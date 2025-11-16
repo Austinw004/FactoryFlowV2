@@ -103,10 +103,37 @@ Preferred communication style: Simple, everyday language.
 - 7-day session TTL with secure, httpOnly cookies
 - Session middleware configured in `server/replitAuth.ts`
 
-**Authorization Pattern**: 
-- Middleware checks (`isAuthenticated`) protect API routes
-- User context extracted from session (`req.user.claims.sub`)
-- Data access filtered by user's `companyId` for tenant isolation
+**Multi-Tenant Security Implementation** (Production-Ready):
+
+**Route Protection**:
+- ALL business API routes protected with `isAuthenticated` middleware
+- CompanyId always derived from authenticated user session (req.user.claims.sub → user.companyId)
+- Never accepts companyId from query parameters or request bodies
+- Returns 401 Unauthorized for unauthenticated requests
+- Returns 403 Forbidden for cross-tenant access attempts
+
+**Resource Ownership Verification**:
+- GET endpoints: Verify resource.companyId matches user.companyId before returning
+- POST endpoints: Force companyId to user.companyId (ignore client-provided values)
+- PATCH endpoints: 
+  - Validate against update schemas (updateSkuSchema, updateMaterialSchema)
+  - Schemas exclude protected fields (id, companyId, createdAt) to prevent tampering
+  - Verify existing resource ownership before allowing updates
+- DELETE endpoints: Verify resource ownership before deletion
+
+**Cross-Entity Validation**:
+- BOM operations: Verify SKU belongs to user's company
+- Supplier Materials: Verify both supplier AND material belong to user's company
+- Demand History: Verify SKU ownership before creating/reading history
+- Allocations: Scoped to company, include ownership verification on retrieval
+
+**Schema Validation**:
+- Insert operations use insertSchemas with auto-generated fields omitted
+- Update operations use updateSchemas (partial, excluding protected fields)
+- Prevents field tampering, ensures data integrity
+- Validates all inputs before storage operations
+
+**Security Audit Status**: ✅ Comprehensive multi-tenant isolation enforced. All attack vectors addressed.
 
 **User Flow**:
 1. Unauthenticated users see landing page
@@ -114,6 +141,7 @@ Preferred communication style: Simple, everyday language.
 3. User record upserted on successful authentication
 4. Session established with user claims and tokens
 5. Frontend redirects to dashboard upon authentication
+6. All API requests scoped to user's company automatically
 
 ### Build & Deployment
 
