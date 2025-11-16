@@ -164,6 +164,163 @@ export const maintenanceRecords = pgTable("maintenance_records", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Financial Statements
+export const balanceSheets = pgTable("balance_sheets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  statementType: text("statement_type").notNull().default("quarterly"), // "quarterly", "annual", "monthly"
+  version: integer("version").notNull().default(1), // For revisions
+  // Assets
+  currentAssets: real("current_assets"),
+  cashAndEquivalents: real("cash_and_equivalents"),
+  accountsReceivable: real("accounts_receivable"),
+  inventory: real("inventory"),
+  prepaidExpenses: real("prepaid_expenses"),
+  fixedAssets: real("fixed_assets"),
+  propertyPlantEquipment: real("property_plant_equipment"),
+  accumulatedDepreciation: real("accumulated_depreciation"),
+  intangibleAssets: real("intangible_assets"),
+  totalAssets: real("total_assets"),
+  // Liabilities
+  currentLiabilities: real("current_liabilities"),
+  accountsPayable: real("accounts_payable"),
+  shortTermDebt: real("short_term_debt"),
+  accruedExpenses: real("accrued_expenses"),
+  longTermLiabilities: real("long_term_liabilities"),
+  longTermDebt: real("long_term_debt"),
+  totalLiabilities: real("total_liabilities"),
+  // Equity
+  shareholdersEquity: real("shareholders_equity"),
+  retainedEarnings: real("retained_earnings"),
+  // Metadata
+  additionalData: jsonb("additional_data"), // Flexible field for extra line items
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const incomeStatements = pgTable("income_statements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  statementType: text("statement_type").notNull().default("quarterly"), // "quarterly", "annual", "monthly"
+  version: integer("version").notNull().default(1),
+  // Revenue
+  revenue: real("revenue"),
+  costOfGoodsSold: real("cost_of_goods_sold"),
+  grossProfit: real("gross_profit"),
+  // Operating Expenses
+  operatingExpenses: real("operating_expenses"),
+  sellingGeneralAdmin: real("selling_general_admin"),
+  researchDevelopment: real("research_development"),
+  depreciationAmortization: real("depreciation_amortization"),
+  operatingIncome: real("operating_income"),
+  // Other
+  interestExpense: real("interest_expense"),
+  interestIncome: real("interest_income"),
+  otherIncome: real("other_income"),
+  incomeBeforeTax: real("income_before_tax"),
+  incomeTax: real("income_tax"),
+  netIncome: real("net_income"),
+  // Metadata
+  additionalData: jsonb("additional_data"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const cashFlowStatements = pgTable("cash_flow_statements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  statementType: text("statement_type").notNull().default("quarterly"), // "quarterly", "annual", "monthly"
+  version: integer("version").notNull().default(1),
+  // Operating Activities
+  netIncome: real("net_income"),
+  depreciationAmortization: real("depreciation_amortization"),
+  changesInWorkingCapital: real("changes_in_working_capital"),
+  changesInReceivables: real("changes_in_receivables"),
+  changesInInventory: real("changes_in_inventory"),
+  changesInPayables: real("changes_in_payables"),
+  operatingCashFlow: real("operating_cash_flow"),
+  // Investing Activities
+  capitalExpenditures: real("capital_expenditures"),
+  acquisitions: real("acquisitions"),
+  investmentPurchases: real("investment_purchases"),
+  investmentSales: real("investment_sales"),
+  investingCashFlow: real("investing_cash_flow"),
+  // Financing Activities
+  debtIssuance: real("debt_issuance"),
+  debtRepayment: real("debt_repayment"),
+  equityIssuance: real("equity_issuance"),
+  dividendsPaid: real("dividends_paid"),
+  financingCashFlow: real("financing_cash_flow"),
+  // Summary
+  netCashFlow: real("net_cash_flow"),
+  beginningCash: real("beginning_cash"),
+  endingCash: real("ending_cash"),
+  // Metadata
+  additionalData: jsonb("additional_data"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Price Tracking & Supplier Machinery
+export const supplierMachinery = pgTable("supplier_machinery", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  supplierId: varchar("supplier_id").notNull().references(() => suppliers.id, { onDelete: "cascade" }),
+  machineryType: text("machinery_type").notNull(), // e.g., "CNC Machine", "Industrial Robot"
+  manufacturer: text("manufacturer"),
+  model: text("model"),
+  unitPrice: real("unit_price").notNull(),
+  currency: text("currency").notNull().default("USD"),
+  leadTimeDays: integer("lead_time_days"),
+  warrantyMonths: integer("warranty_months"),
+  specifications: jsonb("specifications"), // Detailed specs from API
+  availabilityStatus: text("availability_status").default("available"), // "available", "limited", "out_of_stock"
+  lastUpdated: timestamp("last_updated").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const priceHistory = pgTable("price_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  itemType: text("item_type").notNull(), // "material" or "machinery"
+  itemId: varchar("item_id").notNull(), // ID of material or machinery type
+  supplierId: varchar("supplier_id").references(() => suppliers.id, { onDelete: "cascade" }),
+  price: real("price").notNull(),
+  currency: text("currency").notNull().default("USD"),
+  source: text("source").notNull(), // "supplier_quote", "api", "market_data"
+  apiProvider: text("api_provider"), // "metals_dev", "commodities_api", "equipmentwatch"
+  recordedAt: timestamp("recorded_at").defaultNow().notNull(),
+  metadata: jsonb("metadata"), // Additional context (volume, terms, etc.)
+});
+
+export const priceRecommendations = pgTable("price_recommendations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  itemType: text("item_type").notNull(), // "material" or "machinery"
+  itemId: varchar("item_id").notNull(),
+  itemName: text("item_name").notNull(),
+  currentSupplierId: varchar("current_supplier_id").references(() => suppliers.id),
+  currentPrice: real("current_price").notNull(),
+  recommendedSupplierId: varchar("recommended_supplier_id").references(() => suppliers.id),
+  recommendedPrice: real("recommended_price").notNull(),
+  potentialSavings: real("potential_savings").notNull(),
+  savingsPercentage: real("savings_percentage").notNull(),
+  status: text("status").notNull().default("active"), // "active", "dismissed", "accepted"
+  priority: text("priority").default("medium"), // "high", "medium", "low"
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  dismissedAt: timestamp("dismissed_at"),
+  acceptedAt: timestamp("accepted_at"),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const upsertUserSchema = createInsertSchema(users).omit({ createdAt: true, updatedAt: true });
@@ -183,6 +340,15 @@ export const updatePriceAlertSchema = createInsertSchema(priceAlerts).omit({ id:
 export const insertMachinerySchema = createInsertSchema(machinery).omit({ id: true, createdAt: true, updatedAt: true, currentValue: true });
 export const updateMachinerySchema = createInsertSchema(machinery).omit({ id: true, companyId: true, createdAt: true }).partial();
 export const insertMaintenanceRecordSchema = createInsertSchema(maintenanceRecords).omit({ id: true, createdAt: true });
+export const insertBalanceSheetSchema = createInsertSchema(balanceSheets).omit({ id: true, createdAt: true, updatedAt: true });
+export const updateBalanceSheetSchema = createInsertSchema(balanceSheets).omit({ id: true, companyId: true, createdAt: true }).partial();
+export const insertIncomeStatementSchema = createInsertSchema(incomeStatements).omit({ id: true, createdAt: true, updatedAt: true });
+export const updateIncomeStatementSchema = createInsertSchema(incomeStatements).omit({ id: true, companyId: true, createdAt: true }).partial();
+export const insertCashFlowStatementSchema = createInsertSchema(cashFlowStatements).omit({ id: true, createdAt: true, updatedAt: true });
+export const updateCashFlowStatementSchema = createInsertSchema(cashFlowStatements).omit({ id: true, companyId: true, createdAt: true }).partial();
+export const insertSupplierMachinerySchema = createInsertSchema(supplierMachinery).omit({ id: true, createdAt: true, lastUpdated: true });
+export const insertPriceHistorySchema = createInsertSchema(priceHistory).omit({ id: true, recordedAt: true });
+export const insertPriceRecommendationSchema = createInsertSchema(priceRecommendations).omit({ id: true, createdAt: true, dismissedAt: true, acceptedAt: true });
 
 // Types
 export type User = typeof users.$inferSelect;
@@ -212,3 +378,15 @@ export type Machinery = typeof machinery.$inferSelect;
 export type InsertMachinery = z.infer<typeof insertMachinerySchema>;
 export type MaintenanceRecord = typeof maintenanceRecords.$inferSelect;
 export type InsertMaintenanceRecord = z.infer<typeof insertMaintenanceRecordSchema>;
+export type BalanceSheet = typeof balanceSheets.$inferSelect;
+export type InsertBalanceSheet = z.infer<typeof insertBalanceSheetSchema>;
+export type IncomeStatement = typeof incomeStatements.$inferSelect;
+export type InsertIncomeStatement = z.infer<typeof insertIncomeStatementSchema>;
+export type CashFlowStatement = typeof cashFlowStatements.$inferSelect;
+export type InsertCashFlowStatement = z.infer<typeof insertCashFlowStatementSchema>;
+export type SupplierMachinery = typeof supplierMachinery.$inferSelect;
+export type InsertSupplierMachinery = z.infer<typeof insertSupplierMachinerySchema>;
+export type PriceHistory = typeof priceHistory.$inferSelect;
+export type InsertPriceHistory = z.infer<typeof insertPriceHistorySchema>;
+export type PriceRecommendation = typeof priceRecommendations.$inferSelect;
+export type InsertPriceRecommendation = z.infer<typeof insertPriceRecommendationSchema>;
