@@ -253,6 +253,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { insertMachinerySchema } = await import("@shared/schema");
       const machineData = insertMachinerySchema.parse({
         ...req.body,
+        purchaseDate: req.body.purchaseDate ? new Date(req.body.purchaseDate) : null,
+        lastMaintenanceDate: req.body.lastMaintenanceDate ? new Date(req.body.lastMaintenanceDate) : null,
         companyId: user.companyId,
       });
       
@@ -279,7 +281,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const { updateMachinerySchema } = await import("@shared/schema");
-      const updateData = updateMachinerySchema.parse(req.body);
+      const bodyWithParsedDates = {
+        ...req.body,
+        ...(req.body.purchaseDate && { purchaseDate: new Date(req.body.purchaseDate) }),
+        ...(req.body.lastMaintenanceDate && { lastMaintenanceDate: new Date(req.body.lastMaintenanceDate) }),
+      };
+      const updateData = updateMachinerySchema.parse(bodyWithParsedDates);
       
       const updated = await storage.updateMachine(req.params.id, updateData);
       res.json(updated);
@@ -376,6 +383,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const recordData = insertMaintenanceRecordSchema.parse({
         ...req.body,
         machineryId: req.params.id,
+        performedDate: req.body.performedDate ? new Date(req.body.performedDate) : new Date(),
+        nextScheduledDate: req.body.nextScheduledDate ? new Date(req.body.nextScheduledDate) : null,
       });
       
       const record = await storage.createMaintenanceRecord(recordData);

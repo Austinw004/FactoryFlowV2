@@ -338,7 +338,7 @@ function AddMachineForm({ onSuccess, onCancel }: {
         maintenanceIntervalDays: data.maintenanceIntervalDays,
         status: "operational" as const,
       };
-      return await apiRequest("/api/machinery", "POST", payload);
+      return await apiRequest("POST", "/api/machinery", payload);
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/machinery"] });
@@ -830,7 +830,7 @@ function AddMaintenanceForm({ machine, onSuccess, onCancel }: {
         partsReplaced: null,
       };
       
-      return await apiRequest(`/api/machinery/${machine.id}/maintenance`, "POST", payload);
+      return await apiRequest("POST", `/api/machinery/${machine.id}/maintenance`, payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/machinery", machine.id, "maintenance"] });
