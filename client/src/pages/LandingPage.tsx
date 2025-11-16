@@ -65,8 +65,12 @@ export default function LandingPage() {
             </div>
             <div className="flex items-center gap-4">
               <ThemeToggle />
-              <Button variant="ghost" data-testid="link-signin">Sign In</Button>
-              <Button data-testid="button-get-started">Get Started</Button>
+              <Button variant="ghost" asChild data-testid="link-signin">
+                <a href="/api/login">Sign In</a>
+              </Button>
+              <Button asChild data-testid="button-get-started">
+                <a href="/api/login">Get Started</a>
+              </Button>
             </div>
           </div>
         </div>
@@ -85,9 +89,11 @@ export default function LandingPage() {
                 and counter-cyclical procurement strategies based on real-time economic regime analysis.
               </p>
               <div className="flex flex-wrap gap-4">
-                <Button size="lg" data-testid="button-start-free-trial">
-                  Start Free Trial
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                <Button size="lg" asChild data-testid="button-start-free-trial">
+                  <a href="/api/login">
+                    Start Free Trial
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </a>
                 </Button>
                 <Button size="lg" variant="outline" data-testid="button-watch-demo">
                   Watch Demo

@@ -9,21 +9,35 @@ import { Header } from "@/components/Header";
 import NotFound from "@/pages/not-found";
 import LandingPage from "@/pages/LandingPage";
 import Dashboard from "@/pages/Dashboard";
+import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
+  const { isAuthenticated, isLoading } = useAuth();
+
   return (
     <Switch>
-      <Route path="/" component={LandingPage} />
-      <Route path="/dashboard" component={Dashboard} />
+      {isLoading || !isAuthenticated ? (
+        <Route path="/" component={LandingPage} />
+      ) : (
+        <>
+          <Route path="/" component={Dashboard} />
+          <Route path="/dashboard" component={Dashboard} />
+        </>
+      )}
       <Route component={NotFound} />
     </Switch>
   );
 }
 
 function AppLayout() {
+  const { isAuthenticated, isLoading } = useAuth();
   const style = {
     "--sidebar-width": "16rem",
   };
+
+  if (isLoading || !isAuthenticated) {
+    return <Router />;
+  }
 
   return (
     <SidebarProvider style={style as React.CSSProperties}>

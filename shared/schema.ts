@@ -1,18 +1,144 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, real, integer, timestamp, jsonb, primaryKey, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Session storage table for Replit Auth
+export const sessions = pgTable(
+  "sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: jsonb("sess").notNull(),
+    expire: timestamp("expire").notNull(),
+  },
+  (table) => [index("IDX_session_expire").on(table.expire)],
+);
+
+// User storage table for Replit Auth
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  email: varchar("email").unique(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  profileImageUrl: varchar("profile_image_url"),
+  companyId: varchar("company_id").references(() => companies.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export const companies = pgTable("companies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
+export const skus = pgTable("skus", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  code: text("code").notNull(),
+  name: text("name").notNull(),
+  priority: real("priority").notNull().default(1.0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const materials = pgTable("materials", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  code: text("code").notNull(),
+  name: text("name").notNull(),
+  unit: text("unit").notNull(),
+  onHand: real("on_hand").notNull().default(0),
+  inbound: real("inbound").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const boms = pgTable("boms", {
+  skuId: varchar("sku_id").notNull().references(() => skus.id, { onDelete: "cascade" }),
+  materialId: varchar("material_id").notNull().references(() => materials.id, { onDelete: "cascade" }),
+  quantityPerUnit: real("quantity_per_unit").notNull(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.skuId, table.materialId] }),
+}));
+
+export const suppliers = pgTable("suppliers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  contactEmail: text("contact_email"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const supplierMaterials = pgTable("supplier_materials", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  supplierId: varchar("supplier_id").notNull().references(() => suppliers.id, { onDelete: "cascade" }),
+  materialId: varchar("material_id").notNull().references(() => materials.id, { onDelete: "cascade" }),
+  unitCost: real("unit_cost").notNull(),
+  leadTimeDays: integer("lead_time_days").notNull(),
+});
+
+export const demandHistory = pgTable("demand_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  skuId: varchar("sku_id").notNull().references(() => skus.id, { onDelete: "cascade" }),
+  period: text("period").notNull(),
+  units: real("units").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const allocations = pgTable("allocations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  budget: real("budget").notNull(),
+  regime: text("regime").notNull(),
+  fdr: real("fdr").notNull(),
+  policyKnobs: jsonb("policy_knobs").notNull(),
+  kpis: jsonb("kpis").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const allocationResults = pgTable("allocation_results", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  allocationId: varchar("allocation_id").notNull().references(() => allocations.id, { onDelete: "cascade" }),
+  skuId: varchar("sku_id").notNull().references(() => skus.id, { onDelete: "cascade" }),
+  plannedUnits: real("planned_units").notNull(),
+  allocatedUnits: real("allocated_units").notNull(),
+  fillRate: real("fill_rate").notNull(),
+});
+
+// Insert schemas
+export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
+export const upsertUserSchema = createInsertSchema(users).omit({ createdAt: true, updatedAt: true });
+export const insertCompanySchema = createInsertSchema(companies).omit({ id: true, createdAt: true });
+export const insertSkuSchema = createInsertSchema(skus).omit({ id: true, createdAt: true });
+export const updateSkuSchema = createInsertSchema(skus).omit({ id: true, companyId: true, createdAt: true }).partial();
+export const insertMaterialSchema = createInsertSchema(materials).omit({ id: true, createdAt: true });
+export const updateMaterialSchema = createInsertSchema(materials).omit({ id: true, companyId: true, createdAt: true }).partial();
+export const insertBomSchema = createInsertSchema(boms);
+export const insertSupplierSchema = createInsertSchema(suppliers).omit({ id: true, createdAt: true });
+export const insertSupplierMaterialSchema = createInsertSchema(supplierMaterials).omit({ id: true });
+export const insertDemandHistorySchema = createInsertSchema(demandHistory).omit({ id: true, createdAt: true });
+export const insertAllocationSchema = createInsertSchema(allocations).omit({ id: true, createdAt: true });
+export const insertAllocationResultSchema = createInsertSchema(allocationResults).omit({ id: true });
+
+// Types
 export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type UpsertUser = z.infer<typeof upsertUserSchema>;
+export type Company = typeof companies.$inferSelect;
+export type InsertCompany = z.infer<typeof insertCompanySchema>;
+export type Sku = typeof skus.$inferSelect;
+export type InsertSku = z.infer<typeof insertSkuSchema>;
+export type Material = typeof materials.$inferSelect;
+export type InsertMaterial = z.infer<typeof insertMaterialSchema>;
+export type Bom = typeof boms.$inferSelect;
+export type InsertBom = z.infer<typeof insertBomSchema>;
+export type Supplier = typeof suppliers.$inferSelect;
+export type InsertSupplier = z.infer<typeof insertSupplierSchema>;
+export type SupplierMaterial = typeof supplierMaterials.$inferSelect;
+export type InsertSupplierMaterial = z.infer<typeof insertSupplierMaterialSchema>;
+export type DemandHistory = typeof demandHistory.$inferSelect;
+export type InsertDemandHistory = z.infer<typeof insertDemandHistorySchema>;
+export type Allocation = typeof allocations.$inferSelect;
+export type InsertAllocation = z.infer<typeof insertAllocationSchema>;
+export type AllocationResult = typeof allocationResults.$inferSelect;
+export type InsertAllocationResult = z.infer<typeof insertAllocationResultSchema>;

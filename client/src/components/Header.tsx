@@ -37,7 +37,9 @@ export function Header() {
             <DropdownMenuItem data-testid="menu-profile">Profile</DropdownMenuItem>
             <DropdownMenuItem data-testid="menu-settings">Settings</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem data-testid="menu-logout">Logout</DropdownMenuItem>
+            <DropdownMenuItem asChild data-testid="menu-logout">
+              <a href="/api/logout">Logout</a>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
