@@ -57,8 +57,30 @@ export default function Dashboard() {
     },
   });
 
+  // Calculate all derived data (must be before conditional returns)
   const hasData = Array.isArray(skus) && skus.length > 0;
+  
+  const allocationData = allocationDetails?.results
+    ? allocationDetails.results.slice(0, 5).map((r: any) => ({
+        sku: r.skuCode || r.skuId?.substring(0, 8) || 'SKU',
+        plannedUnits: r.plannedUnits || 0,
+        allocatedUnits: r.allocatedUnits || 0,
+        fillRate: Math.round((r.fillRate || 0) * 100),
+        priority: r.priority || 0,
+      }))
+    : [];
 
+  const avgFillRate = allocationDetails?.results && allocationDetails.results.length > 0
+    ? (allocationDetails.results.reduce((sum: number, r: any) => sum + (r.fillRate || 0), 0) / allocationDetails.results.length * 100).toFixed(1)
+    : "0.0";
+
+  const regimeData = regime as any || {};
+  const policySignals = regimeData.policySignals || [];
+  const regimeType = regimeData.regime || "UNKNOWN";
+  const fdr = regimeData.fdr || 0;
+  const intensity = regimeData.intensity || 50;
+
+  // Show loading state
   if (skusLoading || regimeLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -67,6 +89,7 @@ export default function Dashboard() {
     );
   }
 
+  // Show empty state
   if (!hasData) {
     return (
       <div className="p-6 space-y-6">
@@ -111,26 +134,7 @@ export default function Dashboard() {
     );
   }
 
-  const allocationData = allocationDetails?.results
-    ? allocationDetails.results.slice(0, 5).map((r: any) => ({
-        sku: r.skuCode || r.skuId?.substring(0, 8) || 'SKU',
-        plannedUnits: r.plannedUnits || 0,
-        allocatedUnits: r.allocatedUnits || 0,
-        fillRate: Math.round((r.fillRate || 0) * 100),
-        priority: r.priority || 0,
-      }))
-    : [];
-
-  const avgFillRate = allocationDetails?.results && allocationDetails.results.length > 0
-    ? (allocationDetails.results.reduce((sum: number, r: any) => sum + (r.fillRate || 0), 0) / allocationDetails.results.length * 100).toFixed(1)
-    : "0.0";
-
-  const regimeData = regime as any || {};
-  const policySignals = regimeData.policySignals || [];
-  const regimeType = regimeData.regime || "UNKNOWN";
-  const fdr = regimeData.fdr || 0;
-  const intensity = regimeData.intensity || 50;
-
+  // Main dashboard content
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
