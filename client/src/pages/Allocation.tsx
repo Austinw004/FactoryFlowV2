@@ -8,20 +8,47 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Boxes, PlayCircle, AlertCircle, Clock } from "lucide-react";
+import { Boxes, PlayCircle, AlertCircle, Clock, Plus, X, Package } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Allocation, AllocationResult } from "@shared/schema";
+import type { Allocation, AllocationResult, Material } from "@shared/schema";
+
+interface MaterialRequirement {
+  materialId: string;
+  quantity: string;
+}
 
 export default function Allocation() {
   const [budget, setBudget] = useState("50000");
   const [budgetDurationValue, setBudgetDurationValue] = useState("");
   const [budgetDurationUnit, setBudgetDurationUnit] = useState<string>("month");
   const [horizonStart, setHorizonStart] = useState("");
+  const [useDirectMaterials, setUseDirectMaterials] = useState(false);
+  const [materialRequirements, setMaterialRequirements] = useState<MaterialRequirement[]>([
+    { materialId: "", quantity: "" }
+  ]);
   const { toast } = useToast();
+
+  const { data: materials } = useQuery<Material[]>({
+    queryKey: ["/api/materials"],
+  });
 
   const { data: allocations, isLoading } = useQuery<Allocation[]>({
     queryKey: ["/api/allocations"],
   });
+
+  const addMaterialRequirement = () => {
+    setMaterialRequirements([...materialRequirements, { materialId: "", quantity: "" }]);
+  };
+
+  const removeMaterialRequirement = (index: number) => {
+    setMaterialRequirements(materialRequirements.filter((_, i) => i !== index));
+  };
+
+  const updateMaterialRequirement = (index: number, field: 'materialId' | 'quantity', value: string) => {
+    const updated = [...materialRequirements];
+    updated[index][field] = value;
+    setMaterialRequirements(updated);
+  };
 
   const runAllocationMutation = useMutation({
     mutationFn: async () => {
@@ -36,6 +63,21 @@ export default function Allocation() {
         if (horizonStart) {
           payload.horizonStart = horizonStart;
         }
+      }
+
+      if (useDirectMaterials) {
+        const validRequirements = materialRequirements
+          .filter(req => req.materialId && req.quantity && parseFloat(req.quantity) > 0)
+          .map(req => ({
+            materialId: req.materialId,
+            quantity: parseFloat(req.quantity),
+          }));
+        
+        if (validRequirements.length === 0) {
+          throw new Error("Please add at least one material with a valid quantity");
+        }
+        
+        payload.directMaterialRequirements = validRequirements;
       }
       
       return apiRequest("POST", "/api/allocations/run", payload);
@@ -197,6 +239,91 @@ export default function Allocation() {
               </div>
             )}
           </div>
+
+          <div className="space-y-3 p-4 rounded-md bg-muted/50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Package className="h-4 w-4" />
+                <Label className="text-sm font-medium">Direct Material Requirements (Optional)</Label>
+              </div>
+              <Button
+                type="button"
+                variant={useDirectMaterials ? "default" : "outline"}
+                size="sm"
+                onClick={() => setUseDirectMaterials(!useDirectMaterials)}
+                data-testid="button-toggle-direct-materials"
+              >
+                {useDirectMaterials ? "Enabled" : "Disabled"}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {useDirectMaterials 
+                ? "Specify exactly what materials and quantities you need. The system will calculate costs and coverage based on your requirements."
+                : "Toggle to directly specify material requirements instead of using SKU-based allocation."
+              }
+            </p>
+
+            {useDirectMaterials && (
+              <div className="space-y-3 mt-3">
+                {materialRequirements.map((req, index) => (
+                  <div key={index} className="grid grid-cols-[1fr,auto,auto] gap-2 items-end">
+                    <div className="grid gap-2">
+                      <Label className="text-xs">Material</Label>
+                      <Select
+                        value={req.materialId}
+                        onValueChange={(value) => updateMaterialRequirement(index, 'materialId', value)}
+                      >
+                        <SelectTrigger data-testid={`select-material-${index}`}>
+                          <SelectValue placeholder="Select material" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {materials?.map((material) => (
+                            <SelectItem key={material.id} value={material.id}>
+                              {material.name} ({material.unit})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label className="text-xs">Quantity</Label>
+                      <Input
+                        type="number"
+                        value={req.quantity}
+                        onChange={(e) => updateMaterialRequirement(index, 'quantity', e.target.value)}
+                        placeholder="0"
+                        min="0"
+                        step="0.01"
+                        className="w-24"
+                        data-testid={`input-material-quantity-${index}`}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeMaterialRequirement(index)}
+                      disabled={materialRequirements.length === 1}
+                      data-testid={`button-remove-material-${index}`}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addMaterialRequirement}
+                  className="w-full"
+                  data-testid="button-add-material"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Material
+                </Button>
+              </div>
+            )}
+          </div>
           
           <Button
             onClick={handleRunAllocation}
@@ -254,11 +381,20 @@ function AllocationCard({ allocation }: { allocation: Allocation }) {
   const kpis = allocation.kpis as any;
   const coverage = kpis?.coverage;
   const hasWarnings = coverage?.warnings && coverage.warnings.length > 0;
+  const hasDirectMaterials = (allocation as any).directMaterialRequirements;
+  const materialBreakdown = coverage?.materialBreakdown;
 
   return (
     <Card data-testid={`card-allocation-${allocation.id}`}>
       <CardHeader>
-        <CardTitle className="text-lg">{allocation.name || "Unnamed Allocation"}</CardTitle>
+        <CardTitle className="flex items-center justify-between text-lg">
+          <span>{allocation.name || "Unnamed Allocation"}</span>
+          {hasDirectMaterials && (
+            <span className="text-xs font-normal px-2 py-1 rounded-md bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100">
+              Direct Materials
+            </span>
+          )}
+        </CardTitle>
         <CardDescription>
           {new Date(allocation.createdAt).toLocaleDateString()}
         </CardDescription>
@@ -271,6 +407,18 @@ function AllocationCard({ allocation }: { allocation: Allocation }) {
               Budget covers {coverage.budgetCoverageDays?.toFixed(0)} of {coverage.requestedDays} days
             </AlertDescription>
           </Alert>
+        )}
+
+        {materialBreakdown && materialBreakdown.length > 0 && (
+          <div className="p-2 rounded-md bg-muted/50 text-xs space-y-1">
+            <div className="font-medium mb-1">Material Requirements:</div>
+            {materialBreakdown.map((item: any, i: number) => (
+              <div key={i} className="flex justify-between">
+                <span className="text-muted-foreground">{item.materialName}:</span>
+                <span>{item.quantity} @ ${item.unitCost}/unit</span>
+              </div>
+            ))}
+          </div>
         )}
         
         <div className="flex justify-between items-center">

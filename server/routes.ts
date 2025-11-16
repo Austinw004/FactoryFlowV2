@@ -5,6 +5,7 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { DualCircuitEconomics } from "./lib/economics";
 import { DemandForecaster } from "./lib/forecasting";
 import { AllocationEngine } from "./lib/allocation";
+import { z } from "zod";
 import {
   insertSkuSchema,
   updateSkuSchema,
@@ -811,6 +812,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Validation schema for direct material requirements
+  const directMaterialRequirementSchema = z.object({
+    materialId: z.string().min(1, "Material ID is required"),
+    quantity: z.number().positive("Quantity must be positive"),
+  });
+
+  const allocationRunSchema = z.object({
+    budget: z.number().positive("Budget must be positive"),
+    name: z.string().optional(),
+    budgetDurationValue: z.number().int().positive().optional(),
+    budgetDurationUnit: z.enum(["day", "week", "month", "quarter"]).optional(),
+    horizonStart: z.string().optional(),
+    directMaterialRequirements: z.array(directMaterialRequirementSchema).optional(),
+  });
+
   // Run allocation
   app.post("/api/allocations/run", isAuthenticated, async (req: any, res) => {
     try {
@@ -820,11 +836,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User not associated with a company" });
       }
 
-      const { budget, name, budgetDurationValue, budgetDurationUnit, horizonStart } = req.body;
-      
-      if (!budget) {
-        return res.status(400).json({ error: "budget is required" });
+      // Validate request body
+      const validationResult = allocationRunSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ error: validationResult.error.errors[0].message });
       }
+
+      const { budget, name, budgetDurationValue, budgetDurationUnit, horizonStart, directMaterialRequirements } = validationResult.data;
 
       // Fetch company data
       const companyId = user.companyId;
@@ -857,8 +875,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         inbound[mat.code] = mat.inbound;
       }
 
-      // Build supplier terms map
+      // Build supplier terms map (both by code and by ID for direct material flow)
       const supplierTerms: Record<string, any> = {};
+      const supplierTermsById: Record<string, any> = {};
       for (const supplier of suppliers) {
         const sms = await storage.getSupplierMaterials(supplier.id);
         for (const sm of sms) {
@@ -868,9 +887,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
               unit_cost: sm.unitCost,
               lead_time_days: sm.leadTimeDays,
             };
+            supplierTermsById[material.id] = {
+              unit_cost: sm.unitCost,
+              lead_time_days: sm.leadTimeDays,
+              materialCode: material.code,
+              materialName: material.name,
+              unit: material.unit,
+            };
           }
         }
       }
+
+      // Check if using direct material requirements mode
+      const useDirectMaterials = directMaterialRequirements && Array.isArray(directMaterialRequirements) && directMaterialRequirements.length > 0;
 
       // Build demand history for forecasting
       const historyBySku: Record<string, number[]> = {};
@@ -895,9 +924,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         priorityBySku[sku.id] = sku.priority;
       }
 
-      // Run allocation engine
-      const engine = new AllocationEngine(bomMap, onHand, inbound, budget, supplierTerms);
-      const plan = engine.plan(forecastBySku, signals, priorityBySku);
+      // Run allocation engine (or create simple plan for direct materials)
+      let plan: any;
+      if (useDirectMaterials) {
+        // Direct material mode: create a simplified plan without running allocation engine
+        plan = {
+          production_targets: {},
+          sku_allocation_units: {},
+          material_procurement: {},
+          policy_knobs: signals,
+          kpis: {
+            total_production: 0,
+            total_material_cost: 0,
+            total_skus_planned: 0,
+            fill_rate_by_sku: {},
+            budget_utilization: 0,
+          },
+        };
+      } else {
+        // SKU-based mode: run allocation engine
+        const engine = new AllocationEngine(bomMap, onHand, inbound, budget, supplierTerms);
+        plan = engine.plan(forecastBySku, signals, priorityBySku);
+      }
 
       // Calculate budget duration in days
       let durationInDays: number | null = null;
@@ -914,19 +962,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Pre-calculate total material cost for allocated production
       let totalAllocationCost = 0;
       const startDate = horizonStart ? new Date(horizonStart) : new Date();
+      const materialBreakdown: Array<{materialId: string, materialName: string, quantity: number, unitCost: number, totalCost: number}> = [];
 
-      for (const sku of skus) {
-        const allocated = plan.sku_allocation_units[sku.id] || 0;
-        if (allocated > 0) {
-          let skuMaterialCost = 0;
-          const bomEntry = bomMap[sku.id] || {};
-          for (const [materialCode, perUnit] of Object.entries(bomEntry)) {
-            const terms = supplierTerms[materialCode];
-            if (terms) {
-              skuMaterialCost += perUnit * terms.unit_cost * allocated;
-            }
+      if (useDirectMaterials) {
+        // Direct materials mode: validate and calculate cost from user-specified materials
+        for (const req of directMaterialRequirements) {
+          const { materialId, quantity } = req;
+          
+          // Verify material belongs to company
+          const material = materials.find(m => m.id === materialId);
+          if (!material) {
+            return res.status(400).json({ 
+              error: `Material ID ${materialId} not found or does not belong to your company.` 
+            });
           }
-          totalAllocationCost += skuMaterialCost;
+          
+          // Verify supplier pricing exists
+          const terms = supplierTermsById[materialId];
+          if (!terms) {
+            return res.status(400).json({ 
+              error: `No supplier pricing found for material "${material.name}". Please configure a supplier with pricing for this material before creating an allocation.` 
+            });
+          }
+          
+          const materialCost = quantity * terms.unit_cost;
+          totalAllocationCost += materialCost;
+          materialBreakdown.push({
+            materialId,
+            materialName: terms.materialName,
+            quantity,
+            unitCost: terms.unit_cost,
+            totalCost: materialCost,
+          });
+        }
+        
+        // Validate that total cost is greater than zero
+        if (totalAllocationCost === 0) {
+          return res.status(400).json({
+            error: "Total allocation cost is zero. Please check material quantities and supplier pricing."
+          });
+        }
+        
+        // Update plan KPIs with direct material costs
+        plan.kpis.total_material_cost = totalAllocationCost;
+        plan.kpis.budget_utilization = (totalAllocationCost / budget) * 100;
+      } else {
+        // SKU-based mode: calculate cost from allocated SKUs
+        for (const sku of skus) {
+          const allocated = plan.sku_allocation_units[sku.id] || 0;
+          if (allocated > 0) {
+            let skuMaterialCost = 0;
+            const bomEntry = bomMap[sku.id] || {};
+            for (const [materialCode, perUnit] of Object.entries(bomEntry)) {
+              const terms = supplierTerms[materialCode];
+              if (terms) {
+                skuMaterialCost += perUnit * terms.unit_cost * allocated;
+              }
+            }
+            totalAllocationCost += skuMaterialCost;
+          }
         }
       }
 
@@ -962,6 +1056,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalBurnRatePerDay: burnRatePerDay,
           totalAllocationCost,
           forecastHorizonDays,
+          materialBreakdown: useDirectMaterials ? materialBreakdown : undefined,
         };
       }
 
@@ -980,6 +1075,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         budgetDurationValue: budgetDurationValue || null,
         budgetDurationUnit: budgetDurationUnit || null,
         horizonStart: horizonStart ? new Date(horizonStart) : null,
+        directMaterialRequirements: useDirectMaterials ? directMaterialRequirements : null,
       });
 
       // Save allocation results with runway calculations

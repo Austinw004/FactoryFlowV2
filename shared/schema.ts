@@ -97,6 +97,7 @@ export const allocations = pgTable("allocations", {
   budgetDurationValue: integer("budget_duration_value"), // How many periods the budget should last
   budgetDurationUnit: text("budget_duration_unit"), // "day", "week", "month", "quarter"
   horizonStart: timestamp("horizon_start"), // Optional start date for budget period (defaults to now)
+  directMaterialRequirements: jsonb("direct_material_requirements"), // Array of {materialId, quantity} for direct material allocation
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
