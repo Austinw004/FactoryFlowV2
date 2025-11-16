@@ -64,29 +64,29 @@ export default function HowItWorks() {
               <div className="p-4 rounded-lg border bg-card">
                 <h4 className="font-semibold text-primary mb-2">1. Healthy Expansion (FDR 0.8-1.5)</h4>
                 <p className="text-sm text-muted-foreground">
-                  Financial and real circuits aligned. Normal growth conditions. 
-                  <strong className="text-foreground"> Strategy:</strong> Steady capacity expansion, balanced procurement.
+                  The financial and real circuits are aligned, creating normal growth conditions. 
+                  <strong className="text-foreground"> Strategy:</strong> Maintain steady capacity expansion with balanced procurement.
                 </p>
               </div>
               <div className="p-4 rounded-lg border bg-card">
                 <h4 className="font-semibold text-orange-600 mb-2">2. Asset-Led Growth (FDR 1.5-3.0)</h4>
                 <p className="text-sm text-muted-foreground">
-                  Financial circuit pulling ahead. Credit flowing but manufacturing not yet inflated. 
-                  <strong className="text-foreground"> Strategy:</strong> Aggressive material stockpiling before price surge.
+                  The financial circuit is pulling ahead of the real economy. Credit is flowing, but manufacturing has not yet inflated. 
+                  <strong className="text-foreground"> Strategy:</strong> Pursue aggressive material stockpiling before the price surge hits.
                 </p>
               </div>
               <div className="p-4 rounded-lg border bg-card">
                 <h4 className="font-semibold text-destructive mb-2">3. Imbalanced Excess (FDR &gt; 3.0)</h4>
                 <p className="text-sm text-muted-foreground">
-                  Dangerous financial bubble. Asset prices divorced from fundamentals. 
-                  <strong className="text-foreground"> Strategy:</strong> Defensive posture—reduce inventory, delay capex, preserve cash.
+                  A dangerous financial bubble has formed, and asset prices are divorced from economic fundamentals. 
+                  <strong className="text-foreground"> Strategy:</strong> Adopt a defensive posture by reducing inventory, delaying capital expenditures, and preserving cash.
                 </p>
               </div>
               <div className="p-4 rounded-lg border bg-card">
                 <h4 className="font-semibold text-green-600 mb-2">4. Real Economy Lead (FDR &lt; 0.8)</h4>
                 <p className="text-sm text-muted-foreground">
-                  Manufacturing recovering faster than finance. Demand returning, assets cheap. 
-                  <strong className="text-foreground"> Strategy:</strong> Counter-cyclical procurement—buy aggressively while competitors hesitate.
+                  Manufacturing is recovering faster than finance. Demand is returning while assets remain cheap. 
+                  <strong className="text-foreground"> Strategy:</strong> Execute counter-cyclical procurement by buying aggressively while competitors hesitate.
                 </p>
               </div>
             </div>
@@ -101,8 +101,8 @@ export default function HowItWorks() {
             </h3>
             <div className="space-y-3 text-muted-foreground">
               <p>
-                Most manufacturing companies react to economic cycles after they happen. They buy materials when demand surges (paying peak prices) 
-                and slash inventory when demand falls (missing recovery opportunities). <strong className="text-foreground">This platform lets you act before the cycle turns.</strong>
+                Most manufacturing companies react to economic cycles after they have already happened. They buy materials when demand surges (thereby paying peak prices) 
+                and slash inventory when demand falls (thereby missing recovery opportunities). <strong className="text-foreground">This platform allows you to act before the cycle turns.</strong>
               </p>
               
               <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-2">
@@ -110,19 +110,19 @@ export default function HowItWorks() {
                 <ul className="space-y-2 text-sm">
                   <li className="flex gap-2">
                     <span className="text-primary font-bold">1.</span>
-                    <span><strong className="text-foreground">Regime-Aware Forecasting:</strong> Demand predictions automatically adjust based on FDR. In Imbalanced Excess, the system reduces forecasts by 15-30% before your competitors see demand collapse.</span>
+                    <span><strong className="text-foreground">Regime-Aware Forecasting:</strong> Demand predictions automatically adjust based on the FDR ratio. During Imbalanced Excess periods, the system reduces forecasts by 15-30% before your competitors observe the demand collapse.</span>
                   </li>
                   <li className="flex gap-2">
                     <span className="text-primary font-bold">2.</span>
-                    <span><strong className="text-foreground">Counter-Cyclical Procurement:</strong> When FDR signals Real Economy Lead, procurement signals tell you exactly when to buy materials at depressed prices—while competitors are still paralyzed by fear.</span>
+                    <span><strong className="text-foreground">Counter-Cyclical Procurement:</strong> When the FDR signals a Real Economy Lead, procurement alerts inform you exactly when to purchase materials at depressed prices—while your competitors remain paralyzed by fear.</span>
                   </li>
                   <li className="flex gap-2">
                     <span className="text-primary font-bold">3.</span>
-                    <span><strong className="text-foreground">Constraint-Based Allocation:</strong> The allocation engine optimizes material distribution across SKUs using your bill of materials, priorities, and real-time inventory—maximizing fill rates and minimizing waste.</span>
+                    <span><strong className="text-foreground">Constraint-Based Allocation:</strong> The allocation engine optimizes material distribution across SKUs by utilizing your bill of materials, product priorities, and real-time inventory data—thereby maximizing fill rates and minimizing waste.</span>
                   </li>
                   <li className="flex gap-2">
                     <span className="text-primary font-bold">4.</span>
-                    <span><strong className="text-foreground">Policy Automation:</strong> Each regime generates specific policy signals (inventory buffers, credit terms, capex gates) that translate economic intelligence into actionable manufacturing decisions.</span>
+                    <span><strong className="text-foreground">Policy Automation:</strong> Each economic regime generates specific policy signals (such as inventory buffers, credit terms, and capital expenditure gates) that translate economic intelligence into actionable manufacturing decisions.</span>
                   </li>
                 </ul>
               </div>
@@ -149,15 +149,15 @@ export default function HowItWorks() {
                   <span className="font-semibold">Dashboard - Manufacturing Command Center</span>
                 </AccordionTrigger>
                 <AccordionContent className="text-sm text-muted-foreground space-y-2">
-                  <p><strong className="text-foreground">What it does:</strong> Your real-time control panel showing the economic regime status and key manufacturing metrics.</p>
+                  <p><strong className="text-foreground">What it does:</strong> This is your real-time control panel that displays the economic regime status and key manufacturing metrics.</p>
                   <p><strong className="text-foreground">Key metrics displayed:</strong></p>
                   <ul className="list-disc pl-6 space-y-1">
-                    <li><strong>FDR Score:</strong> Current Financial-to-Real Divergence ratio (e.g., 5.0 means financial assets are 5x more inflated than real economy)</li>
-                    <li><strong>Active SKUs:</strong> Number of products you're currently manufacturing</li>
-                    <li><strong>Average Fill Rate:</strong> Percentage of demand you're able to satisfy with available materials (100% = perfect, 70% = material shortage)</li>
-                    <li><strong>Recent Allocations:</strong> Last material distribution runs showing which products got materials</li>
+                    <li><strong>FDR Score:</strong> The current Financial-to-Real Divergence ratio (for example, 5.0 means that financial assets are inflated 5 times more than the real economy)</li>
+                    <li><strong>Active SKUs:</strong> The number of products you are currently manufacturing</li>
+                    <li><strong>Average Fill Rate:</strong> The percentage of demand you are able to satisfy with available materials (100% indicates perfect fulfillment, while 70% indicates a material shortage)</li>
+                    <li><strong>Recent Allocations:</strong> The most recent material distribution runs, showing which products received materials</li>
                   </ul>
-                  <p><strong className="text-foreground">When to use:</strong> Check daily to understand current economic conditions and manufacturing health.</p>
+                  <p><strong className="text-foreground">When to use it:</strong> Check this dashboard daily to understand current economic conditions and monitor manufacturing health.</p>
                 </AccordionContent>
               </AccordionItem>
 
@@ -166,16 +166,16 @@ export default function HowItWorks() {
                   <span className="font-semibold">Forecasting - Regime-Aware Demand Predictions</span>
                 </AccordionTrigger>
                 <AccordionContent className="text-sm text-muted-foreground space-y-2">
-                  <p><strong className="text-foreground">What it does:</strong> Predicts future demand for each product, automatically adjusting predictions based on the current economic regime.</p>
+                  <p><strong className="text-foreground">What it does:</strong> This module predicts future demand for each product while automatically adjusting predictions based on the current economic regime.</p>
                   <p><strong className="text-foreground">How it works:</strong></p>
                   <ul className="list-disc pl-6 space-y-1">
-                    <li>Takes your historical sales data (past demand)</li>
-                    <li>Applies exponential smoothing and moving averages (statistical forecasting)</li>
-                    <li>Multiplies by regime-specific factors (e.g., reduces by 20% during Imbalanced Excess)</li>
-                    <li>Shows you predicted units needed for next period</li>
+                    <li>It analyzes your historical sales data (past demand patterns)</li>
+                    <li>It applies exponential smoothing and moving averages for statistical forecasting</li>
+                    <li>It multiplies the results by regime-specific factors (for example, it reduces forecasts by 20% during Imbalanced Excess periods)</li>
+                    <li>It displays the predicted units needed for the next period</li>
                   </ul>
-                  <p><strong className="text-foreground">Example:</strong> If Widget A historically sells 1,000 units/month, but we're in Imbalanced Excess regime, the forecast might show 800 units—warning you to reduce production before the downturn hits.</p>
-                  <p><strong className="text-foreground">When to use:</strong> Weekly for production planning and quarterly for capacity decisions.</p>
+                  <p><strong className="text-foreground">Example:</strong> If Widget A historically sells 1,000 units per month, but the platform detects that we are in an Imbalanced Excess regime, the forecast might display 800 units—thereby warning you to reduce production before the downturn occurs.</p>
+                  <p><strong className="text-foreground">When to use it:</strong> Review this weekly for production planning and quarterly for capacity decisions.</p>
                 </AccordionContent>
               </AccordionItem>
 
@@ -184,22 +184,22 @@ export default function HowItWorks() {
                   <span className="font-semibold">Allocation - Smart Material Distribution Engine</span>
                 </AccordionTrigger>
                 <AccordionContent className="text-sm text-muted-foreground space-y-2">
-                  <p><strong className="text-foreground">What it does:</strong> Solves the complex problem of "which products should get which materials" when you can't make everything.</p>
+                  <p><strong className="text-foreground">What it does:</strong> This engine solves the complex problem of determining which products should receive which materials when you cannot manufacture everything at once.</p>
                   <p><strong className="text-foreground">The optimization considers:</strong></p>
                   <ul className="list-disc pl-6 space-y-1">
-                    <li><strong>BOM (Bill of Materials):</strong> Recipe showing materials needed per product (e.g., Widget A needs 2kg Steel + 0.5kg Plastic)</li>
-                    <li><strong>Available Inventory:</strong> What you have on hand + what's arriving soon</li>
-                    <li><strong>SKU Priorities:</strong> Which products are most important (high-margin, strategic customers)</li>
-                    <li><strong>Budget Constraints:</strong> Total spending limit you set</li>
+                    <li><strong>BOM (Bill of Materials):</strong> The recipe showing materials needed per product (for example, Widget A requires 2kg of steel plus 0.5kg of plastic)</li>
+                    <li><strong>Available Inventory:</strong> The materials you have on hand plus those arriving soon</li>
+                    <li><strong>SKU Priorities:</strong> Which products are most important (such as high-margin products or those for strategic customers)</li>
+                    <li><strong>Budget Constraints:</strong> The total spending limit you have set</li>
                   </ul>
-                  <p><strong className="text-foreground">Output you get:</strong></p>
+                  <p><strong className="text-foreground">Output you receive:</strong></p>
                   <ul className="list-disc pl-6 space-y-1">
-                    <li><strong>Allocated Units:</strong> How many of each product you can make</li>
-                    <li><strong>Fill Rate:</strong> Percentage of planned production achieved (if you planned 100 but got 85, fill rate = 85%)</li>
-                    <li><strong>Material Usage:</strong> Which materials were fully consumed vs. leftovers</li>
+                    <li><strong>Allocated Units:</strong> The number of each product you can manufacture</li>
+                    <li><strong>Fill Rate:</strong> The percentage of planned production achieved (for example, if you planned 100 units but received materials for 85 units, the fill rate equals 85%)</li>
+                    <li><strong>Material Usage:</strong> Which materials were fully consumed versus which have leftovers</li>
                   </ul>
-                  <p><strong className="text-foreground">Example:</strong> You have 1000kg steel. Widget A needs 2kg (priority 10), Widget B needs 3kg (priority 5). The engine maximizes value by allocating more to Widget A first.</p>
-                  <p><strong className="text-foreground">When to use:</strong> Run before each production cycle to optimize material distribution.</p>
+                  <p><strong className="text-foreground">Example:</strong> Suppose you have 1,000 kg of steel. Widget A requires 2 kg per unit (priority level 10), while Widget B requires 3 kg per unit (priority level 5). The engine maximizes value by allocating more steel to Widget A first.</p>
+                  <p><strong className="text-foreground">When to use it:</strong> Run this before each production cycle to optimize material distribution.</p>
                 </AccordionContent>
               </AccordionItem>
 
@@ -208,21 +208,21 @@ export default function HowItWorks() {
                   <span className="font-semibold">Procurement - Counter-Cyclical Buying Signals</span>
                 </AccordionTrigger>
                 <AccordionContent className="text-sm text-muted-foreground space-y-2">
-                  <p><strong className="text-foreground">What it does:</strong> Tells you when to aggressively buy materials (at low prices) vs. when to hold back (avoiding peak prices).</p>
+                  <p><strong className="text-foreground">What it does:</strong> This module informs you when to aggressively purchase materials (at low prices) versus when to hold back (thereby avoiding peak prices).</p>
                   <p><strong className="text-foreground">Procurement signals by regime:</strong></p>
                   <ul className="list-disc pl-6 space-y-1">
-                    <li><strong>Real Economy Lead (FDR &lt; 0.8):</strong> BUY signal—competitors scared, prices depressed, your chance to stockpile</li>
-                    <li><strong>Healthy Expansion (FDR 0.8-1.5):</strong> Normal purchasing—steady state</li>
-                    <li><strong>Asset-Led Growth (FDR 1.5-3.0):</strong> Accelerate buying—prices rising but not peaked yet</li>
-                    <li><strong>Imbalanced Excess (FDR &gt; 3.0):</strong> HOLD signal—bubble territory, preserve cash, delay purchases</li>
+                    <li><strong>Real Economy Lead (FDR &lt; 0.8):</strong> BUY signal—competitors are fearful, prices are depressed, and this is your opportunity to stockpile materials</li>
+                    <li><strong>Healthy Expansion (FDR 0.8-1.5):</strong> Normal purchasing patterns—maintain steady-state procurement</li>
+                    <li><strong>Asset-Led Growth (FDR 1.5-3.0):</strong> Accelerate purchasing—prices are rising but have not yet peaked</li>
+                    <li><strong>Imbalanced Excess (FDR &gt; 3.0):</strong> HOLD signal—the market is in bubble territory, so preserve cash and delay purchases</li>
                   </ul>
-                  <p><strong className="text-foreground">Also shows:</strong></p>
+                  <p><strong className="text-foreground">Additional information displayed:</strong></p>
                   <ul className="list-disc pl-6 space-y-1">
-                    <li>Supplier lead times (how long until materials arrive)</li>
-                    <li>Current inventory levels (on-hand + inbound quantities)</li>
-                    <li>Material codes and units for purchasing</li>
+                    <li>Supplier lead times (the duration until materials arrive)</li>
+                    <li>Current inventory levels (on-hand quantities plus inbound shipments)</li>
+                    <li>Material codes and units for purchasing purposes</li>
                   </ul>
-                  <p><strong className="text-foreground">When to use:</strong> Review monthly or when FDR crosses regime thresholds.</p>
+                  <p><strong className="text-foreground">When to use it:</strong> Review this monthly or whenever the FDR crosses regime threshold boundaries.</p>
                 </AccordionContent>
               </AccordionItem>
 
