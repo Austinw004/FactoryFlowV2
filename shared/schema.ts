@@ -94,6 +94,9 @@ export const allocations = pgTable("allocations", {
   fdr: real("fdr").notNull(),
   policyKnobs: jsonb("policy_knobs").notNull(),
   kpis: jsonb("kpis").notNull(),
+  budgetDurationValue: integer("budget_duration_value"), // How many periods the budget should last
+  budgetDurationUnit: text("budget_duration_unit"), // "day", "week", "month", "quarter"
+  horizonStart: timestamp("horizon_start"), // Optional start date for budget period (defaults to now)
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -104,6 +107,10 @@ export const allocationResults = pgTable("allocation_results", {
   plannedUnits: real("planned_units").notNull(),
   allocatedUnits: real("allocated_units").notNull(),
   fillRate: real("fill_rate").notNull(),
+  // Budget runway fields
+  estimatedCostPerPeriod: real("estimated_cost_per_period"), // Burn rate for this SKU
+  projectedDepletionDate: timestamp("projected_depletion_date"), // When budget runs out for this SKU
+  daysOfInventory: real("days_of_inventory"), // How many days this allocation covers
 });
 
 export const priceAlerts = pgTable("price_alerts", {

@@ -820,7 +820,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User not associated with a company" });
       }
 
-      const { budget, name } = req.body;
+      const { budget, name, budgetDurationValue, budgetDurationUnit, horizonStart } = req.body;
       
       if (!budget) {
         return res.status(400).json({ error: "budget is required" });
@@ -908,14 +908,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fdr: economics.fdr,
         policyKnobs: plan.policy_knobs as any,
         kpis: plan.kpis as any,
+        budgetDurationValue: budgetDurationValue || null,
+        budgetDurationUnit: budgetDurationUnit || null,
+        horizonStart: horizonStart ? new Date(horizonStart) : null,
       });
 
-      // Save allocation results
+      // Calculate budget duration in days
+      let durationInDays: number | null = null;
+      if (budgetDurationValue && budgetDurationUnit) {
+        const unitToDays: Record<string, number> = {
+          'day': 1,
+          'week': 7,
+          'month': 30,
+          'quarter': 90,
+        };
+        durationInDays = budgetDurationValue * (unitToDays[budgetDurationUnit] || 1);
+      }
+
+      const startDate = horizonStart ? new Date(horizonStart) : new Date();
+
+      // Save allocation results with runway calculations
       const results = [];
       for (const sku of skus) {
         const planned = plan.production_targets[sku.id] || 0;
         const allocated = plan.sku_allocation_units[sku.id] || 0;
         const fillRate = plan.kpis.fill_rate_by_sku[sku.id] || 0;
+        
+        // Calculate cost per period and runway if duration is specified
+        let estimatedCostPerPeriod: number | null = null;
+        let projectedDepletionDate: Date | null = null;
+        let daysOfInventory: number | null = null;
+
+        if (durationInDays && allocated > 0) {
+          // Calculate material cost for this SKU
+          let skuMaterialCost = 0;
+          const bomEntry = bomMap[sku.id] || {};
+          for (const [materialCode, perUnit] of Object.entries(bomEntry)) {
+            const terms = supplierTerms[materialCode];
+            if (terms) {
+              skuMaterialCost += perUnit * terms.unit_cost * allocated;
+            }
+          }
+
+          // Burn rate per day
+          const burnRatePerDay = skuMaterialCost / durationInDays;
+          estimatedCostPerPeriod = burnRatePerDay;
+
+          // Calculate days of inventory based on allocated vs forecasted demand
+          const forecastedDemand = forecastBySku[sku.id] || 1;
+          if (forecastedDemand > 0) {
+            daysOfInventory = (allocated / forecastedDemand) * durationInDays;
+          }
+
+          // Project depletion date
+          if (burnRatePerDay > 0) {
+            const daysUntilDepletion = skuMaterialCost / burnRatePerDay;
+            projectedDepletionDate = new Date(startDate.getTime() + daysUntilDepletion * 24 * 60 * 60 * 1000);
+          }
+        }
         
         results.push({
           allocationId: allocation.id,
@@ -923,6 +973,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           plannedUnits: planned,
           allocatedUnits: allocated,
           fillRate: fillRate,
+          estimatedCostPerPeriod,
+          projectedDepletionDate,
+          daysOfInventory,
         });
       }
       await storage.bulkCreateAllocationResults(results);

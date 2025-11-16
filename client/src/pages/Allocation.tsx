@@ -6,13 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Boxes, PlayCircle, AlertCircle } from "lucide-react";
+import { Boxes, PlayCircle, AlertCircle, Clock } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Allocation, AllocationResult } from "@shared/schema";
 
 export default function Allocation() {
   const [budget, setBudget] = useState("50000");
+  const [budgetDurationValue, setBudgetDurationValue] = useState("");
+  const [budgetDurationUnit, setBudgetDurationUnit] = useState<string>("month");
   const { toast } = useToast();
 
   const { data: allocations, isLoading } = useQuery<Allocation[]>({
@@ -21,10 +24,17 @@ export default function Allocation() {
 
   const runAllocationMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("POST", "/api/allocations/run", {
+      const payload: any = {
         budget: parseFloat(budget),
         name: `Allocation ${new Date().toLocaleDateString()}`,
-      });
+      };
+      
+      if (budgetDurationValue && parseFloat(budgetDurationValue) > 0) {
+        payload.budgetDurationValue = parseInt(budgetDurationValue);
+        payload.budgetDurationUnit = budgetDurationUnit;
+      }
+      
+      return apiRequest("POST", "/api/allocations/run", payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/allocations"] });
@@ -102,10 +112,53 @@ export default function Allocation() {
               data-testid="input-budget"
             />
           </div>
+          
+          <div className="space-y-2 p-4 rounded-md bg-muted/50">
+            <div className="flex items-center gap-2 mb-2">
+              <Clock className="h-4 w-4" />
+              <Label className="text-sm font-medium">Budget Duration (Optional)</Label>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              Specify how long you want this budget to last. The system will calculate burn rate and alert you if the budget won't cover the desired period.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-2">
+                <Label htmlFor="duration-value" className="text-sm">Duration</Label>
+                <Input
+                  id="duration-value"
+                  type="number"
+                  value={budgetDurationValue}
+                  onChange={(e) => setBudgetDurationValue(e.target.value)}
+                  placeholder="3"
+                  min="1"
+                  data-testid="input-duration-value"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="duration-unit" className="text-sm">Period</Label>
+                <Select
+                  value={budgetDurationUnit}
+                  onValueChange={setBudgetDurationUnit}
+                >
+                  <SelectTrigger id="duration-unit" data-testid="select-duration-unit">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="day">Days</SelectItem>
+                    <SelectItem value="week">Weeks</SelectItem>
+                    <SelectItem value="month">Months</SelectItem>
+                    <SelectItem value="quarter">Quarters</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          
           <Button
             onClick={handleRunAllocation}
             disabled={runAllocationMutation.isPending}
             data-testid="button-run-allocation"
+            className="w-full"
           >
             {runAllocationMutation.isPending ? "Running..." : "Run Allocation"}
           </Button>
@@ -144,6 +197,15 @@ function AllocationCard({ allocation }: { allocation: Allocation }) {
     ? (details.results.reduce((sum, r) => sum + r.fillRate, 0) / details.results.length) * 100
     : 0;
 
+  const avgDaysOfInventory = details?.results.length
+    ? details.results.reduce((sum, r) => sum + (r.daysOfInventory || 0), 0) / details.results.length
+    : null;
+
+  const hasDuration = allocation.budgetDurationValue && allocation.budgetDurationUnit;
+  const durationText = hasDuration 
+    ? `${allocation.budgetDurationValue} ${allocation.budgetDurationUnit}${(allocation.budgetDurationValue || 0) > 1 ? 's' : ''}`
+    : null;
+
   return (
     <Card data-testid={`card-allocation-${allocation.id}`}>
       <CardHeader>
@@ -159,6 +221,25 @@ function AllocationCard({ allocation }: { allocation: Allocation }) {
             ${allocation.budget.toLocaleString()}
           </span>
         </div>
+        
+        {hasDuration && (
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">Duration:</span>
+            <span className="font-semibold text-sm" data-testid={`text-duration-${allocation.id}`}>
+              {durationText}
+            </span>
+          </div>
+        )}
+        
+        {avgDaysOfInventory !== null && avgDaysOfInventory > 0 && (
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">Avg Inventory:</span>
+            <span className="font-semibold text-sm" data-testid={`text-inventory-days-${allocation.id}`}>
+              {avgDaysOfInventory.toFixed(0)} days
+            </span>
+          </div>
+        )}
+        
         <div className="flex justify-between items-center">
           <span className="text-sm text-muted-foreground">Total Units:</span>
           <span className="font-semibold" data-testid={`text-total-units-${allocation.id}`}>
