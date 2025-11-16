@@ -17,7 +17,8 @@ export const sessions = pgTable(
 // User storage table for Replit Auth
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: varchar("email").unique(),
+  email: text("email").unique(),
+  name: text("name"),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
@@ -105,6 +106,22 @@ export const allocationResults = pgTable("allocation_results", {
   fillRate: real("fill_rate").notNull(),
 });
 
+export const priceAlerts = pgTable("price_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  materialCode: text("material_code").notNull(),
+  materialName: text("material_name").notNull(),
+  targetPrice: real("target_price").notNull(),
+  priceDirection: text("price_direction").notNull(), // "above" or "below"
+  supplierId: varchar("supplier_id").references(() => suppliers.id, { onDelete: "set null" }),
+  isActive: integer("is_active").notNull().default(1), // 1 = active, 0 = inactive
+  lastCheckedPrice: real("last_checked_price"),
+  lastCheckedAt: timestamp("last_checked_at"),
+  notificationsSent: integer("notifications_sent").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const upsertUserSchema = createInsertSchema(users).omit({ createdAt: true, updatedAt: true });
@@ -119,6 +136,8 @@ export const insertSupplierMaterialSchema = createInsertSchema(supplierMaterials
 export const insertDemandHistorySchema = createInsertSchema(demandHistory).omit({ id: true, createdAt: true });
 export const insertAllocationSchema = createInsertSchema(allocations).omit({ id: true, createdAt: true });
 export const insertAllocationResultSchema = createInsertSchema(allocationResults).omit({ id: true });
+export const insertPriceAlertSchema = createInsertSchema(priceAlerts).omit({ id: true, createdAt: true, updatedAt: true, lastCheckedAt: true, lastCheckedPrice: true, notificationsSent: true });
+export const updatePriceAlertSchema = createInsertSchema(priceAlerts).omit({ id: true, companyId: true, createdAt: true }).partial();
 
 // Types
 export type User = typeof users.$inferSelect;
@@ -142,3 +161,5 @@ export type Allocation = typeof allocations.$inferSelect;
 export type InsertAllocation = z.infer<typeof insertAllocationSchema>;
 export type AllocationResult = typeof allocationResults.$inferSelect;
 export type InsertAllocationResult = z.infer<typeof insertAllocationResultSchema>;
+export type PriceAlert = typeof priceAlerts.$inferSelect;
+export type InsertPriceAlert = z.infer<typeof insertPriceAlertSchema>;
