@@ -4,11 +4,12 @@ import type {
   User, InsertUser, UpsertUser, Company, InsertCompany, Sku, InsertSku,
   Material, InsertMaterial, Bom, InsertBom, Supplier, InsertSupplier,
   SupplierMaterial, InsertSupplierMaterial, DemandHistory, InsertDemandHistory,
-  Allocation, InsertAllocation, AllocationResult, InsertAllocationResult
+  Allocation, InsertAllocation, AllocationResult, InsertAllocationResult,
+  PriceAlert, InsertPriceAlert
 } from "@shared/schema";
 import { 
   users, companies, skus, materials, boms, suppliers, supplierMaterials,
-  demandHistory, allocations, allocationResults
+  demandHistory, allocations, allocationResults, priceAlerts
 } from "@shared/schema";
 
 export interface IStorage {
@@ -64,6 +65,14 @@ export interface IStorage {
   getAllocationResults(allocationId: string): Promise<AllocationResult[]>;
   createAllocationResult(result: InsertAllocationResult): Promise<AllocationResult>;
   bulkCreateAllocationResults(results: InsertAllocationResult[]): Promise<void>;
+  
+  // Price Alerts
+  getPriceAlerts(companyId: string): Promise<PriceAlert[]>;
+  getPriceAlert(id: string): Promise<PriceAlert | undefined>;
+  getActivePriceAlerts(): Promise<PriceAlert[]>;
+  createPriceAlert(alert: InsertPriceAlert): Promise<PriceAlert>;
+  updatePriceAlert(id: string, alert: Partial<InsertPriceAlert>): Promise<PriceAlert | undefined>;
+  deletePriceAlert(id: string): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -231,6 +240,37 @@ export class DbStorage implements IStorage {
     if (results.length > 0) {
       await db.insert(allocationResults).values(results);
     }
+  }
+
+  // Price Alert methods
+  async getPriceAlerts(companyId: string): Promise<PriceAlert[]> {
+    return db.select().from(priceAlerts).where(eq(priceAlerts.companyId, companyId));
+  }
+
+  async getPriceAlert(id: string): Promise<PriceAlert | undefined> {
+    const [alert] = await db.select().from(priceAlerts).where(eq(priceAlerts.id, id));
+    return alert;
+  }
+
+  async getActivePriceAlerts(): Promise<PriceAlert[]> {
+    return db.select().from(priceAlerts).where(eq(priceAlerts.isActive, 1));
+  }
+
+  async createPriceAlert(insertAlert: InsertPriceAlert): Promise<PriceAlert> {
+    const [alert] = await db.insert(priceAlerts).values(insertAlert).returning();
+    return alert;
+  }
+
+  async updatePriceAlert(id: string, updateData: Partial<InsertPriceAlert>): Promise<PriceAlert | undefined> {
+    const [alert] = await db.update(priceAlerts)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(priceAlerts.id, id))
+      .returning();
+    return alert;
+  }
+
+  async deletePriceAlert(id: string): Promise<void> {
+    await db.delete(priceAlerts).where(eq(priceAlerts.id, id));
   }
 }
 

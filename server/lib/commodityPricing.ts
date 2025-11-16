@@ -1,10 +1,15 @@
 /**
  * Commodity Pricing API Integration
  * 
- * Integrates with Metals.Dev API for real-time commodity pricing data.
- * Free tier: 100 requests/month
+ * Integrates with multiple commodity pricing APIs:
+ * - Metals.Dev: Free tier 100 requests/month (precious & base metals)
+ * - Alpha Vantage: Free tier 25 requests/day (commodities, forex, stocks)
+ * - API Ninjas: Generous free tier (commodity spot prices)
  * 
- * API Documentation: https://metals.dev/docs
+ * API Documentation:
+ * - https://metals.dev/docs
+ * - https://www.alphavantage.co/documentation/
+ * - https://api-ninjas.com/api/commodityprice
  */
 
 export interface CommodityPrice {
@@ -15,6 +20,7 @@ export interface CommodityPrice {
   timestamp: string;
   change24h?: number;
   changePercent24h?: number;
+  source?: string; // API source: 'metals-dev', 'alpha-vantage', 'api-ninjas', 'mock'
 }
 
 export interface MetalsDevResponse {
@@ -26,8 +32,28 @@ export interface MetalsDevResponse {
   };
 }
 
+export interface AlphaVantageResponse {
+  'Global Quote'?: {
+    '01. symbol': string;
+    '05. price': string;
+    '09. change': string;
+    '10. change percent': string;
+  };
+  'Realtime Currency Exchange Rate'?: {
+    '5. Exchange Rate': string;
+    '6. Last Refreshed': string;
+  };
+}
+
+export interface APINinjasResponse {
+  name: string;
+  price: number;
+  unit: string;
+  currency: string;
+}
+
 /**
- * Maps material codes to trading symbols
+ * Maps material codes to trading symbols for different APIs
  */
 const MATERIAL_SYMBOL_MAP: { [key: string]: string } = {
   // Precious Metals (Metals.Dev symbols)
@@ -42,6 +68,31 @@ const MATERIAL_SYMBOL_MAP: { [key: string]: string } = {
   'NI-200': 'LME-NI',       // Nickel
   'ZN-99': 'LME-ZN',        // Zinc
   'TECH-MO': 'LME-LMMO',    // Molybdenum (if available)
+};
+
+/**
+ * Maps material codes to API Ninjas commodity names
+ */
+const API_NINJAS_COMMODITY_MAP: { [key: string]: string } = {
+  // Precious Metals
+  'PM-AU': 'gold',
+  'PM-AG': 'silver',
+  'PM-PT': 'platinum',
+  'PM-PD': 'palladium',
+  
+  // Base Metals
+  'CU-C110': 'copper',
+  'AL-6061': 'aluminum',
+  'NI-200': 'nickel',
+  'ZN-99': 'zinc',
+  
+  // Energy & Agriculture (examples)
+  'ENERGY-WTI': 'crude-oil',
+  'ENERGY-BRENT': 'brent-crude',
+  'ENERGY-NG': 'natural-gas',
+  'AGRI-WHEAT': 'wheat',
+  'AGRI-CORN': 'corn',
+  'AGRI-SOYBEAN': 'soybeans',
 };
 
 /**

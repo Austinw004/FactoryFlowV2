@@ -125,6 +125,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Price Alert Endpoints
+  app.get("/api/price-alerts", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      const alerts = await storage.getPriceAlerts(user.companyId);
+      res.json(alerts);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/price-alerts", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      const { insertPriceAlertSchema } = await import("@shared/schema");
+      const alertData = insertPriceAlertSchema.parse({
+        ...req.body,
+        companyId: user.companyId, // Force company ownership
+      });
+      
+      const alert = await storage.createPriceAlert(alertData);
+      res.json(alert);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/price-alerts/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      // Verify ownership
+      const existingAlert = await storage.getPriceAlert(req.params.id);
+      if (!existingAlert) {
+        return res.status(404).json({ error: "Price alert not found" });
+      }
+      if (existingAlert.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const { updatePriceAlertSchema } = await import("@shared/schema");
+      const updateData = updatePriceAlertSchema.parse(req.body);
+      
+      const updated = await storage.updatePriceAlert(req.params.id, updateData);
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/price-alerts/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      // Verify ownership
+      const existingAlert = await storage.getPriceAlert(req.params.id);
+      if (!existingAlert) {
+        return res.status(404).json({ error: "Price alert not found" });
+      }
+      if (existingAlert.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      await storage.deletePriceAlert(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // SKUs
   app.get("/api/skus", isAuthenticated, async (req: any, res) => {
     try {
