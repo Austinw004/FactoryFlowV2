@@ -10,6 +10,15 @@ The platform helps manufacturers make data-driven decisions about:
 - Counter-cyclical procurement timing based on FDR (Financial-to-Real Divergence) metrics
 - Budget optimization and inventory management
 
+## Recent Changes
+
+**November 16, 2025**:
+- Expanded materials database to 47 comprehensive manufacturing materials across 10 categories: metals (10), plastics/polymers (9), composites (3), rubber (3), textiles (3), wood/paper (3), glass/ceramics (2), chemicals/adhesives (4), electronic components (3), and packaging materials (2)
+- Updated BOMs to reference diverse materials including ABS plastic, copper, stainless steel, polypropylene, HDPE, PCBs, and natural rubber
+- Expanded supplier materials catalog to include pricing and lead times for representative materials from each category
+- Added video embed section to "How It Works" page with comprehensive placeholder explaining platform differentiation, competitive advantages, and feature walkthrough
+- Corrected grammar throughout "How It Works" page for professional, complete sentences
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
@@ -40,6 +49,12 @@ Preferred communication style: Simple, everyday language.
 - Charts for forecast visualization (historical vs. predicted demand)
 - Regime status widgets showing current economic conditions
 - Policy signals panels with intensity indicators
+
+**Educational Content**:
+- Comprehensive "How It Works" page explaining dual-circuit economics, four economic regimes, competitive advantages over traditional ERP systems
+- Interactive accordion with platform component details (Forecasting, Allocation, Procurement, Reporting, Configuration)
+- Vocabulary glossary with 12 key terms
+- Video placeholder section ready for YouTube/Vimeo embed with instructions for adding demo content
 
 ### Backend Architecture
 
@@ -80,10 +95,10 @@ Preferred communication style: Simple, everyday language.
 - `companies` - Multi-tenant organization data
 - `users` - User accounts with Replit Auth integration, linked to companies
 - `skus` - Product definitions with priority weighting
-- `materials` - Raw material inventory tracking (on-hand, inbound quantities)
+- `materials` - Raw material inventory tracking (on-hand, inbound quantities). Seed data includes 47 comprehensive materials across 10 categories: metals (steel, stainless steel, aluminum, copper, nickel, titanium, zinc, brass, bronze, magnesium), plastics/polymers (ABS, PET, HDPE, LDPE, PVC, polycarbonate, nylon, polypropylene, acrylic), composites (carbon fiber, fiberglass, Kevlar), rubber (natural, synthetic, silicone), textiles (cotton, polyester, Kevlar fabric), wood/paper (plywood, MDF, cardboard), glass/ceramics (glass, ceramic tile), chemicals/adhesives (epoxy, polyurethane, solvent, lubricant), electronics (PCB, wire, connectors), and packaging (bubble wrap, foam padding)
 - `boms` - Bill of Materials linking SKUs to required materials with quantities
 - `suppliers` - Supplier master data with lead times
-- `supplier_materials` - Junction table for supplier-material pricing
+- `supplier_materials` - Junction table for supplier-material pricing. Seed includes pricing/lead times for representative materials from each category
 - `demand_history` - Historical demand data for forecasting
 - `allocations` - Saved allocation plan snapshots
 - `allocation_results` - Detailed allocation outputs per SKU
