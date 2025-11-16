@@ -9,6 +9,11 @@ import { Header } from "@/components/Header";
 import NotFound from "@/pages/not-found";
 import LandingPage from "@/pages/LandingPage";
 import Dashboard from "@/pages/Dashboard";
+import Forecasting from "@/pages/Forecasting";
+import Allocation from "@/pages/Allocation";
+import Procurement from "@/pages/Procurement";
+import Reports from "@/pages/Reports";
+import Configuration from "@/pages/Configuration";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
@@ -22,6 +27,11 @@ function Router() {
         <>
           <Route path="/" component={Dashboard} />
           <Route path="/dashboard" component={Dashboard} />
+          <Route path="/forecasting" component={Forecasting} />
+          <Route path="/allocation" component={Allocation} />
+          <Route path="/procurement" component={Procurement} />
+          <Route path="/reports" component={Reports} />
+          <Route path="/configuration" component={Configuration} />
         </>
       )}
       <Route component={NotFound} />
