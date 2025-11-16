@@ -102,18 +102,27 @@ export default function Dashboard() {
     );
   }
 
-  const allocationData = Array.isArray(allocations) 
-    ? allocations.slice(0, 5).map((a: any) => ({
-        sku: a.skuCode,
-        plannedUnits: a.plannedUnits,
-        allocatedUnits: a.allocatedUnits,
-        fillRate: Math.round(a.fillRate * 100),
-        priority: a.priority,
+  const latestAllocation = Array.isArray(allocations) && allocations.length > 0 
+    ? allocations[0] 
+    : null;
+
+  const { data: allocationDetails } = useQuery<{ results: any[] }>({
+    queryKey: ["/api/allocations", latestAllocation?.id],
+    enabled: !!latestAllocation?.id,
+  });
+
+  const allocationData = allocationDetails?.results
+    ? allocationDetails.results.slice(0, 5).map((r: any) => ({
+        sku: r.skuCode || r.skuId?.substring(0, 8) || 'SKU',
+        plannedUnits: r.plannedUnits || 0,
+        allocatedUnits: r.allocatedUnits || 0,
+        fillRate: Math.round((r.fillRate || 0) * 100),
+        priority: r.priority || 0,
       }))
     : [];
 
-  const avgFillRate = Array.isArray(allocations) && allocations.length > 0
-    ? (allocations.reduce((sum: number, a: any) => sum + a.fillRate, 0) / allocations.length * 100).toFixed(1)
+  const avgFillRate = allocationDetails?.results && allocationDetails.results.length > 0
+    ? (allocationDetails.results.reduce((sum: number, r: any) => sum + (r.fillRate || 0), 0) / allocationDetails.results.length * 100).toFixed(1)
     : "0.0";
 
   const regimeData = regime as any || {};
