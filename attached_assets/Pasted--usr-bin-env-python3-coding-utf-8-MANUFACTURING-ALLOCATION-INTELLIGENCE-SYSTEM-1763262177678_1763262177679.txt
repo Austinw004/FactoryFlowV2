@@ -1,0 +1,251 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+MANUFACTURING ALLOCATION INTELLIGENCE SYSTEM
+Complete standalone version - all your math preserved
+"""
+
+import math
+import json
+import random
+from datetime import datetime
+from urllib.request import urlopen
+
+def clamp(x, lo, hi):
+    return max(lo, min(hi, x))
+
+def safe_div(a, b, default=0.0):
+    return a / b if b else default
+
+def moving_average(series, window):
+    if window <= 0 or not series:
+        return 0.0
+    window = min(window, len(series))
+    return sum(series[-window:]) / window
+
+def exponential_smoothing(series, alpha=0.4):
+    if not series:
+        return 0.0
+    s = series[0]
+    for x in series[1:]:
+        s = alpha * x + (1 - alpha) * s
+    return s
+
+class DualCircuitEconomics:
+    def __init__(self):
+        self.data = {}
+        self.fdr = 1.0
+        self.regime = "HEALTHY_EXPANSION"
+    
+    def fetch(self):
+        try:
+            with urlopen('https://api.factoryofthefuture.ai/economic-indicators', timeout=5) as response:
+                data = json.loads(response.read().decode())
+        except Exception:
+            data = {
+                "manufacturing_pmi": 52.5,
+                "core_pce": 0.032,
+                "ci_loans_growth": 0.03,
+                "margin_debt_growth": 0.08,
+                "asset_price_index": 1.12,
+                "last_updated": datetime.now().isoformat()
+            }
+        self.data = data
+        self._compute_fdr()
+        self._detect_regime()
+        return self.data
+    
+    def _compute_fdr(self):
+        asset_growth = self.data.get("margin_debt_growth", 0.06)
+        asset_index = self.data.get("asset_price_index", 1.08)
+        ci_growth = self.data.get("ci_loans_growth", 0.02)
+        core_pce = self.data.get("core_pce", 0.03)
+        denom = ci_growth * core_pce if ci_growth * core_pce > 0 else 0.0001
+        self.fdr = clamp((asset_growth * asset_index) / denom, 0.2, 5.0)
+    
+    def _detect_regime(self):
+        if self.fdr > 2.0:
+            self.regime = "IMBALANCED_EXCESS"
+        elif self.fdr > 1.5:
+            self.regime = "ASSET_LED_GROWTH"
+        elif self.fdr < 0.8:
+            self.regime = "REAL_ECONOMY_LEAD"
+        else:
+            self.regime = "HEALTHY_EXPANSION"
+    
+    def signals(self):
+        s = []
+        if self.regime == "IMBALANCED_EXCESS":
+            s += [
+                {"signal": "REDUCE_INVENTORY", "intensity": 0.8},
+                {"signal": "TIGHTEN_CREDIT_TERMS", "intensity": 0.7},
+                {"signal": "DEFER_EXPANSION_CAPEX", "intensity": 0.9},
+                {"signal": "REFINANCE_LONG_FIXED", "intensity": 0.9}
+            ]
+        elif self.regime == "ASSET_LED_GROWTH":
+            s += [
+                {"signal": "SLOW_INVENTORY_BUILD", "intensity": 0.6},
+                {"signal": "EXTEND_PAYABLES", "intensity": 0.6},
+                {"signal": "LOCK_RATES", "intensity": 0.7}
+            ]
+        elif self.regime == "REAL_ECONOMY_LEAD":
+            s += [
+                {"signal": "COUNTER_CYCLICAL_BUY", "intensity": 0.9},
+                {"signal": "EXPAND_CAPACITY_SELECTIVE", "intensity": 0.7},
+                {"signal": "SUPPLY_CHAIN_FINANCE", "intensity": 0.8}
+            ]
+        else:
+            s += [
+                {"signal": "OPTIMIZE_TURNOVER", "intensity": 0.5},
+                {"signal": "SELECTIVE_CAPEX", "intensity": 0.5}
+            ]
+        return s
+
+class DemandForecaster:
+    def __init__(self, history_by_sku):
+        self.history_by_sku = history_by_sku or {}
+    
+    def forecast(self, sku, months_ahead=3, regime="HEALTHY_EXPANSION"):
+        history = self.history_by_sku.get(sku, [])
+        base = exponential_smoothing(history, alpha=0.45)
+        regime_factor = {
+            "IMBALANCED_EXCESS": 0.92,
+            "ASSET_LED_GROWTH": 0.96,
+            "HEALTHY_EXPANSION": 1.00,
+            "REAL_ECONOMY_LEAD": 1.05
+        }.get(regime, 1.0)
+        seasonality = moving_average(history, 12)
+        season_factor = 1.0
+        if seasonality > 0:
+            season_factor = clamp(base / seasonality, 0.85, 1.15)
+        forecasts = []
+        level = base * regime_factor * season_factor
+        for h in range(1, months_ahead + 1):
+            damp = 1.0 - 0.06 * (h - 1)
+            forecasts.append(max(0.0, level * damp))
+        return forecasts
+
+class AllocationEngine:
+    def __init__(self, bom, on_hand, inbound, budget, supplier_terms):
+        self.bom = bom
+        self.on_hand = on_hand
+        self.inbound = inbound
+        self.budget = budget
+        self.supplier_terms = supplier_terms
+    
+    def _material_need_for_sku(self, sku, planned_units):
+        need = {}
+        for m, per_unit in self.bom.get(sku, {}).items():
+            need[m] = need.get(m, 0.0) + per_unit * planned_units
+        return need
+    
+    def _available_material(self, material):
+        return self.on_hand.get(material, 0.0) + self.inbound.get(material, 0.0)
+    
+    def plan(self, forecast_by_sku, regime_signals, priority_by_sku):
+        knobs = {
+            "inventory_buffer_factor": 1.0,
+            "tighten_credit": False,
+            "extend_payables": False,
+            "capex_gate": False
+        }
+        for s in regime_signals:
+            if s["signal"] in ("REDUCE_INVENTORY", "SLOW_INVENTORY_BUILD"):
+                knobs["inventory_buffer_factor"] *= (1.0 - 0.15 * s["intensity"])
+            if s["signal"] in ("TIGHTEN_CREDIT_TERMS",):
+                knobs["tighten_credit"] = True
+            if s["signal"] in ("EXTEND_PAYABLES",):
+                knobs["extend_payables"] = True
+            if s["signal"] in ("DEFER_EXPANSION_CAPEX",):
+                knobs["capex_gate"] = True
+        total_w = sum(priority_by_sku.values()) or 1.0
+        norm_priority = {sku: w / total_w for sku, w in priority_by_sku.items()}
+        production_targets = {}
+        for sku, units in forecast_by_sku.items():
+            buffer = 0.10 * knobs["inventory_buffer_factor"]
+            production_targets[sku] = max(0.0, units * (1.0 + buffer))
+        aggregate_needs = {}
+        for sku, units in production_targets.items():
+            need = self._material_need_for_sku(sku, units)
+            for m, q in need.items():
+                aggregate_needs[m] = aggregate_needs.get(m, 0.0) + q
+        available = {m: self._available_material(m) for m in aggregate_needs}
+        sku_allocation = {sku: 0.0 for sku in production_targets}
+        material_remaining = available.copy()
+        for sku, units in sorted(production_targets.items(), key=lambda kv: -norm_priority.get(kv[0], 0)):
+            caps = []
+            for m, per_unit in self.bom.get(sku, {}).items():
+                if per_unit > 0:
+                    caps.append(material_remaining.get(m, 0.0) / per_unit)
+            feasible_units = min([units] + caps) if caps else 0.0
+            feasible_units = max(0.0, feasible_units)
+            sku_allocation[sku] = feasible_units
+            for m, per_unit in self.bom.get(sku, {}).items():
+                material_remaining[m] = max(0.0, material_remaining.get(m, 0.0) - per_unit * feasible_units)
+        procurement = {}
+        budget_left = self.budget
+        fill_ratio = 0.7 * clamp(knobs["inventory_buffer_factor"], 0.6, 1.4)
+        for m, total_need in aggregate_needs.items():
+            shortfall = max(0.0, total_need - available.get(m, 0.0))
+            to_buy = shortfall * fill_ratio
+            unit_cost = self.supplier_terms.get(m, {}).get("unit_cost", 0.0)
+            cost = unit_cost * to_buy
+            if cost <= budget_left and unit_cost > 0:
+                procurement[m] = {"buy_qty": to_buy, "cost": cost}
+                budget_left -= cost
+            elif unit_cost > 0 and budget_left > 0:
+                qty = budget_left / unit_cost
+                procurement[m] = {"buy_qty": qty, "cost": budget_left}
+                budget_left = 0.0
+        planned_output_value = 0.0
+        total_material_cost_implied = 0.0
+        for sku, units in sku_allocation.items():
+            per_unit_material_cost = 0.0
+            for m, per_unit in self.bom.get(sku, {}).items():
+                per_cost = self.supplier_terms.get(m, {}).get("unit_cost", 0.0)
+                per_unit_material_cost += per_unit * per_cost
+            margin_proxy = max(0.0, 0.25 - 0.5 * safe_div(per_unit_material_cost, 100.0, 0.0))
+            planned_output_value += units * margin_proxy
+            total_material_cost_implied += units * per_unit_material_cost
+        kpis = {
+            "fill_rate_by_sku": {sku: safe_div(sku_allocation[sku], production_targets[sku], 0.0) for sku in sku_allocation},
+            "budget_spent": self.budget - budget_left,
+            "budget_remaining": budget_left,
+            "planned_output_margin_proxy": planned_output_value,
+            "material_cost_implied": total_material_cost_implied
+        }
+        return {
+            "production_targets": production_targets,
+            "sku_allocation_units": sku_allocation,
+            "material_remaining": material_remaining,
+            "procurement_plan": procurement,
+            "policy_knobs": knobs,
+            "kpis": kpis
+        }
+
+# RUN EXAMPLE
+econ = DualCircuitEconomics()
+econ.fetch()
+print(f"Regime: {econ.regime}, FDR: {econ.fdr:.2f}")
+
+history = {
+    "SKU_A": [100,105,110,115,120,125,130,135,140,145,150,155],
+    "SKU_B": [200,195,205,210,215,220,225,230,235,240,245,250]
+}
+bom = {"SKU_A": {"steel": 3, "aluminum": 2, "polymer": 1}, "SKU_B": {"steel": 1, "polymer": 4}}
+on_hand = {"steel": 10000, "aluminum": 8000, "polymer": 15000}
+inbound = {"steel": 4000, "aluminum": 2000, "polymer": 5000}
+supplier_terms = {"steel": {"unit_cost": 2.5, "lead_time_days": 21}, "aluminum": {"unit_cost": 3.75, "lead_time_days": 14}, "polymer": {"unit_cost": 1.2, "lead_time_days": 7}}
+
+forecaster = DemandForecaster(history)
+forecast_by_sku = {sku: sum(forecaster.forecast(sku, 2, econ.regime)) for sku in history.keys()}
+engine = AllocationEngine(bom, on_hand, inbound, 750000, supplier_terms)
+plan = engine.plan(forecast_by_sku, econ.signals(), {"SKU_A": 1.0, "SKU_B": 1.0})
+
+print("\nALLOCATION RESULTS:")
+for sku, units in plan["sku_allocation_units"].items():
+    print(f"{sku}: {units:.0f} units (fill: {plan['kpis']['fill_rate_by_sku'][sku]*100:.1f}%)")
+print(f"\nBudget Spent: ${plan['kpis']['budget_spent']:,.0f}")
+for m, p in plan["procurement_plan"].items():
+    print(f"Buy {m}: {p['buy_qty']:.0f} units @ ${p['cost']:,.0f}")
