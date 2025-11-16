@@ -28,6 +28,15 @@ export default function Dashboard() {
     queryKey: ["/api/skus"],
   });
 
+  const latestAllocation = Array.isArray(allocations) && allocations.length > 0 
+    ? allocations[0] 
+    : null;
+
+  const { data: allocationDetails } = useQuery<{ results: any[] }>({
+    queryKey: ["/api/allocations", latestAllocation?.id],
+    enabled: !!latestAllocation?.id,
+  });
+
   const seedMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/seed"),
     onSuccess: () => {
@@ -101,15 +110,6 @@ export default function Dashboard() {
       </div>
     );
   }
-
-  const latestAllocation = Array.isArray(allocations) && allocations.length > 0 
-    ? allocations[0] 
-    : null;
-
-  const { data: allocationDetails } = useQuery<{ results: any[] }>({
-    queryKey: ["/api/allocations", latestAllocation?.id],
-    enabled: !!latestAllocation?.id,
-  });
 
   const allocationData = allocationDetails?.results
     ? allocationDetails.results.slice(0, 5).map((r: any) => ({
