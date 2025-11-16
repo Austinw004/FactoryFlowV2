@@ -899,20 +899,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const engine = new AllocationEngine(bomMap, onHand, inbound, budget, supplierTerms);
       const plan = engine.plan(forecastBySku, signals, priorityBySku);
 
-      // Save allocation
-      const allocation = await storage.createAllocation({
-        companyId,
-        name: name || `Allocation ${new Date().toISOString()}`,
-        budget,
-        regime: economics.regime,
-        fdr: economics.fdr,
-        policyKnobs: plan.policy_knobs as any,
-        kpis: plan.kpis as any,
-        budgetDurationValue: budgetDurationValue || null,
-        budgetDurationUnit: budgetDurationUnit || null,
-        horizonStart: horizonStart ? new Date(horizonStart) : null,
-      });
-
       // Calculate budget duration in days
       let durationInDays: number | null = null;
       if (budgetDurationValue && budgetDurationUnit) {
@@ -925,7 +911,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
         durationInDays = budgetDurationValue * (unitToDays[budgetDurationUnit] || 1);
       }
 
+      // Pre-calculate total material cost for allocated production
+      let totalAllocationCost = 0;
       const startDate = horizonStart ? new Date(horizonStart) : new Date();
+
+      for (const sku of skus) {
+        const allocated = plan.sku_allocation_units[sku.id] || 0;
+        if (allocated > 0) {
+          let skuMaterialCost = 0;
+          const bomEntry = bomMap[sku.id] || {};
+          for (const [materialCode, perUnit] of Object.entries(bomEntry)) {
+            const terms = supplierTerms[materialCode];
+            if (terms) {
+              skuMaterialCost += perUnit * terms.unit_cost * allocated;
+            }
+          }
+          totalAllocationCost += skuMaterialCost;
+        }
+      }
+
+      // Calculate coverage analysis
+      const coverageWarnings: string[] = [];
+      let coverageData = null;
+      if (durationInDays && totalAllocationCost > 0) {
+        // Forecast horizon: DemandForecaster uses PERIOD_DAYS (30) * 2 periods = 60 days
+        const forecastHorizonDays = 60;
+        
+        // Calculate burn rate per day based on forecast horizon (independent of requested duration)
+        const burnRatePerDay = totalAllocationCost / forecastHorizonDays;
+        
+        // Calculate how many days the budget can actually cover
+        const coverageDays = budget / burnRatePerDay;
+        
+        // Check if coverage meets requested duration
+        const isSufficient = coverageDays >= durationInDays;
+        
+        if (!isSufficient) {
+          const shortfall = (durationInDays * burnRatePerDay) - budget;
+          const coveragePercent = (coverageDays / durationInDays) * 100;
+          coverageWarnings.push(
+            `Budget shortfall: Your $${budget.toLocaleString()} budget covers ${coverageDays.toFixed(0)} days, but you requested ${durationInDays} days (${coveragePercent.toFixed(0)}% coverage). You need an additional $${shortfall.toFixed(0)} to meet your target duration.`
+          );
+        }
+
+        coverageData = {
+          requestedDays: durationInDays,
+          budgetCoverageDays: coverageDays,
+          isSufficient,
+          warnings: coverageWarnings,
+          totalBurnRatePerDay: burnRatePerDay,
+          totalAllocationCost,
+          forecastHorizonDays,
+        };
+      }
+
+      // Save allocation with coverage analysis in KPIs
+      const allocation = await storage.createAllocation({
+        companyId,
+        name: name || `Allocation ${new Date().toISOString()}`,
+        budget,
+        regime: economics.regime,
+        fdr: economics.fdr,
+        policyKnobs: plan.policy_knobs as any,
+        kpis: {
+          ...plan.kpis,
+          coverage: coverageData,
+        } as any,
+        budgetDurationValue: budgetDurationValue || null,
+        budgetDurationUnit: budgetDurationUnit || null,
+        horizonStart: horizonStart ? new Date(horizonStart) : null,
+      });
 
       // Save allocation results with runway calculations
       const results = [];
@@ -984,6 +1039,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         allocation,
         plan,
         results,
+        warnings: coverageWarnings,
+        coverageAnalysis: coverageData,
       });
     } catch (error: any) {
       console.error("Allocation error:", error);

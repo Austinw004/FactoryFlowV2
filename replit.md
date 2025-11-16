@@ -27,7 +27,7 @@ Preferred communication style: Simple, everyday language.
 **Core Business Logic Modules**:
 1.  **DualCircuitEconomics**: Calculates FDR ratio, determines economic regime, and generates policy signals.
 2.  **DemandForecaster**: Produces regime-aware demand forecasts using exponential smoothing and moving averages.
-3.  **AllocationEngine**: Constraint-based optimization for material allocation considering BOMs, availability, SKU priorities, and budget.
+3.  **AllocationEngine**: Constraint-based optimization for material allocation considering BOMs, availability, SKU priorities, budget, and budget duration planning with runway analysis.
 4.  **CommodityPricing**: Real-time integration with Metals.Dev API for live commodity prices, with mock data fallback and support for 110+ tradeable commodities.
 5.  **DepreciationCalculator**: Multi-method depreciation calculation library supporting straight-line, declining balance, and units of production methods with full schedule generation.
 **Data Access Layer**: Centralized storage interface (`server/storage.ts`) for CRUD operations.
@@ -36,7 +36,7 @@ Preferred communication style: Simple, everyday language.
 
 **ORM**: Drizzle ORM with PostgreSQL dialect.
 **Database Provider**: Neon serverless PostgreSQL.
-**Schema Design**: Multi-tenant schema including `companies`, `users`, `skus`, `materials` (110+ tradeable commodities), `boms`, `suppliers`, `supplier_materials`, `demand_history`, `allocations`, `allocation_results`, `price_alerts`, `machinery`, and `maintenance_records`.
+**Schema Design**: Multi-tenant schema including `companies`, `users`, `skus`, `materials` (110+ tradeable commodities), `boms`, `suppliers`, `supplier_materials`, `demand_history`, `allocations` (with budget duration tracking), `allocation_results` (with runway metrics), `price_alerts`, `machinery`, `maintenance_records`, `balance_sheets`, `income_statements`, `cash_flow_statements`, `supplier_machinery`, `price_history`, and `price_recommendations`.
 **Session Management**: `sessions` table for Express session storage, supporting Replit Auth.
 **Multi-tenancy**: All core entities include `companyId` for data isolation; robust security measures for route protection, resource ownership verification, and schema validation are implemented.
 

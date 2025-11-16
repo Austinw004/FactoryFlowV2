@@ -16,6 +16,7 @@ export default function Allocation() {
   const [budget, setBudget] = useState("50000");
   const [budgetDurationValue, setBudgetDurationValue] = useState("");
   const [budgetDurationUnit, setBudgetDurationUnit] = useState<string>("month");
+  const [horizonStart, setHorizonStart] = useState("");
   const { toast } = useToast();
 
   const { data: allocations, isLoading } = useQuery<Allocation[]>({
@@ -32,16 +33,46 @@ export default function Allocation() {
       if (budgetDurationValue && parseFloat(budgetDurationValue) > 0) {
         payload.budgetDurationValue = parseInt(budgetDurationValue);
         payload.budgetDurationUnit = budgetDurationUnit;
+        if (horizonStart) {
+          payload.horizonStart = horizonStart;
+        }
       }
       
       return apiRequest("POST", "/api/allocations/run", payload);
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/allocations"] });
-      toast({
-        title: "Allocation Complete",
-        description: "Material allocation has been successfully calculated.",
-      });
+      
+      // Show warnings if budget is insufficient
+      if (data.warnings && data.warnings.length > 0) {
+        toast({
+          title: "Budget Duration Warning",
+          description: data.warnings[0],
+          variant: "destructive",
+        });
+      } else if (data.coverageAnalysis) {
+        if (data.coverageAnalysis.isSufficient && data.coverageAnalysis.budgetCoverageDays) {
+          toast({
+            title: "Allocation Complete",
+            description: `Your budget will cover ${data.coverageAnalysis.budgetCoverageDays.toFixed(0)} days of operations.`,
+          });
+        } else if (!data.coverageAnalysis.isSufficient) {
+          toast({
+            title: "Allocation Complete",
+            description: "Budget coverage calculated. Check allocation details for warnings.",
+          });
+        } else {
+          toast({
+            title: "Allocation Complete",
+            description: "Material allocation has been successfully calculated.",
+          });
+        }
+      } else {
+        toast({
+          title: "Allocation Complete",
+          description: "Material allocation has been successfully calculated.",
+        });
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -152,6 +183,19 @@ export default function Allocation() {
                 </Select>
               </div>
             </div>
+            
+            {budgetDurationValue && (
+              <div className="grid gap-2 mt-2">
+                <Label htmlFor="horizon-start" className="text-sm">Start Date (Optional)</Label>
+                <Input
+                  id="horizon-start"
+                  type="date"
+                  value={horizonStart}
+                  onChange={(e) => setHorizonStart(e.target.value)}
+                  data-testid="input-horizon-start"
+                />
+              </div>
+            )}
           </div>
           
           <Button
@@ -206,6 +250,11 @@ function AllocationCard({ allocation }: { allocation: Allocation }) {
     ? `${allocation.budgetDurationValue} ${allocation.budgetDurationUnit}${(allocation.budgetDurationValue || 0) > 1 ? 's' : ''}`
     : null;
 
+  // Get coverage data from KPIs
+  const kpis = allocation.kpis as any;
+  const coverage = kpis?.coverage;
+  const hasWarnings = coverage?.warnings && coverage.warnings.length > 0;
+
   return (
     <Card data-testid={`card-allocation-${allocation.id}`}>
       <CardHeader>
@@ -215,6 +264,15 @@ function AllocationCard({ allocation }: { allocation: Allocation }) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
+        {hasWarnings && (
+          <Alert variant="destructive" data-testid={`alert-coverage-warning-${allocation.id}`}>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="text-xs">
+              Budget covers {coverage.budgetCoverageDays?.toFixed(0)} of {coverage.requestedDays} days
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <div className="flex justify-between items-center">
           <span className="text-sm text-muted-foreground">Budget:</span>
           <span className="font-semibold" data-testid={`text-budget-${allocation.id}`}>
@@ -227,6 +285,15 @@ function AllocationCard({ allocation }: { allocation: Allocation }) {
             <span className="text-sm text-muted-foreground">Duration:</span>
             <span className="font-semibold text-sm" data-testid={`text-duration-${allocation.id}`}>
               {durationText}
+            </span>
+          </div>
+        )}
+        
+        {coverage && coverage.isSufficient && (
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">Coverage:</span>
+            <span className="font-semibold text-sm text-green-600 dark:text-green-400" data-testid={`text-coverage-${allocation.id}`}>
+              ✓ {coverage.budgetCoverageDays?.toFixed(0)} days
             </span>
           </div>
         )}
