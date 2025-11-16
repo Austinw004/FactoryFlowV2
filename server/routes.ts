@@ -208,6 +208,190 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Machinery Endpoints
+  app.get("/api/machinery", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      const machines = await storage.getMachinery(user.companyId);
+      res.json(machines);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/machinery/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      const machine = await storage.getMachine(req.params.id);
+      if (!machine) {
+        return res.status(404).json({ error: "Machine not found" });
+      }
+      if (machine.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      res.json(machine);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/machinery", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      const { insertMachinerySchema } = await import("@shared/schema");
+      const machineData = insertMachinerySchema.parse({
+        ...req.body,
+        companyId: user.companyId,
+      });
+      
+      const machine = await storage.createMachine(machineData);
+      res.json(machine);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/machinery/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      const existingMachine = await storage.getMachine(req.params.id);
+      if (!existingMachine) {
+        return res.status(404).json({ error: "Machine not found" });
+      }
+      if (existingMachine.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const { updateMachinerySchema } = await import("@shared/schema");
+      const updateData = updateMachinerySchema.parse(req.body);
+      
+      const updated = await storage.updateMachine(req.params.id, updateData);
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/machinery/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      const existingMachine = await storage.getMachine(req.params.id);
+      if (!existingMachine) {
+        return res.status(404).json({ error: "Machine not found" });
+      }
+      if (existingMachine.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      await storage.deleteMachine(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Calculate depreciation for a machine
+  app.get("/api/machinery/:id/depreciation", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      const machine = await storage.getMachine(req.params.id);
+      if (!machine) {
+        return res.status(404).json({ error: "Machine not found" });
+      }
+      if (machine.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const { calculateDepreciation } = await import("./lib/depreciation");
+      const depreciationData = calculateDepreciation(machine);
+      res.json(depreciationData);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Maintenance Records Endpoints
+  app.get("/api/machinery/:id/maintenance", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      const machine = await storage.getMachine(req.params.id);
+      if (!machine) {
+        return res.status(404).json({ error: "Machine not found" });
+      }
+      if (machine.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const records = await storage.getMaintenanceRecords(req.params.id);
+      res.json(records);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/machinery/:id/maintenance", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      const machine = await storage.getMachine(req.params.id);
+      if (!machine) {
+        return res.status(404).json({ error: "Machine not found" });
+      }
+      if (machine.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const { insertMaintenanceRecordSchema } = await import("@shared/schema");
+      const recordData = insertMaintenanceRecordSchema.parse({
+        ...req.body,
+        machineryId: req.params.id,
+      });
+      
+      const record = await storage.createMaintenanceRecord(recordData);
+      
+      // Update machine's last maintenance date
+      await storage.updateMachine(req.params.id, {
+        lastMaintenanceDate: recordData.performedDate,
+        nextMaintenanceDate: recordData.nextScheduledDate || null,
+      });
+      
+      res.json(record);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
   // SKUs
   app.get("/api/skus", isAuthenticated, async (req: any, res) => {
     try {

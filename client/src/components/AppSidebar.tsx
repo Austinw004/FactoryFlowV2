@@ -6,6 +6,7 @@ import {
   Settings,
   FileText,
   BookOpen,
+  Wrench,
 } from "lucide-react";
 import {
   Sidebar,
@@ -40,6 +41,11 @@ const menuItems = [
     title: "Procurement",
     url: "/procurement",
     icon: ShoppingCart,
+  },
+  {
+    title: "Machinery",
+    url: "/machinery",
+    icon: Wrench,
   },
   {
     title: "Reports",
