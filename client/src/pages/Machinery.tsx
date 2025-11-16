@@ -9,24 +9,63 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Wrench, TrendingDown, AlertTriangle, DollarSign, Calendar, ExternalLink, Clock } from "lucide-react";
-import { format, formatDistance } from "date-fns";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Plus, Wrench, AlertTriangle, ExternalLink, Clock } from "lucide-react";
+import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import type { Machinery, InsertMachinery, MaintenanceRecord, InsertMaintenanceRecord } from "@shared/schema";
+import { insertMachinerySchema, insertMaintenanceRecordSchema } from "@shared/schema";
+import { z } from "zod";
+
+type DepreciationSchedule = {
+  currentValue: number;
+  totalDepreciation: number;
+  yearsElapsed: number;
+  yearsRemaining: number;
+  schedule: Array<{
+    year: number;
+    beginningValue: number;
+    depreciation: number;
+    endingValue: number;
+  }>;
+};
+
+const machineryFormSchema = insertMachinerySchema.omit({ companyId: true }).extend({
+  purchaseCost: z.coerce.number().min(0, "Purchase cost must be positive"),
+  salvageValue: z.coerce.number().min(0, "Salvage value must be positive").default(0),
+  usefulLifeYears: z.coerce.number().int().min(1, "Useful life must be at least 1 year").default(10),
+  maintenanceIntervalDays: z.coerce.number().int().min(1, "Maintenance interval must be at least 1 day").default(90),
+  purchaseDate: z.string().optional(),
+  manufacturer: z.string().optional(),
+  model: z.string().optional(),
+  serialNumber: z.string().optional(),
+  location: z.string().optional(),
+  productUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")),
+  notes: z.string().optional(),
+});
+
+const maintenanceFormSchema = insertMaintenanceRecordSchema.omit({ machineryId: true, partsReplaced: true, nextScheduledDate: true }).extend({
+  cost: z.coerce.number().min(0, "Cost must be positive").default(0),
+  downTimeHours: z.coerce.number().min(0, "Downtime must be positive").default(0),
+  performedDate: z.string(),
+  performedBy: z.string().optional(),
+});
 
 export default function Machinery() {
-  const [selectedMachine, setSelectedMachine] = useState<any | null>(null);
+  const [selectedMachine, setSelectedMachine] = useState<Machinery | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showMaintenanceDialog, setShowMaintenanceDialog] = useState(false);
   const { toast } = useToast();
 
-  const { data: machinery = [], isLoading } = useQuery<any[]>({
+  const { data: machinery = [], isLoading } = useQuery<Machinery[]>({
     queryKey: ["/api/machinery"],
   });
 
-  const handleAddMachine = async (machine: any) => {
+  const handleAddMachine = (machine: Machinery) => {
     setShowAddDialog(false);
     toast({
       title: "Machine added successfully",
@@ -34,12 +73,12 @@ export default function Machinery() {
     });
   };
 
-  const handleViewDetails = (machine: any) => {
+  const handleViewDetails = (machine: Machinery) => {
     setSelectedMachine(machine);
     setShowDetailsDialog(true);
   };
 
-  const handleAddMaintenance = (machine: any) => {
+  const handleAddMaintenance = (machine: Machinery) => {
     setSelectedMachine(machine);
     setShowMaintenanceDialog(true);
   };
@@ -52,10 +91,9 @@ export default function Machinery() {
     );
   }
 
-  const operationalCount = machinery.filter((m: any) => m.status === "operational").length;
-  const maintenanceCount = machinery.filter((m: any) => m.status === "maintenance").length;
-  const downCount = machinery.filter((m: any) => m.status === "down").length;
-  const totalValue = machinery.reduce((sum: number, m: any) => sum + (m.currentValue || m.purchaseCost), 0);
+  const operationalCount = machinery.filter((m) => m.status === "operational").length;
+  const maintenanceCount = machinery.filter((m) => m.status === "maintenance").length;
+  const totalValue = machinery.reduce((sum, m) => sum + (m.currentValue || m.purchaseCost), 0);
 
   return (
     <div className="h-full overflow-auto">
@@ -80,7 +118,6 @@ export default function Machinery() {
           </Dialog>
         </div>
 
-        {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="pb-3">
@@ -108,7 +145,6 @@ export default function Machinery() {
           </Card>
         </div>
 
-        {/* Machinery List */}
         <Card>
           <CardHeader>
             <CardTitle>Equipment Inventory</CardTitle>
@@ -127,7 +163,7 @@ export default function Machinery() {
               </div>
             ) : (
               <div className="space-y-4">
-                {machinery.map((machine: any) => (
+                {machinery.map((machine) => (
                   <MachineryCard
                     key={machine.id}
                     machine={machine}
@@ -140,7 +176,6 @@ export default function Machinery() {
           </CardContent>
         </Card>
 
-        {/* Machine Details Dialog */}
         {selectedMachine && (
           <>
             <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
@@ -168,7 +203,11 @@ export default function Machinery() {
   );
 }
 
-function MachineryCard({ machine, onViewDetails, onAddMaintenance }: any) {
+function MachineryCard({ machine, onViewDetails, onAddMaintenance }: {
+  machine: Machinery;
+  onViewDetails: (machine: Machinery) => void;
+  onAddMaintenance: (machine: Machinery) => void;
+}) {
   const statusColors = {
     operational: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
     maintenance: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
@@ -176,11 +215,14 @@ function MachineryCard({ machine, onViewDetails, onAddMaintenance }: any) {
     retired: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
   };
 
-  const needsMaintenanceSoon = machine.nextMaintenanceDate &&
-    new Date(machine.nextMaintenanceDate) <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  const nextMaintenanceDate = machine.nextMaintenanceDate ? new Date(machine.nextMaintenanceDate) : null;
+  const needsMaintenanceSoon = nextMaintenanceDate &&
+    !isNaN(nextMaintenanceDate.getTime()) &&
+    nextMaintenanceDate <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
   
-  const maintenanceOverdue = machine.nextMaintenanceDate &&
-    new Date(machine.nextMaintenanceDate) < new Date();
+  const maintenanceOverdue = nextMaintenanceDate &&
+    !isNaN(nextMaintenanceDate.getTime()) &&
+    nextMaintenanceDate < new Date();
 
   return (
     <Card className="hover-elevate" data-testid={`card-machine-${machine.id}`}>
@@ -189,7 +231,7 @@ function MachineryCard({ machine, onViewDetails, onAddMaintenance }: any) {
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
               <h3 className="text-lg font-semibold" data-testid={`text-machine-name-${machine.id}`}>{machine.name}</h3>
-              <Badge className={statusColors[machine.status as keyof typeof statusColors]}>
+              <Badge className={statusColors[machine.status as keyof typeof statusColors] || statusColors.operational}>
                 {machine.status}
               </Badge>
               {maintenanceOverdue && (
@@ -251,44 +293,68 @@ function MachineryCard({ machine, onViewDetails, onAddMaintenance }: any) {
   );
 }
 
-function AddMachineForm({ onSuccess, onCancel }: any) {
-  const [formData, setFormData] = useState({
-    name: "",
-    manufacturer: "",
-    model: "",
-    serialNumber: "",
-    category: "",
-    purchaseDate: "",
-    purchaseCost: "",
-    salvageValue: "",
-    usefulLifeYears: "10",
-    depreciationMethod: "straight-line",
-    location: "",
-    productUrl: "",
-    notes: "",
-    maintenanceIntervalDays: "90",
+function AddMachineForm({ onSuccess, onCancel }: {
+  onSuccess: (machine: Machinery) => void;
+  onCancel: () => void;
+}) {
+  const { toast } = useToast();
+  
+  const form = useForm<z.infer<typeof machineryFormSchema>>({
+    resolver: zodResolver(machineryFormSchema),
+    defaultValues: {
+      name: "",
+      manufacturer: "",
+      model: "",
+      serialNumber: "",
+      category: "",
+      purchaseDate: "",
+      purchaseCost: 0,
+      salvageValue: 0,
+      usefulLifeYears: 10,
+      depreciationMethod: "straight-line",
+      location: "",
+      productUrl: "",
+      notes: "",
+      maintenanceIntervalDays: 90,
+    },
   });
 
   const createMachine = useMutation({
-    mutationFn: async (data: any) => {
-      return await apiRequest("/api/machinery", "POST", data);
+    mutationFn: async (data: z.infer<typeof machineryFormSchema>) => {
+      const payload = {
+        name: data.name,
+        manufacturer: data.manufacturer || null,
+        model: data.model || null,
+        serialNumber: data.serialNumber || null,
+        category: data.category,
+        purchaseDate: data.purchaseDate || null,
+        purchaseCost: data.purchaseCost,
+        salvageValue: data.salvageValue,
+        usefulLifeYears: data.usefulLifeYears,
+        depreciationMethod: data.depreciationMethod,
+        location: data.location || null,
+        productUrl: data.productUrl || null,
+        notes: data.notes || null,
+        maintenanceIntervalDays: data.maintenanceIntervalDays,
+        status: "operational" as const,
+      };
+      return await apiRequest("/api/machinery", "POST", payload);
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/machinery"] });
       onSuccess(data);
     },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to add machine",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    createMachine.mutate({
-      ...formData,
-      purchaseCost: parseFloat(formData.purchaseCost),
-      salvageValue: parseFloat(formData.salvageValue) || 0,
-      usefulLifeYears: parseInt(formData.usefulLifeYears),
-      maintenanceIntervalDays: parseInt(formData.maintenanceIntervalDays),
-      purchaseDate: formData.purchaseDate ? new Date(formData.purchaseDate).toISOString() : null,
-    });
+  const handleSubmit = (data: z.infer<typeof machineryFormSchema>) => {
+    createMachine.mutate(data);
   };
 
   return (
@@ -297,186 +363,254 @@ function AddMachineForm({ onSuccess, onCancel }: any) {
         <DialogTitle>Add New Machine</DialogTitle>
         <DialogDescription>Enter the details of your equipment for lifecycle tracking</DialogDescription>
       </DialogHeader>
-      <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="col-span-2">
-            <Label htmlFor="name">Machine Name *</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
-              data-testid="input-machine-name"
-              placeholder="e.g., CNC Mill #3"
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 mt-4">
+          <div className="grid grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem className="col-span-2">
+                  <FormLabel>Machine Name *</FormLabel>
+                  <FormControl>
+                    <Input {...field} data-testid="input-machine-name" placeholder="e.g., CNC Mill #3" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="manufacturer"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Manufacturer</FormLabel>
+                  <FormControl>
+                    <Input {...field} data-testid="input-manufacturer" placeholder="e.g., Haas Automation" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="model"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Model</FormLabel>
+                  <FormControl>
+                    <Input {...field} data-testid="input-model" placeholder="e.g., VF-2SS" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="serialNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Serial Number</FormLabel>
+                  <FormControl>
+                    <Input {...field} data-testid="input-serial-number" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Category *</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger data-testid="select-category">
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="CNC Machine">CNC Machine</SelectItem>
+                      <SelectItem value="Injection Molding">Injection Molding</SelectItem>
+                      <SelectItem value="Assembly Robot">Assembly Robot</SelectItem>
+                      <SelectItem value="3D Printer">3D Printer</SelectItem>
+                      <SelectItem value="Lathe">Lathe</SelectItem>
+                      <SelectItem value="Press">Press</SelectItem>
+                      <SelectItem value="Conveyor System">Conveyor System</SelectItem>
+                      <SelectItem value="Packaging Equipment">Packaging Equipment</SelectItem>
+                      <SelectItem value="Quality Control">Quality Control</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="purchaseDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Purchase Date</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} data-testid="input-purchase-date" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="purchaseCost"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Purchase Cost * ($)</FormLabel>
+                  <FormControl>
+                    <Input type="number" step="0.01" {...field} data-testid="input-purchase-cost" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="salvageValue"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Salvage Value ($)</FormLabel>
+                  <FormControl>
+                    <Input type="number" step="0.01" {...field} data-testid="input-salvage-value" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="usefulLifeYears"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Useful Life (years)</FormLabel>
+                  <FormControl>
+                    <Input type="number" {...field} data-testid="input-useful-life" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="depreciationMethod"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Depreciation Method</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger data-testid="select-depreciation-method">
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="straight-line">Straight-Line</SelectItem>
+                      <SelectItem value="declining-balance">Declining Balance</SelectItem>
+                      <SelectItem value="units-of-production">Units of Production</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="maintenanceIntervalDays"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Maintenance Interval (days)</FormLabel>
+                  <FormControl>
+                    <Input type="number" {...field} data-testid="input-maintenance-interval" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="location"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Location</FormLabel>
+                  <FormControl>
+                    <Input {...field} data-testid="input-location" placeholder="e.g., Factory Floor A, Bay 3" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="productUrl"
+              render={({ field }) => (
+                <FormItem className="col-span-2">
+                  <FormLabel>Product URL (optional)</FormLabel>
+                  <FormControl>
+                    <Input type="url" {...field} data-testid="input-product-url" placeholder="https://manufacturer.com/product-page" />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">Link to manufacturer's product page for specifications</p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem className="col-span-2">
+                  <FormLabel>Notes</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} data-testid="input-notes" rows={3} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
           </div>
-          <div>
-            <Label htmlFor="manufacturer">Manufacturer</Label>
-            <Input
-              id="manufacturer"
-              value={formData.manufacturer}
-              onChange={(e) => setFormData({ ...formData, manufacturer: e.target.value })}
-              data-testid="input-manufacturer"
-              placeholder="e.g., Haas Automation"
-            />
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={onCancel} data-testid="button-cancel-add">
+              Cancel
+            </Button>
+            <Button type="submit" disabled={createMachine.isPending} data-testid="button-submit-add">
+              {createMachine.isPending ? "Adding..." : "Add Machine"}
+            </Button>
           </div>
-          <div>
-            <Label htmlFor="model">Model</Label>
-            <Input
-              id="model"
-              value={formData.model}
-              onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-              data-testid="input-model"
-              placeholder="e.g., VF-2SS"
-            />
-          </div>
-          <div>
-            <Label htmlFor="serialNumber">Serial Number</Label>
-            <Input
-              id="serialNumber"
-              value={formData.serialNumber}
-              onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
-              data-testid="input-serial-number"
-            />
-          </div>
-          <div>
-            <Label htmlFor="category">Category *</Label>
-            <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v })}>
-              <SelectTrigger data-testid="select-category">
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="CNC Machine">CNC Machine</SelectItem>
-                <SelectItem value="Injection Molding">Injection Molding</SelectItem>
-                <SelectItem value="Assembly Robot">Assembly Robot</SelectItem>
-                <SelectItem value="3D Printer">3D Printer</SelectItem>
-                <SelectItem value="Lathe">Lathe</SelectItem>
-                <SelectItem value="Press">Press</SelectItem>
-                <SelectItem value="Conveyor System">Conveyor System</SelectItem>
-                <SelectItem value="Packaging Equipment">Packaging Equipment</SelectItem>
-                <SelectItem value="Quality Control">Quality Control</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="purchaseDate">Purchase Date</Label>
-            <Input
-              id="purchaseDate"
-              type="date"
-              value={formData.purchaseDate}
-              onChange={(e) => setFormData({ ...formData, purchaseDate: e.target.value })}
-              data-testid="input-purchase-date"
-            />
-          </div>
-          <div>
-            <Label htmlFor="purchaseCost">Purchase Cost * ($)</Label>
-            <Input
-              id="purchaseCost"
-              type="number"
-              step="0.01"
-              value={formData.purchaseCost}
-              onChange={(e) => setFormData({ ...formData, purchaseCost: e.target.value })}
-              required
-              data-testid="input-purchase-cost"
-            />
-          </div>
-          <div>
-            <Label htmlFor="salvageValue">Salvage Value ($)</Label>
-            <Input
-              id="salvageValue"
-              type="number"
-              step="0.01"
-              value={formData.salvageValue}
-              onChange={(e) => setFormData({ ...formData, salvageValue: e.target.value })}
-              data-testid="input-salvage-value"
-            />
-          </div>
-          <div>
-            <Label htmlFor="usefulLifeYears">Useful Life (years)</Label>
-            <Input
-              id="usefulLifeYears"
-              type="number"
-              value={formData.usefulLifeYears}
-              onChange={(e) => setFormData({ ...formData, usefulLifeYears: e.target.value })}
-              data-testid="input-useful-life"
-            />
-          </div>
-          <div>
-            <Label htmlFor="depreciationMethod">Depreciation Method</Label>
-            <Select value={formData.depreciationMethod} onValueChange={(v) => setFormData({ ...formData, depreciationMethod: v })}>
-              <SelectTrigger data-testid="select-depreciation-method">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="straight-line">Straight-Line</SelectItem>
-                <SelectItem value="declining-balance">Declining Balance</SelectItem>
-                <SelectItem value="units-of-production">Units of Production</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="maintenanceIntervalDays">Maintenance Interval (days)</Label>
-            <Input
-              id="maintenanceIntervalDays"
-              type="number"
-              value={formData.maintenanceIntervalDays}
-              onChange={(e) => setFormData({ ...formData, maintenanceIntervalDays: e.target.value })}
-              data-testid="input-maintenance-interval"
-            />
-          </div>
-          <div>
-            <Label htmlFor="location">Location</Label>
-            <Input
-              id="location"
-              value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              data-testid="input-location"
-              placeholder="e.g., Factory Floor A, Bay 3"
-            />
-          </div>
-          <div className="col-span-2">
-            <Label htmlFor="productUrl">Product URL (optional)</Label>
-            <Input
-              id="productUrl"
-              type="url"
-              value={formData.productUrl}
-              onChange={(e) => setFormData({ ...formData, productUrl: e.target.value })}
-              data-testid="input-product-url"
-              placeholder="https://manufacturer.com/product-page"
-            />
-            <p className="text-xs text-muted-foreground mt-1">Link to manufacturer's product page for specifications</p>
-          </div>
-          <div className="col-span-2">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              data-testid="input-notes"
-              rows={3}
-            />
-          </div>
-        </div>
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onCancel} data-testid="button-cancel-add">
-            Cancel
-          </Button>
-          <Button type="submit" disabled={createMachine.isPending} data-testid="button-submit-add">
-            {createMachine.isPending ? "Adding..." : "Add Machine"}
-          </Button>
-        </div>
-      </form>
+        </form>
+      </Form>
     </div>
   );
 }
 
-function MachineDetailsView({ machine, onClose }: any) {
-  const { data: depreciation } = useQuery<any>({
+function MachineDetailsView({ machine, onClose }: {
+  machine: Machinery;
+  onClose: () => void;
+}) {
+  const { data: depreciation } = useQuery<DepreciationSchedule>({
     queryKey: ["/api/machinery", machine.id, "depreciation"],
   });
 
-  const { data: maintenanceRecords = [] } = useQuery<any[]>({
+  const { data: maintenanceRecords = [] } = useQuery<MaintenanceRecord[]>({
     queryKey: ["/api/machinery", machine.id, "maintenance"],
   });
 
@@ -600,7 +734,7 @@ function MachineDetailsView({ machine, onClose }: any) {
                       </tr>
                     </thead>
                     <tbody>
-                      {depreciation.schedule.slice(0, 10).map((row: any) => (
+                      {depreciation.schedule.slice(0, 10).map((row) => (
                         <tr key={row.year} className="border-t">
                           <td className="p-2">Year {row.year}</td>
                           <td className="p-2 text-right">${row.beginningValue.toLocaleString()}</td>
@@ -617,9 +751,9 @@ function MachineDetailsView({ machine, onClose }: any) {
         </TabsContent>
 
         <TabsContent value="maintenance" className="space-y-4">
-          {maintenanceRecords && maintenanceRecords.length > 0 ? (
+          {maintenanceRecords.length > 0 ? (
             <div className="space-y-3">
-              {maintenanceRecords.map((record: any) => (
+              {maintenanceRecords.map((record) => (
                 <Card key={record.id}>
                   <CardContent className="p-4">
                     <div className="flex justify-between items-start">
@@ -637,7 +771,7 @@ function MachineDetailsView({ machine, onClose }: any) {
                       </div>
                       <div className="text-right text-sm">
                         <p className="font-semibold">${record.cost.toLocaleString()}</p>
-                        {record.downTimeHours > 0 && (
+                        {record.downTimeHours && record.downTimeHours > 0 && (
                           <p className="text-muted-foreground">{record.downTimeHours}h downtime</p>
                         )}
                       </div>
@@ -658,40 +792,62 @@ function MachineDetailsView({ machine, onClose }: any) {
   );
 }
 
-function AddMaintenanceForm({ machine, onSuccess, onCancel }: any) {
-  const [formData, setFormData] = useState({
-    maintenanceType: "preventive",
-    description: "",
-    cost: "",
-    performedDate: new Date().toISOString().split("T")[0],
-    performedBy: "",
-    downTimeHours: "",
+function AddMaintenanceForm({ machine, onSuccess, onCancel }: {
+  machine: Machinery;
+  onSuccess: () => void;
+  onCancel: () => void;
+}) {
+  const { toast } = useToast();
+  
+  const form = useForm<z.infer<typeof maintenanceFormSchema>>({
+    resolver: zodResolver(maintenanceFormSchema),
+    defaultValues: {
+      maintenanceType: "preventive",
+      description: "",
+      cost: 0,
+      performedDate: new Date().toISOString().split("T")[0],
+      performedBy: "",
+      downTimeHours: 0,
+    },
   });
 
   const addMaintenance = useMutation({
-    mutationFn: async (data: any) => {
-      return await apiRequest(`/api/machinery/${machine.id}/maintenance`, "POST", data);
+    mutationFn: async (data: z.infer<typeof maintenanceFormSchema>) => {
+      const maintenanceIntervalDays = machine.maintenanceIntervalDays || 90;
+      const performedDate = new Date(data.performedDate);
+      const nextDate = new Date(performedDate);
+      nextDate.setDate(nextDate.getDate() + maintenanceIntervalDays);
+      
+      const payload = {
+        machineryId: machine.id,
+        maintenanceType: data.maintenanceType,
+        description: data.description,
+        cost: data.cost,
+        downTimeHours: data.downTimeHours,
+        performedDate: performedDate.toISOString(),
+        performedBy: data.performedBy || null,
+        nextScheduledDate: nextDate.toISOString(),
+        partsReplaced: null,
+      };
+      
+      return await apiRequest(`/api/machinery/${machine.id}/maintenance`, "POST", payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/machinery", machine.id, "maintenance"] });
       queryClient.invalidateQueries({ queryKey: ["/api/machinery"] });
       onSuccess();
     },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to add maintenance record",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const maintenanceIntervalDays = machine.maintenanceIntervalDays || 90;
-    const nextDate = new Date(formData.performedDate);
-    nextDate.setDate(nextDate.getDate() + maintenanceIntervalDays);
-    
-    addMaintenance.mutate({
-      ...formData,
-      cost: parseFloat(formData.cost) || 0,
-      downTimeHours: parseFloat(formData.downTimeHours) || 0,
-      performedDate: new Date(formData.performedDate).toISOString(),
-      nextScheduledDate: nextDate.toISOString(),
-    });
+  const handleSubmit = (data: z.infer<typeof maintenanceFormSchema>) => {
+    addMaintenance.mutate(data);
   };
 
   return (
@@ -700,83 +856,113 @@ function AddMaintenanceForm({ machine, onSuccess, onCancel }: any) {
         <DialogTitle>Add Maintenance Record</DialogTitle>
         <DialogDescription>Record maintenance performed on {machine.name}</DialogDescription>
       </DialogHeader>
-      <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-        <div>
-          <Label htmlFor="maintenanceType">Maintenance Type</Label>
-          <Select value={formData.maintenanceType} onValueChange={(v) => setFormData({ ...formData, maintenanceType: v })}>
-            <SelectTrigger data-testid="select-maintenance-type">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="preventive">Preventive</SelectItem>
-              <SelectItem value="corrective">Corrective</SelectItem>
-              <SelectItem value="predictive">Predictive</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label htmlFor="description">Description *</Label>
-          <Textarea
-            id="description"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            required
-            data-testid="input-maintenance-description"
-            rows={3}
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 mt-4">
+          <FormField
+            control={form.control}
+            name="maintenanceType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Maintenance Type</FormLabel>
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <FormControl>
+                    <SelectTrigger data-testid="select-maintenance-type">
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="preventive">Preventive</SelectItem>
+                    <SelectItem value="corrective">Corrective</SelectItem>
+                    <SelectItem value="predictive">Predictive</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="cost">Cost ($)</Label>
-            <Input
-              id="cost"
-              type="number"
-              step="0.01"
-              value={formData.cost}
-              onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
-              data-testid="input-maintenance-cost"
+          
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Description *</FormLabel>
+                <FormControl>
+                  <Textarea {...field} data-testid="input-maintenance-description" rows={3} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <div className="grid grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="cost"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cost ($)</FormLabel>
+                  <FormControl>
+                    <Input type="number" step="0.01" {...field} data-testid="input-maintenance-cost" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="downTimeHours"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Downtime (hours)</FormLabel>
+                  <FormControl>
+                    <Input type="number" step="0.1" {...field} data-testid="input-downtime-hours" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="performedDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Date Performed</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} data-testid="input-performed-date" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="performedBy"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Performed By</FormLabel>
+                  <FormControl>
+                    <Input {...field} data-testid="input-performed-by" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
           </div>
-          <div>
-            <Label htmlFor="downTimeHours">Downtime (hours)</Label>
-            <Input
-              id="downTimeHours"
-              type="number"
-              step="0.1"
-              value={formData.downTimeHours}
-              onChange={(e) => setFormData({ ...formData, downTimeHours: e.target.value })}
-              data-testid="input-downtime-hours"
-            />
+          
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={onCancel} data-testid="button-cancel-maintenance">
+              Cancel
+            </Button>
+            <Button type="submit" disabled={addMaintenance.isPending} data-testid="button-submit-maintenance">
+              {addMaintenance.isPending ? "Adding..." : "Add Record"}
+            </Button>
           </div>
-          <div>
-            <Label htmlFor="performedDate">Date Performed</Label>
-            <Input
-              id="performedDate"
-              type="date"
-              value={formData.performedDate}
-              onChange={(e) => setFormData({ ...formData, performedDate: e.target.value })}
-              data-testid="input-performed-date"
-            />
-          </div>
-          <div>
-            <Label htmlFor="performedBy">Performed By</Label>
-            <Input
-              id="performedBy"
-              value={formData.performedBy}
-              onChange={(e) => setFormData({ ...formData, performedBy: e.target.value })}
-              data-testid="input-performed-by"
-            />
-          </div>
-        </div>
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onCancel} data-testid="button-cancel-maintenance">
-            Cancel
-          </Button>
-          <Button type="submit" disabled={addMaintenance.isPending} data-testid="button-submit-maintenance">
-            {addMaintenance.isPending ? "Adding..." : "Add Record"}
-          </Button>
-        </div>
-      </form>
+        </form>
+      </Form>
     </div>
   );
 }
