@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, TrendingUp, Zap, Info, Calculator } from "lucide-react";
+import { BookOpen, TrendingUp, Zap, Info, Calculator, Video, PlayCircle } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   Accordion,
   AccordionContent,
@@ -19,6 +20,45 @@ export default function HowItWorks() {
           Understanding dual-circuit economics and your competitive manufacturing advantage
         </p>
       </div>
+
+      <Card className="border-primary/30 bg-primary/5" data-testid="card-demo-video">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-2xl">
+            <Video className="h-6 w-6 text-primary" />
+            Platform Demo & Competitive Edge
+          </CardTitle>
+          <CardDescription>
+            Watch this comprehensive overview to see what makes our platform different and how it gives you a strategic advantage
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="aspect-video w-full rounded-lg border-2 border-dashed border-primary/30 bg-background flex items-center justify-center">
+            <div className="text-center space-y-3 p-6">
+              <PlayCircle className="h-16 w-16 text-muted-foreground mx-auto" />
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold text-foreground">Demo Video Coming Soon</h3>
+                <p className="text-sm text-muted-foreground max-w-md">
+                  This section will feature a comprehensive video demonstrating:
+                </p>
+                <ul className="text-sm text-muted-foreground text-left max-w-md mx-auto space-y-1">
+                  <li>• What makes our dual-circuit approach unique</li>
+                  <li>• Your competitive edge over traditional ERP systems</li>
+                  <li>• Everything the platform offers (Forecasting, Allocation, Procurement)</li>
+                  <li>• Live walkthrough of the dashboard, regime detection, and allocation engine</li>
+                  <li>• Real-world examples of counter-cyclical procurement in action</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              <strong>To add your video:</strong> Upload your demo video to YouTube, then replace the placeholder above with an embedded iframe pointing to your video URL. 
+              The video should explain your platform's differentiation, competitive advantages, feature walkthrough, and demonstrate the system in action.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
 
       <Card className="border-primary/20" data-testid="card-platform-overview">
         <CardHeader>
