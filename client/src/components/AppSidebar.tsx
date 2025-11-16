@@ -5,6 +5,7 @@ import {
   ShoppingCart,
   Settings,
   FileText,
+  BookOpen,
 } from "lucide-react";
 import {
   Sidebar,
@@ -49,6 +50,11 @@ const menuItems = [
     title: "Configuration",
     url: "/configuration",
     icon: Settings,
+  },
+  {
+    title: "How It Works",
+    url: "/how-it-works",
+    icon: BookOpen,
   },
 ];
 
