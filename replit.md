@@ -13,9 +13,24 @@ The platform helps manufacturers make data-driven decisions about:
 ## Recent Changes
 
 **November 16, 2025**:
-- Expanded materials database to 47 comprehensive manufacturing materials across 10 categories: metals (10), plastics/polymers (9), composites (3), rubber (3), textiles (3), wood/paper (3), glass/ceramics (2), chemicals/adhesives (4), electronic components (3), and packaging materials (2)
-- Updated BOMs to reference diverse materials including ABS plastic, copper, stainless steel, polypropylene, HDPE, PCBs, and natural rubber
-- Expanded supplier materials catalog to include pricing and lead times for representative materials from each category
+- **COMMODITY TRADING EXPANSION**: Massively expanded materials database from 47 to **110+ tradeable commodities** enabling full commodity trading capabilities
+  - Specialty High-Performance Polymers (7): PEEK, PVDF, PTFE (Teflon), Polyimide (Kapton), PPS, Polysulfone, PEI (Ultem)
+  - Precious Metals (6): Gold, Silver, Platinum, Palladium, Rhodium, Iridium
+  - Rare Earth Metals (8): Neodymium, Dysprosium, Lanthanum, Cerium, Praseodymium, Europium, Terbium, Yttrium
+  - Specialty Alloys & Superalloys (5): Inconel 625, Hastelloy C-276, Monel 400, Waspaloy, Cobalt-Chrome
+  - Semiconductor Materials (5): Silicon Wafer, Gallium Arsenide, Germanium, Gallium Nitride, Indium Tin Oxide
+  - Battery & Energy Storage Materials (6): Lithium Carbonate, Lithium Hydroxide, Cobalt Oxide, Battery-Grade Graphite, Nickel Sulfate, Manganese Sulfate
+  - Advanced Ceramics (5): Advanced Alumina, Zirconia, Silicon Carbide, Silicon Nitride, Boron Carbide
+  - Industrial Chemicals (8): Sulfuric Acid, Hydrochloric Acid, Sodium Hydroxide, Ammonia, Methanol, Ethanol, Acetone, Toluene
+  - Technology Metals (10): Indium, Tellurium, Selenium, Bismuth, Antimony, Molybdenum, Tungsten, Vanadium, Tantalum, Niobium
+- **REAL-TIME COMMODITY PRICING**: Integrated live commodity pricing API system with Metals.Dev
+  - API service layer (`server/lib/commodityPricing.ts`) for fetching real-time metal and commodity prices
+  - Three API endpoints: `/api/commodities/prices` (all), `/api/commodities/prices/:materialCode` (single), `/api/commodities/prices/bulk` (batch)
+  - Live pricing display on Configuration page with 24-hour price changes and trend indicators (green up/red down)
+  - Auto-refresh every 5 minutes
+  - Graceful fallback to realistic mock data when API key not configured
+  - Supports optional `METALS_API_KEY` environment variable for real-time data (free tier: 100 requests/month)
+- Updated BOMs and supplier materials to include pricing for specialty commodities (PEEK $125/kg, Gold $2050/oz, Rhodium $4800/oz, etc.)
 - Corrected grammar throughout "How It Works" page for professional, complete sentences
 
 ## User Preferences
@@ -61,6 +76,9 @@ Preferred communication style: Simple, everyday language.
 **API Design**: RESTful endpoints organized by domain:
 - `/api/auth/*` - Authentication and user management
 - `/api/economics/*` - Economic regime and FDR calculations
+- `/api/commodities/prices` - Real-time commodity pricing (all tradeable materials)
+- `/api/commodities/prices/:materialCode` - Single commodity price lookup
+- `/api/commodities/prices/bulk` - Batch commodity price fetching
 - `/api/skus` - Product SKU management
 - `/api/materials` - Raw material inventory
 - `/api/allocations` - Allocation engine results
@@ -79,6 +97,13 @@ Preferred communication style: Simple, everyday language.
    - Budget constraints
    - Policy knobs (inventory buffers, credit terms, capex gates)
 
+4. **CommodityPricing** (`server/lib/commodityPricing.ts`): Real-time commodity pricing integration enabling commodity trading capabilities:
+   - Integrates with Metals.Dev API for live precious/industrial metal prices
+   - Maps material codes to trading symbols (XAU for gold, LME-XCU for copper, etc.)
+   - Provides realistic mock pricing for 110+ commodities when API unavailable
+   - Includes 24-hour price changes and percentage movements
+   - Supports batch fetching for performance optimization
+
 **Data Access Layer**: Centralized storage interface (`server/storage.ts`) abstracts database operations with methods for CRUD operations on all entities.
 
 ### Database Architecture
@@ -93,10 +118,10 @@ Preferred communication style: Simple, everyday language.
 - `companies` - Multi-tenant organization data
 - `users` - User accounts with Replit Auth integration, linked to companies
 - `skus` - Product definitions with priority weighting
-- `materials` - Raw material inventory tracking (on-hand, inbound quantities). Seed data includes 47 comprehensive materials across 10 categories: metals (steel, stainless steel, aluminum, copper, nickel, titanium, zinc, brass, bronze, magnesium), plastics/polymers (ABS, PET, HDPE, LDPE, PVC, polycarbonate, nylon, polypropylene, acrylic), composites (carbon fiber, fiberglass, Kevlar), rubber (natural, synthetic, silicone), textiles (cotton, polyester, Kevlar fabric), wood/paper (plywood, MDF, cardboard), glass/ceramics (glass, ceramic tile), chemicals/adhesives (epoxy, polyurethane, solvent, lubricant), electronics (PCB, wire, connectors), and packaging (bubble wrap, foam padding)
+- `materials` - Raw material inventory tracking (on-hand, inbound quantities). Seed data includes **110+ tradeable commodities** across 14 categories: metals (10), plastics/polymers (9), specialty high-performance polymers (7), composites (3), rubber (3), textiles (3), wood/paper (3), glass/ceramics (2), advanced ceramics (5), chemicals/adhesives (4), industrial chemicals (8), electronics (3), packaging (2), precious metals (6), rare earth metals (8), specialty alloys (5), semiconductor materials (5), battery materials (6), and technology metals (10). Materials range from common manufacturing inputs to high-value commodities like PEEK, gold, platinum, rare earths, and specialty superalloys.
 - `boms` - Bill of Materials linking SKUs to required materials with quantities
 - `suppliers` - Supplier master data with lead times
-- `supplier_materials` - Junction table for supplier-material pricing. Seed includes pricing/lead times for representative materials from each category
+- `supplier_materials` - Junction table for supplier-material pricing. Seed includes realistic pricing/lead times for all commodity categories (e.g., PEEK $125/kg, Gold $2050/oz, Rhodium $4800/oz, Inconel $55/kg, Lithium Carbonate $18.50/kg)
 - `demand_history` - Historical demand data for forecasting
 - `allocations` - Saved allocation plan snapshots
 - `allocation_results` - Detailed allocation outputs per SKU

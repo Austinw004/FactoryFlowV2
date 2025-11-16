@@ -83,6 +83,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Commodity Pricing Endpoints
+  app.get("/api/commodities/prices", isAuthenticated, async (req: any, res) => {
+    try {
+      const { fetchAllCommodityPrices } = await import("./lib/commodityPricing");
+      const prices = await fetchAllCommodityPrices();
+      res.json(prices);
+    } catch (error: any) {
+      console.error("Error fetching commodity prices:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/commodities/prices/:materialCode", isAuthenticated, async (req: any, res) => {
+    try {
+      const { fetchSingleCommodityPrice } = await import("./lib/commodityPricing");
+      const price = await fetchSingleCommodityPrice(req.params.materialCode);
+      if (!price) {
+        return res.status(404).json({ error: "Price not available for this material" });
+      }
+      res.json(price);
+    } catch (error: any) {
+      console.error("Error fetching commodity price:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Bulk fetch prices for specific materials
+  app.post("/api/commodities/prices/bulk", isAuthenticated, async (req: any, res) => {
+    try {
+      const { materialCodes } = req.body;
+      if (!Array.isArray(materialCodes)) {
+        return res.status(400).json({ error: "materialCodes must be an array" });
+      }
+      const { fetchCommodityPrices } = await import("./lib/commodityPricing");
+      const prices = await fetchCommodityPrices(materialCodes);
+      res.json(prices);
+    } catch (error: any) {
+      console.error("Error fetching bulk commodity prices:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // SKUs
   app.get("/api/skus", isAuthenticated, async (req: any, res) => {
     try {
