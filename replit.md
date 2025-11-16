@@ -16,7 +16,6 @@ The platform helps manufacturers make data-driven decisions about:
 - Expanded materials database to 47 comprehensive manufacturing materials across 10 categories: metals (10), plastics/polymers (9), composites (3), rubber (3), textiles (3), wood/paper (3), glass/ceramics (2), chemicals/adhesives (4), electronic components (3), and packaging materials (2)
 - Updated BOMs to reference diverse materials including ABS plastic, copper, stainless steel, polypropylene, HDPE, PCBs, and natural rubber
 - Expanded supplier materials catalog to include pricing and lead times for representative materials from each category
-- Added video embed section to "How It Works" page with comprehensive placeholder explaining platform differentiation, competitive advantages, and feature walkthrough
 - Corrected grammar throughout "How It Works" page for professional, complete sentences
 
 ## User Preferences
@@ -54,7 +53,6 @@ Preferred communication style: Simple, everyday language.
 - Comprehensive "How It Works" page explaining dual-circuit economics, four economic regimes, competitive advantages over traditional ERP systems
 - Interactive accordion with platform component details (Forecasting, Allocation, Procurement, Reporting, Configuration)
 - Vocabulary glossary with 12 key terms
-- Video placeholder section ready for YouTube/Vimeo embed with instructions for adding demo content
 
 ### Backend Architecture
 
