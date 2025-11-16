@@ -122,6 +122,48 @@ export const priceAlerts = pgTable("price_alerts", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const machinery = pgTable("machinery", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  manufacturer: text("manufacturer"),
+  model: text("model"),
+  serialNumber: text("serial_number"),
+  category: text("category").notNull(), // "CNC", "Injection Molding", "Assembly Robot", etc.
+  purchaseDate: timestamp("purchase_date"),
+  purchaseCost: real("purchase_cost").notNull(),
+  salvageValue: real("salvage_value").notNull().default(0),
+  usefulLifeYears: integer("useful_life_years").notNull().default(10),
+  depreciationMethod: text("depreciation_method").notNull().default("straight-line"), // "straight-line", "declining-balance", "units-of-production"
+  currentValue: real("current_value"),
+  location: text("location"),
+  status: text("status").notNull().default("operational"), // "operational", "maintenance", "down", "retired"
+  productUrl: text("product_url"),
+  specifications: jsonb("specifications"), // Store detailed specs from APIs
+  hoursOperated: real("hours_operated").default(0),
+  unitsProduced: real("units_produced").default(0),
+  lastMaintenanceDate: timestamp("last_maintenance_date"),
+  nextMaintenanceDate: timestamp("next_maintenance_date"),
+  maintenanceIntervalDays: integer("maintenance_interval_days").default(90),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const maintenanceRecords = pgTable("maintenance_records", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  machineryId: varchar("machinery_id").notNull().references(() => machinery.id, { onDelete: "cascade" }),
+  maintenanceType: text("maintenance_type").notNull(), // "preventive", "corrective", "predictive"
+  description: text("description").notNull(),
+  cost: real("cost").notNull().default(0),
+  performedDate: timestamp("performed_date").notNull(),
+  performedBy: text("performed_by"),
+  nextScheduledDate: timestamp("next_scheduled_date"),
+  downTimeHours: real("down_time_hours").default(0),
+  partsReplaced: text("parts_replaced").array(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const upsertUserSchema = createInsertSchema(users).omit({ createdAt: true, updatedAt: true });
@@ -138,6 +180,9 @@ export const insertAllocationSchema = createInsertSchema(allocations).omit({ id:
 export const insertAllocationResultSchema = createInsertSchema(allocationResults).omit({ id: true });
 export const insertPriceAlertSchema = createInsertSchema(priceAlerts).omit({ id: true, createdAt: true, updatedAt: true, lastCheckedAt: true, lastCheckedPrice: true, notificationsSent: true });
 export const updatePriceAlertSchema = createInsertSchema(priceAlerts).omit({ id: true, companyId: true, createdAt: true }).partial();
+export const insertMachinerySchema = createInsertSchema(machinery).omit({ id: true, createdAt: true, updatedAt: true, currentValue: true });
+export const updateMachinerySchema = createInsertSchema(machinery).omit({ id: true, companyId: true, createdAt: true }).partial();
+export const insertMaintenanceRecordSchema = createInsertSchema(maintenanceRecords).omit({ id: true, createdAt: true });
 
 // Types
 export type User = typeof users.$inferSelect;
@@ -163,3 +208,7 @@ export type AllocationResult = typeof allocationResults.$inferSelect;
 export type InsertAllocationResult = z.infer<typeof insertAllocationResultSchema>;
 export type PriceAlert = typeof priceAlerts.$inferSelect;
 export type InsertPriceAlert = z.infer<typeof insertPriceAlertSchema>;
+export type Machinery = typeof machinery.$inferSelect;
+export type InsertMachinery = z.infer<typeof insertMachinerySchema>;
+export type MaintenanceRecord = typeof maintenanceRecords.$inferSelect;
+export type InsertMaintenanceRecord = z.infer<typeof insertMaintenanceRecordSchema>;
