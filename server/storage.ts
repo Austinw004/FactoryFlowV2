@@ -5,11 +5,12 @@ import type {
   Material, InsertMaterial, Bom, InsertBom, Supplier, InsertSupplier,
   SupplierMaterial, InsertSupplierMaterial, DemandHistory, InsertDemandHistory,
   Allocation, InsertAllocation, AllocationResult, InsertAllocationResult,
-  PriceAlert, InsertPriceAlert
+  PriceAlert, InsertPriceAlert, Machinery, InsertMachinery,
+  MaintenanceRecord, InsertMaintenanceRecord
 } from "@shared/schema";
 import { 
   users, companies, skus, materials, boms, suppliers, supplierMaterials,
-  demandHistory, allocations, allocationResults, priceAlerts
+  demandHistory, allocations, allocationResults, priceAlerts, machinery, maintenanceRecords
 } from "@shared/schema";
 
 export interface IStorage {
@@ -73,6 +74,17 @@ export interface IStorage {
   createPriceAlert(alert: InsertPriceAlert): Promise<PriceAlert>;
   updatePriceAlert(id: string, alert: Partial<InsertPriceAlert>): Promise<PriceAlert | undefined>;
   deletePriceAlert(id: string): Promise<void>;
+  
+  // Machinery
+  getMachinery(companyId: string): Promise<Machinery[]>;
+  getMachine(id: string): Promise<Machinery | undefined>;
+  createMachine(machine: InsertMachinery): Promise<Machinery>;
+  updateMachine(id: string, machine: Partial<InsertMachinery>): Promise<Machinery | undefined>;
+  deleteMachine(id: string): Promise<void>;
+  
+  // Maintenance Records
+  getMaintenanceRecords(machineryId: string): Promise<MaintenanceRecord[]>;
+  createMaintenanceRecord(record: InsertMaintenanceRecord): Promise<MaintenanceRecord>;
 }
 
 export class DbStorage implements IStorage {
@@ -271,6 +283,43 @@ export class DbStorage implements IStorage {
 
   async deletePriceAlert(id: string): Promise<void> {
     await db.delete(priceAlerts).where(eq(priceAlerts.id, id));
+  }
+
+  // Machinery methods
+  async getMachinery(companyId: string): Promise<Machinery[]> {
+    return db.select().from(machinery).where(eq(machinery.companyId, companyId));
+  }
+
+  async getMachine(id: string): Promise<Machinery | undefined> {
+    const [machine] = await db.select().from(machinery).where(eq(machinery.id, id));
+    return machine;
+  }
+
+  async createMachine(insertMachine: InsertMachinery): Promise<Machinery> {
+    const [machine] = await db.insert(machinery).values(insertMachine).returning();
+    return machine;
+  }
+
+  async updateMachine(id: string, updateData: Partial<InsertMachinery>): Promise<Machinery | undefined> {
+    const [machine] = await db.update(machinery)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(machinery.id, id))
+      .returning();
+    return machine;
+  }
+
+  async deleteMachine(id: string): Promise<void> {
+    await db.delete(machinery).where(eq(machinery.id, id));
+  }
+
+  // Maintenance Record methods
+  async getMaintenanceRecords(machineryId: string): Promise<MaintenanceRecord[]> {
+    return db.select().from(maintenanceRecords).where(eq(maintenanceRecords.machineryId, machineryId));
+  }
+
+  async createMaintenanceRecord(insertRecord: InsertMaintenanceRecord): Promise<MaintenanceRecord> {
+    const [record] = await db.insert(maintenanceRecords).values(insertRecord).returning();
+    return record;
   }
 }
 
