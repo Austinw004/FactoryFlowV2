@@ -7,6 +7,8 @@ import {
   FileText,
   BookOpen,
   Wrench,
+  Shield,
+  Activity,
 } from "lucide-react";
 import {
   Sidebar,
@@ -46,6 +48,16 @@ const menuItems = [
     title: "Machinery",
     url: "/machinery",
     icon: Wrench,
+  },
+  {
+    title: "Compliance",
+    url: "/compliance",
+    icon: Shield,
+  },
+  {
+    title: "Production KPIs",
+    url: "/production-kpis",
+    icon: Activity,
   },
   {
     title: "Reports",

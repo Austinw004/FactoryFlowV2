@@ -16,6 +16,8 @@ import Reports from "@/pages/Reports";
 import Configuration from "@/pages/Configuration";
 import HowItWorks from "@/pages/HowItWorks";
 import Machinery from "@/pages/Machinery";
+import Compliance from "@/pages/Compliance";
+import ProductionKPIs from "@/pages/ProductionKPIs";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
@@ -33,6 +35,8 @@ function Router() {
           <Route path="/allocation" component={Allocation} />
           <Route path="/procurement" component={Procurement} />
           <Route path="/machinery" component={Machinery} />
+          <Route path="/compliance" component={Compliance} />
+          <Route path="/production-kpis" component={ProductionKPIs} />
           <Route path="/reports" component={Reports} />
           <Route path="/configuration" component={Configuration} />
           <Route path="/how-it-works" component={HowItWorks} />
