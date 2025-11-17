@@ -1250,6 +1250,367 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========================================
+  // COMPLIANCE MANAGEMENT ROUTES
+  // ========================================
+
+  // Get all compliance documents
+  app.get("/api/compliance/documents", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "User must be associated with a company" });
+      }
+
+      const documents = await storage.getComplianceDocuments(user.companyId);
+      res.json(documents);
+    } catch (error: any) {
+      console.error("Error fetching compliance documents:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create compliance document
+  app.post("/api/compliance/documents", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "User must be associated with a company" });
+      }
+
+      // Get current economic regime for context
+      await economics.fetch();
+      
+      const document = await storage.createComplianceDocument({
+        ...req.body,
+        companyId: user.companyId,
+        createdBy: user.id,
+        economicRegimeContext: economics.regime,
+      });
+      
+      res.status(201).json(document);
+    } catch (error: any) {
+      console.error("Error creating compliance document:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get all compliance regulations
+  app.get("/api/compliance/regulations", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "User must be associated with a company" });
+      }
+
+      const regulations = await storage.getComplianceRegulations(user.companyId);
+      res.json(regulations);
+    } catch (error: any) {
+      console.error("Error fetching compliance regulations:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create compliance regulation
+  app.post("/api/compliance/regulations", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "User must be associated with a company" });
+      }
+
+      const regulation = await storage.createComplianceRegulation({
+        ...req.body,
+        companyId: user.companyId,
+      });
+      
+      res.status(201).json(regulation);
+    } catch (error: any) {
+      console.error("Error creating compliance regulation:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get all compliance audits
+  app.get("/api/compliance/audits", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "User must be associated with a company" });
+      }
+
+      const audits = await storage.getComplianceAudits(user.companyId);
+      res.json(audits);
+    } catch (error: any) {
+      console.error("Error fetching compliance audits:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create compliance audit
+  app.post("/api/compliance/audits", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "User must be associated with a company" });
+      }
+
+      // Get current economic regime and FDR
+      await economics.fetch();
+      
+      const audit = await storage.createComplianceAudit({
+        ...req.body,
+        companyId: user.companyId,
+        economicRegime: economics.regime,
+        fdrAtAudit: economics.fdr,
+      });
+      
+      res.status(201).json(audit);
+    } catch (error: any) {
+      console.error("Error creating compliance audit:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ========================================
+  // PRODUCTION KPI ROUTES
+  // ========================================
+
+  // Get all production runs
+  app.get("/api/production/runs", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "User must be associated with a company" });
+      }
+
+      const runs = await storage.getProductionRuns(user.companyId);
+      res.json(runs);
+    } catch (error: any) {
+      console.error("Error fetching production runs:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create production run
+  app.post("/api/production/runs", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "User must be associated with a company" });
+      }
+
+      // Get current economic regime
+      await economics.fetch();
+      
+      const run = await storage.createProductionRun({
+        ...req.body,
+        companyId: user.companyId,
+        economicRegime: economics.regime,
+        fdrAtStart: economics.fdr,
+      });
+      
+      res.status(201).json(run);
+    } catch (error: any) {
+      console.error("Error creating production run:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update production run (e.g., mark as completed)
+  app.patch("/api/production/runs/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "User must be associated with a company" });
+      }
+
+      const run = await storage.updateProductionRun(req.params.id, req.body);
+      
+      // If run is completed, calculate OEE and create production metric
+      if (run.status === "completed" && run.endTime) {
+        const { generateProductionMetric } = await import("./lib/productionKPIs");
+        await economics.fetch();
+        
+        const metric = generateProductionMetric(
+          run,
+          user.companyId,
+          economics.regime,
+          economics.fdr
+        );
+        
+        await storage.createProductionMetric(metric);
+      }
+      
+      res.json(run);
+    } catch (error: any) {
+      console.error("Error updating production run:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get production metrics with OEE analysis
+  app.get("/api/production/metrics", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "User must be associated with a company" });
+      }
+
+      const metrics = await storage.getProductionMetrics(user.companyId);
+      
+      // Calculate aggregate statistics
+      const avgOEE = metrics.length > 0
+        ? metrics.reduce((sum, m) => sum + (m.oee || 0), 0) / metrics.length
+        : 0;
+      
+      const avgAvailability = metrics.length > 0
+        ? metrics.reduce((sum, m) => sum + (m.availability || 0), 0) / metrics.length
+        : 0;
+      
+      const avgPerformance = metrics.length > 0
+        ? metrics.reduce((sum, m) => sum + (m.performance || 0), 0) / metrics.length
+        : 0;
+      
+      const avgQuality = metrics.length > 0
+        ? metrics.reduce((sum, m) => sum + (m.quality || 0), 0) / metrics.length
+        : 0;
+
+      res.json({
+        metrics,
+        aggregates: {
+          avgOEE: Math.round(avgOEE * 100) / 100,
+          avgAvailability: Math.round(avgAvailability * 100) / 100,
+          avgPerformance: Math.round(avgPerformance * 100) / 100,
+          avgQuality: Math.round(avgQuality * 100) / 100,
+          totalRuns: metrics.length,
+        },
+      });
+    } catch (error: any) {
+      console.error("Error fetching production metrics:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get downtime events
+  app.get("/api/production/downtime", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "User must be associated with a company" });
+      }
+
+      const events = await storage.getDowntimeEvents(user.companyId);
+      res.json(events);
+    } catch (error: any) {
+      console.error("Error fetching downtime events:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create downtime event
+  app.post("/api/production/downtime", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "User must be associated with a company" });
+      }
+
+      await economics.fetch();
+      
+      const event = await storage.createDowntimeEvent({
+        ...req.body,
+        companyId: user.companyId,
+        economicRegime: economics.regime,
+      });
+      
+      res.status(201).json(event);
+    } catch (error: any) {
+      console.error("Error creating downtime event:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get production bottlenecks
+  app.get("/api/production/bottlenecks", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "User must be associated with a company" });
+      }
+
+      const bottlenecks = await storage.getProductionBottlenecks(user.companyId);
+      res.json(bottlenecks);
+    } catch (error: any) {
+      console.error("Error fetching production bottlenecks:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Detect and create bottlenecks from downtime analysis
+  app.post("/api/production/bottlenecks/detect", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "User must be associated with a company" });
+      }
+
+      const downtimeEvents = await storage.getDowntimeEvents(user.companyId);
+      const productionRuns = await storage.getProductionRuns(user.companyId);
+      
+      const { detectBottlenecks } = await import("./lib/productionKPIs");
+      const bottlenecks = detectBottlenecks(downtimeEvents, productionRuns);
+      
+      // Save detected bottlenecks
+      const saved = [];
+      for (const bottleneck of bottlenecks) {
+        const existing = await storage.getProductionBottlenecks(user.companyId);
+        const isDuplicate = existing.some(b => 
+          b.machineryId === bottleneck.machineryId && b.status === "active"
+        );
+        
+        if (!isDuplicate) {
+          saved.push(await storage.createProductionBottleneck(bottleneck));
+        }
+      }
+      
+      res.json({ detected: bottlenecks.length, saved: saved.length, bottlenecks: saved });
+    } catch (error: any) {
+      console.error("Error detecting bottlenecks:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ========================================
+  // EXTERNAL API DATA GATHERING
+  // ========================================
+
+  // Fetch comprehensive economic data from external APIs
+  app.get("/api/external/economic-data", isAuthenticated, async (req: any, res) => {
+    try {
+      const { fetchComprehensiveEconomicData } = await import("./lib/externalAPIs");
+      const data = await fetchComprehensiveEconomicData();
+      res.json(data);
+    } catch (error: any) {
+      console.error("Error fetching external economic data:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

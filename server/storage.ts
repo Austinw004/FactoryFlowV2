@@ -6,11 +6,19 @@ import type {
   SupplierMaterial, InsertSupplierMaterial, DemandHistory, InsertDemandHistory,
   Allocation, InsertAllocation, AllocationResult, InsertAllocationResult,
   PriceAlert, InsertPriceAlert, Machinery, InsertMachinery,
-  MaintenanceRecord, InsertMaintenanceRecord
+  MaintenanceRecord, InsertMaintenanceRecord,
+  ComplianceDocument, InsertComplianceDocument,
+  ComplianceAudit, InsertComplianceAudit,
+  ProductionRun, InsertProductionRun,
+  ProductionMetric, InsertProductionMetric,
+  DowntimeEvent, InsertDowntimeEvent,
+  ProductionBottleneck, InsertProductionBottleneck
 } from "@shared/schema";
 import { 
   users, companies, skus, materials, boms, suppliers, supplierMaterials,
-  demandHistory, allocations, allocationResults, priceAlerts, machinery, maintenanceRecords
+  demandHistory, allocations, allocationResults, priceAlerts, machinery, maintenanceRecords,
+  complianceDocuments, complianceAudits, complianceRegulations,
+  productionRuns, productionMetrics, downtimeEvents, productionBottlenecks
 } from "@shared/schema";
 
 export interface IStorage {
@@ -85,6 +93,35 @@ export interface IStorage {
   // Maintenance Records
   getMaintenanceRecords(machineryId: string): Promise<MaintenanceRecord[]>;
   createMaintenanceRecord(record: InsertMaintenanceRecord): Promise<MaintenanceRecord>;
+  
+  // Compliance Documents
+  getComplianceDocuments(companyId: string): Promise<ComplianceDocument[]>;
+  createComplianceDocument(doc: InsertComplianceDocument): Promise<ComplianceDocument>;
+  
+  // Compliance Regulations
+  getComplianceRegulations(companyId: string): Promise<any[]>;
+  createComplianceRegulation(regulation: any): Promise<any>;
+  
+  // Compliance Audits
+  getComplianceAudits(companyId: string): Promise<ComplianceAudit[]>;
+  createComplianceAudit(audit: InsertComplianceAudit): Promise<ComplianceAudit>;
+  
+  // Production Runs
+  getProductionRuns(companyId: string): Promise<ProductionRun[]>;
+  createProductionRun(run: InsertProductionRun): Promise<ProductionRun>;
+  updateProductionRun(id: string, run: Partial<InsertProductionRun>): Promise<ProductionRun>;
+  
+  // Production Metrics
+  getProductionMetrics(companyId: string): Promise<ProductionMetric[]>;
+  createProductionMetric(metric: InsertProductionMetric): Promise<ProductionMetric>;
+  
+  // Downtime Events
+  getDowntimeEvents(companyId: string): Promise<DowntimeEvent[]>;
+  createDowntimeEvent(event: InsertDowntimeEvent): Promise<DowntimeEvent>;
+  
+  // Production Bottlenecks
+  getProductionBottlenecks(companyId: string): Promise<ProductionBottleneck[]>;
+  createProductionBottleneck(bottleneck: InsertProductionBottleneck): Promise<ProductionBottleneck>;
 }
 
 export class DbStorage implements IStorage {
@@ -320,6 +357,81 @@ export class DbStorage implements IStorage {
   async createMaintenanceRecord(insertRecord: InsertMaintenanceRecord): Promise<MaintenanceRecord> {
     const [record] = await db.insert(maintenanceRecords).values(insertRecord).returning();
     return record;
+  }
+
+  // Compliance Document methods
+  async getComplianceDocuments(companyId: string): Promise<ComplianceDocument[]> {
+    return db.select().from(complianceDocuments).where(eq(complianceDocuments.companyId, companyId));
+  }
+
+  async createComplianceDocument(insertDoc: InsertComplianceDocument): Promise<ComplianceDocument> {
+    const [doc] = await db.insert(complianceDocuments).values(insertDoc).returning();
+    return doc;
+  }
+
+  // Compliance Regulation methods
+  async getComplianceRegulations(companyId: string): Promise<any[]> {
+    return db.select().from(complianceRegulations).where(eq(complianceRegulations.companyId, companyId));
+  }
+
+  async createComplianceRegulation(insertReg: any): Promise<any> {
+    const [regulation] = await db.insert(complianceRegulations).values(insertReg).returning();
+    return regulation;
+  }
+
+  // Compliance Audit methods
+  async getComplianceAudits(companyId: string): Promise<ComplianceAudit[]> {
+    return db.select().from(complianceAudits).where(eq(complianceAudits.companyId, companyId));
+  }
+
+  async createComplianceAudit(insertAudit: InsertComplianceAudit): Promise<ComplianceAudit> {
+    const [audit] = await db.insert(complianceAudits).values(insertAudit).returning();
+    return audit;
+  }
+
+  // Production Run methods
+  async getProductionRuns(companyId: string): Promise<ProductionRun[]> {
+    return db.select().from(productionRuns).where(eq(productionRuns.companyId, companyId));
+  }
+
+  async createProductionRun(insertRun: InsertProductionRun): Promise<ProductionRun> {
+    const [run] = await db.insert(productionRuns).values(insertRun).returning();
+    return run;
+  }
+
+  async updateProductionRun(id: string, updateData: Partial<InsertProductionRun>): Promise<ProductionRun> {
+    const [run] = await db.update(productionRuns).set(updateData).where(eq(productionRuns.id, id)).returning();
+    return run;
+  }
+
+  // Production Metric methods
+  async getProductionMetrics(companyId: string): Promise<ProductionMetric[]> {
+    return db.select().from(productionMetrics).where(eq(productionMetrics.companyId, companyId));
+  }
+
+  async createProductionMetric(insertMetric: InsertProductionMetric): Promise<ProductionMetric> {
+    const [metric] = await db.insert(productionMetrics).values(insertMetric).returning();
+    return metric;
+  }
+
+  // Downtime Event methods
+  async getDowntimeEvents(companyId: string): Promise<DowntimeEvent[]> {
+    return db.select().from(downtimeEvents).where(eq(downtimeEvents.companyId, companyId));
+  }
+
+  async createDowntimeEvent(insertEvent: InsertDowntimeEvent): Promise<DowntimeEvent> {
+    const [event] = await db.insert(downtimeEvents).values(insertEvent).returning();
+    return event;
+  }
+
+  // Production Bottleneck methods
+  async getProductionBottlenecks(companyId: string): Promise<ProductionBottleneck[]> {
+    return db.select().from(productionBottlenecks).where(eq(productionBottlenecks.companyId, companyId));
+  }
+
+  async createProductionBottleneck(insertBottleneck: InsertProductionBottleneck): Promise<ProductionBottleneck> {
+    const [bottleneck] = await db.insert(productionBottlenecks).values(insertBottleneck).returning();
+    return bottleneck;
   }
 }
 

@@ -265,6 +265,85 @@ export default function HowItWorks() {
                   <p><strong className="text-foreground">When to use:</strong> Update inventory weekly, adjust priorities when business strategy changes.</p>
                 </AccordionContent>
               </AccordionItem>
+
+              <AccordionItem value="compliance">
+                <AccordionTrigger>
+                  <span className="font-semibold">Compliance Management - Regulatory Intelligence & Audit Tracking</span>
+                </AccordionTrigger>
+                <AccordionContent className="text-sm text-muted-foreground space-y-2">
+                  <p><strong className="text-foreground">What it does:</strong> Manages regulatory compliance documents, tracks audits, and maintains approval workflows—all with economic regime context to help you understand how different economic conditions affect compliance requirements and enforcement patterns.</p>
+                  <p><strong className="text-foreground">Key features:</strong></p>
+                  <ul className="list-disc pl-6 space-y-1">
+                    <li><strong>Document Version Control:</strong> Track compliance documents (policies, procedures, certificates, permits) with full version history and approval workflows</li>
+                    <li><strong>Audit Management:</strong> Schedule and track internal/external audits, document findings, and manage corrective actions—each audit records the FDR ratio and economic regime at the time of assessment</li>
+                    <li><strong>Regime-Aware Compliance:</strong> The system tracks which economic regime each document was created/modified under, helping you understand how compliance costs shift during different economic cycles</li>
+                    <li><strong>Approval Workflows:</strong> Multi-level approval system for critical compliance documents ensures proper oversight and audit trails</li>
+                  </ul>
+                  <p><strong className="text-foreground">Example:</strong> During an Imbalanced Excess regime (FDR &gt; 3.0), regulatory enforcement often tightens as governments seek revenue. The system helps you prepare by flagging upcoming audit dates and ensuring all documentation is current before the regime shift occurs.</p>
+                  <p><strong className="text-foreground">When to use:</strong> Update compliance documents as regulations change, review audit schedules quarterly, track regime patterns annually.</p>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="production-kpis">
+                <AccordionTrigger>
+                  <span className="font-semibold">Production KPIs - Real-Time OEE Tracking & Bottleneck Detection</span>
+                </AccordionTrigger>
+                <AccordionContent className="text-sm text-muted-foreground space-y-2">
+                  <p><strong className="text-foreground">What it does:</strong> Calculates Overall Equipment Effectiveness (OEE) in real-time, tracks production runs, identifies bottlenecks, and provides regime-aware production recommendations to optimize manufacturing performance.</p>
+                  <p><strong className="text-foreground">OEE Formula (Industry Standard):</strong></p>
+                  <div className="bg-card border rounded p-3 my-2">
+                    <p className="font-mono text-xs">OEE = Availability × Performance × Quality</p>
+                    <ul className="list-none pl-4 space-y-1 mt-2">
+                      <li><strong>Availability:</strong> (Operating Time / Planned Time) × 100</li>
+                      <li><strong>Performance:</strong> (Actual Production / Theoretical Max) × 100</li>
+                      <li><strong>Quality:</strong> (Good Units / Total Units) × 100</li>
+                    </ul>
+                  </div>
+                  <p><strong className="text-foreground">Production metrics tracked:</strong></p>
+                  <ul className="list-disc pl-6 space-y-1">
+                    <li><strong>Production Runs:</strong> Track start/end times, planned vs actual units, cycle times, downtime minutes, and defect rates for each production session</li>
+                    <li><strong>Downtime Events:</strong> Categorize and analyze stoppages (breakdowns, changeovers, material shortages, maintenance, quality issues) with severity tracking</li>
+                    <li><strong>Automated Bottleneck Detection:</strong> The system analyzes downtime patterns and automatically identifies machinery or processes causing production constraints</li>
+                    <li><strong>Cycle Time Analysis:</strong> Compare actual cycle times against targets to identify efficiency opportunities</li>
+                  </ul>
+                  <p><strong className="text-foreground">Regime-aware recommendations:</strong></p>
+                  <ul className="list-disc pl-6 space-y-1">
+                    <li><strong>Healthy Expansion:</strong> Optimize for growth—invest in capacity expansion and automation</li>
+                    <li><strong>Asset-Led Growth:</strong> Balance expansion with efficiency—focus on productivity improvements over capacity additions</li>
+                    <li><strong>Imbalanced Excess:</strong> Defensive posture—reduce production costs, improve margins, delay non-critical capex</li>
+                    <li><strong>Real Economy Lead:</strong> Capitalize on growth—increase capacity to meet demand, lock in favorable supplier contracts</li>
+                  </ul>
+                  <p><strong className="text-foreground">Example:</strong> Your bottling line shows OEE of 68% (below the 75% industry standard). Automated analysis reveals that 45% of downtime comes from changeover delays. During a Real Economy Lead regime, the system recommends investing in quick-change tooling to capture the demand surge, whereas during Imbalanced Excess, it suggests procedural improvements instead of capital spending.</p>
+                  <p><strong className="text-foreground">When to use:</strong> Monitor OEE daily, review bottleneck reports weekly, align production strategy with regime changes monthly.</p>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="external-intelligence">
+                <AccordionTrigger>
+                  <span className="font-semibold">External Intelligence - Continuous Economic Data Gathering</span>
+                </AccordionTrigger>
+                <AccordionContent className="text-sm text-muted-foreground space-y-2">
+                  <p><strong className="text-foreground">What it does:</strong> Continuously gathers economic indicators, market data, and industry metrics from 15+ external APIs to provide real-time intelligence for FDR calculations and regime determination.</p>
+                  <p><strong className="text-foreground">Data sources integrated:</strong></p>
+                  <ul className="list-disc pl-6 space-y-1">
+                    <li><strong>FRED (Federal Reserve Economic Data):</strong> 800K+ indicators including S&P 500, Treasury yields, Federal Funds Rate, GDP, industrial production, manufacturing PMI—unlimited free access</li>
+                    <li><strong>Alpha Vantage:</strong> Economic indicators plus market news sentiment analysis—25 requests/day free tier</li>
+                    <li><strong>DBnomics:</strong> Aggregates 22,000+ datasets from 82 providers (IMF, World Bank, OECD, Eurostat) for global economic data—unlimited access</li>
+                    <li><strong>World Bank API:</strong> 16,000+ development indicators across 45+ databases—unlimited access</li>
+                    <li><strong>IMF, OECD, Trading Economics:</strong> International financial statistics, labor data, trade metrics, and cross-country comparisons</li>
+                    <li><strong>News API:</strong> Market news aggregation for sentiment analysis—100 requests/day</li>
+                  </ul>
+                  <p><strong className="text-foreground">How it enhances decision-making:</strong></p>
+                  <ul className="list-disc pl-6 space-y-1">
+                    <li><strong>Real-Time FDR Calculation:</strong> Instead of relying solely on historical data, the platform pulls current financial and real economy indicators to calculate FDR ratios that reflect today's conditions</li>
+                    <li><strong>Manufacturing-Specific Metrics:</strong> Tracks ISM Manufacturing PMI, manufacturers' new orders, durable goods orders, and capacity utilization—key indicators for production planning</li>
+                    <li><strong>Market Sentiment:</strong> Analyzes news sentiment (bullish/bearish scores) to anticipate market moves before they appear in hard data</li>
+                    <li><strong>Global Context:</strong> Compares U.S. manufacturing indicators against international trends to identify export/import opportunities</li>
+                  </ul>
+                  <p><strong className="text-foreground">Example:</strong> The platform detects that S&P 500 has surged 15% while industrial production index has only grown 2% in the same quarter. This divergence pushes FDR from 2.2 to 3.4, triggering a regime shift from Asset-Led Growth to Imbalanced Excess. The system automatically adjusts demand forecasts downward by 20% and signals HOLD on new material purchases—all before you manually notice the macroeconomic shift.</p>
+                  <p><strong className="text-foreground">When to use:</strong> The system runs automatically in the background, updating regime calculations continuously. Review external data trends during strategic planning sessions.</p>
+                </AccordionContent>
+              </AccordionItem>
             </Accordion>
           </div>
 
@@ -323,6 +402,22 @@ export default function HowItWorks() {
               <div className="p-3 rounded-lg border bg-card">
                 <h4 className="font-semibold text-foreground mb-1">Constraint-Based Optimization</h4>
                 <p className="text-muted-foreground">Mathematical approach that finds best solution given limits (budget, materials, capacity). The allocation engine uses this to maximize production value.</p>
+              </div>
+              <div className="p-3 rounded-lg border bg-card">
+                <h4 className="font-semibold text-foreground mb-1">OEE (Overall Equipment Effectiveness)</h4>
+                <p className="text-muted-foreground">Industry-standard metric for production efficiency. OEE = Availability × Performance × Quality. World-class = 85%+, typical = 60-75%, poor = &lt;60%.</p>
+              </div>
+              <div className="p-3 rounded-lg border bg-card">
+                <h4 className="font-semibold text-foreground mb-1">Bottleneck</h4>
+                <p className="text-muted-foreground">Constraint that limits production throughput. Can be machinery (frequent breakdowns), materials (shortages), labor (insufficient staffing), or processes (inefficient workflows).</p>
+              </div>
+              <div className="p-3 rounded-lg border bg-card">
+                <h4 className="font-semibold text-foreground mb-1">Cycle Time</h4>
+                <p className="text-muted-foreground">Time required to complete one production unit. Actual vs. target cycle time reveals efficiency gaps. Lower cycle times = higher throughput and productivity.</p>
+              </div>
+              <div className="p-3 rounded-lg border bg-card">
+                <h4 className="font-semibold text-foreground mb-1">Compliance Regime Awareness</h4>
+                <p className="text-muted-foreground">Understanding how economic cycles affect regulatory enforcement. During excess periods, regulators tighten oversight; during recovery, enforcement may soften as governments prioritize growth.</p>
               </div>
             </div>
           </div>
