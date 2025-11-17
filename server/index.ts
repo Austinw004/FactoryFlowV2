@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { startBackgroundJobs, stopBackgroundJobs } from "./backgroundJobs";
 
 const app = express();
 
@@ -77,5 +78,19 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+    
+    startBackgroundJobs();
+  });
+
+  process.on('SIGTERM', () => {
+    log('SIGTERM received, stopping background jobs...');
+    stopBackgroundJobs();
+    process.exit(0);
+  });
+
+  process.on('SIGINT', () => {
+    log('SIGINT received, stopping background jobs...');
+    stopBackgroundJobs();
+    process.exit(0);
   });
 })();
