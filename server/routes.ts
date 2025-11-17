@@ -5,6 +5,7 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { DualCircuitEconomics } from "./lib/economics";
 import { DemandForecaster } from "./lib/forecasting";
 import { AllocationEngine } from "./lib/allocation";
+import { setupWebSocket, getConnectedClientCount } from "./websocket";
 import { z } from "zod";
 import {
   insertSkuSchema,
@@ -2237,5 +2238,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+  
+  setupWebSocket(httpServer);
+  
+  app.get("/api/websocket/status", isAuthenticated, (_req, res) => {
+    res.json({
+      connected: getConnectedClientCount(),
+      status: 'active',
+    });
+  });
+  
   return httpServer;
 }
