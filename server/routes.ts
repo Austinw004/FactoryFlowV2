@@ -1596,6 +1596,631 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========================================
+  // PREDICTIVE MAINTENANCE & IOT SENSORS
+  // ========================================
+
+  // Get all equipment sensors for company
+  app.get("/api/predictive-maintenance/sensors", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      const sensors = await storage.getEquipmentSensors(user.companyId);
+      res.json(sensors);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create equipment sensor
+  app.post("/api/predictive-maintenance/sensors", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const { insertEquipmentSensorSchema } = await import("@shared/schema");
+      const sensorData = insertEquipmentSensorSchema.parse({
+        ...req.body,
+        companyId: user.companyId,
+      });
+
+      const sensor = await storage.createEquipmentSensor(sensorData);
+      res.status(201).json(sensor);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get sensor readings
+  app.get("/api/predictive-maintenance/readings", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const { sensorId, limit } = req.query;
+      if (!sensorId) {
+        return res.status(400).json({ error: "sensorId is required" });
+      }
+
+      const readings = await storage.getSensorReadings(sensorId as string, limit ? parseInt(limit as string) : 100);
+      res.json(readings);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create sensor reading
+  app.post("/api/predictive-maintenance/readings", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const { insertSensorReadingSchema } = await import("@shared/schema");
+      const readingData = insertSensorReadingSchema.parse({
+        ...req.body,
+        timestamp: req.body.timestamp ? new Date(req.body.timestamp) : new Date(),
+      });
+
+      const reading = await storage.createSensorReading(readingData);
+      res.status(201).json(reading);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get maintenance alerts
+  app.get("/api/predictive-maintenance/alerts", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const alerts = await storage.getMaintenanceAlerts(user.companyId);
+      res.json(alerts);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create maintenance alert
+  app.post("/api/predictive-maintenance/alerts", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      await economics.fetch();
+      const { insertMaintenanceAlertSchema } = await import("@shared/schema");
+      const alertData = insertMaintenanceAlertSchema.parse({
+        ...req.body,
+        companyId: user.companyId,
+        economicRegime: economics.regime,
+        fdrAtAlert: economics.fdr,
+      });
+
+      const alert = await storage.createMaintenanceAlert(alertData);
+      res.status(201).json(alert);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get maintenance predictions
+  app.get("/api/predictive-maintenance/predictions", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const predictions = await storage.getMaintenancePredictions(user.companyId);
+      res.json(predictions);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create maintenance prediction
+  app.post("/api/predictive-maintenance/predictions", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const { insertMaintenancePredictionSchema } = await import("@shared/schema");
+      const predictionData = insertMaintenancePredictionSchema.parse({
+        ...req.body,
+        companyId: user.companyId,
+        predictedDate: req.body.predictedDate ? new Date(req.body.predictedDate) : new Date(),
+      });
+
+      const prediction = await storage.createMaintenancePrediction(predictionData);
+      res.status(201).json(prediction);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Acknowledge maintenance alert
+  app.patch("/api/predictive-maintenance/alerts/:id/acknowledge", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const alert = await storage.updateMaintenanceAlert(req.params.id, {
+        status: "acknowledged",
+        acknowledgedAt: new Date(),
+      });
+      res.json(alert);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Resolve maintenance alert
+  app.patch("/api/predictive-maintenance/alerts/:id/resolve", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const alert = await storage.updateMaintenanceAlert(req.params.id, {
+        status: "resolved",
+        resolvedAt: new Date(),
+      });
+      res.json(alert);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // ========================================
+  // AI INVENTORY OPTIMIZATION
+  // ========================================
+
+  // Get inventory optimizations
+  app.get("/api/inventory-optimization/analysis", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const optimizations = await storage.getInventoryOptimizations(user.companyId);
+      res.json(optimizations);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create inventory optimization
+  app.post("/api/inventory-optimization/analysis", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      await economics.fetch();
+      const { insertInventoryOptimizationSchema } = await import("@shared/schema");
+      const optimizationData = insertInventoryOptimizationSchema.parse({
+        ...req.body,
+        companyId: user.companyId,
+        economicRegime: economics.regime,
+        fdrAtAnalysis: economics.fdr,
+      });
+
+      const optimization = await storage.createInventoryOptimization(optimizationData);
+      res.status(201).json(optimization);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get demand predictions
+  app.get("/api/inventory-optimization/predictions", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const predictions = await storage.getDemandPredictions(user.companyId);
+      res.json(predictions);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create demand prediction
+  app.post("/api/inventory-optimization/predictions", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      await economics.fetch();
+      const { insertDemandPredictionSchema } = await import("@shared/schema");
+      const predictionData = insertDemandPredictionSchema.parse({
+        ...req.body,
+        companyId: user.companyId,
+        economicRegime: economics.regime,
+        fdrAtForecast: economics.fdr,
+      });
+
+      const prediction = await storage.createDemandPrediction(predictionData);
+      res.status(201).json(prediction);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get inventory recommendations
+  app.get("/api/inventory-optimization/recommendations", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const recommendations = await storage.getInventoryRecommendations(user.companyId);
+      res.json(recommendations);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create inventory recommendation
+  app.post("/api/inventory-optimization/recommendations", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      await economics.fetch();
+      const { insertInventoryRecommendationSchema } = await import("@shared/schema");
+      const recommendationData = insertInventoryRecommendationSchema.parse({
+        ...req.body,
+        companyId: user.companyId,
+        economicRegime: economics.regime,
+      });
+
+      const recommendation = await storage.createInventoryRecommendation(recommendationData);
+      res.status(201).json(recommendation);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Accept inventory recommendation
+  app.patch("/api/inventory-optimization/recommendations/:id/accept", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const recommendation = await storage.updateInventoryRecommendation(req.params.id, {
+        status: "accepted",
+        implementedAt: new Date(),
+      });
+      res.json(recommendation);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Reject inventory recommendation
+  app.patch("/api/inventory-optimization/recommendations/:id/reject", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const recommendation = await storage.updateInventoryRecommendation(req.params.id, {
+        status: "rejected",
+      });
+      res.json(recommendation);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // ========================================
+  // SUPPLY CHAIN TRACEABILITY
+  // ========================================
+
+  // Get material batches
+  app.get("/api/traceability/batches", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const batches = await storage.getMaterialBatches(user.companyId);
+      res.json(batches);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create material batch
+  app.post("/api/traceability/batches", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const { insertMaterialBatchSchema } = await import("@shared/schema");
+      const batchData = insertMaterialBatchSchema.parse({
+        ...req.body,
+        companyId: user.companyId,
+        receivedDate: req.body.receivedDate ? new Date(req.body.receivedDate) : new Date(),
+        expirationDate: req.body.expirationDate ? new Date(req.body.expirationDate) : null,
+        inspectionDate: req.body.inspectionDate ? new Date(req.body.inspectionDate) : null,
+      });
+
+      const batch = await storage.createMaterialBatch(batchData);
+      res.status(201).json(batch);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get traceability events
+  app.get("/api/traceability/events", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const { batchId } = req.query;
+      const events = batchId
+        ? await storage.getTraceabilityEventsByBatch(batchId as string)
+        : await storage.getTraceabilityEvents(user.companyId);
+      
+      res.json(events);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create traceability event
+  app.post("/api/traceability/events", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const { insertTraceabilityEventSchema } = await import("@shared/schema");
+      const eventData = insertTraceabilityEventSchema.parse({
+        ...req.body,
+        companyId: user.companyId,
+      });
+
+      const event = await storage.createTraceabilityEvent(eventData);
+      res.status(201).json(event);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get supplier chain links
+  app.get("/api/traceability/chain-links", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const links = await storage.getSupplierChainLinks(user.companyId);
+      res.json(links);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create supplier chain link
+  app.post("/api/traceability/chain-links", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const { insertSupplierChainLinkSchema } = await import("@shared/schema");
+      const linkData = insertSupplierChainLinkSchema.parse({
+        ...req.body,
+        companyId: user.companyId,
+      });
+
+      const link = await storage.createSupplierChainLink(linkData);
+      res.status(201).json(link);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // ========================================
+  // WORKFORCE SCHEDULING
+  // ========================================
+
+  // Get employees
+  app.get("/api/workforce/employees", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const employees = await storage.getEmployees(user.companyId);
+      res.json(employees);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create employee
+  app.post("/api/workforce/employees", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const { insertEmployeeSchema } = await import("@shared/schema");
+      const employeeData = insertEmployeeSchema.parse({
+        ...req.body,
+        companyId: user.companyId,
+        hireDate: req.body.hireDate ? new Date(req.body.hireDate) : null,
+      });
+
+      const employee = await storage.createEmployee(employeeData);
+      res.status(201).json(employee);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get work shifts
+  app.get("/api/workforce/shifts", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const shifts = await storage.getWorkShifts(user.companyId);
+      res.json(shifts);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create work shift
+  app.post("/api/workforce/shifts", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      await economics.fetch();
+      const { insertWorkShiftSchema } = await import("@shared/schema");
+      const shiftData = insertWorkShiftSchema.parse({
+        ...req.body,
+        companyId: user.companyId,
+        startTime: new Date(req.body.startTime),
+        endTime: new Date(req.body.endTime),
+        economicRegime: economics.regime,
+        fdrAtScheduling: economics.fdr,
+      });
+
+      const shift = await storage.createWorkShift(shiftData);
+      res.status(201).json(shift);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get skill requirements
+  app.get("/api/workforce/skills", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const skills = await storage.getSkillRequirements(user.companyId);
+      res.json(skills);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create skill requirement
+  app.post("/api/workforce/skills", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const { insertSkillRequirementSchema } = await import("@shared/schema");
+      const skillData = insertSkillRequirementSchema.parse({
+        ...req.body,
+        companyId: user.companyId,
+      });
+
+      const skill = await storage.createSkillRequirement(skillData);
+      res.status(201).json(skill);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get staff assignments
+  app.get("/api/workforce/assignments", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const { shiftId } = req.query;
+      const assignments = shiftId
+        ? await storage.getStaffAssignmentsByShift(shiftId as string)
+        : await storage.getStaffAssignments(user.companyId);
+      
+      res.json(assignments);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create staff assignment
+  app.post("/api/workforce/assignments", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const { insertStaffAssignmentSchema } = await import("@shared/schema");
+      const assignmentData = insertStaffAssignmentSchema.parse({
+        ...req.body,
+        checkInTime: req.body.checkInTime ? new Date(req.body.checkInTime) : null,
+        checkOutTime: req.body.checkOutTime ? new Date(req.body.checkOutTime) : null,
+      });
+
+      const assignment = await storage.createStaffAssignment(assignmentData);
+      res.status(201).json(assignment);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // ========================================
   // EXTERNAL API DATA GATHERING
   // ========================================
 

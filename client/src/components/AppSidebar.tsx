@@ -9,6 +9,10 @@ import {
   Wrench,
   Shield,
   Activity,
+  Radio,
+  Package,
+  Network,
+  Users,
 } from "lucide-react";
 import {
   Sidebar,
@@ -58,6 +62,26 @@ const menuItems = [
     title: "Production KPIs",
     url: "/production-kpis",
     icon: Activity,
+  },
+  {
+    title: "Predictive Maintenance",
+    url: "/predictive-maintenance",
+    icon: Radio,
+  },
+  {
+    title: "Inventory Optimization",
+    url: "/inventory-optimization",
+    icon: Package,
+  },
+  {
+    title: "Supply Chain",
+    url: "/traceability",
+    icon: Network,
+  },
+  {
+    title: "Workforce",
+    url: "/workforce",
+    icon: Users,
   },
   {
     title: "Reports",

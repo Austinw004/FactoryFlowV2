@@ -18,6 +18,10 @@ import HowItWorks from "@/pages/HowItWorks";
 import Machinery from "@/pages/Machinery";
 import Compliance from "@/pages/Compliance";
 import ProductionKPIs from "@/pages/ProductionKPIs";
+import PredictiveMaintenance from "@/pages/PredictiveMaintenance";
+import InventoryOptimization from "@/pages/InventoryOptimization";
+import SupplyChainTraceability from "@/pages/SupplyChainTraceability";
+import WorkforceScheduling from "@/pages/WorkforceScheduling";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
@@ -37,6 +41,10 @@ function Router() {
           <Route path="/machinery" component={Machinery} />
           <Route path="/compliance" component={Compliance} />
           <Route path="/production-kpis" component={ProductionKPIs} />
+          <Route path="/predictive-maintenance" component={PredictiveMaintenance} />
+          <Route path="/inventory-optimization" component={InventoryOptimization} />
+          <Route path="/traceability" component={SupplyChainTraceability} />
+          <Route path="/workforce" component={WorkforceScheduling} />
           <Route path="/reports" component={Reports} />
           <Route path="/configuration" component={Configuration} />
           <Route path="/how-it-works" component={HowItWorks} />

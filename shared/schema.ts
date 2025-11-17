@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, real, integer, timestamp, jsonb, primaryKey, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, real, integer, timestamp, jsonb, primaryKey, index, type AnyPgColumn } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -516,6 +516,285 @@ export const productionBottlenecks = pgTable("production_bottlenecks", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// IoT Sensors & Predictive Maintenance
+export const equipmentSensors = pgTable("equipment_sensors", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  machineryId: varchar("machinery_id").notNull().references(() => machinery.id, { onDelete: "cascade" }),
+  sensorType: text("sensor_type").notNull(), // "vibration", "temperature", "pressure", "current", "flow", "acoustic"
+  sensorId: text("sensor_id").notNull().unique(), // External IoT sensor identifier
+  manufacturer: text("manufacturer"),
+  model: text("model"),
+  location: text("location").notNull(), // Where on equipment (e.g., "bearing", "motor", "pump")
+  unit: text("unit").notNull(), // "celsius", "hz", "psi", "amps", "gpm", "db"
+  normalMin: real("normal_min"), // Normal operating range minimum
+  normalMax: real("normal_max"), // Normal operating range maximum
+  warningMin: real("warning_min"), // Warning threshold minimum
+  warningMax: real("warning_max"), // Warning threshold maximum
+  criticalMin: real("critical_min"), // Critical threshold minimum
+  criticalMax: real("critical_max"), // Critical threshold maximum
+  status: text("status").notNull().default("active"), // "active", "inactive", "maintenance", "error"
+  lastCommunication: timestamp("last_communication"),
+  calibrationDate: timestamp("calibration_date"),
+  nextCalibrationDate: timestamp("next_calibration_date"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const sensorReadings = pgTable("sensor_readings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sensorId: varchar("sensor_id").notNull().references(() => equipmentSensors.id, { onDelete: "cascade" }),
+  value: real("value").notNull(),
+  status: text("status").notNull(), // "normal", "warning", "critical"
+  timestamp: timestamp("timestamp").notNull(),
+  metadata: jsonb("metadata"), // Additional context from sensor
+});
+
+export const maintenanceAlerts = pgTable("maintenance_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  machineryId: varchar("machinery_id").notNull().references(() => machinery.id, { onDelete: "cascade" }),
+  alertType: text("alert_type").notNull(), // "predictive_failure", "anomaly_detected", "threshold_exceeded", "pattern_change"
+  severity: text("severity").notNull(), // "critical", "high", "medium", "low"
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  predictedFailureDate: timestamp("predicted_failure_date"),
+  confidence: real("confidence"), // 0-100 ML confidence score
+  affectedSensors: text("affected_sensors").array(),
+  recommendedActions: jsonb("recommended_actions"),
+  status: text("status").notNull().default("active"), // "active", "acknowledged", "resolved", "dismissed"
+  acknowledgedBy: varchar("acknowledged_by").references(() => users.id),
+  acknowledgedAt: timestamp("acknowledged_at"),
+  resolvedBy: varchar("resolved_by").references(() => users.id),
+  resolvedAt: timestamp("resolved_at"),
+  resolutionNotes: text("resolution_notes"),
+  economicRegime: text("economic_regime"), // Regime when alert triggered
+  fdrAtAlert: real("fdr_at_alert"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const maintenancePredictions = pgTable("maintenance_predictions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  machineryId: varchar("machinery_id").notNull().references(() => machinery.id, { onDelete: "cascade" }),
+  predictionType: text("prediction_type").notNull(), // "failure", "degradation", "maintenance_window"
+  failureMode: text("failure_mode"), // "bearing_failure", "motor_burnout", "seal_leak", etc.
+  predictedDate: timestamp("predicted_date").notNull(),
+  confidence: real("confidence").notNull(), // 0-100
+  timeToFailure: real("time_to_failure"), // hours
+  impactAssessment: jsonb("impact_assessment"), // Production impact, cost, etc.
+  mlModel: text("ml_model"), // Which model generated this
+  featureImportance: jsonb("feature_importance"), // What factors led to prediction
+  status: text("status").notNull().default("pending"), // "pending", "validated", "false_positive"
+  actualFailureDate: timestamp("actual_failure_date"),
+  accuracyScore: real("accuracy_score"), // Post-validation accuracy
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// AI-Powered Inventory Optimization
+export const inventoryOptimizations = pgTable("inventory_optimizations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  materialId: varchar("material_id").notNull().references(() => materials.id, { onDelete: "cascade" }),
+  analysisDate: timestamp("analysis_date").defaultNow().notNull(),
+  currentStock: real("current_stock").notNull(),
+  optimalStock: real("optimal_stock").notNull(),
+  reorderPoint: real("reorder_point").notNull(),
+  safetyStock: real("safety_stock").notNull(),
+  economicOrderQuantity: real("economic_order_quantity"), // EOQ
+  leadTimeVariability: real("lead_time_variability"), // days
+  demandVariability: real("demand_variability"), // coefficient of variation
+  forecastAccuracy: real("forecast_accuracy"), // percentage
+  stockoutRisk: real("stockout_risk"), // percentage
+  excessInventoryRisk: real("excess_inventory_risk"), // percentage
+  recommendedAction: text("recommended_action"), // "increase", "decrease", "maintain", "urgent_reorder"
+  estimatedCostImpact: real("estimated_cost_impact"),
+  mlModel: text("ml_model"),
+  confidence: real("confidence"),
+  economicRegime: text("economic_regime"),
+  fdrAtAnalysis: real("fdr_at_analysis"),
+  regimeRecommendation: text("regime_recommendation"), // Regime-specific advice
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const demandPredictions = pgTable("demand_predictions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  skuId: varchar("sku_id").references(() => skus.id, { onDelete: "cascade" }),
+  materialId: varchar("material_id").references(() => materials.id, { onDelete: "cascade" }),
+  forecastPeriod: text("forecast_period").notNull(), // "2025-Q1", "2025-01", etc.
+  forecastHorizon: integer("forecast_horizon").notNull(), // days ahead
+  predictedDemand: real("predicted_demand").notNull(),
+  lowerBound: real("lower_bound"), // 95% confidence interval
+  upperBound: real("upper_bound"), // 95% confidence interval
+  seasonalityFactor: real("seasonality_factor"),
+  trendComponent: real("trend_component"),
+  externalFactors: jsonb("external_factors"), // Market signals, economic indicators
+  mlModel: text("ml_model").notNull(), // "ARIMA", "LSTM", "Prophet", "XGBoost"
+  accuracy: real("accuracy"), // MAPE or other metric
+  actualDemand: real("actual_demand"), // Filled in after period ends
+  economicRegime: text("economic_regime"),
+  fdrAtForecast: real("fdr_at_forecast"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const inventoryRecommendations = pgTable("inventory_recommendations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  recommendationType: text("recommendation_type").notNull(), // "reorder", "adjust_safety_stock", "consolidate_orders", "slow_moving_alert"
+  priority: text("priority").notNull(), // "critical", "high", "medium", "low"
+  affectedMaterials: text("affected_materials").array(), // Material IDs
+  currentState: jsonb("current_state"),
+  recommendedState: jsonb("recommended_state"),
+  reasoning: text("reasoning").notNull(),
+  estimatedSavings: real("estimated_savings"),
+  estimatedRisk: text("estimated_risk"),
+  status: text("status").notNull().default("pending"), // "pending", "accepted", "rejected", "implemented"
+  implementedBy: varchar("implemented_by").references(() => users.id),
+  implementedAt: timestamp("implemented_at"),
+  outcomeNotes: text("outcome_notes"),
+  economicRegime: text("economic_regime"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// End-to-End Supply Chain Traceability
+export const materialBatches = pgTable("material_batches", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  materialId: varchar("material_id").notNull().references(() => materials.id, { onDelete: "cascade" }),
+  batchNumber: text("batch_number").notNull().unique(),
+  supplierId: varchar("supplier_id").notNull().references(() => suppliers.id, { onDelete: "cascade" }),
+  quantity: real("quantity").notNull(),
+  unit: text("unit").notNull(),
+  receivedDate: timestamp("received_date").notNull(),
+  expirationDate: timestamp("expiration_date"),
+  qualityStatus: text("quality_status").notNull().default("pending"), // "pending", "approved", "rejected", "quarantine"
+  inspectionDate: timestamp("inspection_date"),
+  inspectedBy: varchar("inspected_by").references(() => users.id),
+  certifications: text("certifications").array(), // "ISO", "REACH", "RoHS", etc.
+  countryOfOrigin: text("country_of_origin"),
+  lotNumber: text("lot_number"),
+  poNumber: text("po_number"),
+  currentLocation: text("current_location"),
+  status: text("status").notNull().default("in_stock"), // "in_stock", "in_production", "consumed", "returned", "disposed"
+  parentBatchId: varchar("parent_batch_id").references((): AnyPgColumn => materialBatches.id), // For split batches
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const traceabilityEvents = pgTable("traceability_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  batchId: varchar("batch_id").notNull().references(() => materialBatches.id, { onDelete: "cascade" }),
+  eventType: text("event_type").notNull(), // "received", "inspected", "moved", "used_in_production", "shipped", "quality_issue"
+  eventDescription: text("event_description").notNull(),
+  location: text("location"),
+  performedBy: varchar("performed_by").references(() => users.id),
+  productionRunId: varchar("production_run_id").references(() => productionRuns.id),
+  skuId: varchar("sku_id").references(() => skus.id),
+  quantityAffected: real("quantity_affected"),
+  qualityData: jsonb("quality_data"), // Test results, measurements, etc.
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  metadata: jsonb("metadata"),
+});
+
+export const supplierChainLinks = pgTable("supplier_chain_links", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  materialId: varchar("material_id").notNull().references(() => materials.id, { onDelete: "cascade" }),
+  primarySupplierId: varchar("primary_supplier_id").notNull().references(() => suppliers.id, { onDelete: "cascade" }),
+  alternativeSuppliers: text("alternative_suppliers").array(), // Supplier IDs
+  riskLevel: text("risk_level").notNull().default("medium"), // "low", "medium", "high", "critical"
+  singleSourceRisk: integer("single_source_risk").notNull().default(0), // 1 if single source, 0 if multiple
+  geographicDiversification: text("geographic_diversification"), // "high", "medium", "low"
+  leadTimeReliability: real("lead_time_reliability"), // percentage
+  qualityScore: real("quality_score"), // 0-100
+  lastDisruptionDate: timestamp("last_disruption_date"),
+  disruptionHistory: jsonb("disruption_history"), // Historical disruptions
+  contingencyPlan: text("contingency_plan"),
+  economicRegimeImpact: jsonb("economic_regime_impact"), // How each regime affects this supply chain
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Workforce Scheduling & Skills Management
+export const employees = pgTable("employees", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").references(() => users.id), // Link to user if they have account
+  employeeNumber: text("employee_number").notNull(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  email: text("email"),
+  phone: text("phone"),
+  department: text("department").notNull(), // "production", "quality", "maintenance", "logistics"
+  role: text("role").notNull(), // "operator", "technician", "supervisor", "engineer"
+  skills: text("skills").array(), // List of skill codes
+  certifications: text("certifications").array(),
+  hourlyRate: real("hourly_rate"),
+  employmentType: text("employment_type").notNull().default("full_time"), // "full_time", "part_time", "contractor"
+  status: text("status").notNull().default("active"), // "active", "on_leave", "terminated"
+  hireDate: timestamp("hire_date"),
+  maxHoursPerWeek: real("max_hours_per_week").default(40),
+  preferredShifts: text("preferred_shifts").array(), // "day", "evening", "night"
+  availabilityNotes: text("availability_notes"),
+  performanceRating: real("performance_rating"), // 0-5
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const workShifts = pgTable("work_shifts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  shiftName: text("shift_name").notNull(), // "Morning Shift", "Afternoon Shift", "Night Shift"
+  shiftType: text("shift_type").notNull(), // "day", "evening", "night", "weekend"
+  department: text("department").notNull(),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time").notNull(),
+  requiredHeadcount: integer("required_headcount").notNull(),
+  requiredSkills: text("required_skills").array(),
+  machineryIds: text("machinery_ids").array(), // Which machinery this shift operates
+  productionTargets: jsonb("production_targets"), // Expected output
+  status: text("status").notNull().default("scheduled"), // "scheduled", "in_progress", "completed", "cancelled"
+  economicRegime: text("economic_regime"),
+  fdrAtScheduling: real("fdr_at_scheduling"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const skillRequirements = pgTable("skill_requirements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  skillCode: text("skill_code").notNull().unique(), // "CNC_OPERATION", "WELDING_MIG", "FORKLIFT_CERT"
+  skillName: text("skill_name").notNull(),
+  category: text("category").notNull(), // "machinery", "safety", "quality", "technical"
+  description: text("description"),
+  certificationRequired: integer("certification_required").default(0), // 0 or 1
+  trainingDurationHours: real("training_duration_hours"),
+  expirationMonths: integer("expiration_months"), // How often recertification needed
+  relatedMachineryTypes: text("related_machinery_types").array(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const staffAssignments = pgTable("staff_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  shiftId: varchar("shift_id").notNull().references(() => workShifts.id, { onDelete: "cascade" }),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: "cascade" }),
+  assignedRole: text("assigned_role").notNull(),
+  machineryId: varchar("machinery_id").references(() => machinery.id),
+  status: text("status").notNull().default("assigned"), // "assigned", "confirmed", "checked_in", "completed", "absent"
+  checkInTime: timestamp("check_in_time"),
+  checkOutTime: timestamp("check_out_time"),
+  hoursWorked: real("hours_worked"),
+  overtimeHours: real("overtime_hours"),
+  productionOutput: jsonb("production_output"), // What they produced
+  performanceNotes: text("performance_notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const upsertUserSchema = createInsertSchema(users).omit({ createdAt: true, updatedAt: true });
@@ -615,3 +894,57 @@ export type DowntimeEvent = typeof downtimeEvents.$inferSelect;
 export type InsertDowntimeEvent = z.infer<typeof insertDowntimeEventSchema>;
 export type ProductionBottleneck = typeof productionBottlenecks.$inferSelect;
 export type InsertProductionBottleneck = z.infer<typeof insertProductionBottleneckSchema>;
+
+// IoT Sensors & Predictive Maintenance schemas
+export const insertEquipmentSensorSchema = createInsertSchema(equipmentSensors).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertSensorReadingSchema = createInsertSchema(sensorReadings).omit({ id: true });
+export const insertMaintenanceAlertSchema = createInsertSchema(maintenanceAlerts).omit({ id: true, createdAt: true, updatedAt: true, acknowledgedAt: true, resolvedAt: true });
+export const insertMaintenancePredictionSchema = createInsertSchema(maintenancePredictions).omit({ id: true, createdAt: true });
+
+export type EquipmentSensor = typeof equipmentSensors.$inferSelect;
+export type InsertEquipmentSensor = z.infer<typeof insertEquipmentSensorSchema>;
+export type SensorReading = typeof sensorReadings.$inferSelect;
+export type InsertSensorReading = z.infer<typeof insertSensorReadingSchema>;
+export type MaintenanceAlert = typeof maintenanceAlerts.$inferSelect;
+export type InsertMaintenanceAlert = z.infer<typeof insertMaintenanceAlertSchema>;
+export type MaintenancePrediction = typeof maintenancePredictions.$inferSelect;
+export type InsertMaintenancePrediction = z.infer<typeof insertMaintenancePredictionSchema>;
+
+// AI Inventory Optimization schemas
+export const insertInventoryOptimizationSchema = createInsertSchema(inventoryOptimizations).omit({ id: true, analysisDate: true, createdAt: true });
+export const insertDemandPredictionSchema = createInsertSchema(demandPredictions).omit({ id: true, createdAt: true });
+export const insertInventoryRecommendationSchema = createInsertSchema(inventoryRecommendations).omit({ id: true, createdAt: true, implementedAt: true });
+
+export type InventoryOptimization = typeof inventoryOptimizations.$inferSelect;
+export type InsertInventoryOptimization = z.infer<typeof insertInventoryOptimizationSchema>;
+export type DemandPrediction = typeof demandPredictions.$inferSelect;
+export type InsertDemandPrediction = z.infer<typeof insertDemandPredictionSchema>;
+export type InventoryRecommendation = typeof inventoryRecommendations.$inferSelect;
+export type InsertInventoryRecommendation = z.infer<typeof insertInventoryRecommendationSchema>;
+
+// Supply Chain Traceability schemas
+export const insertMaterialBatchSchema = createInsertSchema(materialBatches).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertTraceabilityEventSchema = createInsertSchema(traceabilityEvents).omit({ id: true, timestamp: true });
+export const insertSupplierChainLinkSchema = createInsertSchema(supplierChainLinks).omit({ id: true, createdAt: true, updatedAt: true });
+
+export type MaterialBatch = typeof materialBatches.$inferSelect;
+export type InsertMaterialBatch = z.infer<typeof insertMaterialBatchSchema>;
+export type TraceabilityEvent = typeof traceabilityEvents.$inferSelect;
+export type InsertTraceabilityEvent = z.infer<typeof insertTraceabilityEventSchema>;
+export type SupplierChainLink = typeof supplierChainLinks.$inferSelect;
+export type InsertSupplierChainLink = z.infer<typeof insertSupplierChainLinkSchema>;
+
+// Workforce Scheduling schemas
+export const insertEmployeeSchema = createInsertSchema(employees).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertWorkShiftSchema = createInsertSchema(workShifts).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertSkillRequirementSchema = createInsertSchema(skillRequirements).omit({ id: true, createdAt: true });
+export const insertStaffAssignmentSchema = createInsertSchema(staffAssignments).omit({ id: true, createdAt: true, updatedAt: true });
+
+export type Employee = typeof employees.$inferSelect;
+export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
+export type WorkShift = typeof workShifts.$inferSelect;
+export type InsertWorkShift = z.infer<typeof insertWorkShiftSchema>;
+export type SkillRequirement = typeof skillRequirements.$inferSelect;
+export type InsertSkillRequirement = z.infer<typeof insertSkillRequirementSchema>;
+export type StaffAssignment = typeof staffAssignments.$inferSelect;
+export type InsertStaffAssignment = z.infer<typeof insertStaffAssignmentSchema>;

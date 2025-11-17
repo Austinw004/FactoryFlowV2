@@ -12,13 +12,31 @@ import type {
   ProductionRun, InsertProductionRun,
   ProductionMetric, InsertProductionMetric,
   DowntimeEvent, InsertDowntimeEvent,
-  ProductionBottleneck, InsertProductionBottleneck
+  ProductionBottleneck, InsertProductionBottleneck,
+  EquipmentSensor, InsertEquipmentSensor,
+  SensorReading, InsertSensorReading,
+  MaintenanceAlert, InsertMaintenanceAlert,
+  MaintenancePrediction, InsertMaintenancePrediction,
+  InventoryOptimization, InsertInventoryOptimization,
+  DemandPrediction, InsertDemandPrediction,
+  InventoryRecommendation, InsertInventoryRecommendation,
+  MaterialBatch, InsertMaterialBatch,
+  TraceabilityEvent, InsertTraceabilityEvent,
+  SupplierChainLink, InsertSupplierChainLink,
+  Employee, InsertEmployee,
+  WorkShift, InsertWorkShift,
+  SkillRequirement, InsertSkillRequirement,
+  StaffAssignment, InsertStaffAssignment
 } from "@shared/schema";
 import { 
   users, companies, skus, materials, boms, suppliers, supplierMaterials,
   demandHistory, allocations, allocationResults, priceAlerts, machinery, maintenanceRecords,
   complianceDocuments, complianceAudits, complianceRegulations,
-  productionRuns, productionMetrics, downtimeEvents, productionBottlenecks
+  productionRuns, productionMetrics, downtimeEvents, productionBottlenecks,
+  equipmentSensors, sensorReadings, maintenanceAlerts, maintenancePredictions,
+  inventoryOptimizations, demandPredictions, inventoryRecommendations,
+  materialBatches, traceabilityEvents, supplierChainLinks,
+  employees, workShifts, skillRequirements, staffAssignments
 } from "@shared/schema";
 
 export interface IStorage {
@@ -122,6 +140,45 @@ export interface IStorage {
   // Production Bottlenecks
   getProductionBottlenecks(companyId: string): Promise<ProductionBottleneck[]>;
   createProductionBottleneck(bottleneck: InsertProductionBottleneck): Promise<ProductionBottleneck>;
+  
+  // Predictive Maintenance & IoT Sensors
+  getEquipmentSensors(companyId: string): Promise<EquipmentSensor[]>;
+  getEquipmentSensorsByMachinery(machineryId: string): Promise<EquipmentSensor[]>;
+  createEquipmentSensor(sensor: InsertEquipmentSensor): Promise<EquipmentSensor>;
+  getSensorReadings(sensorId: string, limit?: number): Promise<SensorReading[]>;
+  createSensorReading(reading: InsertSensorReading): Promise<SensorReading>;
+  getMaintenanceAlerts(companyId: string): Promise<MaintenanceAlert[]>;
+  createMaintenanceAlert(alert: InsertMaintenanceAlert): Promise<MaintenanceAlert>;
+  getMaintenancePredictions(companyId: string): Promise<MaintenancePrediction[]>;
+  createMaintenancePrediction(prediction: InsertMaintenancePrediction): Promise<MaintenancePrediction>;
+  
+  // AI Inventory Optimization
+  getInventoryOptimizations(companyId: string): Promise<InventoryOptimization[]>;
+  createInventoryOptimization(optimization: InsertInventoryOptimization): Promise<InventoryOptimization>;
+  getDemandPredictions(companyId: string): Promise<DemandPrediction[]>;
+  createDemandPrediction(prediction: InsertDemandPrediction): Promise<DemandPrediction>;
+  getInventoryRecommendations(companyId: string): Promise<InventoryRecommendation[]>;
+  createInventoryRecommendation(recommendation: InsertInventoryRecommendation): Promise<InventoryRecommendation>;
+  
+  // Supply Chain Traceability
+  getMaterialBatches(companyId: string): Promise<MaterialBatch[]>;
+  createMaterialBatch(batch: InsertMaterialBatch): Promise<MaterialBatch>;
+  getTraceabilityEvents(companyId: string): Promise<TraceabilityEvent[]>;
+  getTraceabilityEventsByBatch(batchId: string): Promise<TraceabilityEvent[]>;
+  createTraceabilityEvent(event: InsertTraceabilityEvent): Promise<TraceabilityEvent>;
+  getSupplierChainLinks(companyId: string): Promise<SupplierChainLink[]>;
+  createSupplierChainLink(link: InsertSupplierChainLink): Promise<SupplierChainLink>;
+  
+  // Workforce Scheduling
+  getEmployees(companyId: string): Promise<Employee[]>;
+  createEmployee(employee: InsertEmployee): Promise<Employee>;
+  getWorkShifts(companyId: string): Promise<WorkShift[]>;
+  createWorkShift(shift: InsertWorkShift): Promise<WorkShift>;
+  getSkillRequirements(companyId: string): Promise<SkillRequirement[]>;
+  createSkillRequirement(requirement: InsertSkillRequirement): Promise<SkillRequirement>;
+  getStaffAssignments(companyId: string): Promise<StaffAssignment[]>;
+  getStaffAssignmentsByShift(shiftId: string): Promise<StaffAssignment[]>;
+  createStaffAssignment(assignment: InsertStaffAssignment): Promise<StaffAssignment>;
 }
 
 export class DbStorage implements IStorage {
@@ -432,6 +489,163 @@ export class DbStorage implements IStorage {
   async createProductionBottleneck(insertBottleneck: InsertProductionBottleneck): Promise<ProductionBottleneck> {
     const [bottleneck] = await db.insert(productionBottlenecks).values(insertBottleneck).returning();
     return bottleneck;
+  }
+
+  // Predictive Maintenance & IoT Sensors methods
+  async getEquipmentSensors(companyId: string): Promise<EquipmentSensor[]> {
+    return db.select().from(equipmentSensors).where(eq(equipmentSensors.companyId, companyId));
+  }
+
+  async getEquipmentSensorsByMachinery(machineryId: string): Promise<EquipmentSensor[]> {
+    return db.select().from(equipmentSensors).where(eq(equipmentSensors.machineryId, machineryId));
+  }
+
+  async createEquipmentSensor(insertSensor: InsertEquipmentSensor): Promise<EquipmentSensor> {
+    const [sensor] = await db.insert(equipmentSensors).values(insertSensor).returning();
+    return sensor;
+  }
+
+  async getSensorReadings(sensorId: string, limit: number = 100): Promise<SensorReading[]> {
+    return db.select().from(sensorReadings).where(eq(sensorReadings.sensorId, sensorId)).limit(limit);
+  }
+
+  async createSensorReading(insertReading: InsertSensorReading): Promise<SensorReading> {
+    const [reading] = await db.insert(sensorReadings).values(insertReading).returning();
+    return reading;
+  }
+
+  async getMaintenanceAlerts(companyId: string): Promise<MaintenanceAlert[]> {
+    return db.select().from(maintenanceAlerts).where(eq(maintenanceAlerts.companyId, companyId));
+  }
+
+  async createMaintenanceAlert(insertAlert: InsertMaintenanceAlert): Promise<MaintenanceAlert> {
+    const [alert] = await db.insert(maintenanceAlerts).values(insertAlert).returning();
+    return alert;
+  }
+
+  async getMaintenancePredictions(companyId: string): Promise<MaintenancePrediction[]> {
+    return db.select().from(maintenancePredictions).where(eq(maintenancePredictions.companyId, companyId));
+  }
+
+  async createMaintenancePrediction(insertPrediction: InsertMaintenancePrediction): Promise<MaintenancePrediction> {
+    const [prediction] = await db.insert(maintenancePredictions).values(insertPrediction).returning();
+    return prediction;
+  }
+
+  async updateMaintenanceAlert(id: string, updates: Partial<MaintenanceAlert>): Promise<MaintenanceAlert> {
+    const [alert] = await db.update(maintenanceAlerts).set(updates).where(eq(maintenanceAlerts.id, id)).returning();
+    return alert;
+  }
+
+  // AI Inventory Optimization methods
+  async getInventoryOptimizations(companyId: string): Promise<InventoryOptimization[]> {
+    return db.select().from(inventoryOptimizations).where(eq(inventoryOptimizations.companyId, companyId));
+  }
+
+  async createInventoryOptimization(insertOptimization: InsertInventoryOptimization): Promise<InventoryOptimization> {
+    const [optimization] = await db.insert(inventoryOptimizations).values(insertOptimization).returning();
+    return optimization;
+  }
+
+  async getDemandPredictions(companyId: string): Promise<DemandPrediction[]> {
+    return db.select().from(demandPredictions).where(eq(demandPredictions.companyId, companyId));
+  }
+
+  async createDemandPrediction(insertPrediction: InsertDemandPrediction): Promise<DemandPrediction> {
+    const [prediction] = await db.insert(demandPredictions).values(insertPrediction).returning();
+    return prediction;
+  }
+
+  async getInventoryRecommendations(companyId: string): Promise<InventoryRecommendation[]> {
+    return db.select().from(inventoryRecommendations).where(eq(inventoryRecommendations.companyId, companyId));
+  }
+
+  async createInventoryRecommendation(insertRecommendation: InsertInventoryRecommendation): Promise<InventoryRecommendation> {
+    const [recommendation] = await db.insert(inventoryRecommendations).values(insertRecommendation).returning();
+    return recommendation;
+  }
+
+  async updateInventoryRecommendation(id: string, updates: Partial<InventoryRecommendation>): Promise<InventoryRecommendation> {
+    const [recommendation] = await db.update(inventoryRecommendations).set(updates).where(eq(inventoryRecommendations.id, id)).returning();
+    return recommendation;
+  }
+
+  // Supply Chain Traceability methods
+  async getMaterialBatches(companyId: string): Promise<MaterialBatch[]> {
+    return db.select().from(materialBatches).where(eq(materialBatches.companyId, companyId));
+  }
+
+  async createMaterialBatch(insertBatch: InsertMaterialBatch): Promise<MaterialBatch> {
+    const [batch] = await db.insert(materialBatches).values(insertBatch).returning();
+    return batch;
+  }
+
+  async getTraceabilityEvents(companyId: string): Promise<TraceabilityEvent[]> {
+    return db.select().from(traceabilityEvents).where(eq(traceabilityEvents.companyId, companyId));
+  }
+
+  async getTraceabilityEventsByBatch(batchId: string): Promise<TraceabilityEvent[]> {
+    return db.select().from(traceabilityEvents).where(eq(traceabilityEvents.batchId, batchId));
+  }
+
+  async createTraceabilityEvent(insertEvent: InsertTraceabilityEvent): Promise<TraceabilityEvent> {
+    const [event] = await db.insert(traceabilityEvents).values(insertEvent).returning();
+    return event;
+  }
+
+  async getSupplierChainLinks(companyId: string): Promise<SupplierChainLink[]> {
+    return db.select().from(supplierChainLinks).where(eq(supplierChainLinks.companyId, companyId));
+  }
+
+  async createSupplierChainLink(insertLink: InsertSupplierChainLink): Promise<SupplierChainLink> {
+    const [link] = await db.insert(supplierChainLinks).values(insertLink).returning();
+    return link;
+  }
+
+  // Workforce Scheduling methods
+  async getEmployees(companyId: string): Promise<Employee[]> {
+    return db.select().from(employees).where(eq(employees.companyId, companyId));
+  }
+
+  async createEmployee(insertEmployee: InsertEmployee): Promise<Employee> {
+    const [employee] = await db.insert(employees).values(insertEmployee).returning();
+    return employee;
+  }
+
+  async getWorkShifts(companyId: string): Promise<WorkShift[]> {
+    return db.select().from(workShifts).where(eq(workShifts.companyId, companyId));
+  }
+
+  async createWorkShift(insertShift: InsertWorkShift): Promise<WorkShift> {
+    const [shift] = await db.insert(workShifts).values(insertShift).returning();
+    return shift;
+  }
+
+  async getSkillRequirements(companyId: string): Promise<SkillRequirement[]> {
+    return db.select().from(skillRequirements).where(eq(skillRequirements.companyId, companyId));
+  }
+
+  async createSkillRequirement(insertRequirement: InsertSkillRequirement): Promise<SkillRequirement> {
+    const [requirement] = await db.insert(skillRequirements).values(insertRequirement).returning();
+    return requirement;
+  }
+
+  async getStaffAssignments(companyId: string): Promise<StaffAssignment[]> {
+    const results = await db
+      .select()
+      .from(staffAssignments)
+      .innerJoin(workShifts, eq(staffAssignments.shiftId, workShifts.id))
+      .where(eq(workShifts.companyId, companyId));
+    return results.map(r => r.staff_assignments);
+  }
+
+  async getStaffAssignmentsByShift(shiftId: string): Promise<StaffAssignment[]> {
+    return db.select().from(staffAssignments).where(eq(staffAssignments.shiftId, shiftId));
+  }
+
+  async createStaffAssignment(insertAssignment: InsertStaffAssignment): Promise<StaffAssignment> {
+    const [assignment] = await db.insert(staffAssignments).values(insertAssignment).returning();
+    return assignment;
   }
 }
 
