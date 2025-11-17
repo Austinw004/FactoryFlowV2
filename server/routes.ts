@@ -84,6 +84,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Master Materials Catalog Endpoint
+  app.get("/api/materials/catalog", isAuthenticated, async (req: any, res) => {
+    try {
+      const { MASTER_MATERIALS_CATALOG, searchMaterials, getAllCategories } = await import("./lib/materialsCatalog");
+      const { query } = req.query;
+      
+      if (query) {
+        const results = searchMaterials(query as string);
+        res.json(results);
+      } else {
+        res.json({
+          materials: MASTER_MATERIALS_CATALOG,
+          categories: getAllCategories(),
+        });
+      }
+    } catch (error: any) {
+      console.error("Error fetching materials catalog:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Commodity Pricing Endpoints
   app.get("/api/commodities/prices", isAuthenticated, async (req: any, res) => {
     try {
@@ -965,33 +986,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const materialBreakdown: Array<{materialId: string, materialName: string, quantity: number, unitCost: number, totalCost: number}> = [];
 
       if (useDirectMaterials) {
+        // Import materials catalog for auto-creation
+        const { getMaterialByCode } = await import("./lib/materialsCatalog");
+        
         // Direct materials mode: validate and calculate cost from user-specified materials
         for (const req of directMaterialRequirements) {
           const { materialId, quantity } = req;
           
-          // Verify material belongs to company
-          const material = materials.find(m => m.id === materialId);
+          // Strategy: 
+          // 1. Try to find by UUID (existing company material)
+          // 2. If not found, try to find by catalog code in company materials
+          // 3. If still not found, auto-create from catalog
+          
+          let material = materials.find(m => m.id === materialId);
+          
           if (!material) {
-            return res.status(400).json({ 
-              error: `Material ID ${materialId} not found or does not belong to your company.` 
-            });
+            // Check if materialId is a catalog code and if company already has this material
+            material = materials.find(m => m.code === materialId);
+            
+            if (!material) {
+              // Material doesn't exist in company - try to create from catalog
+              const catalogMaterial = getMaterialByCode(materialId);
+              if (catalogMaterial) {
+                // Auto-create material from catalog
+                material = await storage.createMaterial({
+                  companyId,
+                  code: catalogMaterial.code,
+                  name: catalogMaterial.name,
+                  unit: catalogMaterial.unit,
+                  onHand: 0,
+                  inbound: 0,
+                });
+                
+                // Refresh materials list
+                materials.push(material);
+                
+                // Auto-create default supplier if none exists
+                let defaultSupplier = suppliers.find(s => s.name === "Default Supplier");
+                if (!defaultSupplier) {
+                  defaultSupplier = await storage.createSupplier({
+                    companyId,
+                    name: "Default Supplier",
+                    contactEmail: "supplier@example.com",
+                  });
+                  suppliers.push(defaultSupplier);
+                }
+                
+                // Auto-create supplier pricing using catalog estimated price
+                const supplierMaterial = await storage.createSupplierMaterial({
+                  supplierId: defaultSupplier.id,
+                  materialId: material.id,
+                  unitCost: catalogMaterial.estimatedPrice || 10.0,
+                  leadTimeDays: 7,
+                });
+                
+                // Add to supplier terms
+                supplierTermsById[material.id] = {
+                  unit_cost: supplierMaterial.unitCost,
+                  lead_time_days: supplierMaterial.leadTimeDays,
+                  materialCode: material.code,
+                  materialName: material.name,
+                  unit: material.unit,
+                };
+              } else {
+                return res.status(400).json({ 
+                  error: `Material "${materialId}" not found in catalog. Please select a valid material.` 
+                });
+              }
+            }
           }
           
-          // Verify supplier pricing exists
-          const terms = supplierTermsById[materialId];
+          // Get pricing (either existing or just created)
+          const terms = supplierTermsById[material.id];
           if (!terms) {
-            return res.status(400).json({ 
-              error: `No supplier pricing found for material "${material.name}". Please configure a supplier with pricing for this material before creating an allocation.` 
+            // Fallback: use catalog estimated price if no supplier pricing exists
+            const catalogMaterial = getMaterialByCode(material.code);
+            const estimatedPrice = catalogMaterial?.estimatedPrice || 10.0;
+            
+            // Create default supplier and pricing on the fly
+            let defaultSupplier = suppliers.find(s => s.name === "Default Supplier");
+            if (!defaultSupplier) {
+              defaultSupplier = await storage.createSupplier({
+                companyId,
+                name: "Default Supplier",
+                contactEmail: "supplier@example.com",
+              });
+              suppliers.push(defaultSupplier);
+            }
+            
+            const supplierMaterial = await storage.createSupplierMaterial({
+              supplierId: defaultSupplier.id,
+              materialId: material.id,
+              unitCost: estimatedPrice,
+              leadTimeDays: 7,
             });
+            
+            supplierTermsById[material.id] = {
+              unit_cost: supplierMaterial.unitCost,
+              lead_time_days: supplierMaterial.leadTimeDays,
+              materialCode: material.code,
+              materialName: material.name,
+              unit: material.unit,
+            };
           }
           
-          const materialCost = quantity * terms.unit_cost;
+          const finalTerms = supplierTermsById[material.id];
+          const materialCost = quantity * finalTerms.unit_cost;
           totalAllocationCost += materialCost;
           materialBreakdown.push({
-            materialId,
-            materialName: terms.materialName,
+            materialId: material.id,
+            materialName: finalTerms.materialName,
             quantity,
-            unitCost: terms.unit_cost,
+            unitCost: finalTerms.unit_cost,
             totalCost: materialCost,
           });
         }

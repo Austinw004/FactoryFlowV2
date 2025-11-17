@@ -2,7 +2,7 @@
 
 ## Overview
 
-This Manufacturing Allocation Intelligence platform uses dual-circuit economic indicators to optimize raw material allocation, demand forecasting, and counter-cyclical procurement. It analyzes economic regimes (Healthy Expansion, Asset-Led Growth, Imbalanced Excess, Real Economy Lead) to generate policy signals for manufacturing and procurement strategies. The platform supports data-driven decisions for SKU demand forecasting, material allocation with priority weighting, counter-cyclical procurement timing using FDR (Financial-to-Real Divergence) metrics, budget/inventory optimization, and comprehensive machinery lifecycle management. The system now supports over 110 tradeable commodities, including specialty polymers, precious metals, rare earths, and advanced ceramics, with real-time commodity pricing capabilities. The new machinery management system tracks equipment value, depreciation across multiple methods, maintenance schedules, and replacement planning. Allocations support two modes: traditional SKU-based planning using demand forecasts and BOMs, or direct material requirements where users specify exact materials and quantities needed for budget duration planning with automatic cost calculations and coverage analysis.
+This Manufacturing Allocation Intelligence platform uses dual-circuit economic indicators to optimize raw material allocation, demand forecasting, and counter-cyclical procurement. It analyzes economic regimes (Healthy Expansion, Asset-Led Growth, Imbalanced Excess, Real Economy Lead) to generate policy signals for manufacturing and procurement strategies. The platform supports data-driven decisions for SKU demand forecasting, material allocation with priority weighting, counter-cyclical procurement timing using FDR (Financial-to-Real Divergence) metrics, budget/inventory optimization, and comprehensive machinery lifecycle management. The system now supports over 110 tradeable commodities, including specialty polymers, precious metals, rare earths, and advanced ceramics, with real-time commodity pricing capabilities. The new machinery management system tracks equipment value, depreciation across multiple methods, maintenance schedules, and replacement planning. Allocations support two modes: traditional SKU-based planning using demand forecasts and BOMs, or direct material requirements where users specify exact materials and quantities needed for budget duration planning with automatic cost calculations and coverage analysis. The platform features a comprehensive master materials catalog system allowing users to type and search any material from the full catalog, with automatic material and supplier pricing creation when users select materials not yet in their company database.
 
 ## User Preferences
 
@@ -19,17 +19,19 @@ Preferred communication style: Simple, everyday language.
 **Key UI Patterns**: Dashboard-centric, KPI cards, data tables, charts for forecasts, regime status widgets, policy signals panels, machinery tracking cards with maintenance alerts.
 **Educational Content**: "How It Works" page explaining dual-circuit economics, economic regimes, and platform components.
 **Machinery Management**: Comprehensive equipment lifecycle tracking with depreciation calculators (straight-line, declining balance, units of production), maintenance scheduling, service warnings for overdue maintenance, replacement planning, and product URL linking for easy specification access.
+**Materials Catalog UI**: Searchable combobox component enabling users to type and select from 110+ tradeable commodities with category filtering and live search functionality.
 
 ### Backend Architecture
 
 **Framework**: Express.js with TypeScript (Node.js).
-**API Design**: RESTful endpoints for authentication, economics, commodity pricing (including real-time for over 110 materials), SKUs, materials, allocations, and machinery management.
+**API Design**: RESTful endpoints for authentication, economics, commodity pricing (including real-time for over 110 materials), SKUs, materials, allocations, machinery management, and master materials catalog access.
 **Core Business Logic Modules**:
 1.  **DualCircuitEconomics**: Calculates FDR ratio, determines economic regime, and generates policy signals.
 2.  **DemandForecaster**: Produces regime-aware demand forecasts using exponential smoothing and moving averages.
 3.  **AllocationEngine**: Constraint-based optimization for material allocation considering BOMs, availability, SKU priorities, budget, and budget duration planning with runway analysis.
 4.  **CommodityPricing**: Real-time integration with Metals.Dev API for live commodity prices, with mock data fallback and support for 110+ tradeable commodities.
 5.  **DepreciationCalculator**: Multi-method depreciation calculation library supporting straight-line, declining balance, and units of production methods with full schedule generation.
+6.  **MaterialsCatalog**: Master catalog library (lib/materialsCatalog.ts) providing 110+ tradeable commodities with search functionality, category filtering, and estimated pricing; supports auto-creation of company materials and supplier pricing when users select catalog items.
 **Data Access Layer**: Centralized storage interface (`server/storage.ts`) for CRUD operations.
 
 ### Database Architecture

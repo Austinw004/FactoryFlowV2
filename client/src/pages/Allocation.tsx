@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { useToast } from "@/hooks/use-toast";
 import { Boxes, PlayCircle, AlertCircle, Clock, Plus, X, Package } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -15,6 +16,14 @@ import type { Allocation, AllocationResult, Material } from "@shared/schema";
 interface MaterialRequirement {
   materialId: string;
   quantity: string;
+}
+
+interface CatalogMaterial {
+  code: string;
+  name: string;
+  unit: string;
+  category: string;
+  estimatedPrice?: number;
 }
 
 export default function Allocation() {
@@ -28,8 +37,8 @@ export default function Allocation() {
   ]);
   const { toast } = useToast();
 
-  const { data: materials } = useQuery<Material[]>({
-    queryKey: ["/api/materials"],
+  const { data: catalogData } = useQuery<{ materials: CatalogMaterial[]; categories: string[] }>({
+    queryKey: ["/api/materials/catalog"],
   });
 
   const { data: allocations, isLoading } = useQuery<Allocation[]>({
@@ -265,51 +274,54 @@ export default function Allocation() {
 
             {useDirectMaterials && (
               <div className="space-y-3 mt-3">
-                {materialRequirements.map((req, index) => (
-                  <div key={index} className="grid grid-cols-[1fr,auto,auto] gap-2 items-end">
-                    <div className="grid gap-2">
-                      <Label className="text-xs">Material</Label>
-                      <Select
-                        value={req.materialId}
-                        onValueChange={(value) => updateMaterialRequirement(index, 'materialId', value)}
+                {materialRequirements.map((req, index) => {
+                  const materialOptions = catalogData?.materials.map((material) => ({
+                    value: material.code,
+                    label: `${material.name} (${material.unit})`,
+                    category: material.category,
+                  })) || [];
+                  
+                  const selectedMaterial = catalogData?.materials.find(m => m.code === req.materialId);
+                  
+                  return (
+                    <div key={index} className="grid grid-cols-[1fr,auto,auto] gap-2 items-end">
+                      <div className="grid gap-2">
+                        <Label className="text-xs">Material (Type to search)</Label>
+                        <Combobox
+                          options={materialOptions}
+                          value={req.materialId}
+                          onValueChange={(value) => updateMaterialRequirement(index, 'materialId', value)}
+                          placeholder="Type to search materials..."
+                          searchPlaceholder="Search 110+ materials..."
+                          emptyMessage="No material found."
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label className="text-xs">Quantity</Label>
+                        <Input
+                          type="number"
+                          value={req.quantity}
+                          onChange={(e) => updateMaterialRequirement(index, 'quantity', e.target.value)}
+                          placeholder="0"
+                          min="0"
+                          step="0.01"
+                          className="w-24"
+                          data-testid={`input-material-quantity-${index}`}
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeMaterialRequirement(index)}
+                        disabled={materialRequirements.length === 1}
+                        data-testid={`button-remove-material-${index}`}
                       >
-                        <SelectTrigger data-testid={`select-material-${index}`}>
-                          <SelectValue placeholder="Select material" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {materials?.map((material) => (
-                            <SelectItem key={material.id} value={material.id}>
-                              {material.name} ({material.unit})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
-                    <div className="grid gap-2">
-                      <Label className="text-xs">Quantity</Label>
-                      <Input
-                        type="number"
-                        value={req.quantity}
-                        onChange={(e) => updateMaterialRequirement(index, 'quantity', e.target.value)}
-                        placeholder="0"
-                        min="0"
-                        step="0.01"
-                        className="w-24"
-                        data-testid={`input-material-quantity-${index}`}
-                      />
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeMaterialRequirement(index)}
-                      disabled={materialRequirements.length === 1}
-                      data-testid={`button-remove-material-${index}`}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
+                  );
+                })}
                 <Button
                   type="button"
                   variant="outline"
