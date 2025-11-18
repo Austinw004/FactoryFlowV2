@@ -948,3 +948,98 @@ export type SkillRequirement = typeof skillRequirements.$inferSelect;
 export type InsertSkillRequirement = z.infer<typeof insertSkillRequirementSchema>;
 export type StaffAssignment = typeof staffAssignments.$inferSelect;
 export type InsertStaffAssignment = z.infer<typeof insertStaffAssignmentSchema>;
+
+// Automatic Procurement & Purchasing
+export const procurementSchedules = pgTable("procurement_schedules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  materialId: varchar("material_id").notNull().references(() => materials.id, { onDelete: "cascade" }),
+  supplierId: varchar("supplier_id").notNull().references(() => suppliers.id, { onDelete: "cascade" }),
+  scheduleType: text("schedule_type").notNull(), // "daily", "weekly", "monthly", "quarterly"
+  quantity: real("quantity").notNull(),
+  unitPrice: real("unit_price").notNull(),
+  dayOfWeek: integer("day_of_week"), // 1-7 for weekly
+  dayOfMonth: integer("day_of_month"), // 1-31 for monthly
+  isActive: text("is_active").notNull().default("active"), // "active", "paused", "cancelled"
+  nextOrderDate: timestamp("next_order_date").notNull(),
+  lastOrderDate: timestamp("last_order_date"),
+  totalOrdersPlaced: integer("total_orders_placed").notNull().default(0),
+  economicRegime: text("economic_regime"),
+  fdrThreshold: real("fdr_threshold"), // Only execute if FDR is below/above this
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const autoPurchaseRecommendations = pgTable("auto_purchase_recommendations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  materialId: varchar("material_id").notNull().references(() => materials.id, { onDelete: "cascade" }),
+  supplierId: varchar("supplier_id").references(() => suppliers.id),
+  recommendationType: text("recommendation_type").notNull(), // "stock_low", "price_optimal", "counter_cyclical", "demand_spike"
+  priority: text("priority").notNull(), // "critical", "high", "medium", "low"
+  suggestedQuantity: real("suggested_quantity").notNull(),
+  suggestedPrice: real("suggested_price"),
+  currentStockLevel: real("current_stock_level"),
+  projectedStockoutDate: timestamp("projected_stockout_date"),
+  reasoning: text("reasoning").notNull(),
+  costSavings: real("cost_savings"),
+  aiConfidence: real("ai_confidence").notNull(), // 0-1
+  status: text("status").notNull().default("pending"), // "pending", "auto_approved", "user_approved", "rejected", "executed"
+  executedAt: timestamp("executed_at"),
+  orderReference: text("order_reference"),
+  economicRegime: text("economic_regime"),
+  fdrAtRecommendation: real("fdr_at_recommendation"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const incomingEmails = pgTable("incoming_emails", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  fromEmail: text("from_email").notNull(),
+  fromName: text("from_name"),
+  subject: text("subject").notNull(),
+  bodyText: text("body_text"),
+  bodyHtml: text("body_html"),
+  receivedAt: timestamp("received_at").notNull(),
+  emailProvider: text("email_provider"), // "gmail", "agentmail", "sendgrid_inbound"
+  rawEmailData: jsonb("raw_email_data"),
+  attachments: jsonb("attachments"), // Array of attachment metadata
+  isProcessed: text("is_processed").notNull().default("unprocessed"), // "unprocessed", "processing", "processed", "failed"
+  supplierId: varchar("supplier_id").references(() => suppliers.id),
+  relatedOrderId: text("related_order_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const emailAnalysis = pgTable("email_analysis", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  emailId: varchar("email_id").notNull().references(() => incomingEmails.id, { onDelete: "cascade" }),
+  analysisType: text("analysis_type").notNull(), // "price_update", "delivery_notification", "order_confirmation", "invoice", "quote", "general"
+  extractedData: jsonb("extracted_data").notNull(), // Structured data extracted from email
+  materials: text("materials").array(), // Material IDs mentioned
+  suppliers: text("suppliers").array(), // Supplier IDs mentioned
+  priceChanges: jsonb("price_changes"), // Array of {materialId, oldPrice, newPrice, effectiveDate}
+  deliveryInfo: jsonb("delivery_info"), // {expectedDate, trackingNumber, carrier}
+  invoiceInfo: jsonb("invoice_info"), // {invoiceNumber, amount, dueDate, items[]}
+  quoteInfo: jsonb("quote_info"), // {quoteNumber, validUntil, items[], totalAmount}
+  sentiment: text("sentiment"), // "positive", "neutral", "negative", "urgent"
+  actionRequired: text("action_required"), // "respond", "approve_quote", "update_pricing", "track_delivery", "none"
+  aiConfidence: real("ai_confidence").notNull(),
+  processingNotes: text("processing_notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Automatic Procurement schemas
+export const insertProcurementScheduleSchema = createInsertSchema(procurementSchedules).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertAutoPurchaseRecommendationSchema = createInsertSchema(autoPurchaseRecommendations).omit({ id: true, createdAt: true });
+export const insertIncomingEmailSchema = createInsertSchema(incomingEmails).omit({ id: true, createdAt: true });
+export const insertEmailAnalysisSchema = createInsertSchema(emailAnalysis).omit({ id: true, createdAt: true });
+
+export type ProcurementSchedule = typeof procurementSchedules.$inferSelect;
+export type InsertProcurementSchedule = z.infer<typeof insertProcurementScheduleSchema>;
+export type AutoPurchaseRecommendation = typeof autoPurchaseRecommendations.$inferSelect;
+export type InsertAutoPurchaseRecommendation = z.infer<typeof insertAutoPurchaseRecommendationSchema>;
+export type IncomingEmail = typeof incomingEmails.$inferSelect;
+export type InsertIncomingEmail = z.infer<typeof insertIncomingEmailSchema>;
+export type EmailAnalysis = typeof emailAnalysis.$inferSelect;
+export type InsertEmailAnalysis = z.infer<typeof insertEmailAnalysisSchema>;

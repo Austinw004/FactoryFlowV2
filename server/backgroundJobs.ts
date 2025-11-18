@@ -1,4 +1,5 @@
 import { storage } from './storage';
+import { broadcastUpdate } from './websocket';
 import axios from 'axios';
 
 interface BackgroundJobConfig {
@@ -81,11 +82,20 @@ export async function generateSensorReadings() {
         const status = value < 20 || value > 80 ? 'critical' : 
                       value < 30 || value > 70 ? 'warning' : 'normal';
         
-        await storage.createSensorReading({
+        const reading = await storage.createSensorReading({
           sensorId: sensor.id,
           timestamp: new Date(),
           value,
           status,
+        });
+
+        broadcastUpdate({
+          type: 'database_update',
+          entity: 'sensor_reading',
+          action: 'create',
+          timestamp: new Date().toISOString(),
+          companyId,
+          data: { sensorId: sensor.id, value, status },
         });
 
         if (status === 'critical' && Math.random() < 0.3) {
@@ -93,7 +103,7 @@ export async function generateSensorReadings() {
           const failureDate = new Date();
           failureDate.setDate(failureDate.getDate() + daysUntilFailure);
           
-          await storage.createMaintenanceAlert({
+          const alert = await storage.createMaintenanceAlert({
             companyId,
             machineryId: sensor.machineryId,
             alertType: 'sensor_threshold',
@@ -102,8 +112,17 @@ export async function generateSensorReadings() {
             description: `Sensor reading ${value.toFixed(2)} exceeds safe threshold`,
             status: 'active',
           });
+
+          broadcastUpdate({
+            type: 'database_update',
+            entity: 'maintenance_alert',
+            action: 'create',
+            timestamp: new Date().toISOString(),
+            companyId,
+            data: { alertType: 'sensor_threshold', severity: 'high' },
+          });
           
-          await storage.createMaintenancePrediction({
+          const prediction = await storage.createMaintenancePrediction({
             companyId,
             machineryId: sensor.machineryId,
             predictionType: 'failure',
@@ -111,6 +130,15 @@ export async function generateSensorReadings() {
             confidence: 0.7 + Math.random() * 0.25,
             predictedDate: failureDate,
             mlModel: 'anomaly_detector_v2',
+          });
+
+          broadcastUpdate({
+            type: 'database_update',
+            entity: 'maintenance_prediction',
+            action: 'create',
+            timestamp: new Date().toISOString(),
+            companyId,
+            data: { predictionType: 'failure', mlModel: 'anomaly_detector_v2' },
           });
         }
       }
@@ -127,6 +155,7 @@ export async function generateSensorReadings() {
 export async function updateCommodityPrices() {
   try {
     const companies = await getActiveCompanyIds();
+    let totalUpdates = 0;
     
     for (const companyId of companies) {
       const materials = await storage.getMaterials(companyId);
@@ -136,18 +165,39 @@ export async function updateCommodityPrices() {
         const basePrice = 100;
         const newPrice = basePrice * (1 + priceChange);
         
-        await storage.createInventoryRecommendation({
+        const recommendation = await storage.createInventoryRecommendation({
           companyId,
           recommendationType: Math.random() < 0.5 ? 'reorder' : 'adjust_safety_stock',
           priority: 'medium',
           reasoning: `Price fluctuation detected: ${(priceChange * 100).toFixed(1)}%`,
           estimatedSavings: Math.round(Math.abs(priceChange) * 10000),
         });
+
+        broadcastUpdate({
+          type: 'database_update',
+          entity: 'commodity_price',
+          action: 'update',
+          timestamp: new Date().toISOString(),
+          companyId,
+          data: { materialId: material.id, priceChange: priceChange * 100 },
+        });
+
+        totalUpdates++;
       }
       
       if (materials.length > 0) {
         console.log(`[Background] Updated ${Math.min(materials.length, 20)} commodity prices for company ${companyId.substring(0, 8)}`);
       }
+    }
+
+    if (totalUpdates > 0) {
+      broadcastUpdate({
+        type: 'database_update',
+        entity: 'commodity_prices',
+        action: 'update',
+        timestamp: new Date().toISOString(),
+        data: { totalUpdates },
+      });
     }
   } catch (error) {
     console.error('[Background] Failed to update commodity prices:', error);
@@ -157,6 +207,7 @@ export async function updateCommodityPrices() {
 export async function regenerateMLPredictions() {
   try {
     const companies = await getActiveCompanyIds();
+    let totalPredictions = 0;
     
     for (const companyId of companies) {
       const materials = await storage.getMaterials(companyId);
@@ -173,7 +224,7 @@ export async function regenerateMLPredictions() {
           const lowerBound = predictedValue * 0.85;
           const upperBound = predictedValue * 1.15;
           
-          await storage.createDemandPrediction({
+          const prediction = await storage.createDemandPrediction({
             materialId: material.id,
             companyId,
             mlModel: ['arima', 'lstm', 'prophet'][Math.floor(Math.random() * 3)] as 'arima' | 'lstm' | 'prophet',
@@ -182,12 +233,33 @@ export async function regenerateMLPredictions() {
             predictedDemand: predictedValue,
             accuracy: 0.75 + Math.random() * 0.2,
           });
+
+          totalPredictions++;
         }
+
+        broadcastUpdate({
+          type: 'database_update',
+          entity: 'demand_prediction',
+          action: 'create',
+          timestamp: new Date().toISOString(),
+          companyId,
+          data: { materialId: material.id, predictionsGenerated: forecastDays },
+        });
       }
       
       if (materials.length > 0) {
         console.log(`[Background] Regenerated ML predictions for company ${companyId.substring(0, 8)}`);
       }
+    }
+
+    if (totalPredictions > 0) {
+      broadcastUpdate({
+        type: 'database_update',
+        entity: 'ml_predictions',
+        action: 'create',
+        timestamp: new Date().toISOString(),
+        data: { totalPredictions },
+      });
     }
   } catch (error) {
     console.error('[Background] Failed to regenerate ML predictions:', error);
@@ -197,6 +269,7 @@ export async function regenerateMLPredictions() {
 export async function updateSupplyChainRisk() {
   try {
     const companies = await getActiveCompanyIds();
+    let totalEvents = 0;
     
     for (const companyId of companies) {
       const batches = await storage.getMaterialBatches(companyId);
@@ -206,7 +279,7 @@ export async function updateSupplyChainRisk() {
           const eventTypes = ['received', 'inspected', 'moved', 'used_in_production', 'shipped'] as const;
           const eventType = eventTypes[Math.floor(Math.random() * eventTypes.length)];
           
-          await storage.createTraceabilityEvent({
+          const event = await storage.createTraceabilityEvent({
             batchId: batch.id,
             companyId,
             eventType,
@@ -214,12 +287,33 @@ export async function updateSupplyChainRisk() {
             location: `Facility ${Math.floor(Math.random() * 5) + 1}`,
             performedBy: 'Auto-Update System',
           });
+
+          broadcastUpdate({
+            type: 'database_update',
+            entity: 'traceability_event',
+            action: 'create',
+            timestamp: new Date().toISOString(),
+            companyId,
+            data: { batchId: batch.id, eventType },
+          });
+
+          totalEvents++;
         }
       }
       
       if (batches.length > 0) {
         console.log(`[Background] Updated supply chain events for company ${companyId.substring(0, 8)}`);
       }
+    }
+
+    if (totalEvents > 0) {
+      broadcastUpdate({
+        type: 'database_update',
+        entity: 'supply_chain_risk',
+        action: 'update',
+        timestamp: new Date().toISOString(),
+        data: { totalEvents },
+      });
     }
   } catch (error) {
     console.error('[Background] Failed to update supply chain risk:', error);
@@ -229,6 +323,7 @@ export async function updateSupplyChainRisk() {
 export async function updateWorkforceMetrics() {
   try {
     const companies = await getActiveCompanyIds();
+    let totalAssignments = 0;
     
     for (const companyId of companies) {
       const employees = await storage.getEmployees(companyId);
@@ -239,18 +334,39 @@ export async function updateWorkforceMetrics() {
         const employee = employees[0];
         
         if (Math.random() < 0.2) {
-          await storage.createStaffAssignment({
+          const assignment = await storage.createStaffAssignment({
             shiftId: shift.id,
             employeeId: employee.id,
             assignedRole: employee.role || 'operator',
             status: 'scheduled',
           });
+
+          broadcastUpdate({
+            type: 'database_update',
+            entity: 'staff_assignment',
+            action: 'create',
+            timestamp: new Date().toISOString(),
+            companyId,
+            data: { shiftId: shift.id, employeeId: employee.id },
+          });
+
+          totalAssignments++;
         }
       }
       
       if (employees.length > 0) {
         console.log(`[Background] Updated workforce metrics for company ${companyId.substring(0, 8)}`);
       }
+    }
+
+    if (totalAssignments > 0) {
+      broadcastUpdate({
+        type: 'database_update',
+        entity: 'workforce_metrics',
+        action: 'update',
+        timestamp: new Date().toISOString(),
+        data: { totalAssignments },
+      });
     }
   } catch (error) {
     console.error('[Background] Failed to update workforce metrics:', error);
@@ -260,13 +376,14 @@ export async function updateWorkforceMetrics() {
 export async function updateProductionKPIs() {
   try {
     const companies = await getActiveCompanyIds();
+    let totalEvents = 0;
     
     for (const companyId of companies) {
       const runs = await storage.getProductionRuns(companyId);
       
       for (const run of runs.slice(0, 5)) {
         if (run.status === 'in_progress' && Math.random() < 0.1) {
-          await storage.createDowntimeEvent({
+          const event = await storage.createDowntimeEvent({
             companyId,
             machineryId: run.machineryId || 'MACH-001',
             eventType: 'unplanned',
@@ -275,12 +392,33 @@ export async function updateProductionKPIs() {
             startTime: new Date(),
             severity: ['low', 'medium'][Math.floor(Math.random() * 2)] as 'low' | 'medium',
           });
+
+          broadcastUpdate({
+            type: 'database_update',
+            entity: 'downtime_event',
+            action: 'create',
+            timestamp: new Date().toISOString(),
+            companyId,
+            data: { machineryId: run.machineryId, eventType: 'unplanned' },
+          });
+
+          totalEvents++;
         }
       }
       
       if (runs.length > 0) {
         console.log(`[Background] Updated production KPIs for company ${companyId.substring(0, 8)}`);
       }
+    }
+
+    if (totalEvents > 0) {
+      broadcastUpdate({
+        type: 'database_update',
+        entity: 'production_kpis',
+        action: 'update',
+        timestamp: new Date().toISOString(),
+        data: { totalEvents },
+      });
     }
   } catch (error) {
     console.error('[Background] Failed to update production KPIs:', error);

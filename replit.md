@@ -6,6 +6,13 @@ This Manufacturing Allocation Intelligence platform uses dual-circuit economic i
 
 **New Features**: The platform now includes regulatory compliance management with document versioning and approval workflows, real-time production KPI dashboards with OEE (Overall Equipment Effectiveness) tracking, automated bottleneck detection, and continuous intelligence gathering from 15+ external economic APIs (FRED, Alpha Vantage, DBnomics, World Bank, IMF, OECD, Trading Economics). All features integrate with the dual-circuit economic thesis, tracking how economic regimes affect compliance requirements, production performance, and strategic decision-making.
 
+**Latest Enhancements** (Real-Time & Automation):
+- **7 Background Polling Services**: Continuous database updates every 30 seconds to 15 minutes - sensor readings (30s), production KPIs (2min), economic data (5min), supply chain risk (5min), commodity prices (10min), workforce metrics (10min), ML predictions (15min)
+- **WebSocket Real-Time Updates**: Live broadcast to all connected clients when database changes occur - instant UI updates without page refresh
+- **Automatic Procurement Scheduling**: Set up recurring purchase orders (daily/weekly/monthly/quarterly) with FDR-threshold triggers and economic regime awareness
+- **AI-Driven Auto-Purchasing**: Intelligent recommendations analyze inventory levels, price trends, demand forecasts, and economic conditions to automatically suggest or execute purchases when optimal
+- **Email Ingestion & Analysis**: Real-time supplier email reception via AgentMail/Gmail integrations with NLP-powered parsing to extract pricing updates, delivery notifications, invoices, quotes, and order confirmations - all auto-analyzed and stored
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
