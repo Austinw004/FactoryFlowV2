@@ -2233,8 +2233,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User has no company association" });
       }
 
-      // For now, return empty array since storage methods aren't implemented yet
-      res.json([]);
+      const payroll = await storage.getEmployeePayroll(user.companyId);
+      res.json(payroll);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -2248,7 +2248,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User has no company association" });
       }
 
-      res.json([]);
+      const benefits = await storage.getEmployeeBenefits(user.companyId);
+      res.json(benefits);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -2262,7 +2263,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User has no company association" });
       }
 
-      res.json([]);
+      const timeOff = await storage.getEmployeeTimeOffRequests(user.companyId);
+      res.json(timeOff);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -2276,7 +2278,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User has no company association" });
       }
 
-      res.json([]);
+      const documents = await storage.getEmployeeDocuments(user.companyId);
+      res.json(documents);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -2290,7 +2293,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User has no company association" });
       }
 
-      res.json([]);
+      const reviews = await storage.getEmployeePerformanceReviews(user.companyId);
+      res.json(reviews);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -2304,9 +2308,188 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User has no company association" });
       }
 
-      res.json([]);
+      const contacts = await storage.getEmployeeEmergencyContacts(user.companyId);
+      res.json(contacts);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create employee payroll record
+  app.post("/api/workforce/payroll", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const { insertEmployeePayrollSchema } = await import("@shared/schema");
+      const payrollData = insertEmployeePayrollSchema.parse(req.body);
+      const payroll = await storage.createEmployeePayroll(payrollData);
+      res.status(201).json(payroll);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Update employee payroll record
+  app.patch("/api/workforce/payroll/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const payroll = await storage.updateEmployeePayroll(req.params.id, req.body);
+      if (!payroll) {
+        return res.status(404).json({ error: "Payroll record not found" });
+      }
+      res.json(payroll);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Create employee benefits record
+  app.post("/api/workforce/benefits", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const { insertEmployeeBenefitsSchema } = await import("@shared/schema");
+      const benefitsData = insertEmployeeBenefitsSchema.parse(req.body);
+      const benefits = await storage.createEmployeeBenefits(benefitsData);
+      res.status(201).json(benefits);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Update employee benefits record
+  app.patch("/api/workforce/benefits/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const benefits = await storage.updateEmployeeBenefits(req.params.id, req.body);
+      if (!benefits) {
+        return res.status(404).json({ error: "Benefits record not found" });
+      }
+      res.json(benefits);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Create time off request
+  app.post("/api/workforce/time-off", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const { insertEmployeeTimeOffSchema } = await import("@shared/schema");
+      const timeOffData = insertEmployeeTimeOffSchema.parse({
+        ...req.body,
+        startDate: new Date(req.body.startDate),
+        endDate: new Date(req.body.endDate),
+      });
+      const timeOff = await storage.createEmployeeTimeOff(timeOffData);
+      res.status(201).json(timeOff);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Update time off request (for approvals)
+  app.patch("/api/workforce/time-off/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const timeOff = await storage.updateEmployeeTimeOff(req.params.id, req.body);
+      if (!timeOff) {
+        return res.status(404).json({ error: "Time off request not found" });
+      }
+      res.json(timeOff);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Create employee document
+  app.post("/api/workforce/documents", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const { insertEmployeeDocumentSchema } = await import("@shared/schema");
+      const documentData = insertEmployeeDocumentSchema.parse({
+        ...req.body,
+        expirationDate: req.body.expirationDate ? new Date(req.body.expirationDate) : null,
+      });
+      const document = await storage.createEmployeeDocument(documentData);
+      res.status(201).json(document);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Create performance review
+  app.post("/api/workforce/reviews", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const { insertEmployeePerformanceReviewSchema } = await import("@shared/schema");
+      const reviewData = insertEmployeePerformanceReviewSchema.parse({
+        ...req.body,
+        reviewDate: new Date(req.body.reviewDate),
+        nextReviewDate: req.body.nextReviewDate ? new Date(req.body.nextReviewDate) : null,
+      });
+      const review = await storage.createEmployeePerformanceReview(reviewData);
+      res.status(201).json(review);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Update performance review
+  app.patch("/api/workforce/reviews/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const review = await storage.updateEmployeePerformanceReview(req.params.id, req.body);
+      if (!review) {
+        return res.status(404).json({ error: "Performance review not found" });
+      }
+      res.json(review);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Create emergency contact
+  app.post("/api/workforce/emergency-contacts", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const { insertEmployeeEmergencyContactSchema } = await import("@shared/schema");
+      const contactData = insertEmployeeEmergencyContactSchema.parse(req.body);
+      const contact = await storage.createEmployeeEmergencyContact(contactData);
+      res.status(201).json(contact);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Update emergency contact
+  app.patch("/api/workforce/emergency-contacts/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const contact = await storage.updateEmployeeEmergencyContact(req.params.id, req.body);
+      if (!contact) {
+        return res.status(404).json({ error: "Emergency contact not found" });
+      }
+      res.json(contact);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
     }
   });
 
