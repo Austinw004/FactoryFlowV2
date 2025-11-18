@@ -2585,6 +2585,331 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========================================
+  // AUTOMATED PURCHASING & INVENTORY MANAGEMENT
+  // ========================================
+
+  // Get all purchase orders for company
+  app.get("/api/purchase-orders", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      const orders = await storage.getPurchaseOrders(user.companyId);
+      res.json(orders);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get purchase orders by status
+  app.get("/api/purchase-orders/status/:status", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      const orders = await storage.getPurchaseOrdersByStatus(user.companyId, req.params.status);
+      res.json(orders);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get single purchase order
+  app.get("/api/purchase-orders/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const order = await storage.getPurchaseOrder(req.params.id);
+      if (!order) {
+        return res.status(404).json({ error: "Purchase order not found" });
+      }
+      res.json(order);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create purchase order
+  app.post("/api/purchase-orders", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      const { insertPurchaseOrderSchema } = await import("@shared/schema");
+      const orderData = insertPurchaseOrderSchema.parse({ ...req.body, companyId: user.companyId });
+      const order = await storage.createPurchaseOrder(orderData);
+      res.status(201).json(order);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Update purchase order (e.g., status changes from email integration)
+  app.patch("/api/purchase-orders/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      // Verify ownership
+      const existingOrder = await storage.getPurchaseOrder(req.params.id);
+      if (!existingOrder || existingOrder.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Purchase order not found in your company" });
+      }
+
+      const order = await storage.updatePurchaseOrder(req.params.id, req.body);
+      if (!order) {
+        return res.status(404).json({ error: "Purchase order not found" });
+      }
+      res.json(order);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Delete purchase order
+  app.delete("/api/purchase-orders/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      // Verify ownership
+      const existingOrder = await storage.getPurchaseOrder(req.params.id);
+      if (!existingOrder || existingOrder.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Purchase order not found in your company" });
+      }
+
+      await storage.deletePurchaseOrder(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get material usage tracking
+  app.get("/api/material-usage", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      const usage = await storage.getMaterialUsageTracking(user.companyId);
+      res.json(usage);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get material usage by material ID
+  app.get("/api/material-usage/material/:materialId", isAuthenticated, async (req: any, res) => {
+    try {
+      const usage = await storage.getMaterialUsageByMaterial(req.params.materialId);
+      res.json(usage);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get material usage by date range
+  app.get("/api/material-usage/range", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      const { startDate, endDate } = req.query;
+      if (!startDate || !endDate) {
+        return res.status(400).json({ error: "startDate and endDate are required" });
+      }
+      const usage = await storage.getMaterialUsageByDateRange(
+        user.companyId,
+        new Date(startDate as string),
+        new Date(endDate as string)
+      );
+      res.json(usage);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create material usage record
+  app.post("/api/material-usage", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      const { insertMaterialUsageTrackingSchema } = await import("@shared/schema");
+      const usageData = insertMaterialUsageTrackingSchema.parse({ ...req.body, companyId: user.companyId });
+      const usage = await storage.createMaterialUsageTracking(usageData);
+      res.status(201).json(usage);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get procurement schedules
+  app.get("/api/procurement-schedules", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      const schedules = await storage.getProcurementSchedules(user.companyId);
+      res.json(schedules);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get active procurement schedules
+  app.get("/api/procurement-schedules/active", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      const schedules = await storage.getActiveProcurementSchedules(user.companyId);
+      res.json(schedules);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create procurement schedule
+  app.post("/api/procurement-schedules", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      const { insertProcurementScheduleSchema } = await import("@shared/schema");
+      const scheduleData = insertProcurementScheduleSchema.parse({ ...req.body, companyId: user.companyId });
+      const schedule = await storage.createProcurementSchedule(scheduleData);
+      res.status(201).json(schedule);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Update procurement schedule
+  app.patch("/api/procurement-schedules/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      // Verify ownership
+      const existingSchedule = await storage.getProcurementSchedule(req.params.id);
+      if (!existingSchedule || existingSchedule.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Procurement schedule not found in your company" });
+      }
+
+      const schedule = await storage.updateProcurementSchedule(req.params.id, req.body);
+      if (!schedule) {
+        return res.status(404).json({ error: "Procurement schedule not found" });
+      }
+      res.json(schedule);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Delete procurement schedule
+  app.delete("/api/procurement-schedules/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      // Verify ownership
+      const existingSchedule = await storage.getProcurementSchedule(req.params.id);
+      if (!existingSchedule || existingSchedule.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Procurement schedule not found in your company" });
+      }
+
+      await storage.deleteProcurementSchedule(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get auto purchase recommendations
+  app.get("/api/auto-purchase-recommendations", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      const recommendations = await storage.getAutoPurchaseRecommendations(user.companyId);
+      res.json(recommendations);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get auto purchase recommendations by status
+  app.get("/api/auto-purchase-recommendations/status/:status", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      const recommendations = await storage.getAutoPurchaseRecommendationsByStatus(user.companyId, req.params.status);
+      res.json(recommendations);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create auto purchase recommendation
+  app.post("/api/auto-purchase-recommendations", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      const { insertAutoPurchaseRecommendationSchema } = await import("@shared/schema");
+      const recommendationData = insertAutoPurchaseRecommendationSchema.parse({ ...req.body, companyId: user.companyId });
+      const recommendation = await storage.createAutoPurchaseRecommendation(recommendationData);
+      res.status(201).json(recommendation);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Update auto purchase recommendation (e.g., approve/reject/execute)
+  app.patch("/api/auto-purchase-recommendations/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      // Verify ownership by fetching all recommendations and checking
+      const allRecommendations = await storage.getAutoPurchaseRecommendations(user.companyId);
+      if (!allRecommendations.find(r => r.id === req.params.id)) {
+        return res.status(403).json({ error: "Recommendation not found in your company" });
+      }
+
+      const recommendation = await storage.updateAutoPurchaseRecommendation(req.params.id, req.body);
+      if (!recommendation) {
+        return res.status(404).json({ error: "Recommendation not found" });
+      }
+      res.json(recommendation);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // ========================================
   // EXTERNAL API DATA GATHERING
   // ========================================
 
