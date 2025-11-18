@@ -2323,6 +2323,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User has no company association" });
       }
 
+      // Verify employee belongs to user's company
+      const employee = await storage.getEmployeeForCompany(req.body.employeeId, user.companyId);
+      if (!employee) {
+        return res.status(403).json({ error: "Employee not found in your company" });
+      }
+
       const { insertEmployeePayrollSchema } = await import("@shared/schema");
       const payrollData = insertEmployeePayrollSchema.parse(req.body);
       const payroll = await storage.createEmployeePayroll(payrollData);
@@ -2335,6 +2341,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update employee payroll record
   app.patch("/api/workforce/payroll/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      // Verify the payroll record belongs to user's company
+      const existingPayroll = await storage.getEmployeePayroll(user.companyId);
+      if (!existingPayroll.find(p => p.id === req.params.id)) {
+        return res.status(403).json({ error: "Payroll record not found in your company" });
+      }
+
       const payroll = await storage.updateEmployeePayroll(req.params.id, req.body);
       if (!payroll) {
         return res.status(404).json({ error: "Payroll record not found" });
@@ -2353,8 +2370,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User has no company association" });
       }
 
-      const { insertEmployeeBenefitsSchema } = await import("@shared/schema");
-      const benefitsData = insertEmployeeBenefitsSchema.parse(req.body);
+      // Verify employee belongs to user's company
+      const employee = await storage.getEmployeeForCompany(req.body.employeeId, user.companyId);
+      if (!employee) {
+        return res.status(403).json({ error: "Employee not found in your company" });
+      }
+
+      const { insertEmployeeBenefitSchema } = await import("@shared/schema");
+      const benefitsData = insertEmployeeBenefitSchema.parse(req.body);
       const benefits = await storage.createEmployeeBenefits(benefitsData);
       res.status(201).json(benefits);
     } catch (error: any) {
@@ -2365,6 +2388,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update employee benefits record
   app.patch("/api/workforce/benefits/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      // Verify the benefits record belongs to user's company
+      const existingBenefits = await storage.getEmployeeBenefits(user.companyId);
+      if (!existingBenefits.find(b => b.id === req.params.id)) {
+        return res.status(403).json({ error: "Benefits record not found in your company" });
+      }
+
       const benefits = await storage.updateEmployeeBenefits(req.params.id, req.body);
       if (!benefits) {
         return res.status(404).json({ error: "Benefits record not found" });
@@ -2383,6 +2417,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User has no company association" });
       }
 
+      // Verify employee belongs to user's company
+      const employee = await storage.getEmployeeForCompany(req.body.employeeId, user.companyId);
+      if (!employee) {
+        return res.status(403).json({ error: "Employee not found in your company" });
+      }
+
       const { insertEmployeeTimeOffSchema } = await import("@shared/schema");
       const timeOffData = insertEmployeeTimeOffSchema.parse({
         ...req.body,
@@ -2399,6 +2439,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update time off request (for approvals)
   app.patch("/api/workforce/time-off/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      // Verify the time off request belongs to user's company
+      const existingTimeOff = await storage.getEmployeeTimeOffRequests(user.companyId);
+      if (!existingTimeOff.find(t => t.id === req.params.id)) {
+        return res.status(403).json({ error: "Time off request not found in your company" });
+      }
+
       const timeOff = await storage.updateEmployeeTimeOff(req.params.id, req.body);
       if (!timeOff) {
         return res.status(404).json({ error: "Time off request not found" });
@@ -2415,6 +2466,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(req.user.claims.sub);
       if (!user || !user.companyId) {
         return res.status(400).json({ error: "User has no company association" });
+      }
+
+      // Verify employee belongs to user's company
+      const employee = await storage.getEmployeeForCompany(req.body.employeeId, user.companyId);
+      if (!employee) {
+        return res.status(403).json({ error: "Employee not found in your company" });
       }
 
       const { insertEmployeeDocumentSchema } = await import("@shared/schema");
@@ -2437,6 +2494,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User has no company association" });
       }
 
+      // Verify employee belongs to user's company
+      const employee = await storage.getEmployeeForCompany(req.body.employeeId, user.companyId);
+      if (!employee) {
+        return res.status(403).json({ error: "Employee not found in your company" });
+      }
+
       const { insertEmployeePerformanceReviewSchema } = await import("@shared/schema");
       const reviewData = insertEmployeePerformanceReviewSchema.parse({
         ...req.body,
@@ -2453,6 +2516,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update performance review
   app.patch("/api/workforce/reviews/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      // Verify the review exists and belongs to user's company
+      const existingReviews = await storage.getEmployeePerformanceReviews(user.companyId);
+      if (!existingReviews.find(r => r.id === req.params.id)) {
+        return res.status(403).json({ error: "Performance review not found in your company" });
+      }
+
       const review = await storage.updateEmployeePerformanceReview(req.params.id, req.body);
       if (!review) {
         return res.status(404).json({ error: "Performance review not found" });
@@ -2471,6 +2545,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User has no company association" });
       }
 
+      // Verify employee belongs to user's company
+      const employee = await storage.getEmployeeForCompany(req.body.employeeId, user.companyId);
+      if (!employee) {
+        return res.status(403).json({ error: "Employee not found in your company" });
+      }
+
       const { insertEmployeeEmergencyContactSchema } = await import("@shared/schema");
       const contactData = insertEmployeeEmergencyContactSchema.parse(req.body);
       const contact = await storage.createEmployeeEmergencyContact(contactData);
@@ -2483,6 +2563,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update emergency contact
   app.patch("/api/workforce/emergency-contacts/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      // Verify the emergency contact belongs to user's company
+      const existingContacts = await storage.getEmployeeEmergencyContacts(user.companyId);
+      if (!existingContacts.find(c => c.id === req.params.id)) {
+        return res.status(403).json({ error: "Emergency contact not found in your company" });
+      }
+
       const contact = await storage.updateEmployeeEmergencyContact(req.params.id, req.body);
       if (!contact) {
         return res.status(404).json({ error: "Emergency contact not found" });

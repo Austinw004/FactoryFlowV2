@@ -28,7 +28,7 @@ import type {
   SkillRequirement, InsertSkillRequirement,
   StaffAssignment, InsertStaffAssignment,
   EmployeePayroll, InsertEmployeePayroll,
-  EmployeeBenefits, InsertEmployeeBenefits,
+  EmployeeBenefit, InsertEmployeeBenefit,
   EmployeeTimeOff, InsertEmployeeTimeOff,
   EmployeePtoBalance, InsertEmployeePtoBalance,
   EmployeeDocument, InsertEmployeeDocument,
@@ -180,6 +180,7 @@ export interface IStorage {
   
   // Workforce Scheduling
   getEmployees(companyId: string): Promise<Employee[]>;
+  getEmployeeForCompany(employeeId: string, companyId: string): Promise<Employee | undefined>;
   createEmployee(employee: InsertEmployee): Promise<Employee>;
   getWorkShifts(companyId: string): Promise<WorkShift[]>;
   createWorkShift(shift: InsertWorkShift): Promise<WorkShift>;
@@ -196,10 +197,10 @@ export interface IStorage {
   updateEmployeePayroll(id: string, payroll: Partial<InsertEmployeePayroll>): Promise<EmployeePayroll | undefined>;
   
   // Employee Benefits
-  getEmployeeBenefits(companyId: string): Promise<EmployeeBenefits[]>;
-  getEmployeeBenefitsByEmployee(employeeId: string): Promise<EmployeeBenefits | undefined>;
-  createEmployeeBenefits(benefits: InsertEmployeeBenefits): Promise<EmployeeBenefits>;
-  updateEmployeeBenefits(id: string, benefits: Partial<InsertEmployeeBenefits>): Promise<EmployeeBenefits | undefined>;
+  getEmployeeBenefits(companyId: string): Promise<EmployeeBenefit[]>;
+  getEmployeeBenefitsByEmployee(employeeId: string): Promise<EmployeeBenefit | undefined>;
+  createEmployeeBenefits(benefits: InsertEmployeeBenefit): Promise<EmployeeBenefit>;
+  updateEmployeeBenefits(id: string, benefits: Partial<InsertEmployeeBenefit>): Promise<EmployeeBenefit | undefined>;
   
   // Employee Time Off
   getEmployeeTimeOffRequests(companyId: string): Promise<EmployeeTimeOff[]>;
@@ -658,6 +659,14 @@ export class DbStorage implements IStorage {
     return db.select().from(employees).where(eq(employees.companyId, companyId));
   }
 
+  async getEmployeeForCompany(employeeId: string, companyId: string): Promise<Employee | undefined> {
+    const [employee] = await db
+      .select()
+      .from(employees)
+      .where(and(eq(employees.id, employeeId), eq(employees.companyId, companyId)));
+    return employee;
+  }
+
   async createEmployee(insertEmployee: InsertEmployee): Promise<Employee> {
     const [employee] = await db.insert(employees).values(insertEmployee).returning();
     return employee;
@@ -725,7 +734,7 @@ export class DbStorage implements IStorage {
   }
 
   // Employee Benefits methods
-  async getEmployeeBenefits(companyId: string): Promise<EmployeeBenefits[]> {
+  async getEmployeeBenefits(companyId: string): Promise<EmployeeBenefit[]> {
     const results = await db
       .select()
       .from(employeeBenefits)
@@ -734,17 +743,17 @@ export class DbStorage implements IStorage {
     return results.map(r => r.employee_benefits);
   }
 
-  async getEmployeeBenefitsByEmployee(employeeId: string): Promise<EmployeeBenefits | undefined> {
+  async getEmployeeBenefitsByEmployee(employeeId: string): Promise<EmployeeBenefit | undefined> {
     const [benefits] = await db.select().from(employeeBenefits).where(eq(employeeBenefits.employeeId, employeeId));
     return benefits;
   }
 
-  async createEmployeeBenefits(insertBenefits: InsertEmployeeBenefits): Promise<EmployeeBenefits> {
+  async createEmployeeBenefits(insertBenefits: InsertEmployeeBenefit): Promise<EmployeeBenefit> {
     const [benefits] = await db.insert(employeeBenefits).values(insertBenefits).returning();
     return benefits;
   }
 
-  async updateEmployeeBenefits(id: string, updateData: Partial<InsertEmployeeBenefits>): Promise<EmployeeBenefits | undefined> {
+  async updateEmployeeBenefits(id: string, updateData: Partial<InsertEmployeeBenefit>): Promise<EmployeeBenefit | undefined> {
     const [benefits] = await db.update(employeeBenefits).set(updateData).where(eq(employeeBenefits.id, id)).returning();
     return benefits;
   }
