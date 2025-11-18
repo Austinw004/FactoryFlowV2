@@ -795,6 +795,168 @@ export const staffAssignments = pgTable("staff_assignments", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Comprehensive Employee Management - HR, Payroll, Benefits
+export const employeePayroll = pgTable("employee_payroll", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: "cascade" }).unique(),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  annualSalary: real("annual_salary"),
+  hourlyRate: real("hourly_rate"),
+  payFrequency: text("pay_frequency").notNull().default("biweekly"), // "weekly", "biweekly", "monthly", "semimonthly"
+  paymentMethod: text("payment_method").notNull().default("direct_deposit"), // "direct_deposit", "check", "cash"
+  bankName: text("bank_name"),
+  accountNumber: text("account_number"), // Encrypted in production
+  routingNumber: text("routing_number"),
+  taxFilingStatus: text("tax_filing_status"), // "single", "married", "head_of_household"
+  federalWithholdings: integer("federal_withholdings").default(0), // Number of allowances
+  stateWithholdings: integer("state_withholdings").default(0),
+  additionalWithholding: real("additional_withholding").default(0),
+  ssnLast4: text("ssn_last4"), // Only last 4 digits for security
+  bonusEligible: integer("bonus_eligible").default(0), // 0 or 1
+  commissionRate: real("commission_rate"),
+  overtimeEligible: integer("overtime_eligible").default(1), // 0 or 1
+  overtimeRate: real("overtime_rate").default(1.5), // Multiplier
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const employeeBenefits = pgTable("employee_benefits", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: "cascade" }),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  benefitType: text("benefit_type").notNull(), // "health", "dental", "vision", "life", "401k", "pto", "other"
+  planName: text("plan_name").notNull(),
+  provider: text("provider"),
+  policyNumber: text("policy_number"),
+  coverageLevel: text("coverage_level"), // "employee_only", "employee_spouse", "employee_children", "family"
+  employeeContribution: real("employee_contribution"),
+  employerContribution: real("employer_contribution"),
+  deductionFrequency: text("deduction_frequency").default("per_paycheck"), // "per_paycheck", "monthly", "annually"
+  enrollmentDate: timestamp("enrollment_date"),
+  effectiveDate: timestamp("effective_date"),
+  expirationDate: timestamp("expiration_date"),
+  status: text("status").notNull().default("active"), // "active", "pending", "cancelled", "expired"
+  dependents: jsonb("dependents"), // Array of dependent info
+  beneficiaries: jsonb("beneficiaries"), // For life insurance
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const employeeDocuments = pgTable("employee_documents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: "cascade" }),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  documentType: text("document_type").notNull(), // "i9", "w4", "contract", "offer_letter", "certification", "license", "performance_review", "disciplinary", "other"
+  title: text("title").notNull(),
+  description: text("description"),
+  fileUrl: text("file_url"), // Path to uploaded file
+  fileName: text("file_name"),
+  fileSize: integer("file_size"), // in bytes
+  uploadedBy: varchar("uploaded_by").references(() => users.id),
+  documentDate: timestamp("document_date"),
+  expirationDate: timestamp("expiration_date"),
+  isConfidential: integer("is_confidential").default(0), // 0 or 1
+  requiresSignature: integer("requires_signature").default(0),
+  signedAt: timestamp("signed_at"),
+  signedBy: varchar("signed_by").references(() => users.id),
+  status: text("status").notNull().default("active"), // "active", "expired", "archived"
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const employeeTimeOff = pgTable("employee_time_off", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: "cascade" }),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  requestType: text("request_type").notNull(), // "vacation", "sick", "personal", "unpaid", "bereavement", "parental", "jury_duty", "other"
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  totalDays: real("total_days").notNull(),
+  totalHours: real("total_hours").notNull(),
+  status: text("status").notNull().default("pending"), // "pending", "approved", "denied", "cancelled"
+  requestedAt: timestamp("requested_at").defaultNow().notNull(),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewNotes: text("review_notes"),
+  reason: text("reason"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const employeePtoBalances = pgTable("employee_pto_balances", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: "cascade" }).unique(),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  vacationDaysTotal: real("vacation_days_total").default(0),
+  vacationDaysUsed: real("vacation_days_used").default(0),
+  vacationDaysRemaining: real("vacation_days_remaining").default(0),
+  sickDaysTotal: real("sick_days_total").default(0),
+  sickDaysUsed: real("sick_days_used").default(0),
+  sickDaysRemaining: real("sick_days_remaining").default(0),
+  personalDaysTotal: real("personal_days_total").default(0),
+  personalDaysUsed: real("personal_days_used").default(0),
+  personalDaysRemaining: real("personal_days_remaining").default(0),
+  accrualRate: real("accrual_rate"), // Days per month
+  accrualStartDate: timestamp("accrual_start_date"),
+  lastAccrualDate: timestamp("last_accrual_date"),
+  yearStartDate: timestamp("year_start_date"), // When PTO year starts
+  carryoverDays: real("carryover_days").default(0),
+  maxCarryover: real("max_carryover"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const employeeEmergencyContacts = pgTable("employee_emergency_contacts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: "cascade" }),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  contactName: text("contact_name").notNull(),
+  relationship: text("relationship").notNull(), // "spouse", "parent", "sibling", "child", "friend", "other"
+  phone: text("phone").notNull(),
+  alternatePhone: text("alternate_phone"),
+  email: text("email"),
+  address: text("address"),
+  isPrimary: integer("is_primary").default(0), // 0 or 1
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const employeePerformanceReviews = pgTable("employee_performance_reviews", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: "cascade" }),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  reviewDate: timestamp("review_date").notNull(),
+  reviewPeriodStart: timestamp("review_period_start").notNull(),
+  reviewPeriodEnd: timestamp("review_period_end").notNull(),
+  reviewerUserId: varchar("reviewer_user_id").notNull().references(() => users.id),
+  reviewType: text("review_type").notNull(), // "annual", "quarterly", "probationary", "promotion", "disciplinary"
+  overallRating: real("overall_rating"), // 1-5 scale
+  productivityScore: real("productivity_score"),
+  qualityScore: real("quality_score"),
+  communicationScore: real("communication_score"),
+  teamworkScore: real("teamwork_score"),
+  attendanceScore: real("attendance_score"),
+  strengths: text("strengths"),
+  areasForImprovement: text("areas_for_improvement"),
+  goals: text("goals"),
+  accomplishments: text("accomplishments"),
+  reviewNotes: text("review_notes"),
+  employeeComments: text("employee_comments"),
+  raiseAmount: real("raise_amount"),
+  raisePercentage: real("raise_percentage"),
+  bonusAmount: real("bonus_amount"),
+  promotionTitle: text("promotion_title"),
+  nextReviewDate: timestamp("next_review_date"),
+  status: text("status").notNull().default("draft"), // "draft", "completed", "acknowledged"
+  acknowledgedAt: timestamp("acknowledged_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const upsertUserSchema = createInsertSchema(users).omit({ createdAt: true, updatedAt: true });
@@ -936,18 +1098,58 @@ export type InsertSupplierChainLink = z.infer<typeof insertSupplierChainLinkSche
 
 // Workforce Scheduling schemas
 export const insertEmployeeSchema = createInsertSchema(employees).omit({ id: true, createdAt: true, updatedAt: true });
+export const updateEmployeeSchema = createInsertSchema(employees).omit({ id: true, companyId: true, createdAt: true }).partial();
 export const insertWorkShiftSchema = createInsertSchema(workShifts).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertSkillRequirementSchema = createInsertSchema(skillRequirements).omit({ id: true, createdAt: true });
 export const insertStaffAssignmentSchema = createInsertSchema(staffAssignments).omit({ id: true, createdAt: true, updatedAt: true });
 
 export type Employee = typeof employees.$inferSelect;
 export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
+export type UpdateEmployee = z.infer<typeof updateEmployeeSchema>;
 export type WorkShift = typeof workShifts.$inferSelect;
 export type InsertWorkShift = z.infer<typeof insertWorkShiftSchema>;
 export type SkillRequirement = typeof skillRequirements.$inferSelect;
 export type InsertSkillRequirement = z.infer<typeof insertSkillRequirementSchema>;
 export type StaffAssignment = typeof staffAssignments.$inferSelect;
 export type InsertStaffAssignment = z.infer<typeof insertStaffAssignmentSchema>;
+
+// Comprehensive Employee Management schemas
+export const insertEmployeePayrollSchema = createInsertSchema(employeePayroll).omit({ id: true, createdAt: true, updatedAt: true });
+export const updateEmployeePayrollSchema = createInsertSchema(employeePayroll).omit({ id: true, companyId: true, createdAt: true }).partial();
+export const insertEmployeeBenefitSchema = createInsertSchema(employeeBenefits).omit({ id: true, createdAt: true, updatedAt: true });
+export const updateEmployeeBenefitSchema = createInsertSchema(employeeBenefits).omit({ id: true, companyId: true, createdAt: true }).partial();
+export const insertEmployeeDocumentSchema = createInsertSchema(employeeDocuments).omit({ id: true, createdAt: true, updatedAt: true });
+export const updateEmployeeDocumentSchema = createInsertSchema(employeeDocuments).omit({ id: true, companyId: true, createdAt: true }).partial();
+export const insertEmployeeTimeOffSchema = createInsertSchema(employeeTimeOff).omit({ id: true, createdAt: true, updatedAt: true, requestedAt: true });
+export const updateEmployeeTimeOffSchema = createInsertSchema(employeeTimeOff).omit({ id: true, companyId: true, createdAt: true, requestedAt: true }).partial();
+export const insertEmployeePtoBalanceSchema = createInsertSchema(employeePtoBalances).omit({ id: true, createdAt: true, updatedAt: true });
+export const updateEmployeePtoBalanceSchema = createInsertSchema(employeePtoBalances).omit({ id: true, companyId: true, createdAt: true }).partial();
+export const insertEmployeeEmergencyContactSchema = createInsertSchema(employeeEmergencyContacts).omit({ id: true, createdAt: true, updatedAt: true });
+export const updateEmployeeEmergencyContactSchema = createInsertSchema(employeeEmergencyContacts).omit({ id: true, companyId: true, createdAt: true }).partial();
+export const insertEmployeePerformanceReviewSchema = createInsertSchema(employeePerformanceReviews).omit({ id: true, createdAt: true, updatedAt: true });
+export const updateEmployeePerformanceReviewSchema = createInsertSchema(employeePerformanceReviews).omit({ id: true, companyId: true, createdAt: true }).partial();
+
+export type EmployeePayroll = typeof employeePayroll.$inferSelect;
+export type InsertEmployeePayroll = z.infer<typeof insertEmployeePayrollSchema>;
+export type UpdateEmployeePayroll = z.infer<typeof updateEmployeePayrollSchema>;
+export type EmployeeBenefit = typeof employeeBenefits.$inferSelect;
+export type InsertEmployeeBenefit = z.infer<typeof insertEmployeeBenefitSchema>;
+export type UpdateEmployeeBenefit = z.infer<typeof updateEmployeeBenefitSchema>;
+export type EmployeeDocument = typeof employeeDocuments.$inferSelect;
+export type InsertEmployeeDocument = z.infer<typeof insertEmployeeDocumentSchema>;
+export type UpdateEmployeeDocument = z.infer<typeof updateEmployeeDocumentSchema>;
+export type EmployeeTimeOff = typeof employeeTimeOff.$inferSelect;
+export type InsertEmployeeTimeOff = z.infer<typeof insertEmployeeTimeOffSchema>;
+export type UpdateEmployeeTimeOff = z.infer<typeof updateEmployeeTimeOffSchema>;
+export type EmployeePtoBalance = typeof employeePtoBalances.$inferSelect;
+export type InsertEmployeePtoBalance = z.infer<typeof insertEmployeePtoBalanceSchema>;
+export type UpdateEmployeePtoBalance = z.infer<typeof updateEmployeePtoBalanceSchema>;
+export type EmployeeEmergencyContact = typeof employeeEmergencyContacts.$inferSelect;
+export type InsertEmployeeEmergencyContact = z.infer<typeof insertEmployeeEmergencyContactSchema>;
+export type UpdateEmployeeEmergencyContact = z.infer<typeof updateEmployeeEmergencyContactSchema>;
+export type EmployeePerformanceReview = typeof employeePerformanceReviews.$inferSelect;
+export type InsertEmployeePerformanceReview = z.infer<typeof insertEmployeePerformanceReviewSchema>;
+export type UpdateEmployeePerformanceReview = z.infer<typeof updateEmployeePerformanceReviewSchema>;
 
 // Automatic Procurement & Purchasing
 export const procurementSchedules = pgTable("procurement_schedules", {

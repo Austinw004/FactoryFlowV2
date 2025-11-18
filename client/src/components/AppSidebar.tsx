@@ -97,7 +97,7 @@ const menuSections = [
         icon: Shield,
       },
       {
-        title: "Workforce Scheduling",
+        title: "Workforce",
         url: "/workforce",
         icon: Users,
       },
