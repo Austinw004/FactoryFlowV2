@@ -1231,11 +1231,60 @@ export const emailAnalysis = pgTable("email_analysis", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const purchaseOrders = pgTable("purchase_orders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  orderNumber: text("order_number").notNull(), // PO-2024-001, etc
+  materialId: varchar("material_id").notNull().references(() => materials.id, { onDelete: "cascade" }),
+  supplierId: varchar("supplier_id").notNull().references(() => suppliers.id, { onDelete: "cascade" }),
+  quantity: real("quantity").notNull(),
+  unitPrice: real("unit_price").notNull(),
+  totalCost: real("total_cost").notNull(),
+  status: text("status").notNull().default("pending"), // "pending", "in_progress", "delivered", "cancelled"
+  orderDate: timestamp("order_date").notNull().defaultNow(),
+  expectedDeliveryDate: timestamp("expected_delivery_date"),
+  actualDeliveryDate: timestamp("actual_delivery_date"),
+  trackingNumber: text("tracking_number"),
+  carrier: text("carrier"),
+  notes: text("notes"),
+  sourceType: text("source_type").notNull(), // "manual", "scheduled", "ai_recommendation", "email_trigger"
+  sourceId: text("source_id"), // ID of schedule, recommendation, or email that triggered this
+  procurementScheduleId: varchar("procurement_schedule_id").references(() => procurementSchedules.id),
+  recommendationId: varchar("recommendation_id").references(() => autoPurchaseRecommendations.id),
+  emailId: varchar("email_id").references(() => incomingEmails.id),
+  economicRegime: text("economic_regime"),
+  fdrAtPurchase: real("fdr_at_purchase"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const materialUsageTracking = pgTable("material_usage_tracking", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  materialId: varchar("material_id").notNull().references(() => materials.id, { onDelete: "cascade" }),
+  usageDate: timestamp("usage_date").notNull().defaultNow(),
+  quantityUsed: real("quantity_used").notNull(),
+  usageType: text("usage_type").notNull(), // "production", "waste", "spoilage", "adjustment", "sample", "rework"
+  productionRunId: varchar("production_run_id").references(() => productionRuns.id),
+  skuId: varchar("sku_id").references(() => skus.id), // What was being produced
+  batchNumber: text("batch_number"),
+  machineId: varchar("machine_id").references(() => machinery.id),
+  operatorEmployeeId: varchar("operator_employee_id").references(() => employees.id),
+  notes: text("notes"),
+  remainingStock: real("remaining_stock"), // Stock level after this usage
+  costPerUnit: real("cost_per_unit"), // FIFO/LIFO cost at time of usage
+  totalCost: real("total_cost"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Automatic Procurement schemas
 export const insertProcurementScheduleSchema = createInsertSchema(procurementSchedules).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertAutoPurchaseRecommendationSchema = createInsertSchema(autoPurchaseRecommendations).omit({ id: true, createdAt: true });
 export const insertIncomingEmailSchema = createInsertSchema(incomingEmails).omit({ id: true, createdAt: true });
 export const insertEmailAnalysisSchema = createInsertSchema(emailAnalysis).omit({ id: true, createdAt: true });
+export const insertPurchaseOrderSchema = createInsertSchema(purchaseOrders).omit({ id: true, createdAt: true, updatedAt: true });
+export const updatePurchaseOrderSchema = insertPurchaseOrderSchema.partial();
+export const insertMaterialUsageTrackingSchema = createInsertSchema(materialUsageTracking).omit({ id: true, createdAt: true });
 
 export type ProcurementSchedule = typeof procurementSchedules.$inferSelect;
 export type InsertProcurementSchedule = z.infer<typeof insertProcurementScheduleSchema>;
@@ -1245,3 +1294,8 @@ export type IncomingEmail = typeof incomingEmails.$inferSelect;
 export type InsertIncomingEmail = z.infer<typeof insertIncomingEmailSchema>;
 export type EmailAnalysis = typeof emailAnalysis.$inferSelect;
 export type InsertEmailAnalysis = z.infer<typeof insertEmailAnalysisSchema>;
+export type PurchaseOrder = typeof purchaseOrders.$inferSelect;
+export type InsertPurchaseOrder = z.infer<typeof insertPurchaseOrderSchema>;
+export type UpdatePurchaseOrder = z.infer<typeof updatePurchaseOrderSchema>;
+export type MaterialUsageTracking = typeof materialUsageTracking.$inferSelect;
+export type InsertMaterialUsageTracking = z.infer<typeof insertMaterialUsageTrackingSchema>;

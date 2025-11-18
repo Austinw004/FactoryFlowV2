@@ -1,5 +1,5 @@
 import { db } from "@db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import type { 
   User, InsertUser, UpsertUser, Company, InsertCompany, Sku, InsertSku,
   Material, InsertMaterial, Bom, InsertBom, Supplier, InsertSupplier,
@@ -33,7 +33,11 @@ import type {
   EmployeePtoBalance, InsertEmployeePtoBalance,
   EmployeeDocument, InsertEmployeeDocument,
   EmployeePerformanceReview, InsertEmployeePerformanceReview,
-  EmployeeEmergencyContact, InsertEmployeeEmergencyContact
+  EmployeeEmergencyContact, InsertEmployeeEmergencyContact,
+  PurchaseOrder, InsertPurchaseOrder, UpdatePurchaseOrder,
+  MaterialUsageTracking, InsertMaterialUsageTracking,
+  ProcurementSchedule, InsertProcurementSchedule,
+  AutoPurchaseRecommendation, InsertAutoPurchaseRecommendation
 } from "@shared/schema";
 import { 
   users, companies, skus, materials, boms, suppliers, supplierMaterials,
@@ -45,7 +49,8 @@ import {
   materialBatches, traceabilityEvents, supplierChainLinks,
   employees, workShifts, skillRequirements, staffAssignments,
   employeePayroll, employeeBenefits, employeeTimeOff, employeePtoBalances,
-  employeeDocuments, employeePerformanceReviews, employeeEmergencyContacts
+  employeeDocuments, employeePerformanceReviews, employeeEmergencyContacts,
+  purchaseOrders, materialUsageTracking, procurementSchedules, autoPurchaseRecommendations
 } from "@shared/schema";
 
 export interface IStorage {
@@ -231,6 +236,34 @@ export interface IStorage {
   getEmployeeEmergencyContactsByEmployee(employeeId: string): Promise<EmployeeEmergencyContact[]>;
   createEmployeeEmergencyContact(contact: InsertEmployeeEmergencyContact): Promise<EmployeeEmergencyContact>;
   updateEmployeeEmergencyContact(id: string, contact: Partial<InsertEmployeeEmergencyContact>): Promise<EmployeeEmergencyContact | undefined>;
+  
+  // Purchase Orders
+  getPurchaseOrders(companyId: string): Promise<PurchaseOrder[]>;
+  getPurchaseOrdersByStatus(companyId: string, status: string): Promise<PurchaseOrder[]>;
+  getPurchaseOrder(id: string): Promise<PurchaseOrder | undefined>;
+  createPurchaseOrder(order: InsertPurchaseOrder): Promise<PurchaseOrder>;
+  updatePurchaseOrder(id: string, order: UpdatePurchaseOrder): Promise<PurchaseOrder | undefined>;
+  deletePurchaseOrder(id: string): Promise<void>;
+  
+  // Material Usage Tracking
+  getMaterialUsageTracking(companyId: string): Promise<MaterialUsageTracking[]>;
+  getMaterialUsageByMaterial(materialId: string): Promise<MaterialUsageTracking[]>;
+  getMaterialUsageByDateRange(companyId: string, startDate: Date, endDate: Date): Promise<MaterialUsageTracking[]>;
+  createMaterialUsageTracking(usage: InsertMaterialUsageTracking): Promise<MaterialUsageTracking>;
+  
+  // Procurement Schedules
+  getProcurementSchedules(companyId: string): Promise<ProcurementSchedule[]>;
+  getActiveProcurementSchedules(companyId: string): Promise<ProcurementSchedule[]>;
+  getProcurementSchedule(id: string): Promise<ProcurementSchedule | undefined>;
+  createProcurementSchedule(schedule: InsertProcurementSchedule): Promise<ProcurementSchedule>;
+  updateProcurementSchedule(id: string, schedule: Partial<InsertProcurementSchedule>): Promise<ProcurementSchedule | undefined>;
+  deleteProcurementSchedule(id: string): Promise<void>;
+  
+  // Auto Purchase Recommendations
+  getAutoPurchaseRecommendations(companyId: string): Promise<AutoPurchaseRecommendation[]>;
+  getAutoPurchaseRecommendationsByStatus(companyId: string, status: string): Promise<AutoPurchaseRecommendation[]>;
+  createAutoPurchaseRecommendation(recommendation: InsertAutoPurchaseRecommendation): Promise<AutoPurchaseRecommendation>;
+  updateAutoPurchaseRecommendation(id: string, recommendation: Partial<InsertAutoPurchaseRecommendation>): Promise<AutoPurchaseRecommendation | undefined>;
 }
 
 export class DbStorage implements IStorage {
@@ -877,6 +910,111 @@ export class DbStorage implements IStorage {
   async updateEmployeeEmergencyContact(id: string, updateData: Partial<InsertEmployeeEmergencyContact>): Promise<EmployeeEmergencyContact | undefined> {
     const [contact] = await db.update(employeeEmergencyContacts).set(updateData).where(eq(employeeEmergencyContacts.id, id)).returning();
     return contact;
+  }
+
+  // Purchase Order methods
+  async getPurchaseOrders(companyId: string): Promise<PurchaseOrder[]> {
+    return db.select().from(purchaseOrders).where(eq(purchaseOrders.companyId, companyId));
+  }
+
+  async getPurchaseOrdersByStatus(companyId: string, status: string): Promise<PurchaseOrder[]> {
+    return db.select().from(purchaseOrders).where(
+      and(eq(purchaseOrders.companyId, companyId), eq(purchaseOrders.status, status))
+    );
+  }
+
+  async getPurchaseOrder(id: string): Promise<PurchaseOrder | undefined> {
+    const [order] = await db.select().from(purchaseOrders).where(eq(purchaseOrders.id, id));
+    return order;
+  }
+
+  async createPurchaseOrder(insertOrder: InsertPurchaseOrder): Promise<PurchaseOrder> {
+    const [order] = await db.insert(purchaseOrders).values(insertOrder).returning();
+    return order;
+  }
+
+  async updatePurchaseOrder(id: string, updateData: UpdatePurchaseOrder): Promise<PurchaseOrder | undefined> {
+    const [order] = await db.update(purchaseOrders).set(updateData).where(eq(purchaseOrders.id, id)).returning();
+    return order;
+  }
+
+  async deletePurchaseOrder(id: string): Promise<void> {
+    await db.delete(purchaseOrders).where(eq(purchaseOrders.id, id));
+  }
+
+  // Material Usage Tracking methods
+  async getMaterialUsageTracking(companyId: string): Promise<MaterialUsageTracking[]> {
+    return db.select().from(materialUsageTracking).where(eq(materialUsageTracking.companyId, companyId));
+  }
+
+  async getMaterialUsageByMaterial(materialId: string): Promise<MaterialUsageTracking[]> {
+    return db.select().from(materialUsageTracking).where(eq(materialUsageTracking.materialId, materialId));
+  }
+
+  async getMaterialUsageByDateRange(companyId: string, startDate: Date, endDate: Date): Promise<MaterialUsageTracking[]> {
+    return db.select().from(materialUsageTracking).where(
+      and(
+        eq(materialUsageTracking.companyId, companyId),
+        sql`${materialUsageTracking.usageDate} >= ${startDate}`,
+        sql`${materialUsageTracking.usageDate} <= ${endDate}`
+      )
+    );
+  }
+
+  async createMaterialUsageTracking(insertUsage: InsertMaterialUsageTracking): Promise<MaterialUsageTracking> {
+    const [usage] = await db.insert(materialUsageTracking).values(insertUsage).returning();
+    return usage;
+  }
+
+  // Procurement Schedule methods
+  async getProcurementSchedules(companyId: string): Promise<ProcurementSchedule[]> {
+    return db.select().from(procurementSchedules).where(eq(procurementSchedules.companyId, companyId));
+  }
+
+  async getActiveProcurementSchedules(companyId: string): Promise<ProcurementSchedule[]> {
+    return db.select().from(procurementSchedules).where(
+      and(eq(procurementSchedules.companyId, companyId), eq(procurementSchedules.isActive, "active"))
+    );
+  }
+
+  async getProcurementSchedule(id: string): Promise<ProcurementSchedule | undefined> {
+    const [schedule] = await db.select().from(procurementSchedules).where(eq(procurementSchedules.id, id));
+    return schedule;
+  }
+
+  async createProcurementSchedule(insertSchedule: InsertProcurementSchedule): Promise<ProcurementSchedule> {
+    const [schedule] = await db.insert(procurementSchedules).values(insertSchedule).returning();
+    return schedule;
+  }
+
+  async updateProcurementSchedule(id: string, updateData: Partial<InsertProcurementSchedule>): Promise<ProcurementSchedule | undefined> {
+    const [schedule] = await db.update(procurementSchedules).set(updateData).where(eq(procurementSchedules.id, id)).returning();
+    return schedule;
+  }
+
+  async deleteProcurementSchedule(id: string): Promise<void> {
+    await db.delete(procurementSchedules).where(eq(procurementSchedules.id, id));
+  }
+
+  // Auto Purchase Recommendation methods
+  async getAutoPurchaseRecommendations(companyId: string): Promise<AutoPurchaseRecommendation[]> {
+    return db.select().from(autoPurchaseRecommendations).where(eq(autoPurchaseRecommendations.companyId, companyId));
+  }
+
+  async getAutoPurchaseRecommendationsByStatus(companyId: string, status: string): Promise<AutoPurchaseRecommendation[]> {
+    return db.select().from(autoPurchaseRecommendations).where(
+      and(eq(autoPurchaseRecommendations.companyId, companyId), eq(autoPurchaseRecommendations.status, status))
+    );
+  }
+
+  async createAutoPurchaseRecommendation(insertRecommendation: InsertAutoPurchaseRecommendation): Promise<AutoPurchaseRecommendation> {
+    const [recommendation] = await db.insert(autoPurchaseRecommendations).values(insertRecommendation).returning();
+    return recommendation;
+  }
+
+  async updateAutoPurchaseRecommendation(id: string, updateData: Partial<InsertAutoPurchaseRecommendation>): Promise<AutoPurchaseRecommendation | undefined> {
+    const [recommendation] = await db.update(autoPurchaseRecommendations).set(updateData).where(eq(autoPurchaseRecommendations.id, id)).returning();
+    return recommendation;
   }
 }
 
