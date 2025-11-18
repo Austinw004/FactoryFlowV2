@@ -137,7 +137,7 @@ export function AppSidebar() {
           </div>
           <div>
             <h2 className="font-semibold text-sm">Manufacturing AI</h2>
-            <p className="text-xs text-muted-foreground">Allocation Intelligence</p>
+            <p className="text-xs text-muted-foreground">Smart Planning</p>
           </div>
         </div>
       </SidebarHeader>

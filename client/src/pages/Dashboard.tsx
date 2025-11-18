@@ -82,6 +82,17 @@ export default function Dashboard() {
   const fdr = regimeData.fdr || 0;
   const intensity = regimeData.intensity || 50;
 
+  // Map regime types to friendly labels
+  const regimeLabels: Record<string, string> = {
+    "HEALTHY_EXPANSION": "Normal Growth",
+    "ASSET_LED_GROWTH": "Early Warning",
+    "IMBALANCED_EXCESS": "Bubble Territory",
+    "REAL_ECONOMY_LEAD": "Opportunity Zone",
+    "UNKNOWN": "Unknown"
+  };
+  
+  const friendlyRegime = regimeLabels[regimeType] || regimeType;
+
   // Show loading state
   if (skusLoading || regimeLoading) {
     return (
@@ -99,7 +110,7 @@ export default function Dashboard() {
           <div>
             <h1 className="text-3xl font-semibold">Dashboard</h1>
             <p className="text-muted-foreground mt-1">
-              Manufacturing allocation intelligence overview
+              Your manufacturing control center
             </p>
           </div>
         </div>
@@ -143,7 +154,7 @@ export default function Dashboard() {
         <div>
           <h1 className="text-3xl font-semibold">Dashboard</h1>
           <p className="text-muted-foreground mt-1">
-            Manufacturing allocation intelligence overview
+            Your manufacturing control center
           </p>
         </div>
         <div className="flex gap-2">
@@ -170,9 +181,9 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
           icon={TrendingUp}
-          label="FDR Score"
+          label="Market Conditions"
           value={fdr.toFixed(2)}
-          subtitle={regimeType.replace(/_/g, ' ')}
+          subtitle={friendlyRegime}
           trend={{ value: "Live", positive: true }}
         />
         <KPICard
@@ -189,9 +200,9 @@ export default function Dashboard() {
         />
         <KPICard
           icon={AlertCircle}
-          label="Active Signals"
+          label="Action Items"
           value={policySignals.length.toString()}
-          subtitle="Policy alerts"
+          subtitle="Recommended actions"
         />
       </div>
 
@@ -235,7 +246,7 @@ export default function Dashboard() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <Radio className="h-5 w-5 text-primary" />
-            Live Economic Intelligence
+            Real-Time Market Tracker
           </h2>
           <Badge variant="outline" className="flex items-center gap-1">
             <span className="relative flex h-2 w-2">

@@ -13,26 +13,26 @@ interface RegimeStatusProps {
 
 const regimeConfig = {
   HEALTHY_EXPANSION: {
-    label: "Healthy Expansion",
-    description: "Balanced growth across real economy and asset markets",
+    label: "Normal Growth",
+    description: "Balanced and healthy market conditions",
     color: "bg-chart-2",
     variant: "default" as const,
   },
   ASSET_LED_GROWTH: {
-    label: "Asset-Led Growth",
-    description: "Asset markets growing faster than real economy",
+    label: "Early Warning",
+    description: "Market heating up - prices starting to rise",
     color: "bg-chart-4",
     variant: "secondary" as const,
   },
   IMBALANCED_EXCESS: {
-    label: "Imbalanced Excess",
-    description: "Bubble risk - asset markets significantly decoupled",
+    label: "Bubble Territory",
+    description: "Prices too high - correction likely coming",
     color: "bg-destructive",
     variant: "destructive" as const,
   },
   REAL_ECONOMY_LEAD: {
-    label: "Real Economy Lead",
-    description: "Counter-cyclical opportunity - real economy stronger",
+    label: "Opportunity Zone",
+    description: "Best time to buy - prices low, recovery starting",
     color: "bg-chart-1",
     variant: "default" as const,
   },
@@ -47,7 +47,7 @@ export function RegimeStatus({ regime, fdr, intensity }: RegimeStatusProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Activity className="h-5 w-5 text-muted-foreground" />
-            <h3 className="font-semibold text-lg">Economic Regime</h3>
+            <h3 className="font-semibold text-lg">Business Climate</h3>
           </div>
           <Badge variant={config.variant} data-testid="badge-regime-type">
             {config.label}
@@ -56,7 +56,7 @@ export function RegimeStatus({ regime, fdr, intensity }: RegimeStatusProps) {
         
         <div className="space-y-2">
           <div className="flex justify-between items-center text-sm">
-            <span className="text-muted-foreground">FDR Score</span>
+            <span className="text-muted-foreground">Condition Score</span>
             <span className="font-mono font-semibold" data-testid="text-fdr-score">{fdr.toFixed(2)}</span>
           </div>
           <Progress value={intensity} className="h-2" data-testid="progress-intensity" />

@@ -14,29 +14,29 @@ interface PolicySignalsProps {
 
 const signalConfig: Record<string, { label: string; icon: any; description: string }> = {
   REDUCE_INVENTORY: {
-    label: "Reduce Inventory",
+    label: "Cut Inventory",
     icon: TrendingDown,
-    description: "Cut inventory buffers to prepare for downturn",
+    description: "Reduce stock levels to preserve cash",
   },
   TIGHTEN_CREDIT_TERMS: {
-    label: "Tighten Credit",
+    label: "Tighten Payment Terms",
     icon: DollarSign,
-    description: "Strengthen credit terms with customers",
+    description: "Get paid faster from customers",
   },
   DEFER_EXPANSION_CAPEX: {
-    label: "Defer Expansion",
+    label: "Hold Major Purchases",
     icon: AlertTriangle,
-    description: "Postpone major capital expenditures",
+    description: "Delay big equipment or expansion spending",
   },
   COUNTER_CYCLICAL_BUY: {
-    label: "Counter-Cyclical Buy",
+    label: "Buy Aggressively",
     icon: TrendingUp,
-    description: "Opportunistic procurement at favorable prices",
+    description: "Stock up now while prices are low",
   },
   OPTIMIZE_TURNOVER: {
-    label: "Optimize Turnover",
+    label: "Improve Efficiency",
     icon: TrendingUp,
-    description: "Focus on inventory efficiency",
+    description: "Use inventory faster, reduce waste",
   },
 };
 
@@ -45,7 +45,7 @@ export function PolicySignals({ signals }: PolicySignalsProps) {
     <Card className="p-6" data-testid="card-policy-signals">
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-lg">Active Policy Signals</h3>
+          <h3 className="font-semibold text-lg">Recommended Actions</h3>
           <Badge variant="secondary" data-testid="badge-signal-count">{signals.length}</Badge>
         </div>
         
