@@ -240,30 +240,32 @@ export interface IStorage {
   // Purchase Orders
   getPurchaseOrders(companyId: string): Promise<PurchaseOrder[]>;
   getPurchaseOrdersByStatus(companyId: string, status: string): Promise<PurchaseOrder[]>;
-  getPurchaseOrder(id: string): Promise<PurchaseOrder | undefined>;
+  getPurchaseOrder(id: string, companyId: string): Promise<PurchaseOrder | undefined>;
   createPurchaseOrder(order: InsertPurchaseOrder): Promise<PurchaseOrder>;
-  updatePurchaseOrder(id: string, order: UpdatePurchaseOrder): Promise<PurchaseOrder | undefined>;
-  deletePurchaseOrder(id: string): Promise<void>;
+  updatePurchaseOrder(id: string, companyId: string, order: UpdatePurchaseOrder): Promise<PurchaseOrder | undefined>;
+  deletePurchaseOrder(id: string, companyId: string): Promise<void>;
   
   // Material Usage Tracking
   getMaterialUsageTracking(companyId: string): Promise<MaterialUsageTracking[]>;
-  getMaterialUsageByMaterial(materialId: string): Promise<MaterialUsageTracking[]>;
+  getMaterialUsageByMaterial(materialId: string, companyId: string): Promise<MaterialUsageTracking[]>;
   getMaterialUsageByDateRange(companyId: string, startDate: Date, endDate: Date): Promise<MaterialUsageTracking[]>;
   createMaterialUsageTracking(usage: InsertMaterialUsageTracking): Promise<MaterialUsageTracking>;
   
   // Procurement Schedules
   getProcurementSchedules(companyId: string): Promise<ProcurementSchedule[]>;
   getActiveProcurementSchedules(companyId: string): Promise<ProcurementSchedule[]>;
-  getProcurementSchedule(id: string): Promise<ProcurementSchedule | undefined>;
+  getProcurementSchedule(id: string, companyId: string): Promise<ProcurementSchedule | undefined>;
   createProcurementSchedule(schedule: InsertProcurementSchedule): Promise<ProcurementSchedule>;
-  updateProcurementSchedule(id: string, schedule: Partial<InsertProcurementSchedule>): Promise<ProcurementSchedule | undefined>;
-  deleteProcurementSchedule(id: string): Promise<void>;
+  updateProcurementSchedule(id: string, companyId: string, schedule: Partial<InsertProcurementSchedule>): Promise<ProcurementSchedule | undefined>;
+  deleteProcurementSchedule(id: string, companyId: string): Promise<void>;
   
   // Auto Purchase Recommendations
   getAutoPurchaseRecommendations(companyId: string): Promise<AutoPurchaseRecommendation[]>;
   getAutoPurchaseRecommendationsByStatus(companyId: string, status: string): Promise<AutoPurchaseRecommendation[]>;
+  getAutoPurchaseRecommendation(id: string, companyId: string): Promise<AutoPurchaseRecommendation | undefined>;
   createAutoPurchaseRecommendation(recommendation: InsertAutoPurchaseRecommendation): Promise<AutoPurchaseRecommendation>;
-  updateAutoPurchaseRecommendation(id: string, recommendation: Partial<InsertAutoPurchaseRecommendation>): Promise<AutoPurchaseRecommendation | undefined>;
+  updateAutoPurchaseRecommendation(id: string, companyId: string, recommendation: Partial<InsertAutoPurchaseRecommendation>): Promise<AutoPurchaseRecommendation | undefined>;
+  deleteAutoPurchaseRecommendation(id: string, companyId: string): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -923,8 +925,10 @@ export class DbStorage implements IStorage {
     );
   }
 
-  async getPurchaseOrder(id: string): Promise<PurchaseOrder | undefined> {
-    const [order] = await db.select().from(purchaseOrders).where(eq(purchaseOrders.id, id));
+  async getPurchaseOrder(id: string, companyId: string): Promise<PurchaseOrder | undefined> {
+    const [order] = await db.select().from(purchaseOrders).where(
+      and(eq(purchaseOrders.id, id), eq(purchaseOrders.companyId, companyId))
+    );
     return order;
   }
 
@@ -933,13 +937,17 @@ export class DbStorage implements IStorage {
     return order;
   }
 
-  async updatePurchaseOrder(id: string, updateData: UpdatePurchaseOrder): Promise<PurchaseOrder | undefined> {
-    const [order] = await db.update(purchaseOrders).set(updateData).where(eq(purchaseOrders.id, id)).returning();
+  async updatePurchaseOrder(id: string, companyId: string, updateData: UpdatePurchaseOrder): Promise<PurchaseOrder | undefined> {
+    const [order] = await db.update(purchaseOrders).set(updateData).where(
+      and(eq(purchaseOrders.id, id), eq(purchaseOrders.companyId, companyId))
+    ).returning();
     return order;
   }
 
-  async deletePurchaseOrder(id: string): Promise<void> {
-    await db.delete(purchaseOrders).where(eq(purchaseOrders.id, id));
+  async deletePurchaseOrder(id: string, companyId: string): Promise<void> {
+    await db.delete(purchaseOrders).where(
+      and(eq(purchaseOrders.id, id), eq(purchaseOrders.companyId, companyId))
+    );
   }
 
   // Material Usage Tracking methods
@@ -947,8 +955,10 @@ export class DbStorage implements IStorage {
     return db.select().from(materialUsageTracking).where(eq(materialUsageTracking.companyId, companyId));
   }
 
-  async getMaterialUsageByMaterial(materialId: string): Promise<MaterialUsageTracking[]> {
-    return db.select().from(materialUsageTracking).where(eq(materialUsageTracking.materialId, materialId));
+  async getMaterialUsageByMaterial(materialId: string, companyId: string): Promise<MaterialUsageTracking[]> {
+    return db.select().from(materialUsageTracking).where(
+      and(eq(materialUsageTracking.materialId, materialId), eq(materialUsageTracking.companyId, companyId))
+    );
   }
 
   async getMaterialUsageByDateRange(companyId: string, startDate: Date, endDate: Date): Promise<MaterialUsageTracking[]> {
@@ -977,8 +987,10 @@ export class DbStorage implements IStorage {
     );
   }
 
-  async getProcurementSchedule(id: string): Promise<ProcurementSchedule | undefined> {
-    const [schedule] = await db.select().from(procurementSchedules).where(eq(procurementSchedules.id, id));
+  async getProcurementSchedule(id: string, companyId: string): Promise<ProcurementSchedule | undefined> {
+    const [schedule] = await db.select().from(procurementSchedules).where(
+      and(eq(procurementSchedules.id, id), eq(procurementSchedules.companyId, companyId))
+    );
     return schedule;
   }
 
@@ -987,13 +999,17 @@ export class DbStorage implements IStorage {
     return schedule;
   }
 
-  async updateProcurementSchedule(id: string, updateData: Partial<InsertProcurementSchedule>): Promise<ProcurementSchedule | undefined> {
-    const [schedule] = await db.update(procurementSchedules).set(updateData).where(eq(procurementSchedules.id, id)).returning();
+  async updateProcurementSchedule(id: string, companyId: string, updateData: Partial<InsertProcurementSchedule>): Promise<ProcurementSchedule | undefined> {
+    const [schedule] = await db.update(procurementSchedules).set(updateData).where(
+      and(eq(procurementSchedules.id, id), eq(procurementSchedules.companyId, companyId))
+    ).returning();
     return schedule;
   }
 
-  async deleteProcurementSchedule(id: string): Promise<void> {
-    await db.delete(procurementSchedules).where(eq(procurementSchedules.id, id));
+  async deleteProcurementSchedule(id: string, companyId: string): Promise<void> {
+    await db.delete(procurementSchedules).where(
+      and(eq(procurementSchedules.id, id), eq(procurementSchedules.companyId, companyId))
+    );
   }
 
   // Auto Purchase Recommendation methods
@@ -1007,14 +1023,29 @@ export class DbStorage implements IStorage {
     );
   }
 
+  async getAutoPurchaseRecommendation(id: string, companyId: string): Promise<AutoPurchaseRecommendation | undefined> {
+    const [recommendation] = await db.select().from(autoPurchaseRecommendations).where(
+      and(eq(autoPurchaseRecommendations.id, id), eq(autoPurchaseRecommendations.companyId, companyId))
+    );
+    return recommendation;
+  }
+
   async createAutoPurchaseRecommendation(insertRecommendation: InsertAutoPurchaseRecommendation): Promise<AutoPurchaseRecommendation> {
     const [recommendation] = await db.insert(autoPurchaseRecommendations).values(insertRecommendation).returning();
     return recommendation;
   }
 
-  async updateAutoPurchaseRecommendation(id: string, updateData: Partial<InsertAutoPurchaseRecommendation>): Promise<AutoPurchaseRecommendation | undefined> {
-    const [recommendation] = await db.update(autoPurchaseRecommendations).set(updateData).where(eq(autoPurchaseRecommendations.id, id)).returning();
+  async updateAutoPurchaseRecommendation(id: string, companyId: string, updateData: Partial<InsertAutoPurchaseRecommendation>): Promise<AutoPurchaseRecommendation | undefined> {
+    const [recommendation] = await db.update(autoPurchaseRecommendations).set(updateData).where(
+      and(eq(autoPurchaseRecommendations.id, id), eq(autoPurchaseRecommendations.companyId, companyId))
+    ).returning();
     return recommendation;
+  }
+
+  async deleteAutoPurchaseRecommendation(id: string, companyId: string): Promise<void> {
+    await db.delete(autoPurchaseRecommendations).where(
+      and(eq(autoPurchaseRecommendations.id, id), eq(autoPurchaseRecommendations.companyId, companyId))
+    );
   }
 }
 

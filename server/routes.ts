@@ -2619,10 +2619,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get single purchase order
   app.get("/api/purchase-orders/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const order = await storage.getPurchaseOrder(req.params.id);
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const order = await storage.getPurchaseOrder(req.params.id, user.companyId);
       if (!order) {
         return res.status(404).json({ error: "Purchase order not found" });
       }
+
       res.json(order);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -2636,6 +2642,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || !user.companyId) {
         return res.status(400).json({ error: "User has no company association" });
       }
+
+      // Verify material belongs to company
+      const material = await storage.getMaterial(req.body.materialId);
+      if (!material || material.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Material not found in your company" });
+      }
+
+      // Verify supplier belongs to company
+      const supplier = await storage.getSupplier(req.body.supplierId);
+      if (!supplier || supplier.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Supplier not found in your company" });
+      }
+
       const { insertPurchaseOrderSchema } = await import("@shared/schema");
       const orderData = insertPurchaseOrderSchema.parse({ ...req.body, companyId: user.companyId });
       const order = await storage.createPurchaseOrder(orderData);
@@ -2653,13 +2672,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User has no company association" });
       }
 
-      // Verify ownership
-      const existingOrder = await storage.getPurchaseOrder(req.params.id);
-      if (!existingOrder || existingOrder.companyId !== user.companyId) {
-        return res.status(403).json({ error: "Purchase order not found in your company" });
+      // Verify ownership via storage (which now enforces companyId)
+      const existingOrder = await storage.getPurchaseOrder(req.params.id, user.companyId);
+      if (!existingOrder) {
+        return res.status(404).json({ error: "Purchase order not found" });
       }
 
-      const order = await storage.updatePurchaseOrder(req.params.id, req.body);
+      // Prevent companyId tampering
+      if (req.body.companyId && req.body.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Cannot change company ownership" });
+      }
+
+      // Verify new material if changing
+      if (req.body.materialId && req.body.materialId !== existingOrder.materialId) {
+        const material = await storage.getMaterial(req.body.materialId);
+        if (!material || material.companyId !== user.companyId) {
+          return res.status(403).json({ error: "Material not found in your company" });
+        }
+      }
+
+      // Verify new supplier if changing
+      if (req.body.supplierId && req.body.supplierId !== existingOrder.supplierId) {
+        const supplier = await storage.getSupplier(req.body.supplierId);
+        if (!supplier || supplier.companyId !== user.companyId) {
+          return res.status(403).json({ error: "Supplier not found in your company" });
+        }
+      }
+
+      const order = await storage.updatePurchaseOrder(req.params.id, user.companyId, req.body);
       if (!order) {
         return res.status(404).json({ error: "Purchase order not found" });
       }
@@ -2677,13 +2717,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User has no company association" });
       }
 
-      // Verify ownership
-      const existingOrder = await storage.getPurchaseOrder(req.params.id);
-      if (!existingOrder || existingOrder.companyId !== user.companyId) {
-        return res.status(403).json({ error: "Purchase order not found in your company" });
-      }
-
-      await storage.deletePurchaseOrder(req.params.id);
+      // Storage now enforces company ownership
+      await storage.deletePurchaseOrder(req.params.id, user.companyId);
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -2707,7 +2742,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get material usage by material ID
   app.get("/api/material-usage/material/:materialId", isAuthenticated, async (req: any, res) => {
     try {
-      const usage = await storage.getMaterialUsageByMaterial(req.params.materialId);
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      // Storage now filters by companyId
+      const usage = await storage.getMaterialUsageByMaterial(req.params.materialId, user.companyId);
       res.json(usage);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -2743,6 +2784,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || !user.companyId) {
         return res.status(400).json({ error: "User has no company association" });
       }
+
+      // Verify material belongs to company
+      const material = await storage.getMaterial(req.body.materialId);
+      if (!material || material.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Material not found in your company" });
+      }
+
+      // Verify SKU if provided
+      if (req.body.skuId) {
+        const sku = await storage.getSku(req.body.skuId);
+        if (!sku || sku.companyId !== user.companyId) {
+          return res.status(403).json({ error: "SKU not found in your company" });
+        }
+      }
+
+      // Verify machinery if provided
+      if (req.body.machineId) {
+        const machine = await storage.getMachine(req.body.machineId);
+        if (!machine || machine.companyId !== user.companyId) {
+          return res.status(403).json({ error: "Machine not found in your company" });
+        }
+      }
+
+      // Verify employee if provided
+      if (req.body.operatorEmployeeId) {
+        const employee = await storage.getEmployeeForCompany(req.body.operatorEmployeeId, user.companyId);
+        if (!employee) {
+          return res.status(403).json({ error: "Employee not found in your company" });
+        }
+      }
+
       const { insertMaterialUsageTrackingSchema } = await import("@shared/schema");
       const usageData = insertMaterialUsageTrackingSchema.parse({ ...req.body, companyId: user.companyId });
       const usage = await storage.createMaterialUsageTracking(usageData);
@@ -2787,6 +2859,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || !user.companyId) {
         return res.status(400).json({ error: "User has no company association" });
       }
+
+      // Verify material belongs to company
+      const material = await storage.getMaterial(req.body.materialId);
+      if (!material || material.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Material not found in your company" });
+      }
+
+      // Verify supplier belongs to company
+      const supplier = await storage.getSupplier(req.body.supplierId);
+      if (!supplier || supplier.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Supplier not found in your company" });
+      }
+
       const { insertProcurementScheduleSchema } = await import("@shared/schema");
       const scheduleData = insertProcurementScheduleSchema.parse({ ...req.body, companyId: user.companyId });
       const schedule = await storage.createProcurementSchedule(scheduleData);
@@ -2804,13 +2889,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User has no company association" });
       }
 
-      // Verify ownership
-      const existingSchedule = await storage.getProcurementSchedule(req.params.id);
-      if (!existingSchedule || existingSchedule.companyId !== user.companyId) {
-        return res.status(403).json({ error: "Procurement schedule not found in your company" });
+      // Verify ownership via storage (which now enforces companyId)
+      const existingSchedule = await storage.getProcurementSchedule(req.params.id, user.companyId);
+      if (!existingSchedule) {
+        return res.status(404).json({ error: "Procurement schedule not found" });
       }
 
-      const schedule = await storage.updateProcurementSchedule(req.params.id, req.body);
+      // Prevent companyId tampering
+      if (req.body.companyId && req.body.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Cannot change company ownership" });
+      }
+
+      // Verify new material if changing
+      if (req.body.materialId && req.body.materialId !== existingSchedule.materialId) {
+        const material = await storage.getMaterial(req.body.materialId);
+        if (!material || material.companyId !== user.companyId) {
+          return res.status(403).json({ error: "Material not found in your company" });
+        }
+      }
+
+      // Verify new supplier if changing
+      if (req.body.supplierId && req.body.supplierId !== existingSchedule.supplierId) {
+        const supplier = await storage.getSupplier(req.body.supplierId);
+        if (!supplier || supplier.companyId !== user.companyId) {
+          return res.status(403).json({ error: "Supplier not found in your company" });
+        }
+      }
+
+      const schedule = await storage.updateProcurementSchedule(req.params.id, user.companyId, req.body);
       if (!schedule) {
         return res.status(404).json({ error: "Procurement schedule not found" });
       }
@@ -2828,13 +2934,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User has no company association" });
       }
 
-      // Verify ownership
-      const existingSchedule = await storage.getProcurementSchedule(req.params.id);
-      if (!existingSchedule || existingSchedule.companyId !== user.companyId) {
-        return res.status(403).json({ error: "Procurement schedule not found in your company" });
-      }
-
-      await storage.deleteProcurementSchedule(req.params.id);
+      // Storage now enforces company ownership
+      await storage.deleteProcurementSchedule(req.params.id, user.companyId);
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -2876,6 +2977,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || !user.companyId) {
         return res.status(400).json({ error: "User has no company association" });
       }
+
+      // Verify material belongs to company
+      const material = await storage.getMaterial(req.body.materialId);
+      if (!material || material.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Material not found in your company" });
+      }
+
+      // Verify supplier belongs to company
+      const supplier = await storage.getSupplier(req.body.supplierId);
+      if (!supplier || supplier.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Supplier not found in your company" });
+      }
+
       const { insertAutoPurchaseRecommendationSchema } = await import("@shared/schema");
       const recommendationData = insertAutoPurchaseRecommendationSchema.parse({ ...req.body, companyId: user.companyId });
       const recommendation = await storage.createAutoPurchaseRecommendation(recommendationData);
@@ -2893,19 +3007,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User has no company association" });
       }
 
-      // Verify ownership by fetching all recommendations and checking
-      const allRecommendations = await storage.getAutoPurchaseRecommendations(user.companyId);
-      if (!allRecommendations.find(r => r.id === req.params.id)) {
-        return res.status(403).json({ error: "Recommendation not found in your company" });
+      // Verify ownership via storage (which now enforces companyId)
+      const existingRecommendation = await storage.getAutoPurchaseRecommendation(req.params.id, user.companyId);
+      if (!existingRecommendation) {
+        return res.status(404).json({ error: "Recommendation not found" });
       }
 
-      const recommendation = await storage.updateAutoPurchaseRecommendation(req.params.id, req.body);
+      // Prevent companyId tampering
+      if (req.body.companyId && req.body.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Cannot change company ownership" });
+      }
+
+      // Verify new material if changing
+      if (req.body.materialId && req.body.materialId !== existingRecommendation.materialId) {
+        const material = await storage.getMaterial(req.body.materialId);
+        if (!material || material.companyId !== user.companyId) {
+          return res.status(403).json({ error: "Material not found in your company" });
+        }
+      }
+
+      // Verify new supplier if changing
+      if (req.body.supplierId && req.body.supplierId !== existingRecommendation.supplierId) {
+        const supplier = await storage.getSupplier(req.body.supplierId);
+        if (!supplier || supplier.companyId !== user.companyId) {
+          return res.status(403).json({ error: "Supplier not found in your company" });
+        }
+      }
+
+      const recommendation = await storage.updateAutoPurchaseRecommendation(req.params.id, user.companyId, req.body);
       if (!recommendation) {
         return res.status(404).json({ error: "Recommendation not found" });
       }
       res.json(recommendation);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Delete auto purchase recommendation
+  app.delete("/api/auto-purchase-recommendations/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      // Storage now enforces company ownership
+      await storage.deleteAutoPurchaseRecommendation(req.params.id, user.companyId);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
   });
 

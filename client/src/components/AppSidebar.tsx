@@ -78,7 +78,7 @@ const menuSections = [
     items: [
       {
         title: "Inventory Management",
-        url: "/inventory-optimization",
+        url: "/inventory",
         icon: Package,
       },
       {

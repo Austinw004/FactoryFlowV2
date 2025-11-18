@@ -22,6 +22,7 @@ import PredictiveMaintenance from "@/pages/PredictiveMaintenance";
 import InventoryOptimization from "@/pages/InventoryOptimization";
 import SupplyChainTraceability from "@/pages/SupplyChainTraceability";
 import WorkforceScheduling from "@/pages/WorkforceScheduling";
+import InventoryManagement from "@/pages/InventoryManagement";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
@@ -45,6 +46,7 @@ function Router() {
           <Route path="/inventory-optimization" component={InventoryOptimization} />
           <Route path="/traceability" component={SupplyChainTraceability} />
           <Route path="/workforce" component={WorkforceScheduling} />
+          <Route path="/inventory" component={InventoryManagement} />
           <Route path="/reports" component={Reports} />
           <Route path="/configuration" component={Configuration} />
           <Route path="/how-it-works" component={HowItWorks} />
