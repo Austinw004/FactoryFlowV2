@@ -26,7 +26,14 @@ import type {
   Employee, InsertEmployee,
   WorkShift, InsertWorkShift,
   SkillRequirement, InsertSkillRequirement,
-  StaffAssignment, InsertStaffAssignment
+  StaffAssignment, InsertStaffAssignment,
+  EmployeePayroll, InsertEmployeePayroll,
+  EmployeeBenefits, InsertEmployeeBenefits,
+  EmployeeTimeOff, InsertEmployeeTimeOff,
+  EmployeePtoBalance, InsertEmployeePtoBalance,
+  EmployeeDocument, InsertEmployeeDocument,
+  EmployeePerformanceReview, InsertEmployeePerformanceReview,
+  EmployeeEmergencyContact, InsertEmployeeEmergencyContact
 } from "@shared/schema";
 import { 
   users, companies, skus, materials, boms, suppliers, supplierMaterials,
@@ -36,7 +43,9 @@ import {
   equipmentSensors, sensorReadings, maintenanceAlerts, maintenancePredictions,
   inventoryOptimizations, demandPredictions, inventoryRecommendations,
   materialBatches, traceabilityEvents, supplierChainLinks,
-  employees, workShifts, skillRequirements, staffAssignments
+  employees, workShifts, skillRequirements, staffAssignments,
+  employeePayroll, employeeBenefits, employeeTimeOff, employeePtoBalances,
+  employeeDocuments, employeePerformanceReviews, employeeEmergencyContacts
 } from "@shared/schema";
 
 export interface IStorage {
@@ -179,6 +188,48 @@ export interface IStorage {
   getStaffAssignments(companyId: string): Promise<StaffAssignment[]>;
   getStaffAssignmentsByShift(shiftId: string): Promise<StaffAssignment[]>;
   createStaffAssignment(assignment: InsertStaffAssignment): Promise<StaffAssignment>;
+  
+  // Employee Payroll
+  getEmployeePayroll(companyId: string): Promise<EmployeePayroll[]>;
+  getEmployeePayrollByEmployee(employeeId: string): Promise<EmployeePayroll | undefined>;
+  createEmployeePayroll(payroll: InsertEmployeePayroll): Promise<EmployeePayroll>;
+  updateEmployeePayroll(id: string, payroll: Partial<InsertEmployeePayroll>): Promise<EmployeePayroll | undefined>;
+  
+  // Employee Benefits
+  getEmployeeBenefits(companyId: string): Promise<EmployeeBenefits[]>;
+  getEmployeeBenefitsByEmployee(employeeId: string): Promise<EmployeeBenefits | undefined>;
+  createEmployeeBenefits(benefits: InsertEmployeeBenefits): Promise<EmployeeBenefits>;
+  updateEmployeeBenefits(id: string, benefits: Partial<InsertEmployeeBenefits>): Promise<EmployeeBenefits | undefined>;
+  
+  // Employee Time Off
+  getEmployeeTimeOffRequests(companyId: string): Promise<EmployeeTimeOff[]>;
+  getEmployeeTimeOffByEmployee(employeeId: string): Promise<EmployeeTimeOff[]>;
+  createEmployeeTimeOff(timeOff: InsertEmployeeTimeOff): Promise<EmployeeTimeOff>;
+  updateEmployeeTimeOff(id: string, timeOff: Partial<InsertEmployeeTimeOff>): Promise<EmployeeTimeOff | undefined>;
+  
+  // Employee PTO Balances
+  getEmployeePtoBalances(companyId: string): Promise<EmployeePtoBalance[]>;
+  getEmployeePtoBalanceByEmployee(employeeId: string): Promise<EmployeePtoBalance | undefined>;
+  createEmployeePtoBalance(balance: InsertEmployeePtoBalance): Promise<EmployeePtoBalance>;
+  updateEmployeePtoBalance(id: string, balance: Partial<InsertEmployeePtoBalance>): Promise<EmployeePtoBalance | undefined>;
+  
+  // Employee Documents
+  getEmployeeDocuments(companyId: string): Promise<EmployeeDocument[]>;
+  getEmployeeDocumentsByEmployee(employeeId: string): Promise<EmployeeDocument[]>;
+  createEmployeeDocument(document: InsertEmployeeDocument): Promise<EmployeeDocument>;
+  updateEmployeeDocument(id: string, document: Partial<InsertEmployeeDocument>): Promise<EmployeeDocument | undefined>;
+  
+  // Employee Performance Reviews
+  getEmployeePerformanceReviews(companyId: string): Promise<EmployeePerformanceReview[]>;
+  getEmployeePerformanceReviewsByEmployee(employeeId: string): Promise<EmployeePerformanceReview[]>;
+  createEmployeePerformanceReview(review: InsertEmployeePerformanceReview): Promise<EmployeePerformanceReview>;
+  updateEmployeePerformanceReview(id: string, review: Partial<InsertEmployeePerformanceReview>): Promise<EmployeePerformanceReview | undefined>;
+  
+  // Employee Emergency Contacts
+  getEmployeeEmergencyContacts(companyId: string): Promise<EmployeeEmergencyContact[]>;
+  getEmployeeEmergencyContactsByEmployee(employeeId: string): Promise<EmployeeEmergencyContact[]>;
+  createEmployeeEmergencyContact(contact: InsertEmployeeEmergencyContact): Promise<EmployeeEmergencyContact>;
+  updateEmployeeEmergencyContact(id: string, contact: Partial<InsertEmployeeEmergencyContact>): Promise<EmployeeEmergencyContact | undefined>;
 }
 
 export class DbStorage implements IStorage {
@@ -646,6 +697,177 @@ export class DbStorage implements IStorage {
   async createStaffAssignment(insertAssignment: InsertStaffAssignment): Promise<StaffAssignment> {
     const [assignment] = await db.insert(staffAssignments).values(insertAssignment).returning();
     return assignment;
+  }
+
+  // Employee Payroll methods
+  async getEmployeePayroll(companyId: string): Promise<EmployeePayroll[]> {
+    const results = await db
+      .select()
+      .from(employeePayroll)
+      .innerJoin(employees, eq(employeePayroll.employeeId, employees.id))
+      .where(eq(employees.companyId, companyId));
+    return results.map(r => r.employee_payroll);
+  }
+
+  async getEmployeePayrollByEmployee(employeeId: string): Promise<EmployeePayroll | undefined> {
+    const [payroll] = await db.select().from(employeePayroll).where(eq(employeePayroll.employeeId, employeeId));
+    return payroll;
+  }
+
+  async createEmployeePayroll(insertPayroll: InsertEmployeePayroll): Promise<EmployeePayroll> {
+    const [payroll] = await db.insert(employeePayroll).values(insertPayroll).returning();
+    return payroll;
+  }
+
+  async updateEmployeePayroll(id: string, updateData: Partial<InsertEmployeePayroll>): Promise<EmployeePayroll | undefined> {
+    const [payroll] = await db.update(employeePayroll).set(updateData).where(eq(employeePayroll.id, id)).returning();
+    return payroll;
+  }
+
+  // Employee Benefits methods
+  async getEmployeeBenefits(companyId: string): Promise<EmployeeBenefits[]> {
+    const results = await db
+      .select()
+      .from(employeeBenefits)
+      .innerJoin(employees, eq(employeeBenefits.employeeId, employees.id))
+      .where(eq(employees.companyId, companyId));
+    return results.map(r => r.employee_benefits);
+  }
+
+  async getEmployeeBenefitsByEmployee(employeeId: string): Promise<EmployeeBenefits | undefined> {
+    const [benefits] = await db.select().from(employeeBenefits).where(eq(employeeBenefits.employeeId, employeeId));
+    return benefits;
+  }
+
+  async createEmployeeBenefits(insertBenefits: InsertEmployeeBenefits): Promise<EmployeeBenefits> {
+    const [benefits] = await db.insert(employeeBenefits).values(insertBenefits).returning();
+    return benefits;
+  }
+
+  async updateEmployeeBenefits(id: string, updateData: Partial<InsertEmployeeBenefits>): Promise<EmployeeBenefits | undefined> {
+    const [benefits] = await db.update(employeeBenefits).set(updateData).where(eq(employeeBenefits.id, id)).returning();
+    return benefits;
+  }
+
+  // Employee Time Off methods
+  async getEmployeeTimeOffRequests(companyId: string): Promise<EmployeeTimeOff[]> {
+    const results = await db
+      .select()
+      .from(employeeTimeOff)
+      .innerJoin(employees, eq(employeeTimeOff.employeeId, employees.id))
+      .where(eq(employees.companyId, companyId));
+    return results.map(r => r.employee_time_off);
+  }
+
+  async getEmployeeTimeOffByEmployee(employeeId: string): Promise<EmployeeTimeOff[]> {
+    return db.select().from(employeeTimeOff).where(eq(employeeTimeOff.employeeId, employeeId));
+  }
+
+  async createEmployeeTimeOff(insertTimeOff: InsertEmployeeTimeOff): Promise<EmployeeTimeOff> {
+    const [timeOff] = await db.insert(employeeTimeOff).values(insertTimeOff).returning();
+    return timeOff;
+  }
+
+  async updateEmployeeTimeOff(id: string, updateData: Partial<InsertEmployeeTimeOff>): Promise<EmployeeTimeOff | undefined> {
+    const [timeOff] = await db.update(employeeTimeOff).set(updateData).where(eq(employeeTimeOff.id, id)).returning();
+    return timeOff;
+  }
+
+  // Employee PTO Balance methods
+  async getEmployeePtoBalances(companyId: string): Promise<EmployeePtoBalance[]> {
+    const results = await db
+      .select()
+      .from(employeePtoBalances)
+      .innerJoin(employees, eq(employeePtoBalances.employeeId, employees.id))
+      .where(eq(employees.companyId, companyId));
+    return results.map(r => r.employee_pto_balances);
+  }
+
+  async getEmployeePtoBalanceByEmployee(employeeId: string): Promise<EmployeePtoBalance | undefined> {
+    const [balance] = await db.select().from(employeePtoBalances).where(eq(employeePtoBalances.employeeId, employeeId));
+    return balance;
+  }
+
+  async createEmployeePtoBalance(insertBalance: InsertEmployeePtoBalance): Promise<EmployeePtoBalance> {
+    const [balance] = await db.insert(employeePtoBalances).values(insertBalance).returning();
+    return balance;
+  }
+
+  async updateEmployeePtoBalance(id: string, updateData: Partial<InsertEmployeePtoBalance>): Promise<EmployeePtoBalance | undefined> {
+    const [balance] = await db.update(employeePtoBalances).set(updateData).where(eq(employeePtoBalances.id, id)).returning();
+    return balance;
+  }
+
+  // Employee Documents methods
+  async getEmployeeDocuments(companyId: string): Promise<EmployeeDocument[]> {
+    const results = await db
+      .select()
+      .from(employeeDocuments)
+      .innerJoin(employees, eq(employeeDocuments.employeeId, employees.id))
+      .where(eq(employees.companyId, companyId));
+    return results.map(r => r.employee_documents);
+  }
+
+  async getEmployeeDocumentsByEmployee(employeeId: string): Promise<EmployeeDocument[]> {
+    return db.select().from(employeeDocuments).where(eq(employeeDocuments.employeeId, employeeId));
+  }
+
+  async createEmployeeDocument(insertDocument: InsertEmployeeDocument): Promise<EmployeeDocument> {
+    const [document] = await db.insert(employeeDocuments).values(insertDocument).returning();
+    return document;
+  }
+
+  async updateEmployeeDocument(id: string, updateData: Partial<InsertEmployeeDocument>): Promise<EmployeeDocument | undefined> {
+    const [document] = await db.update(employeeDocuments).set(updateData).where(eq(employeeDocuments.id, id)).returning();
+    return document;
+  }
+
+  // Employee Performance Review methods
+  async getEmployeePerformanceReviews(companyId: string): Promise<EmployeePerformanceReview[]> {
+    const results = await db
+      .select()
+      .from(employeePerformanceReviews)
+      .innerJoin(employees, eq(employeePerformanceReviews.employeeId, employees.id))
+      .where(eq(employees.companyId, companyId));
+    return results.map(r => r.employee_performance_reviews);
+  }
+
+  async getEmployeePerformanceReviewsByEmployee(employeeId: string): Promise<EmployeePerformanceReview[]> {
+    return db.select().from(employeePerformanceReviews).where(eq(employeePerformanceReviews.employeeId, employeeId));
+  }
+
+  async createEmployeePerformanceReview(insertReview: InsertEmployeePerformanceReview): Promise<EmployeePerformanceReview> {
+    const [review] = await db.insert(employeePerformanceReviews).values(insertReview).returning();
+    return review;
+  }
+
+  async updateEmployeePerformanceReview(id: string, updateData: Partial<InsertEmployeePerformanceReview>): Promise<EmployeePerformanceReview | undefined> {
+    const [review] = await db.update(employeePerformanceReviews).set(updateData).where(eq(employeePerformanceReviews.id, id)).returning();
+    return review;
+  }
+
+  // Employee Emergency Contact methods
+  async getEmployeeEmergencyContacts(companyId: string): Promise<EmployeeEmergencyContact[]> {
+    const results = await db
+      .select()
+      .from(employeeEmergencyContacts)
+      .innerJoin(employees, eq(employeeEmergencyContacts.employeeId, employees.id))
+      .where(eq(employees.companyId, companyId));
+    return results.map(r => r.employee_emergency_contacts);
+  }
+
+  async getEmployeeEmergencyContactsByEmployee(employeeId: string): Promise<EmployeeEmergencyContact[]> {
+    return db.select().from(employeeEmergencyContacts).where(eq(employeeEmergencyContacts.employeeId, employeeId));
+  }
+
+  async createEmployeeEmergencyContact(insertContact: InsertEmployeeEmergencyContact): Promise<EmployeeEmergencyContact> {
+    const [contact] = await db.insert(employeeEmergencyContacts).values(insertContact).returning();
+    return contact;
+  }
+
+  async updateEmployeeEmergencyContact(id: string, updateData: Partial<InsertEmployeeEmergencyContact>): Promise<EmployeeEmergencyContact | undefined> {
+    const [contact] = await db.update(employeeEmergencyContacts).set(updateData).where(eq(employeeEmergencyContacts.id, id)).returning();
+    return contact;
   }
 }
 
