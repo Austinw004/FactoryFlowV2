@@ -27,76 +27,101 @@ import {
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "wouter";
 
-const menuItems = [
+const menuSections = [
   {
-    title: "Dashboard",
-    url: "/dashboard",
-    icon: LayoutDashboard,
+    label: "Planning & Purchasing",
+    items: [
+      {
+        title: "Dashboard",
+        url: "/dashboard",
+        icon: LayoutDashboard,
+      },
+      {
+        title: "Demand Planning",
+        url: "/forecasting",
+        icon: TrendingUp,
+      },
+      {
+        title: "Material Planning",
+        url: "/allocation",
+        icon: Boxes,
+      },
+      {
+        title: "Purchasing",
+        url: "/procurement",
+        icon: ShoppingCart,
+      },
+    ],
   },
   {
-    title: "Forecasting",
-    url: "/forecasting",
-    icon: TrendingUp,
+    label: "Operations & Equipment",
+    items: [
+      {
+        title: "Machinery",
+        url: "/machinery",
+        icon: Wrench,
+      },
+      {
+        title: "Production Tracking",
+        url: "/production-kpis",
+        icon: Activity,
+      },
+      {
+        title: "Equipment Maintenance",
+        url: "/predictive-maintenance",
+        icon: Radio,
+      },
+    ],
   },
   {
-    title: "Allocation",
-    url: "/allocation",
-    icon: Boxes,
+    label: "Inventory & Supply Chain",
+    items: [
+      {
+        title: "Inventory Management",
+        url: "/inventory-optimization",
+        icon: Package,
+      },
+      {
+        title: "Supply Chain Tracking",
+        url: "/traceability",
+        icon: Network,
+      },
+    ],
   },
   {
-    title: "Procurement",
-    url: "/procurement",
-    icon: ShoppingCart,
+    label: "Quality & People",
+    items: [
+      {
+        title: "Compliance",
+        url: "/compliance",
+        icon: Shield,
+      },
+      {
+        title: "Workforce Scheduling",
+        url: "/workforce",
+        icon: Users,
+      },
+    ],
   },
   {
-    title: "Machinery",
-    url: "/machinery",
-    icon: Wrench,
-  },
-  {
-    title: "Compliance",
-    url: "/compliance",
-    icon: Shield,
-  },
-  {
-    title: "Production KPIs",
-    url: "/production-kpis",
-    icon: Activity,
-  },
-  {
-    title: "Predictive Maintenance",
-    url: "/predictive-maintenance",
-    icon: Radio,
-  },
-  {
-    title: "Inventory Optimization",
-    url: "/inventory-optimization",
-    icon: Package,
-  },
-  {
-    title: "Supply Chain",
-    url: "/traceability",
-    icon: Network,
-  },
-  {
-    title: "Workforce",
-    url: "/workforce",
-    icon: Users,
-  },
-  {
-    title: "Reports",
-    url: "/reports",
-    icon: FileText,
-  },
-  {
-    title: "Configuration",
-    url: "/configuration",
-    icon: Settings,
-  },
-  {
-    title: "How It Works",
-    url: "/how-it-works",
-    icon: BookOpen,
+    label: "Settings & Help",
+    items: [
+      {
+        title: "Reports",
+        url: "/reports",
+        icon: FileText,
+      },
+      {
+        title: "Settings",
+        url: "/configuration",
+        icon: Settings,
+      },
+      {
+        title: "How It Works",
+        url: "/how-it-works",
+        icon: BookOpen,
+      },
+    ],
   },
 ];
 
@@ -117,27 +142,29 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton 
-                    asChild 
-                    isActive={location === item.url}
-                    data-testid={`link-sidebar-${item.title.toLowerCase()}`}
-                  >
-                    <Link href={item.url}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {menuSections.map((section) => (
+          <SidebarGroup key={section.label}>
+            <SidebarGroupLabel>{section.label}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {section.items.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton 
+                      asChild 
+                      isActive={location === item.url}
+                      data-testid={`link-sidebar-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
+                    >
+                      <Link href={item.url}>
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
     </Sidebar>
   );
