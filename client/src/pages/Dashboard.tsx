@@ -14,10 +14,12 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useWebSocket } from "@/hooks/useWebSocket";
+import { useLocation } from "wouter";
 
 export default function Dashboard() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
 
   // Enable WebSocket for real-time updates
   const { isConnected } = useWebSocket();
@@ -182,11 +184,18 @@ export default function Dashboard() {
             <Upload className="h-4 w-4 mr-2" />
             Reload Sample Data
           </Button>
-          <Button variant="outline" data-testid="button-run-scenario">
+          <Button 
+            variant="outline" 
+            onClick={() => setLocation('/forecasting')}
+            data-testid="button-run-scenario"
+          >
             <GitCompare className="h-4 w-4 mr-2" />
-            Run Scenario
+            Run Forecast
           </Button>
-          <Button data-testid="button-new-allocation">
+          <Button 
+            onClick={() => setLocation('/allocation')}
+            data-testid="button-new-allocation"
+          >
             <Plus className="h-4 w-4 mr-2" />
             New Allocation
           </Button>
@@ -237,7 +246,12 @@ export default function Dashboard() {
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">Recent Allocations</h2>
-              <Button variant="ghost" size="sm" data-testid="button-view-all">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setLocation('/allocation')}
+                data-testid="button-view-all"
+              >
                 View All
               </Button>
             </div>
