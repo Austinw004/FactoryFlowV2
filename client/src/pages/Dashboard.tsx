@@ -84,10 +84,19 @@ export default function Dashboard() {
     : "0.0";
 
   const regimeData = regime as any || {};
-  const policySignals = regimeData.policySignals || [];
+  const policySignals = regimeData.signals || regimeData.policySignals || [];
   const regimeType = regimeData.regime || "UNKNOWN";
-  const fdr = regimeData.fdr || 0;
+  const fdr = regimeData.fdr || 1.0;
   const intensity = regimeData.intensity || 50;
+  const economicData = regimeData.data || {};
+  const dataSource = regimeData.source || 'unknown';
+  
+  // Fallback values for economic data
+  const sp500 = economicData.sp500Index || economicData.sp500 || null;
+  const inflation = economicData.inflationRate || economicData.inflation || null;
+  const gdpNominal = economicData.gdpNominal || null;
+  const gdpReal = economicData.gdpReal || null;
+  const sentiment = economicData.sentimentScore !== undefined ? economicData.sentimentScore : null;
 
   // Map regime types to friendly labels
   const regimeLabels: Record<string, string> = {
@@ -288,63 +297,81 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="p-4 rounded-lg border bg-card">
             <div className="flex items-center justify-between mb-2">
-              <div className="text-sm font-medium text-muted-foreground">FRED Economic Data</div>
+              <div className="text-sm font-medium text-muted-foreground">Financial Markets</div>
               <Globe className="h-4 w-4 text-primary" />
             </div>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">S&P 500 Growth:</span>
-                <span className="font-semibold">+15.2%</span>
+                <span className="text-muted-foreground">S&P 500:</span>
+                <span className="font-semibold">
+                  {sp500 ? sp500.toLocaleString() : '—'}
+                </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Industrial Production:</span>
-                <span className="font-semibold">+2.1%</span>
+                <span className="text-muted-foreground">Inflation Rate:</span>
+                <span className="font-semibold">
+                  {inflation !== null ? `${(inflation * 100).toFixed(1)}%` : '—'}
+                </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Manufacturing PMI:</span>
-                <span className="font-semibold">52.3</span>
+                <span className="text-muted-foreground">FDR Ratio:</span>
+                <span className="font-semibold">{fdr.toFixed(2)}</span>
               </div>
             </div>
           </div>
           
           <div className="p-4 rounded-lg border bg-card">
             <div className="flex items-center justify-between mb-2">
-              <div className="text-sm font-medium text-muted-foreground">Alpha Vantage Sentiment</div>
+              <div className="text-sm font-medium text-muted-foreground">Real Economy</div>
               <Globe className="h-4 w-4 text-primary" />
             </div>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Market Sentiment:</span>
-                <Badge className="bg-green-600">Bullish</Badge>
+                <span className="text-muted-foreground">GDP (Nominal):</span>
+                <span className="font-semibold">
+                  {gdpNominal ? `$${(gdpNominal / 1e12).toFixed(1)}T` : '—'}
+                </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">GDP Growth:</span>
-                <span className="font-semibold">+3.1%</span>
+                <span className="text-muted-foreground">GDP (Real):</span>
+                <span className="font-semibold">
+                  {gdpReal ? `$${(gdpReal / 1e12).toFixed(1)}T` : '—'}
+                </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Fed Funds Rate:</span>
-                <span className="font-semibold">5.25%</span>
+                <span className="text-muted-foreground">Sentiment:</span>
+                {sentiment !== null ? (
+                  <Badge className={sentiment > 0.5 ? "bg-green-600" : sentiment < -0.5 ? "bg-red-600" : "bg-yellow-600"}>
+                    {sentiment > 0.5 ? 'Bullish' : sentiment < -0.5 ? 'Bearish' : 'Neutral'}
+                  </Badge>
+                ) : (
+                  <span className="text-sm text-muted-foreground">—</span>
+                )}
               </div>
             </div>
           </div>
 
           <div className="p-4 rounded-lg border bg-card">
             <div className="flex items-center justify-between mb-2">
-              <div className="text-sm font-medium text-muted-foreground">DBnomics Global Data</div>
+              <div className="text-sm font-medium text-muted-foreground">Data Source</div>
               <Globe className="h-4 w-4 text-primary" />
             </div>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Global PMI:</span>
-                <span className="font-semibold">51.8</span>
+                <span className="text-muted-foreground">Source:</span>
+                <Badge variant={dataSource === 'external' ? 'default' : 'secondary'}>
+                  {dataSource === 'external' ? 'Live APIs' : dataSource === 'fallback' ? 'Mock Data' : 'Balance Sheet'}
+                </Badge>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Trade Volume:</span>
-                <span className="font-semibold text-green-600">↑ 4.2%</span>
+                <span className="text-muted-foreground">Economic Regime:</span>
+                <span className="font-semibold text-xs">{friendlyRegime}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Commodity Index:</span>
-                <span className="font-semibold">+8.7%</span>
+                <span className="text-muted-foreground">Last Updated:</span>
+                <span className="font-semibold text-xs">
+                  {regimeData.timestamp ? new Date(regimeData.timestamp).toLocaleTimeString() : 'Live'}
+                </span>
               </div>
             </div>
           </div>
@@ -357,10 +384,14 @@ export default function Dashboard() {
             <TrendingUp className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
             <div className="text-sm space-y-1">
               <p className="font-semibold text-foreground">
-                FDR Analysis: Financial markets (+15.2%) significantly outpacing real economy (+2.1%)
+                FDR Analysis: {fdr >= 1.5 ? 'Financial markets significantly outpacing real economy' : fdr >= 1.0 ? 'Moderate financial-real divergence detected' : 'Real economy leading financial markets'}
               </p>
               <p className="text-muted-foreground">
-                This 7.2x divergence indicates {regimeType.replace(/_/g, ' ')} regime. The platform is continuously gathering data from FRED, Alpha Vantage, DBnomics, World Bank, IMF, OECD, Trading Economics, and News API to calculate real-time FDR and adjust all forecasts, allocations, and procurement signals accordingly.
+                Current FDR ratio of {fdr.toFixed(2)} indicates <strong>{friendlyRegime}</strong> regime. 
+                {dataSource === 'external' && ' The platform is gathering data from 15+ external APIs including FRED, Alpha Vantage, DBnomics, World Bank, IMF, OECD, and Trading Economics to calculate real-time FDR.'}
+                {dataSource === 'fallback' && ' Using simulated economic data while external APIs are unavailable.'}
+                {dataSource === 'balance_sheet' && ' Calculated from internal balance sheet and income statement data.'}
+                {' '}All forecasts, allocations, and procurement signals are automatically adjusted based on the current economic regime.
               </p>
             </div>
           </div>

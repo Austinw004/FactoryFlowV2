@@ -22,37 +22,43 @@ const economics = new DualCircuitEconomics();
 
 // Helper function to calculate policy signals based on regime
 function calculateSignalsForRegime(regime: string) {
-  const signals: any = {
-    procurement: '',
-    inventory: '',
-    production: ''
-  };
+  const signals: any[] = [];
 
   switch (regime) {
     case 'HEALTHY_EXPANSION':
-      signals.procurement = 'normal';
-      signals.inventory = 'maintain';
-      signals.production = 'increase';
+      signals.push(
+        { type: 'procurement', action: 'normal', description: 'Maintain standard procurement levels' },
+        { type: 'inventory', action: 'maintain', description: 'Keep inventory at optimal levels' },
+        { type: 'production', action: 'increase', description: 'Gradually increase production capacity' }
+      );
       break;
     case 'ASSET_LED_GROWTH':
-      signals.procurement = 'strategic_buy';
-      signals.inventory = 'build';
-      signals.production = 'increase';
+      signals.push(
+        { type: 'procurement', action: 'strategic_buy', description: 'Lock in favorable prices before inflation hits' },
+        { type: 'inventory', action: 'build', description: 'Build strategic inventory reserves' },
+        { type: 'production', action: 'increase', description: 'Expand production to meet anticipated demand' }
+      );
       break;
     case 'IMBALANCED_EXCESS':
-      signals.procurement = 'reduce';
-      signals.inventory = 'drawdown';
-      signals.production = 'decrease';
+      signals.push(
+        { type: 'procurement', action: 'reduce', description: 'Reduce procurement due to bubble risk' },
+        { type: 'inventory', action: 'drawdown', description: 'Draw down excess inventory' },
+        { type: 'production', action: 'decrease', description: 'Scale back production capacity' }
+      );
       break;
     case 'REAL_ECONOMY_LEAD':
-      signals.procurement = 'aggressive_buy';
-      signals.inventory = 'maximize';
-      signals.production = 'maximize';
+      signals.push(
+        { type: 'procurement', action: 'aggressive_buy', description: 'Aggressively purchase materials at low prices' },
+        { type: 'inventory', action: 'maximize', description: 'Maximize inventory to capitalize on low prices' },
+        { type: 'production', action: 'maximize', description: 'Maximize production for upcoming expansion' }
+      );
       break;
     default:
-      signals.procurement = 'normal';
-      signals.inventory = 'maintain';
-      signals.production = 'normal';
+      signals.push(
+        { type: 'procurement', action: 'normal', description: 'Maintain standard procurement levels' },
+        { type: 'inventory', action: 'maintain', description: 'Keep inventory at optimal levels' },
+        { type: 'production', action: 'normal', description: 'Maintain current production levels' }
+      );
   }
 
   return signals;
@@ -146,7 +152,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fdr: economics.fdr,
           data: economics.data,
           source: 'balance_sheet',
-          signals: economics.signals(),
+          signals: calculateSignalsForRegime(economics.regime),
         });
       }
     } catch (error: any) {
