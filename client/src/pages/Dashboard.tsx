@@ -13,13 +13,18 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useWebSocket } from "@/hooks/useWebSocket";
 
 export default function Dashboard() {
   const { toast } = useToast();
   const { user } = useAuth();
 
+  // Enable WebSocket for real-time updates
+  const { isConnected } = useWebSocket();
+
   const { data: regime, isLoading: regimeLoading } = useQuery({
     queryKey: ["/api/economics/regime"],
+    refetchInterval: 30000, // Refetch every 30 seconds as fallback
   });
 
   const { data: allocations = [], isLoading: allocationsLoading } = useQuery({
@@ -113,6 +118,12 @@ export default function Dashboard() {
               Your manufacturing control center
             </p>
           </div>
+          <div className="flex items-center gap-2">
+            <Badge variant={isConnected ? "default" : "outline"} className="gap-1.5">
+              <Radio className={`h-3 w-3 ${isConnected ? 'animate-pulse' : ''}`} />
+              {isConnected ? 'Live Updates' : 'Connecting...'}
+            </Badge>
+          </div>
         </div>
         <Card className="p-12">
           <div className="text-center space-y-4">
@@ -157,7 +168,11 @@ export default function Dashboard() {
             Your manufacturing control center
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <Badge variant={isConnected ? "default" : "outline"} className="gap-1.5" data-testid="badge-connection-status">
+            <Radio className={`h-3 w-3 ${isConnected ? 'animate-pulse' : ''}`} />
+            {isConnected ? 'Live Updates' : 'Connecting...'}
+          </Badge>
           <Button 
             variant="outline" 
             onClick={() => seedMutation.mutate()} 
