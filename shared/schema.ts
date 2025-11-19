@@ -33,6 +33,23 @@ export const companies = pgTable("companies", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const economicSnapshots = pgTable("economic_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+  fdr: real("fdr").notNull(),
+  regime: text("regime").notNull(),
+  gdpReal: real("gdp_real"),
+  gdpNominal: real("gdp_nominal"),
+  sp500Index: real("sp500_index"),
+  inflationRate: real("inflation_rate"),
+  sentimentScore: real("sentiment_score"),
+  source: text("source").notNull().default('fallback'), // 'external' or 'fallback'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("economic_snapshots_company_timestamp_idx").on(table.companyId, table.timestamp),
+]);
+
 export const skus = pgTable("skus", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
@@ -1299,3 +1316,11 @@ export type InsertPurchaseOrder = z.infer<typeof insertPurchaseOrderSchema>;
 export type UpdatePurchaseOrder = z.infer<typeof updatePurchaseOrderSchema>;
 export type MaterialUsageTracking = typeof materialUsageTracking.$inferSelect;
 export type InsertMaterialUsageTracking = z.infer<typeof insertMaterialUsageTrackingSchema>;
+
+// Economic Snapshots
+export const insertEconomicSnapshotSchema = createInsertSchema(economicSnapshots).omit({ 
+  id: true,
+  createdAt: true 
+});
+export type EconomicSnapshot = typeof economicSnapshots.$inferSelect;
+export type InsertEconomicSnapshot = z.infer<typeof insertEconomicSnapshotSchema>;

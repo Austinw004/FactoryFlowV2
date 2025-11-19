@@ -20,6 +20,44 @@ import {
 
 const economics = new DualCircuitEconomics();
 
+// Helper function to calculate policy signals based on regime
+function calculateSignalsForRegime(regime: string) {
+  const signals: any = {
+    procurement: '',
+    inventory: '',
+    production: ''
+  };
+
+  switch (regime) {
+    case 'HEALTHY_EXPANSION':
+      signals.procurement = 'normal';
+      signals.inventory = 'maintain';
+      signals.production = 'increase';
+      break;
+    case 'ASSET_LED_GROWTH':
+      signals.procurement = 'strategic_buy';
+      signals.inventory = 'build';
+      signals.production = 'increase';
+      break;
+    case 'IMBALANCED_EXCESS':
+      signals.procurement = 'reduce';
+      signals.inventory = 'drawdown';
+      signals.production = 'decrease';
+      break;
+    case 'REAL_ECONOMY_LEAD':
+      signals.procurement = 'aggressive_buy';
+      signals.inventory = 'maximize';
+      signals.production = 'maximize';
+      break;
+    default:
+      signals.procurement = 'normal';
+      signals.inventory = 'maintain';
+      signals.production = 'normal';
+  }
+
+  return signals;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   await setupAuth(app);
@@ -70,16 +108,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Economic regime endpoint (public for now)
-  app.get("/api/economics/regime", async (_req, res) => {
+  // Economic regime endpoint - reads from latest snapshot
+  app.get("/api/economics/regime", isAuthenticated, async (req: any, res) => {
     try {
-      await economics.fetch();
-      res.json({
-        regime: economics.regime,
-        fdr: economics.fdr,
-        data: economics.data,
-        signals: economics.signals(),
-      });
+      const user = req.user;
+      
+      // Try to get latest snapshot from background jobs
+      const snapshot = await storage.getLatestEconomicSnapshot(user.companyId);
+      
+      if (snapshot) {
+        // Use persisted snapshot data
+        res.json({
+          regime: snapshot.regime,
+          fdr: snapshot.fdr,
+          data: {
+            gdpReal: snapshot.gdpReal,
+            gdpNominal: snapshot.gdpNominal,
+            sp500Index: snapshot.sp500Index,
+            inflationRate: snapshot.inflationRate,
+            sentimentScore: snapshot.sentimentScore,
+          },
+          source: snapshot.source,
+          timestamp: snapshot.timestamp,
+          signals: calculateSignalsForRegime(snapshot.regime),
+        });
+      } else {
+        // Fallback to balance sheet calculation if no snapshot exists
+        await economics.fetch();
+        res.json({
+          regime: economics.regime,
+          fdr: economics.fdr,
+          data: economics.data,
+          source: 'balance_sheet',
+          signals: economics.signals(),
+        });
+      }
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

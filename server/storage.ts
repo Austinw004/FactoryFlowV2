@@ -37,7 +37,8 @@ import type {
   PurchaseOrder, InsertPurchaseOrder, UpdatePurchaseOrder,
   MaterialUsageTracking, InsertMaterialUsageTracking,
   ProcurementSchedule, InsertProcurementSchedule,
-  AutoPurchaseRecommendation, InsertAutoPurchaseRecommendation
+  AutoPurchaseRecommendation, InsertAutoPurchaseRecommendation,
+  EconomicSnapshot, InsertEconomicSnapshot
 } from "@shared/schema";
 import { 
   users, companies, skus, materials, boms, suppliers, supplierMaterials,
@@ -50,7 +51,8 @@ import {
   employees, workShifts, skillRequirements, staffAssignments,
   employeePayroll, employeeBenefits, employeeTimeOff, employeePtoBalances,
   employeeDocuments, employeePerformanceReviews, employeeEmergencyContacts,
-  purchaseOrders, materialUsageTracking, procurementSchedules, autoPurchaseRecommendations
+  purchaseOrders, materialUsageTracking, procurementSchedules, autoPurchaseRecommendations,
+  economicSnapshots
 } from "@shared/schema";
 
 export interface IStorage {
@@ -266,6 +268,10 @@ export interface IStorage {
   createAutoPurchaseRecommendation(recommendation: InsertAutoPurchaseRecommendation): Promise<AutoPurchaseRecommendation>;
   updateAutoPurchaseRecommendation(id: string, companyId: string, recommendation: Partial<InsertAutoPurchaseRecommendation>): Promise<AutoPurchaseRecommendation | undefined>;
   deleteAutoPurchaseRecommendation(id: string, companyId: string): Promise<void>;
+  
+  // Economic Snapshots
+  getLatestEconomicSnapshot(companyId: string): Promise<EconomicSnapshot | undefined>;
+  createEconomicSnapshot(snapshot: InsertEconomicSnapshot): Promise<EconomicSnapshot>;
 }
 
 export class DbStorage implements IStorage {
@@ -1046,6 +1052,21 @@ export class DbStorage implements IStorage {
     await db.delete(autoPurchaseRecommendations).where(
       and(eq(autoPurchaseRecommendations.id, id), eq(autoPurchaseRecommendations.companyId, companyId))
     );
+  }
+
+  // Economic Snapshot methods
+  async getLatestEconomicSnapshot(companyId: string): Promise<EconomicSnapshot | undefined> {
+    const [snapshot] = await db.select()
+      .from(economicSnapshots)
+      .where(eq(economicSnapshots.companyId, companyId))
+      .orderBy(sql`${economicSnapshots.timestamp} DESC`)
+      .limit(1);
+    return snapshot;
+  }
+
+  async createEconomicSnapshot(insertSnapshot: InsertEconomicSnapshot): Promise<EconomicSnapshot> {
+    const [snapshot] = await db.insert(economicSnapshots).values(insertSnapshot).returning();
+    return snapshot;
   }
 }
 

@@ -55,6 +55,20 @@ export async function updateExternalEconomicData() {
       
       if (companies.length > 0) {
         for (const companyId of companies) {
+          // Persist to database
+          await storage.createEconomicSnapshot({
+            companyId,
+            timestamp: new Date(),
+            fdr,
+            regime,
+            gdpReal: gdp_real,
+            gdpNominal: gdp_nominal,
+            sp500Index: sp500_index,
+            inflationRate: inflation_rate,
+            sentimentScore: sentiment_score,
+            source: 'external'
+          });
+
           broadcastUpdate({
             type: 'database_update',
             entity: 'economic_indicators',
@@ -96,6 +110,15 @@ export async function updateExternalEconomicData() {
     
     if (companies.length > 0) {
       for (const companyId of companies) {
+        // Persist fallback data to database
+        await storage.createEconomicSnapshot({
+          companyId,
+          timestamp: new Date(),
+          fdr: mockFdr,
+          regime: mockRegime,
+          source: 'fallback'
+        });
+
         broadcastUpdate({
           type: 'database_update',
           entity: 'economic_indicators',
