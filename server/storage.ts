@@ -272,6 +272,9 @@ export interface IStorage {
   // Economic Snapshots
   getLatestEconomicSnapshot(companyId: string): Promise<EconomicSnapshot | undefined>;
   createEconomicSnapshot(snapshot: InsertEconomicSnapshot): Promise<EconomicSnapshot>;
+  
+  // Utility
+  getAllCompanyIds(): Promise<string[]>;
 }
 
 export class DbStorage implements IStorage {
@@ -1067,6 +1070,12 @@ export class DbStorage implements IStorage {
   async createEconomicSnapshot(insertSnapshot: InsertEconomicSnapshot): Promise<EconomicSnapshot> {
     const [snapshot] = await db.insert(economicSnapshots).values(insertSnapshot).returning();
     return snapshot;
+  }
+
+  // Utility methods
+  async getAllCompanyIds(): Promise<string[]> {
+    const result = await db.select({ id: companies.id }).from(companies);
+    return result.map(r => r.id);
   }
 }
 

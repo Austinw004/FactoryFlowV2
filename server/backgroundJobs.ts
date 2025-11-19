@@ -23,17 +23,8 @@ let companyIds: string[] = [];
 
 async function getActiveCompanyIds(): Promise<string[]> {
   if (companyIds.length === 0) {
-    const materials = await storage.getMaterials('');
-    if (materials.length === 0) {
-      return [];
-    }
-    const uniqueIds = new Set<string>();
-    for (const m of materials) {
-      if (m.companyId) {
-        uniqueIds.add(m.companyId);
-      }
-    }
-    companyIds = Array.from(uniqueIds).slice(0, 10);
+    // Get all company IDs from the database
+    companyIds = await storage.getAllCompanyIds();
   }
   return companyIds;
 }

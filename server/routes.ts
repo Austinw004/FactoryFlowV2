@@ -111,7 +111,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Economic regime endpoint - reads from latest snapshot
   app.get("/api/economics/regime", isAuthenticated, async (req: any, res) => {
     try {
-      const user = req.user;
+      // Load full user from database to get companyId
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no associated company" });
+      }
       
       // Try to get latest snapshot from background jobs
       const snapshot = await storage.getLatestEconomicSnapshot(user.companyId);
