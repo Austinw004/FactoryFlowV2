@@ -1426,10 +1426,59 @@ export const insertEconomicSnapshotSchema = createInsertSchema(economicSnapshots
 export type EconomicSnapshot = typeof economicSnapshots.$inferSelect;
 export type InsertEconomicSnapshot = z.infer<typeof insertEconomicSnapshotSchema>;
 
+// Model Comparison Tracking - Prove Dual-Circuit Superiority over traditional models
+export const modelComparisons = pgTable("model_comparisons", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  predictionDate: timestamp("prediction_date").notNull(),
+  targetDate: timestamp("target_date").notNull(),
+  commodity: text("commodity").notNull(), // "Aluminum", "Copper", "Steel", "Nickel", "Oil"
+  
+  // Actual outcome (ground truth)
+  actualPrice: real("actual_price").notNull(),
+  actualDirection: text("actual_direction").notNull(), // "up", "down", "stable"
+  
+  // Dual-Circuit FDR Model (PRIMARY - YOUR THESIS)
+  dualCircuitPredicted: real("dual_circuit_predicted").notNull(),
+  dualCircuitDirection: text("dual_circuit_direction").notNull(),
+  dualCircuitMAPE: real("dual_circuit_mape").notNull(),
+  dualCircuitCorrect: integer("dual_circuit_correct").notNull(), // 1 if direction correct, 0 if wrong
+  
+  // Quantity Theory of Money Baseline
+  qtmPredicted: real("qtm_predicted").notNull(),
+  qtmDirection: text("qtm_direction").notNull(),
+  qtmMAPE: real("qtm_mape").notNull(),
+  qtmCorrect: integer("qtm_correct").notNull(),
+  
+  // Random Walk Baseline (null hypothesis)
+  randomWalkPredicted: real("random_walk_predicted").notNull(),
+  randomWalkDirection: text("random_walk_direction").notNull(),
+  randomWalkMAPE: real("random_walk_mape").notNull(),
+  randomWalkCorrect: integer("random_walk_correct").notNull(),
+  
+  // Momentum Baseline
+  momentumPredicted: real("momentum_predicted").notNull(),
+  momentumDirection: text("momentum_direction").notNull(),
+  momentumMAPE: real("momentum_mape").notNull(),
+  momentumCorrect: integer("momentum_correct").notNull(),
+  
+  // Economic Context (for Dual-Circuit model)
+  fdr: real("fdr").notNull(),
+  regime: text("regime").notNull(),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("model_comparisons_commodity_idx").on(table.commodity),
+  index("model_comparisons_prediction_date_idx").on(table.predictionDate),
+]);
+
 // Research Validation System schemas
 export const insertHistoricalPredictionSchema = createInsertSchema(historicalPredictions).omit({ id: true, createdAt: true });
 export const insertPredictionAccuracyMetricsSchema = createInsertSchema(predictionAccuracyMetrics).omit({ id: true, createdAt: true, calculatedAt: true });
+export const insertModelComparisonSchema = createInsertSchema(modelComparisons).omit({ id: true, createdAt: true });
 export type HistoricalPrediction = typeof historicalPredictions.$inferSelect;
 export type InsertHistoricalPrediction = z.infer<typeof insertHistoricalPredictionSchema>;
 export type PredictionAccuracyMetrics = typeof predictionAccuracyMetrics.$inferSelect;
 export type InsertPredictionAccuracyMetrics = z.infer<typeof insertPredictionAccuracyMetricsSchema>;
+export type ModelComparison = typeof modelComparisons.$inferSelect;
+export type InsertModelComparison = z.infer<typeof insertModelComparisonSchema>;
