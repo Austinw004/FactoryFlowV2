@@ -1294,6 +1294,107 @@ export const materialUsageTracking = pgTable("material_usage_tracking", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Research Validation System - Historical Predictions & Backtesting (NOT USER-FACING)
+// This validates the dual-circuit economic theory by making predictions at historical points
+// and tracking accuracy over time from 2000 AD onwards
+export const historicalPredictions = pgTable("historical_predictions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  predictionDate: timestamp("prediction_date").notNull(), // When the prediction was made (e.g., "2008-01-15")
+  targetDate: timestamp("target_date").notNull(), // What date the prediction was for (e.g., "2008-06-15")
+  horizonDays: integer("horizon_days").notNull(), // Days ahead prediction (targetDate - predictionDate)
+  
+  // Dual-Circuit Variables at prediction time
+  fdrAtPrediction: real("fdr_at_prediction").notNull(), // Ma*Va / Mr*Vr
+  regimeAtPrediction: text("regime_at_prediction").notNull(), // HEALTHY_EXPANSION, etc.
+  mrGrowthRate: real("mr_growth_rate"), // Real economy money growth
+  maGrowthRate: real("ma_growth_rate"), // Asset market money growth
+  vrVelocity: real("vr_velocity"), // Real economy velocity
+  vaVelocity: real("va_velocity"), // Asset market velocity
+  
+  // What was predicted
+  predictionType: text("prediction_type").notNull(), // "commodity_price", "economic_regime", "asset_bubble", "recession"
+  itemId: varchar("item_id"), // Material/commodity ID if applicable
+  itemName: text("item_name"), // Name of what's being predicted
+  predictedValue: real("predicted_value"), // Predicted price or numeric value
+  predictedRegime: text("predicted_regime"), // Predicted economic regime
+  predictedDirection: text("predicted_direction"), // "up", "down", "stable"
+  confidenceScore: real("confidence_score"), // 0-1 confidence in prediction
+  
+  // What actually happened
+  actualValue: real("actual_value"), // Actual price or value at target date
+  actualRegime: text("actual_regime"), // Actual regime at target date
+  actualDirection: text("actual_direction"), // Actual direction of movement
+  
+  // Accuracy metrics
+  absoluteError: real("absolute_error"), // |predicted - actual|
+  percentageError: real("percentage_error"), // (predicted - actual) / actual * 100
+  directionalAccuracy: integer("directional_accuracy"), // 1 if correct, 0 if incorrect
+  regimeAccuracy: integer("regime_accuracy"), // 1 if correct, 0 if incorrect
+  
+  // Methodology tracking
+  modelVersion: text("model_version").notNull().default("v1.0"), // Version of prediction algorithm
+  inputIndicators: jsonb("input_indicators"), // What indicators were used
+  calculationNotes: text("calculation_notes"), // How prediction was derived
+  
+  // External data sources used
+  dataSource: text("data_source").notNull(), // "FRED", "Alpha Vantage", etc.
+  dataQuality: text("data_quality"), // "high", "medium", "low", "estimated"
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("historical_predictions_prediction_date_idx").on(table.predictionDate),
+  index("historical_predictions_target_date_idx").on(table.targetDate),
+  index("historical_predictions_type_idx").on(table.predictionType),
+]);
+
+// Aggregate accuracy metrics for the research validation system
+export const predictionAccuracyMetrics = pgTable("prediction_accuracy_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  metricPeriod: text("metric_period").notNull(), // "2000-2005", "2005-2010", "all_time"
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  
+  // Overall accuracy metrics
+  totalPredictions: integer("total_predictions").notNull(),
+  correctDirectionPct: real("correct_direction_pct"), // % of directional predictions that were correct
+  correctRegimePct: real("correct_regime_pct"), // % of regime predictions that were correct
+  meanAbsolutePercentageError: real("mean_absolute_percentage_error"), // MAPE for price predictions
+  rootMeanSquareError: real("root_mean_square_error"), // RMSE for price predictions
+  
+  // Breakdown by prediction type
+  commodityPriceMAPE: real("commodity_price_mape"),
+  regimeChangeAccuracy: real("regime_change_accuracy"),
+  assetBubbleDetection: real("asset_bubble_detection"), // % of bubbles correctly predicted
+  recessionPredictionAccuracy: real("recession_prediction_accuracy"),
+  
+  // Breakdown by economic regime
+  healthyExpansionAccuracy: real("healthy_expansion_accuracy"),
+  assetLedGrowthAccuracy: real("asset_led_growth_accuracy"),
+  imbalancedExcessAccuracy: real("imbalanced_excess_accuracy"),
+  realEconomyLeadAccuracy: real("real_economy_lead_accuracy"),
+  
+  // FDR correlation with accuracy
+  fdrRangeAnalysis: jsonb("fdr_range_analysis"), // Accuracy by FDR ranges
+  optimalFDRThresholds: jsonb("optimal_fdr_thresholds"), // Data-driven threshold recommendations
+  
+  // Statistical significance
+  sampleSize: integer("sample_size").notNull(),
+  confidenceInterval95: jsonb("confidence_interval_95"), // [lower, upper] bounds
+  pValue: real("p_value"), // Statistical significance vs random predictions
+  
+  // Paper validation metrics
+  paperTheoryAlignment: real("paper_theory_alignment"), // How well results match paper predictions (0-1)
+  unexpectedFindings: text("unexpected_findings"), // Notable deviations from theory
+  improvementRecommendations: text("improvement_recommendations"),
+  
+  calculatedAt: timestamp("calculated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("prediction_accuracy_metrics_period_idx").on(table.periodStart, table.periodEnd),
+]);
+
 // Automatic Procurement schemas
 export const insertProcurementScheduleSchema = createInsertSchema(procurementSchedules).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertAutoPurchaseRecommendationSchema = createInsertSchema(autoPurchaseRecommendations).omit({ id: true, createdAt: true });
@@ -1324,3 +1425,11 @@ export const insertEconomicSnapshotSchema = createInsertSchema(economicSnapshots
 });
 export type EconomicSnapshot = typeof economicSnapshots.$inferSelect;
 export type InsertEconomicSnapshot = z.infer<typeof insertEconomicSnapshotSchema>;
+
+// Research Validation System schemas
+export const insertHistoricalPredictionSchema = createInsertSchema(historicalPredictions).omit({ id: true, createdAt: true });
+export const insertPredictionAccuracyMetricsSchema = createInsertSchema(predictionAccuracyMetrics).omit({ id: true, createdAt: true, calculatedAt: true });
+export type HistoricalPrediction = typeof historicalPredictions.$inferSelect;
+export type InsertHistoricalPrediction = z.infer<typeof insertHistoricalPredictionSchema>;
+export type PredictionAccuracyMetrics = typeof predictionAccuracyMetrics.$inferSelect;
+export type InsertPredictionAccuracyMetrics = z.infer<typeof insertPredictionAccuracyMetricsSchema>;

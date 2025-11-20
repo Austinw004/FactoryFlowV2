@@ -38,7 +38,9 @@ import type {
   MaterialUsageTracking, InsertMaterialUsageTracking,
   ProcurementSchedule, InsertProcurementSchedule,
   AutoPurchaseRecommendation, InsertAutoPurchaseRecommendation,
-  EconomicSnapshot, InsertEconomicSnapshot
+  EconomicSnapshot, InsertEconomicSnapshot,
+  HistoricalPrediction, InsertHistoricalPrediction,
+  PredictionAccuracyMetrics, InsertPredictionAccuracyMetrics
 } from "@shared/schema";
 import { 
   users, companies, skus, materials, boms, suppliers, supplierMaterials,
@@ -52,7 +54,7 @@ import {
   employeePayroll, employeeBenefits, employeeTimeOff, employeePtoBalances,
   employeeDocuments, employeePerformanceReviews, employeeEmergencyContacts,
   purchaseOrders, materialUsageTracking, procurementSchedules, autoPurchaseRecommendations,
-  economicSnapshots
+  economicSnapshots, historicalPredictions, predictionAccuracyMetrics
 } from "@shared/schema";
 
 export interface IStorage {
@@ -272,6 +274,17 @@ export interface IStorage {
   // Economic Snapshots
   getLatestEconomicSnapshot(companyId: string): Promise<EconomicSnapshot | undefined>;
   createEconomicSnapshot(snapshot: InsertEconomicSnapshot): Promise<EconomicSnapshot>;
+  
+  // Research Validation System (Historical Predictions & Backtesting - NOT USER-FACING)
+  getHistoricalPredictions(companyId: string): Promise<HistoricalPrediction[]>;
+  getHistoricalPredictionsByDateRange(companyId: string, startDate: Date, endDate: Date): Promise<HistoricalPrediction[]>;
+  getHistoricalPredictionsByType(companyId: string, predictionType: string): Promise<HistoricalPrediction[]>;
+  createHistoricalPrediction(prediction: InsertHistoricalPrediction): Promise<HistoricalPrediction>;
+  updateHistoricalPredictionActuals(id: string, actualValue: number, actualRegime: string, actualDirection: string): Promise<HistoricalPrediction | undefined>;
+  
+  getPredictionAccuracyMetrics(companyId: string): Promise<PredictionAccuracyMetrics[]>;
+  getLatestAccuracyMetrics(companyId: string): Promise<PredictionAccuracyMetrics | undefined>;
+  createPredictionAccuracyMetrics(metrics: InsertPredictionAccuracyMetrics): Promise<PredictionAccuracyMetrics>;
   
   // Utility
   getAllCompanyIds(): Promise<string[]>;
