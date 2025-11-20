@@ -3251,6 +3251,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Comprehensive test - run detailed analysis with 10,000+ predictions and metrics breakdown
+  app.get("/api/research/comprehensive-test", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      console.log("[Research] Running comprehensive test for company:", user.companyId);
+      
+      // Import comprehensive test module
+      const { runComprehensiveTest, getDatabaseSummary } = await import("./lib/comprehensiveTest");
+      
+      // Run comprehensive analysis
+      const results = await runComprehensiveTest(user.companyId);
+      const dbSummary = await getDatabaseSummary(user.companyId);
+      
+      console.log(`[Research] Comprehensive test complete: ${results.totalPredictions} predictions analyzed`);
+      
+      res.json({
+        ...results,
+        databaseSummary: dbSummary,
+      });
+    } catch (error: any) {
+      console.error("[Research] Failed to run comprehensive test:", error);
+      res.status(500).json({ 
+        message: "Failed to run comprehensive test",
+        error: error.message
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   
   setupWebSocket(httpServer);

@@ -514,8 +514,10 @@ export async function updateProductionKPIs() {
  * - 2010-2019: Recovery and expansion
  * - 2020: COVID shock
  * - 2021-2024: Post-COVID recovery with varying FDR
+ * 
+ * @param dataPoints - Number of data points to generate (default: 20 quarterly points)
  */
-function generateSimulatedHistoricalEconomicStates() {
+function generateSimulatedHistoricalEconomicStates(dataPoints: number = 20) {
   const states: Array<{
     date: Date;
     fdr: number;
@@ -523,44 +525,87 @@ function generateSimulatedHistoricalEconomicStates() {
     aluminumPrice: number;
   }> = [];
   
-  // Generate quarterly data points from 2020 to 2024 (demo timeframe)
-  const startYear = 2020;
-  const endYear = 2024;
+  // For extensive testing, generate weekly data from 2000-2024
+  const startDate = new Date(2000, 0, 1);
+  const endDate = new Date(2024, 11, 31);
+  const totalDays = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+  const daysPerPoint = Math.floor(totalDays / dataPoints);
   
-  for (let year = startYear; year <= endYear; year++) {
-    for (let quarter = 0; quarter < 4; quarter++) {
-      const date = new Date(year, quarter * 3, 1);
-      
-      // Simulate FDR evolution over time (realistic pattern)
-      let fdr: number;
-      let aluminumPrice: number;
-      
-      if (year === 2020) {
-        // COVID shock year - high volatility
-        fdr = 1.4 + (Math.random() - 0.5) * 0.3;
-        aluminumPrice = 2200 + (Math.random() - 0.5) * 300;
-      } else if (year === 2021) {
-        // Recovery with asset bubble forming
-        fdr = 1.6 + (Math.random() - 0.5) * 0.2;
-        aluminumPrice = 2600 + (Math.random() - 0.5) * 250;
-      } else if (year === 2022) {
-        // Bubble conditions
-        fdr = 1.9 + (Math.random() - 0.5) * 0.3;
-        aluminumPrice = 2800 + (Math.random() - 0.5) * 400;
-      } else if (year === 2023) {
-        // Correction starting
-        fdr = 1.5 + (Math.random() - 0.5) * 0.4;
-        aluminumPrice = 2500 + (Math.random() - 0.5) * 350;
-      } else {
-        // 2024 - stabilizing
-        fdr = 1.3 + (Math.random() - 0.5) * 0.2;
-        aluminumPrice = 2400 + (Math.random() - 0.5) * 200;
-      }
-      
-      const regime = calculateEconomicRegime(fdr);
-      
-      states.push({ date, fdr, regime, aluminumPrice });
+  let currentPrice = 1800; // Starting aluminum price in 2000
+  let currentFDR = 1.1; // Starting FDR
+  
+  for (let i = 0; i < dataPoints; i++) {
+    const date = new Date(startDate.getTime() + (i * daysPerPoint * 24 * 60 * 60 * 1000));
+    const year = date.getFullYear();
+    
+    // Simulate realistic FDR evolution through economic cycles
+    let fdrTrend: number;
+    let priceTrend: number;
+    let volatility: number;
+    
+    if (year >= 2000 && year <= 2001) {
+      // Dot-com bubble peak and burst
+      fdrTrend = 1.8 + (Math.random() - 0.5) * 0.4;
+      priceTrend = -0.02; // Declining prices
+      volatility = 200;
+    } else if (year >= 2002 && year <= 2007) {
+      // Housing bubble buildup
+      fdrTrend = 1.3 + ((year - 2002) / 5) * 0.6; // FDR rising 1.3 → 1.9
+      priceTrend = 0.05; // Rising prices
+      volatility = 150;
+    } else if (year >= 2008 && year <= 2009) {
+      // Financial crisis
+      fdrTrend = year === 2008 ? 2.2 : 1.0; // Spike then crash
+      priceTrend = year === 2008 ? -0.15 : -0.10;
+      volatility = 400;
+    } else if (year >= 2010 && year <= 2019) {
+      // Recovery and expansion
+      fdrTrend = 1.2 + ((year - 2010) / 9) * 0.5; // Gradual rise
+      priceTrend = 0.03;
+      volatility = 100;
+    } else if (year === 2020) {
+      // COVID shock
+      fdrTrend = 1.4 + (Math.random() - 0.5) * 0.5;
+      priceTrend = -0.05;
+      volatility = 350;
+    } else if (year === 2021) {
+      // Recovery with stimulus
+      fdrTrend = 1.7 + (Math.random() - 0.5) * 0.3;
+      priceTrend = 0.12; // Strong recovery
+      volatility = 250;
+    } else if (year === 2022) {
+      // Bubble conditions
+      fdrTrend = 1.95 + (Math.random() - 0.5) * 0.25;
+      priceTrend = 0.08;
+      volatility = 300;
+    } else if (year === 2023) {
+      // Correction
+      fdrTrend = 1.5 + (Math.random() - 0.5) * 0.4;
+      priceTrend = -0.03;
+      volatility = 250;
+    } else {
+      // 2024 - stabilizing
+      fdrTrend = 1.3 + (Math.random() - 0.5) * 0.2;
+      priceTrend = 0.01;
+      volatility = 150;
     }
+    
+    // Apply trends with realistic evolution
+    currentFDR = fdrTrend + (Math.random() - 0.5) * 0.15;
+    currentPrice = currentPrice * (1 + priceTrend) + (Math.random() - 0.5) * volatility;
+    
+    // Ensure reasonable bounds
+    currentFDR = Math.max(0.8, Math.min(2.5, currentFDR));
+    currentPrice = Math.max(1200, Math.min(4000, currentPrice));
+    
+    const regime = calculateEconomicRegime(currentFDR);
+    
+    states.push({ 
+      date, 
+      fdr: currentFDR, 
+      regime, 
+      aluminumPrice: Math.round(currentPrice * 100) / 100 
+    });
   }
   
   return states;
@@ -591,7 +636,8 @@ async function runHistoricalBacktesting() {
     
     // Simulate historical economic states for backtesting
     // In production, this would come from HistoricalDataFetcher fetching real FRED/AV data
-    const historicalStates = generateSimulatedHistoricalEconomicStates();
+    // Using 500 data points for comprehensive testing (generates ~500 predictions per company)
+    const historicalStates = generateSimulatedHistoricalEconomicStates(500);
     
     // For each company, run backtesting on historical data
     for (const companyId of companies) {
