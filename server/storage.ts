@@ -40,7 +40,10 @@ import type {
   AutoPurchaseRecommendation, InsertAutoPurchaseRecommendation,
   EconomicSnapshot, InsertEconomicSnapshot,
   HistoricalPrediction, InsertHistoricalPrediction,
-  PredictionAccuracyMetrics, InsertPredictionAccuracyMetrics
+  PredictionAccuracyMetrics, InsertPredictionAccuracyMetrics,
+  ModelComparison, InsertModelComparison,
+  MachineryPrediction, InsertMachineryPrediction,
+  WorkforcePrediction, InsertWorkforcePrediction
 } from "@shared/schema";
 import { 
   users, companies, skus, materials, boms, suppliers, supplierMaterials,
@@ -54,7 +57,8 @@ import {
   employeePayroll, employeeBenefits, employeeTimeOff, employeePtoBalances,
   employeeDocuments, employeePerformanceReviews, employeeEmergencyContacts,
   purchaseOrders, materialUsageTracking, procurementSchedules, autoPurchaseRecommendations,
-  economicSnapshots, historicalPredictions, predictionAccuracyMetrics
+  economicSnapshots, historicalPredictions, predictionAccuracyMetrics,
+  modelComparisons, machineryPredictions, workforcePredictions
 } from "@shared/schema";
 
 export interface IStorage {
@@ -285,6 +289,15 @@ export interface IStorage {
   getPredictionAccuracyMetrics(companyId: string): Promise<PredictionAccuracyMetrics[]>;
   getLatestAccuracyMetrics(companyId: string): Promise<PredictionAccuracyMetrics | undefined>;
   createPredictionAccuracyMetrics(metrics: InsertPredictionAccuracyMetrics): Promise<PredictionAccuracyMetrics>;
+  
+  // Model Comparisons (Dual-Circuit vs Baselines)
+  insertModelComparison(comparison: InsertModelComparison): Promise<ModelComparison>;
+  
+  // Machinery Performance Validation
+  insertMachineryPrediction(prediction: InsertMachineryPrediction): Promise<MachineryPrediction>;
+  
+  // Workforce Economics Validation
+  insertWorkforcePrediction(prediction: InsertWorkforcePrediction): Promise<WorkforcePrediction>;
   
   // Utility
   getAllCompanyIds(): Promise<string[]>;
@@ -1182,6 +1195,24 @@ export class DbStorage implements IStorage {
   async getAllCompanyIds(): Promise<string[]> {
     const result = await db.select({ id: companies.id }).from(companies);
     return result.map(r => r.id);
+  }
+
+  // Model Comparisons (Dual-Circuit vs Baselines)
+  async insertModelComparison(insertComparison: InsertModelComparison): Promise<ModelComparison> {
+    const [comparison] = await db.insert(modelComparisons).values(insertComparison).returning();
+    return comparison;
+  }
+
+  // Machinery Performance Validation
+  async insertMachineryPrediction(insertPrediction: InsertMachineryPrediction): Promise<MachineryPrediction> {
+    const [prediction] = await db.insert(machineryPredictions).values(insertPrediction).returning();
+    return prediction;
+  }
+
+  // Workforce Economics Validation
+  async insertWorkforcePrediction(insertPrediction: InsertWorkforcePrediction): Promise<WorkforcePrediction> {
+    const [prediction] = await db.insert(workforcePredictions).values(insertPrediction).returning();
+    return prediction;
   }
 }
 

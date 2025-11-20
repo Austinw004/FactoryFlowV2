@@ -1472,13 +1472,109 @@ export const modelComparisons = pgTable("model_comparisons", {
   index("model_comparisons_prediction_date_idx").on(table.predictionDate),
 ]);
 
+// Machinery Performance Validation - Test dual-circuit theory on equipment
+export const machineryPredictions = pgTable("machinery_predictions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  predictionDate: timestamp("prediction_date").notNull(),
+  targetDate: timestamp("target_date").notNull(),
+  machineryId: varchar("machinery_id").notNull().references(() => machinery.id),
+  machineryType: text("machinery_type").notNull(),
+  
+  // Economic context at prediction time
+  fdr: real("fdr").notNull(),
+  regime: text("regime").notNull(),
+  
+  // Machinery metrics predicted
+  predictedOEE: real("predicted_oee"), // Overall Equipment Effectiveness
+  predictedMaintenanceCost: real("predicted_maintenance_cost"),
+  predictedDowntimeHours: real("predicted_downtime_hours"),
+  predictedReplacementNeed: integer("predicted_replacement_need"), // 1 if replacement recommended
+  
+  // Actual outcomes
+  actualOEE: real("actual_oee"),
+  actualMaintenanceCost: real("actual_maintenance_cost"),
+  actualDowntimeHours: real("actual_downtime_hours"),
+  actualReplacementNeed: integer("actual_replacement_need"),
+  
+  // Accuracy metrics
+  oeeMAPE: real("oee_mape"),
+  maintenanceCostMAPE: real("maintenance_cost_mape"),
+  downtimeMAPE: real("downtime_mape"),
+  replacementCorrect: integer("replacement_correct"),
+  
+  // Dual-circuit hypothesis
+  hypothesis: text("hypothesis"), // "High FDR = defer capex", "Low FDR = invest in equipment"
+  hypothesisConfirmed: integer("hypothesis_confirmed"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("machinery_predictions_date_idx").on(table.predictionDate),
+  index("machinery_predictions_regime_idx").on(table.regime),
+]);
+
+// Workforce Validation - Test dual-circuit theory on labor economics
+export const workforcePredictions = pgTable("workforce_predictions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  predictionDate: timestamp("prediction_date").notNull(),
+  targetDate: timestamp("target_date").notNull(),
+  
+  // Economic context at prediction time
+  fdr: real("fdr").notNull(),
+  regime: text("regime").notNull(),
+  
+  // Workforce metrics predicted
+  predictedAverageWage: real("predicted_average_wage"),
+  predictedHeadcount: integer("predicted_headcount"),
+  predictedTurnoverRate: real("predicted_turnover_rate"), // % annual turnover
+  predictedUnemploymentRate: real("predicted_unemployment_rate"), // Local/industry rate
+  predictedHiringRate: real("predicted_hiring_rate"), // New hires per month
+  predictedOvertimeHours: real("predicted_overtime_hours"),
+  predictedLaborProductivity: real("predicted_labor_productivity"), // Output per worker
+  
+  // Actual outcomes
+  actualAverageWage: real("actual_average_wage"),
+  actualHeadcount: integer("actual_headcount"),
+  actualTurnoverRate: real("actual_turnover_rate"),
+  actualUnemploymentRate: real("actual_unemployment_rate"),
+  actualHiringRate: real("actual_hiring_rate"),
+  actualOvertimeHours: real("actual_overtime_hours"),
+  actualLaborProductivity: real("actual_labor_productivity"),
+  
+  // Accuracy metrics
+  wageMAPE: real("wage_mape"),
+  headcountMAPE: real("headcount_mape"),
+  turnoverMAPE: real("turnover_mape"),
+  unemploymentMAPE: real("unemployment_mape"),
+  hiringMAPE: real("hiring_mape"),
+  overtimeMAPE: real("overtime_mape"),
+  productivityMAPE: real("productivity_mape"),
+  
+  // Dual-circuit hypothesis
+  hypothesis: text("hypothesis"), // "High FDR = wage pressure + layoffs", "Low FDR = wage growth + hiring"
+  hypothesisConfirmed: integer("hypothesis_confirmed"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("workforce_predictions_date_idx").on(table.predictionDate),
+  index("workforce_predictions_regime_idx").on(table.regime),
+]);
+
 // Research Validation System schemas
 export const insertHistoricalPredictionSchema = createInsertSchema(historicalPredictions).omit({ id: true, createdAt: true });
 export const insertPredictionAccuracyMetricsSchema = createInsertSchema(predictionAccuracyMetrics).omit({ id: true, createdAt: true, calculatedAt: true });
 export const insertModelComparisonSchema = createInsertSchema(modelComparisons).omit({ id: true, createdAt: true });
+export const insertMachineryPredictionSchema = createInsertSchema(machineryPredictions).omit({ id: true, createdAt: true });
+export const insertWorkforcePredictionSchema = createInsertSchema(workforcePredictions).omit({ id: true, createdAt: true });
+
 export type HistoricalPrediction = typeof historicalPredictions.$inferSelect;
 export type InsertHistoricalPrediction = z.infer<typeof insertHistoricalPredictionSchema>;
 export type PredictionAccuracyMetrics = typeof predictionAccuracyMetrics.$inferSelect;
 export type InsertPredictionAccuracyMetrics = z.infer<typeof insertPredictionAccuracyMetricsSchema>;
 export type ModelComparison = typeof modelComparisons.$inferSelect;
 export type InsertModelComparison = z.infer<typeof insertModelComparisonSchema>;
+export type MachineryPrediction = typeof machineryPredictions.$inferSelect;
+export type InsertMachineryPrediction = z.infer<typeof insertMachineryPredictionSchema>;
+export type WorkforcePrediction = typeof workforcePredictions.$inferSelect;
+export type InsertWorkforcePrediction = z.infer<typeof insertWorkforcePredictionSchema>;
