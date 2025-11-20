@@ -1085,6 +1085,99 @@ export class DbStorage implements IStorage {
     return snapshot;
   }
 
+  // Research Validation System methods (Historical Predictions & Backtesting)
+  async getHistoricalPredictions(companyId: string): Promise<HistoricalPrediction[]> {
+    return await db.select()
+      .from(historicalPredictions)
+      .where(eq(historicalPredictions.companyId, companyId))
+      .orderBy(sql`${historicalPredictions.predictionDate} DESC`);
+  }
+
+  async getHistoricalPredictionsByDateRange(companyId: string, startDate: Date, endDate: Date): Promise<HistoricalPrediction[]> {
+    return await db.select()
+      .from(historicalPredictions)
+      .where(
+        and(
+          eq(historicalPredictions.companyId, companyId),
+          sql`${historicalPredictions.predictionDate} >= ${startDate}`,
+          sql`${historicalPredictions.predictionDate} <= ${endDate}`
+        )
+      )
+      .orderBy(sql`${historicalPredictions.predictionDate} DESC`);
+  }
+
+  async getHistoricalPredictionsByType(companyId: string, predictionType: string): Promise<HistoricalPrediction[]> {
+    return await db.select()
+      .from(historicalPredictions)
+      .where(
+        and(
+          eq(historicalPredictions.companyId, companyId),
+          eq(historicalPredictions.predictionType, predictionType)
+        )
+      )
+      .orderBy(sql`${historicalPredictions.predictionDate} DESC`);
+  }
+
+  async createHistoricalPrediction(insertPrediction: InsertHistoricalPrediction): Promise<HistoricalPrediction> {
+    const [prediction] = await db.insert(historicalPredictions).values(insertPrediction).returning();
+    return prediction;
+  }
+
+  async updateHistoricalPredictionActuals(
+    id: string,
+    actualValue: number,
+    actualRegime: string,
+    actualDirection: string
+  ): Promise<HistoricalPrediction | undefined> {
+    // Calculate accuracy metrics
+    const [existing] = await db.select()
+      .from(historicalPredictions)
+      .where(eq(historicalPredictions.id, id));
+    
+    if (!existing) return undefined;
+
+    const absoluteError = Math.abs(existing.predictedValue - actualValue);
+    const percentageError = ((existing.predictedValue - actualValue) / actualValue) * 100;
+    const directionalAccuracy = existing.predictedDirection === actualDirection ? 1 : 0;
+    const regimeAccuracy = existing.predictedRegime === actualRegime ? 1 : 0;
+
+    const [prediction] = await db.update(historicalPredictions)
+      .set({
+        actualValue,
+        actualRegime,
+        actualDirection,
+        absoluteError,
+        percentageError,
+        directionalAccuracy,
+        regimeAccuracy
+      })
+      .where(eq(historicalPredictions.id, id))
+      .returning();
+    
+    return prediction;
+  }
+
+  async getPredictionAccuracyMetrics(companyId: string): Promise<PredictionAccuracyMetrics[]> {
+    return await db.select()
+      .from(predictionAccuracyMetrics)
+      .where(eq(predictionAccuracyMetrics.companyId, companyId))
+      .orderBy(sql`${predictionAccuracyMetrics.periodStart} DESC`);
+  }
+
+  async getLatestAccuracyMetrics(companyId: string): Promise<PredictionAccuracyMetrics | undefined> {
+    const [metrics] = await db.select()
+      .from(predictionAccuracyMetrics)
+      .where(eq(predictionAccuracyMetrics.companyId, companyId))
+      .orderBy(sql`${predictionAccuracyMetrics.periodStart} DESC`)
+      .limit(1);
+    return metrics;
+  }
+
+  async createPredictionAccuracyMetrics(insertMetrics: InsertPredictionAccuracyMetrics): Promise<PredictionAccuracyMetrics> {
+    const [metrics] = await db.insert(predictionAccuracyMetrics).values(insertMetrics).returning();
+    return metrics;
+  }
+
   // Utility methods
   async getAllCompanyIds(): Promise<string[]> {
     const result = await db.select({ id: companies.id }).from(companies);
