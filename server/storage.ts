@@ -1149,8 +1149,8 @@ export class DbStorage implements IStorage {
     
     if (!existing) return undefined;
 
-    const absoluteError = Math.abs(existing.predictedValue - actualValue);
-    const percentageError = ((existing.predictedValue - actualValue) / actualValue) * 100;
+    const absoluteError = existing.predictedValue !== null ? Math.abs(existing.predictedValue - actualValue) : null;
+    const percentageError = existing.predictedValue !== null && actualValue !== 0 ? ((existing.predictedValue - actualValue) / actualValue) * 100 : null;
     const directionalAccuracy = existing.predictedDirection === actualDirection ? 1 : 0;
     const regimeAccuracy = existing.predictedRegime === actualRegime ? 1 : 0;
 
