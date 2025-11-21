@@ -43,7 +43,22 @@ import type {
   PredictionAccuracyMetrics, InsertPredictionAccuracyMetrics,
   ModelComparison, InsertModelComparison,
   MachineryPrediction, InsertMachineryPrediction,
-  WorkforcePrediction, InsertWorkforcePrediction
+  WorkforcePrediction, InsertWorkforcePrediction,
+  FeatureToggle, InsertFeatureToggle,
+  SupplierNode, InsertSupplierNode,
+  SupplierLink, InsertSupplierLink,
+  SupplierHealthMetrics, InsertSupplierHealthMetrics,
+  SupplierRiskAlert, InsertSupplierRiskAlert,
+  PoRule, InsertPoRule,
+  PoWorkflowStep, InsertPoWorkflowStep,
+  PoApproval, InsertPoApproval,
+  NegotiationPlaybook, InsertNegotiationPlaybook,
+  ErpConnection, InsertErpConnection,
+  ConsortiumContribution, InsertConsortiumContribution,
+  ConsortiumMetrics, InsertConsortiumMetrics,
+  ConsortiumAlert, InsertConsortiumAlert,
+  MaTarget, InsertMaTarget,
+  MaRecommendation, InsertMaRecommendation
 } from "@shared/schema";
 import { 
   users, companies, skus, materials, boms, suppliers, supplierMaterials,
@@ -58,7 +73,11 @@ import {
   employeeDocuments, employeePerformanceReviews, employeeEmergencyContacts,
   purchaseOrders, materialUsageTracking, procurementSchedules, autoPurchaseRecommendations,
   economicSnapshots, historicalPredictions, predictionAccuracyMetrics,
-  modelComparisons, machineryPredictions, workforcePredictions
+  modelComparisons, machineryPredictions, workforcePredictions,
+  featureToggles, supplierNodes, supplierLinks, supplierHealthMetrics, supplierRiskAlerts,
+  poRules, poWorkflowSteps, poApprovals, negotiationPlaybooks, erpConnections,
+  consortiumContributions, consortiumMetrics, consortiumAlerts,
+  maTargets, maRecommendations
 } from "@shared/schema";
 
 export interface IStorage {
@@ -298,6 +317,94 @@ export interface IStorage {
   
   // Workforce Economics Validation
   insertWorkforcePrediction(prediction: InsertWorkforcePrediction): Promise<WorkforcePrediction>;
+  
+  // ==================== ENTERPRISE FEATURES ====================
+  
+  // Feature Toggles (for optional features)
+  getFeatureToggles(companyId: string): Promise<FeatureToggle[]>;
+  getFeatureToggle(companyId: string, featureKey: string): Promise<FeatureToggle | undefined>;
+  createFeatureToggle(toggle: InsertFeatureToggle): Promise<FeatureToggle>;
+  updateFeatureToggle(companyId: string, featureKey: string, enabled: number): Promise<FeatureToggle | undefined>;
+  
+  // Supply Chain Network Intelligence - Supplier Nodes
+  getSupplierNodes(companyId: string): Promise<SupplierNode[]>;
+  getSupplierNode(id: string): Promise<SupplierNode | undefined>;
+  getSupplierNodesByTier(companyId: string, tier: number): Promise<SupplierNode[]>;
+  getSupplierNodesByCriticality(companyId: string, criticality: string): Promise<SupplierNode[]>;
+  getCriticalSupplierNodes(companyId: string): Promise<SupplierNode[]>;
+  createSupplierNode(node: InsertSupplierNode): Promise<SupplierNode>;
+  updateSupplierNode(id: string, node: Partial<InsertSupplierNode>): Promise<SupplierNode | undefined>;
+  
+  // Supply Chain Network Intelligence - Supplier Links
+  getSupplierLinks(companyId: string): Promise<SupplierLink[]>;
+  getSupplierLinksFrom(nodeId: string): Promise<SupplierLink[]>;
+  getSupplierLinksTo(nodeId: string): Promise<SupplierLink[]>;
+  createSupplierLink(link: InsertSupplierLink): Promise<SupplierLink>;
+  
+  // Supply Chain Network Intelligence - Health Metrics
+  getSupplierHealthMetrics(nodeId: string): Promise<SupplierHealthMetrics[]>;
+  getLatestSupplierHealthMetric(nodeId: string): Promise<SupplierHealthMetrics | undefined>;
+  createSupplierHealthMetric(metric: InsertSupplierHealthMetrics): Promise<SupplierHealthMetrics>;
+  
+  // Supply Chain Network Intelligence - Risk Alerts
+  getSupplierRiskAlerts(companyId: string): Promise<SupplierRiskAlert[]>;
+  getActiveSupplierRiskAlerts(companyId: string): Promise<SupplierRiskAlert[]>;
+  getSupplierRiskAlertsByNode(nodeId: string): Promise<SupplierRiskAlert[]>;
+  getSupplierRiskAlertsBySeverity(companyId: string, severity: string): Promise<SupplierRiskAlert[]>;
+  createSupplierRiskAlert(alert: InsertSupplierRiskAlert): Promise<SupplierRiskAlert>;
+  acknowledgeSupplierRiskAlert(id: string, userId: string): Promise<SupplierRiskAlert | undefined>;
+  resolveSupplierRiskAlert(id: string, userId: string): Promise<SupplierRiskAlert | undefined>;
+  
+  // Automated PO Execution - PO Rules
+  getPoRules(companyId: string): Promise<PoRule[]>;
+  getPoRule(id: string): Promise<PoRule | undefined>;
+  getEnabledPoRules(companyId: string): Promise<PoRule[]>;
+  getPoRulesByMaterial(materialId: string): Promise<PoRule[]>;
+  createPoRule(rule: InsertPoRule): Promise<PoRule>;
+  updatePoRule(id: string, rule: Partial<InsertPoRule>): Promise<PoRule | undefined>;
+  deletePoRule(id: string): Promise<void>;
+  
+  // Automated PO Execution - Workflow Steps
+  getPoWorkflowSteps(companyId: string): Promise<PoWorkflowStep[]>;
+  getPoWorkflowStepsByPO(purchaseOrderId: string): Promise<PoWorkflowStep[]>;
+  createPoWorkflowStep(step: InsertPoWorkflowStep): Promise<PoWorkflowStep>;
+  updatePoWorkflowStep(id: string, step: Partial<InsertPoWorkflowStep>): Promise<PoWorkflowStep | undefined>;
+  
+  // Automated PO Execution - Approvals
+  getPoApprovals(purchaseOrderId: string): Promise<PoApproval[]>;
+  getPoApprovalsByApprover(approverId: string): Promise<PoApproval[]>;
+  createPoApproval(approval: InsertPoApproval): Promise<PoApproval>;
+  
+  // Automated PO Execution - Negotiation Playbooks
+  getNegotiationPlaybooks(companyId: string): Promise<NegotiationPlaybook[]>;
+  getNegotiationPlaybooksByRegime(companyId: string, regime: string): Promise<NegotiationPlaybook[]>;
+  getNegotiationPlaybook(id: string): Promise<NegotiationPlaybook | undefined>;
+  createNegotiationPlaybook(playbook: InsertNegotiationPlaybook): Promise<NegotiationPlaybook>;
+  updateNegotiationPlaybook(id: string, playbook: Partial<InsertNegotiationPlaybook>): Promise<NegotiationPlaybook | undefined>;
+  
+  // Automated PO Execution - ERP Connections
+  getErpConnections(companyId: string): Promise<ErpConnection[]>;
+  getErpConnection(id: string): Promise<ErpConnection | undefined>;
+  getActiveErpConnection(companyId: string): Promise<ErpConnection | undefined>;
+  createErpConnection(connection: InsertErpConnection): Promise<ErpConnection>;
+  updateErpConnection(id: string, connection: Partial<InsertErpConnection>): Promise<ErpConnection | undefined>;
+  deleteErpConnection(id: string): Promise<void>;
+  
+  // Industry Data Consortium
+  getConsortiumContributions(filters?: { industrySector?: string; region?: string; regime?: string }): Promise<ConsortiumContribution[]>;
+  createConsortiumContribution(contribution: InsertConsortiumContribution): Promise<ConsortiumContribution>;
+  getConsortiumMetrics(regime: string, filters?: { industrySector?: string }): Promise<ConsortiumMetrics[]>;
+  createConsortiumMetrics(metrics: InsertConsortiumMetrics): Promise<ConsortiumMetrics>;
+  getConsortiumAlerts(severity?: string): Promise<ConsortiumAlert[]>;
+  createConsortiumAlert(alert: InsertConsortiumAlert): Promise<ConsortiumAlert>;
+  
+  // M&A Intelligence
+  getMaTargets(companyId: string): Promise<MaTarget[]>;
+  getMaTarget(id: string): Promise<MaTarget | undefined>;
+  createMaTarget(target: InsertMaTarget): Promise<MaTarget>;
+  updateMaTarget(id: string, target: Partial<InsertMaTarget>): Promise<MaTarget | undefined>;
+  getMaRecommendations(companyId: string): Promise<MaRecommendation[]>;
+  createMaRecommendation(recommendation: InsertMaRecommendation): Promise<MaRecommendation>;
   
   // Utility
   getAllCompanyIds(): Promise<string[]>;
@@ -1213,6 +1320,396 @@ export class DbStorage implements IStorage {
   async insertWorkforcePrediction(insertPrediction: InsertWorkforcePrediction): Promise<WorkforcePrediction> {
     const [prediction] = await db.insert(workforcePredictions).values(insertPrediction).returning();
     return prediction;
+  }
+
+  // ==================== ENTERPRISE FEATURES IMPLEMENTATIONS ====================
+  
+  // Feature Toggles
+  async getFeatureToggles(companyId: string): Promise<FeatureToggle[]> {
+    return await db.select().from(featureToggles).where(eq(featureToggles.companyId, companyId));
+  }
+
+  async getFeatureToggle(companyId: string, featureKey: string): Promise<FeatureToggle | undefined> {
+    const [toggle] = await db.select().from(featureToggles)
+      .where(and(eq(featureToggles.companyId, companyId), eq(featureToggles.featureKey, featureKey)));
+    return toggle;
+  }
+
+  async createFeatureToggle(insertToggle: InsertFeatureToggle): Promise<FeatureToggle> {
+    const [toggle] = await db.insert(featureToggles).values(insertToggle).returning();
+    return toggle;
+  }
+
+  async updateFeatureToggle(companyId: string, featureKey: string, enabled: number): Promise<FeatureToggle | undefined> {
+    const [toggle] = await db.update(featureToggles)
+      .set({ 
+        enabled, 
+        enabledAt: enabled === 1 ? new Date() : null,
+        updatedAt: new Date() 
+      })
+      .where(and(eq(featureToggles.companyId, companyId), eq(featureToggles.featureKey, featureKey)))
+      .returning();
+    return toggle;
+  }
+
+  // Supply Chain Network Intelligence - Supplier Nodes
+  async getSupplierNodes(companyId: string): Promise<SupplierNode[]> {
+    return await db.select().from(supplierNodes).where(eq(supplierNodes.companyId, companyId));
+  }
+
+  async getSupplierNode(id: string): Promise<SupplierNode | undefined> {
+    const [node] = await db.select().from(supplierNodes).where(eq(supplierNodes.id, id));
+    return node;
+  }
+
+  async getSupplierNodesByTier(companyId: string, tier: number): Promise<SupplierNode[]> {
+    return await db.select().from(supplierNodes)
+      .where(and(eq(supplierNodes.companyId, companyId), eq(supplierNodes.tier, tier)));
+  }
+
+  async getSupplierNodesByCriticality(companyId: string, criticality: string): Promise<SupplierNode[]> {
+    return await db.select().from(supplierNodes)
+      .where(and(eq(supplierNodes.companyId, companyId), eq(supplierNodes.criticality, criticality)));
+  }
+
+  async getCriticalSupplierNodes(companyId: string): Promise<SupplierNode[]> {
+    return await db.select().from(supplierNodes)
+      .where(and(
+        eq(supplierNodes.companyId, companyId),
+        sql`${supplierNodes.criticality} IN ('high', 'critical')`
+      ));
+  }
+
+  async createSupplierNode(insertNode: InsertSupplierNode): Promise<SupplierNode> {
+    const [node] = await db.insert(supplierNodes).values(insertNode).returning();
+    return node;
+  }
+
+  async updateSupplierNode(id: string, nodeUpdate: Partial<InsertSupplierNode>): Promise<SupplierNode | undefined> {
+    const [node] = await db.update(supplierNodes)
+      .set({ ...nodeUpdate, updatedAt: new Date() })
+      .where(eq(supplierNodes.id, id))
+      .returning();
+    return node;
+  }
+
+  // Supply Chain Network Intelligence - Supplier Links
+  async getSupplierLinks(companyId: string): Promise<SupplierLink[]> {
+    return await db.select().from(supplierLinks).where(eq(supplierLinks.companyId, companyId));
+  }
+
+  async getSupplierLinksFrom(nodeId: string): Promise<SupplierLink[]> {
+    return await db.select().from(supplierLinks).where(eq(supplierLinks.fromNodeId, nodeId));
+  }
+
+  async getSupplierLinksTo(nodeId: string): Promise<SupplierLink[]> {
+    return await db.select().from(supplierLinks).where(eq(supplierLinks.toNodeId, nodeId));
+  }
+
+  async createSupplierLink(insertLink: InsertSupplierLink): Promise<SupplierLink> {
+    const [link] = await db.insert(supplierLinks).values(insertLink).returning();
+    return link;
+  }
+
+  // Supply Chain Network Intelligence - Health Metrics
+  async getSupplierHealthMetrics(nodeId: string): Promise<SupplierHealthMetrics[]> {
+    return await db.select().from(supplierHealthMetrics)
+      .where(eq(supplierHealthMetrics.supplierNodeId, nodeId))
+      .orderBy(sql`${supplierHealthMetrics.timestamp} DESC`);
+  }
+
+  async getLatestSupplierHealthMetric(nodeId: string): Promise<SupplierHealthMetrics | undefined> {
+    const [metric] = await db.select().from(supplierHealthMetrics)
+      .where(eq(supplierHealthMetrics.supplierNodeId, nodeId))
+      .orderBy(sql`${supplierHealthMetrics.timestamp} DESC`)
+      .limit(1);
+    return metric;
+  }
+
+  async createSupplierHealthMetric(insertMetric: InsertSupplierHealthMetrics): Promise<SupplierHealthMetrics> {
+    const [metric] = await db.insert(supplierHealthMetrics).values(insertMetric).returning();
+    return metric;
+  }
+
+  // Supply Chain Network Intelligence - Risk Alerts
+  async getSupplierRiskAlerts(companyId: string): Promise<SupplierRiskAlert[]> {
+    return await db.select().from(supplierRiskAlerts)
+      .where(eq(supplierRiskAlerts.companyId, companyId))
+      .orderBy(sql`${supplierRiskAlerts.createdAt} DESC`);
+  }
+
+  async getActiveSupplierRiskAlerts(companyId: string): Promise<SupplierRiskAlert[]> {
+    return await db.select().from(supplierRiskAlerts)
+      .where(and(
+        eq(supplierRiskAlerts.companyId, companyId),
+        sql`${supplierRiskAlerts.resolvedAt} IS NULL`
+      ))
+      .orderBy(sql`${supplierRiskAlerts.createdAt} DESC`);
+  }
+
+  async getSupplierRiskAlertsByNode(nodeId: string): Promise<SupplierRiskAlert[]> {
+    return await db.select().from(supplierRiskAlerts)
+      .where(eq(supplierRiskAlerts.supplierNodeId, nodeId))
+      .orderBy(sql`${supplierRiskAlerts.createdAt} DESC`);
+  }
+
+  async getSupplierRiskAlertsBySeverity(companyId: string, severity: string): Promise<SupplierRiskAlert[]> {
+    return await db.select().from(supplierRiskAlerts)
+      .where(and(
+        eq(supplierRiskAlerts.companyId, companyId),
+        eq(supplierRiskAlerts.severity, severity)
+      ))
+      .orderBy(sql`${supplierRiskAlerts.createdAt} DESC`);
+  }
+
+  async createSupplierRiskAlert(insertAlert: InsertSupplierRiskAlert): Promise<SupplierRiskAlert> {
+    const [alert] = await db.insert(supplierRiskAlerts).values(insertAlert).returning();
+    return alert;
+  }
+
+  async acknowledgeSupplierRiskAlert(id: string, userId: string): Promise<SupplierRiskAlert | undefined> {
+    const [alert] = await db.update(supplierRiskAlerts)
+      .set({ acknowledgedAt: new Date(), acknowledgedBy: userId })
+      .where(eq(supplierRiskAlerts.id, id))
+      .returning();
+    return alert;
+  }
+
+  async resolveSupplierRiskAlert(id: string, userId: string): Promise<SupplierRiskAlert | undefined> {
+    const [alert] = await db.update(supplierRiskAlerts)
+      .set({ resolvedAt: new Date(), resolvedBy: userId })
+      .where(eq(supplierRiskAlerts.id, id))
+      .returning();
+    return alert;
+  }
+
+  // Automated PO Execution - PO Rules
+  async getPoRules(companyId: string): Promise<PoRule[]> {
+    return await db.select().from(poRules).where(eq(poRules.companyId, companyId));
+  }
+
+  async getPoRule(id: string): Promise<PoRule | undefined> {
+    const [rule] = await db.select().from(poRules).where(eq(poRules.id, id));
+    return rule;
+  }
+
+  async getEnabledPoRules(companyId: string): Promise<PoRule[]> {
+    return await db.select().from(poRules)
+      .where(and(eq(poRules.companyId, companyId), eq(poRules.enabled, 1)))
+      .orderBy(sql`${poRules.priority} DESC`);
+  }
+
+  async getPoRulesByMaterial(materialId: string): Promise<PoRule[]> {
+    return await db.select().from(poRules).where(eq(poRules.materialId, materialId));
+  }
+
+  async createPoRule(insertRule: InsertPoRule): Promise<PoRule> {
+    const [rule] = await db.insert(poRules).values(insertRule).returning();
+    return rule;
+  }
+
+  async updatePoRule(id: string, ruleUpdate: Partial<InsertPoRule>): Promise<PoRule | undefined> {
+    const [rule] = await db.update(poRules)
+      .set({ ...ruleUpdate, updatedAt: new Date() })
+      .where(eq(poRules.id, id))
+      .returning();
+    return rule;
+  }
+
+  async deletePoRule(id: string): Promise<void> {
+    await db.delete(poRules).where(eq(poRules.id, id));
+  }
+
+  // Automated PO Execution - Workflow Steps
+  async getPoWorkflowSteps(companyId: string): Promise<PoWorkflowStep[]> {
+    return await db.select().from(poWorkflowSteps).where(eq(poWorkflowSteps.companyId, companyId));
+  }
+
+  async getPoWorkflowStepsByPO(purchaseOrderId: string): Promise<PoWorkflowStep[]> {
+    return await db.select().from(poWorkflowSteps)
+      .where(eq(poWorkflowSteps.purchaseOrderId, purchaseOrderId))
+      .orderBy(sql`${poWorkflowSteps.stepOrder} ASC`);
+  }
+
+  async createPoWorkflowStep(insertStep: InsertPoWorkflowStep): Promise<PoWorkflowStep> {
+    const [step] = await db.insert(poWorkflowSteps).values(insertStep).returning();
+    return step;
+  }
+
+  async updatePoWorkflowStep(id: string, stepUpdate: Partial<InsertPoWorkflowStep>): Promise<PoWorkflowStep | undefined> {
+    const [step] = await db.update(poWorkflowSteps)
+      .set(stepUpdate)
+      .where(eq(poWorkflowSteps.id, id))
+      .returning();
+    return step;
+  }
+
+  // Automated PO Execution - Approvals
+  async getPoApprovals(purchaseOrderId: string): Promise<PoApproval[]> {
+    return await db.select().from(poApprovals)
+      .where(eq(poApprovals.purchaseOrderId, purchaseOrderId))
+      .orderBy(sql`${poApprovals.createdAt} DESC`);
+  }
+
+  async getPoApprovalsByApprover(approverId: string): Promise<PoApproval[]> {
+    return await db.select().from(poApprovals)
+      .where(eq(poApprovals.approverId, approverId))
+      .orderBy(sql`${poApprovals.createdAt} DESC`);
+  }
+
+  async createPoApproval(insertApproval: InsertPoApproval): Promise<PoApproval> {
+    const [approval] = await db.insert(poApprovals).values(insertApproval).returning();
+    return approval;
+  }
+
+  // Automated PO Execution - Negotiation Playbooks
+  async getNegotiationPlaybooks(companyId: string): Promise<NegotiationPlaybook[]> {
+    return await db.select().from(negotiationPlaybooks).where(eq(negotiationPlaybooks.companyId, companyId));
+  }
+
+  async getNegotiationPlaybooksByRegime(companyId: string, regime: string): Promise<NegotiationPlaybook[]> {
+    return await db.select().from(negotiationPlaybooks)
+      .where(and(eq(negotiationPlaybooks.companyId, companyId), eq(negotiationPlaybooks.regime, regime)));
+  }
+
+  async getNegotiationPlaybook(id: string): Promise<NegotiationPlaybook | undefined> {
+    const [playbook] = await db.select().from(negotiationPlaybooks).where(eq(negotiationPlaybooks.id, id));
+    return playbook;
+  }
+
+  async createNegotiationPlaybook(insertPlaybook: InsertNegotiationPlaybook): Promise<NegotiationPlaybook> {
+    const [playbook] = await db.insert(negotiationPlaybooks).values(insertPlaybook).returning();
+    return playbook;
+  }
+
+  async updateNegotiationPlaybook(id: string, playbookUpdate: Partial<InsertNegotiationPlaybook>): Promise<NegotiationPlaybook | undefined> {
+    const [playbook] = await db.update(negotiationPlaybooks)
+      .set({ ...playbookUpdate, updatedAt: new Date() })
+      .where(eq(negotiationPlaybooks.id, id))
+      .returning();
+    return playbook;
+  }
+
+  // Automated PO Execution - ERP Connections
+  async getErpConnections(companyId: string): Promise<ErpConnection[]> {
+    return await db.select().from(erpConnections).where(eq(erpConnections.companyId, companyId));
+  }
+
+  async getErpConnection(id: string): Promise<ErpConnection | undefined> {
+    const [connection] = await db.select().from(erpConnections).where(eq(erpConnections.id, id));
+    return connection;
+  }
+
+  async getActiveErpConnection(companyId: string): Promise<ErpConnection | undefined> {
+    const [connection] = await db.select().from(erpConnections)
+      .where(and(eq(erpConnections.companyId, companyId), eq(erpConnections.status, 'active')))
+      .limit(1);
+    return connection;
+  }
+
+  async createErpConnection(insertConnection: InsertErpConnection): Promise<ErpConnection> {
+    const [connection] = await db.insert(erpConnections).values(insertConnection).returning();
+    return connection;
+  }
+
+  async updateErpConnection(id: string, connectionUpdate: Partial<InsertErpConnection>): Promise<ErpConnection | undefined> {
+    const [connection] = await db.update(erpConnections)
+      .set({ ...connectionUpdate, updatedAt: new Date() })
+      .where(eq(erpConnections.id, id))
+      .returning();
+    return connection;
+  }
+
+  async deleteErpConnection(id: string): Promise<void> {
+    await db.delete(erpConnections).where(eq(erpConnections.id, id));
+  }
+
+  // Industry Data Consortium
+  async getConsortiumContributions(filters?: { industrySector?: string; region?: string; regime?: string }): Promise<ConsortiumContribution[]> {
+    let query = db.select().from(consortiumContributions);
+    
+    const conditions = [];
+    if (filters?.industrySector) conditions.push(eq(consortiumContributions.industrySector, filters.industrySector));
+    if (filters?.region) conditions.push(eq(consortiumContributions.region, filters.region));
+    if (filters?.regime) conditions.push(eq(consortiumContributions.regime, filters.regime));
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    return await query.orderBy(sql`${consortiumContributions.contributionDate} DESC`).limit(100);
+  }
+
+  async createConsortiumContribution(insertContribution: InsertConsortiumContribution): Promise<ConsortiumContribution> {
+    const [contribution] = await db.insert(consortiumContributions).values(insertContribution).returning();
+    return contribution;
+  }
+
+  async getConsortiumMetrics(regime: string, filters?: { industrySector?: string }): Promise<ConsortiumMetrics[]> {
+    const conditions = [eq(consortiumMetrics.regime, regime)];
+    if (filters?.industrySector) {
+      conditions.push(eq(consortiumMetrics.industrySector, filters.industrySector));
+    }
+    
+    return await db.select().from(consortiumMetrics)
+      .where(and(...conditions))
+      .orderBy(sql`${consortiumMetrics.metricDate} DESC`);
+  }
+
+  async createConsortiumMetrics(insertMetrics: InsertConsortiumMetrics): Promise<ConsortiumMetrics> {
+    const [metrics] = await db.insert(consortiumMetrics).values(insertMetrics).returning();
+    return metrics;
+  }
+
+  async getConsortiumAlerts(severity?: string): Promise<ConsortiumAlert[]> {
+    if (severity) {
+      return await db.select().from(consortiumAlerts)
+        .where(eq(consortiumAlerts.severity, severity))
+        .orderBy(sql`${consortiumAlerts.alertDate} DESC`);
+    }
+    return await db.select().from(consortiumAlerts)
+      .orderBy(sql`${consortiumAlerts.alertDate} DESC`);
+  }
+
+  async createConsortiumAlert(insertAlert: InsertConsortiumAlert): Promise<ConsortiumAlert> {
+    const [alert] = await db.insert(consortiumAlerts).values(insertAlert).returning();
+    return alert;
+  }
+
+  // M&A Intelligence
+  async getMaTargets(companyId: string): Promise<MaTarget[]> {
+    return await db.select().from(maTargets)
+      .where(eq(maTargets.companyId, companyId))
+      .orderBy(sql`${maTargets.timingScore} DESC`);
+  }
+
+  async getMaTarget(id: string): Promise<MaTarget | undefined> {
+    const [target] = await db.select().from(maTargets).where(eq(maTargets.id, id));
+    return target;
+  }
+
+  async createMaTarget(insertTarget: InsertMaTarget): Promise<MaTarget> {
+    const [target] = await db.insert(maTargets).values(insertTarget).returning();
+    return target;
+  }
+
+  async updateMaTarget(id: string, targetUpdate: Partial<InsertMaTarget>): Promise<MaTarget | undefined> {
+    const [target] = await db.update(maTargets)
+      .set({ ...targetUpdate, updatedAt: new Date() })
+      .where(eq(maTargets.id, id))
+      .returning();
+    return target;
+  }
+
+  async getMaRecommendations(companyId: string): Promise<MaRecommendation[]> {
+    return await db.select().from(maRecommendations)
+      .where(eq(maRecommendations.companyId, companyId))
+      .orderBy(sql`${maRecommendations.createdAt} DESC`);
+  }
+
+  async createMaRecommendation(insertRecommendation: InsertMaRecommendation): Promise<MaRecommendation> {
+    const [recommendation] = await db.insert(maRecommendations).values(insertRecommendation).returning();
+    return recommendation;
   }
 }
 

@@ -23,6 +23,12 @@ import InventoryOptimization from "@/pages/InventoryOptimization";
 import SupplyChainTraceability from "@/pages/SupplyChainTraceability";
 import WorkforceScheduling from "@/pages/WorkforceScheduling";
 import InventoryManagement from "@/pages/InventoryManagement";
+import SupplyChainNetwork from "@/pages/SupplyChainNetwork";
+import AutomatedPO from "@/pages/AutomatedPO";
+import IndustryConsortium from "@/pages/IndustryConsortium";
+import MAIntelligence from "@/pages/MAIntelligence";
+import ScenarioPlanning from "@/pages/ScenarioPlanning";
+import GeopoliticalRisk from "@/pages/GeopoliticalRisk";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
@@ -47,6 +53,12 @@ function Router() {
           <Route path="/traceability" component={SupplyChainTraceability} />
           <Route path="/workforce" component={WorkforceScheduling} />
           <Route path="/inventory" component={InventoryManagement} />
+          <Route path="/supply-chain-network" component={SupplyChainNetwork} />
+          <Route path="/automated-po" component={AutomatedPO} />
+          <Route path="/industry-consortium" component={IndustryConsortium} />
+          <Route path="/ma-intelligence" component={MAIntelligence} />
+          <Route path="/scenario-planning" component={ScenarioPlanning} />
+          <Route path="/geopolitical-risk" component={GeopoliticalRisk} />
           <Route path="/reports" component={Reports} />
           <Route path="/configuration" component={Configuration} />
           <Route path="/how-it-works" component={HowItWorks} />

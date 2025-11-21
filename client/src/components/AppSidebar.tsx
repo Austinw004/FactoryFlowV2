@@ -13,6 +13,12 @@ import {
   Package,
   Network,
   Users,
+  AlertTriangle,
+  Zap,
+  BarChart3,
+  Building2,
+  TrendingUp,
+  Globe,
 } from "lucide-react";
 import {
   Sidebar,
@@ -51,6 +57,11 @@ const menuSections = [
         url: "/procurement",
         icon: ShoppingCart,
       },
+      {
+        title: "Automated PO Execution",
+        url: "/automated-po",
+        icon: Zap,
+      },
     ],
   },
   {
@@ -85,6 +96,31 @@ const menuSections = [
         title: "Supply Chain Tracking",
         url: "/traceability",
         icon: Network,
+      },
+      {
+        title: "Supply Chain Network",
+        url: "/supply-chain-network",
+        icon: AlertTriangle,
+      },
+      {
+        title: "Industry Consortium",
+        url: "/industry-consortium",
+        icon: BarChart3,
+      },
+      {
+        title: "M&A Intelligence",
+        url: "/ma-intelligence",
+        icon: Building2,
+      },
+      {
+        title: "Scenario Planning",
+        url: "/scenario-planning",
+        icon: TrendingUp,
+      },
+      {
+        title: "Geopolitical Risk",
+        url: "/geopolitical-risk",
+        icon: Globe,
       },
     ],
   },

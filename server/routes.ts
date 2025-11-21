@@ -6,6 +6,17 @@ import { DualCircuitEconomics } from "./lib/economics";
 import { DemandForecaster } from "./lib/forecasting";
 import { AllocationEngine } from "./lib/allocation";
 import { setupWebSocket, getConnectedClientCount } from "./websocket";
+import { 
+  calculateSupplierRiskScore, 
+  getFDRRiskMultiplier, 
+  analyzeCascadingImpact,
+  generateRegimeAwareActions,
+  scoreAlternativeSuppliers,
+  type RiskScoreInputs 
+} from "./lib/supplyChainRisk";
+import { POExecutionEngine, type POGenerationContext } from "./lib/poExecution";
+import { IndustryConsortiumEngine } from "./lib/industryConsortium";
+import { MAIntelligenceEngine } from "./lib/maIntelligence";
 import { z } from "zod";
 import {
   insertSkuSchema,
@@ -16,6 +27,21 @@ import {
   insertSupplierSchema,
   insertSupplierMaterialSchema,
   insertDemandHistorySchema,
+  insertFeatureToggleSchema,
+  insertSupplierNodeSchema,
+  insertSupplierLinkSchema,
+  insertSupplierHealthMetricsSchema,
+  insertSupplierRiskAlertSchema,
+  insertPoRuleSchema,
+  insertPoWorkflowStepSchema,
+  insertPoApprovalSchema,
+  insertNegotiationPlaybookSchema,
+  insertErpConnectionSchema,
+  insertConsortiumContributionSchema,
+  insertConsortiumMetricsSchema,
+  insertConsortiumAlertSchema,
+  insertMaTargetSchema,
+  insertMaRecommendationSchema,
 } from "@shared/schema";
 
 const economics = new DualCircuitEconomics();
@@ -3280,6 +3306,923 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Failed to run comprehensive test",
         error: error.message
       });
+    }
+  });
+
+  // ==================== ENTERPRISE FEATURES: SUPPLY CHAIN NETWORK INTELLIGENCE ====================
+  
+  // Feature Toggles - Enable/disable optional features
+  app.get("/api/features", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+
+      const toggles = await storage.getFeatureToggles(user.companyId);
+      res.json(toggles);
+    } catch (error: any) {
+      console.error("Error fetching feature toggles:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/features", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+
+      const parsed = insertFeatureToggleSchema.parse({
+        ...req.body,
+        companyId: user.companyId,
+        enabledBy: user.id,
+      });
+      
+      const toggle = await storage.createFeatureToggle(parsed);
+      res.json(toggle);
+    } catch (error: any) {
+      console.error("Error creating feature toggle:", error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.put("/api/features/:featureKey", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+
+      const { enabled } = req.body;
+      const toggle = await storage.updateFeatureToggle(user.companyId, req.params.featureKey, enabled ? 1 : 0);
+      res.json(toggle);
+    } catch (error: any) {
+      console.error("Error updating feature toggle:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Supplier Nodes - Extended supplier information with risk metrics
+  app.get("/api/supply-chain/nodes", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+
+      const { tier, criticality } = req.query;
+      
+      let nodes;
+      if (tier) {
+        nodes = await storage.getSupplierNodesByTier(user.companyId, parseInt(tier as string));
+      } else if (criticality) {
+        nodes = await storage.getSupplierNodesByCriticality(user.companyId, criticality as string);
+      } else {
+        nodes = await storage.getSupplierNodes(user.companyId);
+      }
+      
+      res.json(nodes);
+    } catch (error: any) {
+      console.error("Error fetching supplier nodes:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/supply-chain/nodes/critical", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+
+      const nodes = await storage.getCriticalSupplierNodes(user.companyId);
+      res.json(nodes);
+    } catch (error: any) {
+      console.error("Error fetching critical supplier nodes:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/supply-chain/nodes/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const node = await storage.getSupplierNode(req.params.id);
+      if (!node) {
+        return res.status(404).json({ error: "Supplier node not found" });
+      }
+      res.json(node);
+    } catch (error: any) {
+      console.error("Error fetching supplier node:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/supply-chain/nodes", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+
+      const parsed = insertSupplierNodeSchema.parse({
+        ...req.body,
+        companyId: user.companyId,
+      });
+      
+      const node = await storage.createSupplierNode(parsed);
+      res.json(node);
+    } catch (error: any) {
+      console.error("Error creating supplier node:", error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.put("/api/supply-chain/nodes/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const node = await storage.updateSupplierNode(req.params.id, req.body);
+      if (!node) {
+        return res.status(404).json({ error: "Supplier node not found" });
+      }
+      res.json(node);
+    } catch (error: any) {
+      console.error("Error updating supplier node:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Calculate risk score for a supplier node
+  app.post("/api/supply-chain/nodes/:id/risk-score", isAuthenticated, async (req: any, res) => {
+    try {
+      const node = await storage.getSupplierNode(req.params.id);
+      if (!node) {
+        return res.status(404).json({ error: "Supplier node not found" });
+      }
+
+      const riskInputs: RiskScoreInputs = {
+        financialHealthScore: node.financialHealthScore,
+        bankruptcyRisk: node.bankruptcyRisk,
+        onTimeDeliveryRate: node.onTimeDeliveryRate,
+        qualityScore: node.qualityScore,
+        capacityUtilization: node.capacityUtilization,
+        currentFDR: node.currentFDR,
+        tier: node.tier,
+        criticality: node.criticality,
+      };
+
+      const assessment = calculateSupplierRiskScore(riskInputs);
+      
+      // Also get regime-aware actions
+      const snapshot = await storage.getLatestEconomicSnapshot(node.companyId);
+      let actions: string[] = [];
+      if (snapshot) {
+        actions = generateRegimeAwareActions(snapshot.regime, snapshot.fdr, assessment.riskLevel);
+      }
+
+      res.json({
+        ...assessment,
+        actions,
+        node,
+      });
+    } catch (error: any) {
+      console.error("Error calculating risk score:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Supplier Links - Network connections between suppliers
+  app.get("/api/supply-chain/links", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+
+      const links = await storage.getSupplierLinks(user.companyId);
+      res.json(links);
+    } catch (error: any) {
+      console.error("Error fetching supplier links:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/supply-chain/links/from/:nodeId", isAuthenticated, async (req: any, res) => {
+    try {
+      const links = await storage.getSupplierLinksFrom(req.params.nodeId);
+      res.json(links);
+    } catch (error: any) {
+      console.error("Error fetching outbound links:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/supply-chain/links/to/:nodeId", isAuthenticated, async (req: any, res) => {
+    try {
+      const links = await storage.getSupplierLinksTo(req.params.nodeId);
+      res.json(links);
+    } catch (error: any) {
+      console.error("Error fetching inbound links:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/supply-chain/links", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+
+      const parsed = insertSupplierLinkSchema.parse({
+        ...req.body,
+        companyId: user.companyId,
+      });
+      
+      const link = await storage.createSupplierLink(parsed);
+      res.json(link);
+    } catch (error: any) {
+      console.error("Error creating supplier link:", error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Supplier Health Metrics - Time-series health data
+  app.get("/api/supply-chain/health/:nodeId", isAuthenticated, async (req: any, res) => {
+    try {
+      const metrics = await storage.getSupplierHealthMetrics(req.params.nodeId);
+      res.json(metrics);
+    } catch (error: any) {
+      console.error("Error fetching health metrics:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/supply-chain/health/:nodeId/latest", isAuthenticated, async (req: any, res) => {
+    try {
+      const metric = await storage.getLatestSupplierHealthMetric(req.params.nodeId);
+      if (!metric) {
+        return res.status(404).json({ error: "No health metrics found" });
+      }
+      res.json(metric);
+    } catch (error: any) {
+      console.error("Error fetching latest health metric:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/supply-chain/health", isAuthenticated, async (req: any, res) => {
+    try {
+      const parsed = insertSupplierHealthMetricsSchema.parse(req.body);
+      const metric = await storage.createSupplierHealthMetric(parsed);
+      res.json(metric);
+    } catch (error: any) {
+      console.error("Error creating health metric:", error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Supplier Risk Alerts - Cascading risk warnings
+  app.get("/api/supply-chain/alerts", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+
+      const { active, severity, nodeId } = req.query;
+      
+      let alerts;
+      if (active === 'true') {
+        alerts = await storage.getActiveSupplierRiskAlerts(user.companyId);
+      } else if (severity) {
+        alerts = await storage.getSupplierRiskAlertsBySeverity(user.companyId, severity as string);
+      } else if (nodeId) {
+        alerts = await storage.getSupplierRiskAlertsByNode(nodeId as string);
+      } else {
+        alerts = await storage.getSupplierRiskAlerts(user.companyId);
+      }
+      
+      res.json(alerts);
+    } catch (error: any) {
+      console.error("Error fetching risk alerts:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/supply-chain/alerts", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+
+      const parsed = insertSupplierRiskAlertSchema.parse({
+        ...req.body,
+        companyId: user.companyId,
+      });
+      
+      const alert = await storage.createSupplierRiskAlert(parsed);
+      res.json(alert);
+    } catch (error: any) {
+      console.error("Error creating risk alert:", error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.put("/api/supply-chain/alerts/:id/acknowledge", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user) {
+        return res.status(400).json({ error: "User not found" });
+      }
+
+      const alert = await storage.acknowledgeSupplierRiskAlert(req.params.id, user.id);
+      if (!alert) {
+        return res.status(404).json({ error: "Alert not found" });
+      }
+      res.json(alert);
+    } catch (error: any) {
+      console.error("Error acknowledging alert:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.put("/api/supply-chain/alerts/:id/resolve", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user) {
+        return res.status(400).json({ error: "User not found" });
+      }
+
+      const alert = await storage.resolveSupplierRiskAlert(req.params.id, user.id);
+      if (!alert) {
+        return res.status(404).json({ error: "Alert not found" });
+      }
+      res.json(alert);
+    } catch (error: any) {
+      console.error("Error resolving alert:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Advanced: Cascading impact analysis for a supplier node
+  app.post("/api/supply-chain/nodes/:id/impact-analysis", isAuthenticated, async (req: any, res) => {
+    try {
+      const node = await storage.getSupplierNode(req.params.id);
+      if (!node) {
+        return res.status(404).json({ error: "Supplier node not found" });
+      }
+
+      // Get downstream links
+      const downstreamLinks = await storage.getSupplierLinksFrom(node.id);
+      
+      // Get affected materials and SKUs (simplified - would need more complex logic in production)
+      const affectedMaterialIds = downstreamLinks
+        .map(link => link.materialId)
+        .filter((id): id is string => id !== null);
+      
+      const affectedSkuIds: string[] = []; // Would need to traverse BOM to find affected SKUs
+      
+      const analysis = analyzeCascadingImpact(
+        node,
+        downstreamLinks.length,
+        affectedMaterialIds,
+        affectedSkuIds,
+        1000 // Average material cost placeholder
+      );
+
+      res.json(analysis);
+    } catch (error: any) {
+      console.error("Error analyzing cascading impact:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Advanced: Alternative supplier recommendations
+  app.post("/api/supply-chain/nodes/:id/alternatives", isAuthenticated, async (req: any, res) => {
+    try {
+      const node = await storage.getSupplierNode(req.params.id);
+      if (!node) {
+        return res.status(404).json({ error: "Supplier node not found" });
+      }
+
+      // Get all supplier nodes for this company
+      const allNodes = await storage.getSupplierNodes(node.companyId);
+      
+      // Filter out the failing node
+      const alternatives = allNodes.filter(n => n.id !== node.id);
+      
+      // Score alternatives
+      const scoredAlternatives = scoreAlternativeSuppliers(node, alternatives);
+
+      res.json(scoredAlternatives);
+    } catch (error: any) {
+      console.error("Error finding alternative suppliers:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============================================================
+  // AUTOMATED PO EXECUTION ROUTES
+  // ============================================================
+
+  const poEngine = new POExecutionEngine(storage);
+
+  // PO Rules CRUD
+  app.get("/api/po-rules", isAuthenticated, async (req: any, res) => {
+    try {
+      const rules = await storage.getPoRules(req.user.companyId);
+      res.json(rules);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/po-rules/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const rule = await storage.getPoRule(req.params.id);
+      if (!rule) {
+        return res.status(404).json({ error: "PO rule not found" });
+      }
+      res.json(rule);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/po-rules", isAuthenticated, async (req: any, res) => {
+    try {
+      const validatedData = insertPoRuleSchema.parse({
+        ...req.body,
+        companyId: req.user.companyId,
+      });
+      const rule = await storage.createPoRule(validatedData);
+      res.status(201).json(rule);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/po-rules/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const rule = await storage.updatePoRule(req.params.id, req.body);
+      if (!rule) {
+        return res.status(404).json({ error: "PO rule not found" });
+      }
+      res.json(rule);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/po-rules/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.deletePoRule(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Evaluate PO rules for a material/context
+  app.post("/api/po-rules/evaluate", isAuthenticated, async (req: any, res) => {
+    try {
+      const context: POGenerationContext = req.body;
+      const recommendations = await poEngine.evaluateRules(context, req.user.companyId);
+      res.json(recommendations);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Workflow Steps
+  app.get("/api/po-workflows", isAuthenticated, async (req: any, res) => {
+    try {
+      const steps = await storage.getPoWorkflowSteps(req.user.companyId);
+      res.json(steps);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/purchase-orders/:id/workflow", isAuthenticated, async (req: any, res) => {
+    try {
+      const steps = await storage.getPoWorkflowStepsByPO(req.params.id);
+      res.json(steps);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/po-workflows", isAuthenticated, async (req: any, res) => {
+    try {
+      const validatedData = insertPoWorkflowStepSchema.parse({
+        ...req.body,
+        companyId: req.user.companyId,
+      });
+      const step = await storage.createPoWorkflowStep(validatedData);
+      res.status(201).json(step);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Generate approval workflow for a PO
+  app.post("/api/purchase-orders/workflow/generate", isAuthenticated, async (req: any, res) => {
+    try {
+      const { poValue, materialId, supplierId } = req.body;
+      const workflow = await poEngine.generateApprovalWorkflow(
+        poValue,
+        materialId,
+        supplierId,
+        req.user.companyId
+      );
+      res.json(workflow);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // PO Approvals
+  app.get("/api/purchase-orders/:id/approvals", isAuthenticated, async (req: any, res) => {
+    try {
+      const approvals = await storage.getPoApprovals(req.params.id);
+      res.json(approvals);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/approvals/my-approvals", isAuthenticated, async (req: any, res) => {
+    try {
+      const approvals = await storage.getPoApprovalsByApprover(req.user.id);
+      res.json(approvals);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/po-approvals", isAuthenticated, async (req: any, res) => {
+    try {
+      const validatedData = insertPoApprovalSchema.parse({
+        ...req.body,
+        approverId: req.user.id,
+      });
+      const approval = await storage.createPoApproval(validatedData);
+      res.status(201).json(approval);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Negotiation Playbooks CRUD
+  app.get("/api/negotiation-playbooks", isAuthenticated, async (req: any, res) => {
+    try {
+      const playbooks = await storage.getNegotiationPlaybooks(req.user.companyId);
+      res.json(playbooks);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/negotiation-playbooks/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const playbook = await storage.getNegotiationPlaybook(req.params.id);
+      if (!playbook) {
+        return res.status(404).json({ error: "Playbook not found" });
+      }
+      res.json(playbook);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/negotiation-playbooks/regime/:regime", isAuthenticated, async (req: any, res) => {
+    try {
+      const playbooks = await storage.getNegotiationPlaybooksByRegime(
+        req.user.companyId,
+        req.params.regime
+      );
+      res.json(playbooks);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/negotiation-playbooks", isAuthenticated, async (req: any, res) => {
+    try {
+      const validatedData = insertNegotiationPlaybookSchema.parse({
+        ...req.body,
+        companyId: req.user.companyId,
+      });
+      const playbook = await storage.createNegotiationPlaybook(validatedData);
+      res.status(201).json(playbook);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/negotiation-playbooks/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const playbook = await storage.updateNegotiationPlaybook(req.params.id, req.body);
+      if (!playbook) {
+        return res.status(404).json({ error: "Playbook not found" });
+      }
+      res.json(playbook);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get recommended playbook based on FDR/regime
+  app.post("/api/negotiation-playbooks/recommend", isAuthenticated, async (req: any, res) => {
+    try {
+      const { fdr, regime } = req.body;
+      const playbook = await poEngine.getRecommendedPlaybook(fdr, regime, req.user.companyId);
+      res.json(playbook);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // ERP Connections CRUD
+  app.get("/api/erp-connections", isAuthenticated, async (req: any, res) => {
+    try {
+      const connections = await storage.getErpConnections(req.user.companyId);
+      res.json(connections);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/erp-connections/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const connection = await storage.getErpConnection(req.params.id);
+      if (!connection) {
+        return res.status(404).json({ error: "ERP connection not found" });
+      }
+      res.json(connection);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/erp-connections", isAuthenticated, async (req: any, res) => {
+    try {
+      const validatedData = insertErpConnectionSchema.parse({
+        ...req.body,
+        companyId: req.user.companyId,
+      });
+      const connection = await storage.createErpConnection(validatedData);
+      res.status(201).json(connection);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/erp-connections/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const connection = await storage.updateErpConnection(req.params.id, req.body);
+      if (!connection) {
+        return res.status(404).json({ error: "ERP connection not found" });
+      }
+      res.json(connection);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/erp-connections/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.deleteErpConnection(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get ERP integration status
+  app.get("/api/erp/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const status = await poEngine.getERPStatus(req.user.companyId);
+      res.json(status);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============================================================
+  // INDUSTRY DATA CONSORTIUM ROUTES
+  // ============================================================
+
+  const consortiumEngine = new IndustryConsortiumEngine(storage);
+
+  // Consortium contributions
+  app.get("/api/consortium/contributions", isAuthenticated, async (req: any, res) => {
+    try {
+      const { industrySector, region, regime } = req.query;
+      const contributions = await storage.getConsortiumContributions({ industrySector, region, regime });
+      res.json(contributions);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/consortium/contributions", isAuthenticated, async (req: any, res) => {
+    try {
+      // Anonymize company ID
+      const anonymousId = consortiumEngine.anonymizeCompanyData(req.user.companyId, req.body);
+      
+      const validatedData = insertConsortiumContributionSchema.parse({
+        ...req.body,
+        anonymousId,
+      });
+      
+      const contribution = await storage.createConsortiumContribution(validatedData);
+      res.status(201).json(contribution);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Consortium metrics (benchmarks)
+  app.get("/api/consortium/metrics", isAuthenticated, async (req: any, res) => {
+    try {
+      const { regime, industrySector } = req.query;
+      if (!regime) {
+        return res.status(400).json({ error: "regime parameter is required" });
+      }
+      const metrics = await storage.getConsortiumMetrics(regime as string, { industrySector: industrySector as string });
+      res.json(metrics);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Calculate benchmarks for current company
+  app.post("/api/consortium/benchmarks", isAuthenticated, async (req: any, res) => {
+    try {
+      const { oee, procurementSavings, turnover, regime, industrySector } = req.body;
+      const benchmarks = await consortiumEngine.calculateBenchmarks(
+        { oee, procurementSavings, turnover },
+        regime,
+        industrySector
+      );
+      res.json(benchmarks);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Consortium alerts
+  app.get("/api/consortium/alerts", isAuthenticated, async (req: any, res) => {
+    try {
+      const { severity } = req.query;
+      const alerts = await storage.getConsortiumAlerts(severity as string);
+      res.json(alerts);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Early warning detection
+  app.post("/api/consortium/early-warnings", isAuthenticated, async (req: any, res) => {
+    try {
+      const { regime, industrySector } = req.body;
+      const warnings = await consortiumEngine.detectEarlyWarnings(regime, industrySector);
+      res.json(warnings);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // ============================================================
+  // M&A INTELLIGENCE ROUTES
+  // ============================================================
+
+  const maEngine = new MAIntelligenceEngine(storage);
+
+  // M&A targets
+  app.get("/api/ma/targets", isAuthenticated, async (req: any, res) => {
+    try {
+      const targets = await storage.getMaTargets(req.user.companyId);
+      res.json(targets);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/ma/targets/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const target = await storage.getMaTarget(req.params.id);
+      if (!target || target.companyId !== req.user.companyId) {
+        return res.status(404).json({ error: "Target not found" });
+      }
+      res.json(target);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/ma/targets", isAuthenticated, async (req: any, res) => {
+    try {
+      const validatedData = insertMaTargetSchema.parse({
+        ...req.body,
+        companyId: req.user.companyId,
+      });
+      
+      const target = await storage.createMaTarget(validatedData);
+      res.status(201).json(target);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/ma/targets/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const existing = await storage.getMaTarget(req.params.id);
+      if (!existing || existing.companyId !== req.user.companyId) {
+        return res.status(404).json({ error: "Target not found" });
+      }
+
+      const target = await storage.updateMaTarget(req.params.id, req.body);
+      res.json(target);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // M&A recommendations
+  app.get("/api/ma/recommendations", isAuthenticated, async (req: any, res) => {
+    try {
+      const recommendations = await storage.getMaRecommendations(req.user.companyId);
+      res.json(recommendations);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Generate M&A scoring
+  app.post("/api/ma/score", isAuthenticated, async (req: any, res) => {
+    try {
+      const { targetType, estimatedValue, strategicFitScore, currentFDR, currentRegime } = req.body;
+      const scoring = maEngine.generateRecommendation(
+        { targetType, estimatedValue, strategicFitScore },
+        currentFDR,
+        currentRegime
+      );
+      res.json(scoring);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // ============================================================
+  // SCENARIO PLANNING (OPTIONAL FEATURE)
+  // ============================================================
+
+  // Scenario simulation endpoint (minimal implementation)
+  app.post("/api/scenarios/simulate", isAuthenticated, async (req: any, res) => {
+    try {
+      const { fdr, commodityPrices, demandChange, scenarioName } = req.body;
+      
+      // Simple simulation: calculate projected impact
+      const projectedImpact = {
+        revenueImpact: demandChange * 1.2,
+        costImpact: (commodityPrices || 0) * 0.8,
+        fdrImpact: fdr * 1.1,
+        scenarioName,
+        confidence: 75,
+      };
+      
+      res.json(projectedImpact);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // ============================================================
+  // GEOPOLITICAL RISK (OPTIONAL FEATURE)
+  // ============================================================
+
+  // Geopolitical risk assessment endpoint (minimal implementation)
+  app.post("/api/geopolitical/assess", isAuthenticated, async (req: any, res) => {
+    try {
+      const { region, eventType } = req.body;
+      
+      // Simple risk assessment
+      const risk = {
+        region,
+        eventType,
+        riskLevel: eventType === 'trade_war' ? 'high' : 'medium',
+        impact: 'Supply chain delays expected',
+        recommendation: 'Diversify suppliers',
+        confidence: 70,
+      };
+      
+      res.json(risk);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
     }
   });
 
