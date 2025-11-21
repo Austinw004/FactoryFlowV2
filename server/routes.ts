@@ -4270,6 +4270,135 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk scenario generation endpoints for stress testing
+  app.post('/api/scenarios/bulk-test', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "No company associated with user" });
+      }
+
+      const count = 1000;
+      const results = {
+        totalScenarios: count,
+        regimeDistribution: {} as Record<string, number>,
+        avgConfidence: 0,
+        riskLevels: { low: 0, medium: 0, high: 0 },
+        avgFinancialImpact: 0,
+        scenarios: [] as any[]
+      };
+
+      const scenarioEngine = new ScenarioPlanningEngine(storage);
+      const eventTypes = ['Supply Chain Disruption', 'Demand Shock', 'Cost Inflation', 'Market Expansion', 'Tech Innovation'];
+      
+      for (let i = 0; i < count; i++) {
+        const fdrDelta = (Math.random() - 0.5) * 0.8;
+        const commodityChange = (Math.random() - 0.3) * 100;
+        const demandChange = (Math.random() - 0.4) * 80;
+        const duration = Math.floor(Math.random() * 24) + 1;
+        
+        const input: ScenarioInput = {
+          scenarioName: `${eventTypes[i % eventTypes.length]} #${i + 1}`,
+          fdrDelta,
+          commodityPriceChange: commodityChange,
+          demandChange,
+          durationMonths: duration,
+        };
+
+        const currentContext = {
+          currentFDR: 1.0,
+          currentRegime: 'Healthy Expansion',
+          baseRevenue: 10000000,
+          baseCosts: 7000000,
+          baseMargin: 30,
+        };
+
+        const result = await scenarioEngine.runScenario(input, currentContext);
+        
+        results.regimeDistribution[result.regimeAnalysis.newRegime] = 
+          (results.regimeDistribution[result.regimeAnalysis.newRegime] || 0) + 1;
+        results.avgConfidence += result.confidence;
+        
+        const impact = Math.abs(result.financialImpact.revenueImpact);
+        if (impact < 1000000) results.riskLevels.low++;
+        else if (impact < 3000000) results.riskLevels.medium++;
+        else results.riskLevels.high++;
+        
+        results.avgFinancialImpact += result.financialImpact.revenueImpact;
+        
+        if (i < 10) results.scenarios.push(result);
+      }
+
+      results.avgConfidence = Math.round(results.avgConfidence / count);
+      results.avgFinancialImpact = Math.round(results.avgFinancialImpact / count);
+
+      res.json(results);
+    } catch (error: any) {
+      console.error('Bulk scenario test error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/geopolitical/bulk-test', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "No company associated with user" });
+      }
+
+      const count = 1000;
+      const results = {
+        totalAssessments: count,
+        eventTypeDistribution: {} as Record<string, number>,
+        severityDistribution: { low: 0, medium: 0, high: 0 },
+        avgRiskScore: 0,
+        avgConfidence: 0,
+        assessments: [] as any[]
+      };
+
+      const geoEngine = new GeopoliticalRiskEngine(storage);
+      const eventTypes = ['Trade War', 'Sanctions', 'Currency Crisis', 'Political Instability'];
+      const regions = ['Asia Pacific', 'Europe', 'North America', 'Middle East', 'Latin America', 'Africa'];
+      const severities = ['low', 'medium', 'high'];
+      
+      for (let i = 0; i < count; i++) {
+        const eventType = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+        const region = regions[Math.floor(Math.random() * regions.length)];
+        const severity = severities[Math.floor(Math.random() * severities.length)];
+        
+        const event: GeopoliticalEvent = {
+          eventType,
+          region,
+          severity,
+          description: `${eventType} scenario in ${region} with ${severity} severity`,
+          commoditiesAffected: [],
+          suppliersAffected: [],
+          startDate: new Date()
+        };
+
+        const currentFDR = 1.0 + (Math.random() - 0.5) * 0.4;
+        const assessment = await geoEngine.assessRisk(event, currentFDR);
+        
+        results.eventTypeDistribution[eventType] = (results.eventTypeDistribution[eventType] || 0) + 1;
+        results.severityDistribution[severity]++;
+        results.avgRiskScore += assessment.overallRisk;
+        results.avgConfidence += assessment.confidence;
+        
+        if (i < 10) results.assessments.push(assessment);
+      }
+
+      results.avgRiskScore = Math.round(results.avgRiskScore / count);
+      results.avgConfidence = Math.round(results.avgConfidence / count);
+
+      res.json(results);
+    } catch (error: any) {
+      console.error('Bulk geopolitical test error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   
   setupWebSocket(httpServer);

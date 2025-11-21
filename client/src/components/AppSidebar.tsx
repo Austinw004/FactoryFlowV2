@@ -121,6 +121,11 @@ const menuSections = [
         url: "/geopolitical-risk",
         icon: Globe,
       },
+      {
+        title: "Bulk Testing",
+        url: "/bulk-test",
+        icon: Zap,
+      },
     ],
   },
   {
