@@ -30,6 +30,7 @@ import MAIntelligence from "@/pages/MAIntelligence";
 import ScenarioPlanning from "@/pages/ScenarioPlanning";
 import GeopoliticalRisk from "@/pages/GeopoliticalRisk";
 import BulkTest from "@/pages/BulkTest";
+import HistoricalBacktesting from "@/pages/HistoricalBacktesting";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
@@ -61,6 +62,7 @@ function Router() {
           <Route path="/scenario-planning" component={ScenarioPlanning} />
           <Route path="/geopolitical-risk" component={GeopoliticalRisk} />
           <Route path="/bulk-test" component={BulkTest} />
+          <Route path="/historical-backtesting" component={HistoricalBacktesting} />
           <Route path="/reports" component={Reports} />
           <Route path="/configuration" component={Configuration} />
           <Route path="/how-it-works" component={HowItWorks} />

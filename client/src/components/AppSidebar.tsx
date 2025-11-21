@@ -126,6 +126,11 @@ const menuSections = [
         url: "/bulk-test",
         icon: Zap,
       },
+      {
+        title: "Historical Backtesting",
+        url: "/historical-backtesting",
+        icon: Activity,
+      },
     ],
   },
   {
