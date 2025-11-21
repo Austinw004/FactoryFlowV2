@@ -17,7 +17,6 @@ import {
   Zap,
   BarChart3,
   Building2,
-  TrendingUp,
   Globe,
 } from "lucide-react";
 import {
@@ -115,7 +114,7 @@ const menuSections = [
       {
         title: "Scenario Planning",
         url: "/scenario-planning",
-        icon: TrendingUp,
+        icon: Activity,
       },
       {
         title: "Geopolitical Risk",

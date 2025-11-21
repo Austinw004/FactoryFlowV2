@@ -17,6 +17,8 @@ import {
 import { POExecutionEngine, type POGenerationContext } from "./lib/poExecution";
 import { IndustryConsortiumEngine } from "./lib/industryConsortium";
 import { MAIntelligenceEngine } from "./lib/maIntelligence";
+import { ScenarioPlanningEngine, type ScenarioInput } from "./lib/scenarioPlanning";
+import { GeopoliticalRiskEngine, type GeopoliticalEvent } from "./lib/geopoliticalRisk";
 import { z } from "zod";
 import {
   insertSkuSchema,
@@ -4181,21 +4183,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // SCENARIO PLANNING (OPTIONAL FEATURE)
   // ============================================================
 
-  // Scenario simulation endpoint (minimal implementation)
+  const scenarioEngine = new ScenarioPlanningEngine(storage);
+
+  // Run scenario simulation
   app.post("/api/scenarios/simulate", isAuthenticated, async (req: any, res) => {
     try {
-      const { fdr, commodityPrices, demandChange, scenarioName } = req.body;
-      
-      // Simple simulation: calculate projected impact
-      const projectedImpact = {
-        revenueImpact: demandChange * 1.2,
-        costImpact: (commodityPrices || 0) * 0.8,
-        fdrImpact: fdr * 1.1,
-        scenarioName,
-        confidence: 75,
+      const input: ScenarioInput = {
+        scenarioName: req.body.scenarioName || 'Unnamed Scenario',
+        description: req.body.description,
+        fdrDelta: parseFloat(req.body.fdrDelta) || 0,
+        newRegime: req.body.newRegime,
+        commodityPriceChange: parseFloat(req.body.commodityPriceChange) || 0,
+        affectedCommodities: req.body.affectedCommodities,
+        demandChange: parseFloat(req.body.demandChange) || 0,
+        affectedSKUs: req.body.affectedSKUs,
+        durationMonths: parseInt(req.body.durationMonths) || 12,
       };
-      
-      res.json(projectedImpact);
+
+      const currentContext = {
+        currentFDR: parseFloat(req.body.currentFDR) || 1.0,
+        currentRegime: req.body.currentRegime || 'Healthy Expansion',
+        baseRevenue: parseFloat(req.body.baseRevenue) || 10000000,
+        baseCosts: parseFloat(req.body.baseCosts) || 7000000,
+        baseMargin: parseFloat(req.body.baseMargin) || 30,
+      };
+
+      const result = await scenarioEngine.runScenario(input, currentContext);
+      res.json(result);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Compare multiple scenarios
+  app.post("/api/scenarios/compare", isAuthenticated, async (req: any, res) => {
+    try {
+      const { scenarios } = req.body;
+      if (!Array.isArray(scenarios) || scenarios.length === 0) {
+        return res.status(400).json({ error: "scenarios array is required" });
+      }
+
+      const comparison = await scenarioEngine.compareScenarios(scenarios);
+      res.json(comparison);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
@@ -4205,22 +4234,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GEOPOLITICAL RISK (OPTIONAL FEATURE)
   // ============================================================
 
-  // Geopolitical risk assessment endpoint (minimal implementation)
+  const geoRiskEngine = new GeopoliticalRiskEngine(storage);
+
+  // Assess geopolitical risk
   app.post("/api/geopolitical/assess", isAuthenticated, async (req: any, res) => {
     try {
-      const { region, eventType } = req.body;
-      
-      // Simple risk assessment
-      const risk = {
-        region,
-        eventType,
-        riskLevel: eventType === 'trade_war' ? 'high' : 'medium',
-        impact: 'Supply chain delays expected',
-        recommendation: 'Diversify suppliers',
-        confidence: 70,
+      const event: GeopoliticalEvent = {
+        eventType: req.body.eventType,
+        region: req.body.region,
+        severity: req.body.severity || 'medium',
+        description: req.body.description || '',
+        startDate: req.body.startDate ? new Date(req.body.startDate) : new Date(),
+        endDate: req.body.endDate ? new Date(req.body.endDate) : undefined,
+        commoditiesAffected: req.body.commoditiesAffected || [],
+        suppliersAffected: req.body.suppliersAffected || [],
       };
+
+      const currentFDR = parseFloat(req.body.currentFDR) || 1.0;
+      const assessment = await geoRiskEngine.assessRisk(event, currentFDR);
       
-      res.json(risk);
+      res.json(assessment);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Analyze regional FDR divergence
+  app.post("/api/geopolitical/regional-fdr", isAuthenticated, async (req: any, res) => {
+    try {
+      const { regions, globalFDR } = req.body;
+      const analysis = geoRiskEngine.analyzeRegionalFDR(regions || [], globalFDR || 1.0);
+      res.json(analysis);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
