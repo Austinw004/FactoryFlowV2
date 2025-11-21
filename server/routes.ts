@@ -4399,6 +4399,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================================
+  // HISTORICAL BACKTESTING (Research Validation)
+  // ============================================================
+
+  const { HistoricalBacktestingEngine } = await import("./lib/historicalBacktesting");
+  const backtestEngine = new HistoricalBacktestingEngine(storage);
+
+  // Run historical backtest
+  app.post("/api/backtest/run", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "No company associated with user" });
+      }
+
+      const { startYear, endYear, horizonMonths } = req.body;
+      
+      const results = await backtestEngine.runBacktest(
+        user.companyId,
+        parseInt(startYear) || 2015,
+        parseInt(endYear) || 2023,
+        parseInt(horizonMonths) || 6
+      );
+
+      // Store results
+      await backtestEngine.storeBacktestResults(user.companyId, results);
+
+      res.json(results);
+    } catch (error: any) {
+      console.error('Backtest error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get stored backtest results
+  app.get("/api/backtest/results", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "No company associated with user" });
+      }
+
+      const results = await storage.getPredictionAccuracyMetrics(user.companyId);
+      res.json(results);
+    } catch (error: any) {
+      console.error('Get backtest results error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   
   setupWebSocket(httpServer);
