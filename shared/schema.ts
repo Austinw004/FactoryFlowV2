@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, real, integer, timestamp, jsonb, primaryKey, index, type AnyPgColumn } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, real, integer, timestamp, jsonb, primaryKey, index, uniqueIndex, type AnyPgColumn } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -1560,6 +1560,896 @@ export const workforcePredictions = pgTable("workforce_predictions", {
   index("workforce_predictions_date_idx").on(table.predictionDate),
   index("workforce_predictions_regime_idx").on(table.regime),
 ]);
+
+// ============================================================================
+// FEATURE TOGGLES SYSTEM
+// ============================================================================
+export const featureToggles = pgTable("feature_toggles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  featureKey: text("feature_key").notNull(), // 'scenario_planning', 'geopolitical_risk', etc.
+  enabled: integer("enabled").notNull().default(0), // 0 = disabled, 1 = enabled
+  enabledAt: timestamp("enabled_at"),
+  enabledBy: varchar("enabled_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("feature_toggles_company_idx").on(table.companyId),
+  uniqueIndex("feature_toggles_unique_idx").on(table.companyId, table.featureKey),
+]);
+
+// ============================================================================
+// SUPPLY CHAIN NETWORK INTELLIGENCE
+// ============================================================================
+
+// Extended supplier nodes with FDR-aware health metrics
+export const supplierNodes = pgTable("supplier_nodes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  supplierId: varchar("supplier_id").notNull().references(() => suppliers.id, { onDelete: "cascade" }),
+  tier: integer("tier").notNull().default(1), // 1 = direct, 2 = sub-tier, etc.
+  criticality: text("criticality").notNull().default('medium'), // 'low', 'medium', 'high', 'critical'
+  region: text("region"), // Geographic location
+  
+  // Financial health indicators
+  currentFDR: real("current_fdr"), // Supplier's own FDR if available
+  financialHealthScore: real("financial_health_score"), // 0-100 score
+  bankruptcyRisk: real("bankruptcy_risk"), // 0-100 probability
+  creditRating: text("credit_rating"),
+  
+  // Performance metrics
+  onTimeDeliveryRate: real("on_time_delivery_rate"), // %
+  qualityScore: real("quality_score"), // 0-100
+  capacityUtilization: real("capacity_utilization"), // %
+  
+  // Economic exposure
+  regimeExposure: text("regime_exposure"), // Which regime they're in
+  commodityExposure: jsonb("commodity_exposure"), // Which commodities affect them
+  
+  lastHealthCheck: timestamp("last_health_check"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("supplier_nodes_company_idx").on(table.companyId),
+  index("supplier_nodes_criticality_idx").on(table.criticality),
+  index("supplier_nodes_health_idx").on(table.financialHealthScore),
+]);
+
+// Network connections between suppliers (supply chain graph)
+export const supplierLinks = pgTable("supplier_links", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  fromNodeId: varchar("from_node_id").notNull().references(() => supplierNodes.id, { onDelete: "cascade" }),
+  toNodeId: varchar("to_node_id").notNull().references(() => supplierNodes.id, { onDelete: "cascade" }),
+  materialId: varchar("material_id").references(() => materials.id), // What's being supplied
+  dependencyStrength: real("dependency_strength").notNull().default(1.0), // 0-1 how critical
+  leadTimeDays: integer("lead_time_days"),
+  annualVolume: real("annual_volume"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("supplier_links_company_idx").on(table.companyId),
+  index("supplier_links_from_idx").on(table.fromNodeId),
+  index("supplier_links_to_idx").on(table.toNodeId),
+]);
+
+// Time-series supplier health metrics
+export const supplierHealthMetrics = pgTable("supplier_health_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  supplierNodeId: varchar("supplier_node_id").notNull().references(() => supplierNodes.id, { onDelete: "cascade" }),
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+  
+  // Economic context
+  fdr: real("fdr").notNull(),
+  regime: text("regime").notNull(),
+  
+  // Financial metrics
+  revenueGrowth: real("revenue_growth"), // % YoY
+  profitMargin: real("profit_margin"), // %
+  debtToEquity: real("debt_to_equity"),
+  cashReserves: real("cash_reserves"), // Days of operating cash
+  
+  // Operational metrics
+  productionCapacity: real("production_capacity"), // % of max
+  inventoryTurnover: real("inventory_turnover"),
+  employeeCount: integer("employee_count"),
+  employeeTurnover: real("employee_turnover"), // % annual
+  
+  // Risk indicators
+  riskScore: real("risk_score").notNull(), // 0-100 composite risk
+  disruptionProbability: real("disruption_probability"), // 0-100
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("supplier_health_metrics_node_idx").on(table.supplierNodeId),
+  index("supplier_health_metrics_timestamp_idx").on(table.timestamp),
+  index("supplier_health_metrics_risk_idx").on(table.riskScore),
+]);
+
+// Cascading risk alerts for supply chain
+export const supplierRiskAlerts = pgTable("supplier_risk_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  supplierNodeId: varchar("supplier_node_id").notNull().references(() => supplierNodes.id, { onDelete: "cascade" }),
+  
+  alertType: text("alert_type").notNull(), // 'financial_distress', 'quality_decline', 'capacity_shortage', 'bankruptcy_risk'
+  severity: text("severity").notNull(), // 'low', 'medium', 'high', 'critical'
+  
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  
+  // Risk context
+  fdr: real("fdr"),
+  regime: text("regime"),
+  riskScore: real("risk_score"),
+  
+  // Recommendations
+  recommendedAction: text("recommended_action"), // 'find_alternative', 'increase_inventory', 'negotiate_terms'
+  alternativeSuppliers: jsonb("alternative_suppliers"), // Array of supplier IDs
+  estimatedImpact: real("estimated_impact"), // $ impact if disruption occurs
+  
+  // Cascading impact
+  affectedMaterials: jsonb("affected_materials"), // Material IDs affected
+  affectedSkus: jsonb("affected_skus"), // SKU IDs affected
+  downstreamRisk: real("downstream_risk"), // Risk to your operations (0-100)
+  
+  acknowledgedAt: timestamp("acknowledged_at"),
+  acknowledgedBy: varchar("acknowledged_by").references(() => users.id),
+  resolvedAt: timestamp("resolved_at"),
+  resolvedBy: varchar("resolved_by").references(() => users.id),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("supplier_risk_alerts_company_idx").on(table.companyId),
+  index("supplier_risk_alerts_severity_idx").on(table.severity),
+  index("supplier_risk_alerts_resolved_idx").on(table.resolvedAt),
+]);
+
+// ============================================================================
+// AUTOMATED PURCHASE ORDER EXECUTION
+// ============================================================================
+
+// Smart PO generation rules based on FDR regimes
+export const poRules = pgTable("po_rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  enabled: integer("enabled").notNull().default(1),
+  
+  // Trigger conditions
+  materialId: varchar("material_id").references(() => materials.id),
+  supplierId: varchar("supplier_id").references(() => suppliers.id),
+  
+  // FDR-based triggers
+  fdrMin: real("fdr_min"), // Trigger when FDR >= this
+  fdrMax: real("fdr_max"), // Trigger when FDR <= this
+  regime: text("regime"), // Trigger only in this regime
+  
+  // Inventory triggers
+  inventoryMin: real("inventory_min"), // Trigger when inventory falls below
+  inventoryMax: real("inventory_max"), // Don't trigger if inventory above this
+  
+  // Price triggers
+  priceMin: real("price_min"), // Only buy if price <= this
+  priceMax: real("price_max"), // Don't buy if price >= this
+  priceChange: real("price_change"), // Trigger on % price movement
+  
+  // Order parameters
+  orderQuantity: real("order_quantity"), // Fixed quantity
+  orderDuration: integer("order_duration"), // Days of supply to order
+  maxOrderValue: real("max_order_value"), // $ cap on order
+  
+  // Approval requirements
+  requiresApproval: integer("requires_approval").notNull().default(0),
+  approvalThreshold: real("approval_threshold"), // $ value requiring approval
+  
+  priority: integer("priority").notNull().default(1), // Higher = more important
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdBy: varchar("created_by").references(() => users.id),
+}, (table) => [
+  index("po_rules_company_idx").on(table.companyId),
+  index("po_rules_enabled_idx").on(table.enabled),
+]);
+
+// PO approval workflows
+export const poWorkflowSteps = pgTable("po_workflow_steps", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  purchaseOrderId: varchar("purchase_order_id").notNull().references(() => purchaseOrders.id, { onDelete: "cascade" }),
+  stepNumber: integer("step_number").notNull(),
+  stepType: text("step_type").notNull(), // 'approval', 'review', 'notification'
+  
+  assignedTo: varchar("assigned_to").references(() => users.id),
+  assignedRole: text("assigned_role"), // 'procurement_manager', 'cfo', 'ceo'
+  
+  status: text("status").notNull().default('pending'), // 'pending', 'approved', 'rejected', 'skipped'
+  comments: text("comments"),
+  
+  completedAt: timestamp("completed_at"),
+  completedBy: varchar("completed_by").references(() => users.id),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("po_workflow_steps_po_idx").on(table.purchaseOrderId),
+  index("po_workflow_steps_assigned_idx").on(table.assignedTo),
+  index("po_workflow_steps_status_idx").on(table.status),
+]);
+
+// Approval records
+export const poApprovals = pgTable("po_approvals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  purchaseOrderId: varchar("purchase_order_id").notNull().references(() => purchaseOrders.id, { onDelete: "cascade" }),
+  workflowStepId: varchar("workflow_step_id").references(() => poWorkflowSteps.id),
+  
+  approverType: text("approver_type").notNull(), // 'user', 'automatic', 'rule_based'
+  approverId: varchar("approver_id").references(() => users.id),
+  
+  decision: text("decision").notNull(), // 'approved', 'rejected', 'conditional'
+  justification: text("justification"), // FDR regime context, cost savings, etc.
+  
+  // FDR context at approval time
+  fdr: real("fdr"),
+  regime: text("regime"),
+  
+  conditions: jsonb("conditions"), // Any conditions placed on approval
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("po_approvals_po_idx").on(table.purchaseOrderId),
+  index("po_approvals_approver_idx").on(table.approverId),
+]);
+
+// Negotiation playbook templates
+export const negotiationPlaybooks = pgTable("negotiation_playbooks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  
+  // Regime-specific strategies
+  regime: text("regime"), // Which regime this playbook is for
+  fdrMin: real("fdr_min"),
+  fdrMax: real("fdr_max"),
+  
+  // Negotiation tactics
+  strategy: text("strategy").notNull(), // 'aggressive_discount', 'volume_commit', 'long_term_lock', 'spot_pricing'
+  scriptTemplate: text("script_template"), // Email/conversation template
+  targetDiscount: real("target_discount"), // % discount to aim for
+  
+  // Terms to negotiate
+  paymentTerms: text("payment_terms"), // 'net_30', 'net_60', 'prepaid_discount'
+  contractDuration: integer("contract_duration"), // Days
+  volumeCommitment: real("volume_commitment"),
+  priceIndexing: text("price_indexing"), // 'fdr_indexed', 'cpi_indexed', 'fixed'
+  
+  // Success metrics
+  usageCount: integer("usage_count").notNull().default(0),
+  avgSavings: real("avg_savings"), // Average % saved using this playbook
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdBy: varchar("created_by").references(() => users.id),
+}, (table) => [
+  index("negotiation_playbooks_company_idx").on(table.companyId),
+  index("negotiation_playbooks_regime_idx").on(table.regime),
+]);
+
+// ERP connection configurations
+export const erpConnections = pgTable("erp_connections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  
+  erpSystem: text("erp_system").notNull(), // 'sap', 'oracle', 'dynamics', 'netsuite', 'custom'
+  erpVersion: text("erp_version"),
+  
+  // Connection details (encrypted in production)
+  apiEndpoint: text("api_endpoint"),
+  authMethod: text("auth_method"), // 'oauth', 'api_key', 'basic'
+  credentialsEncrypted: text("credentials_encrypted"), // Encrypted JSON
+  
+  // Capabilities
+  canReadPOs: integer("can_read_pos").notNull().default(0),
+  canCreatePOs: integer("can_create_pos").notNull().default(0),
+  canUpdatePOs: integer("can_update_pos").notNull().default(0),
+  canReadInventory: integer("can_read_inventory").notNull().default(0),
+  
+  // Status
+  status: text("status").notNull().default('inactive'), // 'active', 'inactive', 'error'
+  lastSync: timestamp("last_sync"),
+  lastError: text("last_error"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdBy: varchar("created_by").references(() => users.id),
+}, (table) => [
+  index("erp_connections_company_idx").on(table.companyId),
+  index("erp_connections_status_idx").on(table.status),
+]);
+
+// ============================================================================
+// INDUSTRY DATA CONSORTIUM
+// ============================================================================
+
+// Anonymous contributions from companies
+export const consortiumContributions = pgTable("consortium_contributions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contributionDate: timestamp("contribution_date").notNull().defaultNow(),
+  
+  // Anonymized aggregate data (NO companyId to ensure privacy)
+  anonymousId: varchar("anonymous_id").notNull(), // Cryptographically hashed company ID - cannot be reverse-engineered
+  industrySector: text("industry_sector"), // 'automotive', 'aerospace', 'electronics', etc.
+  companySize: text("company_size"), // 'small', 'medium', 'large', 'enterprise'
+  region: text("region"), // 'north_america', 'europe', 'asia', etc.
+  
+  // Economic regime context
+  fdr: real("fdr").notNull(),
+  regime: text("regime").notNull(),
+  
+  // Procurement data (anonymized)
+  commodityPurchases: jsonb("commodity_purchases"), // {materialType: avgPrice, volume}
+  avgProcurementSavings: real("avg_procurement_savings"), // % vs market
+  
+  // Machinery data
+  avgOEE: real("avg_oee"),
+  avgMaintenanceCost: real("avg_maintenance_cost"),
+  
+  // Workforce data
+  avgWageGrowth: real("avg_wage_growth"), // %
+  avgTurnover: real("avg_turnover"), // %
+  
+  // Performance indicators
+  marginImpact: real("margin_impact"), // % impact from regime
+  inventoryTurns: real("inventory_turns"),
+  
+  // Privacy flags
+  optedIn: integer("opted_in").notNull().default(1),
+  dataRetentionDays: integer("data_retention_days").notNull().default(730), // 2 years
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("consortium_contributions_date_idx").on(table.contributionDate),
+  index("consortium_contributions_regime_idx").on(table.regime),
+  index("consortium_contributions_sector_idx").on(table.industrySector),
+]);
+
+// Aggregated consortium metrics (derived from contributions)
+export const consortiumMetrics = pgTable("consortium_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  metricDate: timestamp("metric_date").notNull(),
+  
+  // Segmentation
+  industrySector: text("industry_sector"),
+  companySize: text("company_size"),
+  region: text("region"),
+  regime: text("regime").notNull(),
+  
+  // Sample size
+  contributorCount: integer("contributor_count").notNull(),
+  
+  // Aggregated procurement metrics
+  medianCommodityPrice: jsonb("median_commodity_price"), // {material: price}
+  p25CommodityPrice: jsonb("p25_commodity_price"),
+  p75CommodityPrice: jsonb("p75_commodity_price"),
+  avgProcurementSavings: real("avg_procurement_savings"),
+  
+  // Aggregated performance metrics
+  medianOEE: real("median_oee"),
+  p25OEE: real("p25_oee"),
+  p75OEE: real("p75_oee"),
+  
+  medianTurnover: real("median_turnover"),
+  p25Turnover: real("p25_turnover"),
+  p75Turnover: real("p75_turnover"),
+  
+  // Best practices indicators
+  topDecileProcurementSavings: real("top_decile_procurement_savings"),
+  topDecileOEE: real("top_decile_oee"),
+  topDecileTurnover: real("top_decile_turnover"),
+  
+  calculatedAt: timestamp("calculated_at").defaultNow().notNull(),
+}, (table) => [
+  index("consortium_metrics_date_idx").on(table.metricDate),
+  index("consortium_metrics_regime_idx").on(table.regime),
+  index("consortium_metrics_sector_idx").on(table.industrySector),
+]);
+
+// Early warning alerts from consortium data
+export const consortiumAlerts = pgTable("consortium_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  alertDate: timestamp("alert_date").notNull().defaultNow(),
+  
+  alertType: text("alert_type").notNull(), // 'regime_shift_early_warning', 'price_anomaly', 'performance_divergence'
+  severity: text("severity").notNull(), // 'info', 'warning', 'critical'
+  
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  
+  // Consortium signal
+  regime: text("regime"),
+  affectedSectors: jsonb("affected_sectors"), // Array of industry sectors
+  signalStrength: real("signal_strength"), // 0-100 confidence
+  
+  // Leading indicator data
+  peerAction: text("peer_action"), // What are peers doing?
+  peerPerformance: jsonb("peer_performance"), // How are peers performing?
+  
+  // Recommendations
+  recommendedAction: text("recommended_action"),
+  estimatedImpact: real("estimated_impact"), // Potential $ impact
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("consortium_alerts_date_idx").on(table.alertDate),
+  index("consortium_alerts_severity_idx").on(table.severity),
+]);
+
+// ============================================================================
+// M&A INTELLIGENCE
+// ============================================================================
+
+// Potential acquisition targets or divestiture candidates
+export const maTargets = pgTable("ma_targets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  
+  targetType: text("target_type").notNull(), // 'acquisition', 'divestiture', 'joint_venture'
+  
+  // Target company info
+  targetName: text("target_name").notNull(),
+  targetIndustry: text("target_industry"),
+  targetRevenue: real("target_revenue"),
+  targetEmployees: integer("target_employees"),
+  targetRegion: text("target_region"),
+  
+  // FDR-based valuation
+  currentFDR: real("current_fdr"),
+  currentRegime: text("current_regime"),
+  targetFDR: real("target_fdr"), // Target company's FDR if known
+  targetRegime: text("target_regime"),
+  
+  // Valuation metrics
+  estimatedValue: real("estimated_value"), // $
+  fdrAdjustedValue: real("fdr_adjusted_value"), // $ adjusted for regime
+  marketMultiple: real("market_multiple"), // EV/EBITDA
+  fdrAdjustedMultiple: real("fdr_adjusted_multiple"), // Regime-adjusted multiple
+  
+  // Strategic fit
+  strategicFitScore: real("strategic_fit_score"), // 0-100
+  synergyPotential: real("synergy_potential"), // $ annual synergies
+  integrationComplexity: text("integration_complexity"), // 'low', 'medium', 'high'
+  
+  // Timing recommendation
+  timingScore: real("timing_score"), // 0-100 how good is timing now
+  timingRationale: text("timing_rationale"), // Why buy/sell now vs. wait
+  optimalRegimeForDeal: text("optimal_regime_for_deal"),
+  
+  // Risk factors
+  regulatoryRisk: real("regulatory_risk"), // 0-100
+  culturalRisk: real("cultural_risk"), // 0-100
+  financialRisk: real("financial_risk"), // 0-100
+  
+  status: text("status").notNull().default('evaluating'), // 'evaluating', 'pursuing', 'on_hold', 'rejected', 'completed'
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdBy: varchar("created_by").references(() => users.id),
+}, (table) => [
+  index("ma_targets_company_idx").on(table.companyId),
+  index("ma_targets_status_idx").on(table.status),
+  index("ma_targets_timing_idx").on(table.timingScore),
+]);
+
+// M&A scenario modeling
+export const maScenarios = pgTable("ma_scenarios", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  maTargetId: varchar("ma_target_id").notNull().references(() => maTargets.id, { onDelete: "cascade" }),
+  
+  scenarioName: text("scenario_name").notNull(),
+  description: text("description"),
+  
+  // Deal structure
+  dealValue: real("deal_value").notNull(), // $
+  cashPortion: real("cash_portion"), // % or $
+  stockPortion: real("stock_portion"), // % or $
+  debtAssumed: real("debt_assumed"), // $
+  
+  // Economic assumptions
+  assumedFDR: real("assumed_fdr").notNull(),
+  assumedRegime: text("assumed_regime").notNull(),
+  regimeDuration: integer("regime_duration"), // Months
+  
+  // Projected outcomes
+  projectedSynergies: real("projected_synergies"), // $ annual
+  synergyCaptureRate: real("synergy_capture_rate"), // % of synergies realized
+  integrationCost: real("integration_cost"), // $ one-time
+  integrationTimeline: integer("integration_timeline"), // Months
+  
+  // Financial projections
+  year1Revenue: real("year1_revenue"),
+  year1EBITDA: real("year1_ebitda"),
+  year3Revenue: real("year3_revenue"),
+  year3EBITDA: real("year3_ebitda"),
+  
+  // Returns
+  projectedROI: real("projected_roi"), // % IRR
+  paybackPeriod: real("payback_period"), // Years
+  
+  // Risk adjustments
+  riskAdjustedROI: real("risk_adjusted_roi"),
+  fdrVolatilityImpact: real("fdr_volatility_impact"), // How regime changes affect returns
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdBy: varchar("created_by").references(() => users.id),
+}, (table) => [
+  index("ma_scenarios_target_idx").on(table.maTargetId),
+]);
+
+// Integration risk assessment
+export const maIntegrationRisks = pgTable("ma_integration_risks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  maTargetId: varchar("ma_target_id").notNull().references(() => maTargets.id, { onDelete: "cascade" }),
+  
+  riskCategory: text("risk_category").notNull(), // 'supply_chain', 'workforce', 'technology', 'culture', 'financial'
+  riskTitle: text("risk_title").notNull(),
+  riskDescription: text("risk_description"),
+  
+  severity: text("severity").notNull(), // 'low', 'medium', 'high', 'critical'
+  probability: real("probability"), // 0-100
+  impact: real("impact"), // $ if risk materializes
+  
+  // FDR regime context
+  regimeSensitivity: text("regime_sensitivity"), // Which regimes amplify this risk
+  fdrImpact: text("fdr_impact"), // How FDR changes affect this risk
+  
+  // Mitigation
+  mitigationStrategy: text("mitigation_strategy"),
+  mitigationCost: real("mitigation_cost"), // $
+  residualRisk: real("residual_risk"), // Risk after mitigation (0-100)
+  
+  ownerRole: text("owner_role"), // Who manages this risk
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdBy: varchar("created_by").references(() => users.id),
+}, (table) => [
+  index("ma_integration_risks_target_idx").on(table.maTargetId),
+  index("ma_integration_risks_severity_idx").on(table.severity),
+]);
+
+// M&A recommendations based on FDR regimes
+export const maRecommendations = pgTable("ma_recommendations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  maTargetId: varchar("ma_target_id").references(() => maTargets.id),
+  
+  recommendationType: text("recommendation_type").notNull(), // 'buy_now', 'wait', 'sell_now', 'explore'
+  
+  title: text("title").notNull(),
+  summary: text("summary").notNull(),
+  detailedRationale: text("detailed_rationale"),
+  
+  // FDR-based timing
+  currentFDR: real("current_fdr").notNull(),
+  currentRegime: text("current_regime").notNull(),
+  optimalFDRRange: text("optimal_fdr_range"), // e.g., "1.0-1.3"
+  
+  // Valuation insights
+  currentValuation: real("current_valuation"),
+  fdrNormalizedValuation: real("fdr_normalized_valuation"),
+  potentialDiscount: real("potential_discount"), // % vs intrinsic value
+  
+  // Action items
+  actionItems: jsonb("action_items"), // Array of next steps
+  timeline: text("timeline"), // "Execute within 30 days", "Wait 6 months"
+  
+  confidence: real("confidence"), // 0-100
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("ma_recommendations_company_idx").on(table.companyId),
+  index("ma_recommendations_type_idx").on(table.recommendationType),
+]);
+
+// ============================================================================
+// SCENARIO PLANNING & WHAT-IF SIMULATOR (OPTIONAL FEATURE)
+// ============================================================================
+
+export const scenarios = pgTable("scenarios", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  
+  name: text("name").notNull(),
+  description: text("description"),
+  scenarioType: text("scenario_type").notNull(), // 'regime_transition', 'commodity_shock', 'multi_variable', 'custom'
+  
+  // Base state (current reality)
+  baselineFDR: real("baseline_fdr"),
+  baselineRegime: text("baseline_regime"),
+  baselineDate: timestamp("baseline_date"),
+  
+  // Scenario assumptions
+  targetFDR: real("target_fdr"),
+  targetRegime: text("target_regime"),
+  transitionDuration: integer("transition_duration"), // Days to transition
+  
+  status: text("status").notNull().default('draft'), // 'draft', 'running', 'completed'
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdBy: varchar("created_by").references(() => users.id),
+}, (table) => [
+  index("scenarios_company_idx").on(table.companyId),
+  index("scenarios_status_idx").on(table.status),
+]);
+
+// Variables to test in scenario
+export const scenarioVariables = pgTable("scenario_variables", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  scenarioId: varchar("scenario_id").notNull().references(() => scenarios.id, { onDelete: "cascade" }),
+  
+  variableType: text("variable_type").notNull(), // 'fdr', 'commodity_price', 'demand', 'capacity', 'wage_rate'
+  variableName: text("variable_name").notNull(),
+  
+  // Baseline value
+  baselineValue: real("baseline_value"),
+  baselineUnit: text("baseline_unit"),
+  
+  // Scenario value
+  scenarioValue: real("scenario_value"),
+  changePercentage: real("change_percentage"), // % change from baseline
+  
+  // Linking
+  materialId: varchar("material_id").references(() => materials.id),
+  skuId: varchar("sku_id").references(() => skus.id),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("scenario_variables_scenario_idx").on(table.scenarioId),
+]);
+
+// Scenario outputs and projections
+export const scenarioOutputs = pgTable("scenario_outputs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  scenarioId: varchar("scenario_id").notNull().references(() => scenarios.id, { onDelete: "cascade" }),
+  
+  outputCategory: text("output_category").notNull(), // 'financial', 'operational', 'workforce', 'risk'
+  outputName: text("output_name").notNull(),
+  
+  // Baseline vs. scenario comparison
+  baselineValue: real("baseline_value"),
+  scenarioValue: real("scenario_value"),
+  delta: real("delta"),
+  deltaPercentage: real("delta_percentage"),
+  
+  unit: text("unit"),
+  
+  // Impact classification
+  impactType: text("impact_type"), // 'cost_increase', 'cost_decrease', 'revenue_impact', 'risk_change'
+  impactValue: real("impact_value"), // $ value of impact
+  
+  // Time-based projection
+  forecastHorizonDays: integer("forecast_horizon_days"),
+  confidenceLevel: real("confidence_level"), // 0-100
+  
+  calculatedAt: timestamp("calculated_at").defaultNow().notNull(),
+}, (table) => [
+  index("scenario_outputs_scenario_idx").on(table.scenarioId),
+  index("scenario_outputs_category_idx").on(table.outputCategory),
+]);
+
+// ============================================================================
+// GEOPOLITICAL RISK INTELLIGENCE (OPTIONAL FEATURE)
+// ============================================================================
+
+// Geopolitical events that may impact supply chains
+export const geopoliticalEvents = pgTable("geopolitical_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  eventType: text("event_type").notNull(), // 'tariff', 'sanction', 'trade_agreement', 'conflict', 'regulation'
+  title: text("title").notNull(),
+  description: text("description"),
+  
+  // Geographic scope
+  affectedRegions: jsonb("affected_regions"), // Array of regions
+  affectedCountries: jsonb("affected_countries"), // Array of country codes
+  
+  // Timing
+  eventDate: timestamp("event_date"),
+  effectiveDate: timestamp("effective_date"),
+  expirationDate: timestamp("expiration_date"),
+  
+  // Impact assessment
+  severity: text("severity"), // 'low', 'medium', 'high', 'critical'
+  commoditiesAffected: jsonb("commodities_affected"), // Array of material types
+  industriesAffected: jsonb("industries_affected"),
+  
+  // Source and confidence
+  source: text("source"), // 'government', 'news', 'analysis', 'internal'
+  sourceUrl: text("source_url"),
+  confidence: real("confidence"), // 0-100
+  
+  status: text("status").notNull().default('active'), // 'active', 'resolved', 'monitoring'
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("geopolitical_events_date_idx").on(table.eventDate),
+  index("geopolitical_events_severity_idx").on(table.severity),
+  index("geopolitical_events_status_idx").on(table.status),
+]);
+
+// Company-specific geopolitical impacts
+export const geopoliticalImpacts = pgTable("geopolitical_impacts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  geopoliticalEventId: varchar("geopolitical_event_id").notNull().references(() => geopoliticalEvents.id),
+  
+  // Impact assessment
+  impactType: text("impact_type").notNull(), // 'cost_increase', 'supply_disruption', 'market_access', 'regulatory_burden'
+  impactSeverity: text("impact_severity").notNull(), // 'low', 'medium', 'high', 'critical'
+  
+  // Financial impact
+  estimatedCostImpact: real("estimated_cost_impact"), // $ annual
+  estimatedRevenueImpact: real("estimated_revenue_impact"), // $ annual
+  
+  // Operational impact
+  affectedSuppliers: jsonb("affected_suppliers"), // Supplier IDs
+  affectedMaterials: jsonb("affected_materials"), // Material IDs
+  affectedMarkets: jsonb("affected_markets"), // Geographic markets
+  
+  // FDR context
+  fdrAtAssessment: real("fdr_at_assessment"),
+  regimeAtAssessment: text("regime_at_assessment"),
+  fdrAmplification: real("fdr_amplification"), // How much FDR regime amplifies impact (1.0 = no change, 2.0 = doubles)
+  
+  // Mitigation strategies
+  mitigationPlan: text("mitigation_plan"),
+  mitigationCost: real("mitigation_cost"), // $
+  mitigationTimeline: integer("mitigation_timeline"), // Days
+  residualRisk: real("residual_risk"), // 0-100 after mitigation
+  
+  // Status tracking
+  status: text("status").notNull().default('assessing'), // 'assessing', 'mitigating', 'monitoring', 'resolved'
+  
+  assignedTo: varchar("assigned_to").references(() => users.id),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("geopolitical_impacts_company_idx").on(table.companyId),
+  index("geopolitical_impacts_event_idx").on(table.geopoliticalEventId),
+  index("geopolitical_impacts_severity_idx").on(table.impactSeverity),
+]);
+
+// Regional FDR snapshots for divergence analysis
+export const regionalFdrSnapshots = pgTable("regional_fdr_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  snapshotDate: timestamp("snapshot_date").notNull().defaultNow(),
+  region: text("region").notNull(), // 'north_america', 'europe', 'china', 'india', 'japan', etc.
+  country: text("country"), // More granular than region
+  
+  // Regional economic indicators
+  fdr: real("fdr").notNull(),
+  regime: text("regime").notNull(),
+  gdpGrowth: real("gdp_growth"), // % YoY
+  inflation: real("inflation"), // %
+  unemployment: real("unemployment"), // %
+  
+  // Manufacturing indicators
+  pmIndex: real("pm_index"), // Purchasing Managers Index
+  industrialProduction: real("industrial_production"), // Index or % change
+  
+  // Currency
+  currencyCode: text("currency_code"),
+  exchangeRateUSD: real("exchange_rate_usd"),
+  
+  // Divergence from global
+  fdrDivergence: real("fdr_divergence"), // Difference from global FDR
+  regimeMismatch: integer("regime_mismatch"), // 1 if different regime than global
+  
+  // Source
+  source: text("source").notNull().default('calculated'), // 'calculated', 'external_api'
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("regional_fdr_snapshots_date_idx").on(table.snapshotDate),
+  index("regional_fdr_snapshots_region_idx").on(table.region),
+  index("regional_fdr_snapshots_divergence_idx").on(table.fdrDivergence),
+]);
+
+// ============================================================================
+// INSERT SCHEMAS & TYPES FOR NEW FEATURES
+// ============================================================================
+
+// Feature Toggles
+export const insertFeatureToggleSchema = createInsertSchema(featureToggles).omit({ id: true, createdAt: true, updatedAt: true });
+export type FeatureToggle = typeof featureToggles.$inferSelect;
+export type InsertFeatureToggle = z.infer<typeof insertFeatureToggleSchema>;
+
+// Supply Chain Network Intelligence
+export const insertSupplierNodeSchema = createInsertSchema(supplierNodes).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertSupplierLinkSchema = createInsertSchema(supplierLinks).omit({ id: true, createdAt: true });
+export const insertSupplierHealthMetricsSchema = createInsertSchema(supplierHealthMetrics).omit({ id: true, createdAt: true });
+export const insertSupplierRiskAlertSchema = createInsertSchema(supplierRiskAlerts).omit({ id: true, createdAt: true });
+
+export type SupplierNode = typeof supplierNodes.$inferSelect;
+export type InsertSupplierNode = z.infer<typeof insertSupplierNodeSchema>;
+export type SupplierLink = typeof supplierLinks.$inferSelect;
+export type InsertSupplierLink = z.infer<typeof insertSupplierLinkSchema>;
+export type SupplierHealthMetrics = typeof supplierHealthMetrics.$inferSelect;
+export type InsertSupplierHealthMetrics = z.infer<typeof insertSupplierHealthMetricsSchema>;
+export type SupplierRiskAlert = typeof supplierRiskAlerts.$inferSelect;
+export type InsertSupplierRiskAlert = z.infer<typeof insertSupplierRiskAlertSchema>;
+
+// Automated PO Execution
+export const insertPoRuleSchema = createInsertSchema(poRules).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertPoWorkflowStepSchema = createInsertSchema(poWorkflowSteps).omit({ id: true, createdAt: true });
+export const insertPoApprovalSchema = createInsertSchema(poApprovals).omit({ id: true, createdAt: true });
+export const insertNegotiationPlaybookSchema = createInsertSchema(negotiationPlaybooks).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertErpConnectionSchema = createInsertSchema(erpConnections).omit({ id: true, createdAt: true, updatedAt: true });
+
+export type PoRule = typeof poRules.$inferSelect;
+export type InsertPoRule = z.infer<typeof insertPoRuleSchema>;
+export type PoWorkflowStep = typeof poWorkflowSteps.$inferSelect;
+export type InsertPoWorkflowStep = z.infer<typeof insertPoWorkflowStepSchema>;
+export type PoApproval = typeof poApprovals.$inferSelect;
+export type InsertPoApproval = z.infer<typeof insertPoApprovalSchema>;
+export type NegotiationPlaybook = typeof negotiationPlaybooks.$inferSelect;
+export type InsertNegotiationPlaybook = z.infer<typeof insertNegotiationPlaybookSchema>;
+export type ErpConnection = typeof erpConnections.$inferSelect;
+export type InsertErpConnection = z.infer<typeof insertErpConnectionSchema>;
+
+// Industry Data Consortium
+export const insertConsortiumContributionSchema = createInsertSchema(consortiumContributions).omit({ id: true, createdAt: true });
+export const insertConsortiumMetricsSchema = createInsertSchema(consortiumMetrics).omit({ id: true, calculatedAt: true });
+export const insertConsortiumAlertSchema = createInsertSchema(consortiumAlerts).omit({ id: true, createdAt: true });
+
+export type ConsortiumContribution = typeof consortiumContributions.$inferSelect;
+export type InsertConsortiumContribution = z.infer<typeof insertConsortiumContributionSchema>;
+export type ConsortiumMetrics = typeof consortiumMetrics.$inferSelect;
+export type InsertConsortiumMetrics = z.infer<typeof insertConsortiumMetricsSchema>;
+export type ConsortiumAlert = typeof consortiumAlerts.$inferSelect;
+export type InsertConsortiumAlert = z.infer<typeof insertConsortiumAlertSchema>;
+
+// M&A Intelligence
+export const insertMaTargetSchema = createInsertSchema(maTargets).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertMaScenarioSchema = createInsertSchema(maScenarios).omit({ id: true, createdAt: true });
+export const insertMaIntegrationRiskSchema = createInsertSchema(maIntegrationRisks).omit({ id: true, createdAt: true });
+export const insertMaRecommendationSchema = createInsertSchema(maRecommendations).omit({ id: true, createdAt: true });
+
+export type MaTarget = typeof maTargets.$inferSelect;
+export type InsertMaTarget = z.infer<typeof insertMaTargetSchema>;
+export type MaScenario = typeof maScenarios.$inferSelect;
+export type InsertMaScenario = z.infer<typeof insertMaScenarioSchema>;
+export type MaIntegrationRisk = typeof maIntegrationRisks.$inferSelect;
+export type InsertMaIntegrationRisk = z.infer<typeof insertMaIntegrationRiskSchema>;
+export type MaRecommendation = typeof maRecommendations.$inferSelect;
+export type InsertMaRecommendation = z.infer<typeof insertMaRecommendationSchema>;
+
+// Scenario Planning (OPTIONAL FEATURE)
+export const insertScenarioSchema = createInsertSchema(scenarios).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertScenarioVariableSchema = createInsertSchema(scenarioVariables).omit({ id: true, createdAt: true });
+export const insertScenarioOutputSchema = createInsertSchema(scenarioOutputs).omit({ id: true, calculatedAt: true });
+
+export type Scenario = typeof scenarios.$inferSelect;
+export type InsertScenario = z.infer<typeof insertScenarioSchema>;
+export type ScenarioVariable = typeof scenarioVariables.$inferSelect;
+export type InsertScenarioVariable = z.infer<typeof insertScenarioVariableSchema>;
+export type ScenarioOutput = typeof scenarioOutputs.$inferSelect;
+export type InsertScenarioOutput = z.infer<typeof insertScenarioOutputSchema>;
+
+// Geopolitical Risk Intelligence (OPTIONAL FEATURE)
+export const insertGeopoliticalEventSchema = createInsertSchema(geopoliticalEvents).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertGeopoliticalImpactSchema = createInsertSchema(geopoliticalImpacts).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertRegionalFdrSnapshotSchema = createInsertSchema(regionalFdrSnapshots).omit({ id: true, createdAt: true });
+
+export type GeopoliticalEvent = typeof geopoliticalEvents.$inferSelect;
+export type InsertGeopoliticalEvent = z.infer<typeof insertGeopoliticalEventSchema>;
+export type GeopoliticalImpact = typeof geopoliticalImpacts.$inferSelect;
+export type InsertGeopoliticalImpact = z.infer<typeof insertGeopoliticalImpactSchema>;
+export type RegionalFdrSnapshot = typeof regionalFdrSnapshots.$inferSelect;
+export type InsertRegionalFdrSnapshot = z.infer<typeof insertRegionalFdrSnapshotSchema>;
 
 // Research Validation System schemas
 export const insertHistoricalPredictionSchema = createInsertSchema(historicalPredictions).omit({ id: true, createdAt: true });
