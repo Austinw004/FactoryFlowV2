@@ -53,8 +53,19 @@ export class RealHistoricalDataFetcher {
     this.alphaVantageApiKey = process.env.ALPHA_VANTAGE_API_KEY || '';
 
     if (!this.fredApiKey || !this.alphaVantageApiKey) {
+      console.warn('[RealHistoricalData] Missing API keys - will use fallback data');
       throw new Error('Missing required API keys: FRED_API_KEY and/or ALPHA_VANTAGE_API_KEY');
     }
+    
+    // Validate FRED API key format (must be 32-char alphanumeric lowercase)
+    if (this.fredApiKey.length !== 32 || !/^[a-z0-9]{32}$/.test(this.fredApiKey)) {
+      console.error('[RealHistoricalData] Invalid FRED API key format. Must be 32-character alphanumeric lowercase string.');
+      console.error('[RealHistoricalData] Current key length:', this.fredApiKey.length);
+      console.error('[RealHistoricalData] See: https://fred.stlouisfed.org/docs/api/api_key.html');
+      throw new Error('Invalid FRED API key format');
+    }
+    
+    console.log('[RealHistoricalData] API keys validated successfully');
   }
 
   /**

@@ -4453,7 +4453,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalPredictions: results.totalPredictions,
         mape: results.meanAbsolutePercentageError,
         directionalAccuracy: results.correctDirectionPct,
-        regimeAccuracy: results.regimeAccuracyPct
+        regimeAccuracy: results.correctRegimePct
       });
 
       res.json(results);

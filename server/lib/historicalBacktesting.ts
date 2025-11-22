@@ -428,28 +428,28 @@ export class HistoricalBacktestingEngine {
    * Store backtest results to database
    */
   async storeBacktestResults(companyId: string, results: BacktestResult): Promise<void> {
-    // Store aggregate metrics
+    // Store aggregate metrics with explicit numeric coercion to prevent type issues
     await this.storage.createPredictionAccuracyMetrics({
       companyId,
       metricPeriod: '2015-2023',
       periodStart: new Date('2015-01-01'),
       periodEnd: new Date('2023-12-31'),
-      totalPredictions: results.totalPredictions,
-      correctDirectionPct: results.correctDirectionPct,
-      correctRegimePct: results.correctRegimePct,
-      meanAbsolutePercentageError: results.meanAbsolutePercentageError,
-      rootMeanSquareError: results.meanAbsolutePercentageError * 1.2, // Approximation
-      commodityPriceMAPE: results.commodityPriceMAPE,
-      regimeChangeAccuracy: results.regimeChangeAccuracy,
+      totalPredictions: Number(results.totalPredictions),
+      correctDirectionPct: Number(results.correctDirectionPct),
+      correctRegimePct: Number(results.correctRegimePct),
+      meanAbsolutePercentageError: Number(results.meanAbsolutePercentageError),
+      rootMeanSquareError: Number(results.meanAbsolutePercentageError) * 1.2, // Approximation
+      commodityPriceMAPE: Number(results.commodityPriceMAPE || 0),
+      regimeChangeAccuracy: Number(results.regimeChangeAccuracy || 0),
       assetBubbleDetection: 75.0, // Mock value
       recessionPredictionAccuracy: 80.0, // Mock value
-      healthyExpansionAccuracy: results.accuracyByRegime.healthyExpansion,
-      assetLedGrowthAccuracy: results.accuracyByRegime.assetLedGrowth,
-      imbalancedExcessAccuracy: results.accuracyByRegime.imbalancedExcess,
-      realEconomyLeadAccuracy: results.accuracyByRegime.realEconomyLead,
+      healthyExpansionAccuracy: Number(results.accuracyByRegime.healthyExpansion),
+      assetLedGrowthAccuracy: Number(results.accuracyByRegime.assetLedGrowth),
+      imbalancedExcessAccuracy: Number(results.accuracyByRegime.imbalancedExcess),
+      realEconomyLeadAccuracy: Number(results.accuracyByRegime.realEconomyLead),
       fdrRangeAnalysis: null,
       optimalFDRThresholds: null,
-      sampleSize: results.sampleSize,
+      sampleSize: Number(results.sampleSize || 0),
       confidenceInterval95: null,
       pValue: 0.001, // Statistically significant
       paperTheoryAlignment: 0.85, // 85% alignment with dual-circuit theory

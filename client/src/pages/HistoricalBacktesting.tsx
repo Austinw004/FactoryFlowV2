@@ -25,13 +25,16 @@ export default function HistoricalBacktesting() {
     
     try {
       console.log('[HistoricalBacktesting] Starting backtest...');
-      const results: any = await apiRequest('POST', '/api/backtest/run', {
+      const response = await apiRequest('POST', '/api/backtest/run', {
         startYear: 2015,
         endYear: 2023,
         horizonMonths: 6,
       });
-
+      
+      // Parse JSON from response
+      const results: any = await response.json();
       console.log('[HistoricalBacktesting] Backtest complete:', results);
+      
       setLatestResults(results);
       await refetch();
 
@@ -51,10 +54,28 @@ export default function HistoricalBacktesting() {
     }
   };
 
-  // Safely extract results with proper fallback
+  // Safely extract results with proper fallback and type coercion
   let results = null;
   try {
-    results = latestResults || (storedResults && Array.isArray(storedResults) && storedResults.length > 0 ? storedResults[0] : null);
+    const rawResults = latestResults || (storedResults && Array.isArray(storedResults) && storedResults.length > 0 ? storedResults[0] : null);
+    
+    // Ensure numeric fields are actually numbers (defensive programming against string conversion)
+    if (rawResults && rawResults.totalPredictions) {
+      results = {
+        ...rawResults,
+        totalPredictions: Number(rawResults.totalPredictions),
+        correctDirectionPct: Number(rawResults.correctDirectionPct || 0),
+        correctRegimePct: Number(rawResults.correctRegimePct || 0),
+        meanAbsolutePercentageError: Number(rawResults.meanAbsolutePercentageError || 0),
+      };
+    }
+    
+    console.log('[HistoricalBacktesting] Current results state:', {
+      latestResults,
+      storedResults,
+      finalResults: results,
+      hasTotal: results?.totalPredictions,
+    });
   } catch (e) {
     console.error('[HistoricalBacktesting] Error extracting results:', e);
   }
@@ -78,10 +99,10 @@ export default function HistoricalBacktesting() {
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="bg-primary/5 border border-primary/20 rounded-md p-3 mb-2">
-            <p className="text-sm font-medium text-primary mb-1">✓ Real Data Integration Active</p>
+            <p className="text-sm font-medium text-primary mb-1">✓ Real Data Integration Ready</p>
             <p className="text-xs text-muted-foreground">
-              Using actual historical data from FRED (Federal Reserve) and Alpha Vantage APIs. 
-              Results represent genuine validation of the dual-circuit economic framework.
+              System configured for FRED (Federal Reserve) and Alpha Vantage APIs.
+              Using deterministic fallback data when APIs unavailable.
             </p>
           </div>
           
@@ -130,6 +151,23 @@ export default function HistoricalBacktesting() {
         </CardContent>
       </Card>
 
+      {/* Debug Info (remove in production) */}
+      {process.env.NODE_ENV === 'development' && (
+        <Card className="border-yellow-500">
+          <CardHeader>
+            <CardTitle className="text-sm">Debug Info</CardTitle>
+          </CardHeader>
+          <CardContent className="text-xs font-mono whitespace-pre-wrap max-h-96 overflow-auto">
+            <div>Latest Results: {latestResults ? 'Present' : 'Null'}</div>
+            <div>Stored Results: {storedResults ? (Array.isArray(storedResults) ? `Array(${storedResults.length})` : 'Object') : 'Null'}</div>
+            <div>Final Results: {results ? 'Present' : 'Null'}</div>
+            <div>Has Total: {results?.totalPredictions || 'No'}</div>
+            {results && <div className="mt-2">Results Object Keys: {Object.keys(results).join(', ')}</div>}
+            {results && <div className="mt-2">Results JSON: {JSON.stringify(results, null, 2).substring(0, 500)}</div>}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Query Error Display */}
       {queryError && (
         <Card className="border-destructive">
@@ -140,7 +178,7 @@ export default function HistoricalBacktesting() {
       )}
 
       {/* Results Display */}
-      {results && results.totalPredictions && (
+      {results && results.totalPredictions > 0 && (
         <>
           {/* Summary Cards */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
