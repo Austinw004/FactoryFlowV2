@@ -4412,29 +4412,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       let user = await storage.getUser(userId);
       
+      // Create user if doesn't exist (edge case for test environments)
+      if (!user) {
+        const claims = req.user.claims;
+        user = await storage.upsertUser({
+          id: userId,
+          email: claims.email || `${userId}@example.com`,
+          firstName: claims.first_name || 'Test',
+          lastName: claims.last_name || 'User',
+        });
+      }
+      
       // Auto-create company if user doesn't have one
-      if (!user?.companyId) {
+      if (!user.companyId) {
         const company = await storage.createCompany({
-          name: `${user?.firstName || 'User'}'s Company`,
+          name: `${user.firstName || 'User'}'s Company`,
         });
         
         user = await storage.upsertUser({
-          ...user!,
+          ...user,
           companyId: company.id,
         });
       }
 
       const { startYear, endYear, horizonMonths } = req.body;
       
+      console.log('[Backtest] Starting historical validation with real data integration...');
+      
       const results = await backtestEngine.runBacktest(
-        user.companyId,
+        user.companyId!,
         parseInt(startYear) || 2015,
         parseInt(endYear) || 2023,
         parseInt(horizonMonths) || 6
       );
 
       // Store results
-      await backtestEngine.storeBacktestResults(user.companyId, results);
+      await backtestEngine.storeBacktestResults(user.companyId!, results);
+      
+      console.log('[Backtest] Completed! Results:', {
+        totalPredictions: results.totalPredictions,
+        mape: results.meanAbsolutePercentageError,
+        directionalAccuracy: results.correctDirectionPct,
+        regimeAccuracy: results.regimeAccuracyPct
+      });
 
       res.json(results);
     } catch (error: any) {
@@ -4449,14 +4469,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       let user = await storage.getUser(userId);
       
+      // Create user if doesn't exist
+      if (!user) {
+        const claims = req.user.claims;
+        user = await storage.upsertUser({
+          id: userId,
+          email: claims.email || `${userId}@example.com`,
+          firstName: claims.first_name || 'Test',
+          lastName: claims.last_name || 'User',
+        });
+      }
+      
       // Auto-create company if user doesn't have one
-      if (!user?.companyId) {
+      if (!user.companyId) {
         const company = await storage.createCompany({
-          name: `${user?.firstName || 'User'}'s Company`,
+          name: `${user.firstName || 'User'}'s Company`,
         });
         
         user = await storage.upsertUser({
-          ...user!,
+          ...user,
           companyId: company.id,
         });
       }
