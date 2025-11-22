@@ -74,39 +74,61 @@ export class RealHistoricalDataFetcher {
   private async fetchFREDSeries(
     seriesId: string,
     startDate: string,
-    endDate: string
+    endDate: string,
+    retries: number = 3
   ): Promise<FREDSeriesData[]> {
-    try {
-      console.log(`[RealHistoricalData] Fetching FRED series: ${seriesId} (${startDate} to ${endDate})`);
-      
-      const response = await axios.get<FREDResponse>(this.baseUrlFRED, {
-        params: {
-          series_id: seriesId,
-          api_key: this.fredApiKey,
-          file_type: 'json',
-          observation_start: startDate,
-          observation_end: endDate,
-          sort_order: 'asc',
-        },
-        timeout: 30000,
-      });
+    for (let attempt = 0; attempt < retries; attempt++) {
+      try {
+        console.log(`[RealHistoricalData] Fetching FRED series: ${seriesId} (${startDate} to ${endDate}) - Attempt ${attempt + 1}`);
+        
+        // Add delay to avoid rate limiting (500ms between requests)
+        if (attempt > 0) {
+          const backoffDelay = Math.min(1000 * Math.pow(2, attempt), 5000);
+          console.log(`[RealHistoricalData] Retrying after ${backoffDelay}ms backoff...`);
+          await this.delay(backoffDelay);
+        } else {
+          // Always delay between requests to avoid overwhelming FRED
+          await this.delay(500);
+        }
+        
+        const response = await axios.get<FREDResponse>(this.baseUrlFRED, {
+          params: {
+            series_id: seriesId,
+            api_key: this.fredApiKey,
+            file_type: 'json',
+            observation_start: startDate,
+            observation_end: endDate,
+            sort_order: 'asc',
+          },
+          headers: {
+            'User-Agent': 'Manufacturing-Allocation-Intelligence-SaaS/1.0 (Research; Node.js)',
+            'Accept': 'application/json',
+          },
+          timeout: 30000,
+        });
 
-      if (!response.data.observations || response.data.observations.length === 0) {
-        console.warn(`[RealHistoricalData] No observations returned for ${seriesId}`);
-        return [];
+        if (!response.data.observations || response.data.observations.length === 0) {
+          console.warn(`[RealHistoricalData] No observations returned for ${seriesId}`);
+          return [];
+        }
+
+        console.log(`[RealHistoricalData] ✓ Fetched ${response.data.observations.length} observations for ${seriesId}`);
+        return response.data.observations;
+      } catch (error: any) {
+        const isLastAttempt = attempt === retries - 1;
+        console.error(`[RealHistoricalData] ✗ Error fetching FRED series ${seriesId} (Attempt ${attempt + 1}/${retries}):`, {
+          message: error.message,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+        });
+        
+        if (isLastAttempt) {
+          throw new Error(`Failed to fetch ${seriesId} from FRED API after ${retries} attempts: ${error.message}`);
+        }
       }
-
-      console.log(`[RealHistoricalData] ✓ Fetched ${response.data.observations.length} observations for ${seriesId}`);
-      return response.data.observations;
-    } catch (error: any) {
-      console.error(`[RealHistoricalData] ✗ Error fetching FRED series ${seriesId}:`, {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-      });
-      throw new Error(`Failed to fetch ${seriesId} from FRED API: ${error.message}`);
     }
+    
+    throw new Error(`Failed to fetch ${seriesId} from FRED API`);
   }
 
   /**

@@ -2453,10 +2453,31 @@ export type InsertRegionalFdrSnapshot = z.infer<typeof insertRegionalFdrSnapshot
 
 // Research Validation System schemas
 export const insertHistoricalPredictionSchema = createInsertSchema(historicalPredictions).omit({ id: true, createdAt: true });
+// Model Calibration Results - 10,000+ test iterations
+export const modelCalibrationResults = pgTable("model_calibration_results", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  totalIterations: integer("total_iterations").notNull(),
+  startedAt: timestamp("started_at").notNull(),
+  completedAt: timestamp("completed_at"),
+  status: text("status").notNull().default('running'),
+  bestParams: jsonb("best_params").notNull(),
+  bestPerformance: jsonb("best_performance").notNull(),
+  averagePerformance: jsonb("average_performance").notNull(),
+  parameterSensitivity: jsonb("parameter_sensitivity").notNull(),
+  thesisValidation: jsonb("thesis_validation").notNull(),
+  recommendations: jsonb("recommendations").notNull(),
+  allResults: jsonb("all_results"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("model_calibration_results_company_idx").on(table.companyId),
+]);
+
 export const insertPredictionAccuracyMetricsSchema = createInsertSchema(predictionAccuracyMetrics).omit({ id: true, createdAt: true, calculatedAt: true });
 export const insertModelComparisonSchema = createInsertSchema(modelComparisons).omit({ id: true, createdAt: true });
 export const insertMachineryPredictionSchema = createInsertSchema(machineryPredictions).omit({ id: true, createdAt: true });
 export const insertWorkforcePredictionSchema = createInsertSchema(workforcePredictions).omit({ id: true, createdAt: true });
+export const insertModelCalibrationResultSchema = createInsertSchema(modelCalibrationResults).omit({ id: true, createdAt: true });
 
 export type HistoricalPrediction = typeof historicalPredictions.$inferSelect;
 export type InsertHistoricalPrediction = z.infer<typeof insertHistoricalPredictionSchema>;
@@ -2468,3 +2489,5 @@ export type MachineryPrediction = typeof machineryPredictions.$inferSelect;
 export type InsertMachineryPrediction = z.infer<typeof insertMachineryPredictionSchema>;
 export type WorkforcePrediction = typeof workforcePredictions.$inferSelect;
 export type InsertWorkforcePrediction = z.infer<typeof insertWorkforcePredictionSchema>;
+export type ModelCalibrationResult = typeof modelCalibrationResults.$inferSelect;
+export type InsertModelCalibrationResult = z.infer<typeof insertModelCalibrationResultSchema>;
