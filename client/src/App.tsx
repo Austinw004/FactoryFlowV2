@@ -24,6 +24,7 @@ import SupplyChainTraceability from "@/pages/SupplyChainTraceability";
 import WorkforceScheduling from "@/pages/WorkforceScheduling";
 import InventoryManagement from "@/pages/InventoryManagement";
 import SupplyChainNetwork from "@/pages/SupplyChainNetwork";
+import SupplyChain from "@/pages/SupplyChain";
 import AutomatedPO from "@/pages/AutomatedPO";
 import IndustryConsortium from "@/pages/IndustryConsortium";
 import MAIntelligence from "@/pages/MAIntelligence";
@@ -49,10 +50,11 @@ function Router() {
           <Route path="/production-kpis" component={ProductionKPIs} />
           <Route path="/predictive-maintenance" component={PredictiveMaintenance} />
           <Route path="/inventory-optimization" component={InventoryOptimization} />
+          <Route path="/supply-chain" component={SupplyChain} />
           <Route path="/traceability" component={SupplyChainTraceability} />
+          <Route path="/supply-chain-network" component={SupplyChainNetwork} />
           <Route path="/workforce" component={WorkforceScheduling} />
           <Route path="/inventory" component={InventoryManagement} />
-          <Route path="/supply-chain-network" component={SupplyChainNetwork} />
           <Route path="/automated-po" component={AutomatedPO} />
           <Route path="/industry-consortium" component={IndustryConsortium} />
           <Route path="/ma-intelligence" component={MAIntelligence} />

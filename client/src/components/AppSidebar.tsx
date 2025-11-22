@@ -92,14 +92,10 @@ const menuSections = [
         icon: Package,
       },
       {
-        title: "Supply Chain Tracking",
-        url: "/traceability",
+        title: "Supply Chain Intelligence",
+        url: "/supply-chain",
         icon: Network,
-      },
-      {
-        title: "Supply Chain Network",
-        url: "/supply-chain-network",
-        icon: AlertTriangle,
+        testId: "sidebar-supply-chain",
       },
       {
         title: "Industry Consortium",
@@ -115,6 +111,7 @@ const menuSections = [
         title: "Strategic Analysis",
         url: "/strategic-analysis",
         icon: Target,
+        testId: "sidebar-strategic-analysis",
       },
     ],
   },
@@ -177,12 +174,12 @@ export function AppSidebar() {
             <SidebarGroupLabel>{section.label}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {section.items.map((item) => (
+                {section.items.map((item: any) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton 
                       asChild 
                       isActive={location === item.url}
-                      data-testid={`link-sidebar-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
+                      data-testid={item.testId || `link-sidebar-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
                     >
                       <Link href={item.url}>
                         <item.icon className="h-4 w-4" />
