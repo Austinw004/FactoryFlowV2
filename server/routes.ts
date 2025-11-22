@@ -4410,9 +4410,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/backtest/run", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      let user = await storage.getUser(userId);
+      
+      // Auto-create company if user doesn't have one
       if (!user?.companyId) {
-        return res.status(403).json({ error: "No company associated with user" });
+        const company = await storage.createCompany({
+          name: `${user?.firstName || 'User'}'s Company`,
+        });
+        
+        user = await storage.upsertUser({
+          ...user!,
+          companyId: company.id,
+        });
       }
 
       const { startYear, endYear, horizonMonths } = req.body;
@@ -4438,12 +4447,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/backtest/results", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      let user = await storage.getUser(userId);
+      
+      // Auto-create company if user doesn't have one
       if (!user?.companyId) {
-        return res.status(403).json({ error: "No company associated with user" });
+        const company = await storage.createCompany({
+          name: `${user?.firstName || 'User'}'s Company`,
+        });
+        
+        user = await storage.upsertUser({
+          ...user!,
+          companyId: company.id,
+        });
       }
 
-      const results = await storage.getPredictionAccuracyMetrics(user.companyId);
+      const results = await storage.getPredictionAccuracyMetrics(user.companyId!);
       res.json(results);
     } catch (error: any) {
       console.error('Get backtest results error:', error);
