@@ -17,7 +17,7 @@ import {
   Zap,
   BarChart3,
   Building2,
-  Globe,
+  Target,
 } from "lucide-react";
 import {
   Sidebar,
@@ -112,24 +112,9 @@ const menuSections = [
         icon: Building2,
       },
       {
-        title: "Scenario Planning",
-        url: "/scenario-planning",
-        icon: Activity,
-      },
-      {
-        title: "Geopolitical Risk",
-        url: "/geopolitical-risk",
-        icon: Globe,
-      },
-      {
-        title: "Bulk Testing",
-        url: "/bulk-test",
-        icon: Zap,
-      },
-      {
-        title: "Historical Backtesting",
-        url: "/historical-backtesting",
-        icon: Activity,
+        title: "Strategic Analysis",
+        url: "/strategic-analysis",
+        icon: Target,
       },
     ],
   },
