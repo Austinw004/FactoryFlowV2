@@ -13,31 +13,37 @@ export default function HistoricalBacktesting() {
   const [running, setRunning] = useState(false);
   const [latestResults, setLatestResults] = useState<any>(null);
 
-  // Fetch stored backtest results
-  const { data: storedResults, refetch } = useQuery({
+  // Fetch stored backtest results with error handling
+  const { data: storedResults, refetch, error: queryError } = useQuery({
     queryKey: ['/api/backtest/results'],
+    retry: 1,
   });
 
   const runBacktest = async () => {
     setRunning(true);
+    setLatestResults(null); // Clear previous results
+    
     try {
+      console.log('[HistoricalBacktesting] Starting backtest...');
       const results: any = await apiRequest('POST', '/api/backtest/run', {
         startYear: 2015,
         endYear: 2023,
         horizonMonths: 6,
       });
 
+      console.log('[HistoricalBacktesting] Backtest complete:', results);
       setLatestResults(results);
-      refetch();
+      await refetch();
 
       toast({
         title: "Backtest Complete!",
         description: `Validated ${results.totalPredictions} predictions with ${results.correctDirectionPct}% directional accuracy`,
       });
     } catch (error: any) {
+      console.error('[HistoricalBacktesting] Error:', error);
       toast({
         title: "Backtest Failed",
-        description: error.message,
+        description: error.message || 'Unknown error occurred',
         variant: "destructive",
       });
     } finally {
@@ -45,7 +51,13 @@ export default function HistoricalBacktesting() {
     }
   };
 
-  const results = latestResults || (storedResults && Array.isArray(storedResults) && storedResults.length > 0 ? storedResults[0] : null);
+  // Safely extract results with proper fallback
+  let results = null;
+  try {
+    results = latestResults || (storedResults && Array.isArray(storedResults) && storedResults.length > 0 ? storedResults[0] : null);
+  } catch (e) {
+    console.error('[HistoricalBacktesting] Error extracting results:', e);
+  }
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -118,8 +130,17 @@ export default function HistoricalBacktesting() {
         </CardContent>
       </Card>
 
+      {/* Query Error Display */}
+      {queryError && (
+        <Card className="border-destructive">
+          <CardContent className="pt-6">
+            <p className="text-destructive text-sm">Error loading results: {(queryError as Error).message}</p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Results Display */}
-      {results && (
+      {results && results.totalPredictions && (
         <>
           {/* Summary Cards */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -129,42 +150,42 @@ export default function HistoricalBacktesting() {
                 <Target className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{results.totalPredictions}</div>
+                <div className="text-2xl font-bold" data-testid="metric-total-predictions">{results.totalPredictions || 0}</div>
                 <p className="text-xs text-muted-foreground">
                   Across 2015-2023 period
                 </p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card data-testid="card-directional-accuracy">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Directional Accuracy</CardTitle>
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{results.correctDirectionPct}%</div>
-                <Progress value={results.correctDirectionPct} className="mt-2" />
+                <div className="text-2xl font-bold" data-testid="metric-directional-accuracy">{results.correctDirectionPct || 0}%</div>
+                <Progress value={results.correctDirectionPct || 0} className="mt-2" />
               </CardContent>
             </Card>
 
-            <Card>
+            <Card data-testid="card-regime-accuracy">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Regime Accuracy</CardTitle>
                 <Activity className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{results.correctRegimePct}%</div>
-                <Progress value={results.correctRegimePct} className="mt-2" />
+                <div className="text-2xl font-bold" data-testid="metric-regime-accuracy">{results.correctRegimePct || 0}%</div>
+                <Progress value={results.correctRegimePct || 0} className="mt-2" />
               </CardContent>
             </Card>
 
-            <Card>
+            <Card data-testid="card-price-mape">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Price MAPE</CardTitle>
                 <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{results.commodityPriceMAPE}%</div>
+                <div className="text-2xl font-bold" data-testid="metric-price-mape">{results.commodityPriceMAPE || 0}%</div>
                 <p className="text-xs text-muted-foreground">
                   Mean Absolute % Error
                 </p>
@@ -183,15 +204,15 @@ export default function HistoricalBacktesting() {
               <CardContent className="flex flex-col gap-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Commodity Prices</span>
-                  <Badge variant="secondary">{results.predictionsByType.commodityPrice}</Badge>
+                  <Badge variant="secondary">{results.predictionsByType?.commodityPrice || 0}</Badge>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Economic Regimes</span>
-                  <Badge variant="secondary">{results.predictionsByType.economicRegime}</Badge>
+                  <Badge variant="secondary">{results.predictionsByType?.economicRegime || 0}</Badge>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Recessions</span>
-                  <Badge variant="secondary">{results.predictionsByType.recession}</Badge>
+                  <Badge variant="secondary">{results.predictionsByType?.recession || 0}</Badge>
                 </div>
               </CardContent>
             </Card>
@@ -206,33 +227,33 @@ export default function HistoricalBacktesting() {
                 <div className="flex flex-col gap-1">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Healthy Expansion</span>
-                    <span className="text-sm font-medium">{results.accuracyByRegime.healthyExpansion}%</span>
+                    <span className="text-sm font-medium">{results.accuracyByRegime?.healthyExpansion || 0}%</span>
                   </div>
-                  <Progress value={results.accuracyByRegime.healthyExpansion} className="h-2" />
+                  <Progress value={results.accuracyByRegime?.healthyExpansion || 0} className="h-2" />
                 </div>
 
                 <div className="flex flex-col gap-1">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Asset-Led Growth</span>
-                    <span className="text-sm font-medium">{results.accuracyByRegime.assetLedGrowth}%</span>
+                    <span className="text-sm font-medium">{results.accuracyByRegime?.assetLedGrowth || 0}%</span>
                   </div>
-                  <Progress value={results.accuracyByRegime.assetLedGrowth} className="h-2" />
+                  <Progress value={results.accuracyByRegime?.assetLedGrowth || 0} className="h-2" />
                 </div>
 
                 <div className="flex flex-col gap-1">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Imbalanced Excess</span>
-                    <span className="text-sm font-medium">{results.accuracyByRegime.imbalancedExcess}%</span>
+                    <span className="text-sm font-medium">{results.accuracyByRegime?.imbalancedExcess || 0}%</span>
                   </div>
-                  <Progress value={results.accuracyByRegime.imbalancedExcess} className="h-2" />
+                  <Progress value={results.accuracyByRegime?.imbalancedExcess || 0} className="h-2" />
                 </div>
 
                 <div className="flex flex-col gap-1">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Real Economy Lead</span>
-                    <span className="text-sm font-medium">{results.accuracyByRegime.realEconomyLead}%</span>
+                    <span className="text-sm font-medium">{results.accuracyByRegime?.realEconomyLead || 0}%</span>
                   </div>
-                  <Progress value={results.accuracyByRegime.realEconomyLead} className="h-2" />
+                  <Progress value={results.accuracyByRegime?.realEconomyLead || 0} className="h-2" />
                 </div>
               </CardContent>
             </Card>

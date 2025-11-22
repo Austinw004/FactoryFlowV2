@@ -66,6 +66,8 @@ export class RealHistoricalDataFetcher {
     endDate: string
   ): Promise<FREDSeriesData[]> {
     try {
+      console.log(`[RealHistoricalData] Fetching FRED series: ${seriesId} (${startDate} to ${endDate})`);
+      
       const response = await axios.get<FREDResponse>(this.baseUrlFRED, {
         params: {
           series_id: seriesId,
@@ -75,12 +77,24 @@ export class RealHistoricalDataFetcher {
           observation_end: endDate,
           sort_order: 'asc',
         },
+        timeout: 30000,
       });
 
-      return response.data.observations || [];
+      if (!response.data.observations || response.data.observations.length === 0) {
+        console.warn(`[RealHistoricalData] No observations returned for ${seriesId}`);
+        return [];
+      }
+
+      console.log(`[RealHistoricalData] ✓ Fetched ${response.data.observations.length} observations for ${seriesId}`);
+      return response.data.observations;
     } catch (error: any) {
-      console.error(`Error fetching FRED series ${seriesId}:`, error.message);
-      throw new Error(`Failed to fetch ${seriesId} from FRED API`);
+      console.error(`[RealHistoricalData] ✗ Error fetching FRED series ${seriesId}:`, {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+      });
+      throw new Error(`Failed to fetch ${seriesId} from FRED API: ${error.message}`);
     }
   }
 
@@ -92,6 +106,8 @@ export class RealHistoricalDataFetcher {
     outputSize: 'compact' | 'full' = 'full'
   ): Promise<AlphaVantageTimeSeriesData> {
     try {
+      console.log(`[RealHistoricalData] Fetching Alpha Vantage data for: ${symbol}`);
+      
       // Rate limit: 25 requests/day for free tier
       await this.delay(1000); // 1 second delay between calls
 
@@ -102,17 +118,25 @@ export class RealHistoricalDataFetcher {
           apikey: this.alphaVantageApiKey,
           outputsize: outputSize,
         },
+        timeout: 30000,
       });
 
       const timeSeries = response.data['Time Series (Daily)'];
       if (!timeSeries) {
+        console.error(`[RealHistoricalData] ✗ No time series in response for ${symbol}:`, response.data);
         throw new Error(`No time series data for ${symbol}`);
       }
 
+      const dateCount = Object.keys(timeSeries).length;
+      console.log(`[RealHistoricalData] ✓ Fetched ${dateCount} daily data points for ${symbol}`);
       return timeSeries;
     } catch (error: any) {
-      console.error(`Error fetching Alpha Vantage data for ${symbol}:`, error.message);
-      throw new Error(`Failed to fetch ${symbol} from Alpha Vantage API`);
+      console.error(`[RealHistoricalData] ✗ Error fetching Alpha Vantage data for ${symbol}:`, {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+      });
+      throw new Error(`Failed to fetch ${symbol} from Alpha Vantage API: ${error.message}`);
     }
   }
 
