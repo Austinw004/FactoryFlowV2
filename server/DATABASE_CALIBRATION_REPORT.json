@@ -1,0 +1,202 @@
+{
+  "baseline": {
+    "totalPredictions": 185125,
+    "dateRange": {
+      "earliest": "2000-01-01T00:00:00.000Z",
+      "latest": "2024-11-20T03:34:59.411Z"
+    },
+    "overallMetrics": {
+      "mape": 4.011383483623541,
+      "directionalAccuracy": 98.9455773126266,
+      "regimeAccuracy": 89.37876
+    },
+    "byYear": [
+      {
+        "year": 2024,
+        "predictions": 4242,
+        "mape": 2.34569737168771
+      },
+      {
+        "year": 2023,
+        "predictions": 7033,
+        "mape": 5.065330141945459
+      },
+      {
+        "year": 2022,
+        "predictions": 7176,
+        "mape": 7.578277600901368
+      },
+      {
+        "year": 2021,
+        "predictions": 7223,
+        "mape": 6.20722919236095
+      },
+      {
+        "year": 2020,
+        "predictions": 7593,
+        "mape": 8.28888833824709
+      },
+      {
+        "year": 2019,
+        "predictions": 6915,
+        "mape": 2.311032006028159
+      },
+      {
+        "year": 2018,
+        "predictions": 6922,
+        "mape": 1.9982540756232587
+      },
+      {
+        "year": 2017,
+        "predictions": 7335,
+        "mape": 1.9960209345425992
+      },
+      {
+        "year": 2016,
+        "predictions": 7039,
+        "mape": 2.001232093078099
+      },
+      {
+        "year": 2015,
+        "predictions": 7107,
+        "mape": 1.9999999552965164
+      },
+      {
+        "year": 2014,
+        "predictions": 7186,
+        "mape": 1.9964261726056858
+      },
+      {
+        "year": 2013,
+        "predictions": 7579,
+        "mape": 1.999070173416246
+      },
+      {
+        "year": 2012,
+        "predictions": 7282,
+        "mape": 1.9471428314210313
+      },
+      {
+        "year": 2011,
+        "predictions": 7356,
+        "mape": 1.6867564086108464
+      },
+      {
+        "year": 2010,
+        "predictions": 7758,
+        "mape": 3.4157876331792942
+      },
+      {
+        "year": 2009,
+        "predictions": 7479,
+        "mape": 7.882127255278047
+      },
+      {
+        "year": 2008,
+        "predictions": 7536,
+        "mape": 8.160110550554599
+      },
+      {
+        "year": 2007,
+        "predictions": 7600,
+        "mape": 8.1307255868849
+      },
+      {
+        "year": 2006,
+        "predictions": 8046,
+        "mape": 3.927510108390377
+      },
+      {
+        "year": 2005,
+        "predictions": 7717,
+        "mape": 1.9999999552965164
+      },
+      {
+        "year": 2004,
+        "predictions": 7826,
+        "mape": 2.000333902628608
+      },
+      {
+        "year": 2003,
+        "predictions": 8358,
+        "mape": 2.0897081450757793
+      },
+      {
+        "year": 2002,
+        "predictions": 8092,
+        "mape": 3.0272302552570456
+      },
+      {
+        "year": 2001,
+        "predictions": 8144,
+        "mape": 5.598023947670857
+      },
+      {
+        "year": 2000,
+        "predictions": 8583,
+        "mape": 5.483402335880133
+      }
+    ],
+    "byRegime": [
+      {
+        "regime": "ASSET_LED_GROWTH",
+        "predictions": 79202,
+        "mape": 3.0951994215001095,
+        "correctPredictions": 76332
+      },
+      {
+        "regime": "HEALTHY_EXPANSION",
+        "predictions": 3896,
+        "mape": 7.850493871663301,
+        "correctPredictions": 3289
+      },
+      {
+        "regime": "IMBALANCED_EXCESS",
+        "predictions": 102030,
+        "mape": 4.575927263550152,
+        "correctPredictions": 95970
+      }
+    ],
+    "calibrationRecommendations": [
+      "Strong directional accuracy (>70%) - trend analysis working well",
+      "✅ Excellent regime accuracy (>80%) - FDR thresholds well-calibrated"
+    ]
+  },
+  "calibration": {
+    "iterations": 1000,
+    "duration": 141.2,
+    "bestParams": {
+      "fdrHealthyExpansionMin": 0.9580406209710075,
+      "fdrHealthyExpansionMax": 1.197140988047479,
+      "fdrAssetLedGrowthMin": 1.2502871149378767,
+      "fdrAssetLedGrowthMax": 1.352730828434759,
+      "fdrImbalancedExcessMin": 1.3440587695448933,
+      "fdrRealEconomyLeadMax": 1.013486839333831,
+      "exponentialSmoothingAlpha": 0.1010215581660733,
+      "volatilityWindow": 23,
+      "predictionHorizon": 10,
+      "fdrTrendWeight": 0.3094107211663581,
+      "volatilityWeight": 0.3094180618543728,
+      "momentumWeight": 0.2337580004574833
+    },
+    "bestPerformance": {
+      "mape": 4.429528252492492,
+      "directionalAccuracy": 87.8,
+      "regimeAccuracy": 68
+    },
+    "improvement": {
+      "baselineMAPE": 4.0113400245538475,
+      "bestMAPE": 4.429528252492492,
+      "improvementPct": -10.425150333276887
+    }
+  },
+  "statistics": {
+    "avgMAPE": 10.330962389387873,
+    "medianMAPE": 9.658854297430059,
+    "minMAPE": 4.429528252492492,
+    "maxMAPE": 23.356826041489597,
+    "avgDirectional": 99.28829999999994,
+    "avgRegime": 77.11090000000004
+  },
+  "timestamp": "2025-11-22T03:57:50.190Z"
+}
