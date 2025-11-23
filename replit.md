@@ -21,6 +21,7 @@ The frontend is built with React and TypeScript, using `shadcn/ui` on Radix UI, 
 The system is a multi-tenant application ensuring data isolation per company. Core features include:
 - **Dual-circuit FDR model**: Determines economic regimes and policy signals.
 - **Demand Forecasting**: Regime-aware forecasting using exponential smoothing and moving averages.
+- **Multi-Horizon Forecasting**: Tracks demand forecasts across multiple time horizons (1 day, 1 week, 2 weeks, 1 month, 2 months, 3 months, 6 months, 1 year) with confidence intervals, accuracy tracking, and cross-horizon comparison analytics.
 - **Allocation Engine**: Constraint-based optimization for material allocation based on BOMs, availability, priorities, and budget duration.
 - **Real-time Commodity Pricing**: Integration with Metals.Dev for over 110 commodities.
 - **Depreciation Calculator**: Supports multiple methods for machinery.
