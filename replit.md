@@ -45,6 +45,19 @@ Webhooks respect company-configured webhook URL and event filtering (configured 
 
 Export service handles CSV field escaping, JSON formatting, and Excel compatibility (via CSV). Future enhancements could include Excel binary format (XLSX) support.
 
+### Data Import System (November 23, 2025)
+**CSV/Excel Data Import**: Implemented comprehensive data import functionality allowing users to import company data from CSV files:
+- **Supported Entities**: SKUs, materials, suppliers
+- **CSV Template Generation**: GET `/api/data/import/template/:entity` downloads pre-configured CSV templates
+- **File Upload & Processing**: POST `/api/data/import` accepts CSV files with multipart/form-data
+- **Validation**: Validates all imported data against Zod schemas before insertion
+- **Duplicate Detection**: Checks for existing records by code (SKUs) or name (materials/suppliers)
+- **Error Reporting**: Returns detailed import results with total/successful/failed counts and per-row error details
+- **CSV Format**: Requires header row (first row must contain column names)
+- **Options**: Supports updateExisting (future enhancement) - currently rejects with 400 error
+
+Import service uses csv-parse for robust CSV parsing with header support and multer for file uploads. Future enhancements could include Excel binary format (XLSX) support and update functionality for existing records.
+
 ## System Architecture
 
 ### Frontend

@@ -21,6 +21,8 @@ import { ScenarioPlanningEngine, type ScenarioInput } from "./lib/scenarioPlanni
 import { GeopoliticalRiskEngine, type GeopoliticalEvent } from "./lib/geopoliticalRisk";
 import { WebhookService } from "./lib/webhookService";
 import { DataExportService } from "./lib/dataExport";
+import { DataImportService } from "./lib/dataImport";
+import multer from "multer";
 import { z } from "zod";
 import {
   insertCompanySchema,
@@ -5078,6 +5080,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.send(result.data);
     } catch (error: any) {
       console.error("Error exporting data:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Data import endpoints
+  const upload = multer({ storage: multer.memoryStorage() });
+
+  app.get("/api/data/import/template/:entity", isAuthenticated, async (req: any, res) => {
+    try {
+      const { entity } = req.params;
+      
+      if (!['skus', 'materials', 'suppliers'].includes(entity)) {
+        return res.status(400).json({ error: "Invalid entity type. Must be 'skus', 'materials', or 'suppliers'" });
+      }
+
+      const dataImportService = new DataImportService(storage);
+      const template = await dataImportService.generateTemplate(entity as any);
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="${entity}_import_template.csv"`);
+      res.send(template);
+    } catch (error: any) {
+      console.error("Error generating import template:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  const importSchema = z.object({
+    entity: z.enum(['skus', 'materials', 'suppliers']),
+    updateExisting: z.coerce.boolean().optional(),
+  });
+
+  app.post("/api/data/import", isAuthenticated, upload.single('file'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !user.companyId) {
+        return res.status(403).json({ error: "User must be associated with a company" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      const validationResult = importSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ error: "Invalid request parameters", details: validationResult.error.errors });
+      }
+
+      const { entity, updateExisting } = validationResult.data;
+      
+      // Reject updateExisting until functionality is implemented
+      if (updateExisting) {
+        return res.status(400).json({ error: "Update existing records is not yet implemented" });
+      }
+
+      const csvContent = req.file.buffer.toString('utf-8');
+
+      const dataImportService = new DataImportService(storage);
+      const result = await dataImportService.importFromCSV(
+        user.companyId,
+        csvContent,
+        { entity, updateExisting }
+      );
+
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error importing data:", error);
       res.status(500).json({ error: error.message });
     }
   });
