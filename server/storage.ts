@@ -496,22 +496,59 @@ export class DbStorage implements IStorage {
   async updateCompany(id: string, updates: Partial<InsertCompany>): Promise<Company | undefined> {
     const updateData: any = {};
     
+    // Company Profile
     if (updates.name !== undefined) updateData.name = updates.name;
     if (updates.industry !== undefined) updateData.industry = updates.industry;
     if (updates.location !== undefined) updateData.location = updates.location;
     if (updates.companySize !== undefined) updateData.companySize = updates.companySize;
+    if (updates.timezone !== undefined) updateData.timezone = updates.timezone;
+    // Budget Configuration
     if (updates.annualBudget !== undefined) updateData.annualBudget = updates.annualBudget;
     if (updates.currentBudgetSpent !== undefined) updateData.currentBudgetSpent = updates.currentBudgetSpent;
     if (updates.budgetPeriod !== undefined) updateData.budgetPeriod = updates.budgetPeriod;
+    if (updates.budgetStartDate !== undefined) updateData.budgetStartDate = updates.budgetStartDate;
+    if (updates.budgetEndDate !== undefined) updateData.budgetEndDate = updates.budgetEndDate;
     if (updates.budgetResetDate !== undefined) updateData.budgetResetDate = updates.budgetResetDate;
+    // Economic Policy Preferences
     if (updates.fdrThresholdLow !== undefined) updateData.fdrThresholdLow = updates.fdrThresholdLow;
     if (updates.fdrThresholdMid !== undefined) updateData.fdrThresholdMid = updates.fdrThresholdMid;
     if (updates.fdrThresholdHigh !== undefined) updateData.fdrThresholdHigh = updates.fdrThresholdHigh;
     if (updates.defaultProcurementPolicy !== undefined) updateData.defaultProcurementPolicy = updates.defaultProcurementPolicy;
+    // Alert & Notification Preferences
     if (updates.alertEmail !== undefined) updateData.alertEmail = updates.alertEmail;
     if (updates.enableRegimeAlerts !== undefined) updateData.enableRegimeAlerts = updates.enableRegimeAlerts;
     if (updates.enableBudgetAlerts !== undefined) updateData.enableBudgetAlerts = updates.enableBudgetAlerts;
     if (updates.budgetAlertThreshold !== undefined) updateData.budgetAlertThreshold = updates.budgetAlertThreshold;
+    if (updates.enableAllocationAlerts !== undefined) updateData.enableAllocationAlerts = updates.enableAllocationAlerts;
+    if (updates.enablePriceAlerts !== undefined) updateData.enablePriceAlerts = updates.enablePriceAlerts;
+    // Email Processing & Forwarding
+    if (updates.emailForwardingEnabled !== undefined) updateData.emailForwardingEnabled = updates.emailForwardingEnabled;
+    if (updates.emailForwardingAddress !== undefined) updateData.emailForwardingAddress = updates.emailForwardingAddress;
+    if (updates.emailProcessingConsent !== undefined) updateData.emailProcessingConsent = updates.emailProcessingConsent;
+    if (updates.emailRetentionDays !== undefined) updateData.emailRetentionDays = updates.emailRetentionDays;
+    if (updates.emailAutoTagging !== undefined) updateData.emailAutoTagging = updates.emailAutoTagging;
+    // AI & Chatbot Settings
+    if (updates.aiChatbotEnabled !== undefined) updateData.aiChatbotEnabled = updates.aiChatbotEnabled;
+    if (updates.aiDataAccessConsent !== undefined) updateData.aiDataAccessConsent = updates.aiDataAccessConsent;
+    if (updates.aiCanAccessFinancials !== undefined) updateData.aiCanAccessFinancials = updates.aiCanAccessFinancials;
+    if (updates.aiCanAccessSupplierData !== undefined) updateData.aiCanAccessSupplierData = updates.aiCanAccessSupplierData;
+    if (updates.aiCanAccessAllocations !== undefined) updateData.aiCanAccessAllocations = updates.aiCanAccessAllocations;
+    if (updates.aiCanAccessEmails !== undefined) updateData.aiCanAccessEmails = updates.aiCanAccessEmails;
+    // Integration & API Settings
+    if (updates.apiAccessEnabled !== undefined) updateData.apiAccessEnabled = updates.apiAccessEnabled;
+    if (updates.apiKey !== undefined) updateData.apiKey = updates.apiKey;
+    if (updates.webhookUrl !== undefined) updateData.webhookUrl = updates.webhookUrl;
+    if (updates.webhookEvents !== undefined) updateData.webhookEvents = updates.webhookEvents;
+    // Data & Privacy Settings
+    if (updates.dataRetentionPolicy !== undefined) updateData.dataRetentionPolicy = updates.dataRetentionPolicy;
+    if (updates.anonymizeOldData !== undefined) updateData.anonymizeOldData = updates.anonymizeOldData;
+    if (updates.exportDataFormat !== undefined) updateData.exportDataFormat = updates.exportDataFormat;
+    // Company Branding
+    if (updates.logoUrl !== undefined) updateData.logoUrl = updates.logoUrl;
+    if (updates.primaryColor !== undefined) updateData.primaryColor = updates.primaryColor;
+    // Onboarding & Feature Flags
+    if (updates.onboardingCompleted !== undefined) updateData.onboardingCompleted = updates.onboardingCompleted;
+    if (updates.showOnboardingHints !== undefined) updateData.showOnboardingHints = updates.showOnboardingHints;
 
     const [updated] = await db.update(companies)
       .set(updateData)

@@ -34,21 +34,54 @@ export const companies = pgTable("companies", {
   industry: text("industry"),
   location: text("location"),
   companySize: text("company_size"), // "small", "medium", "large", "enterprise"
+  timezone: text("timezone").default("America/New_York"),
   // Budget Configuration
   annualBudget: real("annual_budget"),
   currentBudgetSpent: real("current_budget_spent").default(0),
-  budgetPeriod: text("budget_period"), // "monthly", "quarterly", "annual"
+  budgetPeriod: text("budget_period"), // "monthly", "quarterly", "annual", "custom"
+  budgetStartDate: timestamp("budget_start_date"),
+  budgetEndDate: timestamp("budget_end_date"),
   budgetResetDate: timestamp("budget_reset_date"),
   // Economic Policy Preferences
   fdrThresholdLow: real("fdr_threshold_low").default(0.5),
   fdrThresholdMid: real("fdr_threshold_mid").default(1.0),
   fdrThresholdHigh: real("fdr_threshold_high").default(1.5),
   defaultProcurementPolicy: text("default_procurement_policy"), // "conservative", "balanced", "aggressive"
-  // Alert Preferences
+  // Alert & Notification Preferences
   alertEmail: text("alert_email"),
   enableRegimeAlerts: integer("enable_regime_alerts").default(1), // 1 = enabled, 0 = disabled
   enableBudgetAlerts: integer("enable_budget_alerts").default(1),
   budgetAlertThreshold: real("budget_alert_threshold").default(0.8), // Alert when 80% budget spent
+  enableAllocationAlerts: integer("enable_allocation_alerts").default(1),
+  enablePriceAlerts: integer("enable_price_alerts").default(1),
+  // Email Processing & Forwarding Settings
+  emailForwardingEnabled: integer("email_forwarding_enabled").default(0), // 1 = enabled
+  emailForwardingAddress: text("email_forwarding_address"), // Unique email address for this company to forward emails to
+  emailProcessingConsent: integer("email_processing_consent").default(0), // User consent to process emails
+  emailRetentionDays: integer("email_retention_days").default(90), // How long to keep emails
+  emailAutoTagging: integer("email_auto_tagging").default(1), // Auto-tag emails with NLP
+  // AI & Chatbot Settings (Future-proofing)
+  aiChatbotEnabled: integer("ai_chatbot_enabled").default(1),
+  aiDataAccessConsent: integer("ai_data_access_consent").default(0), // Consent for AI to access company data
+  aiCanAccessFinancials: integer("ai_can_access_financials").default(0),
+  aiCanAccessSupplierData: integer("ai_can_access_supplier_data").default(0),
+  aiCanAccessAllocations: integer("ai_can_access_allocations").default(1),
+  aiCanAccessEmails: integer("ai_can_access_emails").default(0),
+  // Integration & API Settings
+  apiAccessEnabled: integer("api_access_enabled").default(0),
+  apiKey: text("api_key"), // Company's API key for programmatic access
+  webhookUrl: text("webhook_url"), // Webhook URL for real-time notifications
+  webhookEvents: text("webhook_events"), // JSON array of events to send to webhook
+  // Data & Privacy Settings
+  dataRetentionPolicy: text("data_retention_policy").default("standard"), // "minimal", "standard", "extended", "permanent"
+  anonymizeOldData: integer("anonymize_old_data").default(0), // Auto-anonymize data older than retention period
+  exportDataFormat: text("export_data_format").default("json"), // "json", "csv", "excel"
+  // Company Branding
+  logoUrl: text("logo_url"),
+  primaryColor: text("primary_color").default("#3b82f6"), // Hex color for branding
+  // Onboarding & Feature Flags
+  onboardingCompleted: integer("onboarding_completed").default(0),
+  showOnboardingHints: integer("show_onboarding_hints").default(1),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

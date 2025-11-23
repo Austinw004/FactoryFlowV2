@@ -14,6 +14,8 @@ export function EditableBudgetGauge() {
   const [isEditing, setIsEditing] = useState(false);
   const [localBudget, setLocalBudget] = useState("");
   const [localSpent, setLocalSpent] = useState("");
+  const [localStartDate, setLocalStartDate] = useState("");
+  const [localEndDate, setLocalEndDate] = useState("");
   const { toast } = useToast();
 
   const { data: company, isLoading } = useQuery<Company>({
@@ -21,7 +23,12 @@ export function EditableBudgetGauge() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (updates: { annualBudget?: number; currentBudgetSpent?: number }) =>
+    mutationFn: (updates: { 
+      annualBudget?: number; 
+      currentBudgetSpent?: number;
+      budgetStartDate?: Date | null;
+      budgetEndDate?: Date | null;
+    }) =>
       apiRequest("PATCH", "/api/company/settings", updates),
     onSuccess: () => {
       toast({
@@ -43,6 +50,8 @@ export function EditableBudgetGauge() {
   const handleEdit = () => {
     setLocalBudget(company?.annualBudget?.toString() || "");
     setLocalSpent(company?.currentBudgetSpent?.toString() || "");
+    setLocalStartDate(company?.budgetStartDate ? new Date(company.budgetStartDate).toISOString().split('T')[0] : "");
+    setLocalEndDate(company?.budgetEndDate ? new Date(company.budgetEndDate).toISOString().split('T')[0] : "");
     setIsEditing(true);
   };
 
@@ -53,6 +62,8 @@ export function EditableBudgetGauge() {
     updateMutation.mutate({
       annualBudget: budget,
       currentBudgetSpent: spent,
+      budgetStartDate: localStartDate ? new Date(localStartDate) : null,
+      budgetEndDate: localEndDate ? new Date(localEndDate) : null,
     });
   };
 
@@ -60,6 +71,8 @@ export function EditableBudgetGauge() {
     setIsEditing(false);
     setLocalBudget("");
     setLocalSpent("");
+    setLocalStartDate("");
+    setLocalEndDate("");
   };
 
   if (isLoading) {
@@ -124,6 +137,28 @@ export function EditableBudgetGauge() {
                 data-testid="input-spent-budget"
               />
             </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2">
+                <Label htmlFor="start-date">Start Date</Label>
+                <Input
+                  id="start-date"
+                  type="date"
+                  value={localStartDate}
+                  onChange={(e) => setLocalStartDate(e.target.value)}
+                  data-testid="input-budget-start-date"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="end-date">End Date</Label>
+                <Input
+                  id="end-date"
+                  type="date"
+                  value={localEndDate}
+                  onChange={(e) => setLocalEndDate(e.target.value)}
+                  data-testid="input-budget-end-date"
+                />
+              </div>
+            </div>
             <div className="flex gap-2">
               <Button
                 onClick={handleSave}
@@ -166,6 +201,16 @@ export function EditableBudgetGauge() {
                   ${total.toLocaleString()}
                 </span>
               </div>
+              {(company?.budgetStartDate || company?.budgetEndDate) && (
+                <div className="flex justify-between mt-2 pt-2 border-t">
+                  <span className="text-sm text-muted-foreground">Budget Period</span>
+                  <span className="text-sm font-medium" data-testid="text-budget-period">
+                    {company?.budgetStartDate && new Date(company.budgetStartDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    {company?.budgetStartDate && company?.budgetEndDate && ' - '}
+                    {company?.budgetEndDate && new Date(company.budgetEndDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         ) : (
