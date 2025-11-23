@@ -5,7 +5,13 @@ import { AllocationTable } from "@/components/AllocationTable";
 import { ForecastChart } from "@/components/ForecastChart";
 import { EditableBudgetGauge } from "@/components/EditableBudgetGauge";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
-import { TrendingUp, DollarSign, Package, AlertCircle, Plus, Upload, GitCompare, Loader2, Globe, Radio } from "lucide-react";
+import { CreateSKUDialog } from "@/components/CreateSKUDialog";
+import { CreateMaterialDialog } from "@/components/CreateMaterialDialog";
+import { CreateSupplierDialog } from "@/components/CreateSupplierDialog";
+import { FDRTrendChart } from "@/components/FDRTrendChart";
+import { MaterialsAtRiskWidget } from "@/components/MaterialsAtRiskWidget";
+import { RegimeActionCards } from "@/components/RegimeActionCards";
+import { TrendingUp, DollarSign, Package, AlertCircle, Plus, Upload, GitCompare, Loader2, Globe, Radio, Package2, Building2, Box } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +24,7 @@ import { useWebSocket } from "@/hooks/useWebSocket";
 import { useLocation } from "wouter";
 import { useOnboardingSteps } from "@/hooks/useOnboardingSteps";
 import React from "react";
+import { useState } from "react";
 
 export default function Dashboard() {
   const { toast } = useToast();
@@ -26,6 +33,11 @@ export default function Dashboard() {
 
   // Enable WebSocket for real-time updates
   const { isConnected } = useWebSocket();
+  
+  // Creation dialog states
+  const [showCreateSKU, setShowCreateSKU] = useState(false);
+  const [showCreateMaterial, setShowCreateMaterial] = useState(false);
+  const [showCreateSupplier, setShowCreateSupplier] = useState(false);
 
   // Onboarding checklist
   const { steps, isFullyCompleted, isLoading: onboardingLoading } = useOnboardingSteps();
@@ -201,11 +213,40 @@ export default function Dashboard() {
             Your manufacturing control center
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Badge variant={isConnected ? "default" : "outline"} className="gap-1.5" data-testid="badge-connection-status">
             <Radio className={`h-3 w-3 ${isConnected ? 'animate-pulse' : ''}`} />
             {isConnected ? 'Live Updates' : 'Connecting...'}
           </Badge>
+          <Separator orientation="vertical" className="h-8" />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowCreateSKU(true)}
+            data-testid="button-quick-create-sku"
+          >
+            <Box className="h-4 w-4 mr-2" />
+            New SKU
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowCreateMaterial(true)}
+            data-testid="button-quick-create-material"
+          >
+            <Package2 className="h-4 w-4 mr-2" />
+            New Material
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowCreateSupplier(true)}
+            data-testid="button-quick-create-supplier"
+          >
+            <Building2 className="h-4 w-4 mr-2" />
+            New Supplier
+          </Button>
+          <Separator orientation="vertical" className="h-8" />
           <Button 
             variant="outline" 
             onClick={() => seedMutation.mutate()} 
@@ -443,6 +484,11 @@ export default function Dashboard() {
           Connect demand history data to view forecasting trends
         </p>
       </Card>
+      
+      {/* Creation Dialogs */}
+      <CreateSKUDialog open={showCreateSKU} onOpenChange={setShowCreateSKU} />
+      <CreateMaterialDialog open={showCreateMaterial} onOpenChange={setShowCreateMaterial} />
+      <CreateSupplierDialog open={showCreateSupplier} onOpenChange={setShowCreateSupplier} />
     </div>
   );
 }
