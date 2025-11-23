@@ -1,18 +1,80 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { SopScenario, SopGapAnalysis, SopMeetingNotes, SopActionItem } from "@shared/schema";
+import {
+  insertSopScenarioSchema,
+  insertSopGapAnalysisSchema,
+  insertSopMeetingNotesSchema,
+  insertSopActionItemSchema,
+  type SopScenario,
+  type SopGapAnalysis,
+  type SopMeetingNotes,
+  type SopActionItem,
+  type InsertSopScenario,
+  type InsertSopGapAnalysis,
+  type InsertSopMeetingNotes,
+  type InsertSopActionItem,
+} from "@shared/schema";
 import { Plus, Calendar, TrendingUp, FileText, CheckCircle2, AlertCircle, Clock, Users } from "lucide-react";
 import { format } from "date-fns";
+import { z } from "zod";
+
+// Create scenario form schema - omit server-injected fields first
+const createScenarioFormSchema = insertSopScenarioSchema
+  .omit({ companyId: true, createdBy: true, approvedAt: true, approvedBy: true })
+  .extend({
+    startDate: z.string(),
+    endDate: z.string(),
+    nextReviewDate: z.string().optional(),
+  });
+
+// Create gap analysis form schema - omit server-injected fields
+const createGapFormSchema = insertSopGapAnalysisSchema
+  .omit({ companyId: true })
+  .extend({
+    periodStart: z.string(),
+    periodEnd: z.string(),
+    forecastedDemand: z.coerce.number().min(0),
+    plannedProduction: z.coerce.number().min(0),
+    gapQuantity: z.coerce.number(),
+    gapPercentage: z.coerce.number().optional(),
+  });
+
+// Create meeting notes form schema - omit server-injected fields
+const createMeetingFormSchema = insertSopMeetingNotesSchema
+  .omit({ companyId: true, createdBy: true })
+  .extend({
+    meetingDate: z.string(),
+    nextMeetingDate: z.string().optional(),
+  });
+
+// Create action item form schema - omit server-injected fields
+const createActionFormSchema = insertSopActionItemSchema
+  .omit({ companyId: true, createdBy: true, completedAt: true, completedBy: true })
+  .extend({
+    dueDate: z.string(),
+    progress: z.coerce.number().min(0).max(100).optional(),
+  });
 
 export default function SopWorkspace() {
   const [activeTab, setActiveTab] = useState("scenarios");
+  const [scenarioDialogOpen, setScenarioDialogOpen] = useState(false);
+  const [gapDialogOpen, setGapDialogOpen] = useState(false);
+  const [meetingDialogOpen, setMeetingDialogOpen] = useState(false);
+  const [actionDialogOpen, setActionDialogOpen] = useState(false);
   const { toast } = useToast();
 
   // Fetch all S&OP data
@@ -30,6 +92,155 @@ export default function SopWorkspace() {
 
   const { data: actionItems, isLoading: actionItemsLoading } = useQuery<SopActionItem[]>({
     queryKey: ["/api/sop/action-items"],
+  });
+
+  // Create scenario form
+  const scenarioForm = useForm<z.infer<typeof createScenarioFormSchema>>({
+    resolver: zodResolver(createScenarioFormSchema),
+    defaultValues: {
+      name: "",
+      scenarioType: "baseline",
+      planningPeriod: "quarterly",
+      status: "draft",
+      startDate: format(new Date(), "yyyy-MM-dd"),
+      endDate: format(new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), "yyyy-MM-dd"),
+      notes: "",
+    },
+  });
+
+  // Create gap analysis form
+  const gapForm = useForm<z.infer<typeof createGapFormSchema>>({
+    resolver: zodResolver(createGapFormSchema),
+    defaultValues: {
+      periodStart: format(new Date(), "yyyy-MM-dd"),
+      periodEnd: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), "yyyy-MM-dd"),
+      forecastedDemand: 0,
+      plannedProduction: 0,
+      gapQuantity: 0,
+      gapCategory: "balanced",
+    },
+  });
+
+  // Create meeting notes form
+  const meetingForm = useForm<z.infer<typeof createMeetingFormSchema>>({
+    resolver: zodResolver(createMeetingFormSchema),
+    defaultValues: {
+      meetingDate: format(new Date(), "yyyy-MM-dd"),
+      meetingType: "monthly_sop",
+    },
+  });
+
+  // Create action item form
+  const actionForm = useForm<z.infer<typeof createActionFormSchema>>({
+    resolver: zodResolver(createActionFormSchema),
+    defaultValues: {
+      title: "",
+      category: "demand_planning",
+      priority: "medium",
+      status: "open",
+      dueDate: format(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), "yyyy-MM-dd"),
+      progress: 0,
+    },
+  });
+
+  // Create scenario mutation
+  const createScenarioMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof createScenarioFormSchema>) => {
+      const payload = {
+        ...data,
+        startDate: new Date(data.startDate),
+        endDate: new Date(data.endDate),
+        nextReviewDate: data.nextReviewDate ? new Date(data.nextReviewDate) : undefined,
+      };
+      return await apiRequest("/api/sop/scenarios", {
+        method: "POST",
+        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/sop/scenarios"] });
+      toast({ title: "Scenario created successfully" });
+      setScenarioDialogOpen(false);
+      scenarioForm.reset();
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to create scenario", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Create gap analysis mutation
+  const createGapMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof createGapFormSchema>) => {
+      const payload = {
+        ...data,
+        periodStart: new Date(data.periodStart),
+        periodEnd: new Date(data.periodEnd),
+      };
+      return await apiRequest("/api/sop/gap-analysis", {
+        method: "POST",
+        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/sop/gap-analysis"] });
+      toast({ title: "Gap analysis created successfully" });
+      setGapDialogOpen(false);
+      gapForm.reset();
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to create gap analysis", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Create meeting notes mutation
+  const createMeetingMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof createMeetingFormSchema>) => {
+      const payload = {
+        ...data,
+        meetingDate: new Date(data.meetingDate),
+        nextMeetingDate: data.nextMeetingDate ? new Date(data.nextMeetingDate) : undefined,
+      };
+      return await apiRequest("/api/sop/meetings", {
+        method: "POST",
+        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/sop/meetings"] });
+      toast({ title: "Meeting notes created successfully" });
+      setMeetingDialogOpen(false);
+      meetingForm.reset();
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to create meeting notes", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Create action item mutation
+  const createActionMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof createActionFormSchema>) => {
+      const payload = {
+        ...data,
+        dueDate: new Date(data.dueDate),
+      };
+      return await apiRequest("/api/sop/action-items", {
+        method: "POST",
+        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/sop/action-items"] });
+      toast({ title: "Action item created successfully" });
+      setActionDialogOpen(false);
+      actionForm.reset();
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to create action item", description: error.message, variant: "destructive" });
+    },
   });
 
   // Approve scenario mutation
@@ -114,10 +325,128 @@ export default function SopWorkspace() {
               Sales & Operations Planning for integrated demand, supply, and financial planning
             </p>
           </div>
-          <Button data-testid="button-new-scenario">
-            <Plus className="w-4 h-4 mr-2" />
-            New Scenario
-          </Button>
+          <Dialog open={scenarioDialogOpen} onOpenChange={setScenarioDialogOpen}>
+            <DialogTrigger asChild>
+              <Button data-testid="button-new-scenario">
+                <Plus className="w-4 h-4 mr-2" />
+                New Scenario
+              </Button>
+            </DialogTrigger>
+            <DialogContent data-testid="dialog-create-scenario">
+              <DialogHeader>
+                <DialogTitle>Create Planning Scenario</DialogTitle>
+                <DialogDescription>
+                  Create a new S&OP planning scenario (baseline, optimistic, or pessimistic)
+                </DialogDescription>
+              </DialogHeader>
+              <Form {...scenarioForm}>
+                <form onSubmit={scenarioForm.handleSubmit((data) => createScenarioMutation.mutate(data))} className="space-y-4">
+                  <FormField
+                    control={scenarioForm.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Scenario Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Q1 2024 Plan" {...field} data-testid="input-scenario-name" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={scenarioForm.control}
+                    name="scenarioType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Scenario Type</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-scenario-type">
+                              <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="baseline">Baseline</SelectItem>
+                            <SelectItem value="optimistic">Optimistic</SelectItem>
+                            <SelectItem value="pessimistic">Pessimistic</SelectItem>
+                            <SelectItem value="worst_case">Worst Case</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={scenarioForm.control}
+                    name="planningPeriod"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Planning Period</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-planning-period">
+                              <SelectValue placeholder="Select period" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="monthly">Monthly</SelectItem>
+                            <SelectItem value="quarterly">Quarterly</SelectItem>
+                            <SelectItem value="annual">Annual</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={scenarioForm.control}
+                      name="startDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Start Date</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} data-testid="input-scenario-start-date" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={scenarioForm.control}
+                      name="endDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>End Date</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} data-testid="input-scenario-end-date" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={scenarioForm.control}
+                    name="notes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Notes</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="Description or assumptions..." {...field} value={field.value || ""} data-testid="textarea-scenario-notes" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" disabled={createScenarioMutation.isPending} data-testid="button-submit-scenario">
+                    {createScenarioMutation.isPending ? "Creating..." : "Create Scenario"}
+                  </Button>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
         </div>
 
         {/* Overview Cards */}
@@ -228,7 +557,7 @@ export default function SopWorkspace() {
                               <CardTitle className="text-lg" data-testid={`text-scenario-name-${scenario.id}`}>
                                 {scenario.name}
                               </CardTitle>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <Badge variant={getScenarioBadgeVariant(scenario.status)} data-testid={`badge-scenario-status-${scenario.id}`}>
                                   {scenario.status}
                                 </Badge>
@@ -267,9 +596,17 @@ export default function SopWorkspace() {
                   <div className="text-center py-12" data-testid="empty-state-scenarios">
                     <TrendingUp className="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 className="mt-4 text-lg font-semibold">No scenarios yet</h3>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground mb-4">
                       Create your first planning scenario to start S&OP planning
                     </p>
+                    <Dialog open={scenarioDialogOpen} onOpenChange={setScenarioDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button data-testid="button-create-first-scenario">
+                          <Plus className="w-4 h-4 mr-2" />
+                          Create Scenario
+                        </Button>
+                      </DialogTrigger>
+                    </Dialog>
                   </div>
                 )}
               </CardContent>
@@ -278,6 +615,135 @@ export default function SopWorkspace() {
 
           {/* Gap Analysis Tab */}
           <TabsContent value="gaps" className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div></div>
+              <Dialog open={gapDialogOpen} onOpenChange={setGapDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button data-testid="button-new-gap-analysis">
+                    <Plus className="w-4 h-4 mr-2" />
+                    New Gap Analysis
+                  </Button>
+                </DialogTrigger>
+                <DialogContent data-testid="dialog-create-gap">
+                  <DialogHeader>
+                    <DialogTitle>Create Gap Analysis</DialogTitle>
+                    <DialogDescription>
+                      Analyze the gap between forecasted demand and planned production capacity
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Form {...gapForm}>
+                    <form onSubmit={gapForm.handleSubmit((data) => createGapMutation.mutate(data))} className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={gapForm.control}
+                          name="periodStart"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Period Start</FormLabel>
+                              <FormControl>
+                                <Input type="date" {...field} data-testid="input-gap-period-start" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={gapForm.control}
+                          name="periodEnd"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Period End</FormLabel>
+                              <FormControl>
+                                <Input type="date" {...field} data-testid="input-gap-period-end" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <FormField
+                        control={gapForm.control}
+                        name="forecastedDemand"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Forecasted Demand (units)</FormLabel>
+                            <FormControl>
+                              <Input type="number" {...field} data-testid="input-gap-demand" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={gapForm.control}
+                        name="plannedProduction"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Planned Production (units)</FormLabel>
+                            <FormControl>
+                              <Input type="number" {...field} data-testid="input-gap-production" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={gapForm.control}
+                        name="gapQuantity"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Gap Quantity (units)</FormLabel>
+                            <FormControl>
+                              <Input type="number" {...field} data-testid="input-gap-quantity" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={gapForm.control}
+                        name="gapCategory"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Gap Category</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-gap-category">
+                                  <SelectValue placeholder="Select category" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="shortage_critical">Critical Shortage</SelectItem>
+                                <SelectItem value="shortage_minor">Minor Shortage</SelectItem>
+                                <SelectItem value="balanced">Balanced</SelectItem>
+                                <SelectItem value="surplus">Surplus</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={gapForm.control}
+                        name="recommendedAction"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Recommended Action</FormLabel>
+                            <FormControl>
+                              <Textarea placeholder="Recommended actions to address this gap..." {...field} value={field.value || ""} data-testid="textarea-gap-action" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button type="submit" disabled={createGapMutation.isPending} data-testid="button-submit-gap">
+                        {createGapMutation.isPending ? "Creating..." : "Create Gap Analysis"}
+                      </Button>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+            </div>
             <Card data-testid="card-gap-analysis-list">
               <CardHeader>
                 <CardTitle>Demand vs Supply Gap Analysis</CardTitle>
@@ -303,7 +769,7 @@ export default function SopWorkspace() {
                                   {format(new Date(gap.periodStart), "MMM d")} - {format(new Date(gap.periodEnd), "MMM d, yyyy")}
                                 </span>
                               </div>
-                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                              <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
                                 <span data-testid={`text-gap-demand-${gap.id}`}>Demand: {gap.forecastedDemand.toLocaleString()} units</span>
                                 <span data-testid={`text-gap-supply-${gap.id}`}>Supply: {gap.plannedProduction.toLocaleString()} units</span>
                                 <span className="font-medium" data-testid={`text-gap-quantity-${gap.id}`}>
@@ -325,9 +791,17 @@ export default function SopWorkspace() {
                   <div className="text-center py-12" data-testid="empty-state-gaps">
                     <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 className="mt-4 text-lg font-semibold">No gap analyses yet</h3>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground mb-4">
                       Run gap analysis to identify demand vs supply constraints
                     </p>
+                    <Dialog open={gapDialogOpen} onOpenChange={setGapDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button data-testid="button-create-first-gap">
+                          <Plus className="w-4 h-4 mr-2" />
+                          Create Gap Analysis
+                        </Button>
+                      </DialogTrigger>
+                    </Dialog>
                   </div>
                 )}
               </CardContent>
@@ -336,6 +810,95 @@ export default function SopWorkspace() {
 
           {/* Meetings Tab */}
           <TabsContent value="meetings" className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div></div>
+              <Dialog open={meetingDialogOpen} onOpenChange={setMeetingDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button data-testid="button-new-meeting">
+                    <Plus className="w-4 h-4 mr-2" />
+                    New Meeting
+                  </Button>
+                </DialogTrigger>
+                <DialogContent data-testid="dialog-create-meeting">
+                  <DialogHeader>
+                    <DialogTitle>Create Meeting Notes</DialogTitle>
+                    <DialogDescription>
+                      Document your S&OP meeting with key decisions and follow-up actions
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Form {...meetingForm}>
+                    <form onSubmit={meetingForm.handleSubmit((data) => createMeetingMutation.mutate(data))} className="space-y-4">
+                      <FormField
+                        control={meetingForm.control}
+                        name="meetingDate"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Meeting Date</FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} data-testid="input-meeting-date" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={meetingForm.control}
+                        name="meetingType"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Meeting Type</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-meeting-type">
+                                  <SelectValue placeholder="Select type" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="monthly_sop">Monthly S&OP</SelectItem>
+                                <SelectItem value="demand_review">Demand Review</SelectItem>
+                                <SelectItem value="supply_review">Supply Review</SelectItem>
+                                <SelectItem value="financial_review">Financial Review</SelectItem>
+                                <SelectItem value="executive_review">Executive Review</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={meetingForm.control}
+                        name="keyDecisions"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Key Decisions</FormLabel>
+                            <FormControl>
+                              <Textarea placeholder="Key decisions made during the meeting..." {...field} value={field.value || ""} data-testid="textarea-meeting-decisions" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={meetingForm.control}
+                        name="nextMeetingDate"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Next Meeting Date (optional)</FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} value={field.value || ""} data-testid="input-next-meeting-date" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button type="submit" disabled={createMeetingMutation.isPending} data-testid="button-submit-meeting">
+                        {createMeetingMutation.isPending ? "Creating..." : "Create Meeting Notes"}
+                      </Button>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+            </div>
             <Card data-testid="card-meetings-list">
               <CardHeader>
                 <CardTitle>S&OP Meeting Notes</CardTitle>
@@ -358,7 +921,7 @@ export default function SopWorkspace() {
                               <CardTitle className="text-lg" data-testid={`text-meeting-date-${meeting.id}`}>
                                 {format(new Date(meeting.meetingDate), "MMMM d, yyyy")}
                               </CardTitle>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <Badge variant="outline" data-testid={`badge-meeting-type-${meeting.id}`}>
                                   {meeting.meetingType}
                                 </Badge>
@@ -387,9 +950,17 @@ export default function SopWorkspace() {
                   <div className="text-center py-12" data-testid="empty-state-meetings">
                     <Users className="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 className="mt-4 text-lg font-semibold">No meeting notes yet</h3>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground mb-4">
                       Document your first S&OP meeting to track decisions and follow-ups
                     </p>
+                    <Dialog open={meetingDialogOpen} onOpenChange={setMeetingDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button data-testid="button-create-first-meeting">
+                          <Plus className="w-4 h-4 mr-2" />
+                          Create Meeting Notes
+                        </Button>
+                      </DialogTrigger>
+                    </Dialog>
                   </div>
                 )}
               </CardContent>
@@ -398,6 +969,119 @@ export default function SopWorkspace() {
 
           {/* Action Items Tab */}
           <TabsContent value="actions" className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div></div>
+              <Dialog open={actionDialogOpen} onOpenChange={setActionDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button data-testid="button-new-action">
+                    <Plus className="w-4 h-4 mr-2" />
+                    New Action Item
+                  </Button>
+                </DialogTrigger>
+                <DialogContent data-testid="dialog-create-action">
+                  <DialogHeader>
+                    <DialogTitle>Create Action Item</DialogTitle>
+                    <DialogDescription>
+                      Track follow-up actions from meetings and gap analyses
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Form {...actionForm}>
+                    <form onSubmit={actionForm.handleSubmit((data) => createActionMutation.mutate(data))} className="space-y-4">
+                      <FormField
+                        control={actionForm.control}
+                        name="title"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Title</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Increase raw material inventory..." {...field} data-testid="input-action-title" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={actionForm.control}
+                        name="category"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Category</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-action-category">
+                                  <SelectValue placeholder="Select category" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="demand_planning">Demand Planning</SelectItem>
+                                <SelectItem value="supply_planning">Supply Planning</SelectItem>
+                                <SelectItem value="capacity_planning">Capacity Planning</SelectItem>
+                                <SelectItem value="inventory_management">Inventory Management</SelectItem>
+                                <SelectItem value="financial_planning">Financial Planning</SelectItem>
+                                <SelectItem value="risk_mitigation">Risk Mitigation</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={actionForm.control}
+                        name="priority"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Priority</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-action-priority">
+                                  <SelectValue placeholder="Select priority" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="critical">Critical</SelectItem>
+                                <SelectItem value="high">High</SelectItem>
+                                <SelectItem value="medium">Medium</SelectItem>
+                                <SelectItem value="low">Low</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={actionForm.control}
+                        name="dueDate"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Due Date</FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} data-testid="input-action-due-date" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={actionForm.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                              <Textarea placeholder="Detailed description of the action..." {...field} value={field.value || ""} data-testid="textarea-action-description" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button type="submit" disabled={createActionMutation.isPending} data-testid="button-submit-action">
+                        {createActionMutation.isPending ? "Creating..." : "Create Action Item"}
+                      </Button>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+            </div>
             <Card data-testid="card-action-items-list">
               <CardHeader>
                 <CardTitle>Action Items</CardTitle>
@@ -467,9 +1151,17 @@ export default function SopWorkspace() {
                   <div className="text-center py-12" data-testid="empty-state-actions">
                     <CheckCircle2 className="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 className="mt-4 text-lg font-semibold">No action items yet</h3>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground mb-4">
                       Create action items to track follow-ups from meetings and gap analyses
                     </p>
+                    <Dialog open={actionDialogOpen} onOpenChange={setActionDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button data-testid="button-create-first-action">
+                          <Plus className="w-4 h-4 mr-2" />
+                          Create Action Item
+                        </Button>
+                      </DialogTrigger>
+                    </Dialog>
                   </div>
                 )}
               </CardContent>
