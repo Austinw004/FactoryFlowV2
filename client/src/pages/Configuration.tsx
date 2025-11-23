@@ -8,7 +8,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, AlertCircle, Package, Building2, Zap, DollarSign, Bell, Save } from "lucide-react";
+import { Settings, AlertCircle, Package, Building2, Zap, DollarSign, Bell, Save, Mail, Plug, Shield, Bot, Palette, Globe } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useState, useEffect } from "react";
@@ -48,7 +49,38 @@ export default function Configuration() {
   });
 
   const handleSave = () => {
-    updateMutation.mutate(formData);
+    const sanitizedData: any = { ...formData };
+    
+    const integerFields = [
+      'enableRegimeAlerts',
+      'enableBudgetAlerts',
+      'enableAllocationAlerts',
+      'enablePriceAlerts',
+      'emailForwardingEnabled',
+      'emailProcessingConsent',
+      'emailAutoTagging',
+      'aiChatbotEnabled',
+      'aiDataAccessConsent',
+      'aiCanAccessFinancials',
+      'aiCanAccessSupplierData',
+      'aiCanAccessAllocations',
+      'aiCanAccessEmails',
+      'anonymizeOldData',
+      'onboardingCompleted',
+      'showOnboardingHints',
+    ];
+    
+    integerFields.forEach(field => {
+      if (sanitizedData[field] !== undefined && sanitizedData[field] !== null) {
+        sanitizedData[field] = sanitizedData[field] ? 1 : 0;
+      }
+    });
+    
+    delete sanitizedData.apiAccessEnabled;
+    delete sanitizedData.apiKey;
+    delete sanitizedData.webhookEvents;
+    
+    updateMutation.mutate(sanitizedData);
   };
 
   const handleChange = (field: keyof Company, value: any) => {
@@ -90,22 +122,42 @@ export default function Configuration() {
       </div>
 
       <Tabs defaultValue="company" data-testid="tabs-settings">
-        <TabsList>
+        <TabsList className="grid grid-cols-4 lg:grid-cols-9 h-auto">
           <TabsTrigger value="company" data-testid="tab-company">
             <Building2 className="h-4 w-4 mr-2" />
-            Company Profile
+            Company
           </TabsTrigger>
           <TabsTrigger value="budget" data-testid="tab-budget">
             <DollarSign className="h-4 w-4 mr-2" />
-            Budget Settings
+            Budget
           </TabsTrigger>
           <TabsTrigger value="economic" data-testid="tab-economic">
             <Zap className="h-4 w-4 mr-2" />
-            Economic Policy
+            Economic
           </TabsTrigger>
           <TabsTrigger value="alerts" data-testid="tab-alerts">
             <Bell className="h-4 w-4 mr-2" />
-            Alerts & Notifications
+            Alerts
+          </TabsTrigger>
+          <TabsTrigger value="communications" data-testid="tab-communications">
+            <Mail className="h-4 w-4 mr-2" />
+            Communications
+          </TabsTrigger>
+          <TabsTrigger value="integrations" data-testid="tab-integrations">
+            <Plug className="h-4 w-4 mr-2" />
+            Integrations
+          </TabsTrigger>
+          <TabsTrigger value="privacy" data-testid="tab-privacy">
+            <Shield className="h-4 w-4 mr-2" />
+            Data & Privacy
+          </TabsTrigger>
+          <TabsTrigger value="ai" data-testid="tab-ai">
+            <Bot className="h-4 w-4 mr-2" />
+            AI Assistant
+          </TabsTrigger>
+          <TabsTrigger value="branding" data-testid="tab-branding">
+            <Palette className="h-4 w-4 mr-2" />
+            Branding
           </TabsTrigger>
         </TabsList>
 
@@ -412,6 +464,428 @@ export default function Configuration() {
                     Receive alert when budget reaches this percentage (default: 80%)
                   </p>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="communications" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Email Processing & Forwarding</CardTitle>
+              <CardDescription>
+                Configure email ingestion and processing for AI-powered supplier communication analysis
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Alert>
+                <Mail className="h-4 w-4" />
+                <AlertDescription>
+                  Forward supplier emails to your unique company email address to enable automated processing and AI analysis
+                </AlertDescription>
+              </Alert>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="space-y-1">
+                    <Label>Enable Email Forwarding</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Activate your unique email address for forwarding
+                    </p>
+                  </div>
+                  <Switch
+                    checked={formData.emailForwardingEnabled === 1}
+                    onCheckedChange={(checked) => handleChange("emailForwardingEnabled", checked ? 1 : 0)}
+                    data-testid="switch-email-forwarding"
+                  />
+                </div>
+
+                {formData.emailForwardingEnabled === 1 && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="forwarding-address">Your Forwarding Email Address</Label>
+                      <Input
+                        id="forwarding-address"
+                        value={formData.emailForwardingAddress || ""}
+                        onChange={(e) => handleChange("emailForwardingAddress", e.target.value)}
+                        placeholder="your-company@mail.manufacturing-ai.app"
+                        data-testid="input-forwarding-address"
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        Forward supplier emails to this address for automatic processing
+                      </p>
+                    </div>
+
+                    <Separator />
+
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="space-y-1">
+                        <Label>Email Processing Consent</Label>
+                        <p className="text-sm text-muted-foreground">
+                          I consent to automated processing of forwarded emails
+                        </p>
+                      </div>
+                      <Switch
+                        checked={formData.emailProcessingConsent === 1}
+                        onCheckedChange={(checked) => handleChange("emailProcessingConsent", checked ? 1 : 0)}
+                        data-testid="switch-email-consent"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="email-retention">Email Retention Period (Days)</Label>
+                      <Select
+                        value={formData.emailRetentionDays?.toString() || "90"}
+                        onValueChange={(value) => handleChange("emailRetentionDays", parseInt(value))}
+                      >
+                        <SelectTrigger id="email-retention" data-testid="select-email-retention">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="30">30 Days</SelectItem>
+                          <SelectItem value="60">60 Days</SelectItem>
+                          <SelectItem value="90">90 Days</SelectItem>
+                          <SelectItem value="180">180 Days</SelectItem>
+                          <SelectItem value="365">1 Year</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-sm text-muted-foreground">
+                        Emails older than this will be automatically deleted
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="space-y-1">
+                        <Label>Auto-tagging with NLP</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Automatically categorize and tag emails using AI
+                        </p>
+                      </div>
+                      <Switch
+                        checked={formData.emailAutoTagging === 1}
+                        onCheckedChange={(checked) => handleChange("emailAutoTagging", checked ? 1 : 0)}
+                        data-testid="switch-email-tagging"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="integrations" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>API & Webhook Configuration</CardTitle>
+              <CardDescription>
+                Configure integration settings and webhook notifications
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Future Feature:</strong> API access with secure key management will be available in a future release. Webhook notifications are production-ready.
+                </AlertDescription>
+              </Alert>
+
+              <div className="flex items-center justify-between p-4 border rounded-lg opacity-60">
+                <div className="space-y-1">
+                  <Label>Enable API Access (Coming Soon)</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Programmatic access requires secure server-side key management
+                  </p>
+                </div>
+                <Switch
+                  checked={false}
+                  disabled
+                  data-testid="switch-api-access"
+                />
+              </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <Label htmlFor="webhook-url">Webhook URL</Label>
+                <Input
+                  id="webhook-url"
+                  value={formData.webhookUrl || ""}
+                  onChange={(e) => handleChange("webhookUrl", e.target.value)}
+                  placeholder="https://your-server.com/webhook"
+                  data-testid="input-webhook-url"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Receive real-time notifications about allocation runs, regime changes, and budget alerts
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Webhook Events</Label>
+                <p className="text-sm text-muted-foreground">
+                  Configure which events trigger webhook notifications in future releases
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="privacy" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Data Retention & Privacy</CardTitle>
+              <CardDescription>
+                Configure how long data is stored and privacy preferences
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="retention-policy">Data Retention Policy</Label>
+                <Select
+                  value={formData.dataRetentionPolicy || "standard"}
+                  onValueChange={(value) => handleChange("dataRetentionPolicy", value)}
+                >
+                  <SelectTrigger id="retention-policy" data-testid="select-retention-policy">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="minimal">Minimal (3 months)</SelectItem>
+                    <SelectItem value="standard">Standard (1 year)</SelectItem>
+                    <SelectItem value="extended">Extended (3 years)</SelectItem>
+                    <SelectItem value="permanent">Permanent (Never delete)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  How long to keep historical data before archiving or deletion
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="space-y-1">
+                  <Label>Auto-anonymize Old Data</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Automatically remove personally identifiable information from old records
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.anonymizeOldData === 1}
+                  onCheckedChange={(checked) => handleChange("anonymizeOldData", checked ? 1 : 0)}
+                  data-testid="switch-anonymize-data"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="export-format">Data Export Format</Label>
+                <Select
+                  value={formData.exportDataFormat || "json"}
+                  onValueChange={(value) => handleChange("exportDataFormat", value)}
+                >
+                  <SelectTrigger id="export-format" data-testid="select-export-format">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="json">JSON</SelectItem>
+                    <SelectItem value="csv">CSV</SelectItem>
+                    <SelectItem value="excel">Excel (XLSX)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  Default format for data exports and backups
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="ai" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>AI Assistant Settings</CardTitle>
+              <CardDescription>
+                Configure AI chatbot capabilities and data access permissions
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Alert>
+                <Bot className="h-4 w-4" />
+                <AlertDescription>
+                  The AI Assistant can answer questions about your company data and help you make informed decisions
+                </AlertDescription>
+              </Alert>
+
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="space-y-1">
+                  <Label>Enable AI Chatbot</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Turn on the AI assistant for natural language queries
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.aiChatbotEnabled === 1}
+                  onCheckedChange={(checked) => handleChange("aiChatbotEnabled", checked ? 1 : 0)}
+                  data-testid="switch-ai-chatbot"
+                />
+              </div>
+
+              {formData.aiChatbotEnabled === 1 && (
+                <>
+                  <Separator />
+                  <div className="space-y-4">
+                    <h4 className="font-medium">Data Access Permissions</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Choose what data the AI can access when answering questions
+                    </p>
+
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="space-y-1">
+                        <Label>General Data Access Consent</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Master switch for AI data access
+                        </p>
+                      </div>
+                      <Switch
+                        checked={formData.aiDataAccessConsent === 1}
+                        onCheckedChange={(checked) => handleChange("aiDataAccessConsent", checked ? 1 : 0)}
+                        data-testid="switch-ai-data-consent"
+                      />
+                    </div>
+
+                    {formData.aiDataAccessConsent === 1 && (
+                      <>
+                        <div className="flex items-center justify-between p-4 border rounded-lg">
+                          <div className="space-y-1">
+                            <Label>Financial Data Access</Label>
+                            <p className="text-sm text-muted-foreground">
+                              Budget, spending, financial statements
+                            </p>
+                          </div>
+                          <Switch
+                            checked={formData.aiCanAccessFinancials === 1}
+                            onCheckedChange={(checked) => handleChange("aiCanAccessFinancials", checked ? 1 : 0)}
+                            data-testid="switch-ai-financials"
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-between p-4 border rounded-lg">
+                          <div className="space-y-1">
+                            <Label>Supplier Data Access</Label>
+                            <p className="text-sm text-muted-foreground">
+                              Supplier information, contracts, pricing
+                            </p>
+                          </div>
+                          <Switch
+                            checked={formData.aiCanAccessSupplierData === 1}
+                            onCheckedChange={(checked) => handleChange("aiCanAccessSupplierData", checked ? 1 : 0)}
+                            data-testid="switch-ai-suppliers"
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-between p-4 border rounded-lg">
+                          <div className="space-y-1">
+                            <Label>Allocation Data Access</Label>
+                            <p className="text-sm text-muted-foreground">
+                              Material allocations, demand forecasts
+                            </p>
+                          </div>
+                          <Switch
+                            checked={formData.aiCanAccessAllocations === 1}
+                            onCheckedChange={(checked) => handleChange("aiCanAccessAllocations", checked ? 1 : 0)}
+                            data-testid="switch-ai-allocations"
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-between p-4 border rounded-lg">
+                          <div className="space-y-1">
+                            <Label>Email Data Access</Label>
+                            <p className="text-sm text-muted-foreground">
+                              Processed supplier emails and communications
+                            </p>
+                          </div>
+                          <Switch
+                            checked={formData.aiCanAccessEmails === 1}
+                            onCheckedChange={(checked) => handleChange("aiCanAccessEmails", checked ? 1 : 0)}
+                            data-testid="switch-ai-emails"
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="branding" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Company Branding</CardTitle>
+              <CardDescription>
+                Customize your company's visual identity in the platform
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="logo-url">Company Logo URL</Label>
+                <Input
+                  id="logo-url"
+                  value={formData.logoUrl || ""}
+                  onChange={(e) => handleChange("logoUrl", e.target.value)}
+                  placeholder="https://your-company.com/logo.png"
+                  data-testid="input-logo-url"
+                />
+                <p className="text-sm text-muted-foreground">
+                  URL to your company logo (recommended: square, at least 200x200px)
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="primary-color">Primary Brand Color</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="primary-color"
+                    type="color"
+                    value={formData.primaryColor || "#3b82f6"}
+                    onChange={(e) => handleChange("primaryColor", e.target.value)}
+                    className="w-20"
+                    data-testid="input-primary-color"
+                  />
+                  <Input
+                    value={formData.primaryColor || "#3b82f6"}
+                    onChange={(e) => handleChange("primaryColor", e.target.value)}
+                    placeholder="#3b82f6"
+                    data-testid="input-primary-color-text"
+                  />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Primary color for charts, highlights, and accents
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="timezone">Timezone</Label>
+                <Select
+                  value={formData.timezone || "America/New_York"}
+                  onValueChange={(value) => handleChange("timezone", value)}
+                >
+                  <SelectTrigger id="timezone" data-testid="select-timezone">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="America/New_York">Eastern Time (ET)</SelectItem>
+                    <SelectItem value="America/Chicago">Central Time (CT)</SelectItem>
+                    <SelectItem value="America/Denver">Mountain Time (MT)</SelectItem>
+                    <SelectItem value="America/Los_Angeles">Pacific Time (PT)</SelectItem>
+                    <SelectItem value="Europe/London">London (GMT)</SelectItem>
+                    <SelectItem value="Europe/Paris">Paris (CET)</SelectItem>
+                    <SelectItem value="Asia/Tokyo">Tokyo (JST)</SelectItem>
+                    <SelectItem value="Asia/Shanghai">Shanghai (CST)</SelectItem>
+                    <SelectItem value="Asia/Dubai">Dubai (GST)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  Used for displaying dates and times throughout the application
+                </p>
               </div>
             </CardContent>
           </Card>

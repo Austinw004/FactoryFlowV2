@@ -10,6 +10,18 @@ The platform provides unified UI tools for **Strategic Analysis** (Economic Scen
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Updates (November 23, 2025)
+
+### Enterprise-Grade SaaS Enhancements
+**Comprehensive Settings System**: Transformed Configuration page from 4 tabs to 9 comprehensive tabs covering all enterprise needs.
+**Budget Time Duration**: Enhanced budget tracking with start/end date configuration for precise budget period management.
+**Email Processing & Forwarding**: Future-proof email ingestion system with forwarding addresses, processing consent, retention policies (30-365 days), and NLP auto-tagging.
+**AI Assistant Settings**: Granular data access permissions for future chatbot integration - control access to financials, suppliers, allocations, and emails.
+**API & Integrations**: API access management, API key generation (client-side demonstration), webhook configuration for real-time notifications.
+**Data & Privacy**: Configurable retention policies (minimal/standard/extended/permanent), auto-anonymization, export format preferences (JSON/CSV/Excel).
+**Company Branding**: Logo URL, primary color picker, timezone selection for global operations.
+**Empty States**: Proper empty state handling for new companies - no fake seed data, clean onboarding experience.
+
 ## System Architecture
 
 ### Frontend
@@ -18,7 +30,7 @@ Preferred communication style: Simple, everyday language.
 **UI/UX**: shadcn/ui on Radix UI, Material Design principles with Linear-inspired minimalism, Tailwind CSS. Dashboard-centric design with KPI cards, data tables, charts, regime status widgets, and policy signals panels.
 **State Management**: TanStack Query for server state; custom hooks for authentication.
 **Routing**: Wouter.
-**Key Features**: Comprehensive machinery tracking (depreciation, maintenance, replacement), searchable materials catalog with category filtering, and a unified analysis interface for strategic tools.
+**Key Features**: Comprehensive machinery tracking, searchable materials catalog, unified strategic analysis interface, budget management with time duration, enterprise settings with 9 configuration tabs (Company, Budget, Economic, Alerts, Communications, Integrations, Data & Privacy, AI Assistant, Branding).
 **Educational Content**: "How It Works" page explaining dual-circuit economics.
 
 ### Backend
@@ -43,6 +55,17 @@ Preferred communication style: Simple, everyday language.
 **ORM**: Drizzle ORM with PostgreSQL dialect.
 **Provider**: Neon serverless PostgreSQL.
 **Schema Design**: Multi-tenant with `companyId` for data isolation across all core entities. Extensive schema supporting SKUs, materials, BOMs, suppliers, demand, allocations, machinery, maintenance, financial statements, compliance, production KPIs, workforce management, automated purchasing (PO, usage tracking, schedules, recommendations, email analysis), and non-user-facing research validation tables.
+
+**Enterprise Settings**: Companies table includes 20+ enterprise-grade fields:
+- Budget management with time duration (budgetStartDate, budgetEndDate)
+- Email processing & forwarding (emailForwardingEnabled, emailForwardingAddress, emailProcessingConsent, emailRetentionDays, emailAutoTagging)
+- AI/Chatbot permissions (aiChatbotEnabled, aiDataAccessConsent, aiCanAccessFinancials, aiCanAccessSupplierData, aiCanAccessAllocations, aiCanAccessEmails)
+- API & integration settings (apiAccessEnabled, apiKey, webhookUrl, webhookEvents)
+- Data retention & privacy (dataRetentionPolicy, anonymizeOldData, exportDataFormat)
+- Company branding (logoUrl, primaryColor, timezone)
+- Onboarding & feature flags (onboardingCompleted, showOnboardingHints)
+- Extended notification preferences (enableAllocationAlerts, enablePriceAlerts)
+
 **Session Management**: `sessions` table for Express session storage.
 
 ### Authentication & Authorization
