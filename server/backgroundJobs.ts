@@ -4,6 +4,7 @@ import { cache, CacheKeys } from './lib/cache';
 import axios from 'axios';
 import { fetchComprehensiveEconomicData } from './lib/externalAPIs';
 import { WebhookService } from './lib/webhookService';
+import { runAutomatedRetraining } from './lib/forecastRetraining';
 
 interface BackgroundJobConfig {
   name: string;
