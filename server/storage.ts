@@ -20,6 +20,7 @@ import type {
   InventoryOptimization, InsertInventoryOptimization,
   DemandPrediction, InsertDemandPrediction,
   InventoryRecommendation, InsertInventoryRecommendation,
+  MultiHorizonForecast, InsertMultiHorizonForecast,
   MaterialBatch, InsertMaterialBatch,
   TraceabilityEvent, InsertTraceabilityEvent,
   SupplierChainLink, InsertSupplierChainLink,
@@ -82,6 +83,7 @@ import {
   productionRuns, productionMetrics, downtimeEvents, productionBottlenecks,
   equipmentSensors, sensorReadings, maintenanceAlerts, maintenancePredictions,
   inventoryOptimizations, demandPredictions, inventoryRecommendations,
+  multiHorizonForecasts,
   materialBatches, traceabilityEvents, supplierChainLinks,
   employees, workShifts, skillRequirements, staffAssignments,
   employeePayroll, employeeBenefits, employeeTimeOff, employeePtoBalances,
@@ -224,6 +226,19 @@ export interface IStorage {
   createDemandPrediction(prediction: InsertDemandPrediction): Promise<DemandPrediction>;
   getInventoryRecommendations(companyId: string): Promise<InventoryRecommendation[]>;
   createInventoryRecommendation(recommendation: InsertInventoryRecommendation): Promise<InventoryRecommendation>;
+  
+  // Multi-Horizon Forecasting
+  getMultiHorizonForecasts(companyId: string, options?: { skuId?: string; horizonDays?: number }): Promise<MultiHorizonForecast[]>;
+  createMultiHorizonForecast(forecast: InsertMultiHorizonForecast): Promise<MultiHorizonForecast>;
+  createMultiHorizonForecasts(forecasts: InsertMultiHorizonForecast[]): Promise<MultiHorizonForecast[]>;
+  updateMultiHorizonForecast(id: string, forecast: Partial<InsertMultiHorizonForecast>): Promise<MultiHorizonForecast>;
+  getMultiHorizonForecastComparison(companyId: string, skuId: string): Promise<Array<{
+    horizonDays: number;
+    avgPredictedDemand: number | null;
+    avgActualDemand: number | null;
+    avgAccuracy: number | null;
+    forecastCount: number;
+  }>>;
   
   // Forecast Accuracy
   getForecastAccuracyMetrics(companyId: string): Promise<{
@@ -1030,6 +1045,55 @@ export class DbStorage implements IStorage {
   async updateInventoryRecommendation(id: string, updates: Partial<InventoryRecommendation>): Promise<InventoryRecommendation> {
     const [recommendation] = await db.update(inventoryRecommendations).set(updates).where(eq(inventoryRecommendations.id, id)).returning();
     return recommendation;
+  }
+
+  // Multi-Horizon Forecasting methods
+  async getMultiHorizonForecasts(companyId: string, options?: { skuId?: string; horizonDays?: number }): Promise<MultiHorizonForecast[]> {
+    let query = db.select().from(multiHorizonForecasts).where(eq(multiHorizonForecasts.companyId, companyId)).$dynamic();
+    
+    if (options?.skuId) {
+      query = query.where(eq(multiHorizonForecasts.skuId, options.skuId));
+    }
+    
+    if (options?.horizonDays !== undefined) {
+      query = query.where(eq(multiHorizonForecasts.horizonDays, options.horizonDays));
+    }
+    
+    return query.orderBy(desc(multiHorizonForecasts.createdAt));
+  }
+
+  async createMultiHorizonForecast(insertForecast: InsertMultiHorizonForecast): Promise<MultiHorizonForecast> {
+    const [forecast] = await db.insert(multiHorizonForecasts).values(insertForecast).returning();
+    return forecast;
+  }
+
+  async createMultiHorizonForecasts(insertForecasts: InsertMultiHorizonForecast[]): Promise<MultiHorizonForecast[]> {
+    return db.insert(multiHorizonForecasts).values(insertForecasts).returning();
+  }
+
+  async updateMultiHorizonForecast(id: string, updates: Partial<InsertMultiHorizonForecast>): Promise<MultiHorizonForecast> {
+    const [forecast] = await db.update(multiHorizonForecasts).set(updates).where(eq(multiHorizonForecasts.id, id)).returning();
+    return forecast;
+  }
+
+  async getMultiHorizonForecastComparison(companyId: string, skuId: string) {
+    const result = await db
+      .select({
+        horizonDays: multiHorizonForecasts.horizonDays,
+        avgPredictedDemand: sql<number>`AVG(${multiHorizonForecasts.predictedDemand})`,
+        avgActualDemand: sql<number>`AVG(${multiHorizonForecasts.actualDemand})`,
+        avgAccuracy: sql<number>`AVG(${multiHorizonForecasts.accuracy})`,
+        forecastCount: sql<number>`COUNT(*)::int`,
+      })
+      .from(multiHorizonForecasts)
+      .where(and(
+        eq(multiHorizonForecasts.companyId, companyId),
+        eq(multiHorizonForecasts.skuId, skuId)
+      ))
+      .groupBy(multiHorizonForecasts.horizonDays)
+      .orderBy(multiHorizonForecasts.horizonDays);
+
+    return result;
   }
 
   // Forecast Accuracy methods
