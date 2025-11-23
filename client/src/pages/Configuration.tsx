@@ -8,12 +8,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, AlertCircle, Package, Building2, Zap, DollarSign, Bell, Save, Mail, Plug, Shield, Bot, Palette, Globe } from "lucide-react";
+import { Settings, AlertCircle, Package, Building2, Zap, DollarSign, Bell, Save, Mail, Plug, Shield, Bot, Palette, Globe, Users } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useState, useEffect } from "react";
-import type { Company } from "@shared/schema";
+import type { Company, User, Role } from "@shared/schema";
 
 export default function Configuration() {
   const { toast } = useToast();
@@ -122,7 +122,7 @@ export default function Configuration() {
       </div>
 
       <Tabs defaultValue="company" data-testid="tabs-settings">
-        <TabsList className="grid grid-cols-4 lg:grid-cols-9 h-auto">
+        <TabsList className="grid grid-cols-4 lg:grid-cols-10 h-auto">
           <TabsTrigger value="company" data-testid="tab-company">
             <Building2 className="h-4 w-4 mr-2" />
             Company
@@ -158,6 +158,10 @@ export default function Configuration() {
           <TabsTrigger value="branding" data-testid="tab-branding">
             <Palette className="h-4 w-4 mr-2" />
             Branding
+          </TabsTrigger>
+          <TabsTrigger value="access" data-testid="tab-access">
+            <Users className="h-4 w-4 mr-2" />
+            Access Control
           </TabsTrigger>
         </TabsList>
 
@@ -890,7 +894,199 @@ export default function Configuration() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="access" className="space-y-4">
+          <RoleManagement />
+        </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+// Role Management Component
+function RoleManagement() {
+  const { toast } = useToast();
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  
+  // Fetch all users in company
+  const { data: currentUser } = useQuery({
+    queryKey: ["/api/auth/user"],
+  });
+  
+  const { data: users = [], isLoading: usersLoading } = useQuery<User[]>({
+    queryKey: ["/api/users"],
+  });
+  
+  const { data: roles = [], isLoading: rolesLoading } = useQuery<Role[]>({
+    queryKey: ["/api/rbac/roles"],
+  });
+  
+  const { data: userRoles = [], refetch: refetchUserRoles } = useQuery<Role[]>({
+    queryKey: ["/api/rbac/users", selectedUserId, "roles"],
+    enabled: !!selectedUserId,
+  });
+  
+  const assignRoleMutation = useMutation({
+    mutationFn: ({ userId, roleId }: { userId: string; roleId: string }) =>
+      apiRequest("POST", `/api/rbac/users/${userId}/roles`, { roleId }),
+    onSuccess: () => {
+      toast({ title: "Success", description: "Role assigned successfully" });
+      refetchUserRoles();
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+  
+  const removeRoleMutation = useMutation({
+    mutationFn: ({ userId, roleId }: { userId: string; roleId: string }) =>
+      apiRequest("DELETE", `/api/rbac/users/${userId}/roles/${roleId}`),
+    onSuccess: () => {
+      toast({ title: "Success", description: "Role removed successfully" });
+      refetchUserRoles();
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+  
+  if (usersLoading || rolesLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-64" />
+      </div>
+    );
+  }
+  
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>User Access Control</CardTitle>
+          <CardDescription>
+            Manage user roles and permissions. Only administrators can modify access control.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Alert>
+            <Shield className="h-4 w-4" />
+            <AlertDescription>
+              Roles define what actions users can perform. Each role has a set of permissions that control access to features.
+            </AlertDescription>
+          </Alert>
+          
+          <div className="space-y-4">
+            <h3 className="font-semibold">Available Roles</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {roles.map((role: any) => (
+                <Card key={role.id} className="hover-elevate">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">{role.name}</CardTitle>
+                    <CardDescription className="text-xs">
+                      {role.description}
+                      {role.isDefault ? " (Default Role)" : ""}
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+          </div>
+          
+          <Separator />
+          
+          <div className="space-y-4">
+            <h3 className="font-semibold">Assign Roles to Users</h3>
+            <div className="space-y-2">
+              <Label>Select User</Label>
+              <Select
+                value={selectedUserId || ""}
+                onValueChange={setSelectedUserId}
+              >
+                <SelectTrigger data-testid="select-user">
+                  <SelectValue placeholder="Choose a user..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {users.map((user: any) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.firstName} {user.lastName} ({user.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {selectedUserId && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">Current Roles</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {userRoles.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No roles assigned yet</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {userRoles.map((role: any) => (
+                        <div
+                          key={role.id}
+                          className="flex items-center gap-2 bg-muted px-3 py-1 rounded-md text-sm"
+                        >
+                          <span>{role.name}</span>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-4 w-4 p-0"
+                            onClick={() =>
+                              removeRoleMutation.mutate({
+                                userId: selectedUserId,
+                                roleId: role.id,
+                              })
+                            }
+                            disabled={removeRoleMutation.isPending}
+                            data-testid={`button-remove-role-${role.id}`}
+                          >
+                            ×
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  <Separator className="my-3" />
+                  
+                  <div className="space-y-2">
+                    <Label>Add Role</Label>
+                    <Select
+                      onValueChange={(roleId) =>
+                        assignRoleMutation.mutate({
+                          userId: selectedUserId,
+                          roleId,
+                        })
+                      }
+                      disabled={assignRoleMutation.isPending}
+                    >
+                      <SelectTrigger data-testid="select-role-to-assign">
+                        <SelectValue placeholder="Choose a role to assign..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {roles
+                          .filter(
+                            (role: any) =>
+                              !userRoles.some((ur: any) => ur.id === role.id)
+                          )
+                          .map((role: any) => (
+                            <SelectItem key={role.id} value={role.id}>
+                              {role.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

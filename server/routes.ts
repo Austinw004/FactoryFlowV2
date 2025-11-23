@@ -2,6 +2,9 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { attachRbacUser } from "./middleware/rbac";
+import rbacRoutes from "./routes/rbac";
+import { initializePermissions, initializeDefaultRoles } from "./lib/rbac";
 import { DualCircuitEconomics } from "./lib/economics";
 import { DemandForecaster } from "./lib/forecasting";
 import { AllocationEngine } from "./lib/allocation";
@@ -102,6 +105,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   await setupAuth(app);
 
+  // Initialize RBAC system on startup
+  console.log("[RBAC] Initializing permissions...");
+  await initializePermissions(storage);
+  console.log("[RBAC] Permissions initialized successfully");
+
+  // Attach RBAC user to all authenticated requests
+  app.use(isAuthenticated, attachRbacUser);
+
+  // RBAC routes (roles, permissions, user role assignments)
+  app.use('/api/rbac', isAuthenticated, rbacRoutes);
+
   // Auth endpoints
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
@@ -111,6 +125,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Get all users in company (for role management)
+  app.get('/api/users', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const currentUser = await storage.getUser(userId);
+      
+      if (!currentUser || !currentUser.companyId) {
+        return res.status(400).json({ error: "User has no associated company" });
+      }
+      
+      const users = await storage.getUsersByCompany(currentUser.companyId);
+      res.json(users);
+    } catch (error: any) {
+      console.error("Error fetching company users:", error);
+      res.status(500).json({ error: "Failed to fetch users" });
     }
   });
 
@@ -129,6 +161,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const company = await storage.createCompany({
           name: `${user.firstName || 'User'}'s Company`,
         });
+        
+        // Initialize default roles for the new company
+        console.log(`[RBAC] Initializing default roles for company ${company.id}`);
+        await initializeDefaultRoles(storage, company.id);
+        
+        // Assign Admin role to the first user
+        const adminRole = await storage.getRoleByName(company.id, "Admin");
+        if (adminRole) {
+          await storage.assignRoleToUser(userId, adminRole.id, company.id, userId);
+          console.log(`[RBAC] Assigned Admin role to user ${userId}`);
+        }
         
         // Update user with company
         user = await storage.upsertUser({

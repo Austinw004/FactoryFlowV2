@@ -1,0 +1,297 @@
+import { Router } from "express";
+import { storage } from "../storage";
+import { requirePermission } from "../middleware/rbac";
+import { PERMISSIONS } from "../lib/rbac";
+import { insertRoleSchema, insertUserRoleAssignmentSchema } from "@shared/schema";
+
+const router = Router();
+
+// Get all permissions (available to all authenticated users)
+router.get("/permissions", async (req, res) => {
+  try {
+    const permissions = await storage.getAllPermissions();
+    res.json(permissions);
+  } catch (error) {
+    console.error("[RBAC Routes] Error fetching permissions:", error);
+    res.status(500).json({ error: "Failed to fetch permissions" });
+  }
+});
+
+// Get all roles for company (requires manage_roles permission)
+router.get("/roles", requirePermission(PERMISSIONS.MANAGE_ROLES), async (req, res) => {
+  try {
+    const user = (req as any).rbacUser;
+    if (!user?.companyId) {
+      return res.status(403).json({ error: "User not associated with a company" });
+    }
+    
+    const roles = await storage.getRoles(user.companyId);
+    res.json(roles);
+  } catch (error) {
+    console.error("[RBAC Routes] Error fetching roles:", error);
+    res.status(500).json({ error: "Failed to fetch roles" });
+  }
+});
+
+// Get specific role with its permissions
+router.get("/roles/:roleId", requirePermission(PERMISSIONS.MANAGE_ROLES), async (req, res) => {
+  try {
+    const { roleId } = req.params;
+    
+    const role = await storage.getRole(roleId);
+    if (!role) {
+      return res.status(404).json({ error: "Role not found" });
+    }
+    
+    const permissions = await storage.getRolePermissions(roleId);
+    
+    res.json({ ...role, permissions });
+  } catch (error) {
+    console.error("[RBAC Routes] Error fetching role:", error);
+    res.status(500).json({ error: "Failed to fetch role" });
+  }
+});
+
+// Create new role
+router.post("/roles", requirePermission(PERMISSIONS.MANAGE_ROLES), async (req, res) => {
+  try {
+    const user = (req as any).rbacUser;
+    if (!user?.companyId) {
+      return res.status(403).json({ error: "User not associated with a company" });
+    }
+    
+    const roleData = insertRoleSchema.parse({
+      ...req.body,
+      companyId: user.companyId,
+      isDefault: 0, // Custom roles are not defaults
+    });
+    
+    const role = await storage.createRole(roleData);
+    
+    // Create audit log
+    await storage.createAuditLog({
+      companyId: user.companyId,
+      userId: user.id,
+      action: "create",
+      entityType: "role",
+      entityId: role.id,
+      changes: { role },
+    });
+    
+    res.status(201).json(role);
+  } catch (error) {
+    console.error("[RBAC Routes] Error creating role:", error);
+    res.status(500).json({ error: "Failed to create role" });
+  }
+});
+
+// Update role
+router.patch("/roles/:roleId", requirePermission(PERMISSIONS.MANAGE_ROLES), async (req, res) => {
+  try {
+    const { roleId } = req.params;
+    const user = (req as any).rbacUser;
+    
+    const role = await storage.updateRole(roleId, req.body);
+    if (!role) {
+      return res.status(404).json({ error: "Role not found" });
+    }
+    
+    // Create audit log
+    if (user?.companyId && user?.id) {
+      await storage.createAuditLog({
+        companyId: user.companyId,
+        userId: user.id,
+        action: "update",
+        entityType: "role",
+        entityId: roleId,
+        changes: req.body,
+      });
+    }
+    
+    res.json(role);
+  } catch (error) {
+    console.error("[RBAC Routes] Error updating role:", error);
+    res.status(500).json({ error: "Failed to update role" });
+  }
+});
+
+// Delete role
+router.delete("/roles/:roleId", requirePermission(PERMISSIONS.MANAGE_ROLES), async (req, res) => {
+  try {
+    const { roleId } = req.params;
+    const user = (req as any).rbacUser;
+    
+    const role = await storage.getRole(roleId);
+    if (!role) {
+      return res.status(404).json({ error: "Role not found" });
+    }
+    
+    // Don't allow deletion of default roles
+    if (role.isDefault) {
+      return res.status(400).json({ error: "Cannot delete default roles" });
+    }
+    
+    await storage.deleteRole(roleId);
+    
+    // Create audit log
+    if (user?.companyId && user?.id) {
+      await storage.createAuditLog({
+        companyId: user.companyId,
+        userId: user.id,
+        action: "delete",
+        entityType: "role",
+        entityId: roleId,
+        changes: { deletedRole: role },
+      });
+    }
+    
+    res.status(204).send();
+  } catch (error) {
+    console.error("[RBAC Routes] Error deleting role:", error);
+    res.status(500).json({ error: "Failed to delete role" });
+  }
+});
+
+// Assign permission to role
+router.post("/roles/:roleId/permissions/:permissionId", requirePermission(PERMISSIONS.MANAGE_ROLES), async (req, res) => {
+  try {
+    const { roleId, permissionId } = req.params;
+    const user = (req as any).rbacUser;
+    
+    await storage.assignPermissionToRole(roleId, permissionId);
+    
+    // Create audit log
+    if (user?.companyId && user?.id) {
+      await storage.createAuditLog({
+        companyId: user.companyId,
+        userId: user.id,
+        action: "create",
+        entityType: "role_permission",
+        entityId: `${roleId}-${permissionId}`,
+        changes: { roleId, permissionId },
+      });
+    }
+    
+    res.status(201).json({ success: true });
+  } catch (error) {
+    console.error("[RBAC Routes] Error assigning permission to role:", error);
+    res.status(500).json({ error: "Failed to assign permission" });
+  }
+});
+
+// Remove permission from role
+router.delete("/roles/:roleId/permissions/:permissionId", requirePermission(PERMISSIONS.MANAGE_ROLES), async (req, res) => {
+  try {
+    const { roleId, permissionId } = req.params;
+    const user = (req as any).rbacUser;
+    
+    await storage.removePermissionFromRole(roleId, permissionId);
+    
+    // Create audit log
+    if (user?.companyId && user?.id) {
+      await storage.createAuditLog({
+        companyId: user.companyId,
+        userId: user.id,
+        action: "delete",
+        entityType: "role_permission",
+        entityId: `${roleId}-${permissionId}`,
+        changes: { roleId, permissionId },
+      });
+    }
+    
+    res.status(204).send();
+  } catch (error) {
+    console.error("[RBAC Routes] Error removing permission from role:", error);
+    res.status(500).json({ error: "Failed to remove permission" });
+  }
+});
+
+// Get user's roles
+router.get("/users/:userId/roles", requirePermission(PERMISSIONS.MANAGE_USERS), async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = (req as any).rbacUser;
+    
+    if (!user?.companyId) {
+      return res.status(403).json({ error: "User not associated with a company" });
+    }
+    
+    const roles = await storage.getUserRoles(userId, user.companyId);
+    res.json(roles);
+  } catch (error) {
+    console.error("[RBAC Routes] Error fetching user roles:", error);
+    res.status(500).json({ error: "Failed to fetch user roles" });
+  }
+});
+
+// Assign role to user
+router.post("/users/:userId/roles", requirePermission(PERMISSIONS.MANAGE_USERS), async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { roleId } = req.body;
+    const user = (req as any).rbacUser;
+    
+    if (!user?.companyId || !user?.id) {
+      return res.status(403).json({ error: "User not associated with a company" });
+    }
+    
+    await storage.assignRoleToUser(userId, roleId, user.companyId, user.id);
+    
+    // Create audit log
+    await storage.createAuditLog({
+      companyId: user.companyId,
+      userId: user.id,
+      action: "create",
+      entityType: "user_role_assignment",
+      entityId: `${userId}-${roleId}`,
+      changes: { userId, roleId, assignedBy: user.id },
+    });
+    
+    res.status(201).json({ success: true });
+  } catch (error) {
+    console.error("[RBAC Routes] Error assigning role to user:", error);
+    res.status(500).json({ error: "Failed to assign role to user" });
+  }
+});
+
+// Remove role from user
+router.delete("/users/:userId/roles/:roleId", requirePermission(PERMISSIONS.MANAGE_USERS), async (req, res) => {
+  try {
+    const { userId, roleId } = req.params;
+    const user = (req as any).rbacUser;
+    
+    await storage.removeRoleFromUser(userId, roleId);
+    
+    // Create audit log
+    if (user?.companyId && user?.id) {
+      await storage.createAuditLog({
+        companyId: user.companyId,
+        userId: user.id,
+        action: "delete",
+        entityType: "user_role_assignment",
+        entityId: `${userId}-${roleId}`,
+        changes: { userId, roleId },
+      });
+    }
+    
+    res.status(204).send();
+  } catch (error) {
+    console.error("[RBAC Routes] Error removing role from user:", error);
+    res.status(500).json({ error: "Failed to remove role from user" });
+  }
+});
+
+// Get users with specific role
+router.get("/roles/:roleId/users", requirePermission(PERMISSIONS.MANAGE_USERS), async (req, res) => {
+  try {
+    const { roleId } = req.params;
+    
+    const users = await storage.getUsersWithRole(roleId);
+    res.json(users);
+  } catch (error) {
+    console.error("[RBAC Routes] Error fetching users with role:", error);
+    res.status(500).json({ error: "Failed to fetch users" });
+  }
+});
+
+export default router;

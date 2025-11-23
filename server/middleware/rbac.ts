@@ -1,24 +1,23 @@
 import { Request, Response, NextFunction } from "express";
 import { userHasPermission, PermissionName } from "../lib/rbac";
 
-// Extend Express Request type to include user
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: string;
-        email?: string;
-        companyId?: string;
-      };
-    }
-  }
+// Custom user type for RBAC
+interface RbacUser {
+  id: string;
+  email?: string;
+  companyId?: string;
+}
+
+// Extend Request to add rbacUser (avoid conflict with existing user type)
+interface AuthenticatedRequest extends Request {
+  rbacUser?: RbacUser;
 }
 
 // Middleware to require specific permission
 export function requirePermission(permissionName: PermissionName) {
-  return async (req: Request, res: Response, next: NextFunction) => {
+  return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const user = req.user;
+      const user = req.rbacUser;
       
       if (!user) {
         return res.status(401).json({ error: "Authentication required" });
@@ -47,9 +46,9 @@ export function requirePermission(permissionName: PermissionName) {
 
 // Middleware to require ANY of the specified permissions (OR logic)
 export function requireAnyPermission(...permissionNames: PermissionName[]) {
-  return async (req: Request, res: Response, next: NextFunction) => {
+  return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const user = req.user;
+      const user = req.rbacUser;
       
       if (!user) {
         return res.status(401).json({ error: "Authentication required" });
@@ -79,9 +78,9 @@ export function requireAnyPermission(...permissionNames: PermissionName[]) {
 
 // Middleware to require ALL of the specified permissions (AND logic)
 export function requireAllPermissions(...permissionNames: PermissionName[]) {
-  return async (req: Request, res: Response, next: NextFunction) => {
+  return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const user = req.user;
+      const user = req.rbacUser;
       
       if (!user) {
         return res.status(401).json({ error: "Authentication required" });
@@ -109,12 +108,12 @@ export function requireAllPermissions(...permissionNames: PermissionName[]) {
   };
 }
 
-// Helper to attach user info from session to request
-export function attachUser(req: Request, res: Response, next: NextFunction) {
+// Helper to attach user info from session to request for RBAC
+export function attachRbacUser(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   // Replit Auth attaches user to req.session
   if (req.session && (req.session as any).passport?.user) {
     const sessionUser = (req.session as any).passport.user;
-    req.user = {
+    req.rbacUser = {
       id: sessionUser.id,
       email: sessionUser.email,
       companyId: sessionUser.companyId,

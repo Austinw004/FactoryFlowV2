@@ -98,6 +98,7 @@ export interface IStorage {
   // Users
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
+  getUsersByCompany(companyId: string): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
   
@@ -464,6 +465,7 @@ export interface IStorage {
   // RBAC - Roles
   getRoles(companyId: string): Promise<Role[]>;
   getRole(roleId: string): Promise<Role | undefined>;
+  getRoleByName(companyId: string, name: string): Promise<Role | undefined>;
   createRole(role: InsertRole): Promise<Role>;
   updateRole(roleId: string, role: Partial<InsertRole>): Promise<Role | undefined>;
   deleteRole(roleId: string): Promise<void>;
@@ -496,6 +498,10 @@ export class DbStorage implements IStorage {
   async getUserByEmail(email: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.email, email));
     return user;
+  }
+
+  async getUsersByCompany(companyId: string): Promise<User[]> {
+    return await db.select().from(users).where(eq(users.companyId, companyId));
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
@@ -2065,6 +2071,13 @@ export class DbStorage implements IStorage {
   
   async getRole(roleId: string): Promise<Role | undefined> {
     const [role] = await db.select().from(roles).where(eq(roles.id, roleId));
+    return role;
+  }
+  
+  async getRoleByName(companyId: string, name: string): Promise<Role | undefined> {
+    const [role] = await db.select().from(roles).where(
+      and(eq(roles.companyId, companyId), eq(roles.name, name))
+    );
     return role;
   }
   
