@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { attachRbacUser } from "./middleware/rbac";
+import { attachRbacUser, requirePermission } from "./middleware/rbac";
 import rbacRoutes from "./routes/rbac";
 import { initializePermissions, initializeDefaultRoles } from "./lib/rbac";
 import { DualCircuitEconomics } from "./lib/economics";
@@ -129,16 +129,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all users in company (for role management)
-  app.get('/api/users', isAuthenticated, async (req: any, res) => {
+  app.get('/api/users', isAuthenticated, requirePermission('MANAGE_USERS'), async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const currentUser = await storage.getUser(userId);
+      const companyId = req.rbacUser?.companyId;
       
-      if (!currentUser || !currentUser.companyId) {
-        return res.status(400).json({ error: "User has no associated company" });
+      if (!companyId) {
+        return res.status(403).json({ error: "Access denied: no company association" });
       }
       
-      const users = await storage.getUsersByCompany(currentUser.companyId);
+      const users = await storage.getUsersByCompany(companyId);
       res.json(users);
     } catch (error: any) {
       console.error("Error fetching company users:", error);

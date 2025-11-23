@@ -91,9 +91,20 @@ router.patch("/roles/:roleId", requirePermission(PERMISSIONS.MANAGE_ROLES), asyn
     const { roleId } = req.params;
     const user = (req as any).rbacUser;
     
-    const role = await storage.updateRole(roleId, req.body);
+    if (!user?.companyId) {
+      return res.status(403).json({ error: "Access denied: no company association" });
+    }
+    
+    // Whitelist updatable fields - prevent companyId reassignment
+    const { name, description, isDefault } = req.body;
+    const updates: any = {};
+    if (name !== undefined) updates.name = name;
+    if (description !== undefined) updates.description = description;
+    if (isDefault !== undefined) updates.isDefault = isDefault;
+    
+    const role = await storage.updateRole(roleId, user.companyId, updates);
     if (!role) {
-      return res.status(404).json({ error: "Role not found" });
+      return res.status(404).json({ error: "Role not found or access denied" });
     }
     
     // Create audit log
@@ -104,7 +115,7 @@ router.patch("/roles/:roleId", requirePermission(PERMISSIONS.MANAGE_ROLES), asyn
         action: "update",
         entityType: "role",
         entityId: roleId,
-        changes: req.body,
+        changes: updates,
       });
     }
     
@@ -121,6 +132,10 @@ router.delete("/roles/:roleId", requirePermission(PERMISSIONS.MANAGE_ROLES), asy
     const { roleId } = req.params;
     const user = (req as any).rbacUser;
     
+    if (!user?.companyId) {
+      return res.status(403).json({ error: "Access denied: no company association" });
+    }
+    
     const role = await storage.getRole(roleId);
     if (!role) {
       return res.status(404).json({ error: "Role not found" });
@@ -131,7 +146,8 @@ router.delete("/roles/:roleId", requirePermission(PERMISSIONS.MANAGE_ROLES), asy
       return res.status(400).json({ error: "Cannot delete default roles" });
     }
     
-    await storage.deleteRole(roleId);
+    // Verify company ownership before deletion
+    await storage.deleteRole(roleId, user.companyId);
     
     // Create audit log
     if (user?.companyId && user?.id) {

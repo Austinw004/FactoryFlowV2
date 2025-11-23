@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { userHasPermission, PermissionName } from "../lib/rbac";
+import { storage } from "../storage";
 
 // Custom user type for RBAC
 interface RbacUser {
@@ -109,15 +110,33 @@ export function requireAllPermissions(...permissionNames: PermissionName[]) {
 }
 
 // Helper to attach user info from session to request for RBAC
-export function attachRbacUser(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-  // Replit Auth attaches user to req.session
-  if (req.session && (req.session as any).passport?.user) {
-    const sessionUser = (req.session as any).passport.user;
-    req.rbacUser = {
-      id: sessionUser.id,
-      email: sessionUser.email,
-      companyId: sessionUser.companyId,
-    };
+export async function attachRbacUser(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  try {
+    // First try to get user from session (primary path)
+    if (req.session && (req.session as any).passport?.user) {
+      const sessionUser = (req.session as any).passport.user;
+      req.rbacUser = {
+        id: sessionUser.id,
+        email: sessionUser.email,
+        companyId: sessionUser.companyId,
+      };
+    }
+    
+    // Fallback: if session doesn't have complete data, fetch from storage
+    if (req.rbacUser && (!req.rbacUser.companyId || !req.rbacUser.email)) {
+      const dbUser = await storage.getUser(req.rbacUser.id);
+      if (dbUser) {
+        req.rbacUser = {
+          id: dbUser.id,
+          email: dbUser.email || req.rbacUser.email,
+          companyId: dbUser.companyId || req.rbacUser.companyId,
+        };
+      }
+    }
+    
+    next();
+  } catch (error) {
+    console.error("[RBAC Middleware] Error attaching RBAC user:", error);
+    next(); // Continue even if there's an error - let permission checks handle it
   }
-  next();
 }

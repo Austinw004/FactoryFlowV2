@@ -467,8 +467,8 @@ export interface IStorage {
   getRole(roleId: string): Promise<Role | undefined>;
   getRoleByName(companyId: string, name: string): Promise<Role | undefined>;
   createRole(role: InsertRole): Promise<Role>;
-  updateRole(roleId: string, role: Partial<InsertRole>): Promise<Role | undefined>;
-  deleteRole(roleId: string): Promise<void>;
+  updateRole(roleId: string, companyId: string, role: Partial<InsertRole>): Promise<Role | undefined>;
+  deleteRole(roleId: string, companyId: string): Promise<void>;
   
   // RBAC - Role Permissions
   getRolePermissions(roleId: string): Promise<Permission[]>;
@@ -2086,13 +2086,19 @@ export class DbStorage implements IStorage {
     return newRole;
   }
   
-  async updateRole(roleId: string, roleData: Partial<InsertRole>): Promise<Role | undefined> {
-    const [role] = await db.update(roles).set(roleData).where(eq(roles.id, roleId)).returning();
+  async updateRole(roleId: string, companyId: string, roleData: Partial<InsertRole>): Promise<Role | undefined> {
+    // Prevent companyId from being changed and verify role belongs to company
+    const { companyId: _, ...safeData } = roleData as any;
+    const [role] = await db.update(roles)
+      .set(safeData)
+      .where(and(eq(roles.id, roleId), eq(roles.companyId, companyId)))
+      .returning();
     return role;
   }
   
-  async deleteRole(roleId: string): Promise<void> {
-    await db.delete(roles).where(eq(roles.id, roleId));
+  async deleteRole(roleId: string, companyId: string): Promise<void> {
+    // Verify role belongs to company before deleting
+    await db.delete(roles).where(and(eq(roles.id, roleId), eq(roles.companyId, companyId)));
   }
   
   // RBAC - Role Permissions
