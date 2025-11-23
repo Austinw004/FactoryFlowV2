@@ -29,6 +29,7 @@ import AutomatedPO from "@/pages/AutomatedPO";
 import IndustryConsortium from "@/pages/IndustryConsortium";
 import MAIntelligence from "@/pages/MAIntelligence";
 import StrategicAnalysis from "@/pages/StrategicAnalysis";
+import SopWorkspace from "@/pages/SopWorkspace";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
@@ -59,6 +60,7 @@ function Router() {
           <Route path="/industry-consortium" component={IndustryConsortium} />
           <Route path="/ma-intelligence" component={MAIntelligence} />
           <Route path="/strategic-analysis" component={StrategicAnalysis} />
+          <Route path="/sop-workspace" component={SopWorkspace} />
           <Route path="/reports" component={Reports} />
           <Route path="/configuration" component={Configuration} />
           <Route path="/how-it-works" component={HowItWorks} />

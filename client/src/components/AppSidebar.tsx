@@ -18,6 +18,7 @@ import {
   BarChart3,
   Building2,
   Target,
+  Clipboard,
 } from "lucide-react";
 import {
   Sidebar,
@@ -50,6 +51,12 @@ const menuSections = [
         title: "Material Planning",
         url: "/allocation",
         icon: Boxes,
+      },
+      {
+        title: "S&OP Workspace",
+        url: "/sop-workspace",
+        icon: Clipboard,
+        testId: "sidebar-sop-workspace",
       },
       {
         title: "Purchasing",
