@@ -210,7 +210,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cacheKey = `economicData:regime:${user.companyId}`;
       const cachedData = globalCache.get<any>(cacheKey);
       if (cachedData) {
-        return res.json({ ...cachedData, fromCache: true });
+        return res.json(cachedData);
       }
       
       // Try to get latest snapshot from background jobs
@@ -288,7 +288,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cacheKey = `commodityPrices:all:${user.companyId}`;
       const cachedPrices = globalCache.get<any>(cacheKey);
       if (cachedPrices) {
-        return res.json({ ...cachedPrices, fromCache: true });
+        return res.json(cachedPrices);
       }
       
       const { fetchAllCommodityPrices } = await import("./lib/commodityPricing");
@@ -618,7 +618,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
+      
+      const cacheKey = `masterData:skus:${user.companyId}`;
+      const cached = globalCache.get<any>(cacheKey);
+      if (cached) {
+        return res.json(cached);
+      }
+      
       const skus = await storage.getSkus(user.companyId);
+      globalCache.set(cacheKey, skus, 'masterData');
+      
       res.json(skus);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -654,6 +663,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const validatedData = insertSkuSchema.parse({ ...req.body, companyId: user.companyId });
       const sku = await storage.createSku(validatedData);
+      globalCache.invalidate(`masterData:skus:${user.companyId}`);
       await logAudit({ action: "create", entityType: "sku", entityId: sku.id, changes: validatedData, req });
       res.status(201).json(sku);
     } catch (error: any) {
@@ -677,6 +687,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const validatedData = updateSkuSchema.parse(req.body);
       const sku = await storage.updateSku(req.params.id, validatedData);
+      globalCache.invalidate(`masterData:skus:${user.companyId}`);
       await logAudit({ action: "update", entityType: "sku", entityId: req.params.id, changes: validatedData, req });
       res.json(sku);
     } catch (error: any) {
@@ -699,6 +710,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Access denied" });
       }
       await storage.deleteSku(req.params.id);
+      globalCache.invalidate(`masterData:skus:${user.companyId}`);
       await logAudit({ action: "delete", entityType: "sku", entityId: req.params.id, changes: { name: existing.name }, req });
       res.status(204).send();
     } catch (error: any) {
@@ -714,7 +726,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
+      
+      const cacheKey = `masterData:materials:${user.companyId}`;
+      const cached = globalCache.get<any>(cacheKey);
+      if (cached) {
+        return res.json(cached);
+      }
+      
       const materials = await storage.getMaterials(user.companyId);
+      globalCache.set(cacheKey, materials, 'masterData');
+      
       res.json(materials);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -750,6 +771,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const validatedData = insertMaterialSchema.parse({ ...req.body, companyId: user.companyId });
       const material = await storage.createMaterial(validatedData);
+      globalCache.invalidate(`masterData:materials:${user.companyId}`);
       await logAudit({ action: "create", entityType: "material", entityId: material.id, changes: validatedData, req });
       res.status(201).json(material);
     } catch (error: any) {
@@ -773,6 +795,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const validatedData = updateMaterialSchema.parse(req.body);
       const material = await storage.updateMaterial(req.params.id, validatedData);
+      globalCache.invalidate(`masterData:materials:${user.companyId}`);
       await logAudit({ action: "update", entityType: "material", entityId: req.params.id, changes: validatedData, req });
       res.json(material);
     } catch (error: any) {
@@ -795,6 +818,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Access denied" });
       }
       await storage.deleteMaterial(req.params.id);
+      globalCache.invalidate(`masterData:materials:${user.companyId}`);
       await logAudit({ action: "delete", entityType: "material", entityId: req.params.id, changes: { name: existing.name }, req });
       res.status(204).send();
     } catch (error: any) {
@@ -866,7 +890,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
+      
+      const cacheKey = `masterData:suppliers:${user.companyId}`;
+      const cached = globalCache.get<any>(cacheKey);
+      if (cached) {
+        return res.json(cached);
+      }
+      
       const suppliers = await storage.getSuppliers(user.companyId);
+      globalCache.set(cacheKey, suppliers, 'masterData');
+      
       res.json(suppliers);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -882,6 +915,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const validatedData = insertSupplierSchema.parse({ ...req.body, companyId: user.companyId });
       const supplier = await storage.createSupplier(validatedData);
+      globalCache.invalidate(`masterData:suppliers:${user.companyId}`);
       await logAudit({ action: "create", entityType: "supplier", entityId: supplier.id, changes: validatedData, req });
       res.status(201).json(supplier);
     } catch (error: any) {
@@ -1003,7 +1037,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cacheKey = `forecasts:accuracy-metrics:${user.companyId}`;
       const cached = globalCache.get<any>(cacheKey);
       if (cached) {
-        return res.json({ ...cached, fromCache: true });
+        return res.json(cached);
       }
       
       const metrics = await storage.getForecastAccuracyMetrics(user.companyId);
@@ -1073,7 +1107,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cacheKey = `forecasts:multi-horizon:${user.companyId}:${skuId || 'all'}:${horizonDays || 'all'}`;
       const cached = globalCache.get<any>(cacheKey);
       if (cached) {
-        return res.json({ ...cached, fromCache: true });
+        return res.json(cached);
       }
       
       const forecasts = await storage.getMultiHorizonForecasts(user.companyId, { skuId, horizonDays });

@@ -27,6 +27,7 @@ export class RegimeAwareCache {
       forecasts: 3600,
       allocations: 1800,
       supplyChainRisk: 3600,
+      masterData: 3600,
       default: 300
     },
     ASSET_LED_GROWTH: {
@@ -35,6 +36,7 @@ export class RegimeAwareCache {
       forecasts: 1800,
       allocations: 900,
       supplyChainRisk: 1800,
+      masterData: 1800,
       default: 180
     },
     IMBALANCED_EXCESS: {
@@ -43,6 +45,7 @@ export class RegimeAwareCache {
       forecasts: 600,
       allocations: 300,
       supplyChainRisk: 600,
+      masterData: 900,
       default: 60
     },
     REAL_ECONOMY_LEAD: {
@@ -51,6 +54,7 @@ export class RegimeAwareCache {
       forecasts: 300,
       allocations: 180,
       supplyChainRisk: 300,
+      masterData: 600,
       default: 45
     }
   };
