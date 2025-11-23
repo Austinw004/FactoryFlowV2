@@ -5089,6 +5089,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validated = updateSchema.parse(req.body);
 
       const updated = await storage.updateCompany(user.companyId!, validated);
+      await logAudit({ action: "update", entityType: "company_settings", entityId: user.companyId!, changes: validated, req });
       res.json(updated);
     } catch (error: any) {
       console.error("Error updating company settings:", error);

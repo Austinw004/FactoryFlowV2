@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, AlertCircle, Package, Building2, Zap, DollarSign, Bell, Save, Mail, Plug, Shield, Bot, Palette, Globe, Users } from "lucide-react";
+import { Settings, AlertCircle, Package, Building2, Zap, DollarSign, Bell, Save, Mail, Plug, Shield, Bot, Palette, Globe, Users, FileText } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -122,7 +122,7 @@ export default function Configuration() {
       </div>
 
       <Tabs defaultValue="company" data-testid="tabs-settings">
-        <TabsList className="grid grid-cols-4 lg:grid-cols-10 h-auto">
+        <TabsList className="grid grid-cols-4 lg:grid-cols-11 h-auto">
           <TabsTrigger value="company" data-testid="tab-company">
             <Building2 className="h-4 w-4 mr-2" />
             Company
@@ -162,6 +162,10 @@ export default function Configuration() {
           <TabsTrigger value="access" data-testid="tab-access">
             <Users className="h-4 w-4 mr-2" />
             Access Control
+          </TabsTrigger>
+          <TabsTrigger value="audit" data-testid="tab-audit">
+            <FileText className="h-4 w-4 mr-2" />
+            Audit Logs
           </TabsTrigger>
         </TabsList>
 
@@ -898,8 +902,121 @@ export default function Configuration() {
         <TabsContent value="access" className="space-y-4">
           <RoleManagement />
         </TabsContent>
+        <TabsContent value="audit" className="space-y-4">
+          <AuditLogViewer />
+        </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+// Audit Log Viewer Component
+function AuditLogViewer() {
+  const [actionFilter, setActionFilter] = useState<string>("all");
+  const [entityFilter, setEntityFilter] = useState<string>("all");
+  
+  const { data: auditLogs, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/rbac/audit-logs"],
+  });
+  
+  const filteredLogs = auditLogs?.filter(log => {
+    if (actionFilter !== "all" && log.action !== actionFilter) return false;
+    if (entityFilter !== "all" && log.entityType !== entityFilter) return false;
+    return true;
+  }) || [];
+  
+  const actions = ["all", "create", "update", "delete"];
+  const entityTypes = ["all", "sku", "material", "supplier", "allocation", "company_settings", "role", "permission"];
+  
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Audit Logs</CardTitle>
+        <CardDescription>
+          Track all critical actions performed by users in your system
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex gap-4 flex-wrap">
+          <div className="w-48">
+            <Label>Action</Label>
+            <Select value={actionFilter} onValueChange={setActionFilter}>
+              <SelectTrigger data-testid="select-action-filter">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {actions.map(action => (
+                  <SelectItem key={action} value={action}>
+                    {action.charAt(0).toUpperCase() + action.slice(1)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="w-48">
+            <Label>Entity Type</Label>
+            <Select value={entityFilter} onValueChange={setEntityFilter}>
+              <SelectTrigger data-testid="select-entity-filter">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {entityTypes.map(type => (
+                  <SelectItem key={type} value={type}>
+                    {type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' ')}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        
+        {isLoading ? (
+          <div className="space-y-2">
+            {[1,2,3].map(i => <Skeleton key={i} className="h-16" />)}
+          </div>
+        ) : filteredLogs.length === 0 ? (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>No audit logs found with the selected filters</AlertDescription>
+          </Alert>
+        ) : (
+          <div className="space-y-2">
+            {filteredLogs.map((log) => (
+              <Card key={log.id} className="p-4">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-sm">{log.action.toUpperCase()}</span>
+                      <span className="text-muted-foreground text-sm">•</span>
+                      <span className="text-sm">{log.entityType.replace('_', ' ')}</span>
+                      {log.entityId && (
+                        <>
+                          <span className="text-muted-foreground text-sm">•</span>
+                          <span className="text-xs text-muted-foreground font-mono">{log.entityId.substring(0, 8)}</span>
+                        </>
+                      )}
+                    </div>
+                    {log.changes && Object.keys(log.changes).length > 0 && (
+                      <div className="text-xs text-muted-foreground font-mono bg-muted p-2 rounded mt-2">
+                        {JSON.stringify(log.changes, null, 2).substring(0, 200)}
+                        {JSON.stringify(log.changes).length > 200 && "..."}
+                      </div>
+                    )}
+                    {log.notes && (
+                      <p className="text-sm text-muted-foreground">{log.notes}</p>
+                    )}
+                  </div>
+                  <div className="text-xs text-muted-foreground text-right ml-4">
+                    <div>{new Date(log.timestamp).toLocaleDateString()}</div>
+                    <div>{new Date(log.timestamp).toLocaleTimeString()}</div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

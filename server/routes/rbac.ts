@@ -323,4 +323,21 @@ router.get("/roles/:roleId/users", requirePermission(PERMISSIONS.MANAGE_USERS), 
   }
 });
 
+// Get audit logs for company (requires view_audit_logs permission)
+router.get("/audit-logs", requirePermission(PERMISSIONS.VIEW_AUDIT_LOGS), async (req, res) => {
+  try {
+    const user = (req as any).rbacUser;
+    if (!user?.companyId) {
+      return res.status(403).json({ error: "User not associated with a company" });
+    }
+    
+    // Enforce company scoping for tenant isolation
+    const logs = await storage.getAuditLogs(user.companyId);
+    res.json(logs);
+  } catch (error) {
+    console.error("[RBAC Routes] Error fetching audit logs:", error);
+    res.status(500).json({ error: "Failed to fetch audit logs" });
+  }
+});
+
 export default router;
