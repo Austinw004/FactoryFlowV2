@@ -702,6 +702,43 @@ function generateSimulatedHistoricalEconomicStates(dataPoints: number = 20) {
  * IMPORTANT: This is a RESEARCH VALIDATION system - NOT user-facing functionality.
  * In production, this would fetch real historical data from FRED/Alpha Vantage APIs.
  */
+/**
+ * Automated Forecast Retraining Job
+ * Runs daily to find SKUs with poor accuracy and retrain models
+ */
+async function runForecastRetraining() {
+  try {
+    const companies = await getActiveCompanyIds();
+    
+    for (const companyId of companies) {
+      try {
+        const result = await runAutomatedRetraining(storage, companyId, 10);
+        
+        // Broadcast retraining results
+        if (result.skusRetrained > 0) {
+          broadcastUpdate({
+            type: 'database_update',
+            entity: 'forecast_retraining',
+            action: 'update',
+            timestamp: new Date().toISOString(),
+            companyId,
+            data: {
+              skusEvaluated: result.totalSkusEvaluated,
+              skusRetrained: result.skusRetrained,
+              mapeBefore: result.averageMAPEBefore.toFixed(2),
+              mapeAfter: result.averageMAPEAfter.toFixed(2),
+            },
+          });
+        }
+      } catch (error: any) {
+        console.error(`[ForecastRetrain] Error for company ${companyId}:`, error.message);
+      }
+    }
+  } catch (error) {
+    console.error('[ForecastRetrain] Failed to run automated retraining:', error);
+  }
+}
+
 async function runHistoricalBacktesting() {
   try {
     const companies = await getActiveCompanyIds();
@@ -826,7 +863,8 @@ const jobConfigs: BackgroundJobConfig[] = [
   { name: 'Supply Chain Risk Updates', intervalMs: 5 * 60 * 1000, enabled: true },
   { name: 'Workforce Metrics Updates', intervalMs: 10 * 60 * 1000, enabled: true },
   { name: 'Production KPI Updates', intervalMs: 2 * 60 * 1000, enabled: true },
-  { name: 'Historical Backtesting (Research)', intervalMs: 20 * 60 * 1000, enabled: true }, // Every 20 minutes
+  { name: 'Historical Backtesting (Research)', intervalMs: 20 * 60 * 1000, enabled: true },
+  { name: 'Automated Forecast Retraining', intervalMs: 24 * 60 * 60 * 1000, enabled: true }, // Daily at 24 hours
 ];
 
 export function startBackgroundJobs() {
@@ -841,6 +879,7 @@ export function startBackgroundJobs() {
     updateWorkforceMetrics,
     updateProductionKPIs,
     runHistoricalBacktesting,
+    runForecastRetraining,
   ];
   
   jobConfigs.forEach((config, index) => {

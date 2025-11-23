@@ -113,8 +113,7 @@ export async function calculateSKUForecastError(
   });
   
   // Get current regime from latest economic snapshot
-  const snapshots = await storage.getEconomicSnapshots(sku!.companyId);
-  const latestSnapshot = snapshots.length > 0 ? snapshots[0] : null;
+  const latestSnapshot = await storage.getLatestEconomicSnapshot(sku!.companyId);
   const regime = (latestSnapshot?.regime || 'HEALTHY_EXPANSION') as Regime;
   
   // Generate forecasts for test period
@@ -193,8 +192,7 @@ export async function retrainSKUForecast(
     });
     
     // Get current regime from latest economic snapshot
-    const snapshots = await storage.getEconomicSnapshots(sku.companyId);
-    const latestSnapshot = snapshots.length > 0 ? snapshots[0] : null;
+    const latestSnapshot = await storage.getLatestEconomicSnapshot(sku.companyId);
     const regime = (latestSnapshot?.regime || 'HEALTHY_EXPANSION') as Regime;
     
     // Validate new model on held-out data
