@@ -5181,13 +5181,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const company = await storage.getCompany(companyId);
       
       // Get SKUs to check if any exist
-      const skus = await storage.getSKUs(companyId);
+      const skus = await storage.getSkus(String(companyId));
       
       // Get materials to check if any exist
-      const materials = await storage.getMaterials(companyId);
+      const materials = await storage.getMaterials(String(companyId));
       
       // Get suppliers to check if any exist
-      const suppliers = await storage.getSuppliers(companyId);
+      const suppliers = await storage.getSuppliers(String(companyId));
       
       // Calculate onboarding status
       const status = {
