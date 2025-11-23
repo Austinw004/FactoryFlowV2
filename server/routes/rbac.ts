@@ -37,13 +37,18 @@ router.get("/roles", requirePermission(PERMISSIONS.MANAGE_ROLES), async (req, re
 router.get("/roles/:roleId", requirePermission(PERMISSIONS.MANAGE_ROLES), async (req, res) => {
   try {
     const { roleId } = req.params;
+    const user = (req as any).rbacUser;
     
-    const role = await storage.getRole(roleId);
-    if (!role) {
-      return res.status(404).json({ error: "Role not found" });
+    if (!user?.companyId) {
+      return res.status(403).json({ error: "Access denied: no company association" });
     }
     
-    const permissions = await storage.getRolePermissions(roleId);
+    const role = await storage.getRole(roleId, user.companyId);
+    if (!role) {
+      return res.status(404).json({ error: "Role not found or access denied" });
+    }
+    
+    const permissions = await storage.getRolePermissions(roleId, user.companyId);
     
     res.json({ ...role, permissions });
   } catch (error) {
@@ -136,9 +141,9 @@ router.delete("/roles/:roleId", requirePermission(PERMISSIONS.MANAGE_ROLES), asy
       return res.status(403).json({ error: "Access denied: no company association" });
     }
     
-    const role = await storage.getRole(roleId);
+    const role = await storage.getRole(roleId, user.companyId);
     if (!role) {
-      return res.status(404).json({ error: "Role not found" });
+      return res.status(404).json({ error: "Role not found or access denied" });
     }
     
     // Don't allow deletion of default roles
@@ -174,7 +179,11 @@ router.post("/roles/:roleId/permissions/:permissionId", requirePermission(PERMIS
     const { roleId, permissionId } = req.params;
     const user = (req as any).rbacUser;
     
-    await storage.assignPermissionToRole(roleId, permissionId);
+    if (!user?.companyId) {
+      return res.status(403).json({ error: "Access denied: no company association" });
+    }
+    
+    await storage.assignPermissionToRole(roleId, permissionId, user.companyId);
     
     // Create audit log
     if (user?.companyId && user?.id) {
@@ -201,7 +210,11 @@ router.delete("/roles/:roleId/permissions/:permissionId", requirePermission(PERM
     const { roleId, permissionId } = req.params;
     const user = (req as any).rbacUser;
     
-    await storage.removePermissionFromRole(roleId, permissionId);
+    if (!user?.companyId) {
+      return res.status(403).json({ error: "Access denied: no company association" });
+    }
+    
+    await storage.removePermissionFromRole(roleId, permissionId, user.companyId);
     
     // Create audit log
     if (user?.companyId && user?.id) {

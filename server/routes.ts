@@ -5,6 +5,7 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { attachRbacUser, requirePermission } from "./middleware/rbac";
 import rbacRoutes from "./routes/rbac";
 import { initializePermissions, initializeDefaultRoles } from "./lib/rbac";
+import { logAudit } from "./lib/auditLogger";
 import { DualCircuitEconomics } from "./lib/economics";
 import { DemandForecaster } from "./lib/forecasting";
 import { AllocationEngine } from "./lib/allocation";
@@ -619,6 +620,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const validatedData = insertSkuSchema.parse({ ...req.body, companyId: user.companyId });
       const sku = await storage.createSku(validatedData);
+      await logAudit({ action: "create", entityType: "sku", entityId: sku.id, changes: validatedData, req });
       res.status(201).json(sku);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -641,6 +643,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const validatedData = updateSkuSchema.parse(req.body);
       const sku = await storage.updateSku(req.params.id, validatedData);
+      await logAudit({ action: "update", entityType: "sku", entityId: req.params.id, changes: validatedData, req });
       res.json(sku);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -662,6 +665,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Access denied" });
       }
       await storage.deleteSku(req.params.id);
+      await logAudit({ action: "delete", entityType: "sku", entityId: req.params.id, changes: { name: existing.name }, req });
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -712,6 +716,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const validatedData = insertMaterialSchema.parse({ ...req.body, companyId: user.companyId });
       const material = await storage.createMaterial(validatedData);
+      await logAudit({ action: "create", entityType: "material", entityId: material.id, changes: validatedData, req });
       res.status(201).json(material);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -734,6 +739,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const validatedData = updateMaterialSchema.parse(req.body);
       const material = await storage.updateMaterial(req.params.id, validatedData);
+      await logAudit({ action: "update", entityType: "material", entityId: req.params.id, changes: validatedData, req });
       res.json(material);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -755,6 +761,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Access denied" });
       }
       await storage.deleteMaterial(req.params.id);
+      await logAudit({ action: "delete", entityType: "material", entityId: req.params.id, changes: { name: existing.name }, req });
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -841,6 +848,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const validatedData = insertSupplierSchema.parse({ ...req.body, companyId: user.companyId });
       const supplier = await storage.createSupplier(validatedData);
+      await logAudit({ action: "create", entityType: "supplier", entityId: supplier.id, changes: validatedData, req });
       res.status(201).json(supplier);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -1338,6 +1346,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         horizonStart: horizonStart ? new Date(horizonStart) : null,
         directMaterialRequirements: useDirectMaterials ? directMaterialRequirements : null,
       });
+      
+      await logAudit({ action: "create", entityType: "allocation", entityId: allocation.id, changes: { budget, regime: economics.regime }, req });
 
       // Save allocation results with runway calculations
       const results = [];

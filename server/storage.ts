@@ -472,8 +472,8 @@ export interface IStorage {
   
   // RBAC - Role Permissions
   getRolePermissions(roleId: string, companyId: string): Promise<Permission[]>;
-  assignPermissionToRole(roleId: string, permissionId: string): Promise<void>;
-  removePermissionFromRole(roleId: string, permissionId: string): Promise<void>;
+  assignPermissionToRole(roleId: string, permissionId: string, companyId: string): Promise<void>;
+  removePermissionFromRole(roleId: string, permissionId: string, companyId: string): Promise<void>;
   
   // RBAC - User Role Assignments
   getUserRoles(userId: string, companyId: string): Promise<Role[]>;
@@ -2105,7 +2105,8 @@ export class DbStorage implements IStorage {
   }
   
   // RBAC - Role Permissions
-  async getRolePermissions(roleId: string): Promise<Permission[]> {
+  async getRolePermissions(roleId: string, companyId: string): Promise<Permission[]> {
+    // Enforce tenant isolation - verify role belongs to company before returning permissions
     const result = await db
       .select({
         id: permissions.id,
@@ -2116,15 +2117,29 @@ export class DbStorage implements IStorage {
       })
       .from(rolePermissions)
       .innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
-      .where(eq(rolePermissions.roleId, roleId));
+      .innerJoin(roles, eq(rolePermissions.roleId, roles.id))
+      .where(and(
+        eq(rolePermissions.roleId, roleId),
+        eq(roles.companyId, companyId)
+      ));
     return result;
   }
   
-  async assignPermissionToRole(roleId: string, permissionId: string): Promise<void> {
+  async assignPermissionToRole(roleId: string, permissionId: string, companyId: string): Promise<void> {
+    // Verify role belongs to company before assigning permission
+    const role = await this.getRole(roleId, companyId);
+    if (!role) {
+      throw new Error("Role not found or access denied");
+    }
     await db.insert(rolePermissions).values({ roleId, permissionId }).onConflictDoNothing();
   }
   
-  async removePermissionFromRole(roleId: string, permissionId: string): Promise<void> {
+  async removePermissionFromRole(roleId: string, permissionId: string, companyId: string): Promise<void> {
+    // Verify role belongs to company before removing permission
+    const role = await this.getRole(roleId, companyId);
+    if (!role) {
+      throw new Error("Role not found or access denied");
+    }
     await db.delete(rolePermissions).where(
       and(
         eq(rolePermissions.roleId, roleId),
