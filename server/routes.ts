@@ -5906,8 +5906,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/cache/stats", isAuthenticated, requirePermission('view_analytics'), async (req: any, res) => {
+  app.get("/api/cache/stats", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
       const stats = globalCache.getStats();
       res.json({
         ...stats,
