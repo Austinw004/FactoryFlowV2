@@ -1137,7 +1137,6 @@ export const insertRoleSchema = createInsertSchema(roles).omit({ id: true, creat
 export const updateRoleSchema = createInsertSchema(roles).omit({ id: true, companyId: true, createdAt: true }).partial();
 export const insertRolePermissionSchema = createInsertSchema(rolePermissions).omit({ createdAt: true });
 export const insertUserRoleAssignmentSchema = createInsertSchema(userRoleAssignments).omit({ assignedAt: true });
-export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({ id: true, timestamp: true });
 
 // Types
 export type User = typeof users.$inferSelect;
@@ -1205,8 +1204,6 @@ export type RolePermission = typeof rolePermissions.$inferSelect;
 export type InsertRolePermission = z.infer<typeof insertRolePermissionSchema>;
 export type UserRoleAssignment = typeof userRoleAssignments.$inferSelect;
 export type InsertUserRoleAssignment = z.infer<typeof insertUserRoleAssignmentSchema>;
-export type AuditLog = typeof auditLogs.$inferSelect;
-export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 
 // IoT Sensors & Predictive Maintenance schemas
 export const insertEquipmentSensorSchema = createInsertSchema(equipmentSensors).omit({ id: true, createdAt: true, updatedAt: true });
