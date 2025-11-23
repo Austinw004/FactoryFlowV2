@@ -988,6 +988,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Forecast Accuracy
+  app.get("/api/forecast-accuracy/metrics", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      const metrics = await storage.getForecastAccuracyMetrics(user.companyId);
+      res.json(metrics);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/forecast-accuracy/by-period", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      const data = await storage.getForecastAccuracyByPeriod(user.companyId);
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/forecast-accuracy/by-sku", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      const data = await storage.getForecastAccuracyBySku(user.companyId);
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/forecast-accuracy/predictions", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
+      const predictions = await storage.getPredictionsWithActuals(user.companyId, limit);
+      res.json(predictions);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Allocations
   app.get("/api/allocations", isAuthenticated, async (req: any, res) => {
     try {

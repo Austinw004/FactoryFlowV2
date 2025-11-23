@@ -225,6 +225,34 @@ export interface IStorage {
   getInventoryRecommendations(companyId: string): Promise<InventoryRecommendation[]>;
   createInventoryRecommendation(recommendation: InsertInventoryRecommendation): Promise<InventoryRecommendation>;
   
+  // Forecast Accuracy
+  getForecastAccuracyMetrics(companyId: string): Promise<{
+    overallMape: number | null;
+    bias: number | null;
+    totalPredictions: number;
+    predictionsWithActuals: number;
+    avgPredicted: number | null;
+    avgActual: number | null;
+  }>;
+  getForecastAccuracyByPeriod(companyId: string): Promise<Array<{
+    period: string;
+    mape: number | null;
+    bias: number | null;
+    totalPredicted: number | null;
+    totalActual: number | null;
+    count: number;
+  }>>;
+  getForecastAccuracyBySku(companyId: string): Promise<Array<{
+    skuId: string;
+    skuName: string;
+    mape: number | null;
+    bias: number | null;
+    totalPredicted: number | null;
+    totalActual: number | null;
+    count: number;
+  }>>;
+  getPredictionsWithActuals(companyId: string, limit?: number): Promise<DemandPrediction[]>;
+  
   // Supply Chain Traceability
   getMaterialBatches(companyId: string): Promise<MaterialBatch[]>;
   createMaterialBatch(batch: InsertMaterialBatch): Promise<MaterialBatch>;
@@ -1002,6 +1030,111 @@ export class DbStorage implements IStorage {
   async updateInventoryRecommendation(id: string, updates: Partial<InventoryRecommendation>): Promise<InventoryRecommendation> {
     const [recommendation] = await db.update(inventoryRecommendations).set(updates).where(eq(inventoryRecommendations.id, id)).returning();
     return recommendation;
+  }
+
+  // Forecast Accuracy methods
+  async getForecastAccuracyMetrics(companyId: string) {
+    const result = await db
+      .select({
+        totalPredictions: sql<number>`COUNT(*)::int`,
+        predictionsWithActuals: sql<number>`COUNT(CASE WHEN ${demandPredictions.actualDemand} IS NOT NULL THEN 1 END)::int`,
+        avgPredicted: sql<number>`AVG(${demandPredictions.predictedDemand})`,
+        avgActual: sql<number>`AVG(${demandPredictions.actualDemand})`,
+        overallMape: sql<number>`
+          AVG(
+            CASE 
+              WHEN ${demandPredictions.actualDemand} IS NOT NULL AND ${demandPredictions.actualDemand} > 0 
+              THEN ABS((${demandPredictions.actualDemand} - ${demandPredictions.predictedDemand}) / ${demandPredictions.actualDemand}) * 100
+            END
+          )`,
+        bias: sql<number>`
+          AVG(
+            CASE 
+              WHEN ${demandPredictions.actualDemand} IS NOT NULL 
+              THEN (${demandPredictions.predictedDemand} - ${demandPredictions.actualDemand})
+            END
+          )`
+      })
+      .from(demandPredictions)
+      .where(eq(demandPredictions.companyId, companyId));
+    
+    return result[0];
+  }
+
+  async getForecastAccuracyByPeriod(companyId: string) {
+    return db
+      .select({
+        period: demandPredictions.forecastPeriod,
+        count: sql<number>`COUNT(*)::int`,
+        totalPredicted: sql<number>`SUM(${demandPredictions.predictedDemand})`,
+        totalActual: sql<number>`SUM(${demandPredictions.actualDemand})`,
+        mape: sql<number>`
+          AVG(
+            CASE 
+              WHEN ${demandPredictions.actualDemand} IS NOT NULL AND ${demandPredictions.actualDemand} > 0 
+              THEN ABS((${demandPredictions.actualDemand} - ${demandPredictions.predictedDemand}) / ${demandPredictions.actualDemand}) * 100
+            END
+          )`,
+        bias: sql<number>`
+          AVG(
+            CASE 
+              WHEN ${demandPredictions.actualDemand} IS NOT NULL 
+              THEN (${demandPredictions.predictedDemand} - ${demandPredictions.actualDemand})
+            END
+          )`
+      })
+      .from(demandPredictions)
+      .where(and(
+        eq(demandPredictions.companyId, companyId),
+        sql`${demandPredictions.actualDemand} IS NOT NULL`
+      ))
+      .groupBy(demandPredictions.forecastPeriod)
+      .orderBy(demandPredictions.forecastPeriod);
+  }
+
+  async getForecastAccuracyBySku(companyId: string) {
+    return db
+      .select({
+        skuId: demandPredictions.skuId,
+        skuName: skus.name,
+        count: sql<number>`COUNT(*)::int`,
+        totalPredicted: sql<number>`SUM(${demandPredictions.predictedDemand})`,
+        totalActual: sql<number>`SUM(${demandPredictions.actualDemand})`,
+        mape: sql<number>`
+          AVG(
+            CASE 
+              WHEN ${demandPredictions.actualDemand} IS NOT NULL AND ${demandPredictions.actualDemand} > 0 
+              THEN ABS((${demandPredictions.actualDemand} - ${demandPredictions.predictedDemand}) / ${demandPredictions.actualDemand}) * 100
+            END
+          )`,
+        bias: sql<number>`
+          AVG(
+            CASE 
+              WHEN ${demandPredictions.actualDemand} IS NOT NULL 
+              THEN (${demandPredictions.predictedDemand} - ${demandPredictions.actualDemand})
+            END
+          )`
+      })
+      .from(demandPredictions)
+      .leftJoin(skus, eq(demandPredictions.skuId, skus.id))
+      .where(and(
+        eq(demandPredictions.companyId, companyId),
+        sql`${demandPredictions.actualDemand} IS NOT NULL`
+      ))
+      .groupBy(demandPredictions.skuId, skus.name)
+      .orderBy(sql`mape DESC NULLS LAST`);
+  }
+
+  async getPredictionsWithActuals(companyId: string, limit: number = 100): Promise<DemandPrediction[]> {
+    return db
+      .select()
+      .from(demandPredictions)
+      .where(and(
+        eq(demandPredictions.companyId, companyId),
+        sql`${demandPredictions.actualDemand} IS NOT NULL`
+      ))
+      .orderBy(desc(demandPredictions.createdAt))
+      .limit(limit);
   }
 
   // Supply Chain Traceability methods
