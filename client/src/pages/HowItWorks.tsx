@@ -7,8 +7,12 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { OnboardingChecklist } from "@/components/OnboardingChecklist";
+import { useOnboardingSteps } from "@/hooks/useOnboardingSteps";
 
 export default function HowItWorks() {
+  const { steps, isFullyCompleted, isLoading: onboardingLoading } = useOnboardingSteps();
+
   return (
     <div className="p-6 space-y-6">
       <div>
@@ -19,6 +23,15 @@ export default function HowItWorks() {
           Simple guide to understanding your manufacturing intelligence platform
         </p>
       </div>
+
+      {/* Show compact onboarding checklist if all steps complete (regardless of dismissed status) */}
+      {!onboardingLoading && isFullyCompleted && (
+        <OnboardingChecklist 
+          steps={steps}
+          showDismissButton={false}
+          compact={true}
+        />
+      )}
 
       {/* OVERVIEW SECTION - New top section explaining the big picture */}
       <Card className="border-primary/20 bg-primary/5" data-testid="card-platform-overview">

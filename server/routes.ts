@@ -5019,6 +5019,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Onboarding endpoints
+  app.get("/api/onboarding/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      let user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Auto-create company if user doesn't have one
+      if (!user.companyId) {
+        const company = await storage.createCompany({
+          name: `${user.firstName || 'User'}'s Company`,
+        });
+        
+        user = await storage.upsertUser({
+          ...user,
+          companyId: company.id,
+        });
+      }
+
+      const companyId = user.companyId!;
+      
+      // Get company to check profile
+      const company = await storage.getCompany(companyId);
+      
+      // Get SKUs to check if any exist
+      const skus = await storage.getSKUs(companyId);
+      
+      // Get materials to check if any exist
+      const materials = await storage.getMaterials(companyId);
+      
+      // Get suppliers to check if any exist
+      const suppliers = await storage.getSuppliers(companyId);
+      
+      // Calculate onboarding status
+      const status = {
+        hasCompanyProfile: !!(company?.industry && company?.location),
+        hasBudget: !!(company?.budget && company?.budget > 0),
+        hasSkus: skus.length > 0,
+        hasMaterials: materials.length > 0,
+        hasSuppliers: suppliers.length > 0,
+        hasAlertsConfigured: !!(company?.enableAllocationAlerts || company?.enablePriceAlerts),
+      };
+      
+      res.json(status);
+    } catch (error: any) {
+      console.error("Error fetching onboarding status:", error);
+      res.status(500).json({ message: "Failed to fetch onboarding status" });
+    }
+  });
+
+  app.post("/api/onboarding/complete", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !user.companyId) {
+        return res.status(400).json({ message: "User has no company association" });
+      }
+
+      // Mark onboarding as completed
+      const updated = await storage.updateCompany(user.companyId, {
+        onboardingCompleted: 1,
+      });
+      
+      res.json({ success: true, company: updated });
+    } catch (error: any) {
+      console.error("Error completing onboarding:", error);
+      res.status(500).json({ message: "Failed to complete onboarding" });
+    }
+  });
+
   const httpServer = createServer(app);
   
   setupWebSocket(httpServer);

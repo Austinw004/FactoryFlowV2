@@ -4,6 +4,7 @@ import { PolicySignals } from "@/components/PolicySignals";
 import { AllocationTable } from "@/components/AllocationTable";
 import { ForecastChart } from "@/components/ForecastChart";
 import { EditableBudgetGauge } from "@/components/EditableBudgetGauge";
+import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { TrendingUp, DollarSign, Package, AlertCircle, Plus, Upload, GitCompare, Loader2, Globe, Radio } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -15,6 +16,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { useLocation } from "wouter";
+import { useOnboardingSteps } from "@/hooks/useOnboardingSteps";
+import React from "react";
 
 export default function Dashboard() {
   const { toast } = useToast();
@@ -23,6 +26,25 @@ export default function Dashboard() {
 
   // Enable WebSocket for real-time updates
   const { isConnected } = useWebSocket();
+
+  // Onboarding checklist
+  const { steps, isFullyCompleted, isLoading: onboardingLoading } = useOnboardingSteps();
+  
+  const { data: companySettings } = useQuery<{ onboardingCompleted?: number; showOnboardingHints?: number }>({
+    queryKey: ['/api/company/settings'],
+  });
+  
+  const completeOnboardingMutation = useMutation({
+    mutationFn: () => apiRequest('POST', '/api/onboarding/complete'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/company/settings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/onboarding/status'] });
+      toast({
+        title: "Checklist dismissed",
+        description: "You can find the checklist in the How It Works section anytime.",
+      });
+    },
+  });
 
   const { data: regime, isLoading: regimeLoading } = useQuery({
     queryKey: ["/api/economics/regime"],
@@ -210,6 +232,23 @@ export default function Dashboard() {
           </Button>
         </div>
       </div>
+
+      {/* Onboarding Checklist - Always show if not all steps complete (based on real-time status) */}
+      {!onboardingLoading && !isFullyCompleted && (
+        <OnboardingChecklist 
+          steps={steps}
+          onDismiss={undefined}
+          showDismissButton={false}
+        />
+      )}
+      {/* Show dismissible checklist when all steps complete but not yet dismissed */}
+      {!onboardingLoading && isFullyCompleted && companySettings && !companySettings.onboardingCompleted && (
+        <OnboardingChecklist 
+          steps={steps}
+          onDismiss={() => completeOnboardingMutation.mutate()}
+          showDismissButton={true}
+        />
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
