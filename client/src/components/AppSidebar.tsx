@@ -54,6 +54,12 @@ const menuSections = [
         testId: "sidebar-forecast-accuracy",
       },
       {
+        title: "Multi-Horizon Forecasts",
+        url: "/multi-horizon-forecasts",
+        icon: BarChart3,
+        testId: "sidebar-multi-horizon",
+      },
+      {
         title: "Material Planning",
         url: "/allocation",
         icon: Boxes,
