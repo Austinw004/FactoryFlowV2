@@ -2479,6 +2479,121 @@ export const insertMachineryPredictionSchema = createInsertSchema(machineryPredi
 export const insertWorkforcePredictionSchema = createInsertSchema(workforcePredictions).omit({ id: true, createdAt: true });
 export const insertModelCalibrationResultSchema = createInsertSchema(modelCalibrationResults).omit({ id: true, createdAt: true });
 
+// Saved Scenarios & Bookmarks - Feature Enhancement
+export const savedScenarios = pgTable("saved_scenarios", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  type: text("type").notNull(), // 'economic', 'geopolitical', 'combined'
+  configuration: jsonb("configuration").notNull(), // Stores form data for reuse
+  tags: text("tags").array(), // For categorization and search
+  isTemplate: integer("is_template").notNull().default(0), // 0 = saved result, 1 = reusable template
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("saved_scenarios_company_idx").on(table.companyId),
+  index("saved_scenarios_user_idx").on(table.userId),
+  index("saved_scenarios_type_idx").on(table.type),
+]);
+
+export const scenarioBookmarks = pgTable("scenario_bookmarks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  savedScenarioId: varchar("saved_scenario_id").references(() => savedScenarios.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  notes: text("notes"),
+  results: jsonb("results").notNull(), // Complete analysis results
+  fdrAtTime: real("fdr_at_time"),
+  regimeAtTime: text("regime_at_time"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("scenario_bookmarks_company_idx").on(table.companyId),
+  index("scenario_bookmarks_user_idx").on(table.userId),
+]);
+
+// Smart Alerts & Monitoring
+export const fdrAlerts = pgTable("fdr_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  condition: text("condition").notNull(), // 'above', 'below', 'crosses_above', 'crosses_below'
+  threshold: real("threshold").notNull(),
+  isActive: integer("is_active").notNull().default(1),
+  lastTriggered: timestamp("last_triggered"),
+  notificationMethod: text("notification_method").notNull().default('in_app'), // 'in_app', 'email'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("fdr_alerts_company_idx").on(table.companyId),
+  index("fdr_alerts_active_idx").on(table.isActive),
+]);
+
+export const commodityPriceAlerts = pgTable("commodity_price_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  materialId: varchar("material_id").notNull().references(() => materials.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  condition: text("condition").notNull(), // 'above', 'below', 'change_pct'
+  threshold: real("threshold").notNull(),
+  changePercentage: real("change_percentage"), // For 'change_pct' condition
+  timeframe: text("timeframe"), // 'daily', 'weekly', 'monthly'
+  isActive: integer("is_active").notNull().default(1),
+  lastTriggered: timestamp("last_triggered"),
+  notificationMethod: text("notification_method").notNull().default('in_app'),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("commodity_price_alerts_company_idx").on(table.companyId),
+  index("commodity_price_alerts_material_idx").on(table.materialId),
+  index("commodity_price_alerts_active_idx").on(table.isActive),
+]);
+
+export const regimeChangeNotifications = pgTable("regime_change_notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  fromRegime: text("from_regime").notNull(),
+  toRegime: text("to_regime").notNull(),
+  fdrAtChange: real("fdr_at_change").notNull(),
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+  acknowledged: integer("acknowledged").notNull().default(0),
+  acknowledgedBy: varchar("acknowledged_by").references(() => users.id),
+  acknowledgedAt: timestamp("acknowledged_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("regime_change_notifications_company_idx").on(table.companyId),
+  index("regime_change_notifications_timestamp_idx").on(table.timestamp),
+]);
+
+export const alertTriggers = pgTable("alert_triggers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  alertType: text("alert_type").notNull(), // 'fdr', 'commodity_price', 'regime_change'
+  alertId: varchar("alert_id").notNull(), // References the specific alert
+  triggeredAt: timestamp("triggered_at").notNull().defaultNow(),
+  currentValue: real("current_value"),
+  thresholdValue: real("threshold_value"),
+  message: text("message").notNull(),
+  acknowledged: integer("acknowledged").notNull().default(0),
+  acknowledgedBy: varchar("acknowledged_by").references(() => users.id),
+  acknowledgedAt: timestamp("acknowledged_at"),
+}, (table) => [
+  index("alert_triggers_company_idx").on(table.companyId),
+  index("alert_triggers_acknowledged_idx").on(table.acknowledged),
+]);
+
+// Saved Scenarios schemas
+export const insertSavedScenarioSchema = createInsertSchema(savedScenarios).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertScenarioBookmarkSchema = createInsertSchema(scenarioBookmarks).omit({ id: true, createdAt: true });
+
+// Smart Alerts schemas
+export const insertFdrAlertSchema = createInsertSchema(fdrAlerts).omit({ id: true, createdAt: true });
+export const insertCommodityPriceAlertSchema = createInsertSchema(commodityPriceAlerts).omit({ id: true, createdAt: true });
+export const insertRegimeChangeNotificationSchema = createInsertSchema(regimeChangeNotifications).omit({ id: true, createdAt: true });
+export const insertAlertTriggerSchema = createInsertSchema(alertTriggers).omit({ id: true });
+
 export type HistoricalPrediction = typeof historicalPredictions.$inferSelect;
 export type InsertHistoricalPrediction = z.infer<typeof insertHistoricalPredictionSchema>;
 export type PredictionAccuracyMetrics = typeof predictionAccuracyMetrics.$inferSelect;
@@ -2491,3 +2606,19 @@ export type WorkforcePrediction = typeof workforcePredictions.$inferSelect;
 export type InsertWorkforcePrediction = z.infer<typeof insertWorkforcePredictionSchema>;
 export type ModelCalibrationResult = typeof modelCalibrationResults.$inferSelect;
 export type InsertModelCalibrationResult = z.infer<typeof insertModelCalibrationResultSchema>;
+
+// Saved Scenarios & Bookmarks types
+export type SavedScenario = typeof savedScenarios.$inferSelect;
+export type InsertSavedScenario = z.infer<typeof insertSavedScenarioSchema>;
+export type ScenarioBookmark = typeof scenarioBookmarks.$inferSelect;
+export type InsertScenarioBookmark = z.infer<typeof insertScenarioBookmarkSchema>;
+
+// Smart Alerts types
+export type FdrAlert = typeof fdrAlerts.$inferSelect;
+export type InsertFdrAlert = z.infer<typeof insertFdrAlertSchema>;
+export type CommodityPriceAlert = typeof commodityPriceAlerts.$inferSelect;
+export type InsertCommodityPriceAlert = z.infer<typeof insertCommodityPriceAlertSchema>;
+export type RegimeChangeNotification = typeof regimeChangeNotifications.$inferSelect;
+export type InsertRegimeChangeNotification = z.infer<typeof insertRegimeChangeNotificationSchema>;
+export type AlertTrigger = typeof alertTriggers.$inferSelect;
+export type InsertAlertTrigger = z.infer<typeof insertAlertTriggerSchema>;

@@ -58,7 +58,13 @@ import type {
   ConsortiumMetrics, InsertConsortiumMetrics,
   ConsortiumAlert, InsertConsortiumAlert,
   MaTarget, InsertMaTarget,
-  MaRecommendation, InsertMaRecommendation
+  MaRecommendation, InsertMaRecommendation,
+  SavedScenario, InsertSavedScenario,
+  ScenarioBookmark, InsertScenarioBookmark,
+  FdrAlert, InsertFdrAlert,
+  CommodityPriceAlert, InsertCommodityPriceAlert,
+  AlertTrigger, InsertAlertTrigger,
+  RegimeChangeNotification, InsertRegimeChangeNotification
 } from "@shared/schema";
 import { 
   users, companies, skus, materials, boms, suppliers, supplierMaterials,
@@ -77,7 +83,8 @@ import {
   featureToggles, supplierNodes, supplierLinks, supplierHealthMetrics, supplierRiskAlerts,
   poRules, poWorkflowSteps, poApprovals, negotiationPlaybooks, erpConnections,
   consortiumContributions, consortiumMetrics, consortiumAlerts,
-  maTargets, maRecommendations
+  maTargets, maRecommendations,
+  savedScenarios, scenarioBookmarks, fdrAlerts, commodityPriceAlerts, alertTriggers, regimeChangeNotifications
 } from "@shared/schema";
 
 export interface IStorage {
@@ -405,6 +412,40 @@ export interface IStorage {
   updateMaTarget(id: string, target: Partial<InsertMaTarget>): Promise<MaTarget | undefined>;
   getMaRecommendations(companyId: string): Promise<MaRecommendation[]>;
   createMaRecommendation(recommendation: InsertMaRecommendation): Promise<MaRecommendation>;
+  
+  // Saved Scenarios & Bookmarks
+  getSavedScenarios(companyId: string): Promise<SavedScenario[]>;
+  getSavedScenario(id: string): Promise<SavedScenario | undefined>;
+  createSavedScenario(scenario: InsertSavedScenario): Promise<SavedScenario>;
+  updateSavedScenario(id: string, scenario: Partial<InsertSavedScenario>): Promise<SavedScenario | undefined>;
+  deleteSavedScenario(id: string): Promise<void>;
+  
+  getScenarioBookmarks(companyId: string): Promise<ScenarioBookmark[]>;
+  getScenarioBookmark(id: string): Promise<ScenarioBookmark | undefined>;
+  createScenarioBookmark(bookmark: InsertScenarioBookmark): Promise<ScenarioBookmark>;
+  updateScenarioBookmark(id: string, bookmark: Partial<InsertScenarioBookmark>): Promise<ScenarioBookmark | undefined>;
+  deleteScenarioBookmark(id: string): Promise<void>;
+  
+  // Smart Alerts & Monitoring
+  getFdrAlerts(companyId: string): Promise<FdrAlert[]>;
+  createFdrAlert(alert: InsertFdrAlert): Promise<FdrAlert>;
+  updateFdrAlert(id: string, alert: Partial<InsertFdrAlert>): Promise<FdrAlert | undefined>;
+  deleteFdrAlert(id: string): Promise<void>;
+  
+  getCommodityPriceAlerts(companyId: string): Promise<CommodityPriceAlert[]>;
+  createCommodityPriceAlert(alert: InsertCommodityPriceAlert): Promise<CommodityPriceAlert>;
+  updateCommodityPriceAlert(id: string, alert: Partial<InsertCommodityPriceAlert>): Promise<CommodityPriceAlert | undefined>;
+  deleteCommodityPriceAlert(id: string): Promise<void>;
+  
+  getAlertTriggers(companyId: string): Promise<AlertTrigger[]>;
+  getUnacknowledgedAlertTriggers(companyId: string): Promise<AlertTrigger[]>;
+  createAlertTrigger(trigger: InsertAlertTrigger): Promise<AlertTrigger>;
+  acknowledgeAlertTrigger(id: string, userId: string): Promise<AlertTrigger | undefined>;
+  
+  getRegimeNotifications(companyId: string): Promise<RegimeChangeNotification[]>;
+  getUnacknowledgedRegimeNotifications(companyId: string): Promise<RegimeChangeNotification[]>;
+  createRegimeNotification(notification: InsertRegimeChangeNotification): Promise<RegimeChangeNotification>;
+  acknowledgeRegimeNotification(id: string, userId: string): Promise<RegimeChangeNotification | undefined>;
   
   // Utility
   getAllCompanyIds(): Promise<string[]>;
@@ -1710,6 +1751,175 @@ export class DbStorage implements IStorage {
   async createMaRecommendation(insertRecommendation: InsertMaRecommendation): Promise<MaRecommendation> {
     const [recommendation] = await db.insert(maRecommendations).values(insertRecommendation).returning();
     return recommendation;
+  }
+
+  // Saved Scenarios & Bookmarks
+  async getSavedScenarios(companyId: string): Promise<SavedScenario[]> {
+    return await db.select().from(savedScenarios)
+      .where(eq(savedScenarios.companyId, companyId))
+      .orderBy(sql`${savedScenarios.createdAt} DESC`);
+  }
+
+  async getSavedScenario(id: string): Promise<SavedScenario | undefined> {
+    const [scenario] = await db.select().from(savedScenarios).where(eq(savedScenarios.id, id));
+    return scenario;
+  }
+
+  async createSavedScenario(insertScenario: InsertSavedScenario): Promise<SavedScenario> {
+    const [scenario] = await db.insert(savedScenarios).values(insertScenario).returning();
+    return scenario;
+  }
+
+  async updateSavedScenario(id: string, scenarioUpdate: Partial<InsertSavedScenario>): Promise<SavedScenario | undefined> {
+    const [scenario] = await db.update(savedScenarios)
+      .set({ ...scenarioUpdate, updatedAt: new Date() })
+      .where(eq(savedScenarios.id, id))
+      .returning();
+    return scenario;
+  }
+
+  async deleteSavedScenario(id: string): Promise<void> {
+    await db.delete(savedScenarios).where(eq(savedScenarios.id, id));
+  }
+
+  async getScenarioBookmarks(companyId: string): Promise<ScenarioBookmark[]> {
+    return await db.select().from(scenarioBookmarks)
+      .where(eq(scenarioBookmarks.companyId, companyId))
+      .orderBy(sql`${scenarioBookmarks.createdAt} DESC`);
+  }
+
+  async getScenarioBookmark(id: string): Promise<ScenarioBookmark | undefined> {
+    const [bookmark] = await db.select().from(scenarioBookmarks).where(eq(scenarioBookmarks.id, id));
+    return bookmark;
+  }
+
+  async createScenarioBookmark(insertBookmark: InsertScenarioBookmark): Promise<ScenarioBookmark> {
+    const [bookmark] = await db.insert(scenarioBookmarks).values(insertBookmark).returning();
+    return bookmark;
+  }
+
+  async updateScenarioBookmark(id: string, bookmarkUpdate: Partial<InsertScenarioBookmark>): Promise<ScenarioBookmark | undefined> {
+    const [bookmark] = await db.update(scenarioBookmarks)
+      .set(bookmarkUpdate)
+      .where(eq(scenarioBookmarks.id, id))
+      .returning();
+    return bookmark;
+  }
+
+  async deleteScenarioBookmark(id: string): Promise<void> {
+    await db.delete(scenarioBookmarks).where(eq(scenarioBookmarks.id, id));
+  }
+
+  // Smart Alerts & Monitoring
+  async getFdrAlerts(companyId: string): Promise<FdrAlert[]> {
+    return await db.select().from(fdrAlerts)
+      .where(eq(fdrAlerts.companyId, companyId))
+      .orderBy(sql`${fdrAlerts.createdAt} DESC`);
+  }
+
+  async createFdrAlert(insertAlert: InsertFdrAlert): Promise<FdrAlert> {
+    const [alert] = await db.insert(fdrAlerts).values(insertAlert).returning();
+    return alert;
+  }
+
+  async updateFdrAlert(id: string, alertUpdate: Partial<InsertFdrAlert>): Promise<FdrAlert | undefined> {
+    const [alert] = await db.update(fdrAlerts)
+      .set(alertUpdate)
+      .where(eq(fdrAlerts.id, id))
+      .returning();
+    return alert;
+  }
+
+  async deleteFdrAlert(id: string): Promise<void> {
+    await db.delete(fdrAlerts).where(eq(fdrAlerts.id, id));
+  }
+
+  async getCommodityPriceAlerts(companyId: string): Promise<CommodityPriceAlert[]> {
+    return await db.select().from(commodityPriceAlerts)
+      .where(eq(commodityPriceAlerts.companyId, companyId))
+      .orderBy(sql`${commodityPriceAlerts.createdAt} DESC`);
+  }
+
+  async createCommodityPriceAlert(insertAlert: InsertCommodityPriceAlert): Promise<CommodityPriceAlert> {
+    const [alert] = await db.insert(commodityPriceAlerts).values(insertAlert).returning();
+    return alert;
+  }
+
+  async updateCommodityPriceAlert(id: string, alertUpdate: Partial<InsertCommodityPriceAlert>): Promise<CommodityPriceAlert | undefined> {
+    const [alert] = await db.update(commodityPriceAlerts)
+      .set(alertUpdate)
+      .where(eq(commodityPriceAlerts.id, id))
+      .returning();
+    return alert;
+  }
+
+  async deleteCommodityPriceAlert(id: string): Promise<void> {
+    await db.delete(commodityPriceAlerts).where(eq(commodityPriceAlerts.id, id));
+  }
+
+  async getAlertTriggers(companyId: string): Promise<AlertTrigger[]> {
+    return await db.select().from(alertTriggers)
+      .where(eq(alertTriggers.companyId, companyId))
+      .orderBy(sql`${alertTriggers.triggeredAt} DESC`)
+      .limit(100);
+  }
+
+  async getUnacknowledgedAlertTriggers(companyId: string): Promise<AlertTrigger[]> {
+    return await db.select().from(alertTriggers)
+      .where(and(eq(alertTriggers.companyId, companyId), eq(alertTriggers.acknowledged, 0)))
+      .orderBy(sql`${alertTriggers.triggeredAt} DESC`);
+  }
+
+  async createAlertTrigger(insertTrigger: InsertAlertTrigger): Promise<AlertTrigger> {
+    const [trigger] = await db.insert(alertTriggers).values(insertTrigger).returning();
+    return trigger;
+  }
+
+  async acknowledgeAlertTrigger(id: string, userId: string): Promise<AlertTrigger | undefined> {
+    const [trigger] = await db.update(alertTriggers)
+      .set({ 
+        acknowledged: 1, 
+        acknowledgedBy: userId, 
+        acknowledgedAt: new Date() 
+      })
+      .where(eq(alertTriggers.id, id))
+      .returning();
+    return trigger;
+  }
+
+  async getRegimeNotifications(companyId: string): Promise<RegimeChangeNotification[]> {
+    return await db.select().from(regimeChangeNotifications)
+      .where(eq(regimeChangeNotifications.companyId, companyId))
+      .orderBy(sql`${regimeChangeNotifications.timestamp} DESC`)
+      .limit(50);
+  }
+
+  async getUnacknowledgedRegimeNotifications(companyId: string): Promise<RegimeChangeNotification[]> {
+    return await db.select().from(regimeChangeNotifications)
+      .where(and(eq(regimeChangeNotifications.companyId, companyId), eq(regimeChangeNotifications.acknowledged, 0)))
+      .orderBy(sql`${regimeChangeNotifications.timestamp} DESC`);
+  }
+
+  async createRegimeNotification(insertNotification: InsertRegimeChangeNotification): Promise<RegimeChangeNotification> {
+    const [notification] = await db.insert(regimeChangeNotifications).values(insertNotification).returning();
+    return notification;
+  }
+
+  async acknowledgeRegimeNotification(id: string, userId: string): Promise<RegimeChangeNotification | undefined> {
+    const [notification] = await db.update(regimeChangeNotifications)
+      .set({ 
+        acknowledged: 1, 
+        acknowledgedBy: userId, 
+        acknowledgedAt: new Date() 
+      })
+      .where(eq(regimeChangeNotifications.id, id))
+      .returning();
+    return notification;
+  }
+
+  async getAllCompanyIds(): Promise<string[]> {
+    const result = await db.select({ id: companies.id }).from(companies);
+    return result.map(r => r.id);
   }
 }
 

@@ -4500,6 +4500,458 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== Saved Scenarios & Bookmarks =====
+  
+  // Get all saved scenarios for company
+  app.get("/api/saved-scenarios", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      const scenarios = await storage.getSavedScenarios(user.companyId);
+      res.json(scenarios);
+    } catch (error: any) {
+      console.error("Error fetching saved scenarios:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get specific saved scenario
+  app.get("/api/saved-scenarios/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      const scenario = await storage.getSavedScenario(req.params.id);
+      if (!scenario) {
+        return res.status(404).json({ error: "Saved scenario not found" });
+      }
+      
+      if (scenario.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      res.json(scenario);
+    } catch (error: any) {
+      console.error("Error fetching saved scenario:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create new saved scenario
+  app.post("/api/saved-scenarios", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      const { insertSavedScenarioSchema } = await import("@shared/schema");
+      const scenarioData = insertSavedScenarioSchema.parse({
+        ...req.body,
+        companyId: user.companyId,
+        userId: user.id,
+      });
+      
+      const scenario = await storage.createSavedScenario(scenarioData);
+      res.status(201).json(scenario);
+    } catch (error: any) {
+      console.error("Error creating saved scenario:", error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Update saved scenario
+  app.put("/api/saved-scenarios/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      const existingScenario = await storage.getSavedScenario(req.params.id);
+      if (!existingScenario) {
+        return res.status(404).json({ error: "Saved scenario not found" });
+      }
+      
+      if (existingScenario.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const updated = await storage.updateSavedScenario(req.params.id, req.body);
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating saved scenario:", error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Delete saved scenario
+  app.delete("/api/saved-scenarios/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      const existingScenario = await storage.getSavedScenario(req.params.id);
+      if (!existingScenario) {
+        return res.status(404).json({ error: "Saved scenario not found" });
+      }
+      
+      if (existingScenario.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      await storage.deleteSavedScenario(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting saved scenario:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get all scenario bookmarks for company
+  app.get("/api/scenario-bookmarks", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      const bookmarks = await storage.getScenarioBookmarks(user.companyId);
+      res.json(bookmarks);
+    } catch (error: any) {
+      console.error("Error fetching scenario bookmarks:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get specific scenario bookmark
+  app.get("/api/scenario-bookmarks/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      const bookmark = await storage.getScenarioBookmark(req.params.id);
+      if (!bookmark) {
+        return res.status(404).json({ error: "Scenario bookmark not found" });
+      }
+      
+      if (bookmark.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      res.json(bookmark);
+    } catch (error: any) {
+      console.error("Error fetching scenario bookmark:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create new scenario bookmark
+  app.post("/api/scenario-bookmarks", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      const { insertScenarioBookmarkSchema } = await import("@shared/schema");
+      const bookmarkData = insertScenarioBookmarkSchema.parse({
+        ...req.body,
+        companyId: user.companyId,
+        userId: user.id,
+      });
+      
+      const bookmark = await storage.createScenarioBookmark(bookmarkData);
+      res.status(201).json(bookmark);
+    } catch (error: any) {
+      console.error("Error creating scenario bookmark:", error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Update scenario bookmark
+  app.put("/api/scenario-bookmarks/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      const existingBookmark = await storage.getScenarioBookmark(req.params.id);
+      if (!existingBookmark) {
+        return res.status(404).json({ error: "Scenario bookmark not found" });
+      }
+      
+      if (existingBookmark.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      const updated = await storage.updateScenarioBookmark(req.params.id, req.body);
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating scenario bookmark:", error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Delete scenario bookmark
+  app.delete("/api/scenario-bookmarks/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      const existingBookmark = await storage.getScenarioBookmark(req.params.id);
+      if (!existingBookmark) {
+        return res.status(404).json({ error: "Scenario bookmark not found" });
+      }
+      
+      if (existingBookmark.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      
+      await storage.deleteScenarioBookmark(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting scenario bookmark:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ===== Smart Alerts & Monitoring =====
+
+  // Get all FDR alerts for company
+  app.get("/api/fdr-alerts", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      const alerts = await storage.getFdrAlerts(user.companyId);
+      res.json(alerts);
+    } catch (error: any) {
+      console.error("Error fetching FDR alerts:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create new FDR alert
+  app.post("/api/fdr-alerts", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      const { insertFdrAlertSchema } = await import("@shared/schema");
+      const alertData = insertFdrAlertSchema.parse({
+        ...req.body,
+        companyId: user.companyId,
+        userId: user.id,
+      });
+      
+      const alert = await storage.createFdrAlert(alertData);
+      res.status(201).json(alert);
+    } catch (error: any) {
+      console.error("Error creating FDR alert:", error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Update FDR alert
+  app.put("/api/fdr-alerts/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      const updated = await storage.updateFdrAlert(req.params.id, req.body);
+      if (!updated) {
+        return res.status(404).json({ error: "FDR alert not found" });
+      }
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating FDR alert:", error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Delete FDR alert
+  app.delete("/api/fdr-alerts/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      await storage.deleteFdrAlert(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting FDR alert:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get all commodity price alerts for company
+  app.get("/api/commodity-price-alerts", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      const alerts = await storage.getCommodityPriceAlerts(user.companyId);
+      res.json(alerts);
+    } catch (error: any) {
+      console.error("Error fetching commodity price alerts:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create new commodity price alert
+  app.post("/api/commodity-price-alerts", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      const { insertCommodityPriceAlertSchema } = await import("@shared/schema");
+      const alertData = insertCommodityPriceAlertSchema.parse({
+        ...req.body,
+        companyId: user.companyId,
+        userId: user.id,
+      });
+      
+      const alert = await storage.createCommodityPriceAlert(alertData);
+      res.status(201).json(alert);
+    } catch (error: any) {
+      console.error("Error creating commodity price alert:", error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Update commodity price alert
+  app.put("/api/commodity-price-alerts/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      const updated = await storage.updateCommodityPriceAlert(req.params.id, req.body);
+      if (!updated) {
+        return res.status(404).json({ error: "Commodity price alert not found" });
+      }
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating commodity price alert:", error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Delete commodity price alert
+  app.delete("/api/commodity-price-alerts/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      await storage.deleteCommodityPriceAlert(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting commodity price alert:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get alert triggers (recent + unacknowledged)
+  app.get("/api/alert-triggers", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      const triggers = await storage.getAlertTriggers(user.companyId);
+      res.json(triggers);
+    } catch (error: any) {
+      console.error("Error fetching alert triggers:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Acknowledge alert trigger
+  app.post("/api/alert-triggers/:id/acknowledge", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      const updated = await storage.acknowledgeAlertTrigger(req.params.id, user.id);
+      if (!updated) {
+        return res.status(404).json({ error: "Alert trigger not found" });
+      }
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error acknowledging alert trigger:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get regime change notifications
+  app.get("/api/regime-notifications", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      const notifications = await storage.getRegimeNotifications(user.companyId);
+      res.json(notifications);
+    } catch (error: any) {
+      console.error("Error fetching regime notifications:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Acknowledge regime change notification
+  app.post("/api/regime-notifications/:id/acknowledge", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      const updated = await storage.acknowledgeRegimeNotification(req.params.id, user.id);
+      if (!updated) {
+        return res.status(404).json({ error: "Regime notification not found" });
+      }
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error acknowledging regime notification:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   
   setupWebSocket(httpServer);
