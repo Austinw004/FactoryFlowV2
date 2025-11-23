@@ -23,6 +23,9 @@ The system is a multi-tenant application ensuring data isolation per company. Co
 - **Demand Forecasting**: Regime-aware forecasting using exponential smoothing and moving averages.
 - **Multi-Horizon Forecasting**: Tracks demand forecasts across multiple time horizons (1 day, 1 week, 2 weeks, 1 month, 2 months, 3 months, 6 months, 1 year) with confidence intervals, accuracy tracking, and cross-horizon comparison analytics.
 - **Automated Forecast Retraining**: Daily background job that implements continuous learning by finding SKUs with new actual demand, calculating forecast error (MAPE), and automatically retraining models where error exceeds 10%. Achieves 26%+ accuracy improvements through feedback loops.
+- **Real-Time MAPE Tracking**: Continuous forecast accuracy monitoring system that tracks MAPE across all SKUs every 4 hours, comparing against both baseline (first measurement) and previous measurements to detect long-term drift and short-term degradation.
+- **Forecast Degradation Alerts**: Automated alert system that creates/updates alerts when MAPE degrades by >10% from baseline or previous measurement, with severity levels (low/medium/high/critical) based on degradation percentage. Alerts persist until verified improvement after retraining.
+- **Automatic Recalibration**: When degradation reaches high (>30%) or critical (>50%) severity, the system automatically triggers model retraining and only resolves alerts if MAPE demonstrably improves post-retraining.
 - **Allocation Engine**: Constraint-based optimization for material allocation based on BOMs, availability, priorities, and budget duration.
 - **Real-time Commodity Pricing**: Integration with Metals.Dev for over 110 commodities.
 - **Depreciation Calculator**: Supports multiple methods for machinery.
