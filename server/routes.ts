@@ -7,6 +7,7 @@ import rbacRoutes from "./routes/rbac";
 import { initializePermissions, initializeDefaultRoles } from "./lib/rbac";
 import { logAudit } from "./lib/auditLogger";
 import { cache, CacheKeys, CacheTTL } from "./lib/cache";
+import { globalCache } from "./lib/caching";
 import { DualCircuitEconomics } from "./lib/economics";
 import { DemandForecaster } from "./lib/forecasting";
 import { AllocationEngine } from "./lib/allocation";
@@ -999,7 +1000,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
+      
+      const cacheKey = `forecasts:accuracy:metrics:${user.companyId}`;
+      const cached = globalCache.get<any>(cacheKey);
+      if (cached) {
+        return res.json({ ...cached, fromCache: true });
+      }
+      
       const metrics = await storage.getForecastAccuracyMetrics(user.companyId);
+      globalCache.set(cacheKey, metrics, 'forecasts');
+      
       res.json(metrics);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -1057,9 +1067,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
+      
       const skuId = req.query.skuId as string | undefined;
       const horizonDays = req.query.horizonDays ? parseInt(req.query.horizonDays as string) : undefined;
+      
+      const cacheKey = `forecasts:${user.companyId}:${skuId || 'all'}:${horizonDays || 'all'}`;
+      const cached = globalCache.get<any>(cacheKey);
+      if (cached) {
+        return res.json({ ...cached, fromCache: true });
+      }
+      
       const forecasts = await storage.getMultiHorizonForecasts(user.companyId, { skuId, horizonDays });
+      globalCache.set(cacheKey, forecasts, 'forecasts');
+      
       res.json(forecasts);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -5850,6 +5870,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error completing onboarding:", error);
       res.status(500).json({ message: "Failed to complete onboarding" });
+    }
+  });
+
+  app.get("/api/cache/stats", isAuthenticated, requirePermission('view_analytics'), async (req: any, res) => {
+    try {
+      const stats = globalCache.getStats();
+      res.json({
+        ...stats,
+        description: "Regime-aware cache with dynamic TTLs based on economic volatility",
+        regimeEffects: {
+          HEALTHY_EXPANSION: "Longest TTLs (most stable)",
+          ASSET_LED_GROWTH: "Medium TTLs (moderate volatility)",
+          IMBALANCED_EXCESS: "Short TTLs (high volatility)",
+          REAL_ECONOMY_LEAD: "Shortest TTLs (highest volatility)"
+        }
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
   });
 

@@ -6,6 +6,7 @@ import { fetchComprehensiveEconomicData } from './lib/externalAPIs';
 import { WebhookService } from './lib/webhookService';
 import { runAutomatedRetraining } from './lib/forecastRetraining';
 import { trackAllSKUs } from './lib/forecastMonitoring';
+import { globalCache } from './lib/caching';
 
 interface BackgroundJobConfig {
   name: string;
@@ -105,6 +106,8 @@ export async function updateExternalEconomicData() {
 
           if (previousRegime && previousRegime !== regime) {
             console.log(`[Background] 🚨 REGIME CHANGE detected for company ${companyId}: ${previousRegime} → ${regime} (FDR: ${clampedFdr.toFixed(2)})`);
+            
+            globalCache.updateRegime(regime);
             
             // Fire webhook notification
             webhookService.fireRegimeChange(companyId, previousRegime, regime, clampedFdr)
