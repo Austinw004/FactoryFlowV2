@@ -779,6 +779,35 @@ export const demandPredictions = pgTable("demand_predictions", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Multi-Horizon Forecasting Demand Signal Repository
+export const multiHorizonForecasts = pgTable("multi_horizon_forecasts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  skuId: varchar("sku_id").notNull().references(() => skus.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(), // When the forecast was made
+  forecastDate: text("forecast_date").notNull(), // The date this forecast is for (YYYY-MM-DD)
+  horizonDays: integer("horizon_days").notNull(), // Days ahead from createdAt (1, 7, 14, 30, 60, 90, 180, 365)
+  predictedDemand: real("predicted_demand").notNull(),
+  lowerBound: real("lower_bound"), // 95% confidence interval
+  upperBound: real("upper_bound"), // 95% confidence interval
+  confidence: real("confidence"), // 0-100
+  mlModel: text("ml_model").notNull(), // Model used for this horizon
+  externalFactors: jsonb("external_factors"), // Market signals, economic indicators
+  economicRegime: text("economic_regime"), // Regime at forecast time
+  fdrAtForecast: real("fdr_at_forecast"), // FDR at forecast time
+  actualDemand: real("actual_demand"), // Filled in after the forecast date
+  accuracy: real("accuracy"), // MAPE after actual is known
+  signalStrength: text("signal_strength"), // "strong", "moderate", "weak" - quality of demand signal
+  volatility: real("volatility"), // Expected demand volatility
+  seasonality: real("seasonality"), // Seasonal component strength
+  trend: real("trend"), // Trend component
+}, (table) => [
+  index("multi_horizon_forecasts_company_idx").on(table.companyId),
+  index("multi_horizon_forecasts_sku_idx").on(table.skuId),
+  index("multi_horizon_forecasts_horizon_idx").on(table.horizonDays),
+  index("multi_horizon_forecasts_date_idx").on(table.forecastDate),
+]);
+
 export const inventoryRecommendations = pgTable("inventory_recommendations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
@@ -1233,6 +1262,7 @@ export type InsertMaintenancePrediction = z.infer<typeof insertMaintenancePredic
 export const insertInventoryOptimizationSchema = createInsertSchema(inventoryOptimizations).omit({ id: true, analysisDate: true, createdAt: true });
 export const insertDemandPredictionSchema = createInsertSchema(demandPredictions).omit({ id: true, createdAt: true });
 export const insertInventoryRecommendationSchema = createInsertSchema(inventoryRecommendations).omit({ id: true, createdAt: true, implementedAt: true });
+export const insertMultiHorizonForecastSchema = createInsertSchema(multiHorizonForecasts).omit({ id: true, createdAt: true });
 
 export type InventoryOptimization = typeof inventoryOptimizations.$inferSelect;
 export type InsertInventoryOptimization = z.infer<typeof insertInventoryOptimizationSchema>;
@@ -1240,6 +1270,8 @@ export type DemandPrediction = typeof demandPredictions.$inferSelect;
 export type InsertDemandPrediction = z.infer<typeof insertDemandPredictionSchema>;
 export type InventoryRecommendation = typeof inventoryRecommendations.$inferSelect;
 export type InsertInventoryRecommendation = z.infer<typeof insertInventoryRecommendationSchema>;
+export type MultiHorizonForecast = typeof multiHorizonForecasts.$inferSelect;
+export type InsertMultiHorizonForecast = z.infer<typeof insertMultiHorizonForecastSchema>;
 
 // Supply Chain Traceability schemas
 export const insertMaterialBatchSchema = createInsertSchema(materialBatches).omit({ id: true, createdAt: true, updatedAt: true });
