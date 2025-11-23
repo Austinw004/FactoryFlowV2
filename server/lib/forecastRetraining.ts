@@ -43,15 +43,21 @@ export async function findSKUsWithRecentActuals(
   
   // Get all SKUs for the company
   const skus = await storage.getSkus(companyId);
-  const skusWithActuals: string[] = [];
   
-  for (const sku of skus) {
-    // Check if this SKU has demand history in the last N days
-    const history = await storage.getDemandHistory(sku.id);
-    const recentHistory = history.filter(h => new Date(h.createdAt) >= cutoffDate);
-    
-    if (recentHistory.length > 0) {
-      skusWithActuals.push(sku.id);
+  // Parallelize demand history fetches to avoid blocking event loop
+  const historyChecks = await Promise.allSettled(
+    skus.map(async (sku) => {
+      const history = await storage.getDemandHistory(sku.id);
+      const recentHistory = history.filter(h => new Date(h.createdAt) >= cutoffDate);
+      return { skuId: sku.id, hasRecent: recentHistory.length > 0 };
+    })
+  );
+  
+  // Filter successful checks with recent history
+  const skusWithActuals: string[] = [];
+  for (const result of historyChecks) {
+    if (result.status === 'fulfilled' && result.value.hasRecent) {
+      skusWithActuals.push(result.value.skuId);
     }
   }
   
@@ -68,12 +74,27 @@ export async function calculateSKUForecastError(
   daysBack: number = 90
 ): Promise<SKUForecastError> {
   const sku = await storage.getSku(skuId);
+  
+  // Guard against missing SKU records
+  if (!sku) {
+    console.warn(`[ForecastError] SKU ${skuId} not found, skipping`);
+    return {
+      skuId,
+      skuName: 'Unknown',
+      mape: 0,
+      predictionsEvaluated: 0,
+      avgPredicted: 0,
+      avgActual: 0,
+      shouldRetrain: false,
+    };
+  }
+  
   const history = await storage.getDemandHistory(skuId);
   
   if (history.length < 2) {
     return {
       skuId,
-      skuName: sku?.name || 'Unknown',
+      skuName: sku.name || 'Unknown',
       mape: 0,
       predictionsEvaluated: 0,
       avgPredicted: 0,
@@ -113,7 +134,7 @@ export async function calculateSKUForecastError(
   });
   
   // Get current regime from latest economic snapshot
-  const latestSnapshot = await storage.getLatestEconomicSnapshot(sku!.companyId);
+  const latestSnapshot = await storage.getLatestEconomicSnapshot(sku.companyId);
   const regime = (latestSnapshot?.regime || 'HEALTHY_EXPANSION') as Regime;
   
   // Generate forecasts for test period
@@ -263,21 +284,24 @@ export async function runAutomatedRetraining(
       return result;
     }
     
-    result.totalSkusEvaluated = skuIds.length;
+    // Calculate errors for each SKU in parallel
+    const errorResults = await Promise.allSettled(
+      skuIds.map(skuId => calculateSKUForecastError(storage, skuId, 90))
+    );
     
-    // Calculate errors for each SKU
+    // Filter only successfully evaluated SKUs with predictions
     const errors: SKUForecastError[] = [];
-    for (const skuId of skuIds) {
-      try {
-        const error = await calculateSKUForecastError(storage, skuId, 90);
-        if (error.predictionsEvaluated > 0) {
-          errors.push(error);
-        }
-      } catch (err: any) {
-        console.error(`[AutoRetrain] Error calculating MAPE for SKU ${skuId}:`, err.message);
-        result.errors.push(`SKU ${skuId}: ${err.message}`);
+    for (const errorResult of errorResults) {
+      if (errorResult.status === 'fulfilled' && errorResult.value.predictionsEvaluated > 0) {
+        errors.push(errorResult.value);
+      } else if (errorResult.status === 'rejected') {
+        console.error(`[AutoRetrain] Error calculating MAPE:`, errorResult.reason.message);
+        result.errors.push(errorResult.reason.message);
       }
     }
+    
+    // Only count SKUs that actually had predictions to evaluate
+    result.totalSkusEvaluated = errors.length;
     
     // Calculate average MAPE before retraining
     if (errors.length > 0) {
