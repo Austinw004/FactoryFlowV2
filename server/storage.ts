@@ -1122,7 +1122,7 @@ export class DbStorage implements IStorage {
         sql`${demandPredictions.actualDemand} IS NOT NULL`
       ))
       .groupBy(demandPredictions.skuId, skus.name)
-      .orderBy(sql`mape DESC NULLS LAST`);
+      .orderBy(sql`AVG(CASE WHEN ${demandPredictions.actualDemand} IS NOT NULL AND ${demandPredictions.actualDemand} > 0 THEN ABS((${demandPredictions.actualDemand} - ${demandPredictions.predictedDemand}) / ${demandPredictions.actualDemand}) * 100 END) DESC NULLS LAST`);
   }
 
   async getPredictionsWithActuals(companyId: string, limit: number = 100): Promise<DemandPrediction[]> {

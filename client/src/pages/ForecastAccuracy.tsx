@@ -6,17 +6,64 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { TrendingUp, TrendingDown, Target, BarChart3, AlertCircle } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
+interface ForecastMetrics {
+  overallMape: number | null;
+  bias: number | null;
+  totalPredictions: number;
+  predictionsWithActuals: number;
+  avgPredicted: number | null;
+  avgActual: number | null;
+}
+
+interface PeriodAccuracy {
+  period: string;
+  mape: number | null;
+  bias: number | null;
+  totalPredicted: number | null;
+  totalActual: number | null;
+  count: number;
+}
+
+interface SkuAccuracy {
+  skuId: string | null;
+  skuName: string | null;
+  mape: number | null;
+  bias: number | null;
+  totalPredicted: number | null;
+  totalActual: number | null;
+  count: number;
+}
+
+interface Prediction {
+  skuName: string;
+  forecastDate: string;
+  predictedDemand: number;
+  actualDemand: number;
+  mape: number;
+}
+
+interface AggregatedPeriod {
+  period: string;
+  totalPredicted: number;
+  totalActual: number;
+  count: number;
+}
+
 export default function ForecastAccuracy() {
-  const { data: metrics, isLoading: metricsLoading } = useQuery<any>({
+  const { data: metrics, isLoading: metricsLoading, error: metricsError } = useQuery<ForecastMetrics>({
     queryKey: ["/api/forecast-accuracy/metrics"],
   });
 
-  const { data: byPeriod, isLoading: byPeriodLoading } = useQuery<any[]>({
+  const { data: byPeriod, isLoading: byPeriodLoading, error: byPeriodError } = useQuery<PeriodAccuracy[]>({
     queryKey: ["/api/forecast-accuracy/by-period"],
   });
 
-  const { data: bySku, isLoading: bySkuLoading } = useQuery<any[]>({
+  const { data: bySku, isLoading: bySkuLoading, error: bySkuError } = useQuery<SkuAccuracy[]>({
     queryKey: ["/api/forecast-accuracy/by-sku"],
+  });
+
+  const { data: predictions, isLoading: predictionsLoading, error: predictionsError } = useQuery<Prediction[]>({
+    queryKey: ["/api/forecast-accuracy/predictions"],
   });
 
   const formatNumber = (num: number | null | undefined) => {
@@ -28,6 +75,30 @@ export default function ForecastAccuracy() {
     if (num === null || num === undefined) return "N/A";
     return `${num.toFixed(1)}%`;
   };
+
+  // Aggregate predictions by period for the predicted vs actual chart
+  const predictionsByPeriod: AggregatedPeriod[] = predictions ? 
+    Object.values(
+      predictions.reduce((acc: Record<string, AggregatedPeriod>, pred: Prediction) => {
+        const period = pred.forecastDate;
+        if (!acc[period]) {
+          acc[period] = {
+            period,
+            totalPredicted: 0,
+            totalActual: 0,
+            count: 0
+          };
+        }
+        // Guard against null values to prevent NaN
+        const predicted = pred.predictedDemand ?? 0;
+        const actual = pred.actualDemand ?? 0;
+        acc[period].totalPredicted += predicted;
+        acc[period].totalActual += actual;
+        acc[period].count += 1;
+        return acc;
+      }, {})
+    ).sort((a, b) => a.period.localeCompare(b.period))
+    : [];
 
   const getBiasLabel = (bias: number | null | undefined) => {
     if (bias === null || bias === undefined) return { label: "N/A", variant: "secondary" as const };
@@ -43,6 +114,8 @@ export default function ForecastAccuracy() {
     return "text-red-600 dark:text-red-400";
   };
 
+  const hasError = metricsError || byPeriodError || bySkuError || predictionsError;
+
   return (
     <div className="p-6 space-y-6">
       <div>
@@ -51,6 +124,24 @@ export default function ForecastAccuracy() {
           Track prediction accuracy with MAPE metrics, bias analysis, and performance by SKU
         </p>
       </div>
+
+      {hasError && (
+        <Card className="border-destructive" data-testid="error-banner">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="h-5 w-5" />
+              <p className="font-medium">Failed to load forecast accuracy data</p>
+            </div>
+            <p className="text-sm text-muted-foreground mt-2">
+              {predictionsError && "Unable to load predictions data for the comparison chart. "}
+              {metricsError && "Unable to load overall metrics. "}
+              {byPeriodError && "Unable to load period accuracy data. "}
+              {bySkuError && "Unable to load SKU accuracy data. "}
+              Please try refreshing the page.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card data-testid="card-overall-mape">
@@ -61,6 +152,11 @@ export default function ForecastAccuracy() {
           <CardContent>
             {metricsLoading ? (
               <Skeleton className="h-8 w-20" />
+            ) : metricsError ? (
+              <div className="text-sm text-destructive flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                Failed to load
+              </div>
             ) : (
               <>
                 <div className={`text-2xl font-bold ${getAccuracyColor(metrics?.overallMape)}`} data-testid="text-overall-mape">
@@ -175,14 +271,14 @@ export default function ForecastAccuracy() {
         <Card data-testid="card-predicted-vs-actual">
           <CardHeader>
             <CardTitle>Predicted vs Actual by Period</CardTitle>
-            <CardDescription>Demand comparison</CardDescription>
+            <CardDescription>Demand comparison from predictions</CardDescription>
           </CardHeader>
           <CardContent>
-            {byPeriodLoading ? (
+            {predictionsLoading ? (
               <Skeleton className="h-80 w-full" />
-            ) : byPeriod && byPeriod.length > 0 ? (
+            ) : predictionsByPeriod && predictionsByPeriod.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={byPeriod}>
+                <BarChart data={predictionsByPeriod}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="period" />
                   <YAxis label={{ value: 'Units', angle: -90, position: 'insideLeft' }} />
@@ -194,7 +290,7 @@ export default function ForecastAccuracy() {
               </ResponsiveContainer>
             ) : (
               <div className="flex items-center justify-center h-80 text-muted-foreground">
-                No period data available
+                No predictions with actuals available
               </div>
             )}
           </CardContent>
@@ -226,7 +322,7 @@ export default function ForecastAccuracy() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {bySku.map((sku: any, idx: number) => (
+                {bySku.map((sku, idx) => (
                   <TableRow key={idx} data-testid={`row-sku-${idx}`}>
                     <TableCell className="font-medium" data-testid={`text-sku-name-${idx}`}>
                       {sku.skuName || "Unknown SKU"}
