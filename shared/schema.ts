@@ -470,6 +470,24 @@ export const complianceAudits = pgTable("compliance_audits", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const auditLogs = pgTable("audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+  action: text("action").notNull(), // "create", "update", "delete", "login", "logout", "export", "import"
+  entityType: text("entity_type").notNull(), // "company", "sku", "material", "supplier", "allocation", "settings", etc.
+  entityId: varchar("entity_id"), // ID of the affected entity
+  changes: jsonb("changes"), // Before/after values for updates
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+}, (table) => [
+  index("audit_logs_company_idx").on(table.companyId),
+  index("audit_logs_user_idx").on(table.userId),
+  index("audit_logs_entity_idx").on(table.entityType, table.entityId),
+  index("audit_logs_timestamp_idx").on(table.timestamp),
+]);
+
 export const complianceApprovals = pgTable("compliance_approvals", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   documentId: varchar("document_id").notNull().references(() => complianceDocuments.id, { onDelete: "cascade" }),
@@ -2640,6 +2658,9 @@ export const alertTriggers = pgTable("alert_triggers", {
 export const insertSavedScenarioSchema = createInsertSchema(savedScenarios).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertScenarioBookmarkSchema = createInsertSchema(scenarioBookmarks).omit({ id: true, createdAt: true });
 
+// Audit Logs schemas
+export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({ id: true, timestamp: true });
+
 // Smart Alerts schemas
 export const insertFdrAlertSchema = createInsertSchema(fdrAlerts).omit({ id: true, createdAt: true });
 export const insertCommodityPriceAlertSchema = createInsertSchema(commodityPriceAlerts).omit({ id: true, createdAt: true });
@@ -2664,6 +2685,10 @@ export type SavedScenario = typeof savedScenarios.$inferSelect;
 export type InsertSavedScenario = z.infer<typeof insertSavedScenarioSchema>;
 export type ScenarioBookmark = typeof scenarioBookmarks.$inferSelect;
 export type InsertScenarioBookmark = z.infer<typeof insertScenarioBookmarkSchema>;
+
+// Audit Logs types
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 
 // Smart Alerts types
 export type FdrAlert = typeof fdrAlerts.$inferSelect;

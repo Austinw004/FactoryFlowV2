@@ -448,6 +448,12 @@ export interface IStorage {
   createRegimeNotification(notification: InsertRegimeChangeNotification): Promise<RegimeChangeNotification>;
   acknowledgeRegimeNotification(id: string, userId: string): Promise<RegimeChangeNotification | undefined>;
   
+  // Audit Logs
+  createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
+  getAuditLogs(companyId: string, limit?: number): Promise<AuditLog[]>;
+  getAuditLogsByEntity(companyId: string, entityType: string, entityId?: string): Promise<AuditLog[]>;
+  getAuditLogsByUser(userId: string, limit?: number): Promise<AuditLog[]>;
+  
   // Utility
   getAllCompanyIds(): Promise<string[]>;
 }
