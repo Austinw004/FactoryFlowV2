@@ -1,6 +1,7 @@
 import { storage } from './storage';
 import { broadcastUpdate } from './websocket';
 import axios from 'axios';
+import { fetchComprehensiveEconomicData } from './lib/externalAPIs';
 
 interface BackgroundJobConfig {
   name: string;
@@ -31,32 +32,41 @@ async function getActiveCompanyIds(): Promise<string[]> {
 
 export async function updateExternalEconomicData() {
   try {
-    const response = await axios.get('https://api.factoryofthefuture.ai/economic-indicators', {
-      timeout: 10000,
-      validateStatus: () => true
-    });
+    // Fetch comprehensive economic data from real external APIs (FRED, Alpha Vantage, etc.)
+    const economicData = await fetchComprehensiveEconomicData();
+    
+    // Extract latest values from FRED data
+    const sp500Latest = economicData.financial_circuit?.sp500?.observations?.[0]?.value;
+    const gdpLatest = economicData.real_circuit?.real_gdp?.observations?.[0]?.value;
+    const industrialProdLatest = economicData.real_circuit?.industrial_production?.observations?.[0]?.value;
+    const cpiLatest = economicData.real_circuit?.cpi?.observations?.[0]?.value;
+    const unemploymentLatest = economicData.real_circuit?.unemployment?.observations?.[0]?.value;
 
-    if (response.status === 200 && response.data) {
-      const { gdp_real, gdp_nominal, sp500_index, inflation_rate, sentiment_score } = response.data;
+    if (sp500Latest && gdpLatest && industrialProdLatest) {
+      // Calculate FDR using real data
+      // Financial Circuit: S&P 500 as proxy for asset market activity
+      // Real Circuit: GDP + Industrial Production as proxy for real economic activity
+      const financialIndex = parseFloat(sp500Latest);
+      const realIndex = (parseFloat(gdpLatest) / 1000) + (parseFloat(industrialProdLatest) / 10); // Normalized
       
-      const fdr = gdp_nominal && gdp_real ? gdp_nominal / gdp_real : 1.2;
+      const fdr = financialIndex / realIndex;
       const regime = calculateEconomicRegime(fdr);
 
       const companies = await getActiveCompanyIds();
       
       if (companies.length > 0) {
         for (const companyId of companies) {
-          // Persist to database
+          // Persist real economic data to database
           await storage.createEconomicSnapshot({
             companyId,
             timestamp: new Date(),
             fdr,
             regime,
-            gdpReal: gdp_real,
-            gdpNominal: gdp_nominal,
-            sp500Index: sp500_index,
-            inflationRate: inflation_rate,
-            sentimentScore: sentiment_score,
+            gdpReal: gdpLatest ? parseFloat(gdpLatest) : null,
+            gdpNominal: null, // We're using real GDP from FRED
+            sp500Index: sp500Latest ? parseFloat(sp500Latest) : null,
+            inflationRate: cpiLatest ? parseFloat(cpiLatest) : null,
+            sentimentScore: null, // Could be calculated from news data if available
             source: 'external'
           });
 
@@ -69,10 +79,11 @@ export async function updateExternalEconomicData() {
             data: { 
               fdr: fdr.toFixed(2), 
               regime, 
-              gdpReal: gdp_real,
-              gdpNominal: gdp_nominal,
-              sp500: sp500_index,
-              inflation: inflation_rate 
+              gdpReal: gdpLatest ? parseFloat(gdpLatest) : null,
+              sp500: sp500Latest ? parseFloat(sp500Latest) : null,
+              industrialProduction: industrialProdLatest ? parseFloat(industrialProdLatest) : null,
+              cpi: cpiLatest ? parseFloat(cpiLatest) : null,
+              unemployment: unemploymentLatest ? parseFloat(unemploymentLatest) : null
             },
           });
         }
@@ -85,14 +96,16 @@ export async function updateExternalEconomicData() {
           data: { 
             fdr: fdr.toFixed(2), 
             regime,
-            companiesUpdated: companies.length 
+            companiesUpdated: companies.length,
+            dataSource: 'FRED API'
           },
         });
       }
       
-      console.log(`[Background] Updated economic data: FDR=${fdr.toFixed(2)}, Regime=${regime}, Companies=${companies.length}`);
+      console.log(`[Background] ✅ Updated economic data from FRED: FDR=${fdr.toFixed(2)}, Regime=${regime}, S&P=${sp500Latest}, GDP=${gdpLatest}, Companies=${companies.length}`);
     } else {
-      console.log(`[Background] External economic API returned status ${response.status}, using cached data`);
+      console.log(`[Background] ⚠️  Incomplete data from FRED API (S&P=${!!sp500Latest}, GDP=${!!gdpLatest}, IndProd=${!!industrialProdLatest}), using fallback`);
+      throw new Error('Incomplete external data');
     }
   } catch (error: any) {
     const companies = await getActiveCompanyIds();
