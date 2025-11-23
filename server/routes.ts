@@ -207,9 +207,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User has no associated company" });
       }
       
-      // Check cache first
-      const cacheKey = CacheKeys.economicRegime(user.companyId);
-      const cachedData = cache.get<any>(cacheKey);
+      // Check regime-aware cache first
+      const cacheKey = `economicData:regime:${user.companyId}`;
+      const cachedData = globalCache.get<any>(cacheKey);
       if (cachedData) {
         return res.json({ ...cachedData, fromCache: true });
       }
@@ -234,8 +234,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           signals: calculateSignalsForRegime(snapshot.regime),
         };
         
-        // Cache the response for 5 minutes
-        cache.set(cacheKey, responseData, CacheTTL.ECONOMIC_DATA);
+        // Cache with regime-aware TTL
+        globalCache.set(cacheKey, responseData, 'economicData');
         
         res.json(responseData);
       } else {
@@ -285,9 +285,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User not associated with a company" });
       }
       
-      // Check cache first
-      const cacheKey = CacheKeys.commodityPrices(user.companyId);
-      const cachedPrices = cache.get<any>(cacheKey);
+      // Check regime-aware cache first
+      const cacheKey = `commodityPrices:all:${user.companyId}`;
+      const cachedPrices = globalCache.get<any>(cacheKey);
       if (cachedPrices) {
         return res.json({ ...cachedPrices, fromCache: true });
       }
@@ -295,8 +295,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { fetchAllCommodityPrices } = await import("./lib/commodityPricing");
       const prices = await fetchAllCommodityPrices();
       
-      // Cache for 10 minutes
-      cache.set(cacheKey, prices, CacheTTL.COMMODITY_PRICES);
+      // Cache with regime-aware TTL
+      globalCache.set(cacheKey, prices, 'commodityPrices');
       
       res.json(prices);
     } catch (error: any) {
@@ -1001,7 +1001,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User not associated with a company" });
       }
       
-      const cacheKey = `forecasts:accuracy:metrics:${user.companyId}`;
+      const cacheKey = `forecasts:accuracy-metrics:${user.companyId}`;
       const cached = globalCache.get<any>(cacheKey);
       if (cached) {
         return res.json({ ...cached, fromCache: true });
@@ -1071,7 +1071,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const skuId = req.query.skuId as string | undefined;
       const horizonDays = req.query.horizonDays ? parseInt(req.query.horizonDays as string) : undefined;
       
-      const cacheKey = `forecasts:${user.companyId}:${skuId || 'all'}:${horizonDays || 'all'}`;
+      const cacheKey = `forecasts:multi-horizon:${user.companyId}:${skuId || 'all'}:${horizonDays || 'all'}`;
       const cached = globalCache.get<any>(cacheKey);
       if (cached) {
         return res.json({ ...cached, fromCache: true });

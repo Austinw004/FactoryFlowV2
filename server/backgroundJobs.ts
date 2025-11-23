@@ -130,9 +130,8 @@ export async function updateExternalEconomicData() {
           }
           previousRegimes.set(companyId, regime);
           
-          // Invalidate cache to ensure fresh data is fetched
-          cache.invalidate(CacheKeys.economicRegime(companyId));
-          cache.invalidate(CacheKeys.economicIndicators(companyId));
+          // Invalidate regime-aware cache to ensure fresh data is fetched
+          globalCache.invalidate(`economicData:regime:${companyId}`);
 
           broadcastUpdate({
             type: 'database_update',
@@ -345,8 +344,8 @@ export async function updateCommodityPrices() {
       if (materials.length > 0) {
         console.log(`[Background] Updated ${Math.min(materials.length, 20)} commodity prices for company ${companyId.substring(0, 8)}`);
         
-        // Invalidate commodity price cache for this company
-        cache.invalidate(CacheKeys.commodityPrices(companyId));
+        // Invalidate regime-aware commodity price cache for this company
+        globalCache.invalidate(`commodityPrices:all:${companyId}`);
       }
     }
 
