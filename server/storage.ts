@@ -243,8 +243,8 @@ export interface IStorage {
     count: number;
   }>>;
   getForecastAccuracyBySku(companyId: string): Promise<Array<{
-    skuId: string;
-    skuName: string;
+    skuId: string | null;
+    skuName: string | null;
     mape: number | null;
     bias: number | null;
     totalPredicted: number | null;

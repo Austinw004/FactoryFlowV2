@@ -48,6 +48,12 @@ const menuSections = [
         icon: TrendingUp,
       },
       {
+        title: "Forecast Accuracy",
+        url: "/forecast-accuracy",
+        icon: Target,
+        testId: "sidebar-forecast-accuracy",
+      },
+      {
         title: "Material Planning",
         url: "/allocation",
         icon: Boxes,

@@ -30,6 +30,7 @@ import IndustryConsortium from "@/pages/IndustryConsortium";
 import MAIntelligence from "@/pages/MAIntelligence";
 import StrategicAnalysis from "@/pages/StrategicAnalysis";
 import SopWorkspace from "@/pages/SopWorkspace";
+import ForecastAccuracy from "@/pages/ForecastAccuracy";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
@@ -61,6 +62,7 @@ function Router() {
           <Route path="/ma-intelligence" component={MAIntelligence} />
           <Route path="/strategic-analysis" component={StrategicAnalysis} />
           <Route path="/sop-workspace" component={SopWorkspace} />
+          <Route path="/forecast-accuracy" component={ForecastAccuracy} />
           <Route path="/reports" component={Reports} />
           <Route path="/configuration" component={Configuration} />
           <Route path="/how-it-works" component={HowItWorks} />
