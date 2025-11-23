@@ -464,14 +464,14 @@ export interface IStorage {
   
   // RBAC - Roles
   getRoles(companyId: string): Promise<Role[]>;
-  getRole(roleId: string): Promise<Role | undefined>;
+  getRole(roleId: string, companyId: string): Promise<Role | undefined>;
   getRoleByName(companyId: string, name: string): Promise<Role | undefined>;
   createRole(role: InsertRole): Promise<Role>;
   updateRole(roleId: string, companyId: string, role: Partial<InsertRole>): Promise<Role | undefined>;
   deleteRole(roleId: string, companyId: string): Promise<void>;
   
   // RBAC - Role Permissions
-  getRolePermissions(roleId: string): Promise<Permission[]>;
+  getRolePermissions(roleId: string, companyId: string): Promise<Permission[]>;
   assignPermissionToRole(roleId: string, permissionId: string): Promise<void>;
   removePermissionFromRole(roleId: string, permissionId: string): Promise<void>;
   
@@ -2069,8 +2069,11 @@ export class DbStorage implements IStorage {
     return await db.select().from(roles).where(eq(roles.companyId, companyId));
   }
   
-  async getRole(roleId: string): Promise<Role | undefined> {
-    const [role] = await db.select().from(roles).where(eq(roles.id, roleId));
+  async getRole(roleId: string, companyId: string): Promise<Role | undefined> {
+    // Enforce tenant isolation - only return role if it belongs to the company
+    const [role] = await db.select().from(roles).where(
+      and(eq(roles.id, roleId), eq(roles.companyId, companyId))
+    );
     return role;
   }
   
