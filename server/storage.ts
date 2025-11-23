@@ -69,7 +69,11 @@ import type {
   Role, InsertRole,
   Permission, InsertPermission,
   RolePermission, InsertRolePermission,
-  UserRoleAssignment, InsertUserRoleAssignment
+  UserRoleAssignment, InsertUserRoleAssignment,
+  SopScenario, InsertSopScenario,
+  SopGapAnalysis, InsertSopGapAnalysis,
+  SopMeetingNotes, InsertSopMeetingNotes,
+  SopActionItem, InsertSopActionItem
 } from "@shared/schema";
 import { 
   users, companies, skus, materials, boms, suppliers, supplierMaterials,
@@ -91,7 +95,8 @@ import {
   maTargets, maRecommendations,
   savedScenarios, scenarioBookmarks, fdrAlerts, commodityPriceAlerts, alertTriggers, regimeChangeNotifications,
   auditLogs,
-  roles, permissions, rolePermissions, userRoleAssignments
+  roles, permissions, rolePermissions, userRoleAssignments,
+  sopScenarios, sopGapAnalysis, sopMeetingNotes, sopActionItems
 } from "@shared/schema";
 
 export interface IStorage {
@@ -437,6 +442,39 @@ export interface IStorage {
   createScenarioBookmark(bookmark: InsertScenarioBookmark): Promise<ScenarioBookmark>;
   updateScenarioBookmark(id: string, bookmark: Partial<InsertScenarioBookmark>): Promise<ScenarioBookmark | undefined>;
   deleteScenarioBookmark(id: string): Promise<void>;
+  
+  // S&OP Workspace - Scenarios
+  getSopScenarios(companyId: string): Promise<SopScenario[]>;
+  getSopScenario(id: string): Promise<SopScenario | undefined>;
+  createSopScenario(scenario: InsertSopScenario): Promise<SopScenario>;
+  updateSopScenario(id: string, scenario: Partial<InsertSopScenario>): Promise<SopScenario | undefined>;
+  deleteSopScenario(id: string): Promise<void>;
+  approveSopScenario(id: string, approvedBy: string): Promise<SopScenario | undefined>;
+  
+  // S&OP Workspace - Gap Analysis
+  getSopGapAnalyses(companyId: string): Promise<SopGapAnalysis[]>;
+  getSopGapAnalysesByScenario(scenarioId: string): Promise<SopGapAnalysis[]>;
+  getSopGapAnalysis(id: string): Promise<SopGapAnalysis | undefined>;
+  createSopGapAnalysis(gapAnalysis: InsertSopGapAnalysis): Promise<SopGapAnalysis>;
+  updateSopGapAnalysis(id: string, gapAnalysis: Partial<InsertSopGapAnalysis>): Promise<SopGapAnalysis | undefined>;
+  deleteSopGapAnalysis(id: string): Promise<void>;
+  
+  // S&OP Workspace - Meeting Notes
+  getSopMeetingNotes(companyId: string): Promise<SopMeetingNotes[]>;
+  getSopMeetingNote(id: string): Promise<SopMeetingNotes | undefined>;
+  createSopMeetingNote(meetingNote: InsertSopMeetingNotes): Promise<SopMeetingNotes>;
+  updateSopMeetingNote(id: string, meetingNote: Partial<InsertSopMeetingNotes>): Promise<SopMeetingNotes | undefined>;
+  deleteSopMeetingNote(id: string): Promise<void>;
+  
+  // S&OP Workspace - Action Items
+  getSopActionItems(companyId: string): Promise<SopActionItem[]>;
+  getSopActionItemsByMeeting(meetingId: string): Promise<SopActionItem[]>;
+  getSopActionItemsByAssignee(assignedTo: string): Promise<SopActionItem[]>;
+  getSopActionItem(id: string): Promise<SopActionItem | undefined>;
+  createSopActionItem(actionItem: InsertSopActionItem): Promise<SopActionItem>;
+  updateSopActionItem(id: string, actionItem: Partial<InsertSopActionItem>): Promise<SopActionItem | undefined>;
+  completeSopActionItem(id: string): Promise<SopActionItem | undefined>;
+  deleteSopActionItem(id: string): Promise<void>;
   
   // Smart Alerts & Monitoring
   getFdrAlerts(companyId: string): Promise<FdrAlert[]>;
@@ -1928,6 +1966,166 @@ export class DbStorage implements IStorage {
 
   async deleteScenarioBookmark(id: string): Promise<void> {
     await db.delete(scenarioBookmarks).where(eq(scenarioBookmarks.id, id));
+  }
+
+  // S&OP Workspace - Scenarios
+  async getSopScenarios(companyId: string): Promise<SopScenario[]> {
+    return await db.select().from(sopScenarios)
+      .where(eq(sopScenarios.companyId, companyId))
+      .orderBy(sql`${sopScenarios.createdAt} DESC`);
+  }
+
+  async getSopScenario(id: string): Promise<SopScenario | undefined> {
+    const [scenario] = await db.select().from(sopScenarios).where(eq(sopScenarios.id, id));
+    return scenario;
+  }
+
+  async createSopScenario(insertScenario: InsertSopScenario): Promise<SopScenario> {
+    const [scenario] = await db.insert(sopScenarios).values(insertScenario).returning();
+    return scenario;
+  }
+
+  async updateSopScenario(id: string, scenarioUpdate: Partial<InsertSopScenario>): Promise<SopScenario | undefined> {
+    const [scenario] = await db.update(sopScenarios)
+      .set({ ...scenarioUpdate, updatedAt: sql`NOW()` })
+      .where(eq(sopScenarios.id, id))
+      .returning();
+    return scenario;
+  }
+
+  async deleteSopScenario(id: string): Promise<void> {
+    await db.delete(sopScenarios).where(eq(sopScenarios.id, id));
+  }
+
+  async approveSopScenario(id: string, approvedBy: string): Promise<SopScenario | undefined> {
+    const [scenario] = await db.update(sopScenarios)
+      .set({ 
+        status: 'active',
+        approvedBy,
+        approvedAt: sql`NOW()`,
+        updatedAt: sql`NOW()`
+      })
+      .where(eq(sopScenarios.id, id))
+      .returning();
+    return scenario;
+  }
+
+  // S&OP Workspace - Gap Analysis
+  async getSopGapAnalyses(companyId: string): Promise<SopGapAnalysis[]> {
+    return await db.select().from(sopGapAnalysis)
+      .where(eq(sopGapAnalysis.companyId, companyId))
+      .orderBy(sql`${sopGapAnalysis.periodStart} DESC`);
+  }
+
+  async getSopGapAnalysesByScenario(scenarioId: string): Promise<SopGapAnalysis[]> {
+    return await db.select().from(sopGapAnalysis)
+      .where(eq(sopGapAnalysis.scenarioId, scenarioId))
+      .orderBy(sql`${sopGapAnalysis.periodStart} ASC`);
+  }
+
+  async getSopGapAnalysis(id: string): Promise<SopGapAnalysis | undefined> {
+    const [gap] = await db.select().from(sopGapAnalysis).where(eq(sopGapAnalysis.id, id));
+    return gap;
+  }
+
+  async createSopGapAnalysis(insertGap: InsertSopGapAnalysis): Promise<SopGapAnalysis> {
+    const [gap] = await db.insert(sopGapAnalysis).values(insertGap).returning();
+    return gap;
+  }
+
+  async updateSopGapAnalysis(id: string, gapUpdate: Partial<InsertSopGapAnalysis>): Promise<SopGapAnalysis | undefined> {
+    const [gap] = await db.update(sopGapAnalysis)
+      .set(gapUpdate)
+      .where(eq(sopGapAnalysis.id, id))
+      .returning();
+    return gap;
+  }
+
+  async deleteSopGapAnalysis(id: string): Promise<void> {
+    await db.delete(sopGapAnalysis).where(eq(sopGapAnalysis.id, id));
+  }
+
+  // S&OP Workspace - Meeting Notes
+  async getSopMeetingNotes(companyId: string): Promise<SopMeetingNotes[]> {
+    return await db.select().from(sopMeetingNotes)
+      .where(eq(sopMeetingNotes.companyId, companyId))
+      .orderBy(sql`${sopMeetingNotes.meetingDate} DESC`);
+  }
+
+  async getSopMeetingNote(id: string): Promise<SopMeetingNotes | undefined> {
+    const [note] = await db.select().from(sopMeetingNotes).where(eq(sopMeetingNotes.id, id));
+    return note;
+  }
+
+  async createSopMeetingNote(insertNote: InsertSopMeetingNotes): Promise<SopMeetingNotes> {
+    const [note] = await db.insert(sopMeetingNotes).values(insertNote).returning();
+    return note;
+  }
+
+  async updateSopMeetingNote(id: string, noteUpdate: Partial<InsertSopMeetingNotes>): Promise<SopMeetingNotes | undefined> {
+    const [note] = await db.update(sopMeetingNotes)
+      .set({ ...noteUpdate, updatedAt: sql`NOW()` })
+      .where(eq(sopMeetingNotes.id, id))
+      .returning();
+    return note;
+  }
+
+  async deleteSopMeetingNote(id: string): Promise<void> {
+    await db.delete(sopMeetingNotes).where(eq(sopMeetingNotes.id, id));
+  }
+
+  // S&OP Workspace - Action Items
+  async getSopActionItems(companyId: string): Promise<SopActionItem[]> {
+    return await db.select().from(sopActionItems)
+      .where(eq(sopActionItems.companyId, companyId))
+      .orderBy(sql`${sopActionItems.dueDate} ASC NULLS LAST`);
+  }
+
+  async getSopActionItemsByMeeting(meetingId: string): Promise<SopActionItem[]> {
+    return await db.select().from(sopActionItems)
+      .where(eq(sopActionItems.meetingId, meetingId))
+      .orderBy(sql`${sopActionItems.createdAt} DESC`);
+  }
+
+  async getSopActionItemsByAssignee(assignedTo: string): Promise<SopActionItem[]> {
+    return await db.select().from(sopActionItems)
+      .where(eq(sopActionItems.assignedTo, assignedTo))
+      .orderBy(sql`${sopActionItems.dueDate} ASC NULLS LAST`);
+  }
+
+  async getSopActionItem(id: string): Promise<SopActionItem | undefined> {
+    const [item] = await db.select().from(sopActionItems).where(eq(sopActionItems.id, id));
+    return item;
+  }
+
+  async createSopActionItem(insertItem: InsertSopActionItem): Promise<SopActionItem> {
+    const [item] = await db.insert(sopActionItems).values(insertItem).returning();
+    return item;
+  }
+
+  async updateSopActionItem(id: string, itemUpdate: Partial<InsertSopActionItem>): Promise<SopActionItem | undefined> {
+    const [item] = await db.update(sopActionItems)
+      .set({ ...itemUpdate, updatedAt: sql`NOW()` })
+      .where(eq(sopActionItems.id, id))
+      .returning();
+    return item;
+  }
+
+  async completeSopActionItem(id: string): Promise<SopActionItem | undefined> {
+    const [item] = await db.update(sopActionItems)
+      .set({ 
+        status: 'completed',
+        progress: 100,
+        completedAt: sql`NOW()`,
+        updatedAt: sql`NOW()`
+      })
+      .where(eq(sopActionItems.id, id))
+      .returning();
+    return item;
+  }
+
+  async deleteSopActionItem(id: string): Promise<void> {
+    await db.delete(sopActionItems).where(eq(sopActionItems.id, id));
   }
 
   // Smart Alerts & Monitoring

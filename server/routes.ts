@@ -4840,6 +4840,269 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== S&OP Workspace =====
+  
+  // S&OP Scenarios
+  app.get("/api/sop/scenarios", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) return res.status(400).json({ error: "User has no company association" });
+      
+      const scenarios = await storage.getSopScenarios(user.companyId);
+      res.json(scenarios);
+    } catch (error: any) {
+      console.error("Error fetching S&OP scenarios:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/sop/scenarios/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) return res.status(400).json({ error: "User has no company association" });
+      
+      const scenario = await storage.getSopScenario(req.params.id);
+      if (!scenario) return res.status(404).json({ error: "S&OP scenario not found" });
+      if (scenario.companyId !== user.companyId) return res.status(403).json({ error: "Forbidden" });
+      
+      res.json(scenario);
+    } catch (error: any) {
+      console.error("Error fetching S&OP scenario:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/sop/scenarios", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) return res.status(400).json({ error: "User has no company association" });
+      
+      const { insertSopScenarioSchema } = await import("@shared/schema");
+      const scenarioData = insertSopScenarioSchema.parse({ ...req.body, companyId: user.companyId, createdBy: user.id });
+      
+      const scenario = await storage.createSopScenario(scenarioData);
+      res.status(201).json(scenario);
+    } catch (error: any) {
+      console.error("Error creating S&OP scenario:", error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.put("/api/sop/scenarios/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) return res.status(400).json({ error: "User has no company association" });
+      
+      const existing = await storage.getSopScenario(req.params.id);
+      if (!existing) return res.status(404).json({ error: "S&OP scenario not found" });
+      if (existing.companyId !== user.companyId) return res.status(403).json({ error: "Forbidden" });
+      
+      const updated = await storage.updateSopScenario(req.params.id, req.body);
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating S&OP scenario:", error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/sop/scenarios/:id/approve", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) return res.status(400).json({ error: "User has no company association" });
+      
+      const existing = await storage.getSopScenario(req.params.id);
+      if (!existing) return res.status(404).json({ error: "S&OP scenario not found" });
+      if (existing.companyId !== user.companyId) return res.status(403).json({ error: "Forbidden" });
+      
+      const approved = await storage.approveSopScenario(req.params.id, user.id);
+      res.json(approved);
+    } catch (error: any) {
+      console.error("Error approving S&OP scenario:", error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/sop/scenarios/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) return res.status(400).json({ error: "User has no company association" });
+      
+      const existing = await storage.getSopScenario(req.params.id);
+      if (!existing) return res.status(404).json({ error: "S&OP scenario not found" });
+      if (existing.companyId !== user.companyId) return res.status(403).json({ error: "Forbidden" });
+      
+      await storage.deleteSopScenario(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting S&OP scenario:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // S&OP Gap Analysis
+  app.get("/api/sop/gap-analysis", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) return res.status(400).json({ error: "User has no company association" });
+      
+      const { scenarioId } = req.query;
+      const gaps = scenarioId ? await storage.getSopGapAnalysesByScenario(scenarioId as string) : await storage.getSopGapAnalyses(user.companyId);
+      res.json(gaps);
+    } catch (error: any) {
+      console.error("Error fetching S&OP gap analyses:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/sop/gap-analysis", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) return res.status(400).json({ error: "User has no company association" });
+      
+      const { insertSopGapAnalysisSchema } = await import("@shared/schema");
+      const gapData = insertSopGapAnalysisSchema.parse({ ...req.body, companyId: user.companyId });
+      
+      const gap = await storage.createSopGapAnalysis(gapData);
+      res.status(201).json(gap);
+    } catch (error: any) {
+      console.error("Error creating S&OP gap analysis:", error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // S&OP Meeting Notes
+  app.get("/api/sop/meetings", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) return res.status(400).json({ error: "User has no company association" });
+      
+      const meetings = await storage.getSopMeetingNotes(user.companyId);
+      res.json(meetings);
+    } catch (error: any) {
+      console.error("Error fetching S&OP meetings:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/sop/meetings", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) return res.status(400).json({ error: "User has no company association" });
+      
+      const { insertSopMeetingNotesSchema } = await import("@shared/schema");
+      const meetingData = insertSopMeetingNotesSchema.parse({ ...req.body, companyId: user.companyId, facilitator: user.id });
+      
+      const meeting = await storage.createSopMeetingNote(meetingData);
+      res.status(201).json(meeting);
+    } catch (error: any) {
+      console.error("Error creating S&OP meeting:", error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.put("/api/sop/meetings/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) return res.status(400).json({ error: "User has no company association" });
+      
+      const existing = await storage.getSopMeetingNote(req.params.id);
+      if (!existing) return res.status(404).json({ error: "S&OP meeting not found" });
+      if (existing.companyId !== user.companyId) return res.status(403).json({ error: "Forbidden" });
+      
+      const updated = await storage.updateSopMeetingNote(req.params.id, req.body);
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating S&OP meeting:", error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // S&OP Action Items
+  app.get("/api/sop/action-items", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) return res.status(400).json({ error: "User has no company association" });
+      
+      const { meetingId, assignedTo } = req.query;
+      let actionItems;
+      if (meetingId) actionItems = await storage.getSopActionItemsByMeeting(meetingId as string);
+      else if (assignedTo) actionItems = await storage.getSopActionItemsByAssignee(assignedTo as string);
+      else actionItems = await storage.getSopActionItems(user.companyId);
+      
+      res.json(actionItems);
+    } catch (error: any) {
+      console.error("Error fetching S&OP action items:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/sop/action-items", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) return res.status(400).json({ error: "User has no company association" });
+      
+      const { insertSopActionItemSchema } = await import("@shared/schema");
+      const actionData = insertSopActionItemSchema.parse({ ...req.body, companyId: user.companyId });
+      
+      const actionItem = await storage.createSopActionItem(actionData);
+      res.status(201).json(actionItem);
+    } catch (error: any) {
+      console.error("Error creating S&OP action item:", error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.put("/api/sop/action-items/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) return res.status(400).json({ error: "User has no company association" });
+      
+      const existing = await storage.getSopActionItem(req.params.id);
+      if (!existing) return res.status(404).json({ error: "S&OP action item not found" });
+      if (existing.companyId !== user.companyId) return res.status(403).json({ error: "Forbidden" });
+      
+      const updated = await storage.updateSopActionItem(req.params.id, req.body);
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating S&OP action item:", error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/sop/action-items/:id/complete", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) return res.status(400).json({ error: "User has no company association" });
+      
+      const existing = await storage.getSopActionItem(req.params.id);
+      if (!existing) return res.status(404).json({ error: "S&OP action item not found" });
+      if (existing.companyId !== user.companyId) return res.status(403).json({ error: "Forbidden" });
+      
+      const completed = await storage.completeSopActionItem(req.params.id);
+      res.json(completed);
+    } catch (error: any) {
+      console.error("Error completing S&OP action item:", error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/sop/action-items/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) return res.status(400).json({ error: "User has no company association" });
+      
+      const existing = await storage.getSopActionItem(req.params.id);
+      if (!existing) return res.status(404).json({ error: "S&OP action item not found" });
+      if (existing.companyId !== user.companyId) return res.status(403).json({ error: "Forbidden" });
+      
+      await storage.deleteSopActionItem(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting S&OP action item:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ===== Smart Alerts & Monitoring =====
 
   // Get all FDR alerts for company
