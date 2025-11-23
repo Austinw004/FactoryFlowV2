@@ -8,12 +8,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, AlertCircle, Package, Building2, Zap, DollarSign, Bell, Save, Mail, Plug, Shield, Bot, Palette, Globe, Users, FileText } from "lucide-react";
+import { Settings, AlertCircle, Package, Building2, Zap, DollarSign, Bell, Save, Mail, Plug, Shield, Bot, Palette, Globe, Users, FileText, MapPin } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useState, useEffect } from "react";
 import type { Company, User, Role } from "@shared/schema";
+import { LocationsManagement } from "@/components/LocationsManagement";
 
 export default function Configuration() {
   const { toast } = useToast();
@@ -122,10 +123,14 @@ export default function Configuration() {
       </div>
 
       <Tabs defaultValue="company" data-testid="tabs-settings">
-        <TabsList className="grid grid-cols-4 lg:grid-cols-11 h-auto">
+        <TabsList className="grid grid-cols-4 lg:grid-cols-12 h-auto">
           <TabsTrigger value="company" data-testid="tab-company">
             <Building2 className="h-4 w-4 mr-2" />
             Company
+          </TabsTrigger>
+          <TabsTrigger value="locations" data-testid="tab-locations">
+            <MapPin className="h-4 w-4 mr-2" />
+            Locations
           </TabsTrigger>
           <TabsTrigger value="budget" data-testid="tab-budget">
             <DollarSign className="h-4 w-4 mr-2" />
@@ -245,6 +250,10 @@ export default function Configuration() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="locations" className="space-y-4">
+          <LocationsManagement />
         </TabsContent>
 
         <TabsContent value="budget" className="space-y-4">
