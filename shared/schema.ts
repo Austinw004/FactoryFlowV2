@@ -27,6 +27,50 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// RBAC - Permission definitions (system-wide)
+export const permissions = pgTable("permissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(), // e.g., "view_forecast", "edit_procurement"
+  description: text("description"),
+  category: text("category"), // "forecasting", "procurement", "administration", etc.
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// RBAC - Roles (company-scoped)
+export const roles = pgTable("roles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  name: text("name").notNull(), // "Executive", "Procurement Manager", etc.
+  description: text("description"),
+  isDefault: integer("is_default").default(0), // System default roles (cannot be deleted)
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("roles_company_idx").on(table.companyId),
+  uniqueIndex("roles_company_name_unique").on(table.companyId, table.name),
+]);
+
+// RBAC - Role-Permission mappings
+export const rolePermissions = pgTable("role_permissions", {
+  roleId: varchar("role_id").notNull().references(() => roles.id, { onDelete: "cascade" }),
+  permissionId: varchar("permission_id").notNull().references(() => permissions.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  primaryKey({ columns: [table.roleId, table.permissionId] }),
+]);
+
+// RBAC - User-Role assignments (users can have multiple roles)
+export const userRoleAssignments = pgTable("user_role_assignments", {
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  roleId: varchar("role_id").notNull().references(() => roles.id, { onDelete: "cascade" }),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  assignedBy: varchar("assigned_by").references(() => users.id), // Who assigned this role
+  assignedAt: timestamp("assigned_at").defaultNow(),
+}, (table) => [
+  primaryKey({ columns: [table.userId, table.roleId] }),
+  index("user_role_assignments_user_idx").on(table.userId),
+  index("user_role_assignments_company_idx").on(table.companyId),
+]);
+
 export const companies = pgTable("companies", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
@@ -1087,6 +1131,14 @@ export const updateDowntimeEventSchema = createInsertSchema(downtimeEvents).omit
 export const insertProductionBottleneckSchema = createInsertSchema(productionBottlenecks).omit({ id: true, createdAt: true, updatedAt: true, identifiedAt: true });
 export const updateProductionBottleneckSchema = createInsertSchema(productionBottlenecks).omit({ id: true, companyId: true, createdAt: true }).partial();
 
+// RBAC Insert Schemas
+export const insertPermissionSchema = createInsertSchema(permissions).omit({ id: true, createdAt: true });
+export const insertRoleSchema = createInsertSchema(roles).omit({ id: true, createdAt: true });
+export const updateRoleSchema = createInsertSchema(roles).omit({ id: true, companyId: true, createdAt: true }).partial();
+export const insertRolePermissionSchema = createInsertSchema(rolePermissions).omit({ createdAt: true });
+export const insertUserRoleAssignmentSchema = createInsertSchema(userRoleAssignments).omit({ assignedAt: true });
+export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({ id: true, timestamp: true });
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -1143,6 +1195,18 @@ export type DowntimeEvent = typeof downtimeEvents.$inferSelect;
 export type InsertDowntimeEvent = z.infer<typeof insertDowntimeEventSchema>;
 export type ProductionBottleneck = typeof productionBottlenecks.$inferSelect;
 export type InsertProductionBottleneck = z.infer<typeof insertProductionBottleneckSchema>;
+
+// RBAC Types
+export type Permission = typeof permissions.$inferSelect;
+export type InsertPermission = z.infer<typeof insertPermissionSchema>;
+export type Role = typeof roles.$inferSelect;
+export type InsertRole = z.infer<typeof insertRoleSchema>;
+export type RolePermission = typeof rolePermissions.$inferSelect;
+export type InsertRolePermission = z.infer<typeof insertRolePermissionSchema>;
+export type UserRoleAssignment = typeof userRoleAssignments.$inferSelect;
+export type InsertUserRoleAssignment = z.infer<typeof insertUserRoleAssignmentSchema>;
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 
 // IoT Sensors & Predictive Maintenance schemas
 export const insertEquipmentSensorSchema = createInsertSchema(equipmentSensors).omit({ id: true, createdAt: true, updatedAt: true });
