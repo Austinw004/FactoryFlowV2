@@ -16,10 +16,23 @@ import {
   Play,
   CheckCircle,
   Target,
-  Zap
+  Zap,
+  Save,
+  Bookmark,
+  GitCompare,
+  FileDown,
+  Bell
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { SaveScenarioDialog } from "@/components/analysis/SaveScenarioDialog";
+import { ScenarioLibrary } from "@/components/analysis/ScenarioLibrary";
+import { ScenarioComparison } from "@/components/analysis/ScenarioComparison";
+import { AlertsConfig } from "@/components/analysis/AlertsConfig";
+import { ExportDialog } from "@/components/analysis/ExportDialog";
+import { FDRTimelineChart } from "@/components/analysis/FDRTimelineChart";
+import { CommodityHeatMap } from "@/components/analysis/CommodityHeatMap";
+import type { SavedScenario, ScenarioBookmark } from "@shared/schema";
 
 interface ScenarioResult {
   scenarioName: string;
@@ -84,6 +97,13 @@ export default function StrategicAnalysis() {
   
   const economicFormRef = useRef<HTMLFormElement>(null);
   const geoFormRef = useRef<HTMLFormElement>(null);
+
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [showLibrary, setShowLibrary] = useState(false);
+  const [showComparison, setShowComparison] = useState(false);
+  const [showAlerts, setShowAlerts] = useState(false);
+  const [showExport, setShowExport] = useState(false);
+  const [compareBookmarks, setCompareBookmarks] = useState<ScenarioBookmark[]>([]);
 
   const { data: economicData } = useQuery<any>({
     queryKey: ["/api/economic-indicators"],
@@ -765,14 +785,63 @@ export default function StrategicAnalysis() {
       {scenarioResult && (
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
-                {scenarioResult.scenarioName} Results
-              </CardTitle>
-              <Badge variant={scenarioResult.confidence > 75 ? "default" : "secondary"}>
-                {scenarioResult.confidence}% Confidence
-              </Badge>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  {scenarioResult.scenarioName} Results
+                </CardTitle>
+                <Badge variant={scenarioResult.confidence > 75 ? "default" : "secondary"}>
+                  {scenarioResult.confidence}% Confidence
+                </Badge>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowSaveDialog(true)}
+                  data-testid="button-save-template"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  Save as Template
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowSaveDialog(true)}
+                  data-testid="button-bookmark-results"
+                >
+                  <Bookmark className="h-4 w-4 mr-2" />
+                  Bookmark Results
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowLibrary(true)}
+                  data-testid="button-compare-scenarios"
+                >
+                  <GitCompare className="h-4 w-4 mr-2" />
+                  Compare Scenarios
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowExport(true)}
+                  data-testid="button-export"
+                >
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Export
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowAlerts(true)}
+                  data-testid="button-configure-alerts"
+                >
+                  <Bell className="h-4 w-4 mr-2" />
+                  Configure Alerts
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -1060,6 +1129,67 @@ export default function StrategicAnalysis() {
           </CardContent>
         </Card>
       )}
+
+      <SaveScenarioDialog
+        open={showSaveDialog}
+        onOpenChange={setShowSaveDialog}
+        scenarioData={
+          scenarioResult
+            ? {
+                type: includeGeopolitical ? 'geopolitical' : includeEconomic ? 'economic' : 'combined',
+                configuration: economicFormRef.current ? Object.fromEntries(new FormData(economicFormRef.current)) : {},
+                results: scenarioResult,
+                currentFDR,
+                currentRegime,
+              }
+            : undefined
+        }
+      />
+
+      <ScenarioLibrary
+        open={showLibrary}
+        onOpenChange={setShowLibrary}
+        onLoadTemplate={(template: SavedScenario) => {
+          toast({
+            title: "Template Loaded",
+            description: `"${template.name}" configuration has been loaded`,
+          });
+        }}
+        onViewBookmark={(bookmark: ScenarioBookmark) => {
+          const results = bookmark.results as any;
+          setScenarioResult(results);
+          toast({
+            title: "Bookmark Loaded",
+            description: `Viewing results for "${bookmark.name}"`,
+          });
+        }}
+        onCompareBookmarks={(bookmarks: ScenarioBookmark[]) => {
+          setCompareBookmarks(bookmarks);
+          setShowComparison(true);
+        }}
+      />
+
+      <ScenarioComparison
+        open={showComparison}
+        onOpenChange={setShowComparison}
+        scenarios={compareBookmarks}
+      />
+
+      <AlertsConfig open={showAlerts} onOpenChange={setShowAlerts} />
+
+      <ExportDialog
+        open={showExport}
+        onOpenChange={setShowExport}
+        scenarioData={
+          scenarioResult
+            ? {
+                type: includeGeopolitical ? 'geopolitical' : includeEconomic ? 'economic' : 'combined',
+                results: scenarioResult,
+                configuration: economicFormRef.current ? Object.fromEntries(new FormData(economicFormRef.current)) : {},
+              }
+            : undefined
+        }
+      />
     </div>
   );
 }
