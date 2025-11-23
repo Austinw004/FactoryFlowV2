@@ -129,6 +129,34 @@ export const companies = pgTable("companies", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Company Locations (warehouses, factories, offices)
+export const companyLocations = pgTable("company_locations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  locationType: text("location_type").notNull(), // "warehouse", "factory", "office", "distribution_center", "retail"
+  addressLine1: text("address_line_1").notNull(),
+  addressLine2: text("address_line_2"),
+  city: text("city").notNull(),
+  state: text("state"),
+  postalCode: text("postal_code"),
+  country: text("country").notNull().default("United States"),
+  isPrimary: integer("is_primary").default(0), // 1 = primary location
+  contactName: text("contact_name"),
+  contactEmail: text("contact_email"),
+  contactPhone: text("contact_phone"),
+  squareFootage: real("square_footage"),
+  capacity: real("capacity"), // Storage capacity in units
+  operationalStatus: text("operational_status").default("active"), // "active", "inactive", "under_construction"
+  timezone: text("timezone"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("company_locations_company_idx").on(table.companyId),
+  index("company_locations_type_idx").on(table.locationType),
+]);
+
 export const economicSnapshots = pgTable("economic_snapshots", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
@@ -1130,6 +1158,8 @@ export const employeePerformanceReviews = pgTable("employee_performance_reviews"
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const upsertUserSchema = createInsertSchema(users).omit({ createdAt: true, updatedAt: true });
 export const insertCompanySchema = createInsertSchema(companies).omit({ id: true, createdAt: true });
+export const insertCompanyLocationSchema = createInsertSchema(companyLocations).omit({ id: true, createdAt: true, updatedAt: true });
+export const updateCompanyLocationSchema = insertCompanyLocationSchema.partial();
 export const insertSkuSchema = createInsertSchema(skus).omit({ id: true, createdAt: true });
 export const updateSkuSchema = createInsertSchema(skus).omit({ id: true, companyId: true, createdAt: true }).partial();
 export const insertMaterialSchema = createInsertSchema(materials).omit({ id: true, createdAt: true });
@@ -1182,6 +1212,9 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type Company = typeof companies.$inferSelect;
 export type InsertCompany = z.infer<typeof insertCompanySchema>;
+export type CompanyLocation = typeof companyLocations.$inferSelect;
+export type InsertCompanyLocation = z.infer<typeof insertCompanyLocationSchema>;
+export type UpdateCompanyLocation = z.infer<typeof updateCompanyLocationSchema>;
 export type Sku = typeof skus.$inferSelect;
 export type InsertSku = z.infer<typeof insertSkuSchema>;
 export type Material = typeof materials.$inferSelect;

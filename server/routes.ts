@@ -5503,6 +5503,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Company Locations
+  app.get("/api/company/locations", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) return res.status(400).json({ error: "User has no company" });
+      const locations = await storage.getCompanyLocations(user.companyId);
+      res.json(locations);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/company/locations", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) return res.status(400).json({ error: "User has no company" });
+      const { insertCompanyLocationSchema } = await import("@shared/schema");
+      const locationData = insertCompanyLocationSchema.parse({ ...req.body, companyId: user.companyId });
+      const location = await storage.createCompanyLocation(locationData);
+      res.status(201).json(location);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/company/locations/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) return res.status(400).json({ error: "User has no company" });
+      const location = await storage.getCompanyLocation(req.params.id);
+      if (!location || location.companyId !== user.companyId) return res.status(404).json({ error: "Location not found" });
+      const updated = await storage.updateCompanyLocation(req.params.id, req.body);
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/company/locations/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) return res.status(400).json({ error: "User has no company" });
+      const location = await storage.getCompanyLocation(req.params.id);
+      if (!location || location.companyId !== user.companyId) return res.status(404).json({ error: "Location not found" });
+      await storage.deleteCompanyLocation(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.patch("/api/company/settings", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

@@ -1,7 +1,9 @@
 import { db } from "@db";
 import { eq, and, sql, desc } from "drizzle-orm";
 import type { 
-  User, InsertUser, UpsertUser, Company, InsertCompany, Sku, InsertSku,
+  User, InsertUser, UpsertUser, Company, InsertCompany,
+  CompanyLocation, InsertCompanyLocation, UpdateCompanyLocation,
+  Sku, InsertSku,
   Material, InsertMaterial, Bom, InsertBom, Supplier, InsertSupplier,
   SupplierMaterial, InsertSupplierMaterial, DemandHistory, InsertDemandHistory,
   Allocation, InsertAllocation, AllocationResult, InsertAllocationResult,
@@ -77,7 +79,7 @@ import type {
   SopActionItem, InsertSopActionItem
 } from "@shared/schema";
 import { 
-  users, companies, skus, materials, boms, suppliers, supplierMaterials,
+  users, companies, companyLocations, skus, materials, boms, suppliers, supplierMaterials,
   demandHistory, allocations, allocationResults, priceAlerts, machinery, maintenanceRecords,
   complianceDocuments, complianceAudits, complianceRegulations,
   productionRuns, productionMetrics, downtimeEvents, productionBottlenecks,
@@ -113,6 +115,13 @@ export interface IStorage {
   getCompany(id: string): Promise<Company | undefined>;
   createCompany(company: InsertCompany): Promise<Company>;
   updateCompany(id: string, company: Partial<InsertCompany>): Promise<Company | undefined>;
+  
+  // Company Locations
+  getCompanyLocations(companyId: string): Promise<CompanyLocation[]>;
+  getCompanyLocation(id: string): Promise<CompanyLocation | undefined>;
+  createCompanyLocation(location: InsertCompanyLocation): Promise<CompanyLocation>;
+  updateCompanyLocation(id: string, updates: UpdateCompanyLocation): Promise<CompanyLocation>;
+  deleteCompanyLocation(id: string): Promise<void>;
   
   // Sessions (for WebSocket authentication)
   getSessionById(sessionId: string): Promise<any | undefined>;
@@ -680,6 +689,33 @@ export class DbStorage implements IStorage {
       .where(eq(companies.id, id))
       .returning();
     return updated;
+  }
+
+  // Company Locations methods
+  async getCompanyLocations(companyId: string): Promise<CompanyLocation[]> {
+    return db.select().from(companyLocations).where(eq(companyLocations.companyId, companyId)).orderBy(desc(companyLocations.isPrimary), companyLocations.name);
+  }
+
+  async getCompanyLocation(id: string): Promise<CompanyLocation | undefined> {
+    const [location] = await db.select().from(companyLocations).where(eq(companyLocations.id, id));
+    return location;
+  }
+
+  async createCompanyLocation(insertLocation: InsertCompanyLocation): Promise<CompanyLocation> {
+    const [location] = await db.insert(companyLocations).values(insertLocation).returning();
+    return location;
+  }
+
+  async updateCompanyLocation(id: string, updates: UpdateCompanyLocation): Promise<CompanyLocation> {
+    const [location] = await db.update(companyLocations).set({
+      ...updates,
+      updatedAt: new Date(),
+    }).where(eq(companyLocations.id, id)).returning();
+    return location;
+  }
+
+  async deleteCompanyLocation(id: string): Promise<void> {
+    await db.delete(companyLocations).where(eq(companyLocations.id, id));
   }
   
   async getSessionById(sessionId: string): Promise<any | undefined> {
