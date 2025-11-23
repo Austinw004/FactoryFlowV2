@@ -35,6 +35,16 @@ Preferred communication style: Simple, everyday language.
 
 Webhooks respect company-configured webhook URL and event filtering (configured in Settings → Integrations tab). All webhook payloads include event type, timestamp, company ID, and relevant data. Failed webhook calls are logged but don't block operations.
 
+### Data Export System (November 23, 2025)
+**Multi-Format Data Export**: Implemented comprehensive data export functionality allowing users to export company data in JSON, CSV, or Excel formats:
+- **Supported Entities**: SKUs, materials, suppliers, allocations, machinery
+- **Format Selection**: Respects company-configured export format preference (Settings → Data & Privacy)
+- **API Endpoint**: POST `/api/data/export` with optional format and entities parameters
+- **Download Headers**: Proper content-type and content-disposition for file downloads
+- **Multi-Tenant**: Exports only data associated with authenticated user's company
+
+Export service handles CSV field escaping, JSON formatting, and Excel compatibility (via CSV). Future enhancements could include Excel binary format (XLSX) support.
+
 ## System Architecture
 
 ### Frontend

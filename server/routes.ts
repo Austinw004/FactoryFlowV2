@@ -20,6 +20,7 @@ import { MAIntelligenceEngine } from "./lib/maIntelligence";
 import { ScenarioPlanningEngine, type ScenarioInput } from "./lib/scenarioPlanning";
 import { GeopoliticalRiskEngine, type GeopoliticalEvent } from "./lib/geopoliticalRisk";
 import { WebhookService } from "./lib/webhookService";
+import { DataExportService } from "./lib/dataExport";
 import { z } from "zod";
 import {
   insertCompanySchema,
@@ -5041,6 +5042,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid request data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to update company settings" });
+    }
+  });
+
+  // Data export endpoint
+  const exportSchema = z.object({
+    format: z.enum(['json', 'csv', 'excel']).optional(),
+    entities: z.array(z.enum(['skus', 'materials', 'suppliers', 'allocations', 'machinery'])).optional(),
+  });
+
+  app.post("/api/data/export", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !user.companyId) {
+        return res.status(403).json({ error: "User must be associated with a company" });
+      }
+
+      const validationResult = exportSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ error: "Invalid request parameters", details: validationResult.error.errors });
+      }
+
+      const { format, entities } = validationResult.data;
+      
+      const dataExportService = new DataExportService(storage);
+      const result = await dataExportService.exportCompanyData(user.companyId, {
+        format: format || undefined,
+        entities: entities || undefined,
+      });
+
+      res.setHeader('Content-Type', result.contentType);
+      res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+      res.send(result.data);
+    } catch (error: any) {
+      console.error("Error exporting data:", error);
+      res.status(500).json({ error: error.message });
     }
   });
 
