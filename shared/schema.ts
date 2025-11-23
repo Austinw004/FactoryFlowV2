@@ -2728,6 +2728,154 @@ export const alertTriggers = pgTable("alert_triggers", {
   index("alert_triggers_acknowledged_idx").on(table.acknowledged),
 ]);
 
+// ================================================================================
+// S&OP (Sales & Operations Planning) Workspace
+// ================================================================================
+
+// S&OP Planning Scenarios - Different demand/supply planning scenarios
+export const sopScenarios = pgTable("sop_scenarios", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  name: text("name").notNull(), // "Q1 2025 Baseline", "Optimistic Growth", etc.
+  scenarioType: text("scenario_type").notNull(), // "baseline", "optimistic", "pessimistic", "custom"
+  planningPeriod: text("planning_period").notNull(), // "monthly", "quarterly", "annual"
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  
+  // Demand assumptions
+  demandGrowthRate: real("demand_growth_rate"), // % growth expected
+  seasonalityFactors: jsonb("seasonality_factors"), // Monthly/quarterly seasonality adjustments
+  
+  // Supply assumptions
+  productionCapacity: real("production_capacity"), // Units per period
+  materialAvailability: real("material_availability"), // % of materials available
+  supplierReliability: real("supplier_reliability"), // % reliability score
+  
+  // Financial assumptions
+  budgetAllocation: real("budget_allocation"),
+  costInflationRate: real("cost_inflation_rate"), // % expected cost increase
+  
+  // Status and ownership
+  status: text("status").notNull().default("draft"), // "draft", "active", "archived"
+  createdBy: varchar("created_by").references(() => users.id),
+  approvedBy: varchar("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  notes: text("notes"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("sop_scenarios_company_idx").on(table.companyId),
+  index("sop_scenarios_status_idx").on(table.status),
+  index("sop_scenarios_period_idx").on(table.startDate, table.endDate),
+]);
+
+// S&OP Gap Analysis - Tracking demand vs supply gaps
+export const sopGapAnalysis = pgTable("sop_gap_analysis", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  scenarioId: varchar("scenario_id").references(() => sopScenarios.id, { onDelete: "cascade" }),
+  
+  // Time period
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  
+  // Demand side
+  forecastedDemand: real("forecasted_demand").notNull(), // Total units
+  demandByProduct: jsonb("demand_by_product"), // { skuId: quantity }
+  
+  // Supply side
+  plannedProduction: real("planned_production").notNull(), // Total units
+  productionCapacity: real("production_capacity"), // Max possible units
+  materialConstraints: jsonb("material_constraints"), // { materialId: shortage }
+  
+  // Gap calculation
+  gapQuantity: real("gap_quantity").notNull(), // demand - supply (negative = surplus)
+  gapPercentage: real("gap_percentage"), // gap / demand * 100
+  gapCategory: text("gap_category").notNull(), // "surplus", "balanced", "shortage_minor", "shortage_critical"
+  
+  // Recommended actions
+  recommendedAction: text("recommended_action"),
+  estimatedImpact: real("estimated_impact"), // Financial impact if gap not addressed
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("sop_gap_analysis_company_idx").on(table.companyId),
+  index("sop_gap_analysis_scenario_idx").on(table.scenarioId),
+  index("sop_gap_analysis_period_idx").on(table.periodStart),
+]);
+
+// S&OP Meeting Notes - Record of monthly S&OP meetings
+export const sopMeetingNotes = pgTable("sop_meeting_notes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  
+  meetingDate: timestamp("meeting_date").notNull(),
+  meetingType: text("meeting_type").notNull().default("monthly"), // "monthly", "quarterly", "ad_hoc"
+  
+  // Participants
+  attendees: jsonb("attendees"), // Array of { userId, name, role }
+  facilitator: varchar("facilitator").references(() => users.id),
+  
+  // Content
+  agendaItems: jsonb("agenda_items"), // Array of agenda topics
+  keyDecisions: text("key_decisions"), // Major decisions made
+  notes: text("notes"), // General meeting notes
+  
+  // Scenarios discussed
+  scenariosReviewed: jsonb("scenarios_reviewed"), // Array of scenario IDs
+  approvedScenario: varchar("approved_scenario").references(() => sopScenarios.id),
+  
+  // Follow-up
+  nextMeetingDate: timestamp("next_meeting_date"),
+  attachments: jsonb("attachments"), // Array of file references
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("sop_meeting_notes_company_idx").on(table.companyId),
+  index("sop_meeting_notes_date_idx").on(table.meetingDate),
+]);
+
+// S&OP Action Items - Tasks and decisions from S&OP meetings
+export const sopActionItems = pgTable("sop_action_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  meetingId: varchar("meeting_id").references(() => sopMeetingNotes.id, { onDelete: "cascade" }),
+  scenarioId: varchar("scenario_id").references(() => sopScenarios.id, { onDelete: "set null" }),
+  
+  title: text("title").notNull(),
+  description: text("description"),
+  category: text("category").notNull(), // "demand", "supply", "financial", "process_improvement"
+  priority: text("priority").notNull().default("medium"), // "low", "medium", "high", "critical"
+  
+  // Ownership
+  assignedTo: varchar("assigned_to").references(() => users.id),
+  reportingTo: varchar("reporting_to").references(() => users.id),
+  
+  // Timeline
+  dueDate: timestamp("due_date"),
+  completedAt: timestamp("completed_at"),
+  
+  // Status tracking
+  status: text("status").notNull().default("open"), // "open", "in_progress", "blocked", "completed", "cancelled"
+  blockers: text("blockers"), // Description of any blockers
+  progress: integer("progress").default(0), // 0-100 percentage
+  
+  // Impact and outcomes
+  expectedImpact: text("expected_impact"),
+  actualOutcome: text("actual_outcome"),
+  relatedGapId: varchar("related_gap_id").references(() => sopGapAnalysis.id),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("sop_action_items_company_idx").on(table.companyId),
+  index("sop_action_items_status_idx").on(table.status),
+  index("sop_action_items_assigned_idx").on(table.assignedTo),
+  index("sop_action_items_due_idx").on(table.dueDate),
+]);
+
 // Saved Scenarios schemas
 export const insertSavedScenarioSchema = createInsertSchema(savedScenarios).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertScenarioBookmarkSchema = createInsertSchema(scenarioBookmarks).omit({ id: true, createdAt: true });
@@ -2773,3 +2921,19 @@ export type RegimeChangeNotification = typeof regimeChangeNotifications.$inferSe
 export type InsertRegimeChangeNotification = z.infer<typeof insertRegimeChangeNotificationSchema>;
 export type AlertTrigger = typeof alertTriggers.$inferSelect;
 export type InsertAlertTrigger = z.infer<typeof insertAlertTriggerSchema>;
+
+// S&OP Workspace schemas
+export const insertSopScenarioSchema = createInsertSchema(sopScenarios).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertSopGapAnalysisSchema = createInsertSchema(sopGapAnalysis).omit({ id: true, createdAt: true });
+export const insertSopMeetingNotesSchema = createInsertSchema(sopMeetingNotes).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertSopActionItemSchema = createInsertSchema(sopActionItems).omit({ id: true, createdAt: true, updatedAt: true });
+
+// S&OP Workspace types
+export type SopScenario = typeof sopScenarios.$inferSelect;
+export type InsertSopScenario = z.infer<typeof insertSopScenarioSchema>;
+export type SopGapAnalysis = typeof sopGapAnalysis.$inferSelect;
+export type InsertSopGapAnalysis = z.infer<typeof insertSopGapAnalysisSchema>;
+export type SopMeetingNotes = typeof sopMeetingNotes.$inferSelect;
+export type InsertSopMeetingNotes = z.infer<typeof insertSopMeetingNotesSchema>;
+export type SopActionItem = typeof sopActionItems.$inferSelect;
+export type InsertSopActionItem = z.infer<typeof insertSopActionItemSchema>;
