@@ -1,6 +1,5 @@
 import { storage } from './storage';
 import { broadcastUpdate } from './websocket';
-import { cache, CacheKeys } from './lib/cache';
 import axios from 'axios';
 import { fetchComprehensiveEconomicData } from './lib/externalAPIs';
 import { WebhookService } from './lib/webhookService';

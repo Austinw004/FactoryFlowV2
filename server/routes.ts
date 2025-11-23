@@ -6,7 +6,6 @@ import { attachRbacUser, requirePermission } from "./middleware/rbac";
 import rbacRoutes from "./routes/rbac";
 import { initializePermissions, initializeDefaultRoles } from "./lib/rbac";
 import { logAudit } from "./lib/auditLogger";
-import { cache, CacheKeys, CacheTTL } from "./lib/cache";
 import { globalCache } from "./lib/caching";
 import { DualCircuitEconomics } from "./lib/economics";
 import { DemandForecaster } from "./lib/forecasting";
