@@ -64,12 +64,12 @@ export default function MultiHorizonForecasts() {
   });
 
   const { data: forecasts, isLoading: forecastsLoading } = useQuery<MultiHorizonForecast[]>({
-    queryKey: ["/api/multi-horizon-forecasts", selectedSkuId],
+    queryKey: ["/api/multi-horizon-forecasts", { skuId: selectedSkuId }],
     enabled: !!selectedSkuId,
   });
 
   const { data: comparison, isLoading: comparisonLoading } = useQuery<HorizonComparison[]>({
-    queryKey: ["/api/multi-horizon-forecasts/comparison", selectedSkuId],
+    queryKey: [`/api/multi-horizon-forecasts/comparison/${selectedSkuId}`],
     enabled: !!selectedSkuId,
   });
 
