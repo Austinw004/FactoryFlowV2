@@ -112,11 +112,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await initializePermissions(storage);
   console.log("[RBAC] Permissions initialized successfully");
 
-  // Attach RBAC user to all authenticated requests
-  app.use(isAuthenticated, attachRbacUser);
+  // Attach RBAC user to all authenticated API requests (not frontend static files)
+  app.use('/api', isAuthenticated, attachRbacUser);
 
   // RBAC routes (roles, permissions, user role assignments)
-  app.use('/api/rbac', isAuthenticated, rbacRoutes);
+  app.use('/api/rbac', rbacRoutes);
 
   // Auth endpoints
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
