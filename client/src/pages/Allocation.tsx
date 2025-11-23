@@ -27,7 +27,7 @@ interface CatalogMaterial {
 }
 
 export default function Allocation() {
-  const [budget, setBudget] = useState("50000");
+  const [budget, setBudget] = useState("");
   const [budgetDurationValue, setBudgetDurationValue] = useState("");
   const [budgetDurationUnit, setBudgetDurationUnit] = useState<string>("month");
   const [horizonStart, setHorizonStart] = useState("");
