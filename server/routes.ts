@@ -4957,13 +4957,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/company/settings", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      let user = await storage.getUser(userId);
       
-      if (!user?.companyId) {
-        return res.status(404).json({ message: "Company not found" });
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Auto-create company if user doesn't have one
+      if (!user.companyId) {
+        const company = await storage.createCompany({
+          name: `${user.firstName || 'User'}'s Company`,
+        });
+        
+        user = await storage.upsertUser({
+          ...user,
+          companyId: company.id,
+        });
       }
 
-      const company = await storage.getCompany(user.companyId);
+      const company = await storage.getCompany(user.companyId!);
       res.json(company);
     } catch (error: any) {
       console.error("Error fetching company settings:", error);
@@ -4974,17 +4986,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/company/settings", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      let user = await storage.getUser(userId);
       
-      if (!user?.companyId) {
-        return res.status(404).json({ message: "Company not found" });
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Auto-create company if user doesn't have one
+      if (!user.companyId) {
+        const company = await storage.createCompany({
+          name: `${user.firstName || 'User'}'s Company`,
+        });
+        
+        user = await storage.upsertUser({
+          ...user,
+          companyId: company.id,
+        });
       }
 
       // Validate the request body with the partial insert schema
       const updateSchema = insertCompanySchema.partial();
       const validated = updateSchema.parse(req.body);
 
-      const updated = await storage.updateCompany(user.companyId, validated);
+      const updated = await storage.updateCompany(user.companyId!, validated);
       res.json(updated);
     } catch (error: any) {
       console.error("Error updating company settings:", error);
