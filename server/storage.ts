@@ -1,5 +1,5 @@
 import { db } from "@db";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, desc } from "drizzle-orm";
 import type { 
   User, InsertUser, UpsertUser, Company, InsertCompany, Sku, InsertSku,
   Material, InsertMaterial, Bom, InsertBom, Supplier, InsertSupplier,
@@ -64,7 +64,8 @@ import type {
   FdrAlert, InsertFdrAlert,
   CommodityPriceAlert, InsertCommodityPriceAlert,
   AlertTrigger, InsertAlertTrigger,
-  RegimeChangeNotification, InsertRegimeChangeNotification
+  RegimeChangeNotification, InsertRegimeChangeNotification,
+  AuditLog, InsertAuditLog
 } from "@shared/schema";
 import { 
   users, companies, skus, materials, boms, suppliers, supplierMaterials,
@@ -84,7 +85,8 @@ import {
   poRules, poWorkflowSteps, poApprovals, negotiationPlaybooks, erpConnections,
   consortiumContributions, consortiumMetrics, consortiumAlerts,
   maTargets, maRecommendations,
-  savedScenarios, scenarioBookmarks, fdrAlerts, commodityPriceAlerts, alertTriggers, regimeChangeNotifications
+  savedScenarios, scenarioBookmarks, fdrAlerts, commodityPriceAlerts, alertTriggers, regimeChangeNotifications,
+  auditLogs
 } from "@shared/schema";
 
 export interface IStorage {
@@ -1410,12 +1412,6 @@ export class DbStorage implements IStorage {
     return metrics;
   }
 
-  // Utility methods
-  async getAllCompanyIds(): Promise<string[]> {
-    const result = await db.select({ id: companies.id }).from(companies);
-    return result.map(r => r.id);
-  }
-
   // Model Comparisons (Dual-Circuit vs Baselines)
   async insertModelComparison(insertComparison: InsertModelComparison): Promise<ModelComparison> {
     const [comparison] = await db.insert(modelComparisons).values(insertComparison).returning();
@@ -1986,6 +1982,48 @@ export class DbStorage implements IStorage {
       .where(eq(regimeChangeNotifications.id, id))
       .returning();
     return notification;
+  }
+
+  // Audit Logs
+  async createAuditLog(log: InsertAuditLog): Promise<AuditLog> {
+    const [auditLog] = await db.insert(auditLogs).values(log).returning();
+    return auditLog;
+  }
+
+  async getAuditLogs(companyId: string, limit: number = 100): Promise<AuditLog[]> {
+    return await db
+      .select()
+      .from(auditLogs)
+      .where(eq(auditLogs.companyId, companyId))
+      .orderBy(desc(auditLogs.timestamp))
+      .limit(limit);
+  }
+
+  async getAuditLogsByEntity(companyId: string, entityType: string, entityId?: string): Promise<AuditLog[]> {
+    const conditions = [
+      eq(auditLogs.companyId, companyId),
+      eq(auditLogs.entityType, entityType)
+    ];
+    
+    if (entityId) {
+      conditions.push(eq(auditLogs.entityId, entityId));
+    }
+    
+    return await db
+      .select()
+      .from(auditLogs)
+      .where(and(...conditions))
+      .orderBy(desc(auditLogs.timestamp))
+      .limit(100);
+  }
+
+  async getAuditLogsByUser(userId: string, limit: number = 100): Promise<AuditLog[]> {
+    return await db
+      .select()
+      .from(auditLogs)
+      .where(eq(auditLogs.userId, userId))
+      .orderBy(desc(auditLogs.timestamp))
+      .limit(limit);
   }
 
   async getAllCompanyIds(): Promise<string[]> {
