@@ -22,6 +22,19 @@ Preferred communication style: Simple, everyday language.
 **Company Branding**: Logo URL, primary color picker, timezone selection for global operations.
 **Empty States**: Proper empty state handling for new companies - no fake seed data, clean onboarding experience.
 
+### Smart Onboarding System (November 23, 2025)
+**Smart Onboarding Checklist**: Implemented status-driven onboarding checklist that tracks completion of key setup steps (company profile, budget, SKUs, materials, suppliers, alerts). Checklist automatically appears on dashboard when incomplete, becomes dismissible when all steps done, and moves to "How It Works" section for reference. Reappears if data is deleted (based on real-time `/api/onboarding/status`). Note: App currently lacks dedicated creation workflows for SKUs/materials/suppliers - users complete steps via sample data load. Building these workflows would be a separate enhancement.
+
+### Webhook Notification System (November 23, 2025)
+**Active Webhook Integration**: Implemented comprehensive webhook notification system that fires HTTP POST requests for key business events:
+- **Regime Change Webhooks**: Fires when economic regime transitions (e.g., HEALTHY_EXPANSION → ASSET_LED_GROWTH) with FDR data
+- **Budget Alert Webhooks**: Fires when budget utilization exceeds 80% during allocation runs
+- **Allocation Complete Webhooks**: Fires after successful material allocation with production targets
+- **Price Alert Webhooks**: Ready for integration with commodity price monitoring
+- **Machinery Alert Webhooks**: Ready for integration with machinery maintenance system
+
+Webhooks respect company-configured webhook URL and event filtering (configured in Settings → Integrations tab). All webhook payloads include event type, timestamp, company ID, and relevant data. Failed webhook calls are logged but don't block operations.
+
 ## System Architecture
 
 ### Frontend

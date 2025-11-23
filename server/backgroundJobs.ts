@@ -2,6 +2,7 @@ import { storage } from './storage';
 import { broadcastUpdate } from './websocket';
 import axios from 'axios';
 import { fetchComprehensiveEconomicData } from './lib/externalAPIs';
+import { WebhookService } from './lib/webhookService';
 
 interface BackgroundJobConfig {
   name: string;
@@ -10,6 +11,8 @@ interface BackgroundJobConfig {
 }
 
 const jobs: Map<string, NodeJS.Timeout> = new Map();
+const webhookService = new WebhookService(storage);
+const previousRegimes: Map<string, string> = new Map();
 
 type EconomicRegime = 'HEALTHY_EXPANSION' | 'ASSET_LED_GROWTH' | 'IMBALANCED_EXCESS' | 'REAL_ECONOMY_LEAD';
 
@@ -81,6 +84,8 @@ export async function updateExternalEconomicData() {
       
       if (companies.length > 0) {
         for (const companyId of companies) {
+          const previousRegime = previousRegimes.get(companyId);
+          
           // Persist real economic data to database
           await storage.createEconomicSnapshot({
             companyId,
@@ -94,6 +99,12 @@ export async function updateExternalEconomicData() {
             sentimentScore: null, // Could be calculated from news data if available
             source: 'external'
           });
+
+          if (previousRegime && previousRegime !== regime) {
+            webhookService.fireRegimeChange(companyId, previousRegime, regime, clampedFdr)
+              .catch(err => console.error(`Webhook error (regime_change) for company ${companyId}:`, err));
+          }
+          previousRegimes.set(companyId, regime);
 
           broadcastUpdate({
             type: 'database_update',
@@ -132,7 +143,7 @@ export async function updateExternalEconomicData() {
       
       console.log(`[Background] ✅ Updated economic data from FRED: FDR=${clampedFdr.toFixed(2)}, Regime=${regime}, S&P Growth=${(sp500Growth * 100).toFixed(2)}%, Real Growth=${(realGrowth * 100).toFixed(2)}%, Companies=${companies.length}`);
     } else {
-      console.log(`[Background] ⚠️  Incomplete data from FRED API (S&P=${!!sp500Latest}, GDP=${!!gdpLatest}, IndProd=${!!industrialProdLatest}), using fallback`);
+      console.log(`[Background] ⚠️  Incomplete data from FRED API, using fallback`);
       throw new Error('Incomplete external data');
     }
   } catch (error: any) {

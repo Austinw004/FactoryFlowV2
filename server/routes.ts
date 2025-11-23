@@ -19,6 +19,7 @@ import { IndustryConsortiumEngine } from "./lib/industryConsortium";
 import { MAIntelligenceEngine } from "./lib/maIntelligence";
 import { ScenarioPlanningEngine, type ScenarioInput } from "./lib/scenarioPlanning";
 import { GeopoliticalRiskEngine, type GeopoliticalEvent } from "./lib/geopoliticalRisk";
+import { WebhookService } from "./lib/webhookService";
 import { z } from "zod";
 import {
   insertCompanySchema,
@@ -48,6 +49,7 @@ import {
 } from "@shared/schema";
 
 const economics = new DualCircuitEconomics();
+const webhookService = new WebhookService(storage);
 
 // Helper function to calculate policy signals based on regime
 function calculateSignalsForRegime(regime: string) {
@@ -1216,7 +1218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Update plan KPIs with direct material costs
         plan.kpis.total_material_cost = totalAllocationCost;
-        plan.kpis.budget_utilization = (totalAllocationCost / budget) * 100;
+        plan.kpis.budget_utilization = budget > 0 ? (totalAllocationCost / budget) * 100 : 0;
       } else {
         // SKU-based mode: calculate cost from allocated SKUs
         for (const sku of skus) {
@@ -1233,6 +1235,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             totalAllocationCost += skuMaterialCost;
           }
         }
+        
+        plan.kpis.total_material_cost = totalAllocationCost;
+        plan.kpis.budget_utilization = budget > 0 ? (totalAllocationCost / budget) * 100 : 0;
       }
 
       // Calculate coverage analysis
@@ -1341,6 +1346,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       await storage.bulkCreateAllocationResults(results);
+
+      const budgetUtilization = plan.kpis.budget_utilization || 0;
+      
+      webhookService.fireAllocationComplete(
+        companyId,
+        allocation.id,
+        allocation.name,
+        totalAllocationCost,
+        budgetUtilization,
+        plan.kpis.total_production || 0
+      ).catch(err => console.error('Webhook error (allocation_complete):', err));
+
+      if (budgetUtilization >= 80) {
+        webhookService.fireBudgetAlert(
+          companyId,
+          totalAllocationCost,
+          budget,
+          budgetUtilization
+        ).catch(err => console.error('Webhook error (budget_alert):', err));
+      }
 
       res.status(201).json({
         allocation,
