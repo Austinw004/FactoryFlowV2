@@ -152,10 +152,8 @@ export class HistoricalBacktestingEngine {
       else regime = 'Imbalanced Excess';
       
       // Generate mock economic indicators
-      const gdpReal = 20000000 * (1 + yearProgress * 0.25); // Growth
-      const gdpNominal = gdpReal * (1 + 0.02 * yearProgress); // With inflation
+      const gdp = 20000000 * (1 + yearProgress * 0.25); // Growth
       const sp500Index = 2000 + yearProgress * 2500 + (fdr - 1.0) * 1000; // Correlates with FDR
-      const inflationRate = 1.5 + yearProgress * 2.5 + (fdr - 1.0) * 1.5; // Higher FDR → higher inflation
       
       // Generate commodity prices (correlated with FDR and inflation)
       const commodityPrices = {
@@ -170,10 +168,8 @@ export class HistoricalBacktestingEngine {
         date: new Date(currentDate),
         fdr,
         regime,
-        gdpReal,
-        gdpNominal,
+        gdp,
         sp500Index,
-        inflationRate,
         commodityPrices,
       });
       
@@ -281,7 +277,7 @@ export class HistoricalBacktestingEngine {
    * Run complete backtest across historical period
    */
   async runBacktest(
-    companyId: number,
+    companyId: string,
     startYear: number = 2015,
     endYear: number = 2023,
     horizonMonths: number = 6
@@ -289,7 +285,7 @@ export class HistoricalBacktestingEngine {
     const historicalData = await this.getHistoricalData(startYear, endYear);
     
     // Save snapshots for reproducibility
-    await this.saveEconomicSnapshots(companyId.toString(), historicalData);
+    await this.saveEconomicSnapshots(companyId, historicalData);
     
     const predictions: any[] = [];
     let correctDirection = 0;

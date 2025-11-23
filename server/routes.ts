@@ -4317,16 +4317,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const result = await scenarioEngine.runScenario(input, currentContext);
         
-        results.regimeDistribution[result.regimeAnalysis.newRegime] = 
-          (results.regimeDistribution[result.regimeAnalysis.newRegime] || 0) + 1;
+        results.regimeDistribution[result.newRegime] = 
+          (results.regimeDistribution[result.newRegime] || 0) + 1;
         results.avgConfidence += result.confidence;
         
-        const impact = Math.abs(result.financialImpact.revenueImpact);
+        const impact = Math.abs(result.revenueImpact);
         if (impact < 1000000) results.riskLevels.low++;
         else if (impact < 3000000) results.riskLevels.medium++;
         else results.riskLevels.high++;
         
-        results.avgFinancialImpact += result.financialImpact.revenueImpact;
+        results.avgFinancialImpact += result.revenueImpact;
         
         if (i < 10) results.scenarios.push(result);
       }
@@ -4360,9 +4360,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const geoEngine = new GeopoliticalRiskEngine(storage);
-      const eventTypes = ['Trade War', 'Sanctions', 'Currency Crisis', 'Political Instability'];
+      const eventTypes: Array<'trade_war' | 'sanctions' | 'currency_crisis' | 'political_instability'> = ['trade_war', 'sanctions', 'currency_crisis', 'political_instability'];
       const regions = ['Asia Pacific', 'Europe', 'North America', 'Middle East', 'Latin America', 'Africa'];
-      const severities = ['low', 'medium', 'high'];
+      const severities: Array<'low' | 'medium' | 'high'> = ['low', 'medium', 'high'];
       
       for (let i = 0; i < count; i++) {
         const eventType = eventTypes[Math.floor(Math.random() * eventTypes.length)];
@@ -4383,8 +4383,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const assessment = await geoEngine.assessRisk(event, currentFDR);
         
         results.eventTypeDistribution[eventType] = (results.eventTypeDistribution[eventType] || 0) + 1;
-        results.severityDistribution[severity]++;
-        results.avgRiskScore += assessment.overallRisk;
+        results.severityDistribution[severity] = (results.severityDistribution[severity] || 0) + 1;
+        results.avgRiskScore += assessment.exposureScore;
         results.avgConfidence += assessment.confidence;
         
         if (i < 10) results.assessments.push(assessment);
@@ -4442,9 +4442,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const results = await backtestEngine.runBacktest(
         user.companyId!,
-        parseInt(startYear) || 2015,
-        parseInt(endYear) || 2023,
-        parseInt(horizonMonths) || 6
+        parseInt(startYear as string) || 2015,
+        parseInt(endYear as string) || 2023,
+        parseInt(horizonMonths as string) || 6
       );
 
       // Store results
