@@ -65,7 +65,11 @@ import type {
   CommodityPriceAlert, InsertCommodityPriceAlert,
   AlertTrigger, InsertAlertTrigger,
   RegimeChangeNotification, InsertRegimeChangeNotification,
-  AuditLog, InsertAuditLog
+  AuditLog, InsertAuditLog,
+  Role, InsertRole,
+  Permission, InsertPermission,
+  RolePermission, InsertRolePermission,
+  UserRoleAssignment, InsertUserRoleAssignment
 } from "@shared/schema";
 import { 
   users, companies, skus, materials, boms, suppliers, supplierMaterials,
@@ -86,7 +90,8 @@ import {
   consortiumContributions, consortiumMetrics, consortiumAlerts,
   maTargets, maRecommendations,
   savedScenarios, scenarioBookmarks, fdrAlerts, commodityPriceAlerts, alertTriggers, regimeChangeNotifications,
-  auditLogs
+  auditLogs,
+  roles, permissions, rolePermissions, userRoleAssignments
 } from "@shared/schema";
 
 export interface IStorage {
@@ -455,6 +460,28 @@ export interface IStorage {
   getAuditLogs(companyId: string, limit?: number): Promise<AuditLog[]>;
   getAuditLogsByEntity(companyId: string, entityType: string, entityId?: string): Promise<AuditLog[]>;
   getAuditLogsByUser(userId: string, limit?: number): Promise<AuditLog[]>;
+  
+  // RBAC - Roles
+  getRoles(companyId: string): Promise<Role[]>;
+  getRole(roleId: string): Promise<Role | undefined>;
+  createRole(role: InsertRole): Promise<Role>;
+  updateRole(roleId: string, role: Partial<InsertRole>): Promise<Role | undefined>;
+  deleteRole(roleId: string): Promise<void>;
+  
+  // RBAC - Role Permissions
+  getRolePermissions(roleId: string): Promise<Permission[]>;
+  assignPermissionToRole(roleId: string, permissionId: string): Promise<void>;
+  removePermissionFromRole(roleId: string, permissionId: string): Promise<void>;
+  
+  // RBAC - User Role Assignments
+  getUserRoles(userId: string, companyId: string): Promise<Role[]>;
+  assignRoleToUser(userId: string, roleId: string, companyId: string, assignedBy: string): Promise<void>;
+  removeRoleFromUser(userId: string, roleId: string): Promise<void>;
+  getUsersWithRole(roleId: string): Promise<User[]>;
+  
+  // RBAC - Permissions
+  getAllPermissions(): Promise<Permission[]>;
+  getPermission(permissionId: string): Promise<Permission | undefined>;
   
   // Utility
   getAllCompanyIds(): Promise<string[]>;
@@ -2029,6 +2056,126 @@ export class DbStorage implements IStorage {
   async getAllCompanyIds(): Promise<string[]> {
     const result = await db.select({ id: companies.id }).from(companies);
     return result.map(r => r.id);
+  }
+  
+  // RBAC - Roles
+  async getRoles(companyId: string): Promise<Role[]> {
+    return await db.select().from(roles).where(eq(roles.companyId, companyId));
+  }
+  
+  async getRole(roleId: string): Promise<Role | undefined> {
+    const [role] = await db.select().from(roles).where(eq(roles.id, roleId));
+    return role;
+  }
+  
+  async createRole(role: InsertRole): Promise<Role> {
+    const [newRole] = await db.insert(roles).values(role).returning();
+    return newRole;
+  }
+  
+  async updateRole(roleId: string, roleData: Partial<InsertRole>): Promise<Role | undefined> {
+    const [role] = await db.update(roles).set(roleData).where(eq(roles.id, roleId)).returning();
+    return role;
+  }
+  
+  async deleteRole(roleId: string): Promise<void> {
+    await db.delete(roles).where(eq(roles.id, roleId));
+  }
+  
+  // RBAC - Role Permissions
+  async getRolePermissions(roleId: string): Promise<Permission[]> {
+    const result = await db
+      .select({
+        id: permissions.id,
+        name: permissions.name,
+        description: permissions.description,
+        category: permissions.category,
+        createdAt: permissions.createdAt,
+      })
+      .from(rolePermissions)
+      .innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
+      .where(eq(rolePermissions.roleId, roleId));
+    return result;
+  }
+  
+  async assignPermissionToRole(roleId: string, permissionId: string): Promise<void> {
+    await db.insert(rolePermissions).values({ roleId, permissionId }).onConflictDoNothing();
+  }
+  
+  async removePermissionFromRole(roleId: string, permissionId: string): Promise<void> {
+    await db.delete(rolePermissions).where(
+      and(
+        eq(rolePermissions.roleId, roleId),
+        eq(rolePermissions.permissionId, permissionId)
+      )
+    );
+  }
+  
+  // RBAC - User Role Assignments
+  async getUserRoles(userId: string, companyId: string): Promise<Role[]> {
+    const result = await db
+      .select({
+        id: roles.id,
+        companyId: roles.companyId,
+        name: roles.name,
+        description: roles.description,
+        isDefault: roles.isDefault,
+        createdAt: roles.createdAt,
+      })
+      .from(userRoleAssignments)
+      .innerJoin(roles, eq(userRoleAssignments.roleId, roles.id))
+      .where(and(
+        eq(userRoleAssignments.userId, userId),
+        eq(userRoleAssignments.companyId, companyId)
+      ));
+    return result;
+  }
+  
+  async assignRoleToUser(userId: string, roleId: string, companyId: string, assignedBy: string): Promise<void> {
+    await db.insert(userRoleAssignments).values({
+      userId,
+      roleId,
+      companyId,
+      assignedBy,
+    }).onConflictDoNothing();
+  }
+  
+  async removeRoleFromUser(userId: string, roleId: string): Promise<void> {
+    await db.delete(userRoleAssignments).where(
+      and(
+        eq(userRoleAssignments.userId, userId),
+        eq(userRoleAssignments.roleId, roleId)
+      )
+    );
+  }
+  
+  async getUsersWithRole(roleId: string): Promise<User[]> {
+    const result = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        name: users.name,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        profileImageUrl: users.profileImageUrl,
+        companyId: users.companyId,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
+      })
+      .from(userRoleAssignments)
+      .innerJoin(users, eq(userRoleAssignments.userId, users.id))
+      .where(eq(userRoleAssignments.roleId, roleId));
+    return result;
+  }
+  
+  // RBAC - Permissions
+  async getAllPermissions(): Promise<Permission[]> {
+    return await db.select().from(permissions);
+  }
+  
+  async getPermission(permissionId: string): Promise<Permission | undefined> {
+    const [permission] = await db.select().from(permissions).where(eq(permissions.id, permissionId));
+    return permission;
   }
 }
 
