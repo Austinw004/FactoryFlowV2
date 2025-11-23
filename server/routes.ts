@@ -21,6 +21,7 @@ import { ScenarioPlanningEngine, type ScenarioInput } from "./lib/scenarioPlanni
 import { GeopoliticalRiskEngine, type GeopoliticalEvent } from "./lib/geopoliticalRisk";
 import { z } from "zod";
 import {
+  insertCompanySchema,
   insertSkuSchema,
   updateSkuSchema,
   insertMaterialSchema,
@@ -4949,6 +4950,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error acknowledging regime notification:", error);
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Company settings endpoints
+  app.get("/api/company/settings", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.companyId) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+
+      const company = await storage.getCompany(user.companyId);
+      res.json(company);
+    } catch (error: any) {
+      console.error("Error fetching company settings:", error);
+      res.status(500).json({ message: "Failed to fetch company settings" });
+    }
+  });
+
+  app.patch("/api/company/settings", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.companyId) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+
+      // Validate the request body with the partial insert schema
+      const updateSchema = insertCompanySchema.partial();
+      const validated = updateSchema.parse(req.body);
+
+      const updated = await storage.updateCompany(user.companyId, validated);
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating company settings:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update company settings" });
     }
   });
 

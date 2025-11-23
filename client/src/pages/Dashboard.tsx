@@ -3,6 +3,7 @@ import { RegimeStatus } from "@/components/RegimeStatus";
 import { PolicySignals } from "@/components/PolicySignals";
 import { AllocationTable } from "@/components/AllocationTable";
 import { ForecastChart } from "@/components/ForecastChart";
+import { EditableBudgetGauge } from "@/components/EditableBudgetGauge";
 import { TrendingUp, DollarSign, Package, AlertCircle, Plus, Upload, GitCompare, Loader2, Globe, Radio } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -238,12 +239,15 @@ export default function Dashboard() {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
-        <RegimeStatus 
-          regime={regimeType} 
-          fdr={fdr} 
-          intensity={intensity} 
-        />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2">
+          <RegimeStatus 
+            regime={regimeType} 
+            fdr={fdr} 
+            intensity={intensity} 
+          />
+        </div>
+        <EditableBudgetGauge />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

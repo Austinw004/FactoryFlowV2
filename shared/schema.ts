@@ -30,6 +30,25 @@ export const users = pgTable("users", {
 export const companies = pgTable("companies", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
+  // Company Profile
+  industry: text("industry"),
+  location: text("location"),
+  companySize: text("company_size"), // "small", "medium", "large", "enterprise"
+  // Budget Configuration
+  annualBudget: real("annual_budget"),
+  currentBudgetSpent: real("current_budget_spent").default(0),
+  budgetPeriod: text("budget_period"), // "monthly", "quarterly", "annual"
+  budgetResetDate: timestamp("budget_reset_date"),
+  // Economic Policy Preferences
+  fdrThresholdLow: real("fdr_threshold_low").default(0.5),
+  fdrThresholdMid: real("fdr_threshold_mid").default(1.0),
+  fdrThresholdHigh: real("fdr_threshold_high").default(1.5),
+  defaultProcurementPolicy: text("default_procurement_policy"), // "conservative", "balanced", "aggressive"
+  // Alert Preferences
+  alertEmail: text("alert_email"),
+  enableRegimeAlerts: integer("enable_regime_alerts").default(1), // 1 = enabled, 0 = disabled
+  enableBudgetAlerts: integer("enable_budget_alerts").default(1),
+  budgetAlertThreshold: real("budget_alert_threshold").default(0.8), // Alert when 80% budget spent
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
