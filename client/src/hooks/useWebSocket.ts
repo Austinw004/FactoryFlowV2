@@ -32,7 +32,7 @@ export function useWebSocket(onMessage?: MessageHandler) {
       wsRef.current = ws;
 
       ws.onopen = () => {
-        console.log('[WebSocket] Connected to real-time updates');
+        console.log('[WebSocket] Connected to real-time updates (server-side authenticated)');
         reconnectAttemptsRef.current = 0;
       };
 
@@ -62,6 +62,17 @@ export function useWebSocket(onMessage?: MessageHandler) {
               queryClient.invalidateQueries({ queryKey: ['/api/purchase-orders'] });
             }
 
+            // Call custom message handler if provided
+            if (onMessage) {
+              onMessage(message);
+            }
+          } else if (message.type === 'regime_change') {
+            console.log(`[WebSocket] 🚨 REGIME CHANGE: ${message.data?.from} → ${message.data?.to} (FDR: ${message.data?.fdr?.toFixed(2)})`);
+            
+            // Invalidate all economic data queries
+            queryClient.invalidateQueries({ queryKey: ['/api/economics/regime'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/economics/indicators'] });
+            
             // Call custom message handler if provided
             if (onMessage) {
               onMessage(message);

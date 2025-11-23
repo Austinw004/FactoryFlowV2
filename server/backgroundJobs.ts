@@ -1,5 +1,6 @@
 import { storage } from './storage';
 import { broadcastUpdate } from './websocket';
+import { cache, CacheKeys } from './lib/cache';
 import axios from 'axios';
 import { fetchComprehensiveEconomicData } from './lib/externalAPIs';
 import { WebhookService } from './lib/webhookService';
@@ -101,10 +102,32 @@ export async function updateExternalEconomicData() {
           });
 
           if (previousRegime && previousRegime !== regime) {
+            console.log(`[Background] 🚨 REGIME CHANGE detected for company ${companyId}: ${previousRegime} → ${regime} (FDR: ${clampedFdr.toFixed(2)})`);
+            
+            // Fire webhook notification
             webhookService.fireRegimeChange(companyId, previousRegime, regime, clampedFdr)
               .catch(err => console.error(`Webhook error (regime_change) for company ${companyId}:`, err));
+            
+            // Broadcast dedicated regime change message via WebSocket
+            broadcastUpdate({
+              type: 'regime_change',
+              entity: 'economic_regime',
+              action: 'update',
+              timestamp: new Date().toISOString(),
+              companyId,
+              data: {
+                from: previousRegime,
+                to: regime,
+                fdr: clampedFdr,
+                severity: (previousRegime === 'IMBALANCED_EXCESS' || regime === 'IMBALANCED_EXCESS') ? 'high' : 'medium',
+              },
+            });
           }
           previousRegimes.set(companyId, regime);
+          
+          // Invalidate cache to ensure fresh data is fetched
+          cache.invalidate(CacheKeys.economicRegime(companyId));
+          cache.invalidate(CacheKeys.economicIndicators(companyId));
 
           broadcastUpdate({
             type: 'database_update',
@@ -316,6 +339,9 @@ export async function updateCommodityPrices() {
       
       if (materials.length > 0) {
         console.log(`[Background] Updated ${Math.min(materials.length, 20)} commodity prices for company ${companyId.substring(0, 8)}`);
+        
+        // Invalidate commodity price cache for this company
+        cache.invalidate(CacheKeys.commodityPrices(companyId));
       }
     }
 

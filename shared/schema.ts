@@ -153,7 +153,9 @@ export const skus = pgTable("skus", {
   name: text("name").notNull(),
   priority: real("priority").notNull().default(1.0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("skus_company_idx").on(table.companyId),
+]);
 
 export const materials = pgTable("materials", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -164,7 +166,9 @@ export const materials = pgTable("materials", {
   onHand: real("on_hand").notNull().default(0),
   inbound: real("inbound").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("materials_company_idx").on(table.companyId),
+]);
 
 export const boms = pgTable("boms", {
   skuId: varchar("sku_id").notNull().references(() => skus.id, { onDelete: "cascade" }),
@@ -180,7 +184,9 @@ export const suppliers = pgTable("suppliers", {
   name: text("name").notNull(),
   contactEmail: text("contact_email"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("suppliers_company_idx").on(table.companyId),
+]);
 
 export const supplierMaterials = pgTable("supplier_materials", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -212,7 +218,10 @@ export const allocations = pgTable("allocations", {
   horizonStart: timestamp("horizon_start"), // Optional start date for budget period (defaults to now)
   directMaterialRequirements: jsonb("direct_material_requirements"), // Array of {materialId, quantity} for direct material allocation
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("allocations_company_idx").on(table.companyId),
+  index("allocations_created_at_idx").on(table.createdAt),
+]);
 
 export const allocationResults = pgTable("allocation_results", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1404,7 +1413,11 @@ export const purchaseOrders = pgTable("purchase_orders", {
   fdrAtPurchase: real("fdr_at_purchase"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("purchase_orders_company_idx").on(table.companyId),
+  index("purchase_orders_status_idx").on(table.status),
+  index("purchase_orders_company_status_idx").on(table.companyId, table.status),
+]);
 
 export const materialUsageTracking = pgTable("material_usage_tracking", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

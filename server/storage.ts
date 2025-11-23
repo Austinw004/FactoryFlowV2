@@ -107,6 +107,9 @@ export interface IStorage {
   createCompany(company: InsertCompany): Promise<Company>;
   updateCompany(id: string, company: Partial<InsertCompany>): Promise<Company | undefined>;
   
+  // Sessions (for WebSocket authentication)
+  getSessionById(sessionId: string): Promise<any | undefined>;
+  
   // SKUs
   getSkus(companyId: string): Promise<Sku[]>;
   getSku(id: string): Promise<Sku | undefined>;
@@ -596,6 +599,23 @@ export class DbStorage implements IStorage {
       .where(eq(companies.id, id))
       .returning();
     return updated;
+  }
+  
+  async getSessionById(sessionId: string): Promise<any | undefined> {
+    try {
+      // Query the sessions table directly (created by connect-pg-simple)
+      const result = await db.execute(
+        sql`SELECT sess FROM sessions WHERE sid = ${sessionId}`
+      );
+      
+      if (result.rows && result.rows.length > 0) {
+        return (result.rows[0] as any).sess;
+      }
+      return undefined;
+    } catch (error) {
+      console.error('[Storage] Failed to get session:', error);
+      return undefined;
+    }
   }
 
   async getSkus(companyId: string): Promise<Sku[]> {

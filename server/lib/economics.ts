@@ -18,10 +18,18 @@ function clamp(x: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, x));
 }
 
+export interface RegimeChange {
+  from: Regime;
+  to: Regime;
+  timestamp: string;
+  fdr: number;
+}
+
 export class DualCircuitEconomics {
   data: EconomicData;
   fdr: number;
   regime: Regime;
+  lastRegimeChange: RegimeChange | null;
 
   constructor() {
     this.data = {
@@ -34,9 +42,12 @@ export class DualCircuitEconomics {
     };
     this.fdr = 1.0;
     this.regime = "HEALTHY_EXPANSION";
+    this.lastRegimeChange = null;
   }
 
   async fetch(): Promise<EconomicData> {
+    const previousRegime = this.regime;
+    
     try {
       const response = await fetch('https://api.factoryofthefuture.ai/economic-indicators', {
         signal: AbortSignal.timeout(5000),
@@ -54,7 +65,27 @@ export class DualCircuitEconomics {
     }
     this.computeFdr();
     this.detectRegime();
+    
+    // Return regime change information
+    if (previousRegime !== this.regime) {
+      console.log(`[Economics] Regime change detected: ${previousRegime} → ${this.regime} (FDR: ${this.fdr.toFixed(2)})`);
+      this.lastRegimeChange = {
+        from: previousRegime,
+        to: this.regime,
+        timestamp: new Date().toISOString(),
+        fdr: this.fdr,
+      };
+    }
+    
     return this.data;
+  }
+  
+  getRegimeChange() {
+    return this.lastRegimeChange;
+  }
+  
+  clearRegimeChange() {
+    this.lastRegimeChange = null;
   }
 
   private computeFdr(): void {

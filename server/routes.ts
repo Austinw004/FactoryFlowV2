@@ -6,6 +6,7 @@ import { attachRbacUser, requirePermission } from "./middleware/rbac";
 import rbacRoutes from "./routes/rbac";
 import { initializePermissions, initializeDefaultRoles } from "./lib/rbac";
 import { logAudit } from "./lib/auditLogger";
+import { cache, CacheKeys, CacheTTL } from "./lib/cache";
 import { DualCircuitEconomics } from "./lib/economics";
 import { DemandForecaster } from "./lib/forecasting";
 import { AllocationEngine } from "./lib/allocation";
@@ -202,12 +203,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User has no associated company" });
       }
       
+      // Check cache first
+      const cacheKey = CacheKeys.economicRegime(user.companyId);
+      const cachedData = cache.get<any>(cacheKey);
+      if (cachedData) {
+        return res.json({ ...cachedData, fromCache: true });
+      }
+      
       // Try to get latest snapshot from background jobs
       const snapshot = await storage.getLatestEconomicSnapshot(user.companyId);
       
       if (snapshot) {
         // Use persisted snapshot data
-        res.json({
+        const responseData = {
           regime: snapshot.regime,
           fdr: snapshot.fdr,
           data: {
@@ -220,7 +228,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           source: snapshot.source,
           timestamp: snapshot.timestamp,
           signals: calculateSignalsForRegime(snapshot.regime),
-        });
+        };
+        
+        // Cache the response for 5 minutes
+        cache.set(cacheKey, responseData, CacheTTL.ECONOMIC_DATA);
+        
+        res.json(responseData);
       } else {
         // Fallback to balance sheet calculation if no snapshot exists
         await economics.fetch();
@@ -261,8 +274,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Commodity Pricing Endpoints
   app.get("/api/commodities/prices", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      // Check cache first
+      const cacheKey = CacheKeys.commodityPrices(user.companyId);
+      const cachedPrices = cache.get<any>(cacheKey);
+      if (cachedPrices) {
+        return res.json({ ...cachedPrices, fromCache: true });
+      }
+      
       const { fetchAllCommodityPrices } = await import("./lib/commodityPricing");
       const prices = await fetchAllCommodityPrices();
+      
+      // Cache for 10 minutes
+      cache.set(cacheKey, prices, CacheTTL.COMMODITY_PRICES);
+      
       res.json(prices);
     } catch (error: any) {
       console.error("Error fetching commodity prices:", error);

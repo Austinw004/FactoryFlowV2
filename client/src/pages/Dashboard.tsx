@@ -31,8 +31,19 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
 
-  // Enable WebSocket for real-time updates
-  const { isConnected } = useWebSocket();
+  // Enable WebSocket for real-time updates with regime change notifications
+  const { isConnected } = useWebSocket((message) => {
+    if (message.type === 'regime_change' && message.data) {
+      const severity = message.data.severity === 'high' ? 'destructive' : 'default';
+      
+      toast({
+        title: "Economic Regime Changed",
+        description: `The economic regime has shifted from ${message.data.from} to ${message.data.to}. FDR: ${message.data.fdr?.toFixed(2)}`,
+        variant: severity as 'default' | 'destructive',
+        duration: 10000, // Show for 10 seconds
+      });
+    }
+  });
   
   // Creation dialog states
   const [showCreateSKU, setShowCreateSKU] = useState(false);
