@@ -35,24 +35,49 @@ export async function updateExternalEconomicData() {
     // Fetch comprehensive economic data from real external APIs (FRED, Alpha Vantage, etc.)
     const economicData = await fetchComprehensiveEconomicData();
     
-    // Extract latest values from FRED data
-    const sp500Latest = economicData.financial_circuit?.sp500?.observations?.[0]?.value;
-    const gdpLatest = economicData.real_circuit?.real_gdp?.observations?.[0]?.value;
-    const industrialProdLatest = economicData.real_circuit?.industrial_production?.observations?.[0]?.value;
-    const cpiLatest = economicData.real_circuit?.cpi?.observations?.[0]?.value;
-    const unemploymentLatest = economicData.real_circuit?.unemployment?.observations?.[0]?.value;
+    // Extract latest and previous values from FRED data for growth calculation
+    const sp500Obs = economicData.financial_circuit?.sp500?.observations || [];
+    const gdpObs = economicData.real_circuit?.real_gdp?.observations || [];
+    const indProdObs = economicData.real_circuit?.industrial_production?.observations || [];
+    const cpiObs = economicData.real_circuit?.cpi?.observations || [];
+    const unemploymentObs = economicData.real_circuit?.unemployment?.observations || [];
 
-    if (sp500Latest && gdpLatest && industrialProdLatest) {
-      // Calculate FDR using real data
-      // Financial Circuit: S&P 500 as proxy for asset market activity
-      // Real Circuit: GDP + Industrial Production as proxy for real economic activity
-      const financialIndex = parseFloat(sp500Latest);
-      const realIndex = (parseFloat(gdpLatest) / 1000) + (parseFloat(industrialProdLatest) / 10); // Normalized
+    if (sp500Obs.length >= 2 && gdpObs.length >= 2 && indProdObs.length >= 2) {
+      // Calculate growth rates for dual-circuit FDR formula
+      // Financial Circuit: S&P 500 growth as proxy for asset market activity (Ma * Va)
+      const sp500Current = parseFloat(sp500Obs[0].value);
+      const sp500Previous = parseFloat(sp500Obs[1].value);
+      const sp500Growth = sp500Previous > 0 ? (sp500Current - sp500Previous) / sp500Previous : 0.02;
       
-      const fdr = financialIndex / realIndex;
-      const regime = calculateEconomicRegime(fdr);
+      // Real Circuit: GDP + Industrial Production growth as proxy for real economy (Mr * Vr)
+      const gdpCurrent = parseFloat(gdpObs[0].value);
+      const gdpPrevious = parseFloat(gdpObs[1].value);
+      const gdpGrowth = gdpPrevious > 0 ? (gdpCurrent - gdpPrevious) / gdpPrevious : 0.02;
+      
+      const indProdCurrent = parseFloat(indProdObs[0].value);
+      const indProdPrevious = parseFloat(indProdObs[1].value);
+      const indProdGrowth = indProdPrevious > 0 ? (indProdCurrent - indProdPrevious) / indProdPrevious : 0.02;
+      
+      // FDR = (Asset Market Growth) / (Real Economy Growth)
+      // Using S&P 500 growth for financial circuit and average of GDP + Industrial Production for real circuit
+      const financialGrowth = sp500Growth;
+      const realGrowth = (gdpGrowth + indProdGrowth) / 2;
+      
+      // Calculate FDR with safeguards
+      const fdr = realGrowth > 0.0001 ? financialGrowth / realGrowth : 1.0;
+      
+      // Clamp to reasonable range [0.2, 5.0] as per dual-circuit theory
+      const clampedFdr = Math.max(0.2, Math.min(5.0, fdr));
+      const regime = calculateEconomicRegime(clampedFdr);
 
       const companies = await getActiveCompanyIds();
+      
+      // Extract absolute values for context
+      const sp500Latest = sp500Obs[0]?.value;
+      const gdpLatest = gdpObs[0]?.value;
+      const industrialProdLatest = indProdObs[0]?.value;
+      const cpiLatest = cpiObs[0]?.value;
+      const unemploymentLatest = unemploymentObs[0]?.value;
       
       if (companies.length > 0) {
         for (const companyId of companies) {
@@ -60,7 +85,7 @@ export async function updateExternalEconomicData() {
           await storage.createEconomicSnapshot({
             companyId,
             timestamp: new Date(),
-            fdr,
+            fdr: clampedFdr,
             regime,
             gdpReal: gdpLatest ? parseFloat(gdpLatest) : null,
             gdpNominal: null, // We're using real GDP from FRED
@@ -77,13 +102,15 @@ export async function updateExternalEconomicData() {
             timestamp: new Date().toISOString(),
             companyId,
             data: { 
-              fdr: fdr.toFixed(2), 
+              fdr: clampedFdr.toFixed(2), 
               regime, 
               gdpReal: gdpLatest ? parseFloat(gdpLatest) : null,
               sp500: sp500Latest ? parseFloat(sp500Latest) : null,
               industrialProduction: industrialProdLatest ? parseFloat(industrialProdLatest) : null,
               cpi: cpiLatest ? parseFloat(cpiLatest) : null,
-              unemployment: unemploymentLatest ? parseFloat(unemploymentLatest) : null
+              unemployment: unemploymentLatest ? parseFloat(unemploymentLatest) : null,
+              sp500Growth: (sp500Growth * 100).toFixed(2) + '%',
+              realGrowth: (realGrowth * 100).toFixed(2) + '%'
             },
           });
         }
@@ -94,15 +121,16 @@ export async function updateExternalEconomicData() {
           action: 'update',
           timestamp: new Date().toISOString(),
           data: { 
-            fdr: fdr.toFixed(2), 
+            fdr: clampedFdr.toFixed(2), 
             regime,
             companiesUpdated: companies.length,
-            dataSource: 'FRED API'
+            dataSource: 'FRED API',
+            calculation: `S&P Growth: ${(sp500Growth * 100).toFixed(2)}% / Real Growth: ${(realGrowth * 100).toFixed(2)}%`
           },
         });
       }
       
-      console.log(`[Background] ✅ Updated economic data from FRED: FDR=${fdr.toFixed(2)}, Regime=${regime}, S&P=${sp500Latest}, GDP=${gdpLatest}, Companies=${companies.length}`);
+      console.log(`[Background] ✅ Updated economic data from FRED: FDR=${clampedFdr.toFixed(2)}, Regime=${regime}, S&P Growth=${(sp500Growth * 100).toFixed(2)}%, Real Growth=${(realGrowth * 100).toFixed(2)}%, Companies=${companies.length}`);
     } else {
       console.log(`[Background] ⚠️  Incomplete data from FRED API (S&P=${!!sp500Latest}, GDP=${!!gdpLatest}, IndProd=${!!industrialProdLatest}), using fallback`);
       throw new Error('Incomplete external data');

@@ -305,22 +305,45 @@ export async function fetchComprehensiveEconomicData(): Promise<any> {
  */
 export function calculateFDRFromExternalData(economicData: any): number | null {
   try {
-    // Extract latest values from time series
-    const sp500Latest = economicData.financial_circuit?.sp500?.observations?.[0]?.value;
-    const gdpLatest = economicData.real_circuit?.real_gdp?.observations?.[0]?.value;
-    const industrialProdLatest = economicData.real_circuit?.industrial_production?.observations?.[0]?.value;
+    // Extract latest and previous values from time series for growth calculation
+    const sp500Obs = economicData.financial_circuit?.sp500?.observations || [];
+    const gdpObs = economicData.real_circuit?.real_gdp?.observations || [];
+    const indProdObs = economicData.real_circuit?.industrial_production?.observations || [];
 
-    if (!sp500Latest || !gdpLatest || !industrialProdLatest) {
+    if (sp500Obs.length < 2 || gdpObs.length < 2 || indProdObs.length < 2) {
       return null;
     }
 
-    // Simple FDR calculation: (Financial Growth Rate) / (Real Economy Growth Rate)
-    // In practice, use more sophisticated calculations with growth rates
-    const financialIndex = parseFloat(sp500Latest);
-    const realIndex = (parseFloat(gdpLatest) + parseFloat(industrialProdLatest)) / 2;
-
-    const fdr = financialIndex / realIndex;
-    return fdr;
+    // Calculate growth rates for dual-circuit FDR formula
+    // Financial Circuit: S&P 500 growth as proxy for asset market activity (Ma * Va)
+    const sp500Current = parseFloat(sp500Obs[0].value);
+    const sp500Previous = parseFloat(sp500Obs[1].value);
+    const sp500Growth = sp500Previous > 0 ? (sp500Current - sp500Previous) / sp500Previous : 0.02;
+    
+    // Real Circuit: GDP + Industrial Production growth as proxy for real economy (Mr * Vr)
+    const gdpCurrent = parseFloat(gdpObs[0].value);
+    const gdpPrevious = parseFloat(gdpObs[1].value);
+    const gdpGrowth = gdpPrevious > 0 ? (gdpCurrent - gdpPrevious) / gdpPrevious : 0.02;
+    
+    const indProdCurrent = parseFloat(indProdObs[0].value);
+    const indProdPrevious = parseFloat(indProdObs[1].value);
+    const indProdGrowth = indProdPrevious > 0 ? (indProdCurrent - indProdPrevious) / indProdPrevious : 0.02;
+    
+    // FDR = (Asset Market Growth) / (Real Economy Growth)
+    const financialGrowth = sp500Growth;
+    const realGrowth = (gdpGrowth + indProdGrowth) / 2;
+    
+    // Calculate FDR with safeguards - prevent division by zero or extreme values
+    // Return neutral FDR=1.0 for near-zero or negative real growth
+    if (realGrowth <= 0.0001) {
+      return 1.0;
+    }
+    
+    const fdr = financialGrowth / realGrowth;
+    
+    // Clamp to reasonable range [0.2, 5.0] as per dual-circuit theory
+    // This ensures FDR stays within interpretable bounds for regime classification
+    return Math.max(0.2, Math.min(5.0, fdr));
   } catch (error) {
     console.error("Error calculating FDR:", error);
     return null;
@@ -337,13 +360,14 @@ export function determineEconomicRegimeFromData(economicData: any): string {
     return "UNKNOWN";
   }
 
-  // Regime classification based on FDR thresholds (align with existing system)
-  if (fdr < 2.0) {
-    return "HEALTHY_EXPANSION";
-  } else if (fdr >= 2.0 && fdr < 4.0) {
-    return "ASSET_LED_GROWTH";
-  } else if (fdr >= 4.0 && fdr < 8.0) {
+  // Regime classification based on FDR thresholds (aligned with dual-circuit theory)
+  // FDR = Financial Growth / Real Growth ratio
+  if (fdr >= 1.5) {
     return "IMBALANCED_EXCESS";
+  } else if (fdr >= 1.0) {
+    return "ASSET_LED_GROWTH";
+  } else if (fdr >= 0.5) {
+    return "HEALTHY_EXPANSION";
   } else {
     return "REAL_ECONOMY_LEAD";
   }
