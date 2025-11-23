@@ -40,6 +40,8 @@ import {
   insertSupplierMaterialSchema,
   insertDemandHistorySchema,
   insertMultiHorizonForecastSchema,
+  insertForecastAccuracyTrackingSchema,
+  insertForecastDegradationAlertSchema,
   insertFeatureToggleSchema,
   insertSupplierNodeSchema,
   insertSupplierLinkSchema,
@@ -1129,6 +1131,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const comparison = await storage.getMultiHorizonForecastComparison(user.companyId, req.params.skuId);
       res.json(comparison);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Forecast Accuracy Tracking & Monitoring
+  app.get("/api/forecast-accuracy-tracking", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      const skuId = req.query.skuId as string | undefined;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      const tracking = await storage.getForecastAccuracyTracking(user.companyId, { skuId, limit });
+      res.json(tracking);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/forecast-accuracy-tracking/latest/:skuId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      const tracking = await storage.getLatestForecastAccuracyBySKU(user.companyId, req.params.skuId);
+      res.json(tracking || null);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/forecast-degradation-alerts", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      const skuId = req.query.skuId as string | undefined;
+      const resolved = req.query.resolved === 'true' ? true : req.query.resolved === 'false' ? false : undefined;
+      const severity = req.query.severity as string | undefined;
+      const alerts = await storage.getForecastDegradationAlerts(user.companyId, { skuId, resolved, severity });
+      res.json(alerts);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/forecast-degradation-alerts/:id/acknowledge", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      const alert = await storage.acknowledgeForecastAlert(req.params.id, userId);
+      res.json(alert);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/forecast-degradation-alerts/:id/resolve", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      const { actionTaken } = req.body;
+      if (!actionTaken) {
+        return res.status(400).json({ error: "actionTaken is required" });
+      }
+      const alert = await storage.resolveForecastAlert(req.params.id, actionTaken, userId);
+      res.json(alert);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

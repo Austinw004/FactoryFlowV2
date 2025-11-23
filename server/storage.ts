@@ -23,6 +23,8 @@ import type {
   DemandPrediction, InsertDemandPrediction,
   InventoryRecommendation, InsertInventoryRecommendation,
   MultiHorizonForecast, InsertMultiHorizonForecast,
+  ForecastAccuracyTracking, InsertForecastAccuracyTracking,
+  ForecastDegradationAlert, InsertForecastDegradationAlert,
   MaterialBatch, InsertMaterialBatch,
   TraceabilityEvent, InsertTraceabilityEvent,
   SupplierChainLink, InsertSupplierChainLink,
@@ -85,7 +87,7 @@ import {
   productionRuns, productionMetrics, downtimeEvents, productionBottlenecks,
   equipmentSensors, sensorReadings, maintenanceAlerts, maintenancePredictions,
   inventoryOptimizations, demandPredictions, inventoryRecommendations,
-  multiHorizonForecasts,
+  multiHorizonForecasts, forecastAccuracyTracking, forecastDegradationAlerts,
   materialBatches, traceabilityEvents, supplierChainLinks,
   employees, workShifts, skillRequirements, staffAssignments,
   employeePayroll, employeeBenefits, employeeTimeOff, employeePtoBalances,
@@ -276,6 +278,16 @@ export interface IStorage {
     count: number;
   }>>;
   getPredictionsWithActuals(companyId: string, limit?: number): Promise<DemandPrediction[]>;
+  
+  // Forecast Accuracy Tracking & Monitoring
+  getForecastAccuracyTracking(companyId: string, options?: { skuId?: string; limit?: number }): Promise<ForecastAccuracyTracking[]>;
+  getLatestForecastAccuracyBySKU(companyId: string, skuId: string): Promise<ForecastAccuracyTracking | undefined>;
+  createForecastAccuracyTracking(tracking: InsertForecastAccuracyTracking): Promise<ForecastAccuracyTracking>;
+  
+  getForecastDegradationAlerts(companyId: string, options?: { skuId?: string; resolved?: boolean; severity?: string }): Promise<ForecastDegradationAlert[]>;
+  createForecastDegradationAlert(alert: InsertForecastDegradationAlert): Promise<ForecastDegradationAlert>;
+  acknowledgeForecastAlert(id: string, userId: string): Promise<ForecastDegradationAlert>;
+  resolveForecastAlert(id: string, actionTaken: string, userId: string): Promise<ForecastDegradationAlert>;
   
   // Supply Chain Traceability
   getMaterialBatches(companyId: string): Promise<MaterialBatch[]>;
@@ -1235,6 +1247,95 @@ export class DbStorage implements IStorage {
       ))
       .orderBy(desc(demandPredictions.createdAt))
       .limit(limit);
+  }
+
+  // Forecast Accuracy Tracking & Monitoring methods
+  async getForecastAccuracyTracking(companyId: string, options?: { skuId?: string; limit?: number }): Promise<ForecastAccuracyTracking[]> {
+    let query = db.select().from(forecastAccuracyTracking)
+      .where(eq(forecastAccuracyTracking.companyId, companyId))
+      .$dynamic();
+    
+    if (options?.skuId) {
+      query = query.where(eq(forecastAccuracyTracking.skuId, options.skuId));
+    }
+    
+    query = query.orderBy(desc(forecastAccuracyTracking.measurementDate));
+    
+    if (options?.limit) {
+      query = query.limit(options.limit);
+    }
+    
+    return query;
+  }
+
+  async getLatestForecastAccuracyBySKU(companyId: string, skuId: string): Promise<ForecastAccuracyTracking | undefined> {
+    const results = await db.select().from(forecastAccuracyTracking)
+      .where(and(
+        eq(forecastAccuracyTracking.companyId, companyId),
+        eq(forecastAccuracyTracking.skuId, skuId)
+      ))
+      .orderBy(desc(forecastAccuracyTracking.measurementDate))
+      .limit(1);
+    
+    return results[0];
+  }
+
+  async createForecastAccuracyTracking(tracking: InsertForecastAccuracyTracking): Promise<ForecastAccuracyTracking> {
+    const [result] = await db.insert(forecastAccuracyTracking).values(tracking).returning();
+    return result;
+  }
+
+  async getForecastDegradationAlerts(companyId: string, options?: { skuId?: string; resolved?: boolean; severity?: string }): Promise<ForecastDegradationAlert[]> {
+    let query = db.select().from(forecastDegradationAlerts)
+      .where(eq(forecastDegradationAlerts.companyId, companyId))
+      .$dynamic();
+    
+    if (options?.skuId) {
+      query = query.where(eq(forecastDegradationAlerts.skuId, options.skuId));
+    }
+    
+    if (options?.resolved !== undefined) {
+      query = query.where(eq(forecastDegradationAlerts.resolved, options.resolved ? 1 : 0));
+    }
+    
+    if (options?.severity) {
+      query = query.where(eq(forecastDegradationAlerts.severity, options.severity));
+    }
+    
+    query = query.orderBy(desc(forecastDegradationAlerts.triggeredAt));
+    
+    return query;
+  }
+
+  async createForecastDegradationAlert(alert: InsertForecastDegradationAlert): Promise<ForecastDegradationAlert> {
+    const [result] = await db.insert(forecastDegradationAlerts).values(alert).returning();
+    return result;
+  }
+
+  async acknowledgeForecastAlert(id: string, userId: string): Promise<ForecastDegradationAlert> {
+    const [result] = await db.update(forecastDegradationAlerts)
+      .set({
+        acknowledged: 1,
+        acknowledgedBy: userId,
+        acknowledgedAt: new Date()
+      })
+      .where(eq(forecastDegradationAlerts.id, id))
+      .returning();
+    return result;
+  }
+
+  async resolveForecastAlert(id: string, actionTaken: string, userId: string): Promise<ForecastDegradationAlert> {
+    const [result] = await db.update(forecastDegradationAlerts)
+      .set({
+        resolved: 1,
+        resolvedAt: new Date(),
+        actionTaken,
+        actionTakenAt: new Date(),
+        actionTakenBy: userId
+      })
+      .where(eq(forecastDegradationAlerts.id, id))
+      .returning();
+    return result;
   }
 
   // Supply Chain Traceability methods

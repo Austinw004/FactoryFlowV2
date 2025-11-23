@@ -5,6 +5,7 @@ import axios from 'axios';
 import { fetchComprehensiveEconomicData } from './lib/externalAPIs';
 import { WebhookService } from './lib/webhookService';
 import { runAutomatedRetraining } from './lib/forecastRetraining';
+import { trackAllSKUs } from './lib/forecastMonitoring';
 
 interface BackgroundJobConfig {
   name: string;
@@ -855,6 +856,18 @@ async function runHistoricalBacktesting() {
   }
 }
 
+async function trackForecastAccuracy() {
+  try {
+    const activeCompanyIds = await getActiveCompanyIds();
+    
+    for (const companyId of activeCompanyIds) {
+      await trackAllSKUs(storage, companyId);
+    }
+  } catch (error) {
+    console.error('[Forecast Monitoring] Failed to track forecast accuracy:', error);
+  }
+}
+
 const jobConfigs: BackgroundJobConfig[] = [
   { name: 'Economic Data Updates', intervalMs: 5 * 60 * 1000, enabled: true },
   { name: 'Sensor Readings Generation', intervalMs: 30 * 1000, enabled: true },
@@ -865,6 +878,7 @@ const jobConfigs: BackgroundJobConfig[] = [
   { name: 'Production KPI Updates', intervalMs: 2 * 60 * 1000, enabled: true },
   { name: 'Historical Backtesting (Research)', intervalMs: 20 * 60 * 1000, enabled: true },
   { name: 'Automated Forecast Retraining', intervalMs: 24 * 60 * 60 * 1000, enabled: true }, // Daily at 24 hours
+  { name: 'Forecast Accuracy Tracking', intervalMs: 4 * 60 * 60 * 1000, enabled: true }, // Every 4 hours
 ];
 
 export function startBackgroundJobs() {
@@ -880,6 +894,7 @@ export function startBackgroundJobs() {
     updateProductionKPIs,
     runHistoricalBacktesting,
     runForecastRetraining,
+    trackForecastAccuracy,
   ];
   
   jobConfigs.forEach((config, index) => {

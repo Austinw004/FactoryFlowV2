@@ -836,6 +836,87 @@ export const multiHorizonForecasts = pgTable("multi_horizon_forecasts", {
   index("multi_horizon_forecasts_date_idx").on(table.forecastDate),
 ]);
 
+// Real-time Forecast Accuracy Tracking & Monitoring
+export const forecastAccuracyTracking = pgTable("forecast_accuracy_tracking", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  skuId: varchar("sku_id").notNull().references(() => skus.id, { onDelete: "cascade" }),
+  
+  // Timeframe
+  measurementDate: timestamp("measurement_date").notNull().defaultNow(),
+  evaluationPeriodDays: integer("evaluation_period_days").notNull().default(30), // Window used for calculation
+  
+  // Accuracy metrics
+  mape: real("mape").notNull(), // Mean Absolute Percentage Error
+  mae: real("mae"), // Mean Absolute Error
+  rmse: real("rmse"), // Root Mean Square Error
+  predictionsEvaluated: integer("predictions_evaluated").notNull(), // Number of predictions used
+  
+  // Trend indicators
+  mapeTrend: text("map_trend"), // "improving", "degrading", "stable"
+  trendChangePercent: real("trend_change_percent"), // % change from previous measurement
+  
+  // Baseline comparison
+  baselineMAPE: real("baseline_mape"), // MAPE when SKU was last retrained
+  improvementVsBaseline: real("improvement_vs_baseline"), // % better/worse than baseline
+  
+  // Context
+  economicRegime: text("economic_regime"),
+  averageDemand: real("average_demand"),
+  demandVolatility: real("demand_volatility"), // Standard deviation / mean
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("forecast_accuracy_tracking_company_idx").on(table.companyId),
+  index("forecast_accuracy_tracking_sku_idx").on(table.skuId),
+  index("forecast_accuracy_tracking_date_idx").on(table.measurementDate),
+]);
+
+export const forecastDegradationAlerts = pgTable("forecast_degradation_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  skuId: varchar("sku_id").notNull().references(() => skus.id, { onDelete: "cascade" }),
+  
+  // Alert details
+  alertType: text("alert_type").notNull(), // "degradation", "threshold_exceeded", "rapid_decline"
+  severity: text("severity").notNull(), // "low", "medium", "high", "critical"
+  triggeredAt: timestamp("triggered_at").notNull().defaultNow(),
+  
+  // Metrics that triggered alert
+  currentMAPE: real("current_mape").notNull(),
+  previousMAPE: real("previous_mape"),
+  baselineMAPE: real("baseline_mape"),
+  degradationPercent: real("degradation_percent"), // % worse than baseline
+  
+  // Thresholds
+  thresholdType: text("threshold_type").notNull(), // "absolute", "relative", "trend"
+  thresholdValue: real("threshold_value").notNull(),
+  
+  // Recommended actions
+  recommendedAction: text("recommended_action").notNull(), // "retrain", "recalibrate", "investigate", "monitor"
+  actionTaken: text("action_taken"), // "retrained", "recalibrated", "ignored", null = pending
+  actionTakenAt: timestamp("action_taken_at"),
+  actionTakenBy: varchar("action_taken_by").references(() => users.id),
+  
+  // Status
+  acknowledged: integer("acknowledged").notNull().default(0),
+  acknowledgedBy: varchar("acknowledged_by").references(() => users.id),
+  acknowledgedAt: timestamp("acknowledged_at"),
+  resolved: integer("resolved").notNull().default(0),
+  resolvedAt: timestamp("resolved_at"),
+  
+  // Additional context
+  message: text("message").notNull(),
+  details: jsonb("details"), // Additional diagnostic information
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("forecast_degradation_alerts_company_idx").on(table.companyId),
+  index("forecast_degradation_alerts_sku_idx").on(table.skuId),
+  index("forecast_degradation_alerts_severity_idx").on(table.severity),
+  index("forecast_degradation_alerts_resolved_idx").on(table.resolved),
+]);
+
 export const inventoryRecommendations = pgTable("inventory_recommendations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
@@ -1296,6 +1377,8 @@ export const insertInventoryOptimizationSchema = createInsertSchema(inventoryOpt
 export const insertDemandPredictionSchema = createInsertSchema(demandPredictions).omit({ id: true, createdAt: true });
 export const insertInventoryRecommendationSchema = createInsertSchema(inventoryRecommendations).omit({ id: true, createdAt: true, implementedAt: true });
 export const insertMultiHorizonForecastSchema = createInsertSchema(multiHorizonForecasts).omit({ id: true, createdAt: true });
+export const insertForecastAccuracyTrackingSchema = createInsertSchema(forecastAccuracyTracking).omit({ id: true, createdAt: true });
+export const insertForecastDegradationAlertSchema = createInsertSchema(forecastDegradationAlerts).omit({ id: true, createdAt: true });
 
 export type InventoryOptimization = typeof inventoryOptimizations.$inferSelect;
 export type InsertInventoryOptimization = z.infer<typeof insertInventoryOptimizationSchema>;
@@ -1305,6 +1388,10 @@ export type InventoryRecommendation = typeof inventoryRecommendations.$inferSele
 export type InsertInventoryRecommendation = z.infer<typeof insertInventoryRecommendationSchema>;
 export type MultiHorizonForecast = typeof multiHorizonForecasts.$inferSelect;
 export type InsertMultiHorizonForecast = z.infer<typeof insertMultiHorizonForecastSchema>;
+export type ForecastAccuracyTracking = typeof forecastAccuracyTracking.$inferSelect;
+export type InsertForecastAccuracyTracking = z.infer<typeof insertForecastAccuracyTrackingSchema>;
+export type ForecastDegradationAlert = typeof forecastDegradationAlerts.$inferSelect;
+export type InsertForecastDegradationAlert = z.infer<typeof insertForecastDegradationAlertSchema>;
 
 // Supply Chain Traceability schemas
 export const insertMaterialBatchSchema = createInsertSchema(materialBatches).omit({ id: true, createdAt: true, updatedAt: true });
