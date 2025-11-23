@@ -494,8 +494,27 @@ export class DbStorage implements IStorage {
   }
 
   async updateCompany(id: string, updates: Partial<InsertCompany>): Promise<Company | undefined> {
+    const updateData: any = {};
+    
+    if (updates.name !== undefined) updateData.name = updates.name;
+    if (updates.industry !== undefined) updateData.industry = updates.industry;
+    if (updates.location !== undefined) updateData.location = updates.location;
+    if (updates.companySize !== undefined) updateData.companySize = updates.companySize;
+    if (updates.annualBudget !== undefined) updateData.annualBudget = updates.annualBudget;
+    if (updates.currentBudgetSpent !== undefined) updateData.currentBudgetSpent = updates.currentBudgetSpent;
+    if (updates.budgetPeriod !== undefined) updateData.budgetPeriod = updates.budgetPeriod;
+    if (updates.budgetResetDate !== undefined) updateData.budgetResetDate = updates.budgetResetDate;
+    if (updates.fdrThresholdLow !== undefined) updateData.fdrThresholdLow = updates.fdrThresholdLow;
+    if (updates.fdrThresholdMid !== undefined) updateData.fdrThresholdMid = updates.fdrThresholdMid;
+    if (updates.fdrThresholdHigh !== undefined) updateData.fdrThresholdHigh = updates.fdrThresholdHigh;
+    if (updates.defaultProcurementPolicy !== undefined) updateData.defaultProcurementPolicy = updates.defaultProcurementPolicy;
+    if (updates.alertEmail !== undefined) updateData.alertEmail = updates.alertEmail;
+    if (updates.enableRegimeAlerts !== undefined) updateData.enableRegimeAlerts = updates.enableRegimeAlerts;
+    if (updates.enableBudgetAlerts !== undefined) updateData.enableBudgetAlerts = updates.enableBudgetAlerts;
+    if (updates.budgetAlertThreshold !== undefined) updateData.budgetAlertThreshold = updates.budgetAlertThreshold;
+
     const [updated] = await db.update(companies)
-      .set(updates)
+      .set(updateData)
       .where(eq(companies.id, id))
       .returning();
     return updated;
