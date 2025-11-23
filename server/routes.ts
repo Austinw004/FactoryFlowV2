@@ -39,6 +39,7 @@ import {
   insertSupplierSchema,
   insertSupplierMaterialSchema,
   insertDemandHistorySchema,
+  insertMultiHorizonForecastSchema,
   insertFeatureToggleSchema,
   insertSupplierNodeSchema,
   insertSupplierLinkSchema,
@@ -1041,6 +1042,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
       const predictions = await storage.getPredictionsWithActuals(user.companyId, limit);
       res.json(predictions);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Multi-Horizon Forecasting
+  app.get("/api/multi-horizon-forecasts", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      const skuId = req.query.skuId as string | undefined;
+      const horizonDays = req.query.horizonDays ? parseInt(req.query.horizonDays as string) : undefined;
+      const forecasts = await storage.getMultiHorizonForecasts(user.companyId, { skuId, horizonDays });
+      res.json(forecasts);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/multi-horizon-forecasts", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      const validated = insertMultiHorizonForecastSchema.parse({
+        ...req.body,
+        companyId: user.companyId,
+      });
+      const forecast = await storage.createMultiHorizonForecast(validated);
+      res.status(201).json(forecast);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/multi-horizon-forecasts/bulk", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      const forecasts = req.body.forecasts || [];
+      const validated = forecasts.map((f: any) => insertMultiHorizonForecastSchema.parse({
+        ...f,
+        companyId: user.companyId,
+      }));
+      const created = await storage.createMultiHorizonForecasts(validated);
+      res.status(201).json(created);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/multi-horizon-forecasts/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      const forecasts = await storage.getMultiHorizonForecasts(user.companyId);
+      const forecast = forecasts.find(f => f.id === req.params.id);
+      if (!forecast) {
+        return res.status(404).json({ error: "Forecast not found" });
+      }
+      const updated = await storage.updateMultiHorizonForecast(req.params.id, req.body);
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/multi-horizon-forecasts/comparison/:skuId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      const comparison = await storage.getMultiHorizonForecastComparison(user.companyId, req.params.skuId);
+      res.json(comparison);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
