@@ -3264,6 +3264,105 @@ export const benchmarkComparisons = pgTable("benchmark_comparisons", {
   index("benchmark_comparisons_submission_idx").on(table.submissionId),
 ]);
 
+// Demand Signal Sources - Configure external signal sources
+export const demandSignalSources = pgTable("demand_signal_sources", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  
+  name: varchar("name", { length: 100 }).notNull(),
+  sourceType: text("source_type").notNull(), // "pos", "ecommerce", "distributor", "erp", "manual", "api", "edi"
+  description: text("description"),
+  
+  isActive: boolean("is_active").default(true).notNull(),
+  refreshFrequency: text("refresh_frequency").default("daily"), // "realtime", "hourly", "daily", "weekly"
+  lastSyncAt: timestamp("last_sync_at"),
+  
+  configuration: jsonb("configuration"), // API endpoints, credentials ref, etc.
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("demand_signal_sources_company_idx").on(table.companyId),
+  index("demand_signal_sources_type_idx").on(table.sourceType),
+]);
+
+// Demand Signals - Individual demand signal entries
+export const demandSignals = pgTable("demand_signals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  sourceId: varchar("source_id").references(() => demandSignalSources.id, { onDelete: "set null" }),
+  
+  skuId: varchar("sku_id").references(() => skus.id, { onDelete: "cascade" }),
+  materialId: varchar("material_id").references(() => materials.id, { onDelete: "cascade" }),
+  
+  signalType: text("signal_type").notNull(), // "order", "forecast", "promotion", "seasonality", "trend", "event", "market"
+  signalDate: timestamp("signal_date").notNull(),
+  
+  quantity: real("quantity").notNull(),
+  unit: varchar("unit", { length: 20 }),
+  
+  confidence: real("confidence"), // 0-100
+  priority: text("priority").default("medium"), // "low", "medium", "high", "critical"
+  
+  region: varchar("region", { length: 100 }),
+  channel: varchar("channel", { length: 100 }), // "retail", "wholesale", "ecommerce", "direct"
+  customer: varchar("customer", { length: 255 }),
+  
+  economicRegime: text("economic_regime"), // Regime at signal time
+  fdrAtSignal: real("fdr_at_signal"),
+  
+  attributes: jsonb("attributes"), // Flexible attributes
+  notes: text("notes"),
+  
+  isProcessed: boolean("is_processed").default(false).notNull(),
+  processedAt: timestamp("processed_at"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("demand_signals_company_idx").on(table.companyId),
+  index("demand_signals_sku_idx").on(table.skuId),
+  index("demand_signals_material_idx").on(table.materialId),
+  index("demand_signals_date_idx").on(table.signalDate),
+  index("demand_signals_type_idx").on(table.signalType),
+  index("demand_signals_source_idx").on(table.sourceId),
+]);
+
+// Demand Signal Aggregates - Daily/weekly/monthly rollups
+export const demandSignalAggregates = pgTable("demand_signal_aggregates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  
+  skuId: varchar("sku_id").references(() => skus.id, { onDelete: "cascade" }),
+  materialId: varchar("material_id").references(() => materials.id, { onDelete: "cascade" }),
+  
+  aggregationPeriod: text("aggregation_period").notNull(), // "daily", "weekly", "monthly"
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  
+  totalSignals: integer("total_signals").notNull(),
+  totalQuantity: real("total_quantity").notNull(),
+  avgConfidence: real("avg_confidence"),
+  
+  bySignalType: jsonb("by_signal_type"), // { "order": 100, "forecast": 50 }
+  byChannel: jsonb("by_channel"), // { "retail": 80, "ecommerce": 70 }
+  byRegion: jsonb("by_region"), // { "NA": 100, "EU": 50 }
+  
+  trendDirection: text("trend_direction"), // "increasing", "stable", "decreasing"
+  trendStrength: real("trend_strength"), // Percentage change
+  volatility: real("volatility"),
+  
+  economicRegime: text("economic_regime"),
+  fdrAtAggregate: real("fdr_at_aggregate"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("demand_signal_aggregates_company_idx").on(table.companyId),
+  index("demand_signal_aggregates_sku_idx").on(table.skuId),
+  index("demand_signal_aggregates_period_idx").on(table.periodStart, table.periodEnd),
+]);
+
 // Saved Scenarios schemas
 export const insertSavedScenarioSchema = createInsertSchema(savedScenarios).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertScenarioBookmarkSchema = createInsertSchema(scenarioBookmarks).omit({ id: true, createdAt: true });
@@ -3348,3 +3447,16 @@ export type BenchmarkAggregate = typeof benchmarkAggregates.$inferSelect;
 export type InsertBenchmarkAggregate = z.infer<typeof insertBenchmarkAggregateSchema>;
 export type BenchmarkComparison = typeof benchmarkComparisons.$inferSelect;
 export type InsertBenchmarkComparison = z.infer<typeof insertBenchmarkComparisonSchema>;
+
+// Demand Signal Repository schemas
+export const insertDemandSignalSourceSchema = createInsertSchema(demandSignalSources).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertDemandSignalSchema = createInsertSchema(demandSignals).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertDemandSignalAggregateSchema = createInsertSchema(demandSignalAggregates).omit({ id: true, createdAt: true, updatedAt: true });
+
+// Demand Signal Repository types
+export type DemandSignalSource = typeof demandSignalSources.$inferSelect;
+export type InsertDemandSignalSource = z.infer<typeof insertDemandSignalSourceSchema>;
+export type DemandSignal = typeof demandSignals.$inferSelect;
+export type InsertDemandSignal = z.infer<typeof insertDemandSignalSchema>;
+export type DemandSignalAggregate = typeof demandSignalAggregates.$inferSelect;
+export type InsertDemandSignalAggregate = z.infer<typeof insertDemandSignalAggregateSchema>;
