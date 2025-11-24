@@ -61,6 +61,7 @@ import {
   insertMaRecommendationSchema,
   insertRfqSchema,
   insertRfqQuoteSchema,
+  insertBenchmarkSubmissionSchema,
 } from "@shared/schema";
 
 const economics = new DualCircuitEconomics();
@@ -6246,6 +6247,197 @@ export async function registerRoutes(app: Express): Promise<Server> {
           IMBALANCED_EXCESS: "Short TTLs (high volatility)",
           REAL_ECONOMY_LEAD: "Shortest TTLs (highest volatility)"
         }
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ==========================================
+  // PEER BENCHMARKING (INDUSTRY DATA CONSORTIUM)
+  // ==========================================
+  
+  // Submit benchmark data from company's supplier materials
+  app.post("/api/benchmarks/submit", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+
+      const company = await storage.getCompany(user.companyId);
+      if (!company) {
+        return res.status(404).json({ error: "Company not found" });
+      }
+
+      const validatedData = insertBenchmarkSubmissionSchema.parse({
+        ...req.body,
+        companyId: user.companyId,
+        companyIndustry: company.industry,
+        companySize: company.companySize,
+        snapshotDate: new Date().toISOString(),
+      });
+
+      const submission = await storage.createBenchmarkSubmission(validatedData);
+
+      await auditLogger.log({
+        companyId: user.companyId,
+        userId,
+        action: "create",
+        entityType: "benchmark_submission",
+        entityId: submission.id,
+        changes: submission,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent") || "unknown",
+      });
+
+      res.json(submission);
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get company's benchmark submissions
+  app.get("/api/benchmarks/submissions", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+
+      const submissions = await storage.getBenchmarkSubmissions(user.companyId);
+      res.json(submissions);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get industry benchmark aggregates for comparison
+  app.get("/api/benchmarks/aggregates", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+
+      const filters = {
+        materialCategory: req.query.materialCategory as string | undefined,
+        materialSubcategory: req.query.materialSubcategory as string | undefined,
+        industry: req.query.industry as string | undefined,
+        companySize: req.query.companySize as string | undefined,
+        snapshotMonth: req.query.snapshotMonth as string | undefined,
+      };
+
+      const aggregates = await storage.getBenchmarkAggregates(filters);
+      res.json(aggregates);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get company's benchmark comparisons with insights
+  app.get("/api/benchmarks/comparisons", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+
+      const comparisons = await storage.getBenchmarkComparisons(user.companyId);
+      res.json(comparisons);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Compare company costs against industry (generates comparison insights)
+  app.post("/api/benchmarks/compare", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+
+      const company = await storage.getCompany(user.companyId);
+      if (!company) {
+        return res.status(404).json({ error: "Company not found" });
+      }
+
+      // Get submissions for this company
+      const submissions = await storage.getBenchmarkSubmissions(user.companyId);
+      
+      // For each submission, find matching aggregate and create comparison
+      const comparisons = [];
+      for (const submission of submissions) {
+        const aggregates = await storage.getBenchmarkAggregates({
+          materialCategory: submission.materialCategory,
+          materialSubcategory: submission.materialSubcategory || undefined,
+          industry: company.industry || undefined,
+          companySize: company.companySize || undefined,
+        });
+
+        if (aggregates.length > 0) {
+          const aggregate = aggregates[0]; // Use most recent
+          const industryAvg = aggregate.averageCost;
+          const companyCost = submission.unitCost;
+          const diffPercent = ((companyCost - industryAvg) / industryAvg) * 100;
+          const diffAbsolute = companyCost - industryAvg;
+
+          let position = "average";
+          if (diffPercent < -10) position = "below_average";
+          else if (diffPercent > 10 && diffPercent <= 30) position = "above_average";
+          else if (diffPercent > 30) position = "significantly_above";
+
+          // Calculate percentile
+          let percentile = 50;
+          if (aggregate.p25Cost && companyCost < aggregate.p25Cost) percentile = 25;
+          else if (aggregate.p75Cost && companyCost > aggregate.p75Cost) percentile = 75;
+          else if (aggregate.p90Cost && companyCost > aggregate.p90Cost) percentile = 90;
+
+          // Calculate potential savings
+          const savingsOpportunity = diffPercent > 0
+            ? (diffAbsolute * (submission.purchaseVolume || 0))
+            : 0;
+
+          const comparison = await storage.createBenchmarkComparison({
+            companyId: user.companyId,
+            submissionId: submission.id,
+            aggregateId: aggregate.id,
+            companyCost,
+            industryCost: industryAvg,
+            costDifferencePercent: diffPercent,
+            costDifferenceAbsolute: diffAbsolute,
+            companyPercentile: percentile,
+            competitivePosition: position,
+            savingsOpportunity,
+          });
+
+          comparisons.push(comparison);
+        }
+      }
+
+      await auditLogger.log({
+        companyId: user.companyId,
+        userId,
+        action: "generate",
+        entityType: "benchmark_comparison",
+        entityId: user.companyId,
+        changes: { comparisonsGenerated: comparisons.length },
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent") || "unknown",
+      });
+
+      res.json({
+        generated: comparisons.length,
+        comparisons,
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
