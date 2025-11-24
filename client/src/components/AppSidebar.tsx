@@ -80,6 +80,12 @@ const menuSections = [
         url: "/automated-po",
         icon: Zap,
       },
+      {
+        title: "RFQ Generation",
+        url: "/rfq-generation",
+        icon: FileText,
+        testId: "sidebar-rfq-generation",
+      },
     ],
   },
   {

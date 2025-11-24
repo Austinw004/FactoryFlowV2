@@ -78,7 +78,9 @@ import type {
   SopScenario, InsertSopScenario,
   SopGapAnalysis, InsertSopGapAnalysis,
   SopMeetingNotes, InsertSopMeetingNotes,
-  SopActionItem, InsertSopActionItem
+  SopActionItem, InsertSopActionItem,
+  Rfq, InsertRfq,
+  RfqQuote, InsertRfqQuote
 } from "@shared/schema";
 import { 
   users, companies, companyLocations, skus, materials, boms, suppliers, supplierMaterials,
@@ -102,7 +104,8 @@ import {
   savedScenarios, scenarioBookmarks, fdrAlerts, commodityPriceAlerts, alertTriggers, regimeChangeNotifications,
   auditLogs,
   roles, permissions, rolePermissions, userRoleAssignments,
-  sopScenarios, sopGapAnalysis, sopMeetingNotes, sopActionItems
+  sopScenarios, sopGapAnalysis, sopMeetingNotes, sopActionItems,
+  rfqs, rfqQuotes
 } from "@shared/schema";
 
 export interface IStorage {
@@ -178,6 +181,17 @@ export interface IStorage {
   createPriceAlert(alert: InsertPriceAlert): Promise<PriceAlert>;
   updatePriceAlert(id: string, alert: Partial<InsertPriceAlert>): Promise<PriceAlert | undefined>;
   deletePriceAlert(id: string): Promise<void>;
+  
+  // RFQs (Request for Quotations)
+  getRfqs(companyId: string): Promise<Rfq[]>;
+  getRfq(id: string): Promise<Rfq | undefined>;
+  createRfq(rfq: InsertRfq): Promise<Rfq>;
+  updateRfq(id: string, rfq: Partial<InsertRfq>): Promise<Rfq | undefined>;
+  deleteRfq(id: string): Promise<void>;
+  
+  // RFQ Quotes
+  getRfqQuotes(rfqId: string): Promise<RfqQuote[]>;
+  createRfqQuote(quote: InsertRfqQuote): Promise<RfqQuote>;
   
   // Machinery
   getMachinery(companyId: string): Promise<Machinery[]>;
@@ -902,6 +916,43 @@ export class DbStorage implements IStorage {
 
   async deletePriceAlert(id: string): Promise<void> {
     await db.delete(priceAlerts).where(eq(priceAlerts.id, id));
+  }
+
+  // RFQ methods
+  async getRfqs(companyId: string): Promise<Rfq[]> {
+    return db.select().from(rfqs).where(eq(rfqs.companyId, companyId)).orderBy(desc(rfqs.createdAt));
+  }
+
+  async getRfq(id: string): Promise<Rfq | undefined> {
+    const [rfq] = await db.select().from(rfqs).where(eq(rfqs.id, id));
+    return rfq;
+  }
+
+  async createRfq(insertRfq: InsertRfq): Promise<Rfq> {
+    const [rfq] = await db.insert(rfqs).values(insertRfq).returning();
+    return rfq;
+  }
+
+  async updateRfq(id: string, updateData: Partial<InsertRfq>): Promise<Rfq | undefined> {
+    const [rfq] = await db.update(rfqs)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(rfqs.id, id))
+      .returning();
+    return rfq;
+  }
+
+  async deleteRfq(id: string): Promise<void> {
+    await db.delete(rfqs).where(eq(rfqs.id, id));
+  }
+
+  // RFQ Quote methods
+  async getRfqQuotes(rfqId: string): Promise<RfqQuote[]> {
+    return db.select().from(rfqQuotes).where(eq(rfqQuotes.rfqId, rfqId)).orderBy(desc(rfqQuotes.receivedAt));
+  }
+
+  async createRfqQuote(insertQuote: InsertRfqQuote): Promise<RfqQuote> {
+    const [quote] = await db.insert(rfqQuotes).values(insertQuote).returning();
+    return quote;
   }
 
   // Machinery methods

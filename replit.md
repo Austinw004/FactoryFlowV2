@@ -38,10 +38,11 @@ The system is a multi-tenant application ensuring data isolation per company. Co
 - **Data Export System**: Allows exporting company data (SKUs, materials, suppliers, allocations, machinery) in JSON, CSV, or Excel formats.
 - **Data Import System**: Supports importing SKUs, materials, and suppliers from CSV with validation and error reporting.
 - **Comprehensive Settings System**: Manages budget duration, email processing, AI assistant permissions, API access, data privacy, and company branding.
+- **Automated RFQ Generation**: Intelligent system that monitors inventory levels and economic regime signals to automatically generate Request for Quotations (RFQs). Triggers when inventory falls below reorder point threshold AND regime signals are favorable (expansionary or real economy lead). Runs every 15 minutes via background job, saving procurement managers 10-15 hours/week by eliminating manual RFQ creation. Uses storage layer for proper company scoping and audit logging. Features regime-aware prioritization, supplier matching, and full CRUD API with schema validation.
 
 ### System Design Choices
 
-The frontend uses React with TypeScript and Vite, with `wouter` for routing and TanStack Query for server state management. The backend is an Express.js application with TypeScript, providing RESTful APIs. Drizzle ORM with Neon serverless PostgreSQL is used for the database, featuring a multi-tenant schema with `companyId` for data isolation. Authentication is handled via Replit Auth (OpenID Connect) with Express sessions. The system employs 9 background polling services for continuous data updates and WebSockets for live UI updates, including a daily automated forecast retraining service that continuously improves prediction accuracy.
+The frontend uses React with TypeScript and Vite, with `wouter` for routing and TanStack Query for server state management. The backend is an Express.js application with TypeScript, providing RESTful APIs. Drizzle ORM with Neon serverless PostgreSQL is used for the database, featuring a multi-tenant schema with `companyId` for data isolation. Authentication is handled via Replit Auth (OpenID Connect) with Express sessions. The system employs 11 background polling services for continuous data updates and WebSockets for live UI updates, including daily automated forecast retraining, real-time forecast accuracy tracking, and automated RFQ generation services that continuously improve system intelligence.
 
 ## External Dependencies
 

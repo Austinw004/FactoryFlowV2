@@ -6,6 +6,10 @@ import { WebhookService } from './lib/webhookService';
 import { runAutomatedRetraining } from './lib/forecastRetraining';
 import { trackAllSKUs } from './lib/forecastMonitoring';
 import { globalCache } from './lib/caching';
+import { createRfqGenerationService } from './lib/rfqGeneration';
+import { logAudit } from './lib/auditLogger';
+
+const rfqGenerationService = createRfqGenerationService(storage);
 
 interface BackgroundJobConfig {
   name: string;
@@ -869,6 +873,54 @@ async function trackForecastAccuracy() {
   }
 }
 
+async function autoGenerateRfqsJob() {
+  try {
+    const activeCompanyIds = await getActiveCompanyIds();
+    
+    for (const companyId of activeCompanyIds) {
+      const results = await rfqGenerationService.autoGenerateRfqs(companyId, 'system');
+      const generated = results.filter(r => r.success).length;
+      const successfulRfqs = results.filter(r => r.success);
+      
+      if (generated > 0) {
+        console.log(`[RFQ Auto-Generation] Generated ${generated} RFQs for company ${companyId.substring(0, 8)}`);
+        
+        // Log audit entry for SOC2-lite compliance
+        await logAudit(
+          storage,
+          companyId,
+          'system',
+          'rfq_auto_generate',
+          `Background job auto-generated ${generated} RFQs from ${results.length} opportunities.`,
+          { 
+            generated, 
+            total: results.length,
+            rfqIds: successfulRfqs.map(r => r.rfqId),
+            rfqNumbers: successfulRfqs.map(r => r.rfqNumber),
+            triggers: successfulRfqs.map(r => ({
+              materialId: r.trigger.materialId,
+              materialName: r.trigger.materialName,
+              priority: r.trigger.priority,
+              reason: r.trigger.reason
+            }))
+          }
+        );
+        
+        broadcastUpdate({
+          type: 'database_update',
+          entity: 'rfq',
+          action: 'create',
+          timestamp: new Date().toISOString(),
+          companyId,
+          data: { generated, total: results.length },
+        });
+      }
+    }
+  } catch (error) {
+    console.error('[RFQ Auto-Generation] Failed to auto-generate RFQs:', error);
+  }
+}
+
 const jobConfigs: BackgroundJobConfig[] = [
   { name: 'Economic Data Updates', intervalMs: 5 * 60 * 1000, enabled: true },
   { name: 'Sensor Readings Generation', intervalMs: 30 * 1000, enabled: true },
@@ -880,6 +932,7 @@ const jobConfigs: BackgroundJobConfig[] = [
   { name: 'Historical Backtesting (Research)', intervalMs: 20 * 60 * 1000, enabled: true },
   { name: 'Automated Forecast Retraining', intervalMs: 24 * 60 * 60 * 1000, enabled: true }, // Daily at 24 hours
   { name: 'Forecast Accuracy Tracking', intervalMs: 4 * 60 * 60 * 1000, enabled: true }, // Every 4 hours
+  { name: 'RFQ Auto-Generation', intervalMs: 15 * 60 * 1000, enabled: true }, // Every 15 minutes
 ];
 
 export function startBackgroundJobs() {
@@ -896,6 +949,7 @@ export function startBackgroundJobs() {
     runHistoricalBacktesting,
     runForecastRetraining,
     trackForecastAccuracy,
+    autoGenerateRfqsJob,
   ];
   
   jobConfigs.forEach((config, index) => {

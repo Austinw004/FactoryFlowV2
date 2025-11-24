@@ -32,6 +32,7 @@ import StrategicAnalysis from "@/pages/StrategicAnalysis";
 import SopWorkspace from "@/pages/SopWorkspace";
 import ForecastAccuracy from "@/pages/ForecastAccuracy";
 import MultiHorizonForecasts from "@/pages/MultiHorizonForecasts";
+import RfqDashboard from "@/pages/rfq-dashboard";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
@@ -59,6 +60,7 @@ function Router() {
           <Route path="/workforce" component={WorkforceScheduling} />
           <Route path="/inventory" component={InventoryManagement} />
           <Route path="/automated-po" component={AutomatedPO} />
+          <Route path="/rfq-generation" component={RfqDashboard} />
           <Route path="/industry-consortium" component={IndustryConsortium} />
           <Route path="/ma-intelligence" component={MAIntelligence} />
           <Route path="/strategic-analysis" component={StrategicAnalysis} />

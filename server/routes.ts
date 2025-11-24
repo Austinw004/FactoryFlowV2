@@ -28,6 +28,7 @@ import { GeopoliticalRiskEngine, type GeopoliticalEvent } from "./lib/geopolitic
 import { WebhookService } from "./lib/webhookService";
 import { DataExportService } from "./lib/dataExport";
 import { DataImportService } from "./lib/dataImport";
+import { createRfqGenerationService } from "./lib/rfqGeneration";
 import multer from "multer";
 import { z } from "zod";
 import {
@@ -58,10 +59,13 @@ import {
   insertConsortiumAlertSchema,
   insertMaTargetSchema,
   insertMaRecommendationSchema,
+  insertRfqSchema,
+  insertRfqQuoteSchema,
 } from "@shared/schema";
 
 const economics = new DualCircuitEconomics();
 const webhookService = new WebhookService(storage);
+const rfqGenerationService = createRfqGenerationService(storage);
 
 // Helper function to calculate policy signals based on regime
 function calculateSignalsForRegime(regime: string) {
@@ -1747,6 +1751,320 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error("Allocation error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ========================================
+  // AUTOMATED RFQ GENERATION ROUTES
+  // ========================================
+
+  // Get all RFQs for company
+  app.get("/api/rfqs", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+
+      const rfqs = await storage.getRfqs(user.companyId);
+      res.json(rfqs);
+    } catch (error: any) {
+      console.error("Error fetching RFQs:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get single RFQ by ID
+  app.get("/api/rfqs/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+
+      const rfq = await storage.getRfq(req.params.id);
+      if (!rfq) {
+        return res.status(404).json({ error: "RFQ not found" });
+      }
+      if (rfq.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      // Also fetch related quotes
+      const quotes = await storage.getRfqQuotes(req.params.id);
+      res.json({ ...rfq, quotes });
+    } catch (error: any) {
+      console.error("Error fetching RFQ:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Identify RFQ opportunities (scan inventory + regime)
+  app.get("/api/rfqs/opportunities/scan", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+
+      const triggers = await rfqGenerationService.identifyRfqTriggers(user.companyId);
+      
+      await logAudit(
+        storage,
+        user.companyId,
+        userId,
+        'rfq_scan',
+        `Scanned for RFQ opportunities. Found ${triggers.length} materials below reorder point.`,
+        { triggerCount: triggers.length }
+      );
+
+      res.json(triggers);
+    } catch (error: any) {
+      console.error("Error scanning for RFQ opportunities:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Auto-generate RFQs from opportunities
+  app.post("/api/rfqs/generate", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+
+      const results = await rfqGenerationService.autoGenerateRfqs(user.companyId, userId);
+      
+      const successCount = results.filter(r => r.success).length;
+      
+      await logAudit(
+        storage,
+        user.companyId,
+        userId,
+        'rfq_auto_generate',
+        `Auto-generated ${successCount} RFQs from ${results.length} opportunities.`,
+        { results }
+      );
+
+      res.json({
+        success: true,
+        generated: successCount,
+        total: results.length,
+        results,
+      });
+    } catch (error: any) {
+      console.error("Error auto-generating RFQs:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create manual RFQ
+  app.post("/api/rfqs", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+
+      // Validate request body
+      const validationResult = insertRfqSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          error: "Validation failed", 
+          details: validationResult.error.errors 
+        });
+      }
+
+      const rfqData = {
+        ...validationResult.data,
+        companyId: user.companyId,
+        createdBy: userId,
+        isAutoGenerated: 0,
+      };
+
+      const rfq = await storage.createRfq(rfqData);
+      
+      await logAudit(
+        storage,
+        user.companyId,
+        userId,
+        'rfq_create',
+        `Created manual RFQ ${rfq.rfqNumber} for material ${rfq.materialId}`,
+        { rfqId: rfq.id }
+      );
+
+      res.status(201).json(rfq);
+    } catch (error: any) {
+      console.error("Error creating RFQ:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update RFQ
+  app.patch("/api/rfqs/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+
+      const existingRfq = await storage.getRfq(req.params.id);
+      if (!existingRfq) {
+        return res.status(404).json({ error: "RFQ not found" });
+      }
+      if (existingRfq.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      const updatedRfq = await storage.updateRfq(req.params.id, req.body);
+      
+      await logAudit(
+        storage,
+        user.companyId,
+        userId,
+        'rfq_update',
+        `Updated RFQ ${existingRfq.rfqNumber}`,
+        { rfqId: req.params.id, changes: req.body }
+      );
+
+      res.json(updatedRfq);
+    } catch (error: any) {
+      console.error("Error updating RFQ:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Approve RFQ (change status to pending_approval -> sent)
+  app.post("/api/rfqs/:id/approve", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+
+      const rfq = await storage.getRfq(req.params.id);
+      if (!rfq) {
+        return res.status(404).json({ error: "RFQ not found" });
+      }
+      if (rfq.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      const updatedRfq = await storage.updateRfq(req.params.id, {
+        status: "sent",
+        approvedBy: userId,
+        approvedAt: new Date(),
+        sentAt: new Date(),
+      });
+
+      await logAudit(
+        storage,
+        user.companyId,
+        userId,
+        'rfq_approve',
+        `Approved and sent RFQ ${rfq.rfqNumber}`,
+        { rfqId: req.params.id }
+      );
+
+      res.json(updatedRfq);
+    } catch (error: any) {
+      console.error("Error approving RFQ:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete RFQ
+  app.delete("/api/rfqs/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+
+      const rfq = await storage.getRfq(req.params.id);
+      if (!rfq) {
+        return res.status(404).json({ error: "RFQ not found" });
+      }
+      if (rfq.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      await storage.deleteRfq(req.params.id);
+      
+      await logAudit(
+        storage,
+        user.companyId,
+        userId,
+        'rfq_delete',
+        `Deleted RFQ ${rfq.rfqNumber}`,
+        { rfqId: req.params.id }
+      );
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting RFQ:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Add quote to RFQ
+  app.post("/api/rfqs/:rfqId/quotes", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+
+      const rfq = await storage.getRfq(req.params.rfqId);
+      if (!rfq) {
+        return res.status(404).json({ error: "RFQ not found" });
+      }
+      if (rfq.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      const validationResult = insertRfqQuoteSchema.safeParse({
+        ...req.body,
+        rfqId: req.params.rfqId,
+      });
+
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          error: "Validation failed", 
+          details: validationResult.error.errors 
+        });
+      }
+
+      const quote = await storage.createRfqQuote(validationResult.data);
+      
+      // Update RFQ quotes count
+      await storage.updateRfq(req.params.rfqId, {
+        quotesReceived: (rfq.quotesReceived || 0) + 1,
+        status: "quotes_received",
+      });
+
+      await logAudit(
+        storage,
+        user.companyId,
+        userId,
+        'rfq_quote_add',
+        `Added quote from supplier ${quote.supplierId} to RFQ ${rfq.rfqNumber}`,
+        { rfqId: req.params.rfqId, quoteId: quote.id }
+      );
+
+      res.status(201).json(quote);
+    } catch (error: any) {
+      console.error("Error adding quote to RFQ:", error);
       res.status(500).json({ error: error.message });
     }
   });
