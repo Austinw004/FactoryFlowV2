@@ -3130,6 +3130,140 @@ export const rfqQuotes = pgTable("rfq_quotes", {
   index("rfq_quotes_supplier_idx").on(table.supplierId),
 ]);
 
+// ==========================================
+// PEER BENCHMARKING (INDUSTRY DATA CONSORTIUM)
+// ==========================================
+
+// Benchmark Submissions - Anonymized material cost data from companies
+export const benchmarkSubmissions = pgTable("benchmark_submissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  
+  // Material Classification (standardized for cross-company comparison)
+  materialCategory: text("material_category").notNull(), // "Metals", "Polymers", "Electronics", etc.
+  materialSubcategory: text("material_subcategory"), // "Aluminum", "Steel", "Copper", etc.
+  materialName: text("material_name").notNull(), // Generic name (e.g., "Aluminum Sheet 6061")
+  
+  // Cost Data
+  unitCost: real("unit_cost").notNull(), // Cost per unit
+  unit: text("unit").notNull(), // "kg", "ton", "piece", etc.
+  currency: text("currency").notNull().default("USD"),
+  
+  // Volume & Context
+  purchaseVolume: real("purchase_volume"), // Monthly/annual volume purchased
+  volumePeriod: text("volume_period").default("monthly"), // "monthly", "quarterly", "annual"
+  
+  // Company Context (anonymized in aggregates)
+  companyIndustry: text("company_industry"), // From companies.industry
+  companySize: text("company_size"), // From companies.companySize
+  companyLocation: text("company_location"), // Generalized region (e.g., "Northeast US")
+  
+  // Temporal Data
+  snapshotDate: timestamp("snapshot_date").notNull(), // When this data was captured
+  
+  // Data Quality & Consent
+  dataQuality: text("data_quality").default("verified"), // "verified", "estimated", "supplier_quoted"
+  shareConsent: integer("share_consent").notNull().default(1), // 1 = consent to share anonymized data
+  
+  // Audit
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("benchmark_submissions_company_idx").on(table.companyId),
+  index("benchmark_submissions_category_idx").on(table.materialCategory, table.materialSubcategory),
+  index("benchmark_submissions_snapshot_idx").on(table.snapshotDate),
+  index("benchmark_submissions_industry_idx").on(table.companyIndustry),
+]);
+
+// Benchmark Aggregates - Pre-computed industry averages for fast comparison
+export const benchmarkAggregates = pgTable("benchmark_aggregates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Material Classification
+  materialCategory: text("material_category").notNull(),
+  materialSubcategory: text("material_subcategory"),
+  materialName: text("material_name").notNull(),
+  unit: text("unit").notNull(),
+  
+  // Segmentation (for comparing apples to apples)
+  industry: text("industry"), // Filter to specific industry or null for all industries
+  companySize: text("company_size"), // Filter to company size or null for all sizes
+  region: text("region"), // Geographic region or null for all regions
+  
+  // Aggregate Statistics
+  participantCount: integer("participant_count").notNull(), // Number of companies contributing (min 3 for privacy)
+  averageCost: real("average_cost").notNull(), // Mean cost per unit
+  medianCost: real("median_cost").notNull(), // Median cost per unit
+  minCost: real("min_cost").notNull(), // Minimum cost (5th percentile for privacy)
+  maxCost: real("max_cost").notNull(), // Maximum cost (95th percentile for privacy)
+  standardDeviation: real("standard_deviation"), // Cost variation
+  
+  // Percentiles (for detailed comparison)
+  p25Cost: real("p25_cost"), // 25th percentile
+  p75Cost: real("p75_cost"), // 75th percentile
+  p90Cost: real("p90_cost"), // 90th percentile
+  
+  // Volume-Weighted Statistics (larger buyers may get better prices)
+  volumeWeightedAvgCost: real("volume_weighted_avg_cost"),
+  totalVolume: real("total_volume"), // Total industry volume for this material
+  
+  // Temporal Context
+  snapshotMonth: text("snapshot_month").notNull(), // "2024-01" format for monthly aggregation
+  calculatedAt: timestamp("calculated_at").notNull().defaultNow(),
+  
+  // Data Quality
+  dataQualityScore: real("data_quality_score"), // 0-100 score based on submission quality
+  isPublished: integer("is_published").default(0), // 1 = available for customer viewing
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("benchmark_aggregates_category_idx").on(table.materialCategory, table.materialSubcategory),
+  index("benchmark_aggregates_snapshot_idx").on(table.snapshotMonth),
+  index("benchmark_aggregates_industry_idx").on(table.industry),
+  uniqueIndex("benchmark_aggregates_unique").on(
+    table.materialCategory,
+    table.materialSubcategory,
+    table.materialName,
+    table.unit,
+    table.industry,
+    table.companySize,
+    table.region,
+    table.snapshotMonth
+  ),
+]);
+
+// Benchmark Comparisons - Store individual company comparisons against industry
+export const benchmarkComparisons = pgTable("benchmark_comparisons", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  
+  // Reference to submission and aggregate
+  submissionId: varchar("submission_id").notNull().references(() => benchmarkSubmissions.id, { onDelete: "cascade" }),
+  aggregateId: varchar("aggregate_id").notNull().references(() => benchmarkAggregates.id, { onDelete: "cascade" }),
+  
+  // Comparison Results
+  companyCost: real("company_cost").notNull(),
+  industryCost: real("industry_cost").notNull(), // Average from aggregate
+  costDifferencePercent: real("cost_difference_percent").notNull(), // (company - industry) / industry * 100
+  costDifferenceAbsolute: real("cost_difference_absolute").notNull(),
+  
+  // Percentile Ranking
+  companyPercentile: real("company_percentile"), // Where company ranks (0-100)
+  
+  // Insights
+  competitivePosition: text("competitive_position"), // "below_average", "average", "above_average", "significantly_above"
+  savingsOpportunity: real("savings_opportunity"), // Potential annual savings if matched industry average
+  
+  // Temporal
+  comparisonDate: timestamp("comparison_date").notNull().defaultNow(),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("benchmark_comparisons_company_idx").on(table.companyId),
+  index("benchmark_comparisons_submission_idx").on(table.submissionId),
+]);
+
 // Saved Scenarios schemas
 export const insertSavedScenarioSchema = createInsertSchema(savedScenarios).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertScenarioBookmarkSchema = createInsertSchema(scenarioBookmarks).omit({ id: true, createdAt: true });
@@ -3201,3 +3335,16 @@ export type Rfq = typeof rfqs.$inferSelect;
 export type InsertRfq = z.infer<typeof insertRfqSchema>;
 export type RfqQuote = typeof rfqQuotes.$inferSelect;
 export type InsertRfqQuote = z.infer<typeof insertRfqQuoteSchema>;
+
+// Benchmark schemas
+export const insertBenchmarkSubmissionSchema = createInsertSchema(benchmarkSubmissions).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertBenchmarkAggregateSchema = createInsertSchema(benchmarkAggregates).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertBenchmarkComparisonSchema = createInsertSchema(benchmarkComparisons).omit({ id: true, createdAt: true });
+
+// Benchmark types
+export type BenchmarkSubmission = typeof benchmarkSubmissions.$inferSelect;
+export type InsertBenchmarkSubmission = z.infer<typeof insertBenchmarkSubmissionSchema>;
+export type BenchmarkAggregate = typeof benchmarkAggregates.$inferSelect;
+export type InsertBenchmarkAggregate = z.infer<typeof insertBenchmarkAggregateSchema>;
+export type BenchmarkComparison = typeof benchmarkComparisons.$inferSelect;
+export type InsertBenchmarkComparison = z.infer<typeof insertBenchmarkComparisonSchema>;
