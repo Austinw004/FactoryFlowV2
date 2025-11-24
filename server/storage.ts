@@ -83,7 +83,10 @@ import type {
   RfqQuote, InsertRfqQuote,
   BenchmarkSubmission, InsertBenchmarkSubmission,
   BenchmarkAggregate, InsertBenchmarkAggregate,
-  BenchmarkComparison, InsertBenchmarkComparison
+  BenchmarkComparison, InsertBenchmarkComparison,
+  DemandSignalSource, InsertDemandSignalSource,
+  DemandSignal, InsertDemandSignal,
+  DemandSignalAggregate, InsertDemandSignalAggregate
 } from "@shared/schema";
 import { 
   users, companies, companyLocations, skus, materials, boms, suppliers, supplierMaterials,
@@ -109,7 +112,8 @@ import {
   roles, permissions, rolePermissions, userRoleAssignments,
   sopScenarios, sopGapAnalysis, sopMeetingNotes, sopActionItems,
   rfqs, rfqQuotes,
-  benchmarkSubmissions, benchmarkAggregates, benchmarkComparisons
+  benchmarkSubmissions, benchmarkAggregates, benchmarkComparisons,
+  demandSignalSources, demandSignals, demandSignalAggregates
 } from "@shared/schema";
 
 export interface IStorage {
@@ -623,6 +627,38 @@ export interface IStorage {
   upsertBenchmarkAggregate(aggregate: InsertBenchmarkAggregate): Promise<BenchmarkAggregate>;
   getBenchmarkComparisons(companyId: string): Promise<BenchmarkComparison[]>;
   createBenchmarkComparison(comparison: InsertBenchmarkComparison): Promise<BenchmarkComparison>;
+  
+  // Demand Signal Repository
+  createDemandSignalSource(source: InsertDemandSignalSource): Promise<DemandSignalSource>;
+  getDemandSignalSources(companyId: string): Promise<DemandSignalSource[]>;
+  getDemandSignalSource(id: string): Promise<DemandSignalSource | undefined>;
+  updateDemandSignalSource(id: string, source: Partial<InsertDemandSignalSource>): Promise<DemandSignalSource | undefined>;
+  deleteDemandSignalSource(id: string): Promise<void>;
+  
+  createDemandSignal(signal: InsertDemandSignal): Promise<DemandSignal>;
+  getDemandSignals(companyId: string, filters?: { 
+    sourceId?: string; 
+    skuId?: string; 
+    materialId?: string; 
+    signalType?: string;
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+  }): Promise<DemandSignal[]>;
+  getDemandSignal(id: string): Promise<DemandSignal | undefined>;
+  updateDemandSignal(id: string, signal: Partial<InsertDemandSignal>): Promise<DemandSignal | undefined>;
+  deleteDemandSignal(id: string): Promise<void>;
+  markDemandSignalsProcessed(signalIds: string[]): Promise<void>;
+  
+  getDemandSignalAggregates(companyId: string, filters?: {
+    skuId?: string;
+    materialId?: string;
+    aggregationPeriod?: string;
+    startDate?: Date;
+    endDate?: Date;
+  }): Promise<DemandSignalAggregate[]>;
+  createDemandSignalAggregate(aggregate: InsertDemandSignalAggregate): Promise<DemandSignalAggregate>;
+  upsertDemandSignalAggregate(aggregate: InsertDemandSignalAggregate): Promise<DemandSignalAggregate>;
   
   // Utility
   getAllCompanyIds(): Promise<string[]>;
@@ -2789,6 +2825,182 @@ export class DbStorage implements IStorage {
 
   async createBenchmarkComparison(comparison: InsertBenchmarkComparison): Promise<BenchmarkComparison> {
     const [result] = await db.insert(benchmarkComparisons).values(comparison).returning();
+    return result;
+  }
+
+  // Demand Signal Repository - Sources
+  async createDemandSignalSource(source: InsertDemandSignalSource): Promise<DemandSignalSource> {
+    const [result] = await db.insert(demandSignalSources).values(source).returning();
+    return result;
+  }
+
+  async getDemandSignalSources(companyId: string): Promise<DemandSignalSource[]> {
+    return await db
+      .select()
+      .from(demandSignalSources)
+      .where(eq(demandSignalSources.companyId, companyId))
+      .orderBy(desc(demandSignalSources.createdAt));
+  }
+
+  async getDemandSignalSource(id: string): Promise<DemandSignalSource | undefined> {
+    const [source] = await db.select().from(demandSignalSources).where(eq(demandSignalSources.id, id));
+    return source;
+  }
+
+  async updateDemandSignalSource(id: string, source: Partial<InsertDemandSignalSource>): Promise<DemandSignalSource | undefined> {
+    const [result] = await db
+      .update(demandSignalSources)
+      .set({ ...source, updatedAt: new Date() })
+      .where(eq(demandSignalSources.id, id))
+      .returning();
+    return result;
+  }
+
+  async deleteDemandSignalSource(id: string): Promise<void> {
+    await db.delete(demandSignalSources).where(eq(demandSignalSources.id, id));
+  }
+
+  // Demand Signal Repository - Signals
+  async createDemandSignal(signal: InsertDemandSignal): Promise<DemandSignal> {
+    const [result] = await db.insert(demandSignals).values(signal).returning();
+    return result;
+  }
+
+  async getDemandSignals(companyId: string, filters?: { 
+    sourceId?: string; 
+    skuId?: string; 
+    materialId?: string; 
+    signalType?: string;
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+  }): Promise<DemandSignal[]> {
+    const conditions = [eq(demandSignals.companyId, companyId)];
+    
+    if (filters?.sourceId) {
+      conditions.push(eq(demandSignals.sourceId, filters.sourceId));
+    }
+    if (filters?.skuId) {
+      conditions.push(eq(demandSignals.skuId, filters.skuId));
+    }
+    if (filters?.materialId) {
+      conditions.push(eq(demandSignals.materialId, filters.materialId));
+    }
+    if (filters?.signalType) {
+      conditions.push(eq(demandSignals.signalType, filters.signalType));
+    }
+    if (filters?.startDate) {
+      conditions.push(sql`${demandSignals.signalDate} >= ${filters.startDate}`);
+    }
+    if (filters?.endDate) {
+      conditions.push(sql`${demandSignals.signalDate} <= ${filters.endDate}`);
+    }
+    
+    let query = db
+      .select()
+      .from(demandSignals)
+      .where(and(...conditions))
+      .orderBy(desc(demandSignals.signalDate));
+    
+    if (filters?.limit) {
+      query = query.limit(filters.limit) as any;
+    }
+    
+    return await query;
+  }
+
+  async getDemandSignal(id: string): Promise<DemandSignal | undefined> {
+    const [signal] = await db.select().from(demandSignals).where(eq(demandSignals.id, id));
+    return signal;
+  }
+
+  async updateDemandSignal(id: string, signal: Partial<InsertDemandSignal>): Promise<DemandSignal | undefined> {
+    const [result] = await db
+      .update(demandSignals)
+      .set({ ...signal, updatedAt: new Date() })
+      .where(eq(demandSignals.id, id))
+      .returning();
+    return result;
+  }
+
+  async deleteDemandSignal(id: string): Promise<void> {
+    await db.delete(demandSignals).where(eq(demandSignals.id, id));
+  }
+
+  async markDemandSignalsProcessed(signalIds: string[]): Promise<void> {
+    if (signalIds.length === 0) return;
+    
+    await db
+      .update(demandSignals)
+      .set({ isProcessed: true, processedAt: new Date(), updatedAt: new Date() })
+      .where(sql`${demandSignals.id} IN (${sql.join(signalIds.map(id => sql`${id}`), sql`, `)})`);
+  }
+
+  // Demand Signal Repository - Aggregates
+  async getDemandSignalAggregates(companyId: string, filters?: {
+    skuId?: string;
+    materialId?: string;
+    aggregationPeriod?: string;
+    startDate?: Date;
+    endDate?: Date;
+  }): Promise<DemandSignalAggregate[]> {
+    const conditions = [eq(demandSignalAggregates.companyId, companyId)];
+    
+    if (filters?.skuId) {
+      conditions.push(eq(demandSignalAggregates.skuId, filters.skuId));
+    }
+    if (filters?.materialId) {
+      conditions.push(eq(demandSignalAggregates.materialId, filters.materialId));
+    }
+    if (filters?.aggregationPeriod) {
+      conditions.push(eq(demandSignalAggregates.aggregationPeriod, filters.aggregationPeriod));
+    }
+    if (filters?.startDate) {
+      conditions.push(sql`${demandSignalAggregates.periodStart} >= ${filters.startDate}`);
+    }
+    if (filters?.endDate) {
+      conditions.push(sql`${demandSignalAggregates.periodEnd} <= ${filters.endDate}`);
+    }
+    
+    return await db
+      .select()
+      .from(demandSignalAggregates)
+      .where(and(...conditions))
+      .orderBy(desc(demandSignalAggregates.periodStart));
+  }
+
+  async createDemandSignalAggregate(aggregate: InsertDemandSignalAggregate): Promise<DemandSignalAggregate> {
+    const [result] = await db.insert(demandSignalAggregates).values(aggregate).returning();
+    return result;
+  }
+
+  async upsertDemandSignalAggregate(aggregate: InsertDemandSignalAggregate): Promise<DemandSignalAggregate> {
+    const [result] = await db
+      .insert(demandSignalAggregates)
+      .values(aggregate)
+      .onConflictDoUpdate({
+        target: [
+          demandSignalAggregates.companyId,
+          demandSignalAggregates.skuId,
+          demandSignalAggregates.aggregationPeriod,
+          demandSignalAggregates.periodStart,
+        ],
+        set: {
+          totalSignals: aggregate.totalSignals,
+          totalQuantity: aggregate.totalQuantity,
+          avgConfidence: aggregate.avgConfidence,
+          bySignalType: aggregate.bySignalType,
+          byChannel: aggregate.byChannel,
+          byRegion: aggregate.byRegion,
+          trendDirection: aggregate.trendDirection,
+          trendStrength: aggregate.trendStrength,
+          volatility: aggregate.volatility,
+          economicRegime: aggregate.economicRegime,
+          fdrAtAggregate: aggregate.fdrAtAggregate,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
     return result;
   }
 
