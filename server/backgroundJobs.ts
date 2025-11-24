@@ -7,9 +7,11 @@ import { runAutomatedRetraining } from './lib/forecastRetraining';
 import { trackAllSKUs } from './lib/forecastMonitoring';
 import { globalCache } from './lib/caching';
 import { createRfqGenerationService } from './lib/rfqGeneration';
+import { createBenchmarkAggregationService } from './lib/benchmarkAggregation';
 import { logAudit } from './lib/auditLogger';
 
 const rfqGenerationService = createRfqGenerationService(storage);
+const benchmarkAggregationService = createBenchmarkAggregationService(storage);
 
 interface BackgroundJobConfig {
   name: string;
@@ -921,6 +923,29 @@ async function autoGenerateRfqsJob() {
   }
 }
 
+async function aggregateBenchmarkDataJob() {
+  try {
+    console.log('[Benchmark Aggregation] Starting monthly aggregation...');
+    
+    // Run full aggregation across all companies
+    const results = await benchmarkAggregationService.aggregateAll();
+    
+    if (results.aggregates > 0) {
+      console.log(`[Benchmark Aggregation] Processed ${results.processed} submissions, created ${results.aggregates} industry aggregates`);
+      
+      broadcastUpdate({
+        type: 'database_update',
+        entity: 'benchmark_aggregate',
+        action: 'create',
+        timestamp: new Date().toISOString(),
+        data: results,
+      });
+    }
+  } catch (error) {
+    console.error('[Benchmark Aggregation] Failed to aggregate benchmark data:', error);
+  }
+}
+
 const jobConfigs: BackgroundJobConfig[] = [
   { name: 'Economic Data Updates', intervalMs: 5 * 60 * 1000, enabled: true },
   { name: 'Sensor Readings Generation', intervalMs: 30 * 1000, enabled: true },
@@ -933,6 +958,7 @@ const jobConfigs: BackgroundJobConfig[] = [
   { name: 'Automated Forecast Retraining', intervalMs: 24 * 60 * 60 * 1000, enabled: true }, // Daily at 24 hours
   { name: 'Forecast Accuracy Tracking', intervalMs: 4 * 60 * 60 * 1000, enabled: true }, // Every 4 hours
   { name: 'RFQ Auto-Generation', intervalMs: 15 * 60 * 1000, enabled: true }, // Every 15 minutes
+  { name: 'Benchmark Data Aggregation', intervalMs: 24 * 60 * 60 * 1000, enabled: true }, // Daily (monthly aggregation check)
 ];
 
 export function startBackgroundJobs() {
@@ -950,6 +976,7 @@ export function startBackgroundJobs() {
     runForecastRetraining,
     trackForecastAccuracy,
     autoGenerateRfqsJob,
+    aggregateBenchmarkDataJob,
   ];
   
   jobConfigs.forEach((config, index) => {
