@@ -128,6 +128,12 @@ const menuSections = [
         icon: BarChart3,
       },
       {
+        title: "Peer Benchmarking",
+        url: "/peer-benchmarking",
+        icon: Users,
+        testId: "sidebar-peer-benchmarking",
+      },
+      {
         title: "M&A Intelligence",
         url: "/ma-intelligence",
         icon: Building2,

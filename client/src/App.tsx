@@ -33,6 +33,7 @@ import SopWorkspace from "@/pages/SopWorkspace";
 import ForecastAccuracy from "@/pages/ForecastAccuracy";
 import MultiHorizonForecasts from "@/pages/MultiHorizonForecasts";
 import RfqDashboard from "@/pages/rfq-dashboard";
+import PeerBenchmarking from "@/pages/peer-benchmarking";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
@@ -61,6 +62,7 @@ function Router() {
           <Route path="/inventory" component={InventoryManagement} />
           <Route path="/automated-po" component={AutomatedPO} />
           <Route path="/rfq-generation" component={RfqDashboard} />
+          <Route path="/peer-benchmarking" component={PeerBenchmarking} />
           <Route path="/industry-consortium" component={IndustryConsortium} />
           <Route path="/ma-intelligence" component={MAIntelligence} />
           <Route path="/strategic-analysis" component={StrategicAnalysis} />
