@@ -11,6 +11,7 @@ import { DualCircuitEconomics } from "./lib/economics";
 import { DemandForecaster } from "./lib/forecasting";
 import { AllocationEngine } from "./lib/allocation";
 import { setupWebSocket, getConnectedClientCount } from "./websocket";
+import { applySecurityHardening, securityMonitor, rateLimiters } from "./lib/securityHardening";
 import { 
   calculateSupplierRiskScore, 
   getFDRRiskMultiplier, 
@@ -107,6 +108,9 @@ function calculateSignalsForRegime(regime: string) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Apply SOC2-lite security hardening
+  applySecurityHardening(app);
+
   // Setup authentication
   await setupAuth(app);
 
@@ -5924,6 +5928,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
           IMBALANCED_EXCESS: "Short TTLs (high volatility)",
           REAL_ECONOMY_LEAD: "Shortest TTLs (highest volatility)"
         }
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Security Monitoring Endpoints
+  app.get("/api/security/events", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+
+      const minutes = parseInt(req.query.minutes as string) || 60;
+      const events = securityMonitor.getRecentEvents(minutes);
+
+      res.json({
+        events,
+        timeRange: `Last ${minutes} minutes`,
+        totalEvents: events.length,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/security/summary", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+
+      const summary = securityMonitor.getSummary();
+
+      res.json({
+        ...summary,
+        description: "SOC2-lite security monitoring summary",
+        features: {
+          encryption: "AES-256-CBC for sensitive data at rest",
+          rateLimiting: "100 requests/min global, customizable per endpoint",
+          inputSanitization: "XSS and injection prevention",
+          sqlInjectionPrevention: "Pattern-based detection and blocking",
+          securityHeaders: "CSP, HSTS, X-Frame-Options, etc.",
+          auditLogging: "Comprehensive audit trail for all mutations",
+        },
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });

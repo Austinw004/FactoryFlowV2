@@ -43,6 +43,10 @@ localPort = 37205
 externalPort = 4200
 
 [[ports]]
+localPort = 38539
+externalPort = 8008
+
+[[ports]]
 localPort = 39273
 externalPort = 8000
 
@@ -80,3 +84,8 @@ waitForPort = 5000
 
 [agent]
 integrations = ["javascript_log_in_with_replit:1.0.0", "javascript_database:1.0.0"]
+
+[userenv]
+
+[userenv.shared]
+ENCRYPTION_KEY = "4b373b98f181b23ddd962ad9c3d73e1f13297b93f9d02903983cdf97e7519187"
