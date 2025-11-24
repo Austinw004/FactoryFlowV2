@@ -80,7 +80,10 @@ import type {
   SopMeetingNotes, InsertSopMeetingNotes,
   SopActionItem, InsertSopActionItem,
   Rfq, InsertRfq,
-  RfqQuote, InsertRfqQuote
+  RfqQuote, InsertRfqQuote,
+  BenchmarkSubmission, InsertBenchmarkSubmission,
+  BenchmarkAggregate, InsertBenchmarkAggregate,
+  BenchmarkComparison, InsertBenchmarkComparison
 } from "@shared/schema";
 import { 
   users, companies, companyLocations, skus, materials, boms, suppliers, supplierMaterials,
@@ -105,7 +108,8 @@ import {
   auditLogs,
   roles, permissions, rolePermissions, userRoleAssignments,
   sopScenarios, sopGapAnalysis, sopMeetingNotes, sopActionItems,
-  rfqs, rfqQuotes
+  rfqs, rfqQuotes,
+  benchmarkSubmissions, benchmarkAggregates, benchmarkComparisons
 } from "@shared/schema";
 
 export interface IStorage {
@@ -603,6 +607,21 @@ export interface IStorage {
   // RBAC - Permissions
   getAllPermissions(): Promise<Permission[]>;
   getPermission(permissionId: string): Promise<Permission | undefined>;
+  
+  // Peer Benchmarking (Industry Data Consortium)
+  createBenchmarkSubmission(submission: InsertBenchmarkSubmission): Promise<BenchmarkSubmission>;
+  getBenchmarkSubmissions(companyId: string): Promise<BenchmarkSubmission[]>;
+  getBenchmarkAggregates(filters: {
+    materialCategory?: string;
+    materialSubcategory?: string;
+    industry?: string;
+    companySize?: string;
+    snapshotMonth?: string;
+  }): Promise<BenchmarkAggregate[]>;
+  createBenchmarkAggregate(aggregate: InsertBenchmarkAggregate): Promise<BenchmarkAggregate>;
+  updateBenchmarkAggregate(id: string, aggregate: Partial<InsertBenchmarkAggregate>): Promise<BenchmarkAggregate | undefined>;
+  getBenchmarkComparisons(companyId: string): Promise<BenchmarkComparison[]>;
+  createBenchmarkComparison(comparison: InsertBenchmarkComparison): Promise<BenchmarkComparison>;
   
   // Utility
   getAllCompanyIds(): Promise<string[]>;
@@ -2660,6 +2679,79 @@ export class DbStorage implements IStorage {
       .where(eq(auditLogs.userId, userId))
       .orderBy(desc(auditLogs.timestamp))
       .limit(limit);
+  }
+
+  // Peer Benchmarking (Industry Data Consortium)
+  async createBenchmarkSubmission(submission: InsertBenchmarkSubmission): Promise<BenchmarkSubmission> {
+    const [result] = await db.insert(benchmarkSubmissions).values(submission).returning();
+    return result;
+  }
+
+  async getBenchmarkSubmissions(companyId: string): Promise<BenchmarkSubmission[]> {
+    return await db
+      .select()
+      .from(benchmarkSubmissions)
+      .where(eq(benchmarkSubmissions.companyId, companyId))
+      .orderBy(desc(benchmarkSubmissions.snapshotDate));
+  }
+
+  async getBenchmarkAggregates(filters: {
+    materialCategory?: string;
+    materialSubcategory?: string;
+    industry?: string;
+    companySize?: string;
+    snapshotMonth?: string;
+  }): Promise<BenchmarkAggregate[]> {
+    const conditions: any[] = [eq(benchmarkAggregates.isPublished, 1)];
+    
+    if (filters.materialCategory) {
+      conditions.push(eq(benchmarkAggregates.materialCategory, filters.materialCategory));
+    }
+    if (filters.materialSubcategory) {
+      conditions.push(eq(benchmarkAggregates.materialSubcategory, filters.materialSubcategory));
+    }
+    if (filters.industry) {
+      conditions.push(eq(benchmarkAggregates.industry, filters.industry));
+    }
+    if (filters.companySize) {
+      conditions.push(eq(benchmarkAggregates.companySize, filters.companySize));
+    }
+    if (filters.snapshotMonth) {
+      conditions.push(eq(benchmarkAggregates.snapshotMonth, filters.snapshotMonth));
+    }
+    
+    return await db
+      .select()
+      .from(benchmarkAggregates)
+      .where(and(...conditions))
+      .orderBy(desc(benchmarkAggregates.snapshotMonth));
+  }
+
+  async createBenchmarkAggregate(aggregate: InsertBenchmarkAggregate): Promise<BenchmarkAggregate> {
+    const [result] = await db.insert(benchmarkAggregates).values(aggregate).returning();
+    return result;
+  }
+
+  async updateBenchmarkAggregate(id: string, aggregateData: Partial<InsertBenchmarkAggregate>): Promise<BenchmarkAggregate | undefined> {
+    const [result] = await db
+      .update(benchmarkAggregates)
+      .set(aggregateData)
+      .where(eq(benchmarkAggregates.id, id))
+      .returning();
+    return result;
+  }
+
+  async getBenchmarkComparisons(companyId: string): Promise<BenchmarkComparison[]> {
+    return await db
+      .select()
+      .from(benchmarkComparisons)
+      .where(eq(benchmarkComparisons.companyId, companyId))
+      .orderBy(desc(benchmarkComparisons.comparisonDate));
+  }
+
+  async createBenchmarkComparison(comparison: InsertBenchmarkComparison): Promise<BenchmarkComparison> {
+    const [result] = await db.insert(benchmarkComparisons).values(comparison).returning();
+    return result;
   }
 
   async getAllCompanyIds(): Promise<string[]> {
