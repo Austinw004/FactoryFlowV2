@@ -620,6 +620,7 @@ export interface IStorage {
   }): Promise<BenchmarkAggregate[]>;
   createBenchmarkAggregate(aggregate: InsertBenchmarkAggregate): Promise<BenchmarkAggregate>;
   updateBenchmarkAggregate(id: string, aggregate: Partial<InsertBenchmarkAggregate>): Promise<BenchmarkAggregate | undefined>;
+  upsertBenchmarkAggregate(aggregate: InsertBenchmarkAggregate): Promise<BenchmarkAggregate>;
   getBenchmarkComparisons(companyId: string): Promise<BenchmarkComparison[]>;
   createBenchmarkComparison(comparison: InsertBenchmarkComparison): Promise<BenchmarkComparison>;
   
@@ -2737,6 +2738,43 @@ export class DbStorage implements IStorage {
       .update(benchmarkAggregates)
       .set(aggregateData)
       .where(eq(benchmarkAggregates.id, id))
+      .returning();
+    return result;
+  }
+
+  async upsertBenchmarkAggregate(aggregate: InsertBenchmarkAggregate): Promise<BenchmarkAggregate> {
+    // Upsert based on unique constraint: material + segmentation + snapshot month
+    const [result] = await db
+      .insert(benchmarkAggregates)
+      .values(aggregate)
+      .onConflictDoUpdate({
+        target: [
+          benchmarkAggregates.materialCategory,
+          benchmarkAggregates.materialSubcategory,
+          benchmarkAggregates.materialName,
+          benchmarkAggregates.unit,
+          benchmarkAggregates.industry,
+          benchmarkAggregates.companySize,
+          benchmarkAggregates.region,
+          benchmarkAggregates.snapshotMonth,
+        ],
+        set: {
+          participantCount: aggregate.participantCount,
+          averageCost: aggregate.averageCost,
+          medianCost: aggregate.medianCost,
+          minCost: aggregate.minCost,
+          maxCost: aggregate.maxCost,
+          standardDeviation: aggregate.standardDeviation,
+          p25Cost: aggregate.p25Cost,
+          p75Cost: aggregate.p75Cost,
+          p90Cost: aggregate.p90Cost,
+          volumeWeightedAvgCost: aggregate.volumeWeightedAvgCost,
+          totalVolume: aggregate.totalVolume,
+          dataQualityScore: aggregate.dataQualityScore,
+          isPublished: aggregate.isPublished,
+          updatedAt: new Date(),
+        },
+      })
       .returning();
     return result;
   }
