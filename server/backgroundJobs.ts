@@ -878,18 +878,18 @@ async function autoGenerateRfqsJob() {
     const activeCompanyIds = await getActiveCompanyIds();
     
     for (const companyId of activeCompanyIds) {
-      const results = await rfqGenerationService.autoGenerateRfqs(companyId, 'system');
+      const results = await rfqGenerationService.autoGenerateRfqs(companyId, null);
       const generated = results.filter(r => r.success).length;
       const successfulRfqs = results.filter(r => r.success);
       
       if (generated > 0) {
         console.log(`[RFQ Auto-Generation] Generated ${generated} RFQs for company ${companyId.substring(0, 8)}`);
         
-        // Log audit entry for SOC2-lite compliance
+        // Log audit entry for SOC2-lite compliance (use 'system' for audit tracking)
         await logAudit(
           storage,
           companyId,
-          'system',
+          'background-system',
           'rfq_auto_generate',
           `Background job auto-generated ${generated} RFQs from ${results.length} opportunities.`,
           { 

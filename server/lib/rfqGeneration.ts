@@ -248,7 +248,7 @@ export class RfqGenerationService {
   async generateRfqFromTrigger(
     companyId: string,
     trigger: RfqGenerationTrigger,
-    createdBy: string
+    createdBy: string | null
   ): Promise<RfqGenerationResult> {
     try {
       // Get material details
@@ -344,7 +344,7 @@ export class RfqGenerationService {
    * Auto-generate RFQs for all materials that need them
    * Returns list of generated RFQs
    */
-  async autoGenerateRfqs(companyId: string, createdBy: string): Promise<RfqGenerationResult[]> {
+  async autoGenerateRfqs(companyId: string, createdBy: string | null): Promise<RfqGenerationResult[]> {
     const triggers = await this.identifyRfqTriggers(companyId);
     
     // Only generate for high and urgent priority items in auto mode

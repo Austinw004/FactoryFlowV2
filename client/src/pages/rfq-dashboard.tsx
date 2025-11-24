@@ -74,7 +74,7 @@ export default function RfqDashboard() {
   // Auto-generate RFQs mutation
   const autoGenerateMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest("/api/rfqs/generate", "POST", {});
+      return await apiRequest("POST", "/api/rfqs/generate", {});
     },
     onSuccess: (data) => {
       toast({
@@ -96,7 +96,7 @@ export default function RfqDashboard() {
   // Approve RFQ mutation
   const approveMutation = useMutation({
     mutationFn: async (rfqId: string) => {
-      return await apiRequest(`/api/rfqs/${rfqId}/approve`, "POST", {});
+      return await apiRequest("POST", `/api/rfqs/${rfqId}/approve`, {});
     },
     onSuccess: () => {
       toast({
@@ -117,7 +117,7 @@ export default function RfqDashboard() {
   // Delete RFQ mutation
   const deleteMutation = useMutation({
     mutationFn: async (rfqId: string) => {
-      return await apiRequest(`/api/rfqs/${rfqId}`, "DELETE");
+      return await apiRequest("DELETE", `/api/rfqs/${rfqId}`);
     },
     onSuccess: () => {
       toast({
