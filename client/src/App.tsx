@@ -9,32 +9,13 @@ import { Header } from "@/components/Header";
 import NotFound from "@/pages/not-found";
 import LandingPage from "@/pages/LandingPage";
 import Dashboard from "@/pages/Dashboard";
-import Forecasting from "@/pages/Forecasting";
-import Allocation from "@/pages/Allocation";
-import Procurement from "@/pages/Procurement";
+import DemandHub from "@/pages/DemandHub";
+import ProcurementHub from "@/pages/ProcurementHub";
+import OperationsHub from "@/pages/OperationsHub";
+import SupplyChainHub from "@/pages/SupplyChainHub";
 import Reports from "@/pages/Reports";
 import Configuration from "@/pages/Configuration";
 import HowItWorks from "@/pages/HowItWorks";
-import Machinery from "@/pages/Machinery";
-import Compliance from "@/pages/Compliance";
-import ProductionKPIs from "@/pages/ProductionKPIs";
-import PredictiveMaintenance from "@/pages/PredictiveMaintenance";
-import InventoryOptimization from "@/pages/InventoryOptimization";
-import SupplyChainTraceability from "@/pages/SupplyChainTraceability";
-import WorkforceScheduling from "@/pages/WorkforceScheduling";
-import InventoryManagement from "@/pages/InventoryManagement";
-import SupplyChainNetwork from "@/pages/SupplyChainNetwork";
-import SupplyChain from "@/pages/SupplyChain";
-import AutomatedPO from "@/pages/AutomatedPO";
-import IndustryConsortium from "@/pages/IndustryConsortium";
-import MAIntelligence from "@/pages/MAIntelligence";
-import StrategicAnalysis from "@/pages/StrategicAnalysis";
-import SopWorkspace from "@/pages/SopWorkspace";
-import ForecastAccuracy from "@/pages/ForecastAccuracy";
-import MultiHorizonForecasts from "@/pages/MultiHorizonForecasts";
-import DemandSignalRepository from "@/pages/DemandSignalRepository";
-import RfqDashboard from "@/pages/rfq-dashboard";
-import PeerBenchmarking from "@/pages/peer-benchmarking";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
@@ -48,29 +29,10 @@ function Router() {
         <>
           <Route path="/" component={Dashboard} />
           <Route path="/dashboard" component={Dashboard} />
-          <Route path="/forecasting" component={Forecasting} />
-          <Route path="/allocation" component={Allocation} />
-          <Route path="/procurement" component={Procurement} />
-          <Route path="/machinery" component={Machinery} />
-          <Route path="/compliance" component={Compliance} />
-          <Route path="/production-kpis" component={ProductionKPIs} />
-          <Route path="/predictive-maintenance" component={PredictiveMaintenance} />
-          <Route path="/inventory-optimization" component={InventoryOptimization} />
-          <Route path="/supply-chain" component={SupplyChain} />
-          <Route path="/traceability" component={SupplyChainTraceability} />
-          <Route path="/supply-chain-network" component={SupplyChainNetwork} />
-          <Route path="/workforce" component={WorkforceScheduling} />
-          <Route path="/inventory" component={InventoryManagement} />
-          <Route path="/automated-po" component={AutomatedPO} />
-          <Route path="/rfq-generation" component={RfqDashboard} />
-          <Route path="/peer-benchmarking" component={PeerBenchmarking} />
-          <Route path="/industry-consortium" component={IndustryConsortium} />
-          <Route path="/ma-intelligence" component={MAIntelligence} />
-          <Route path="/strategic-analysis" component={StrategicAnalysis} />
-          <Route path="/sop-workspace" component={SopWorkspace} />
-          <Route path="/forecast-accuracy" component={ForecastAccuracy} />
-          <Route path="/multi-horizon-forecasts" component={MultiHorizonForecasts} />
-          <Route path="/demand-signal-repository" component={DemandSignalRepository} />
+          <Route path="/demand" component={DemandHub} />
+          <Route path="/procurement" component={ProcurementHub} />
+          <Route path="/operations" component={OperationsHub} />
+          <Route path="/supply-chain" component={SupplyChainHub} />
           <Route path="/reports" component={Reports} />
           <Route path="/configuration" component={Configuration} />
           <Route path="/how-it-works" component={HowItWorks} />
@@ -84,7 +46,7 @@ function Router() {
 function AppLayout() {
   const { isAuthenticated, isLoading } = useAuth();
   const style = {
-    "--sidebar-width": "16rem",
+    "--sidebar-width": "15rem",
   };
 
   if (isLoading || !isAuthenticated) {
