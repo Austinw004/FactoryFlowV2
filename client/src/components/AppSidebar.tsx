@@ -71,6 +71,12 @@ const menuSections = [
         testId: "sidebar-sop-workspace",
       },
       {
+        title: "Demand Signal Repository",
+        url: "/demand-signal-repository",
+        icon: Radio,
+        testId: "sidebar-demand-signal-repository",
+      },
+      {
         title: "Purchasing",
         url: "/procurement",
         icon: ShoppingCart,

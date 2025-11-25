@@ -32,6 +32,7 @@ import StrategicAnalysis from "@/pages/StrategicAnalysis";
 import SopWorkspace from "@/pages/SopWorkspace";
 import ForecastAccuracy from "@/pages/ForecastAccuracy";
 import MultiHorizonForecasts from "@/pages/MultiHorizonForecasts";
+import DemandSignalRepository from "@/pages/DemandSignalRepository";
 import RfqDashboard from "@/pages/rfq-dashboard";
 import PeerBenchmarking from "@/pages/peer-benchmarking";
 import { useAuth } from "@/hooks/useAuth";
@@ -69,6 +70,7 @@ function Router() {
           <Route path="/sop-workspace" component={SopWorkspace} />
           <Route path="/forecast-accuracy" component={ForecastAccuracy} />
           <Route path="/multi-horizon-forecasts" component={MultiHorizonForecasts} />
+          <Route path="/demand-signal-repository" component={DemandSignalRepository} />
           <Route path="/reports" component={Reports} />
           <Route path="/configuration" component={Configuration} />
           <Route path="/how-it-works" component={HowItWorks} />
