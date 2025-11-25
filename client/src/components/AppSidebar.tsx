@@ -41,16 +41,16 @@ const mainMenuItems = [
     testId: "sidebar-supply-chain",
   },
   {
-    title: "Procurement",
-    url: "/procurement",
-    icon: ShoppingCart,
-    testId: "sidebar-procurement",
-  },
-  {
     title: "Operations",
     url: "/operations",
     icon: Wrench,
     testId: "sidebar-operations",
+  },
+  {
+    title: "Procurement",
+    url: "/procurement",
+    icon: ShoppingCart,
+    testId: "sidebar-procurement",
   },
 ];
 
