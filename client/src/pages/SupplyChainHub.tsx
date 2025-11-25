@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Package, Network, BarChart3, Users, Building2, Target } from "lucide-react";
 import InventoryManagement from "./InventoryManagement";
@@ -17,8 +17,16 @@ const tabs = [
   { id: "strategic", label: "Strategy", icon: Target, component: StrategicAnalysis },
 ];
 
-export default function SupplyChainHub() {
-  const [activeTab, setActiveTab] = useState("inventory");
+interface SupplyChainHubProps {
+  initialTab?: string;
+}
+
+export default function SupplyChainHub({ initialTab = "inventory" }: SupplyChainHubProps) {
+  const [activeTab, setActiveTab] = useState(initialTab);
+  
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   return (
     <div className="h-full flex flex-col">

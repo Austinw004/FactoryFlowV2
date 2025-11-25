@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ShoppingCart, Zap, FileText } from "lucide-react";
 import Procurement from "./Procurement";
@@ -11,8 +11,16 @@ const tabs = [
   { id: "rfq", label: "RFQ Generation", icon: FileText, component: RfqDashboard },
 ];
 
-export default function ProcurementHub() {
-  const [activeTab, setActiveTab] = useState("purchasing");
+interface ProcurementHubProps {
+  initialTab?: string;
+}
+
+export default function ProcurementHub({ initialTab = "purchasing" }: ProcurementHubProps) {
+  const [activeTab, setActiveTab] = useState(initialTab);
+  
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   return (
     <div className="h-full flex flex-col">

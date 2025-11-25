@@ -18,26 +18,91 @@ import Configuration from "@/pages/Configuration";
 import HowItWorks from "@/pages/HowItWorks";
 import { useAuth } from "@/hooks/useAuth";
 
+const DemandPlanningRoute = () => <DemandHub initialTab="planning" />;
+const DemandAccuracyRoute = () => <DemandHub initialTab="accuracy" />;
+const DemandHorizonsRoute = () => <DemandHub initialTab="horizons" />;
+const DemandSignalsRoute = () => <DemandHub initialTab="signals" />;
+const DemandSopRoute = () => <DemandHub initialTab="sop" />;
+
+const ProcurementPurchasingRoute = () => <ProcurementHub initialTab="purchasing" />;
+const ProcurementAutoPoRoute = () => <ProcurementHub initialTab="automated-po" />;
+const ProcurementRfqRoute = () => <ProcurementHub initialTab="rfq" />;
+
+const OperationsMachineryRoute = () => <OperationsHub initialTab="machinery" />;
+const OperationsProductionRoute = () => <OperationsHub initialTab="production" />;
+const OperationsMaintenanceRoute = () => <OperationsHub initialTab="maintenance" />;
+const OperationsWorkforceRoute = () => <OperationsHub initialTab="workforce" />;
+const OperationsComplianceRoute = () => <OperationsHub initialTab="compliance" />;
+
+const SupplyChainInventoryRoute = () => <SupplyChainHub initialTab="inventory" />;
+const SupplyChainNetworkRoute = () => <SupplyChainHub initialTab="network" />;
+const SupplyChainConsortiumRoute = () => <SupplyChainHub initialTab="consortium" />;
+const SupplyChainBenchmarkingRoute = () => <SupplyChainHub initialTab="benchmarking" />;
+const SupplyChainMaRoute = () => <SupplyChainHub initialTab="ma" />;
+const SupplyChainStrategicRoute = () => <SupplyChainHub initialTab="strategic" />;
+
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <Switch>
+        <Route path="/" component={LandingPage} />
+        <Route component={LandingPage} />
+      </Switch>
+    );
+  }
+
   return (
     <Switch>
-      {isLoading || !isAuthenticated ? (
-        <Route path="/" component={LandingPage} />
-      ) : (
-        <>
-          <Route path="/" component={Dashboard} />
-          <Route path="/dashboard" component={Dashboard} />
-          <Route path="/demand" component={DemandHub} />
-          <Route path="/procurement" component={ProcurementHub} />
-          <Route path="/operations" component={OperationsHub} />
-          <Route path="/supply-chain" component={SupplyChainHub} />
-          <Route path="/reports" component={Reports} />
-          <Route path="/configuration" component={Configuration} />
-          <Route path="/how-it-works" component={HowItWorks} />
-        </>
-      )}
+      {/* Main routes */}
+      <Route path="/" component={Dashboard} />
+      <Route path="/dashboard" component={Dashboard} />
+      <Route path="/demand" component={DemandPlanningRoute} />
+      <Route path="/procurement" component={ProcurementPurchasingRoute} />
+      <Route path="/operations" component={OperationsMachineryRoute} />
+      <Route path="/supply-chain" component={SupplyChainInventoryRoute} />
+      <Route path="/reports" component={Reports} />
+      <Route path="/configuration" component={Configuration} />
+      <Route path="/how-it-works" component={HowItWorks} />
+
+      {/* Legacy routes - Demand & Forecasting */}
+      <Route path="/forecasting" component={DemandPlanningRoute} />
+      <Route path="/forecast-accuracy" component={DemandAccuracyRoute} />
+      <Route path="/multi-horizon-forecasts" component={DemandHorizonsRoute} />
+      <Route path="/demand-signal-repository" component={DemandSignalsRoute} />
+      <Route path="/sop-workspace" component={DemandSopRoute} />
+      <Route path="/allocation" component={DemandPlanningRoute} />
+
+      {/* Legacy routes - Procurement */}
+      <Route path="/automated-po" component={ProcurementAutoPoRoute} />
+      <Route path="/rfq-generation" component={ProcurementRfqRoute} />
+
+      {/* Legacy routes - Operations */}
+      <Route path="/machinery" component={OperationsMachineryRoute} />
+      <Route path="/production-kpis" component={OperationsProductionRoute} />
+      <Route path="/predictive-maintenance" component={OperationsMaintenanceRoute} />
+      <Route path="/workforce" component={OperationsWorkforceRoute} />
+      <Route path="/compliance" component={OperationsComplianceRoute} />
+
+      {/* Legacy routes - Supply Chain */}
+      <Route path="/inventory" component={SupplyChainInventoryRoute} />
+      <Route path="/inventory-optimization" component={SupplyChainInventoryRoute} />
+      <Route path="/traceability" component={SupplyChainNetworkRoute} />
+      <Route path="/supply-chain-network" component={SupplyChainNetworkRoute} />
+      <Route path="/industry-consortium" component={SupplyChainConsortiumRoute} />
+      <Route path="/peer-benchmarking" component={SupplyChainBenchmarkingRoute} />
+      <Route path="/ma-intelligence" component={SupplyChainMaRoute} />
+      <Route path="/strategic-analysis" component={SupplyChainStrategicRoute} />
+
       <Route component={NotFound} />
     </Switch>
   );

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TrendingUp, Target, BarChart3, Radio, Clipboard } from "lucide-react";
 import Forecasting from "./Forecasting";
@@ -15,8 +15,16 @@ const tabs = [
   { id: "sop", label: "S&OP", icon: Clipboard, component: SopWorkspace },
 ];
 
-export default function DemandHub() {
-  const [activeTab, setActiveTab] = useState("planning");
+interface DemandHubProps {
+  initialTab?: string;
+}
+
+export default function DemandHub({ initialTab = "planning" }: DemandHubProps) {
+  const [activeTab, setActiveTab] = useState(initialTab);
+  
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   return (
     <div className="h-full flex flex-col">

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Wrench, Activity, Radio, Users, Shield } from "lucide-react";
 import Machinery from "./Machinery";
@@ -15,8 +15,16 @@ const tabs = [
   { id: "compliance", label: "Compliance", icon: Shield, component: Compliance },
 ];
 
-export default function OperationsHub() {
-  const [activeTab, setActiveTab] = useState("machinery");
+interface OperationsHubProps {
+  initialTab?: string;
+}
+
+export default function OperationsHub({ initialTab = "machinery" }: OperationsHubProps) {
+  const [activeTab, setActiveTab] = useState(initialTab);
+  
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   return (
     <div className="h-full flex flex-col">
