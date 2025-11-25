@@ -35,6 +35,12 @@ const mainMenuItems = [
     testId: "sidebar-demand",
   },
   {
+    title: "Supply Chain",
+    url: "/supply-chain",
+    icon: Network,
+    testId: "sidebar-supply-chain",
+  },
+  {
     title: "Procurement",
     url: "/procurement",
     icon: ShoppingCart,
@@ -45,12 +51,6 @@ const mainMenuItems = [
     url: "/operations",
     icon: Wrench,
     testId: "sidebar-operations",
-  },
-  {
-    title: "Supply Chain",
-    url: "/supply-chain",
-    icon: Network,
-    testId: "sidebar-supply-chain",
   },
 ];
 
