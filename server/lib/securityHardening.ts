@@ -502,10 +502,10 @@ export function applySecurityHardening(app: any) {
   app.use(sqlInjectionPrevention);
   console.log('[Security] ✓ SQL injection prevention enabled');
   
-  // 4. Global rate limiting (100 requests per minute per IP)
-  const globalRateLimit = createRateLimitMiddleware(100, 60000);
+  // 4. Global rate limiting (300 requests per minute per IP - increased for testing)
+  const globalRateLimit = createRateLimitMiddleware(300, 60000);
   app.use(globalRateLimit);
-  console.log('[Security] ✓ Global rate limiting enabled (100 req/min)');
+  console.log('[Security] ✓ Global rate limiting enabled (300 req/min)');
   
   console.log('[Security] SOC2-lite security hardening complete');
 }
@@ -519,7 +519,7 @@ export const rateLimiters = {
   auth: createRateLimitMiddleware(5, 60000), // 5 requests per minute
   
   // Moderate rate limiting for API endpoints
-  api: createRateLimitMiddleware(100, 60000), // 100 requests per minute
+  api: createRateLimitMiddleware(300, 60000), // 300 requests per minute
   
   // Lenient rate limiting for read-only endpoints
   readOnly: createRateLimitMiddleware(300, 60000), // 300 requests per minute

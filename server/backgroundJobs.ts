@@ -888,13 +888,12 @@ async function autoGenerateRfqsJob() {
         console.log(`[RFQ Auto-Generation] Generated ${generated} RFQs for company ${companyId.substring(0, 8)}`);
         
         // Log audit entry for SOC2-lite compliance (use 'system' for audit tracking)
-        await logAudit(
-          storage,
-          companyId,
-          'background-system',
-          'rfq_auto_generate',
-          `Background job auto-generated ${generated} RFQs from ${results.length} opportunities.`,
-          { 
+        await logAudit({
+          action: "create",
+          entityType: "rfq_auto_generate",
+          entityId: companyId,
+          notes: `Background job auto-generated ${generated} RFQs from ${results.length} opportunities.`,
+          changes: { 
             generated, 
             total: results.length,
             rfqIds: successfulRfqs.map(r => r.rfqId),
@@ -905,8 +904,10 @@ async function autoGenerateRfqsJob() {
               priority: r.trigger.priority,
               reason: r.trigger.reason
             }))
-          }
-        );
+          },
+          companyId,
+          systemContext: true,
+        });
         
         broadcastUpdate({
           type: 'database_update',

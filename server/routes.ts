@@ -6645,7 +6645,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User not associated with a company" });
       }
       const { insertDemandSignalSchema } = await import("@shared/schema");
-      const signalData = insertDemandSignalSchema.parse({ ...req.body, companyId: user.companyId });
+      const body = { 
+        ...req.body, 
+        companyId: user.companyId,
+        signalDate: req.body.signalDate ? new Date(req.body.signalDate) : new Date(),
+      };
+      const signalData = insertDemandSignalSchema.parse(body);
       const signal = await storage.createDemandSignal(signalData);
       
       await logAudit({
@@ -6681,7 +6686,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       for (let i = 0; i < signals.length; i++) {
         try {
-          const signalData = insertDemandSignalSchema.parse({ ...signals[i], companyId: user.companyId });
+          const signalBody = {
+            ...signals[i],
+            companyId: user.companyId,
+            signalDate: signals[i].signalDate ? new Date(signals[i].signalDate) : new Date(),
+          };
+          const signalData = insertDemandSignalSchema.parse(signalBody);
           const signal = await storage.createDemandSignal(signalData);
           createdSignals.push(signal);
         } catch (e: any) {

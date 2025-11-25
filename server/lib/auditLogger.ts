@@ -19,24 +19,39 @@ export async function logAudit(params: {
   entityId?: string;
   changes?: any;
   notes?: string;
-  req: Request;
+  req?: Request;
+  companyId?: string;
+  systemContext?: boolean;
 }) {
   try {
-    const { action, entityType, entityId, changes, notes, req } = params;
+    const { action, entityType, entityId, changes, notes, req, companyId: directCompanyId, systemContext } = params;
     
-    // Extract user context from request
-    const user = (req as any).rbacUser || (req as any).user;
-    if (!user) {
-      console.warn("[Audit] No user context available for audit log");
+    let context: AuditContext;
+    
+    if (systemContext && directCompanyId) {
+      context = {
+        userId: "system",
+        companyId: directCompanyId,
+        ipAddress: "127.0.0.1",
+        userAgent: "background-job",
+      };
+    } else if (req) {
+      const user = (req as any).rbacUser || (req as any).user;
+      if (!user) {
+        console.warn("[Audit] No user context available for audit log");
+        return;
+      }
+
+      context = {
+        userId: user.id || user.claims?.sub,
+        companyId: user.companyId,
+        ipAddress: req.ip || req.headers["x-forwarded-for"] as string,
+        userAgent: req.headers["user-agent"],
+      };
+    } else {
+      console.warn("[Audit] No request or system context provided for audit log");
       return;
     }
-
-    const context: AuditContext = {
-      userId: user.id || user.claims?.sub,
-      companyId: user.companyId,
-      ipAddress: req.ip || req.headers["x-forwarded-for"] as string,
-      userAgent: req.headers["user-agent"],
-    };
 
     if (!context.companyId) {
       console.warn("[Audit] No company context available for audit log");
@@ -49,15 +64,13 @@ export async function logAudit(params: {
       action,
       entityType,
       entityId,
-      changes: changes ? JSON.stringify(changes) : null,
+      changes: changes || notes ? JSON.stringify({ ...changes, notes }) : null,
       ipAddress: context.ipAddress,
       userAgent: context.userAgent,
-      notes,
     });
     
-    console.log(`[Audit] ${action.toUpperCase()} ${entityType}${entityId ? ` (${entityId})` : ""} by user ${context.userId}`);
+    console.log(`[Audit] ${action.toUpperCase()} ${entityType}${entityId ? ` (${entityId})` : ""} by ${context.userId}`);
   } catch (error) {
-    // Never fail the request due to audit logging error
     console.error("[Audit] Failed to create audit log:", error);
   }
 }

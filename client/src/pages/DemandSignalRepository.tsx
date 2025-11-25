@@ -244,13 +244,17 @@ export default function DemandSignalRepository() {
       toast({ title: "Validation error", description: "Signal type is required.", variant: "destructive" });
       return;
     }
+    if (!newSignal.quantity || isNaN(parseFloat(newSignal.quantity))) {
+      toast({ title: "Validation error", description: "Quantity is required and must be a number.", variant: "destructive" });
+      return;
+    }
     createSignalMutation.mutate({
       ...newSignal,
-      quantity: newSignal.quantity ? parseFloat(newSignal.quantity) : null,
+      quantity: parseFloat(newSignal.quantity),
       confidence: newSignal.confidence ? parseFloat(newSignal.confidence) : null,
-      signalDate: new Date(),
-      sourceId: newSignal.sourceId || null,
-      skuId: newSignal.skuId || null,
+      signalDate: new Date().toISOString(),
+      sourceId: newSignal.sourceId && newSignal.sourceId !== "none" ? newSignal.sourceId : null,
+      skuId: newSignal.skuId && newSignal.skuId !== "none" ? newSignal.skuId : null,
     });
   };
 
@@ -421,7 +425,7 @@ export default function DemandSignalRepository() {
                       <SelectValue placeholder="Select source..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No specific source</SelectItem>
+                      <SelectItem value="none">No specific source</SelectItem>
                       {sources?.map((source) => (
                         <SelectItem key={source.id} value={source.id}>
                           {source.name}
@@ -440,7 +444,7 @@ export default function DemandSignalRepository() {
                       <SelectValue placeholder="Select SKU..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No specific SKU</SelectItem>
+                      <SelectItem value="none">No specific SKU</SelectItem>
                       {skus?.map((sku) => (
                         <SelectItem key={sku.id} value={sku.id}>
                           {sku.name}
