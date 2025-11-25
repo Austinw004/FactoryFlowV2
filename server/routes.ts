@@ -6493,6 +6493,408 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Demand Signal Repository - Sources
+  app.get("/api/demand-signals/sources", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      const sources = await storage.getDemandSignalSources(user.companyId);
+      res.json(sources);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/demand-signals/sources/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      const source = await storage.getDemandSignalSource(req.params.id);
+      if (!source) return res.status(404).json({ error: "Demand signal source not found" });
+      if (source.companyId !== user.companyId) return res.status(403).json({ error: "Forbidden" });
+      res.json(source);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/demand-signals/sources", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      const { insertDemandSignalSourceSchema } = await import("@shared/schema");
+      const sourceData = insertDemandSignalSourceSchema.parse({ ...req.body, companyId: user.companyId });
+      const source = await storage.createDemandSignalSource(sourceData);
+      
+      await auditLogger.log({
+        companyId: user.companyId,
+        userId,
+        action: "create",
+        entityType: "demand_signal_source",
+        entityId: source.id,
+        changes: { name: source.name, sourceType: source.sourceType },
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent") || "unknown",
+      });
+      
+      res.status(201).json(source);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/demand-signals/sources/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      const existing = await storage.getDemandSignalSource(req.params.id);
+      if (!existing) return res.status(404).json({ error: "Demand signal source not found" });
+      if (existing.companyId !== user.companyId) return res.status(403).json({ error: "Forbidden" });
+      
+      const updated = await storage.updateDemandSignalSource(req.params.id, req.body);
+      
+      await auditLogger.log({
+        companyId: user.companyId,
+        userId,
+        action: "update",
+        entityType: "demand_signal_source",
+        entityId: req.params.id,
+        changes: req.body,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent") || "unknown",
+      });
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/demand-signals/sources/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      const existing = await storage.getDemandSignalSource(req.params.id);
+      if (!existing) return res.status(404).json({ error: "Demand signal source not found" });
+      if (existing.companyId !== user.companyId) return res.status(403).json({ error: "Forbidden" });
+      
+      await storage.deleteDemandSignalSource(req.params.id);
+      
+      await auditLogger.log({
+        companyId: user.companyId,
+        userId,
+        action: "delete",
+        entityType: "demand_signal_source",
+        entityId: req.params.id,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent") || "unknown",
+      });
+      
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Demand Signal Repository - Signals
+  app.get("/api/demand-signals", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const filters: any = {};
+      if (req.query.sourceId) filters.sourceId = req.query.sourceId;
+      if (req.query.skuId) filters.skuId = req.query.skuId;
+      if (req.query.materialId) filters.materialId = req.query.materialId;
+      if (req.query.signalType) filters.signalType = req.query.signalType;
+      if (req.query.startDate) filters.startDate = new Date(req.query.startDate);
+      if (req.query.endDate) filters.endDate = new Date(req.query.endDate);
+      if (req.query.limit) filters.limit = parseInt(req.query.limit);
+      
+      const signals = await storage.getDemandSignals(user.companyId, filters);
+      res.json(signals);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/demand-signals/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      const signal = await storage.getDemandSignal(req.params.id);
+      if (!signal) return res.status(404).json({ error: "Demand signal not found" });
+      if (signal.companyId !== user.companyId) return res.status(403).json({ error: "Forbidden" });
+      res.json(signal);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/demand-signals", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      const { insertDemandSignalSchema } = await import("@shared/schema");
+      const signalData = insertDemandSignalSchema.parse({ ...req.body, companyId: user.companyId });
+      const signal = await storage.createDemandSignal(signalData);
+      
+      await auditLogger.log({
+        companyId: user.companyId,
+        userId,
+        action: "create",
+        entityType: "demand_signal",
+        entityId: signal.id,
+        changes: { signalType: signal.signalType, quantity: signal.quantity },
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent") || "unknown",
+      });
+      
+      res.status(201).json(signal);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/demand-signals/batch", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const { signals } = req.body;
+      if (!Array.isArray(signals)) {
+        return res.status(400).json({ error: "signals must be an array" });
+      }
+      
+      const { insertDemandSignalSchema } = await import("@shared/schema");
+      const createdSignals = [];
+      const errors = [];
+      
+      for (let i = 0; i < signals.length; i++) {
+        try {
+          const signalData = insertDemandSignalSchema.parse({ ...signals[i], companyId: user.companyId });
+          const signal = await storage.createDemandSignal(signalData);
+          createdSignals.push(signal);
+        } catch (e: any) {
+          errors.push({ index: i, error: e.message });
+        }
+      }
+      
+      if (createdSignals.length > 0) {
+        await auditLogger.log({
+          companyId: user.companyId,
+          userId,
+          action: "batch_create",
+          entityType: "demand_signal",
+          entityId: user.companyId,
+          changes: { count: createdSignals.length, errors: errors.length },
+          ipAddress: req.ip,
+          userAgent: req.get("user-agent") || "unknown",
+        });
+      }
+      
+      res.status(201).json({ created: createdSignals, errors });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/demand-signals/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      const existing = await storage.getDemandSignal(req.params.id);
+      if (!existing) return res.status(404).json({ error: "Demand signal not found" });
+      if (existing.companyId !== user.companyId) return res.status(403).json({ error: "Forbidden" });
+      
+      const updated = await storage.updateDemandSignal(req.params.id, req.body);
+      
+      await auditLogger.log({
+        companyId: user.companyId,
+        userId,
+        action: "update",
+        entityType: "demand_signal",
+        entityId: req.params.id,
+        changes: req.body,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent") || "unknown",
+      });
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/demand-signals/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      const existing = await storage.getDemandSignal(req.params.id);
+      if (!existing) return res.status(404).json({ error: "Demand signal not found" });
+      if (existing.companyId !== user.companyId) return res.status(403).json({ error: "Forbidden" });
+      
+      await storage.deleteDemandSignal(req.params.id);
+      
+      await auditLogger.log({
+        companyId: user.companyId,
+        userId,
+        action: "delete",
+        entityType: "demand_signal",
+        entityId: req.params.id,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent") || "unknown",
+      });
+      
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/demand-signals/process", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const { signalIds } = req.body;
+      if (!Array.isArray(signalIds)) {
+        return res.status(400).json({ error: "signalIds must be an array" });
+      }
+      
+      await storage.markDemandSignalsProcessed(signalIds);
+      
+      await auditLogger.log({
+        companyId: user.companyId,
+        userId,
+        action: "process",
+        entityType: "demand_signal",
+        entityId: user.companyId,
+        changes: { processedCount: signalIds.length },
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent") || "unknown",
+      });
+      
+      res.json({ processed: signalIds.length });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Demand Signal Repository - Aggregates
+  app.get("/api/demand-signals/aggregates", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const filters: any = {};
+      if (req.query.skuId) filters.skuId = req.query.skuId;
+      if (req.query.materialId) filters.materialId = req.query.materialId;
+      if (req.query.aggregationPeriod) filters.aggregationPeriod = req.query.aggregationPeriod;
+      if (req.query.startDate) filters.startDate = new Date(req.query.startDate);
+      if (req.query.endDate) filters.endDate = new Date(req.query.endDate);
+      
+      const aggregates = await storage.getDemandSignalAggregates(user.companyId, filters);
+      res.json(aggregates);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Demand Signal Repository - Analytics Summary
+  app.get("/api/demand-signals/analytics", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const sources = await storage.getDemandSignalSources(user.companyId);
+      const signals = await storage.getDemandSignals(user.companyId, { limit: 1000 });
+      
+      const totalSources = sources.length;
+      const activeSources = sources.filter(s => s.isActive).length;
+      const totalSignals = signals.length;
+      const unprocessedSignals = signals.filter(s => !s.isProcessed).length;
+      
+      const signalsByType: Record<string, number> = {};
+      const signalsBySource: Record<string, number> = {};
+      let totalQuantity = 0;
+      let totalConfidence = 0;
+      
+      for (const signal of signals) {
+        signalsByType[signal.signalType] = (signalsByType[signal.signalType] || 0) + 1;
+        if (signal.sourceId) {
+          signalsBySource[signal.sourceId] = (signalsBySource[signal.sourceId] || 0) + 1;
+        }
+        totalQuantity += signal.quantity || 0;
+        totalConfidence += signal.confidenceScore || 0;
+      }
+      
+      res.json({
+        summary: {
+          totalSources,
+          activeSources,
+          totalSignals,
+          unprocessedSignals,
+          avgConfidence: signals.length > 0 ? totalConfidence / signals.length : 0,
+          totalQuantity,
+        },
+        bySignalType: signalsByType,
+        bySource: signalsBySource,
+        sources: sources.map(s => ({
+          id: s.id,
+          name: s.name,
+          sourceType: s.sourceType,
+          isActive: s.isActive,
+          signalCount: signalsBySource[s.id] || 0,
+        })),
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   
   setupWebSocket(httpServer);
