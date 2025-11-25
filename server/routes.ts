@@ -6281,15 +6281,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const submission = await storage.createBenchmarkSubmission(validatedData);
 
-      await auditLogger.log({
-        companyId: user.companyId,
-        userId,
+      await logAudit({
         action: "create",
         entityType: "benchmark_submission",
         entityId: submission.id,
         changes: submission,
-        ipAddress: req.ip,
-        userAgent: req.get("user-agent") || "unknown",
+        req,
       });
 
       res.json(submission);
@@ -6424,15 +6421,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      await auditLogger.log({
-        companyId: user.companyId,
-        userId,
-        action: "generate",
+      await logAudit({
+        action: "create",
         entityType: "benchmark_comparison",
         entityId: user.companyId,
         changes: { comparisonsGenerated: comparisons.length },
-        ipAddress: req.ip,
-        userAgent: req.get("user-agent") || "unknown",
+        req,
       });
 
       res.json({
@@ -6535,15 +6529,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sourceData = insertDemandSignalSourceSchema.parse({ ...req.body, companyId: user.companyId });
       const source = await storage.createDemandSignalSource(sourceData);
       
-      await auditLogger.log({
-        companyId: user.companyId,
-        userId,
+      await logAudit({
         action: "create",
         entityType: "demand_signal_source",
         entityId: source.id,
         changes: { name: source.name, sourceType: source.sourceType },
-        ipAddress: req.ip,
-        userAgent: req.get("user-agent") || "unknown",
+        req,
       });
       
       res.status(201).json(source);
@@ -6565,15 +6556,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const updated = await storage.updateDemandSignalSource(req.params.id, req.body);
       
-      await auditLogger.log({
-        companyId: user.companyId,
-        userId,
+      await logAudit({
         action: "update",
         entityType: "demand_signal_source",
         entityId: req.params.id,
         changes: req.body,
-        ipAddress: req.ip,
-        userAgent: req.get("user-agent") || "unknown",
+        req,
       });
       
       res.json(updated);
@@ -6595,14 +6583,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       await storage.deleteDemandSignalSource(req.params.id);
       
-      await auditLogger.log({
-        companyId: user.companyId,
-        userId,
+      await logAudit({
         action: "delete",
         entityType: "demand_signal_source",
         entityId: req.params.id,
-        ipAddress: req.ip,
-        userAgent: req.get("user-agent") || "unknown",
+        req,
       });
       
       res.status(204).send();
@@ -6663,15 +6648,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const signalData = insertDemandSignalSchema.parse({ ...req.body, companyId: user.companyId });
       const signal = await storage.createDemandSignal(signalData);
       
-      await auditLogger.log({
-        companyId: user.companyId,
-        userId,
+      await logAudit({
         action: "create",
         entityType: "demand_signal",
         entityId: signal.id,
         changes: { signalType: signal.signalType, quantity: signal.quantity },
-        ipAddress: req.ip,
-        userAgent: req.get("user-agent") || "unknown",
+        req,
       });
       
       res.status(201).json(signal);
@@ -6708,15 +6690,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       if (createdSignals.length > 0) {
-        await auditLogger.log({
-          companyId: user.companyId,
-          userId,
-          action: "batch_create",
+        await logAudit({
+          action: "create",
           entityType: "demand_signal",
           entityId: user.companyId,
-          changes: { count: createdSignals.length, errors: errors.length },
-          ipAddress: req.ip,
-          userAgent: req.get("user-agent") || "unknown",
+          changes: { count: createdSignals.length, errors: errors.length, batch: true },
+          req,
         });
       }
       
@@ -6739,15 +6718,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const updated = await storage.updateDemandSignal(req.params.id, req.body);
       
-      await auditLogger.log({
-        companyId: user.companyId,
-        userId,
+      await logAudit({
         action: "update",
         entityType: "demand_signal",
         entityId: req.params.id,
         changes: req.body,
-        ipAddress: req.ip,
-        userAgent: req.get("user-agent") || "unknown",
+        req,
       });
       
       res.json(updated);
@@ -6769,14 +6745,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       await storage.deleteDemandSignal(req.params.id);
       
-      await auditLogger.log({
-        companyId: user.companyId,
-        userId,
+      await logAudit({
         action: "delete",
         entityType: "demand_signal",
         entityId: req.params.id,
-        ipAddress: req.ip,
-        userAgent: req.get("user-agent") || "unknown",
+        req,
       });
       
       res.status(204).send();
@@ -6800,15 +6773,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       await storage.markDemandSignalsProcessed(signalIds);
       
-      await auditLogger.log({
-        companyId: user.companyId,
-        userId,
-        action: "process",
+      await logAudit({
+        action: "update",
         entityType: "demand_signal",
         entityId: user.companyId,
         changes: { processedCount: signalIds.length },
-        ipAddress: req.ip,
-        userAgent: req.get("user-agent") || "unknown",
+        notes: "Marked signals as processed",
+        req,
       });
       
       res.json({ processed: signalIds.length });
@@ -6868,7 +6839,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           signalsBySource[signal.sourceId] = (signalsBySource[signal.sourceId] || 0) + 1;
         }
         totalQuantity += signal.quantity || 0;
-        totalConfidence += signal.confidenceScore || 0;
+        totalConfidence += signal.confidence || 0;
       }
       
       res.json({

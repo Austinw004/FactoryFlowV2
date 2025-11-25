@@ -59,7 +59,7 @@ interface DemandSignal {
   quantity: number | null;
   unit: string | null;
   signalDate: Date;
-  confidenceScore: number | null;
+  confidence: number | null;
   metadata: any;
   channel: string | null;
   region: string | null;
@@ -146,7 +146,7 @@ export default function DemandSignalRepository() {
     signalType: "order",
     skuId: "",
     quantity: "",
-    confidenceScore: "85",
+    confidence: "85",
     channel: "",
     region: "",
     sourceId: "",
@@ -208,7 +208,7 @@ export default function DemandSignalRepository() {
       queryClient.invalidateQueries({ queryKey: ["/api/demand-signals"] });
       queryClient.invalidateQueries({ queryKey: ["/api/demand-signals/analytics"] });
       setShowAddSignalDialog(false);
-      setNewSignal({ signalType: "order", skuId: "", quantity: "", confidenceScore: "85", channel: "", region: "", sourceId: "" });
+      setNewSignal({ signalType: "order", skuId: "", quantity: "", confidence: "85", channel: "", region: "", sourceId: "" });
       toast({ title: "Signal created", description: "Demand signal recorded successfully." });
     },
     onError: (error: any) => {
@@ -247,7 +247,7 @@ export default function DemandSignalRepository() {
     createSignalMutation.mutate({
       ...newSignal,
       quantity: newSignal.quantity ? parseFloat(newSignal.quantity) : null,
-      confidenceScore: newSignal.confidenceScore ? parseFloat(newSignal.confidenceScore) : null,
+      confidence: newSignal.confidence ? parseFloat(newSignal.confidence) : null,
       signalDate: new Date(),
       sourceId: newSignal.sourceId || null,
       skuId: newSignal.skuId || null,
@@ -469,8 +469,8 @@ export default function DemandSignalRepository() {
                       min="0"
                       max="100"
                       data-testid="input-signal-confidence"
-                      value={newSignal.confidenceScore}
-                      onChange={(e) => setNewSignal({ ...newSignal, confidenceScore: e.target.value })}
+                      value={newSignal.confidence}
+                      onChange={(e) => setNewSignal({ ...newSignal, confidence: e.target.value })}
                     />
                   </div>
                 </div>
@@ -838,11 +838,11 @@ export default function DemandSignalRepository() {
                             {signal.quantity?.toLocaleString() || "-"}
                           </TableCell>
                           <TableCell className="text-right">
-                            {signal.confidenceScore !== null ? (
+                            {signal.confidence !== null ? (
                               <Badge 
-                                variant={signal.confidenceScore >= 80 ? "default" : signal.confidenceScore >= 60 ? "secondary" : "outline"}
+                                variant={signal.confidence >= 80 ? "default" : signal.confidence >= 60 ? "secondary" : "outline"}
                               >
-                                {signal.confidenceScore}%
+                                {signal.confidence}%
                               </Badge>
                             ) : "-"}
                           </TableCell>
