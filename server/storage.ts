@@ -2210,14 +2210,16 @@ export class DbStorage implements IStorage {
   }
 
   // Automated PO Execution - Workflow Steps
-  async getPoWorkflowSteps(companyId: string): Promise<PoWorkflowStep[]> {
-    return await db.select().from(poWorkflowSteps).where(eq(poWorkflowSteps.companyId, companyId));
+  async getPoWorkflowSteps(purchaseOrderId: string): Promise<PoWorkflowStep[]> {
+    return await db.select().from(poWorkflowSteps)
+      .where(eq(poWorkflowSteps.purchaseOrderId, purchaseOrderId))
+      .orderBy(sql`${poWorkflowSteps.stepNumber} ASC`);
   }
 
   async getPoWorkflowStepsByPO(purchaseOrderId: string): Promise<PoWorkflowStep[]> {
     return await db.select().from(poWorkflowSteps)
       .where(eq(poWorkflowSteps.purchaseOrderId, purchaseOrderId))
-      .orderBy(sql`${poWorkflowSteps.stepOrder} ASC`);
+      .orderBy(sql`${poWorkflowSteps.stepNumber} ASC`);
   }
 
   async createPoWorkflowStep(insertStep: InsertPoWorkflowStep): Promise<PoWorkflowStep> {
@@ -3222,13 +3224,10 @@ export class DbStorage implements IStorage {
     if (filters?.metricType) {
       conditions.push(eq(roiMetrics.metricType, filters.metricType));
     }
-    if (filters?.category) {
-      conditions.push(eq(roiMetrics.category, filters.category));
-    }
     
     const query = db.select().from(roiMetrics)
       .where(and(...conditions))
-      .orderBy(desc(roiMetrics.recordedAt));
+      .orderBy(desc(roiMetrics.periodStart));
     
     if (filters?.limit) {
       return query.limit(filters.limit);

@@ -6876,6 +6876,637 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================================================
+  // ROI DASHBOARD
+  // ============================================================================
+
+  // Get ROI metrics with filters
+  app.get("/api/roi/metrics", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const filters: any = {};
+      if (req.query.metricType) filters.metricType = req.query.metricType;
+      if (req.query.category) filters.category = req.query.category;
+      if (req.query.startDate) filters.startDate = new Date(req.query.startDate);
+      if (req.query.endDate) filters.endDate = new Date(req.query.endDate);
+      if (req.query.limit) filters.limit = parseInt(req.query.limit);
+      
+      const metrics = await storage.getRoiMetrics(user.companyId, filters);
+      res.json(metrics);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create ROI metric
+  app.post("/api/roi/metrics", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const metric = await storage.createRoiMetric({
+        ...req.body,
+        companyId: user.companyId,
+      });
+      
+      await logAudit({
+        action: "create",
+        entityType: "roi_metric",
+        entityId: metric.id,
+        changes: req.body,
+        notes: `Created ROI metric: ${req.body.metricType}`,
+        req,
+      });
+      
+      res.status(201).json(metric);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get ROI summary
+  app.get("/api/roi/summary", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const periodType = req.query.periodType as string || "all_time";
+      const summary = await storage.getRoiSummary(user.companyId, periodType);
+      
+      // If no summary exists, calculate from metrics
+      if (!summary) {
+        const metrics = await storage.getRoiMetrics(user.companyId);
+        
+        let totalProcurementSavings = 0;
+        let totalForecastAccuracyImprovement = 0;
+        let totalTimeAutomated = 0;
+        let procurementCount = 0;
+        let forecastCount = 0;
+        
+        for (const metric of metrics) {
+          if (metric.metricType === "procurement_savings") {
+            totalProcurementSavings += metric.value || 0;
+            procurementCount++;
+          } else if (metric.metricType === "forecast_accuracy") {
+            totalForecastAccuracyImprovement += metric.value || 0;
+            forecastCount++;
+          } else if (metric.metricType === "time_saved") {
+            totalTimeAutomated += metric.value || 0;
+          }
+        }
+        
+        return res.json({
+          companyId: user.companyId,
+          periodType,
+          totalProcurementSavings,
+          totalForecastAccuracyImprovement: forecastCount > 0 ? totalForecastAccuracyImprovement / forecastCount : 0,
+          totalTimeAutomated,
+          avgMapeImprovement: forecastCount > 0 ? totalForecastAccuracyImprovement / forecastCount : 0,
+          calculatedAt: new Date(),
+        });
+      }
+      
+      res.json(summary);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get ROI dashboard overview (combined data)
+  app.get("/api/roi/dashboard", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const [allMetrics, recentMetrics] = await Promise.all([
+        storage.getRoiMetrics(user.companyId),
+        storage.getRoiMetrics(user.companyId, { limit: 100 }),
+      ]);
+      
+      // Calculate totals by type
+      const byType: Record<string, { total: number; count: number; recent: number[] }> = {};
+      const bySource: Record<string, number> = {};
+      
+      for (const metric of allMetrics) {
+        if (!byType[metric.metricType]) {
+          byType[metric.metricType] = { total: 0, count: 0, recent: [] };
+        }
+        byType[metric.metricType].total += metric.value || 0;
+        byType[metric.metricType].count++;
+        
+        const source = metric.source || "uncategorized";
+        bySource[source] = (bySource[source] || 0) + (metric.value || 0);
+      }
+      
+      // Add recent values for trending
+      for (const metric of recentMetrics.slice(0, 10)) {
+        if (byType[metric.metricType]) {
+          byType[metric.metricType].recent.push(metric.value || 0);
+        }
+      }
+      
+      res.json({
+        totals: {
+          procurementSavings: byType["procurement_savings"]?.total || 0,
+          forecastAccuracyImprovement: byType["forecast_accuracy"]?.count > 0 
+            ? byType["forecast_accuracy"].total / byType["forecast_accuracy"].count 
+            : 0,
+          timeSaved: byType["time_saved"]?.total || 0,
+          inventoryOptimization: byType["inventory_optimization"]?.total || 0,
+        },
+        byMetricType: byType,
+        bySource,
+        recentMetrics: recentMetrics.slice(0, 20),
+        metricsCount: allMetrics.length,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============================================================================
+  // ERP INTEGRATION TEMPLATES
+  // ============================================================================
+
+  // Get all ERP integration templates
+  app.get("/api/erp/templates", isAuthenticated, rateLimiters.api, async (_req: any, res) => {
+    try {
+      const templates = await storage.getErpIntegrationTemplates();
+      res.json(templates);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get single ERP template
+  app.get("/api/erp/templates/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const template = await storage.getErpIntegrationTemplate(req.params.id);
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      res.json(template);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Seed default ERP templates (admin only, or initial setup)
+  app.post("/api/erp/templates/seed", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const defaultTemplates = [
+        {
+          erpName: "sap",
+          displayName: "SAP S/4HANA",
+          description: "Enterprise-grade ERP integration with SAP S/4HANA for procurement, inventory, and production planning.",
+          logoUrl: "/erp-logos/sap.svg",
+          supportedModules: ["inventory", "procurement", "production", "finance"],
+          dataFlowDirection: "bidirectional" as const,
+          connectionType: "api" as const,
+          authMethod: "oauth2" as const,
+          apiDocumentationUrl: "https://api.sap.com/documentation",
+          fieldMappings: {
+            materials: { "material_number": "id", "material_description": "name", "base_unit": "unit" },
+            purchaseOrders: { "po_number": "poNumber", "vendor": "supplierId", "total": "totalAmount" },
+            inventory: { "material": "materialId", "quantity": "quantity", "location": "locationId" }
+          },
+          sampleConfig: { baseUrl: "https://mycompany.sapbydesign.com/api", clientId: "YOUR_CLIENT_ID" },
+          setupInstructions: "## SAP S/4HANA Integration Setup\n\n1. **API Access**: Enable OData APIs in SAP\n2. **OAuth Setup**: Create OAuth client in SAP\n3. **Configure Endpoints**: Set base URL and authentication\n4. **Test Connection**: Verify with a simple data fetch\n\n### Required Permissions\n- Material Management read/write\n- Purchase Order management\n- Inventory visibility",
+          isPopular: true,
+          sortOrder: 1,
+        },
+        {
+          erpName: "oracle_netsuite",
+          displayName: "Oracle NetSuite",
+          description: "Cloud-based ERP integration with Oracle NetSuite for full supply chain visibility.",
+          logoUrl: "/erp-logos/netsuite.svg",
+          supportedModules: ["inventory", "procurement", "sales", "finance"],
+          dataFlowDirection: "bidirectional" as const,
+          connectionType: "api" as const,
+          authMethod: "oauth2" as const,
+          apiDocumentationUrl: "https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/chapter_1529090917.html",
+          fieldMappings: {
+            materials: { "internalId": "id", "itemId": "sku", "displayName": "name" },
+            purchaseOrders: { "tranId": "poNumber", "entity": "supplierId", "total": "totalAmount" },
+            inventory: { "item": "materialId", "quantityAvailable": "quantity" }
+          },
+          sampleConfig: { accountId: "YOUR_ACCOUNT_ID", consumerKey: "YOUR_CONSUMER_KEY" },
+          setupInstructions: "## Oracle NetSuite Integration Setup\n\n1. **Enable SuiteScript/REST**: Activate RESTlets in NetSuite\n2. **Create Integration Record**: Generate token-based auth credentials\n3. **Map Custom Fields**: Align NetSuite fields with platform schema\n4. **Test Sync**: Run initial data synchronization\n\n### Required Roles\n- Inventory Manager\n- Purchasing Agent",
+          isPopular: true,
+          sortOrder: 2,
+        },
+        {
+          erpName: "microsoft_dynamics_365",
+          displayName: "Microsoft Dynamics 365",
+          description: "Seamless integration with Microsoft Dynamics 365 Finance and Supply Chain Management.",
+          logoUrl: "/erp-logos/dynamics365.svg",
+          supportedModules: ["inventory", "procurement", "production", "finance"],
+          dataFlowDirection: "bidirectional" as const,
+          connectionType: "api" as const,
+          authMethod: "oauth2" as const,
+          apiDocumentationUrl: "https://docs.microsoft.com/en-us/dynamics365/fin-ops-core/dev-itpro/data-entities/",
+          fieldMappings: {
+            materials: { "ItemId": "id", "ProductName": "name", "InventUnitId": "unit" },
+            purchaseOrders: { "PurchId": "poNumber", "OrderVendorAccountNumber": "supplierId", "TotalAmount": "totalAmount" },
+            inventory: { "ItemId": "materialId", "AvailablePhysical": "quantity" }
+          },
+          sampleConfig: { tenantId: "YOUR_TENANT_ID", resourceUrl: "https://yourorg.operations.dynamics.com" },
+          setupInstructions: "## Microsoft Dynamics 365 Integration\n\n1. **Azure AD Setup**: Register application in Azure Active Directory\n2. **API Permissions**: Grant Dynamics 365 Finance API access\n3. **Configure Data Entities**: Enable required data entities\n4. **Webhook Setup**: Configure outbound webhooks for real-time sync\n\n### Required Licenses\n- Dynamics 365 Finance\n- Dynamics 365 Supply Chain Management",
+          isPopular: true,
+          sortOrder: 3,
+        },
+        {
+          erpName: "sage",
+          displayName: "Sage X3 / Sage Intacct",
+          description: "Integration with Sage business management solutions for mid-market manufacturers.",
+          logoUrl: "/erp-logos/sage.svg",
+          supportedModules: ["inventory", "procurement", "finance"],
+          dataFlowDirection: "bidirectional" as const,
+          connectionType: "api" as const,
+          authMethod: "api_key" as const,
+          apiDocumentationUrl: "https://developer.sage.com/accounting/guides/",
+          fieldMappings: {
+            materials: { "ITMREF": "id", "ITMDES": "name", "STU": "unit" },
+            purchaseOrders: { "POHNUM": "poNumber", "BPSNUM": "supplierId", "TOTAMTATIORD": "totalAmount" },
+            inventory: { "ITMREF": "materialId", "QTYSTU": "quantity" }
+          },
+          sampleConfig: { companyCode: "YOUR_COMPANY", apiKey: "YOUR_API_KEY" },
+          setupInstructions: "## Sage Integration Setup\n\n1. **API Activation**: Enable REST API in Sage configuration\n2. **Generate API Key**: Create API credentials\n3. **Field Mapping**: Map Sage fields to platform schema\n4. **Test Connection**: Validate with inventory sync\n\n### Requirements\n- Sage X3 v12+ or Sage Intacct\n- API module license",
+          isPopular: false,
+          sortOrder: 4,
+        },
+        {
+          erpName: "infor",
+          displayName: "Infor CloudSuite",
+          description: "Industry-specific ERP integration with Infor CloudSuite for discrete and process manufacturing.",
+          logoUrl: "/erp-logos/infor.svg",
+          supportedModules: ["inventory", "procurement", "production"],
+          dataFlowDirection: "bidirectional" as const,
+          connectionType: "api" as const,
+          authMethod: "oauth2" as const,
+          apiDocumentationUrl: "https://docs.infor.com/",
+          fieldMappings: {
+            materials: { "item": "id", "description": "name", "uom": "unit" },
+            purchaseOrders: { "orderNumber": "poNumber", "vendorNumber": "supplierId", "orderTotal": "totalAmount" },
+            inventory: { "itemNumber": "materialId", "quantityOnHand": "quantity" }
+          },
+          sampleConfig: { tenant: "YOUR_TENANT", ionApiUrl: "https://mingle-ionapi.inforcloudsuite.com" },
+          setupInstructions: "## Infor CloudSuite Integration\n\n1. **ION API Gateway**: Configure ION API in Infor OS\n2. **Authorization**: Set up OAuth credentials\n3. **BOD Configuration**: Enable required Business Object Documents\n4. **Data Lake Setup**: Configure Infor Data Lake for analytics\n\n### Supported Solutions\n- Infor CloudSuite Industrial (SyteLine)\n- Infor LN\n- Infor M3",
+          isPopular: false,
+          sortOrder: 5,
+        },
+      ];
+      
+      const created = [];
+      for (const template of defaultTemplates) {
+        const existing = await storage.getErpIntegrationTemplates();
+        const exists = existing.find(t => t.erpName === template.erpName);
+        if (!exists) {
+          const result = await storage.createErpIntegrationTemplate(template as any);
+          created.push(result);
+        }
+      }
+      
+      res.json({ seeded: created.length, templates: created });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get ERP sync logs for a connection
+  app.get("/api/erp/connections/:connectionId/logs", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit) : 50;
+      const logs = await storage.getErpSyncLogs(req.params.connectionId, limit);
+      res.json(logs);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============================================================================
+  // PRESCRIPTIVE ACTION PLAYBOOKS
+  // ============================================================================
+
+  // Get all playbooks
+  app.get("/api/playbooks", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const filters: any = {};
+      if (req.query.triggerType) filters.triggerType = req.query.triggerType;
+      if (req.query.isActive !== undefined) filters.isActive = req.query.isActive === "true";
+      
+      const playbooks = await storage.getActionPlaybooks(filters);
+      res.json(playbooks);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get single playbook
+  app.get("/api/playbooks/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const playbook = await storage.getActionPlaybook(req.params.id);
+      if (!playbook) {
+        return res.status(404).json({ error: "Playbook not found" });
+      }
+      res.json(playbook);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Seed default playbooks
+  app.post("/api/playbooks/seed", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const defaultPlaybooks = [
+        {
+          name: "Recession Preparation Playbook",
+          description: "Actions to take when economic indicators signal transition to recessionary conditions",
+          triggerType: "regime_change",
+          fromRegime: "expansionary",
+          toRegime: "recessionary",
+          priority: "critical",
+          applicableIndustries: null,
+          actions: [
+            { id: "1", title: "Review and defer non-essential capital expenditures", description: "Postpone machinery purchases and facility expansions", timeframe: "1 week", department: "Finance" },
+            { id: "2", title: "Negotiate extended payment terms with suppliers", description: "Lock in favorable payment terms while suppliers are still flexible", timeframe: "2 weeks", department: "Procurement" },
+            { id: "3", title: "Increase safety stock for critical materials", description: "Build inventory buffer for essential production inputs", timeframe: "30 days", department: "Operations" },
+            { id: "4", title: "Renegotiate supplier contracts with volume flexibility", description: "Add provisions for demand fluctuation without penalties", timeframe: "45 days", department: "Procurement" },
+            { id: "5", title: "Identify alternative lower-cost suppliers", description: "Qualify backup suppliers for cost optimization", timeframe: "60 days", department: "Procurement" },
+          ],
+          expectedOutcomes: {
+            procurementSavings: "8-15%",
+            cashFlowImprovement: "20-30%",
+            riskReduction: "Significant supply chain resilience improvement"
+          },
+          isSystemDefault: true,
+          isActive: true,
+        },
+        {
+          name: "Expansion Opportunity Playbook",
+          description: "Capitalize on favorable economic conditions with strategic investments",
+          triggerType: "regime_change",
+          fromRegime: "recessionary",
+          toRegime: "expansionary",
+          priority: "high",
+          applicableIndustries: null,
+          actions: [
+            { id: "1", title: "Lock in long-term supplier contracts at favorable rates", description: "Secure pricing before market rates increase", timeframe: "2 weeks", department: "Procurement" },
+            { id: "2", title: "Accelerate planned capital investments", description: "Take advantage of lower equipment costs and available financing", timeframe: "30 days", department: "Finance" },
+            { id: "3", title: "Increase production capacity utilization", description: "Ramp up production to meet anticipated demand growth", timeframe: "30 days", department: "Operations" },
+            { id: "4", title: "Stockpile raw materials at current prices", description: "Build strategic inventory before inflation increases costs", timeframe: "45 days", department: "Procurement" },
+            { id: "5", title: "Review and pursue deferred growth initiatives", description: "Restart projects paused during downturn", timeframe: "60 days", department: "Strategy" },
+          ],
+          expectedOutcomes: {
+            marketShareGain: "5-10%",
+            costAdvantage: "10-20% vs delayed action",
+            capacityReadiness: "Full utilization ready"
+          },
+          isSystemDefault: true,
+          isActive: true,
+        },
+        {
+          name: "Financial Circuit Leading Playbook",
+          description: "When financial markets lead real economy, prepare for delayed real sector impact",
+          triggerType: "regime_change",
+          fromRegime: "real_economy_lead",
+          toRegime: "financial_lead",
+          priority: "medium",
+          applicableIndustries: null,
+          actions: [
+            { id: "1", title: "Review commodity hedging positions", description: "Adjust hedging strategy for anticipated price volatility", timeframe: "1 week", department: "Finance" },
+            { id: "2", title: "Monitor supplier financial health closely", description: "Increase credit monitoring frequency", timeframe: "2 weeks", department: "Procurement" },
+            { id: "3", title: "Prepare for potential demand volatility", description: "Build demand forecasting scenarios for multiple outcomes", timeframe: "30 days", department: "Planning" },
+            { id: "4", title: "Secure backup credit facilities", description: "Ensure working capital availability for various scenarios", timeframe: "30 days", department: "Finance" },
+          ],
+          expectedOutcomes: {
+            riskMitigation: "Reduced exposure to market volatility",
+            forecastAccuracy: "Improved through scenario planning",
+            financialFlexibility: "Enhanced working capital position"
+          },
+          isSystemDefault: true,
+          isActive: true,
+        },
+        {
+          name: "Forecast Degradation Response",
+          description: "Actions when demand forecast accuracy degrades significantly",
+          triggerType: "forecast_degradation",
+          fdrThreshold: 0.3,
+          fdrDirection: "above",
+          priority: "high",
+          applicableIndustries: null,
+          actions: [
+            { id: "1", title: "Review forecast model inputs", description: "Check for data quality issues or missing signals", timeframe: "1 day", department: "Planning" },
+            { id: "2", title: "Trigger model retraining", description: "Initiate automated retraining with recent data", timeframe: "2 days", department: "Data Science" },
+            { id: "3", title: "Increase safety stock temporarily", description: "Buffer inventory while forecast accuracy recovers", timeframe: "1 week", department: "Operations" },
+            { id: "4", title: "Review external demand signals", description: "Check for market changes not captured in model", timeframe: "1 week", department: "Sales" },
+          ],
+          expectedOutcomes: {
+            forecastRecovery: "MAPE reduction of 20-30%",
+            serviceLevel: "Maintained despite degradation",
+            modelImprovement: "Continuous learning validated"
+          },
+          isSystemDefault: true,
+          isActive: true,
+        },
+      ];
+      
+      const created = [];
+      const existing = await storage.getActionPlaybooks();
+      
+      for (const playbook of defaultPlaybooks) {
+        const exists = existing.find(p => p.name === playbook.name);
+        if (!exists) {
+          const result = await storage.createActionPlaybook(playbook as any);
+          created.push(result);
+        }
+      }
+      
+      res.json({ seeded: created.length, playbooks: created });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get active playbook instances for company
+  app.get("/api/playbooks/instances", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const status = req.query.status as string | undefined;
+      const instances = await storage.getActivePlaybookInstances(user.companyId, status);
+      
+      // Enrich with playbook details
+      const enriched = await Promise.all(instances.map(async (instance) => {
+        const playbook = await storage.getActionPlaybook(instance.playbookId);
+        return { ...instance, playbook };
+      }));
+      
+      res.json(enriched);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Trigger a playbook manually
+  app.post("/api/playbooks/:id/trigger", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const playbook = await storage.getActionPlaybook(req.params.id);
+      if (!playbook) {
+        return res.status(404).json({ error: "Playbook not found" });
+      }
+      
+      const instance = await storage.createActivePlaybookInstance({
+        companyId: user.companyId,
+        playbookId: playbook.id,
+        triggeredAt: new Date(),
+        triggerContext: req.body.triggerContext || { manual: true, triggeredBy: userId },
+        status: "active",
+        currentActionIndex: 0,
+      });
+      
+      // Create action logs for each action
+      const actions = (playbook.actions as any[]) || [];
+      for (let i = 0; i < actions.length; i++) {
+        await storage.createPlaybookActionLog({
+          instanceId: instance.id,
+          actionIndex: i,
+          actionTitle: actions[i].title,
+          status: i === 0 ? "in_progress" : "pending",
+        });
+      }
+      
+      await logAudit({
+        action: "create",
+        entityType: "playbook_instance",
+        entityId: instance.id,
+        changes: { playbookId: playbook.id, playbookName: playbook.name },
+        notes: `Triggered playbook: ${playbook.name}`,
+        req,
+      });
+      
+      res.status(201).json({ instance, playbook });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update playbook instance (complete action, dismiss, etc.)
+  app.patch("/api/playbooks/instances/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const instance = await storage.getActivePlaybookInstance(req.params.id);
+      if (!instance || instance.companyId !== user.companyId) {
+        return res.status(404).json({ error: "Instance not found" });
+      }
+      
+      const updated = await storage.updateActivePlaybookInstance(req.params.id, req.body);
+      
+      await logAudit({
+        action: "update",
+        entityType: "playbook_instance",
+        entityId: req.params.id,
+        changes: req.body,
+        notes: `Updated playbook instance`,
+        req,
+      });
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Complete an action in a playbook
+  app.post("/api/playbooks/instances/:instanceId/actions/:actionIndex/complete", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const instance = await storage.getActivePlaybookInstance(req.params.instanceId);
+      if (!instance || instance.companyId !== user.companyId) {
+        return res.status(404).json({ error: "Instance not found" });
+      }
+      
+      const actionLogs = await storage.getPlaybookActionLogs(req.params.instanceId);
+      const actionLog = actionLogs.find(a => a.actionIndex === parseInt(req.params.actionIndex));
+      
+      if (!actionLog) {
+        return res.status(404).json({ error: "Action not found" });
+      }
+      
+      // Update current action as completed
+      await storage.updatePlaybookActionLog(actionLog.id, {
+        status: "completed",
+        completedAt: new Date(),
+        completedBy: userId,
+        notes: req.body.notes,
+        evidence: req.body.evidence,
+      });
+      
+      // Start next action if available
+      const nextAction = actionLogs.find(a => a.actionIndex === parseInt(req.params.actionIndex) + 1);
+      if (nextAction) {
+        await storage.updatePlaybookActionLog(nextAction.id, { status: "in_progress", startedAt: new Date() });
+        await storage.updateActivePlaybookInstance(req.params.instanceId, {
+          currentActionIndex: nextAction.actionIndex,
+          status: "in_progress",
+        });
+      } else {
+        // All actions completed
+        await storage.updateActivePlaybookInstance(req.params.instanceId, {
+          status: "completed",
+          completedAt: new Date(),
+        });
+      }
+      
+      await logAudit({
+        action: "update",
+        entityType: "playbook_action",
+        entityId: actionLog.id,
+        changes: { status: "completed", actionIndex: req.params.actionIndex },
+        notes: `Completed playbook action: ${actionLog.actionTitle}`,
+        req,
+      });
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   
   setupWebSocket(httpServer);
