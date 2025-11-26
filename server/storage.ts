@@ -86,7 +86,14 @@ import type {
   BenchmarkComparison, InsertBenchmarkComparison,
   DemandSignalSource, InsertDemandSignalSource,
   DemandSignal, InsertDemandSignal,
-  DemandSignalAggregate, InsertDemandSignalAggregate
+  DemandSignalAggregate, InsertDemandSignalAggregate,
+  RoiMetric, InsertRoiMetric,
+  RoiSummary, InsertRoiSummary,
+  ErpIntegrationTemplate, InsertErpIntegrationTemplate,
+  ErpSyncLog, InsertErpSyncLog,
+  ActionPlaybook, InsertActionPlaybook,
+  ActivePlaybookInstance, InsertActivePlaybookInstance,
+  PlaybookActionLog, InsertPlaybookActionLog
 } from "@shared/schema";
 import { 
   users, companies, companyLocations, skus, materials, boms, suppliers, supplierMaterials,
@@ -113,7 +120,9 @@ import {
   sopScenarios, sopGapAnalysis, sopMeetingNotes, sopActionItems,
   rfqs, rfqQuotes,
   benchmarkSubmissions, benchmarkAggregates, benchmarkComparisons,
-  demandSignalSources, demandSignals, demandSignalAggregates
+  demandSignalSources, demandSignals, demandSignalAggregates,
+  roiMetrics, roiSummary, erpIntegrationTemplates, erpSyncLogs,
+  actionPlaybooks, activePlaybookInstances, playbookActionLogs
 } from "@shared/schema";
 
 export interface IStorage {
@@ -662,6 +671,46 @@ export interface IStorage {
   
   // Utility
   getAllCompanyIds(): Promise<string[]>;
+  
+  // ROI Metrics
+  getRoiMetrics(companyId: string, filters?: {
+    metricType?: string;
+    category?: string;
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+  }): Promise<RoiMetric[]>;
+  createRoiMetric(metric: InsertRoiMetric): Promise<RoiMetric>;
+  getRoiSummary(companyId: string, periodType?: string): Promise<RoiSummary | undefined>;
+  upsertRoiSummary(summary: InsertRoiSummary): Promise<RoiSummary>;
+  
+  // ERP Integration Templates
+  getErpIntegrationTemplates(): Promise<ErpIntegrationTemplate[]>;
+  getErpIntegrationTemplate(id: string): Promise<ErpIntegrationTemplate | undefined>;
+  createErpIntegrationTemplate(template: InsertErpIntegrationTemplate): Promise<ErpIntegrationTemplate>;
+  updateErpIntegrationTemplate(id: string, template: Partial<InsertErpIntegrationTemplate>): Promise<ErpIntegrationTemplate | undefined>;
+  
+  // ERP Sync Logs
+  getErpSyncLogs(connectionId: string, limit?: number): Promise<ErpSyncLog[]>;
+  createErpSyncLog(log: InsertErpSyncLog): Promise<ErpSyncLog>;
+  updateErpSyncLog(id: string, log: Partial<InsertErpSyncLog>): Promise<ErpSyncLog | undefined>;
+  
+  // Action Playbooks
+  getActionPlaybooks(filters?: { triggerType?: string; isActive?: boolean }): Promise<ActionPlaybook[]>;
+  getActionPlaybook(id: string): Promise<ActionPlaybook | undefined>;
+  createActionPlaybook(playbook: InsertActionPlaybook): Promise<ActionPlaybook>;
+  updateActionPlaybook(id: string, playbook: Partial<InsertActionPlaybook>): Promise<ActionPlaybook | undefined>;
+  
+  // Active Playbook Instances
+  getActivePlaybookInstances(companyId: string, status?: string): Promise<ActivePlaybookInstance[]>;
+  getActivePlaybookInstance(id: string): Promise<ActivePlaybookInstance | undefined>;
+  createActivePlaybookInstance(instance: InsertActivePlaybookInstance): Promise<ActivePlaybookInstance>;
+  updateActivePlaybookInstance(id: string, instance: Partial<InsertActivePlaybookInstance>): Promise<ActivePlaybookInstance | undefined>;
+  
+  // Playbook Action Logs
+  getPlaybookActionLogs(instanceId: string): Promise<PlaybookActionLog[]>;
+  createPlaybookActionLog(log: InsertPlaybookActionLog): Promise<PlaybookActionLog>;
+  updatePlaybookActionLog(id: string, log: Partial<InsertPlaybookActionLog>): Promise<PlaybookActionLog | undefined>;
 }
 
 export class DbStorage implements IStorage {
@@ -3158,6 +3207,203 @@ export class DbStorage implements IStorage {
   async getPermission(permissionId: string): Promise<Permission | undefined> {
     const [permission] = await db.select().from(permissions).where(eq(permissions.id, permissionId));
     return permission;
+  }
+  
+  // ROI Metrics
+  async getRoiMetrics(companyId: string, filters?: {
+    metricType?: string;
+    category?: string;
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+  }): Promise<RoiMetric[]> {
+    let conditions = [eq(roiMetrics.companyId, companyId)];
+    
+    if (filters?.metricType) {
+      conditions.push(eq(roiMetrics.metricType, filters.metricType));
+    }
+    if (filters?.category) {
+      conditions.push(eq(roiMetrics.category, filters.category));
+    }
+    
+    const query = db.select().from(roiMetrics)
+      .where(and(...conditions))
+      .orderBy(desc(roiMetrics.recordedAt));
+    
+    if (filters?.limit) {
+      return query.limit(filters.limit);
+    }
+    return query;
+  }
+  
+  async createRoiMetric(metric: InsertRoiMetric): Promise<RoiMetric> {
+    const [result] = await db.insert(roiMetrics).values(metric).returning();
+    return result;
+  }
+  
+  async getRoiSummary(companyId: string, periodType?: string): Promise<RoiSummary | undefined> {
+    const conditions = [eq(roiSummary.companyId, companyId)];
+    if (periodType) {
+      conditions.push(eq(roiSummary.periodType, periodType));
+    }
+    const [result] = await db.select().from(roiSummary)
+      .where(and(...conditions))
+      .orderBy(desc(roiSummary.updatedAt))
+      .limit(1);
+    return result;
+  }
+  
+  async upsertRoiSummary(summary: InsertRoiSummary): Promise<RoiSummary> {
+    const [result] = await db.insert(roiSummary)
+      .values(summary)
+      .onConflictDoUpdate({
+        target: [roiSummary.companyId, roiSummary.periodType],
+        set: {
+          ...summary,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return result;
+  }
+  
+  // ERP Integration Templates
+  async getErpIntegrationTemplates(): Promise<ErpIntegrationTemplate[]> {
+    return db.select().from(erpIntegrationTemplates)
+      .where(eq(erpIntegrationTemplates.isActive, true))
+      .orderBy(erpIntegrationTemplates.sortOrder);
+  }
+  
+  async getErpIntegrationTemplate(id: string): Promise<ErpIntegrationTemplate | undefined> {
+    const [result] = await db.select().from(erpIntegrationTemplates)
+      .where(eq(erpIntegrationTemplates.id, id));
+    return result;
+  }
+  
+  async createErpIntegrationTemplate(template: InsertErpIntegrationTemplate): Promise<ErpIntegrationTemplate> {
+    const [result] = await db.insert(erpIntegrationTemplates).values(template).returning();
+    return result;
+  }
+  
+  async updateErpIntegrationTemplate(id: string, template: Partial<InsertErpIntegrationTemplate>): Promise<ErpIntegrationTemplate | undefined> {
+    const [result] = await db.update(erpIntegrationTemplates)
+      .set({ ...template, updatedAt: new Date() })
+      .where(eq(erpIntegrationTemplates.id, id))
+      .returning();
+    return result;
+  }
+  
+  // ERP Sync Logs
+  async getErpSyncLogs(connectionId: string, limit?: number): Promise<ErpSyncLog[]> {
+    const query = db.select().from(erpSyncLogs)
+      .where(eq(erpSyncLogs.connectionId, connectionId))
+      .orderBy(desc(erpSyncLogs.startedAt));
+    
+    if (limit) {
+      return query.limit(limit);
+    }
+    return query;
+  }
+  
+  async createErpSyncLog(log: InsertErpSyncLog): Promise<ErpSyncLog> {
+    const [result] = await db.insert(erpSyncLogs).values(log).returning();
+    return result;
+  }
+  
+  async updateErpSyncLog(id: string, log: Partial<InsertErpSyncLog>): Promise<ErpSyncLog | undefined> {
+    const [result] = await db.update(erpSyncLogs)
+      .set(log)
+      .where(eq(erpSyncLogs.id, id))
+      .returning();
+    return result;
+  }
+  
+  // Action Playbooks
+  async getActionPlaybooks(filters?: { triggerType?: string; isActive?: boolean }): Promise<ActionPlaybook[]> {
+    let conditions: any[] = [];
+    
+    if (filters?.triggerType) {
+      conditions.push(eq(actionPlaybooks.triggerType, filters.triggerType));
+    }
+    if (filters?.isActive !== undefined) {
+      conditions.push(eq(actionPlaybooks.isActive, filters.isActive));
+    }
+    
+    if (conditions.length === 0) {
+      return db.select().from(actionPlaybooks);
+    }
+    return db.select().from(actionPlaybooks).where(and(...conditions));
+  }
+  
+  async getActionPlaybook(id: string): Promise<ActionPlaybook | undefined> {
+    const [result] = await db.select().from(actionPlaybooks)
+      .where(eq(actionPlaybooks.id, id));
+    return result;
+  }
+  
+  async createActionPlaybook(playbook: InsertActionPlaybook): Promise<ActionPlaybook> {
+    const [result] = await db.insert(actionPlaybooks).values(playbook).returning();
+    return result;
+  }
+  
+  async updateActionPlaybook(id: string, playbook: Partial<InsertActionPlaybook>): Promise<ActionPlaybook | undefined> {
+    const [result] = await db.update(actionPlaybooks)
+      .set({ ...playbook, updatedAt: new Date() })
+      .where(eq(actionPlaybooks.id, id))
+      .returning();
+    return result;
+  }
+  
+  // Active Playbook Instances
+  async getActivePlaybookInstances(companyId: string, status?: string): Promise<ActivePlaybookInstance[]> {
+    let conditions = [eq(activePlaybookInstances.companyId, companyId)];
+    
+    if (status) {
+      conditions.push(eq(activePlaybookInstances.status, status));
+    }
+    
+    return db.select().from(activePlaybookInstances)
+      .where(and(...conditions))
+      .orderBy(desc(activePlaybookInstances.triggeredAt));
+  }
+  
+  async getActivePlaybookInstance(id: string): Promise<ActivePlaybookInstance | undefined> {
+    const [result] = await db.select().from(activePlaybookInstances)
+      .where(eq(activePlaybookInstances.id, id));
+    return result;
+  }
+  
+  async createActivePlaybookInstance(instance: InsertActivePlaybookInstance): Promise<ActivePlaybookInstance> {
+    const [result] = await db.insert(activePlaybookInstances).values(instance).returning();
+    return result;
+  }
+  
+  async updateActivePlaybookInstance(id: string, instance: Partial<InsertActivePlaybookInstance>): Promise<ActivePlaybookInstance | undefined> {
+    const [result] = await db.update(activePlaybookInstances)
+      .set({ ...instance, updatedAt: new Date() })
+      .where(eq(activePlaybookInstances.id, id))
+      .returning();
+    return result;
+  }
+  
+  // Playbook Action Logs
+  async getPlaybookActionLogs(instanceId: string): Promise<PlaybookActionLog[]> {
+    return db.select().from(playbookActionLogs)
+      .where(eq(playbookActionLogs.instanceId, instanceId))
+      .orderBy(playbookActionLogs.actionIndex);
+  }
+  
+  async createPlaybookActionLog(log: InsertPlaybookActionLog): Promise<PlaybookActionLog> {
+    const [result] = await db.insert(playbookActionLogs).values(log).returning();
+    return result;
+  }
+  
+  async updatePlaybookActionLog(id: string, log: Partial<InsertPlaybookActionLog>): Promise<PlaybookActionLog | undefined> {
+    const [result] = await db.update(playbookActionLogs)
+      .set(log)
+      .where(eq(playbookActionLogs.id, id))
+      .returning();
+    return result;
   }
 }
 
