@@ -3460,3 +3460,274 @@ export type DemandSignal = typeof demandSignals.$inferSelect;
 export type InsertDemandSignal = z.infer<typeof insertDemandSignalSchema>;
 export type DemandSignalAggregate = typeof demandSignalAggregates.$inferSelect;
 export type InsertDemandSignalAggregate = z.infer<typeof insertDemandSignalAggregateSchema>;
+
+// ============================================
+// ROI DASHBOARD & METRICS
+// ============================================
+
+// ROI Metrics - Track savings, accuracy improvements, and time saved
+export const roiMetrics = pgTable("roi_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  
+  metricType: text("metric_type").notNull(), // "procurement_savings", "forecast_accuracy", "time_saved", "inventory_reduction"
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  
+  // Value metrics
+  value: real("value").notNull(), // The actual metric value
+  unit: text("unit").notNull(), // "dollars", "percent", "hours", "units"
+  
+  // Comparison values
+  baselineValue: real("baseline_value"), // What it was before optimization
+  improvement: real("improvement"), // Absolute improvement
+  improvementPercent: real("improvement_percent"), // Percentage improvement
+  
+  // Context
+  economicRegime: text("economic_regime"),
+  fdrAtPeriod: real("fdr_at_period"),
+  
+  // Attribution
+  source: text("source"), // "rfq_optimization", "regime_timing", "forecast_model", "automated_allocation"
+  details: jsonb("details"), // Additional context specific to the metric type
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("roi_metrics_company_idx").on(table.companyId),
+  index("roi_metrics_type_idx").on(table.metricType),
+  index("roi_metrics_period_idx").on(table.periodStart, table.periodEnd),
+]);
+
+// ROI Summary - Aggregated ROI dashboard data
+export const roiSummary = pgTable("roi_summary", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  
+  periodType: text("period_type").notNull(), // "weekly", "monthly", "quarterly", "yearly"
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  
+  // Procurement Savings
+  totalProcurementSavings: real("total_procurement_savings").default(0),
+  regimeTimingSavings: real("regime_timing_savings").default(0), // Savings from buying at right regime
+  supplierOptimizationSavings: real("supplier_optimization_savings").default(0),
+  bulkPurchaseSavings: real("bulk_purchase_savings").default(0),
+  
+  // Forecast Accuracy
+  avgForecastMape: real("avg_forecast_mape"), // Average MAPE across all SKUs
+  forecastAccuracyImprovement: real("forecast_accuracy_improvement"), // % improvement
+  skusWithImprovedAccuracy: integer("skus_with_improved_accuracy"),
+  totalSkusTracked: integer("total_skus_tracked"),
+  
+  // Time Savings
+  hoursAutoRfq: real("hours_auto_rfq").default(0), // Hours saved from automated RFQ
+  hoursAutoRetraining: real("hours_auto_retraining").default(0), // Hours saved from auto model retraining
+  hoursAutoAllocation: real("hours_auto_allocation").default(0), // Hours saved from automated allocation
+  totalHoursSaved: real("total_hours_saved").default(0),
+  
+  // Inventory Optimization
+  inventoryReduction: real("inventory_reduction"), // $ value of reduced inventory
+  stockoutsPrevented: integer("stockouts_prevented"),
+  excessInventoryAvoided: real("excess_inventory_avoided"),
+  
+  // Overall ROI
+  totalValueGenerated: real("total_value_generated"), // Sum of all savings
+  estimatedAnnualizedRoi: real("estimated_annualized_roi"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("roi_summary_company_idx").on(table.companyId),
+  index("roi_summary_period_idx").on(table.periodStart, table.periodEnd),
+  uniqueIndex("roi_summary_company_period_unique").on(table.companyId, table.periodType, table.periodStart),
+]);
+
+// ============================================
+// ERP INTEGRATION TEMPLATES
+// ============================================
+
+// ERP Integration Templates - Pre-built templates for popular ERPs
+export const erpIntegrationTemplates = pgTable("erp_integration_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  erpName: text("erp_name").notNull(), // "SAP", "Oracle NetSuite", "Microsoft Dynamics 365", "Sage", "Infor"
+  erpVersion: text("erp_version"), // e.g., "S/4HANA", "Cloud", "Business Central"
+  displayName: text("display_name").notNull(),
+  description: text("description"),
+  logoUrl: text("logo_url"),
+  
+  // Integration capabilities
+  supportedModules: text("supported_modules").array(), // ["inventory", "procurement", "sales", "production"]
+  dataFlowDirection: text("data_flow_direction").notNull(), // "import", "export", "bidirectional"
+  
+  // Technical details
+  connectionType: text("connection_type").notNull(), // "api", "file", "database", "webhook"
+  authMethod: text("auth_method").notNull(), // "oauth2", "api_key", "basic", "certificate"
+  apiDocumentationUrl: text("api_documentation_url"),
+  
+  // Field mappings template
+  fieldMappings: jsonb("field_mappings").notNull(), // Template for mapping ERP fields to our schema
+  
+  // Sample configuration
+  sampleConfig: jsonb("sample_config"), // Example configuration for quick setup
+  setupInstructions: text("setup_instructions"), // Markdown instructions
+  
+  // Metadata
+  isPopular: boolean("is_popular").default(false),
+  sortOrder: integer("sort_order").default(0),
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// ERP Sync Logs - Track sync history (uses existing erpConnections table)
+export const erpSyncLogs = pgTable("erp_sync_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  connectionId: varchar("connection_id").notNull().references(() => erpConnections.id, { onDelete: "cascade" }),
+  
+  syncType: text("sync_type").notNull(), // "full", "incremental", "manual"
+  direction: text("direction").notNull(), // "import", "export"
+  
+  startedAt: timestamp("started_at").notNull(),
+  completedAt: timestamp("completed_at"),
+  
+  status: text("status").notNull(), // "running", "success", "partial", "failed"
+  
+  recordsProcessed: integer("records_processed").default(0),
+  recordsSucceeded: integer("records_succeeded").default(0),
+  recordsFailed: integer("records_failed").default(0),
+  
+  errors: jsonb("errors"), // Array of error details
+  summary: jsonb("summary"), // Sync summary statistics
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("erp_sync_logs_connection_idx").on(table.connectionId),
+  index("erp_sync_logs_started_idx").on(table.startedAt),
+]);
+
+// ============================================
+// PRESCRIPTIVE ACTION PLAYBOOKS
+// ============================================
+
+// Action Playbooks - Prescriptive actions for regime changes
+export const actionPlaybooks = pgTable("action_playbooks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  name: text("name").notNull(),
+  description: text("description"),
+  
+  // Trigger conditions
+  triggerType: text("trigger_type").notNull(), // "regime_change", "fdr_threshold", "forecast_degradation", "inventory_alert"
+  fromRegime: text("from_regime"), // Previous regime (for regime_change)
+  toRegime: text("to_regime"), // New regime (for regime_change)
+  fdrThreshold: real("fdr_threshold"), // FDR threshold for fdr_threshold type
+  fdrDirection: text("fdr_direction"), // "above", "below", "crossing"
+  
+  // Priority and applicability
+  priority: text("priority").notNull().default("medium"), // "critical", "high", "medium", "low"
+  applicableIndustries: text("applicable_industries").array(), // null means all industries
+  
+  // Actions - ordered list of recommended actions
+  actions: jsonb("actions").notNull(), // Array of action objects
+  
+  // Expected outcomes
+  expectedOutcomes: jsonb("expected_outcomes"), // Expected benefits from following playbook
+  
+  // Metadata
+  isSystemDefault: boolean("is_system_default").default(false),
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Active Playbook Instances - When a playbook is triggered for a company
+export const activePlaybookInstances = pgTable("active_playbook_instances", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  playbookId: varchar("playbook_id").notNull().references(() => actionPlaybooks.id),
+  
+  // Trigger context
+  triggeredAt: timestamp("triggered_at").notNull().defaultNow(),
+  triggerContext: jsonb("trigger_context"), // FDR value, regime info, etc.
+  
+  // Status tracking
+  status: text("status").notNull().default("active"), // "active", "in_progress", "completed", "dismissed"
+  
+  // Action progress
+  actionsCompleted: jsonb("actions_completed"), // Array of completed action IDs with timestamps
+  currentActionIndex: integer("current_action_index").default(0),
+  
+  // Outcome tracking
+  actualOutcomes: jsonb("actual_outcomes"), // Tracked outcomes after completion
+  completedAt: timestamp("completed_at"),
+  dismissedAt: timestamp("dismissed_at"),
+  dismissedReason: text("dismissed_reason"),
+  
+  // User interaction
+  assignedTo: varchar("assigned_to").references(() => users.id),
+  notes: text("notes"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("active_playbook_instances_company_idx").on(table.companyId),
+  index("active_playbook_instances_status_idx").on(table.status),
+  index("active_playbook_instances_triggered_idx").on(table.triggeredAt),
+]);
+
+// Playbook Action Log - Track individual action completions
+export const playbookActionLogs = pgTable("playbook_action_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  instanceId: varchar("instance_id").notNull().references(() => activePlaybookInstances.id, { onDelete: "cascade" }),
+  
+  actionIndex: integer("action_index").notNull(),
+  actionTitle: text("action_title").notNull(),
+  
+  status: text("status").notNull(), // "pending", "in_progress", "completed", "skipped"
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  
+  completedBy: varchar("completed_by").references(() => users.id),
+  notes: text("notes"),
+  evidence: jsonb("evidence"), // Links, screenshots, data points
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("playbook_action_logs_instance_idx").on(table.instanceId),
+]);
+
+// ROI Metrics schemas
+export const insertRoiMetricSchema = createInsertSchema(roiMetrics).omit({ id: true, createdAt: true });
+export const insertRoiSummarySchema = createInsertSchema(roiSummary).omit({ id: true, createdAt: true, updatedAt: true });
+
+// ERP Integration schemas
+export const insertErpIntegrationTemplateSchema = createInsertSchema(erpIntegrationTemplates).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertErpSyncLogSchema = createInsertSchema(erpSyncLogs).omit({ id: true, createdAt: true });
+
+// Action Playbook schemas
+export const insertActionPlaybookSchema = createInsertSchema(actionPlaybooks).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertActivePlaybookInstanceSchema = createInsertSchema(activePlaybookInstances).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertPlaybookActionLogSchema = createInsertSchema(playbookActionLogs).omit({ id: true, createdAt: true });
+
+// ROI Metrics types
+export type RoiMetric = typeof roiMetrics.$inferSelect;
+export type InsertRoiMetric = z.infer<typeof insertRoiMetricSchema>;
+export type RoiSummary = typeof roiSummary.$inferSelect;
+export type InsertRoiSummary = z.infer<typeof insertRoiSummarySchema>;
+
+// ERP Integration types
+export type ErpIntegrationTemplate = typeof erpIntegrationTemplates.$inferSelect;
+export type InsertErpIntegrationTemplate = z.infer<typeof insertErpIntegrationTemplateSchema>;
+export type ErpSyncLog = typeof erpSyncLogs.$inferSelect;
+export type InsertErpSyncLog = z.infer<typeof insertErpSyncLogSchema>;
+
+// Action Playbook types
+export type ActionPlaybook = typeof actionPlaybooks.$inferSelect;
+export type InsertActionPlaybook = z.infer<typeof insertActionPlaybookSchema>;
+export type ActivePlaybookInstance = typeof activePlaybookInstances.$inferSelect;
+export type InsertActivePlaybookInstance = z.infer<typeof insertActivePlaybookInstanceSchema>;
+export type PlaybookActionLog = typeof playbookActionLogs.$inferSelect;
+export type InsertPlaybookActionLog = z.infer<typeof insertPlaybookActionLogSchema>;
