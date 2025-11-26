@@ -1292,6 +1292,257 @@ export async function seedData(companyId: string) {
 
   await storage.bulkCreateDemandHistory(demandHistoryItems);
 
+  // Seed ERP Integration Templates (global, not company-specific)
+  const existingTemplates = await storage.getErpIntegrationTemplates();
+  if (existingTemplates.length === 0) {
+    console.log("Seeding ERP integration templates...");
+    
+    await storage.createErpIntegrationTemplate({
+      erpName: "SAP",
+      erpVersion: "S/4HANA 2023",
+      displayName: "SAP S/4HANA",
+      description: "Enterprise-grade ERP integration for SAP S/4HANA. Supports real-time material management, procurement, and production planning.",
+      supportedModules: ["inventory", "procurement", "production", "sales"],
+      dataFlowDirection: "bidirectional",
+      connectionType: "api",
+      authMethod: "oauth2",
+      apiDocumentationUrl: "https://help.sap.com/docs/S4HANA",
+      fieldMappings: {
+        skuField: "MATNR",
+        materialField: "MATERIAL_GROUP",
+        inventoryField: "LABST",
+        purchaseOrderField: "EBELN",
+        supplierField: "LIFNR",
+        customMappings: { unitOfMeasure: "MEINS", batchNumber: "CHARG" }
+      },
+      sampleConfig: {
+        requiredFields: ["client_id", "client_secret", "tenant_url", "company_code"],
+        optionalFields: ["plant", "storage_location"],
+        batchSize: 500
+      },
+      setupInstructions: "1. Navigate to SAP Fiori Launchpad and access the Communication Management app\n2. Create a new Communication Arrangement using the Manufacturing AI scenario template\n3. Configure OAuth 2.0 credentials and note the client ID and secret\n4. Enable the required OData services for materials, inventory, and purchasing\n5. Enter your credentials in our configuration panel to complete the connection",
+      isPopular: true,
+      sortOrder: 1,
+      isActive: true
+    });
+
+    await storage.createErpIntegrationTemplate({
+      erpName: "Oracle NetSuite",
+      erpVersion: "2023.2",
+      displayName: "Oracle NetSuite",
+      description: "Cloud-native ERP integration for Oracle NetSuite. Comprehensive support for inventory, procurement, and financial data sync.",
+      supportedModules: ["inventory", "procurement", "sales", "finance"],
+      dataFlowDirection: "bidirectional",
+      connectionType: "api",
+      authMethod: "api_key",
+      apiDocumentationUrl: "https://docs.oracle.com/en/cloud/saas/netsuite/",
+      fieldMappings: {
+        skuField: "itemId",
+        materialField: "itemType",
+        inventoryField: "quantityAvailable",
+        purchaseOrderField: "tranId",
+        supplierField: "entityId"
+      },
+      sampleConfig: {
+        requiredFields: ["account_id", "consumer_key", "consumer_secret", "token_id", "token_secret"],
+        batchSize: 1000
+      },
+      setupInstructions: "1. Log in to NetSuite and navigate to Setup > Integration > Manage Integrations\n2. Create a new integration record with Token-Based Authentication enabled\n3. Generate your Consumer Key and Consumer Secret from the integration record\n4. Create access tokens for the integration under your user record\n5. Enable SuiteScript and SuiteTalk web services in your account",
+      isPopular: true,
+      sortOrder: 2,
+      isActive: true
+    });
+
+    await storage.createErpIntegrationTemplate({
+      erpName: "Microsoft Dynamics 365",
+      erpVersion: "10.0.38",
+      displayName: "Microsoft Dynamics 365",
+      description: "Unified platform integration for Microsoft Dynamics 365 Finance and Operations. Deep integration with Azure ecosystem.",
+      supportedModules: ["inventory", "procurement", "production", "sales", "finance"],
+      dataFlowDirection: "bidirectional",
+      connectionType: "api",
+      authMethod: "oauth2",
+      apiDocumentationUrl: "https://learn.microsoft.com/en-us/dynamics365/",
+      fieldMappings: {
+        skuField: "ItemNumber",
+        materialField: "ProductGroupId",
+        inventoryField: "AvailableInventory",
+        purchaseOrderField: "PurchaseOrderNumber",
+        supplierField: "VendorAccountNumber"
+      },
+      sampleConfig: {
+        requiredFields: ["tenant_id", "client_id", "client_secret", "environment_url"],
+        batchSize: 250
+      },
+      setupInstructions: "1. Register an application in Azure Active Directory for your tenant\n2. Grant the application API permissions for Dynamics 365\n3. Create a client secret for the application\n4. In Dynamics 365, add the application as a system user\n5. Configure data entities access for the required entities",
+      isPopular: true,
+      sortOrder: 3,
+      isActive: true
+    });
+
+    await storage.createErpIntegrationTemplate({
+      erpName: "Sage",
+      erpVersion: "X3 V12",
+      displayName: "Sage X3",
+      description: "Flexible mid-market ERP integration for Sage X3. Ideal for manufacturing and distribution companies.",
+      supportedModules: ["inventory", "procurement", "production"],
+      dataFlowDirection: "bidirectional",
+      connectionType: "api",
+      authMethod: "basic",
+      apiDocumentationUrl: "https://www.sage.com/en-us/products/sage-x3/",
+      fieldMappings: {
+        skuField: "ITMREF",
+        materialField: "TCLCOD",
+        inventoryField: "PHYSTO",
+        purchaseOrderField: "POHNUM",
+        supplierField: "BPSNUM"
+      },
+      sampleConfig: {
+        requiredFields: ["server_url", "database", "username", "password"],
+        batchSize: 200
+      },
+      setupInstructions: "1. Enable the web services module in Sage X3 administration\n2. Create a web services user with appropriate permissions\n3. Configure the REST API endpoint in Sage X3 settings\n4. Enable the required web service pools for your data needs\n5. Test connectivity using the Sage web services console",
+      isPopular: false,
+      sortOrder: 4,
+      isActive: true
+    });
+
+    await storage.createErpIntegrationTemplate({
+      erpName: "Infor",
+      erpVersion: "CloudSuite M3",
+      displayName: "Infor CloudSuite",
+      description: "Industry-specific ERP integration for Infor M3. Optimized for complex manufacturing environments.",
+      supportedModules: ["inventory", "procurement", "production", "warehouse"],
+      dataFlowDirection: "bidirectional",
+      connectionType: "api",
+      authMethod: "oauth2",
+      apiDocumentationUrl: "https://docs.infor.com/",
+      fieldMappings: {
+        skuField: "ITNO",
+        materialField: "ITGR",
+        inventoryField: "STQT",
+        purchaseOrderField: "PUNO",
+        supplierField: "SUNO"
+      },
+      sampleConfig: {
+        requiredFields: ["tenant_id", "client_id", "client_secret", "ionapi_file"],
+        batchSize: 300
+      },
+      setupInstructions: "1. Access Infor OS portal and navigate to API Gateway\n2. Create a new Service Account for Manufacturing AI\n3. Download the IONAPI credentials file\n4. Configure API permissions for M3 BE APIs\n5. Upload the IONAPI file in our configuration panel",
+      isPopular: false,
+      sortOrder: 5,
+      isActive: true
+    });
+
+    console.log("ERP integration templates seeded");
+  }
+
+  // Seed Action Playbooks (global templates)
+  const existingPlaybooks = await storage.getActionPlaybooks();
+  if (existingPlaybooks.length === 0) {
+    console.log("Seeding action playbooks...");
+
+    await storage.createActionPlaybook({
+      name: "Bubble Territory Response Protocol",
+      description: "Strategic actions to protect against market correction during asset-bubble conditions. Focus on cash preservation and risk reduction.",
+      triggerType: "regime_change",
+      toRegime: "IMBALANCED_EXCESS",
+      fdrThreshold: 1.5,
+      fdrDirection: "above",
+      priority: "critical",
+      actions: [
+        { order: 1, category: "procurement", action: "Pause all non-critical purchase orders above $50K", rationale: "Preserve cash for potential market correction", timeframe: "Immediate", priority: "critical", automatable: true },
+        { order: 2, category: "inventory", action: "Reduce target inventory levels by 15%", rationale: "Lower carrying costs and exposure to price drops", timeframe: "Within 1 week", priority: "high", automatable: true },
+        { order: 3, category: "supplier", action: "Renegotiate payment terms to 60+ days where possible", rationale: "Improve cash flow timing", timeframe: "Within 2 weeks", priority: "high", automatable: false },
+        { order: 4, category: "forecasting", action: "Switch to conservative demand scenarios", rationale: "Account for potential demand slowdown", timeframe: "Immediate", priority: "medium", automatable: true },
+        { order: 5, category: "budget", action: "Build cash reserve buffer of 20%", rationale: "Prepare for opportunities during correction", timeframe: "Within 1 month", priority: "medium", automatable: false }
+      ],
+      expectedOutcomes: [
+        "Reduced exposure to asset price corrections",
+        "Improved cash position by 15-25%",
+        "Maintained supply continuity with lower risk",
+        "Positioned to capitalize on post-correction opportunities"
+      ],
+      isSystemDefault: true,
+      isActive: true
+    });
+
+    await storage.createActionPlaybook({
+      name: "Opportunity Zone Expansion Strategy",
+      description: "Capitalize on favorable conditions when real economy leads financial markets. Strategic forward buying and capacity expansion.",
+      triggerType: "regime_change",
+      toRegime: "REAL_ECONOMY_LEAD",
+      fdrThreshold: 0.8,
+      fdrDirection: "below",
+      priority: "high",
+      actions: [
+        { order: 1, category: "procurement", action: "Execute forward contracts for 3-6 month supply of key materials", rationale: "Lock in favorable pricing before market catches up", timeframe: "Within 1 week", priority: "critical", automatable: true },
+        { order: 2, category: "supplier", action: "Negotiate volume discounts with top 5 suppliers", rationale: "Leverage strong negotiating position", timeframe: "Within 2 weeks", priority: "high", automatable: false },
+        { order: 3, category: "inventory", action: "Increase safety stock levels by 20% for high-demand SKUs", rationale: "Prepare for demand surge", timeframe: "Within 2 weeks", priority: "high", automatable: true },
+        { order: 4, category: "forecasting", action: "Activate optimistic growth scenarios", rationale: "Capture upside demand potential", timeframe: "Immediate", priority: "medium", automatable: true },
+        { order: 5, category: "budget", action: "Reallocate budget from reserves to growth initiatives", rationale: "Invest during favorable conditions", timeframe: "Within 1 month", priority: "medium", automatable: false }
+      ],
+      expectedOutcomes: [
+        "10-20% procurement cost reduction through forward buying",
+        "Improved fill rates during demand surge",
+        "Strengthened supplier relationships and terms",
+        "Competitive advantage through proactive positioning"
+      ],
+      isSystemDefault: true,
+      isActive: true
+    });
+
+    await storage.createActionPlaybook({
+      name: "Early Warning Defensive Posture",
+      description: "Moderate risk reduction when asset-led growth signals emerge. Balance between opportunity capture and protection.",
+      triggerType: "regime_change",
+      toRegime: "ASSET_LED_GROWTH",
+      fdrThreshold: 1.2,
+      fdrDirection: "above",
+      priority: "medium",
+      actions: [
+        { order: 1, category: "procurement", action: "Increase RFQ competition by 25%", rationale: "Drive better pricing through competition", timeframe: "Within 1 week", priority: "high", automatable: true },
+        { order: 2, category: "inventory", action: "Review slow-moving inventory for liquidation", rationale: "Free up capital and reduce exposure", timeframe: "Within 2 weeks", priority: "medium", automatable: true },
+        { order: 3, category: "supplier", action: "Audit supplier financial health", rationale: "Identify supply chain risks early", timeframe: "Within 2 weeks", priority: "high", automatable: false },
+        { order: 4, category: "forecasting", action: "Blend optimistic and conservative scenarios 50/50", rationale: "Hedge forecasting risk", timeframe: "Immediate", priority: "medium", automatable: true }
+      ],
+      expectedOutcomes: [
+        "Reduced inventory carrying costs by 10%",
+        "Improved supplier risk visibility",
+        "Balanced cash position for either scenario",
+        "Maintained operational continuity"
+      ],
+      isSystemDefault: true,
+      isActive: true
+    });
+
+    await storage.createActionPlaybook({
+      name: "Healthy Expansion Optimization",
+      description: "Standard operational excellence focus during normal growth conditions. Efficiency and continuous improvement.",
+      triggerType: "regime_change",
+      toRegime: "HEALTHY_EXPANSION",
+      fdrThreshold: 1.0,
+      fdrDirection: "crossing",
+      priority: "low",
+      actions: [
+        { order: 1, category: "procurement", action: "Optimize order timing using demand patterns", rationale: "Reduce carrying costs through just-in-time", timeframe: "Ongoing", priority: "medium", automatable: true },
+        { order: 2, category: "inventory", action: "Implement ABC classification review", rationale: "Focus resources on high-value items", timeframe: "Monthly", priority: "medium", automatable: true },
+        { order: 3, category: "supplier", action: "Schedule quarterly business reviews", rationale: "Strengthen partnerships and identify improvements", timeframe: "Quarterly", priority: "low", automatable: false },
+        { order: 4, category: "forecasting", action: "Refine ML models with latest data", rationale: "Continuous accuracy improvement", timeframe: "Weekly", priority: "medium", automatable: true }
+      ],
+      expectedOutcomes: [
+        "Steady 2-5% annual efficiency gains",
+        "Improved forecast accuracy over time",
+        "Strong supplier relationships",
+        "Optimized working capital"
+      ],
+      isSystemDefault: true,
+      isActive: true
+    });
+
+    console.log("Action playbooks seeded");
+  }
+
   console.log("Seed data created successfully with 110+ tradeable commodity materials!");
   return {
     companyId,

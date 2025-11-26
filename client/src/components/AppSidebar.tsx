@@ -7,6 +7,9 @@ import {
   BookOpen,
   Wrench,
   Network,
+  PieChart,
+  Database,
+  BookMarked,
 } from "lucide-react";
 import {
   Sidebar,
@@ -60,6 +63,24 @@ const bottomMenuItems = [
     url: "/reports",
     icon: FileText,
     testId: "sidebar-reports",
+  },
+  {
+    title: "ROI Dashboard",
+    url: "/roi-dashboard",
+    icon: PieChart,
+    testId: "sidebar-roi-dashboard",
+  },
+  {
+    title: "ERP Templates",
+    url: "/erp-templates",
+    icon: Database,
+    testId: "sidebar-erp-templates",
+  },
+  {
+    title: "Action Playbooks",
+    url: "/action-playbooks",
+    icon: BookMarked,
+    testId: "sidebar-action-playbooks",
   },
   {
     title: "Settings",

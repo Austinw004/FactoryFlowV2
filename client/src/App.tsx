@@ -16,6 +16,9 @@ import SupplyChainHub from "@/pages/SupplyChainHub";
 import Reports from "@/pages/Reports";
 import Configuration from "@/pages/Configuration";
 import HowItWorks from "@/pages/HowItWorks";
+import RoiDashboard from "@/pages/RoiDashboard";
+import ErpTemplates from "@/pages/ErpTemplates";
+import ActionPlaybooks from "@/pages/ActionPlaybooks";
 import { useAuth } from "@/hooks/useAuth";
 
 const DemandPlanningRoute = () => <DemandHub initialTab="planning" />;
@@ -71,6 +74,9 @@ function Router() {
       <Route path="/operations" component={OperationsMachineryRoute} />
       <Route path="/supply-chain" component={SupplyChainInventoryRoute} />
       <Route path="/reports" component={Reports} />
+      <Route path="/roi-dashboard" component={RoiDashboard} />
+      <Route path="/erp-templates" component={ErpTemplates} />
+      <Route path="/action-playbooks" component={ActionPlaybooks} />
       <Route path="/configuration" component={Configuration} />
       <Route path="/how-it-works" component={HowItWorks} />
 
