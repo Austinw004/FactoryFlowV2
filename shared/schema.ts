@@ -2810,6 +2810,75 @@ export const scenarioBookmarks = pgTable("scenario_bookmarks", {
   index("scenario_bookmarks_user_idx").on(table.userId),
 ]);
 
+// Scenario Simulations ("What-If" Analysis)
+export const scenarioSimulations = pgTable("scenario_simulations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  createdById: varchar("created_by_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  baseFdrValue: real("base_fdr_value").notNull(),
+  baseRegime: text("base_regime").notNull(),
+  baseCommodityInputs: jsonb("base_commodity_inputs"), // Initial commodity prices/settings
+  status: text("status").notNull().default("draft"), // 'draft', 'running', 'completed', 'archived'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("scenario_simulations_company_idx").on(table.companyId),
+  index("scenario_simulations_created_by_idx").on(table.createdById),
+  index("scenario_simulations_status_idx").on(table.status),
+]);
+
+export const scenarioVariants = pgTable("scenario_variants", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  simulationId: varchar("simulation_id").notNull().references(() => scenarioSimulations.id, { onDelete: "cascade" }),
+  label: text("label").notNull(), // e.g., "Optimistic", "Pessimistic", "Base Case"
+  fdrValue: real("fdr_value").notNull(),
+  regime: text("regime").notNull(),
+  commodityAdjustments: jsonb("commodity_adjustments"), // Price changes per commodity
+  procurementImpact: real("procurement_impact"), // % change in procurement costs
+  inventoryImpact: real("inventory_impact"), // % change in inventory levels
+  allocationImpact: jsonb("allocation_impact"), // Detailed allocation changes
+  forecastImpact: jsonb("forecast_impact"), // Impact on demand forecasts
+  budgetImpact: real("budget_impact"), // Impact on budget utilization
+  riskScore: real("risk_score"), // Overall risk score for this variant
+  comparisonMeta: jsonb("comparison_meta"), // Additional comparison data
+  isBaseline: integer("is_baseline").default(0), // 1 if this is the baseline scenario
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("scenario_variants_simulation_idx").on(table.simulationId),
+]);
+
+// Supplier Risk Scoring with FDR Signals
+export const supplierRiskSnapshots = pgTable("supplier_risk_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  supplierId: varchar("supplier_id").notNull().references(() => suppliers.id, { onDelete: "cascade" }),
+  regime: text("regime").notNull(), // Economic regime at time of evaluation
+  fdrValue: real("fdr_value"), // FDR value at evaluation
+  fdrSignalStrength: real("fdr_signal_strength"), // How strong the FDR signal is (0-1)
+  baseScore: real("base_score").notNull(), // Risk score before FDR adjustment (0-100)
+  adjustedScore: real("adjusted_score").notNull(), // Risk score after FDR adjustment (0-100)
+  riskTier: text("risk_tier").notNull(), // 'low', 'medium', 'high', 'critical'
+  riskFactors: jsonb("risk_factors"), // Breakdown of risk factors
+  recommendations: jsonb("recommendations"), // Actionable recommendations
+  // Component scores
+  financialHealthScore: real("financial_health_score"),
+  geographicRiskScore: real("geographic_risk_score"),
+  concentrationRiskScore: real("concentration_risk_score"),
+  performanceScore: real("performance_score"),
+  regimeImpactScore: real("regime_impact_score"), // How current regime affects this supplier
+  evaluatedAt: timestamp("evaluated_at").defaultNow().notNull(),
+  nextEvaluationDue: timestamp("next_evaluation_due"),
+  isLatest: integer("is_latest").default(1), // 1 if this is the most recent snapshot
+}, (table) => [
+  index("supplier_risk_snapshots_company_idx").on(table.companyId),
+  index("supplier_risk_snapshots_supplier_idx").on(table.supplierId),
+  index("supplier_risk_snapshots_regime_idx").on(table.regime),
+  index("supplier_risk_snapshots_tier_idx").on(table.riskTier),
+  index("supplier_risk_snapshots_latest_idx").on(table.isLatest),
+]);
+
 // Smart Alerts & Monitoring
 export const fdrAlerts = pgTable("fdr_alerts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -3367,6 +3436,13 @@ export const demandSignalAggregates = pgTable("demand_signal_aggregates", {
 export const insertSavedScenarioSchema = createInsertSchema(savedScenarios).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertScenarioBookmarkSchema = createInsertSchema(scenarioBookmarks).omit({ id: true, createdAt: true });
 
+// Scenario Simulation schemas
+export const insertScenarioSimulationSchema = createInsertSchema(scenarioSimulations).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertScenarioVariantSchema = createInsertSchema(scenarioVariants).omit({ id: true, createdAt: true });
+
+// Supplier Risk Scoring schemas
+export const insertSupplierRiskSnapshotSchema = createInsertSchema(supplierRiskSnapshots).omit({ id: true, evaluatedAt: true });
+
 // Audit Logs schemas
 export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({ id: true, timestamp: true });
 
@@ -3394,6 +3470,16 @@ export type SavedScenario = typeof savedScenarios.$inferSelect;
 export type InsertSavedScenario = z.infer<typeof insertSavedScenarioSchema>;
 export type ScenarioBookmark = typeof scenarioBookmarks.$inferSelect;
 export type InsertScenarioBookmark = z.infer<typeof insertScenarioBookmarkSchema>;
+
+// Scenario Simulation types
+export type ScenarioSimulation = typeof scenarioSimulations.$inferSelect;
+export type InsertScenarioSimulation = z.infer<typeof insertScenarioSimulationSchema>;
+export type ScenarioVariant = typeof scenarioVariants.$inferSelect;
+export type InsertScenarioVariant = z.infer<typeof insertScenarioVariantSchema>;
+
+// Supplier Risk Scoring types
+export type SupplierRiskSnapshot = typeof supplierRiskSnapshots.$inferSelect;
+export type InsertSupplierRiskSnapshot = z.infer<typeof insertSupplierRiskSnapshotSchema>;
 
 // Audit Logs types
 export type AuditLog = typeof auditLogs.$inferSelect;
