@@ -5876,8 +5876,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // S&OP Meeting Notes
-  app.get("/api/sop/meetings", isAuthenticated, async (req: any, res) => {
+  // S&OP Meeting Notes (Legacy - renamed to avoid conflict with new S&OP workflow meetings)
+  app.get("/api/sop/meeting-notes", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
       if (!user || !user.companyId) return res.status(400).json({ error: "User has no company association" });
@@ -5885,12 +5885,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const meetings = await storage.getSopMeetingNotes(user.companyId);
       res.json(meetings);
     } catch (error: any) {
-      console.error("Error fetching S&OP meetings:", error);
+      console.error("Error fetching S&OP meeting notes:", error);
       res.status(500).json({ error: error.message });
     }
   });
 
-  app.post("/api/sop/meetings", isAuthenticated, async (req: any, res) => {
+  app.post("/api/sop/meeting-notes", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
       if (!user || !user.companyId) return res.status(400).json({ error: "User has no company association" });
@@ -5901,24 +5901,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const meeting = await storage.createSopMeetingNote(meetingData);
       res.status(201).json(meeting);
     } catch (error: any) {
-      console.error("Error creating S&OP meeting:", error);
+      console.error("Error creating S&OP meeting note:", error);
       res.status(400).json({ error: error.message });
     }
   });
 
-  app.put("/api/sop/meetings/:id", isAuthenticated, async (req: any, res) => {
+  app.put("/api/sop/meeting-notes/:id", isAuthenticated, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
       if (!user || !user.companyId) return res.status(400).json({ error: "User has no company association" });
       
       const existing = await storage.getSopMeetingNote(req.params.id);
-      if (!existing) return res.status(404).json({ error: "S&OP meeting not found" });
+      if (!existing) return res.status(404).json({ error: "S&OP meeting note not found" });
       if (existing.companyId !== user.companyId) return res.status(403).json({ error: "Forbidden" });
       
       const updated = await storage.updateSopMeetingNote(req.params.id, req.body);
       res.json(updated);
     } catch (error: any) {
-      console.error("Error updating S&OP meeting:", error);
+      console.error("Error updating S&OP meeting note:", error);
       res.status(400).json({ error: error.message });
     }
   });
@@ -8527,8 +8527,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get current regime context
       const latestSnapshot = await storage.getLatestEconomicSnapshot(user.companyId);
       
+      // Parse date strings to Date objects (datetime-local sends strings)
+      const scheduledStart = req.body.scheduledStart ? new Date(req.body.scheduledStart) : undefined;
+      const scheduledEnd = req.body.scheduledEnd ? new Date(req.body.scheduledEnd) : undefined;
+      const planningHorizonStart = req.body.planningHorizonStart ? new Date(req.body.planningHorizonStart) : undefined;
+      const planningHorizonEnd = req.body.planningHorizonEnd ? new Date(req.body.planningHorizonEnd) : undefined;
+      
       const validatedData = insertSopMeetingSchema.parse({
         ...req.body,
+        scheduledStart,
+        scheduledEnd,
+        planningHorizonStart,
+        planningHorizonEnd,
         companyId: user.companyId,
         organizerId: userId,
         regimeAtMeeting: latestSnapshot?.regime,

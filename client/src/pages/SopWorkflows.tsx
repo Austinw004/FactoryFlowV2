@@ -283,7 +283,22 @@ function CreateMeetingDialog({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [meetingType, setMeetingType] = useState("demand_review");
-  const [scheduledStart, setScheduledStart] = useState("");
+  
+  // Calculate default start time (next business day at 10 AM local time)
+  const getDefaultStartTime = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(10, 0, 0, 0);
+    // Format as local datetime string for datetime-local input (YYYY-MM-DDTHH:MM)
+    const year = tomorrow.getFullYear();
+    const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+    const day = String(tomorrow.getDate()).padStart(2, '0');
+    const hours = String(tomorrow.getHours()).padStart(2, '0');
+    const minutes = String(tomorrow.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+  
+  const [scheduledStart, setScheduledStart] = useState(getDefaultStartTime);
   const [duration, setDuration] = useState(60);
 
   const createMutation = useMutation({
@@ -313,7 +328,7 @@ function CreateMeetingDialog({
     setTitle("");
     setDescription("");
     setMeetingType("demand_review");
-    setScheduledStart("");
+    setScheduledStart(getDefaultStartTime());
     setDuration(60);
   };
 
