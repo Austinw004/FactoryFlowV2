@@ -8136,6 +8136,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // ===== SUPPLIER RISK SCORING =====
   
+  // Get risk summary/dashboard data (must be before :supplierId route)
+  app.get("/api/supplier-risk/summary", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const snapshots = await storage.getSupplierRiskSnapshots(user.companyId, { latestOnly: true });
+      
+      const summary = {
+        totalSuppliers: snapshots.length,
+        avgRiskScore: snapshots.length > 0 
+          ? snapshots.reduce((sum, s) => sum + s.adjustedScore, 0) / snapshots.length 
+          : 0,
+        byTier: {
+          low: snapshots.filter(s => s.riskTier === "low").length,
+          medium: snapshots.filter(s => s.riskTier === "medium").length,
+          high: snapshots.filter(s => s.riskTier === "high").length,
+          critical: snapshots.filter(s => s.riskTier === "critical").length,
+        },
+        criticalSuppliers: snapshots
+          .filter(s => s.riskTier === "critical" || s.riskTier === "high")
+          .sort((a, b) => b.adjustedScore - a.adjustedScore)
+          .slice(0, 5),
+        recommendations: snapshots
+          .filter(s => s.recommendations && Array.isArray(s.recommendations))
+          .flatMap(s => (s.recommendations as any[]).map(r => ({ ...r, supplierId: s.supplierId })))
+          .slice(0, 10),
+      };
+      
+      res.json(summary);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Get all supplier risk snapshots for company
   app.get("/api/supplier-risk", isAuthenticated, rateLimiters.api, async (req: any, res) => {
     try {
@@ -8362,44 +8400,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       res.json({ summary, results });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-  
-  // Get risk summary/dashboard data
-  app.get("/api/supplier-risk/summary", isAuthenticated, rateLimiters.api, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      if (!user?.companyId) {
-        return res.status(400).json({ error: "User not associated with a company" });
-      }
-      
-      const snapshots = await storage.getSupplierRiskSnapshots(user.companyId, { latestOnly: true });
-      
-      const summary = {
-        totalSuppliers: snapshots.length,
-        avgRiskScore: snapshots.length > 0 
-          ? snapshots.reduce((sum, s) => sum + s.adjustedScore, 0) / snapshots.length 
-          : 0,
-        byTier: {
-          low: snapshots.filter(s => s.riskTier === "low").length,
-          medium: snapshots.filter(s => s.riskTier === "medium").length,
-          high: snapshots.filter(s => s.riskTier === "high").length,
-          critical: snapshots.filter(s => s.riskTier === "critical").length,
-        },
-        criticalSuppliers: snapshots
-          .filter(s => s.riskTier === "critical" || s.riskTier === "high")
-          .sort((a, b) => b.adjustedScore - a.adjustedScore)
-          .slice(0, 5),
-        recommendations: snapshots
-          .filter(s => s.recommendations && Array.isArray(s.recommendations))
-          .flatMap(s => (s.recommendations as any[]).map(r => ({ ...r, supplierId: s.supplierId })))
-          .slice(0, 10),
-      };
-      
-      res.json(summary);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

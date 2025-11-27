@@ -13,9 +13,9 @@ import DemandHub from "@/pages/DemandHub";
 import ProcurementHub from "@/pages/ProcurementHub";
 import OperationsHub from "@/pages/OperationsHub";
 import SupplyChainHub from "@/pages/SupplyChainHub";
+import StrategyHub from "@/pages/StrategyHub";
 import Configuration from "@/pages/Configuration";
 import HowItWorks from "@/pages/HowItWorks";
-import ScenarioSimulation from "@/pages/ScenarioSimulation";
 import SopWorkflows from "@/pages/SopWorkflows";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -45,15 +45,18 @@ const OperationsWorkforceRoute = () => <OperationsHub initialTab="workforce" />;
 const OperationsComplianceRoute = () => <OperationsHub initialTab="compliance" />;
 
 // Supply Chain Hub routes
-const SupplyChainDigitalTwinRoute = () => <SupplyChainHub initialTab="digital-twin" />;
 const SupplyChainInventoryRoute = () => <SupplyChainHub initialTab="inventory" />;
 const SupplyChainNetworkRoute = () => <SupplyChainHub initialTab="network" />;
 const SupplyChainSupplierRiskRoute = () => <SupplyChainHub initialTab="supplier-risk" />;
-const SupplyChainConsortiumRoute = () => <SupplyChainHub initialTab="consortium" />;
-const SupplyChainBenchmarkingRoute = () => <SupplyChainHub initialTab="benchmarking" />;
 const SupplyChainErpRoute = () => <SupplyChainHub initialTab="erp" />;
-const SupplyChainMaRoute = () => <SupplyChainHub initialTab="ma" />;
-const SupplyChainStrategicRoute = () => <SupplyChainHub initialTab="strategic" />;
+const SupplyChainConsortiumRoute = () => <SupplyChainHub initialTab="consortium" />;
+
+// Strategy Hub routes
+const StrategyDigitalTwinRoute = () => <StrategyHub initialTab="digital-twin" />;
+const StrategyAnalysisRoute = () => <StrategyHub initialTab="strategic" />;
+const StrategyScenariosRoute = () => <StrategyHub initialTab="scenarios" />;
+const StrategyMaRoute = () => <StrategyHub initialTab="ma" />;
+const StrategyBenchmarkingRoute = () => <StrategyHub initialTab="benchmarking" />;
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -77,23 +80,23 @@ function Router() {
 
   return (
     <Switch>
-      {/* Main routes */}
+      {/* Main hub routes */}
       <Route path="/" component={DashboardOverviewRoute} />
       <Route path="/dashboard" component={DashboardOverviewRoute} />
       <Route path="/demand" component={DemandPlanningRoute} />
+      <Route path="/supply-chain" component={SupplyChainInventoryRoute} />
       <Route path="/procurement" component={ProcurementPurchasingRoute} />
       <Route path="/operations" component={OperationsMachineryRoute} />
-      <Route path="/supply-chain" component={SupplyChainInventoryRoute} />
-      <Route path="/scenario-simulation" component={ScenarioSimulation} />
-      <Route path="/sop-workflows" component={SopWorkflows} />
+      <Route path="/strategy" component={StrategyDigitalTwinRoute} />
       <Route path="/configuration" component={Configuration} />
       <Route path="/how-it-works" component={HowItWorks} />
+      <Route path="/sop-workflows" component={SopWorkflows} />
 
       {/* Dashboard Hub routes */}
       <Route path="/roi-dashboard" component={DashboardRoiRoute} />
       <Route path="/reports" component={DashboardReportsRoute} />
 
-      {/* Legacy routes - Demand & Forecasting */}
+      {/* Demand & Forecasting routes */}
       <Route path="/forecasting" component={DemandPlanningRoute} />
       <Route path="/forecast-accuracy" component={DemandAccuracyRoute} />
       <Route path="/multi-horizon-forecasts" component={DemandHorizonsRoute} />
@@ -101,30 +104,33 @@ function Router() {
       <Route path="/sop-workspace" component={DemandSopRoute} />
       <Route path="/allocation" component={DemandPlanningRoute} />
 
-      {/* Legacy routes - Procurement */}
+      {/* Procurement routes */}
       <Route path="/automated-po" component={ProcurementAutoPoRoute} />
       <Route path="/rfq-generation" component={ProcurementRfqRoute} />
       <Route path="/action-playbooks" component={ProcurementPlaybooksRoute} />
 
-      {/* Legacy routes - Operations */}
+      {/* Operations routes */}
       <Route path="/machinery" component={OperationsMachineryRoute} />
       <Route path="/production-kpis" component={OperationsProductionRoute} />
       <Route path="/predictive-maintenance" component={OperationsMaintenanceRoute} />
       <Route path="/workforce" component={OperationsWorkforceRoute} />
       <Route path="/compliance" component={OperationsComplianceRoute} />
 
-      {/* Legacy routes - Supply Chain */}
-      <Route path="/digital-twin" component={SupplyChainDigitalTwinRoute} />
+      {/* Supply Chain routes */}
       <Route path="/inventory" component={SupplyChainInventoryRoute} />
       <Route path="/inventory-optimization" component={SupplyChainInventoryRoute} />
       <Route path="/traceability" component={SupplyChainNetworkRoute} />
       <Route path="/supply-chain-network" component={SupplyChainNetworkRoute} />
       <Route path="/supplier-risk" component={SupplyChainSupplierRiskRoute} />
-      <Route path="/industry-consortium" component={SupplyChainConsortiumRoute} />
-      <Route path="/peer-benchmarking" component={SupplyChainBenchmarkingRoute} />
       <Route path="/erp-templates" component={SupplyChainErpRoute} />
-      <Route path="/ma-intelligence" component={SupplyChainMaRoute} />
-      <Route path="/strategic-analysis" component={SupplyChainStrategicRoute} />
+      <Route path="/industry-consortium" component={SupplyChainConsortiumRoute} />
+
+      {/* Strategy & Insights routes */}
+      <Route path="/digital-twin" component={StrategyDigitalTwinRoute} />
+      <Route path="/strategic-analysis" component={StrategyAnalysisRoute} />
+      <Route path="/scenario-simulation" component={StrategyScenariosRoute} />
+      <Route path="/ma-intelligence" component={StrategyMaRoute} />
+      <Route path="/peer-benchmarking" component={StrategyBenchmarkingRoute} />
 
       <Route component={NotFound} />
     </Switch>

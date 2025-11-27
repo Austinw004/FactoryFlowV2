@@ -1,25 +1,25 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Package, Network, ShieldAlert, Database, BarChart3 } from "lucide-react";
-import InventoryManagement from "./InventoryManagement";
-import SupplyChain from "./SupplyChain";
-import SupplierRisk from "./SupplierRisk";
-import ErpTemplates from "./ErpTemplates";
-import IndustryConsortium from "./IndustryConsortium";
+import { Layers, Target, FlaskConical, Building2, Users } from "lucide-react";
+import DigitalTwin from "./DigitalTwin";
+import StrategicAnalysis from "./StrategicAnalysis";
+import ScenarioSimulation from "./ScenarioSimulation";
+import MAIntelligence from "./MAIntelligence";
+import PeerBenchmarking from "./peer-benchmarking";
 
 const tabs = [
-  { id: "inventory", label: "Inventory", icon: Package, component: InventoryManagement },
-  { id: "network", label: "Network", icon: Network, component: SupplyChain },
-  { id: "supplier-risk", label: "Supplier Risk", icon: ShieldAlert, component: SupplierRisk },
-  { id: "erp", label: "ERP Integration", icon: Database, component: ErpTemplates },
-  { id: "consortium", label: "Consortium", icon: BarChart3, component: IndustryConsortium },
+  { id: "digital-twin", label: "Digital Twin", icon: Layers, component: DigitalTwin },
+  { id: "strategic", label: "Strategic Analysis", icon: Target, component: StrategicAnalysis },
+  { id: "scenarios", label: "Scenarios", icon: FlaskConical, component: ScenarioSimulation },
+  { id: "ma", label: "M&A Intelligence", icon: Building2, component: MAIntelligence },
+  { id: "benchmarking", label: "Benchmarking", icon: Users, component: PeerBenchmarking },
 ];
 
-interface SupplyChainHubProps {
+interface StrategyHubProps {
   initialTab?: string;
 }
 
-export default function SupplyChainHub({ initialTab = "inventory" }: SupplyChainHubProps) {
+export default function StrategyHub({ initialTab = "digital-twin" }: StrategyHubProps) {
   const [activeTab, setActiveTab] = useState(initialTab);
   
   useEffect(() => {
@@ -30,11 +30,11 @@ export default function SupplyChainHub({ initialTab = "inventory" }: SupplyChain
     <div className="h-full flex flex-col">
       <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="px-6 pt-4 pb-0">
-          <h1 className="text-2xl font-bold" data-testid="heading-supply-chain-hub">
-            Supply Chain
+          <h1 className="text-2xl font-bold" data-testid="heading-strategy-hub">
+            Strategy & Insights
           </h1>
           <p className="text-sm text-muted-foreground mb-3">
-            Manage inventory, supplier network, risk assessment, and integrations
+            Digital twin, strategic analysis, scenario modeling, and competitive intelligence
           </p>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="h-auto p-1 bg-muted/50">

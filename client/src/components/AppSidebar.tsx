@@ -6,6 +6,7 @@ import {
   BookOpen,
   Wrench,
   Network,
+  Lightbulb,
 } from "lucide-react";
 import {
   Sidebar,
@@ -40,16 +41,22 @@ const mainMenuItems = [
     testId: "sidebar-supply-chain",
   },
   {
+    title: "Procurement",
+    url: "/procurement",
+    icon: ShoppingCart,
+    testId: "sidebar-procurement",
+  },
+  {
     title: "Operations",
     url: "/operations",
     icon: Wrench,
     testId: "sidebar-operations",
   },
   {
-    title: "Procurement",
-    url: "/procurement",
-    icon: ShoppingCart,
-    testId: "sidebar-procurement",
+    title: "Strategy & Insights",
+    url: "/strategy",
+    icon: Lightbulb,
+    testId: "sidebar-strategy",
   },
 ];
 
