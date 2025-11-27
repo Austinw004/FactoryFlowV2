@@ -997,6 +997,116 @@ export const supplierChainLinks = pgTable("supplier_chain_links", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Multi-Tier Supplier Mapping (Resilinc/Interos competitor feature)
+// Tracks supplier tiers (Tier-1, Tier-2, Tier-3, etc.) for deep supply chain visibility
+export const supplierTiers = pgTable("supplier_tiers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  supplierId: varchar("supplier_id").notNull().references(() => suppliers.id, { onDelete: "cascade" }),
+  tier: integer("tier").notNull().default(1), // 1 = direct supplier, 2 = sub-supplier, 3 = sub-sub-supplier, etc.
+  tierLabel: text("tier_label"), // "Direct Supplier", "Sub-Supplier", "Raw Material Provider"
+  materialCategories: text("material_categories").array(), // What categories this supplier provides
+  region: text("region"), // Geographic region (country, state, city)
+  country: text("country"),
+  coordinates: jsonb("coordinates"), // { lat: number, lng: number } for mapping
+  riskRegion: integer("risk_region").default(0), // 1 if in high-risk region, 0 otherwise
+  spendShare: real("spend_share"), // Percentage of total spend with this tier
+  dependencyWeight: real("dependency_weight"), // How critical is this supplier (0-100)
+  alternativesCount: integer("alternatives_count").default(0), // Number of alternative suppliers at this tier
+  lastAssessmentDate: timestamp("last_assessment_date"),
+  dataConfidence: real("data_confidence"), // 0-100 confidence in tier data
+  dataSource: text("data_source"), // "manual", "api", "inferred"
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("supplier_tiers_company_idx").on(table.companyId),
+  index("supplier_tiers_supplier_idx").on(table.supplierId),
+  index("supplier_tiers_tier_idx").on(table.tier),
+]);
+
+// Parent-child relationships between suppliers (who supplies whom)
+export const supplierRelationships = pgTable("supplier_relationships", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  parentSupplierId: varchar("parent_supplier_id").notNull().references(() => suppliers.id, { onDelete: "cascade" }),
+  childSupplierId: varchar("child_supplier_id").notNull().references(() => suppliers.id, { onDelete: "cascade" }),
+  relationshipType: text("relationship_type").notNull().default("supplies"), // "supplies", "subcontracts", "joint_venture"
+  materialFlows: jsonb("material_flows"), // [{ materialId, volumePercent, criticalPath }]
+  volumeShare: real("volume_share"), // What % of parent's materials come from child
+  isCriticalPath: integer("is_critical_path").default(0), // 1 if on critical supply path
+  isSingleSource: integer("is_single_source").default(0), // 1 if parent has no alternatives for this material
+  leadTimeDays: integer("lead_time_days"),
+  qualityScore: real("quality_score"), // 0-100
+  relationshipStrength: text("relationship_strength"), // "strong", "moderate", "weak"
+  contractEndDate: timestamp("contract_end_date"),
+  riskScore: real("risk_score"), // Calculated risk for this relationship (0-100)
+  lastVerifiedDate: timestamp("last_verified_date"),
+  verificationMethod: text("verification_method"), // "manual", "api", "document", "inferred"
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("supplier_rel_company_idx").on(table.companyId),
+  index("supplier_rel_parent_idx").on(table.parentSupplierId),
+  index("supplier_rel_child_idx").on(table.childSupplierId),
+]);
+
+// High-risk regions database for alerting when sub-tier suppliers are in risky areas
+export const supplierRegionRisks = pgTable("supplier_region_risks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").references(() => companies.id, { onDelete: "cascade" }), // null = global risk data
+  region: text("region").notNull(), // Country, state, or specific region
+  country: text("country").notNull(),
+  riskLevel: text("risk_level").notNull().default("medium"), // "low", "medium", "high", "critical"
+  riskScore: real("risk_score").notNull().default(50), // 0-100
+  riskFactors: jsonb("risk_factors"), // { geopolitical: 80, natural_disaster: 60, infrastructure: 40, ... }
+  geopoliticalRisk: real("geopolitical_risk"), // 0-100
+  naturalDisasterRisk: real("natural_disaster_risk"), // 0-100
+  infrastructureRisk: real("infrastructure_risk"), // 0-100
+  laborRisk: real("labor_risk"), // 0-100
+  regulatoryRisk: real("regulatory_risk"), // 0-100
+  economicInstabilityRisk: real("economic_instability_risk"), // 0-100
+  activeEvents: jsonb("active_events"), // Current risk events affecting this region
+  lastEventDate: timestamp("last_event_date"),
+  dataSource: text("data_source"), // "internal", "external_api", "manual"
+  lastUpdated: timestamp("last_updated").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("region_risks_company_idx").on(table.companyId),
+  index("region_risks_country_idx").on(table.country),
+  index("region_risks_level_idx").on(table.riskLevel),
+]);
+
+// Alerts for multi-tier supply chain issues
+export const supplierTierAlerts = pgTable("supplier_tier_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  alertType: text("alert_type").notNull(), // "single_source", "concentration_risk", "high_risk_region", "tier_dependency", "contract_expiry"
+  severity: text("severity").notNull().default("medium"), // "low", "medium", "high", "critical"
+  title: text("title").notNull(),
+  description: text("description"),
+  affectedSupplierId: varchar("affected_supplier_id").references(() => suppliers.id),
+  affectedTier: integer("affected_tier"),
+  affectedRegion: text("affected_region"),
+  affectedMaterials: text("affected_materials").array(),
+  riskScore: real("risk_score"), // 0-100
+  impactEstimate: jsonb("impact_estimate"), // { revenueAtRisk, productionDays, affectedSkus }
+  recommendations: jsonb("recommendations"), // [{ action, priority, timeframe }]
+  status: text("status").notNull().default("active"), // "active", "acknowledged", "mitigated", "resolved"
+  acknowledgedAt: timestamp("acknowledged_at"),
+  acknowledgedBy: varchar("acknowledged_by").references(() => users.id),
+  resolvedAt: timestamp("resolved_at"),
+  resolvedBy: varchar("resolved_by").references(() => users.id),
+  resolution: text("resolution"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("tier_alerts_company_idx").on(table.companyId),
+  index("tier_alerts_type_idx").on(table.alertType),
+  index("tier_alerts_severity_idx").on(table.severity),
+  index("tier_alerts_status_idx").on(table.status),
+]);
+
 // Workforce Scheduling & Skills Management
 export const employees = pgTable("employees", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1404,6 +1514,29 @@ export type TraceabilityEvent = typeof traceabilityEvents.$inferSelect;
 export type InsertTraceabilityEvent = z.infer<typeof insertTraceabilityEventSchema>;
 export type SupplierChainLink = typeof supplierChainLinks.$inferSelect;
 export type InsertSupplierChainLink = z.infer<typeof insertSupplierChainLinkSchema>;
+
+// Multi-Tier Supplier Mapping schemas
+export const insertSupplierTierSchema = createInsertSchema(supplierTiers).omit({ id: true, createdAt: true, updatedAt: true });
+export const updateSupplierTierSchema = createInsertSchema(supplierTiers).omit({ id: true, companyId: true, createdAt: true }).partial();
+export const insertSupplierRelationshipSchema = createInsertSchema(supplierRelationships).omit({ id: true, createdAt: true, updatedAt: true });
+export const updateSupplierRelationshipSchema = createInsertSchema(supplierRelationships).omit({ id: true, companyId: true, createdAt: true }).partial();
+export const insertSupplierRegionRiskSchema = createInsertSchema(supplierRegionRisks).omit({ id: true, createdAt: true, lastUpdated: true });
+export const updateSupplierRegionRiskSchema = createInsertSchema(supplierRegionRisks).omit({ id: true, companyId: true, createdAt: true }).partial();
+export const insertSupplierTierAlertSchema = createInsertSchema(supplierTierAlerts).omit({ id: true, createdAt: true, updatedAt: true, acknowledgedAt: true, resolvedAt: true });
+export const updateSupplierTierAlertSchema = createInsertSchema(supplierTierAlerts).omit({ id: true, companyId: true, createdAt: true }).partial();
+
+export type SupplierTier = typeof supplierTiers.$inferSelect;
+export type InsertSupplierTier = z.infer<typeof insertSupplierTierSchema>;
+export type UpdateSupplierTier = z.infer<typeof updateSupplierTierSchema>;
+export type SupplierRelationship = typeof supplierRelationships.$inferSelect;
+export type InsertSupplierRelationship = z.infer<typeof insertSupplierRelationshipSchema>;
+export type UpdateSupplierRelationship = z.infer<typeof updateSupplierRelationshipSchema>;
+export type SupplierRegionRisk = typeof supplierRegionRisks.$inferSelect;
+export type InsertSupplierRegionRisk = z.infer<typeof insertSupplierRegionRiskSchema>;
+export type UpdateSupplierRegionRisk = z.infer<typeof updateSupplierRegionRiskSchema>;
+export type SupplierTierAlert = typeof supplierTierAlerts.$inferSelect;
+export type InsertSupplierTierAlert = z.infer<typeof insertSupplierTierAlertSchema>;
+export type UpdateSupplierTierAlert = z.infer<typeof updateSupplierTierAlertSchema>;
 
 // Workforce Scheduling schemas
 export const insertEmployeeSchema = createInsertSchema(employees).omit({ id: true, createdAt: true, updatedAt: true });

@@ -110,7 +110,11 @@ import type {
   DigitalTwinQuery, InsertDigitalTwinQuery,
   DigitalTwinSimulation, InsertDigitalTwinSimulation,
   DigitalTwinAlert, InsertDigitalTwinAlert,
-  DigitalTwinMetric, InsertDigitalTwinMetric
+  DigitalTwinMetric, InsertDigitalTwinMetric,
+  SupplierTier, InsertSupplierTier,
+  SupplierRelationship, InsertSupplierRelationship,
+  SupplierRegionRisk, InsertSupplierRegionRisk,
+  SupplierTierAlert, InsertSupplierTierAlert
 } from "@shared/schema";
 import { 
   users, companies, companyLocations, skus, materials, boms, suppliers, supplierMaterials,
@@ -145,7 +149,8 @@ import {
   sopReconciliationItems, sopApprovalChains, sopApprovalSteps,
   sopApprovalRequests, sopApprovalActions,
   digitalTwinDataFeeds, digitalTwinSnapshots, digitalTwinQueries,
-  digitalTwinSimulations, digitalTwinAlerts, digitalTwinMetrics
+  digitalTwinSimulations, digitalTwinAlerts, digitalTwinMetrics,
+  supplierTiers, supplierRelationships, supplierRegionRisks, supplierTierAlerts
 } from "@shared/schema";
 
 export interface IStorage {
@@ -351,6 +356,37 @@ export interface IStorage {
   createTraceabilityEvent(event: InsertTraceabilityEvent): Promise<TraceabilityEvent>;
   getSupplierChainLinks(companyId: string): Promise<SupplierChainLink[]>;
   createSupplierChainLink(link: InsertSupplierChainLink): Promise<SupplierChainLink>;
+  
+  // Multi-Tier Supplier Mapping
+  getSupplierTiers(companyId: string): Promise<SupplierTier[]>;
+  getSupplierTier(id: string): Promise<SupplierTier | undefined>;
+  getSupplierTierBySupplier(supplierId: string): Promise<SupplierTier | undefined>;
+  createSupplierTier(tier: InsertSupplierTier): Promise<SupplierTier>;
+  updateSupplierTier(id: string, tier: Partial<InsertSupplierTier>): Promise<SupplierTier | undefined>;
+  deleteSupplierTier(id: string): Promise<void>;
+  
+  getSupplierRelationships(companyId: string): Promise<SupplierRelationship[]>;
+  getSupplierRelationship(id: string): Promise<SupplierRelationship | undefined>;
+  getSupplierRelationshipsByParent(parentSupplierId: string): Promise<SupplierRelationship[]>;
+  getSupplierRelationshipsByChild(childSupplierId: string): Promise<SupplierRelationship[]>;
+  createSupplierRelationship(relationship: InsertSupplierRelationship): Promise<SupplierRelationship>;
+  updateSupplierRelationship(id: string, relationship: Partial<InsertSupplierRelationship>): Promise<SupplierRelationship | undefined>;
+  deleteSupplierRelationship(id: string): Promise<void>;
+  
+  getSupplierRegionRisks(companyId?: string): Promise<SupplierRegionRisk[]>;
+  getSupplierRegionRisk(id: string): Promise<SupplierRegionRisk | undefined>;
+  getSupplierRegionRiskByCountry(country: string): Promise<SupplierRegionRisk[]>;
+  createSupplierRegionRisk(risk: InsertSupplierRegionRisk): Promise<SupplierRegionRisk>;
+  updateSupplierRegionRisk(id: string, risk: Partial<InsertSupplierRegionRisk>): Promise<SupplierRegionRisk | undefined>;
+  deleteSupplierRegionRisk(id: string): Promise<void>;
+  
+  getSupplierTierAlerts(companyId: string): Promise<SupplierTierAlert[]>;
+  getSupplierTierAlert(id: string): Promise<SupplierTierAlert | undefined>;
+  getActiveSupplierTierAlerts(companyId: string): Promise<SupplierTierAlert[]>;
+  createSupplierTierAlert(alert: InsertSupplierTierAlert): Promise<SupplierTierAlert>;
+  updateSupplierTierAlert(id: string, alert: Partial<InsertSupplierTierAlert>): Promise<SupplierTierAlert | undefined>;
+  acknowledgeSupplierTierAlert(id: string, userId: string): Promise<SupplierTierAlert | undefined>;
+  resolveSupplierTierAlert(id: string, userId: string, resolution: string): Promise<SupplierTierAlert | undefined>;
   
   // Workforce Scheduling
   getEmployees(companyId: string): Promise<Employee[]>;
@@ -1674,6 +1710,129 @@ export class DbStorage implements IStorage {
   async createSupplierChainLink(insertLink: InsertSupplierChainLink): Promise<SupplierChainLink> {
     const [link] = await db.insert(supplierChainLinks).values(insertLink).returning();
     return link;
+  }
+
+  // Multi-Tier Supplier Mapping methods
+  async getSupplierTiers(companyId: string): Promise<SupplierTier[]> {
+    return db.select().from(supplierTiers).where(eq(supplierTiers.companyId, companyId));
+  }
+
+  async getSupplierTier(id: string): Promise<SupplierTier | undefined> {
+    const [tier] = await db.select().from(supplierTiers).where(eq(supplierTiers.id, id));
+    return tier;
+  }
+
+  async getSupplierTierBySupplier(supplierId: string): Promise<SupplierTier | undefined> {
+    const [tier] = await db.select().from(supplierTiers).where(eq(supplierTiers.supplierId, supplierId));
+    return tier;
+  }
+
+  async createSupplierTier(insertTier: InsertSupplierTier): Promise<SupplierTier> {
+    const [tier] = await db.insert(supplierTiers).values(insertTier).returning();
+    return tier;
+  }
+
+  async updateSupplierTier(id: string, tier: Partial<InsertSupplierTier>): Promise<SupplierTier | undefined> {
+    const [updated] = await db.update(supplierTiers).set({ ...tier, updatedAt: new Date() }).where(eq(supplierTiers.id, id)).returning();
+    return updated;
+  }
+
+  async deleteSupplierTier(id: string): Promise<void> {
+    await db.delete(supplierTiers).where(eq(supplierTiers.id, id));
+  }
+
+  async getSupplierRelationships(companyId: string): Promise<SupplierRelationship[]> {
+    return db.select().from(supplierRelationships).where(eq(supplierRelationships.companyId, companyId));
+  }
+
+  async getSupplierRelationship(id: string): Promise<SupplierRelationship | undefined> {
+    const [rel] = await db.select().from(supplierRelationships).where(eq(supplierRelationships.id, id));
+    return rel;
+  }
+
+  async getSupplierRelationshipsByParent(parentSupplierId: string): Promise<SupplierRelationship[]> {
+    return db.select().from(supplierRelationships).where(eq(supplierRelationships.parentSupplierId, parentSupplierId));
+  }
+
+  async getSupplierRelationshipsByChild(childSupplierId: string): Promise<SupplierRelationship[]> {
+    return db.select().from(supplierRelationships).where(eq(supplierRelationships.childSupplierId, childSupplierId));
+  }
+
+  async createSupplierRelationship(insertRel: InsertSupplierRelationship): Promise<SupplierRelationship> {
+    const [rel] = await db.insert(supplierRelationships).values(insertRel).returning();
+    return rel;
+  }
+
+  async updateSupplierRelationship(id: string, rel: Partial<InsertSupplierRelationship>): Promise<SupplierRelationship | undefined> {
+    const [updated] = await db.update(supplierRelationships).set({ ...rel, updatedAt: new Date() }).where(eq(supplierRelationships.id, id)).returning();
+    return updated;
+  }
+
+  async deleteSupplierRelationship(id: string): Promise<void> {
+    await db.delete(supplierRelationships).where(eq(supplierRelationships.id, id));
+  }
+
+  async getSupplierRegionRisks(companyId?: string): Promise<SupplierRegionRisk[]> {
+    if (companyId) {
+      return db.select().from(supplierRegionRisks).where(eq(supplierRegionRisks.companyId, companyId));
+    }
+    return db.select().from(supplierRegionRisks);
+  }
+
+  async getSupplierRegionRisk(id: string): Promise<SupplierRegionRisk | undefined> {
+    const [risk] = await db.select().from(supplierRegionRisks).where(eq(supplierRegionRisks.id, id));
+    return risk;
+  }
+
+  async getSupplierRegionRiskByCountry(country: string): Promise<SupplierRegionRisk[]> {
+    return db.select().from(supplierRegionRisks).where(eq(supplierRegionRisks.country, country));
+  }
+
+  async createSupplierRegionRisk(insertRisk: InsertSupplierRegionRisk): Promise<SupplierRegionRisk> {
+    const [risk] = await db.insert(supplierRegionRisks).values(insertRisk).returning();
+    return risk;
+  }
+
+  async updateSupplierRegionRisk(id: string, risk: Partial<InsertSupplierRegionRisk>): Promise<SupplierRegionRisk | undefined> {
+    const [updated] = await db.update(supplierRegionRisks).set({ ...risk, lastUpdated: new Date() }).where(eq(supplierRegionRisks.id, id)).returning();
+    return updated;
+  }
+
+  async deleteSupplierRegionRisk(id: string): Promise<void> {
+    await db.delete(supplierRegionRisks).where(eq(supplierRegionRisks.id, id));
+  }
+
+  async getSupplierTierAlerts(companyId: string): Promise<SupplierTierAlert[]> {
+    return db.select().from(supplierTierAlerts).where(eq(supplierTierAlerts.companyId, companyId)).orderBy(desc(supplierTierAlerts.createdAt));
+  }
+
+  async getSupplierTierAlert(id: string): Promise<SupplierTierAlert | undefined> {
+    const [alert] = await db.select().from(supplierTierAlerts).where(eq(supplierTierAlerts.id, id));
+    return alert;
+  }
+
+  async getActiveSupplierTierAlerts(companyId: string): Promise<SupplierTierAlert[]> {
+    return db.select().from(supplierTierAlerts).where(and(eq(supplierTierAlerts.companyId, companyId), eq(supplierTierAlerts.status, "active"))).orderBy(desc(supplierTierAlerts.createdAt));
+  }
+
+  async createSupplierTierAlert(insertAlert: InsertSupplierTierAlert): Promise<SupplierTierAlert> {
+    const [alert] = await db.insert(supplierTierAlerts).values(insertAlert).returning();
+    return alert;
+  }
+
+  async updateSupplierTierAlert(id: string, alert: Partial<InsertSupplierTierAlert>): Promise<SupplierTierAlert | undefined> {
+    const [updated] = await db.update(supplierTierAlerts).set({ ...alert, updatedAt: new Date() }).where(eq(supplierTierAlerts.id, id)).returning();
+    return updated;
+  }
+
+  async acknowledgeSupplierTierAlert(id: string, userId: string): Promise<SupplierTierAlert | undefined> {
+    const [updated] = await db.update(supplierTierAlerts).set({ status: "acknowledged", acknowledgedAt: new Date(), acknowledgedBy: userId, updatedAt: new Date() }).where(eq(supplierTierAlerts.id, id)).returning();
+    return updated;
+  }
+
+  async resolveSupplierTierAlert(id: string, userId: string, resolution: string): Promise<SupplierTierAlert | undefined> {
+    const [updated] = await db.update(supplierTierAlerts).set({ status: "resolved", resolvedAt: new Date(), resolvedBy: userId, resolution, updatedAt: new Date() }).where(eq(supplierTierAlerts.id, id)).returning();
+    return updated;
   }
 
   // Workforce Scheduling methods

@@ -8406,6 +8406,439 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ============================================
+  // MULTI-TIER SUPPLIER MAPPING ROUTES
+  // ============================================
+
+  // --- Supplier Tiers ---
+  
+  // Get supplier network graph (nodes + edges for visualization)
+  app.get("/api/supplier-network/graph", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const [tiers, relationships, suppliers, regionRisks] = await Promise.all([
+        storage.getSupplierTiers(user.companyId),
+        storage.getSupplierRelationships(user.companyId),
+        storage.getSuppliers(user.companyId),
+        storage.getSupplierRegionRisks(user.companyId),
+      ]);
+      
+      // Build nodes from suppliers with tier info
+      const nodes = suppliers.map(supplier => {
+        const tier = tiers.find(t => t.supplierId === supplier.id);
+        const regionRisk = tier?.country ? regionRisks.find(r => r.country === tier.country) : null;
+        return {
+          id: supplier.id,
+          name: supplier.name,
+          contactEmail: supplier.contactEmail,
+          tier: tier?.tier || 1,
+          tierLabel: tier?.tierLabel || "Direct Supplier",
+          region: tier?.region,
+          country: tier?.country,
+          coordinates: tier?.coordinates,
+          riskRegion: tier?.riskRegion || 0,
+          regionRiskLevel: regionRisk?.riskLevel || "low",
+          regionRiskScore: regionRisk?.riskScore || 0,
+          spendShare: tier?.spendShare || 0,
+          dependencyWeight: tier?.dependencyWeight || 0,
+          alternativesCount: tier?.alternativesCount || 0,
+          dataConfidence: tier?.dataConfidence || 0,
+        };
+      });
+      
+      // Build edges from relationships
+      const edges = relationships.map(rel => ({
+        id: rel.id,
+        source: rel.parentSupplierId,
+        target: rel.childSupplierId,
+        type: rel.relationshipType,
+        volumeShare: rel.volumeShare,
+        isCriticalPath: rel.isCriticalPath === 1,
+        isSingleSource: rel.isSingleSource === 1,
+        riskScore: rel.riskScore,
+        leadTimeDays: rel.leadTimeDays,
+        qualityScore: rel.qualityScore,
+      }));
+      
+      res.json({ nodes, edges });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Analyze network for dependencies and risks
+  app.get("/api/supplier-network/analysis", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const [tiers, relationships, suppliers, regionRisks, alerts] = await Promise.all([
+        storage.getSupplierTiers(user.companyId),
+        storage.getSupplierRelationships(user.companyId),
+        storage.getSuppliers(user.companyId),
+        storage.getSupplierRegionRisks(user.companyId),
+        storage.getActiveSupplierTierAlerts(user.companyId),
+      ]);
+      
+      // Calculate single-source dependencies
+      const singleSourceDeps = relationships.filter(r => r.isSingleSource === 1);
+      const singleSourceSuppliers = singleSourceDeps.map(r => {
+        const supplier = suppliers.find(s => s.id === r.childSupplierId);
+        const tier = tiers.find(t => t.supplierId === r.childSupplierId);
+        return {
+          supplierId: r.childSupplierId,
+          supplierName: supplier?.name || "Unknown",
+          parentSupplierId: r.parentSupplierId,
+          tier: tier?.tier || 1,
+          volumeShare: r.volumeShare,
+          riskScore: r.riskScore,
+        };
+      });
+      
+      // Calculate concentration by country
+      const countryConcentration: Record<string, { count: number; totalSpend: number; suppliers: string[] }> = {};
+      tiers.forEach(tier => {
+        if (tier.country) {
+          if (!countryConcentration[tier.country]) {
+            countryConcentration[tier.country] = { count: 0, totalSpend: 0, suppliers: [] };
+          }
+          countryConcentration[tier.country].count++;
+          countryConcentration[tier.country].totalSpend += tier.spendShare || 0;
+          const supplier = suppliers.find(s => s.id === tier.supplierId);
+          if (supplier) countryConcentration[tier.country].suppliers.push(supplier.name);
+        }
+      });
+      
+      // Find high-risk region suppliers
+      const highRiskRegions = regionRisks.filter(r => r.riskLevel === "high" || r.riskLevel === "critical");
+      const suppliersInHighRiskRegions = tiers
+        .filter(t => t.riskRegion === 1 || highRiskRegions.some(r => r.country === t.country))
+        .map(t => {
+          const supplier = suppliers.find(s => s.id === t.supplierId);
+          const regionRisk = regionRisks.find(r => r.country === t.country);
+          return {
+            supplierId: t.supplierId,
+            supplierName: supplier?.name || "Unknown",
+            tier: t.tier,
+            country: t.country,
+            region: t.region,
+            riskLevel: regionRisk?.riskLevel || "high",
+            riskScore: regionRisk?.riskScore || 0,
+            riskFactors: regionRisk?.riskFactors,
+          };
+        });
+      
+      // Calculate tier distribution
+      const tierDistribution: Record<number, number> = {};
+      tiers.forEach(t => {
+        tierDistribution[t.tier] = (tierDistribution[t.tier] || 0) + 1;
+      });
+      
+      // Critical path analysis
+      const criticalPathRelationships = relationships.filter(r => r.isCriticalPath === 1);
+      
+      res.json({
+        summary: {
+          totalSuppliers: suppliers.length,
+          totalTiers: Math.max(...tiers.map(t => t.tier), 1),
+          totalRelationships: relationships.length,
+          singleSourceCount: singleSourceDeps.length,
+          highRiskRegionCount: suppliersInHighRiskRegions.length,
+          activeAlerts: alerts.length,
+        },
+        singleSourceDependencies: singleSourceSuppliers,
+        countryConcentration: Object.entries(countryConcentration).map(([country, data]) => ({
+          country,
+          ...data,
+          concentrationRisk: data.totalSpend > 30 ? "high" : data.totalSpend > 15 ? "medium" : "low",
+        })),
+        highRiskRegionSuppliers: suppliersInHighRiskRegions,
+        tierDistribution: Object.entries(tierDistribution).map(([tier, count]) => ({
+          tier: parseInt(tier),
+          count,
+        })),
+        criticalPaths: criticalPathRelationships.length,
+        recommendations: [
+          singleSourceDeps.length > 0 ? {
+            priority: "high",
+            type: "single_source",
+            message: `${singleSourceDeps.length} single-source dependencies detected. Consider developing alternative suppliers.`,
+          } : null,
+          suppliersInHighRiskRegions.length > 0 ? {
+            priority: "high",
+            type: "high_risk_region",
+            message: `${suppliersInHighRiskRegions.length} suppliers in high-risk regions. Review contingency plans.`,
+          } : null,
+          Object.values(countryConcentration).some(c => c.totalSpend > 30) ? {
+            priority: "medium",
+            type: "concentration",
+            message: "High geographic concentration detected. Consider diversifying supplier base.",
+          } : null,
+        ].filter(Boolean),
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Get all supplier tiers
+  app.get("/api/supplier-tiers", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const tiers = await storage.getSupplierTiers(user.companyId);
+      res.json(tiers);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Create or update supplier tier
+  app.post("/api/supplier-tiers", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const existingTier = await storage.getSupplierTierBySupplier(req.body.supplierId);
+      if (existingTier) {
+        const updated = await storage.updateSupplierTier(existingTier.id, req.body);
+        return res.json(updated);
+      }
+      
+      const tier = await storage.createSupplierTier({
+        ...req.body,
+        companyId: user.companyId,
+      });
+      res.status(201).json(tier);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // Update supplier tier
+  app.patch("/api/supplier-tiers/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const tier = await storage.updateSupplierTier(req.params.id, req.body);
+      if (!tier) {
+        return res.status(404).json({ error: "Supplier tier not found" });
+      }
+      res.json(tier);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // Delete supplier tier
+  app.delete("/api/supplier-tiers/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      await storage.deleteSupplierTier(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // --- Supplier Relationships ---
+  
+  // Get all relationships
+  app.get("/api/supplier-relationships", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const relationships = await storage.getSupplierRelationships(user.companyId);
+      res.json(relationships);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Create relationship
+  app.post("/api/supplier-relationships", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const relationship = await storage.createSupplierRelationship({
+        ...req.body,
+        companyId: user.companyId,
+      });
+      res.status(201).json(relationship);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // Update relationship
+  app.patch("/api/supplier-relationships/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const rel = await storage.updateSupplierRelationship(req.params.id, req.body);
+      if (!rel) {
+        return res.status(404).json({ error: "Relationship not found" });
+      }
+      res.json(rel);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // Delete relationship
+  app.delete("/api/supplier-relationships/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      await storage.deleteSupplierRelationship(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // --- Region Risks ---
+  
+  // Get all region risks
+  app.get("/api/supplier-region-risks", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const risks = await storage.getSupplierRegionRisks(user.companyId);
+      res.json(risks);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Create region risk
+  app.post("/api/supplier-region-risks", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      const risk = await storage.createSupplierRegionRisk({
+        ...req.body,
+        companyId: user?.companyId || null,
+      });
+      res.status(201).json(risk);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // Update region risk
+  app.patch("/api/supplier-region-risks/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const risk = await storage.updateSupplierRegionRisk(req.params.id, req.body);
+      if (!risk) {
+        return res.status(404).json({ error: "Region risk not found" });
+      }
+      res.json(risk);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // Delete region risk
+  app.delete("/api/supplier-region-risks/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      await storage.deleteSupplierRegionRisk(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // --- Supplier Tier Alerts ---
+  
+  // Get tier alerts
+  app.get("/api/supplier-tier-alerts", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const activeOnly = req.query.active === "true";
+      const alerts = activeOnly 
+        ? await storage.getActiveSupplierTierAlerts(user.companyId)
+        : await storage.getSupplierTierAlerts(user.companyId);
+      res.json(alerts);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Create tier alert
+  app.post("/api/supplier-tier-alerts", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const alert = await storage.createSupplierTierAlert({
+        ...req.body,
+        companyId: user.companyId,
+      });
+      res.status(201).json(alert);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // Acknowledge tier alert
+  app.post("/api/supplier-tier-alerts/:id/acknowledge", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const alert = await storage.acknowledgeSupplierTierAlert(req.params.id, userId);
+      if (!alert) {
+        return res.status(404).json({ error: "Alert not found" });
+      }
+      res.json(alert);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // Resolve tier alert
+  app.post("/api/supplier-tier-alerts/:id/resolve", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { resolution } = req.body;
+      const alert = await storage.resolveSupplierTierAlert(req.params.id, userId, resolution || "Resolved");
+      if (!alert) {
+        return res.status(404).json({ error: "Alert not found" });
+      }
+      res.json(alert);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // ============================================
   // S&OP WORKFLOW ROUTES
   // ============================================
 

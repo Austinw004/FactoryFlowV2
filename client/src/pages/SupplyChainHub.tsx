@@ -1,15 +1,17 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Package, Network, ShieldAlert, Database, BarChart3 } from "lucide-react";
+import { Package, Network, ShieldAlert, Database, BarChart3, GitBranch } from "lucide-react";
 import InventoryManagement from "./InventoryManagement";
 import SupplyChain from "./SupplyChain";
 import SupplierRisk from "./SupplierRisk";
 import ErpTemplates from "./ErpTemplates";
 import IndustryConsortium from "./IndustryConsortium";
+import MultiTierSupplierMapping from "./MultiTierSupplierMapping";
 
 const tabs = [
   { id: "inventory", label: "Inventory", icon: Package, component: InventoryManagement },
   { id: "network", label: "Network", icon: Network, component: SupplyChain },
+  { id: "multi-tier", label: "Multi-Tier Map", icon: GitBranch, component: MultiTierSupplierMapping },
   { id: "supplier-risk", label: "Supplier Risk", icon: ShieldAlert, component: SupplierRisk },
   { id: "erp", label: "ERP Integration", icon: Database, component: ErpTemplates },
   { id: "consortium", label: "Consortium", icon: BarChart3, component: IndustryConsortium },
