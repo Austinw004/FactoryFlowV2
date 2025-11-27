@@ -1,18 +1,22 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Package, Network, BarChart3, Users, Building2, Target } from "lucide-react";
+import { Package, Network, BarChart3, Users, Building2, Target, ShieldAlert, Database } from "lucide-react";
 import InventoryManagement from "./InventoryManagement";
 import SupplyChain from "./SupplyChain";
 import IndustryConsortium from "./IndustryConsortium";
 import PeerBenchmarking from "./peer-benchmarking";
 import MAIntelligence from "./MAIntelligence";
 import StrategicAnalysis from "./StrategicAnalysis";
+import SupplierRisk from "./SupplierRisk";
+import ErpTemplates from "./ErpTemplates";
 
 const tabs = [
   { id: "inventory", label: "Inventory", icon: Package, component: InventoryManagement },
   { id: "network", label: "Network", icon: Network, component: SupplyChain },
+  { id: "supplier-risk", label: "Supplier Risk", icon: ShieldAlert, component: SupplierRisk },
   { id: "consortium", label: "Consortium", icon: BarChart3, component: IndustryConsortium },
   { id: "benchmarking", label: "Benchmarking", icon: Users, component: PeerBenchmarking },
+  { id: "erp", label: "ERP Integration", icon: Database, component: ErpTemplates },
   { id: "ma", label: "M&A", icon: Building2, component: MAIntelligence },
   { id: "strategic", label: "Strategy", icon: Target, component: StrategicAnalysis },
 ];
@@ -36,19 +40,19 @@ export default function SupplyChainHub({ initialTab = "inventory" }: SupplyChain
             Supply Chain & Strategy
           </h1>
           <p className="text-sm text-muted-foreground mb-3">
-            Manage inventory, suppliers, benchmarking, and strategic analysis
+            Manage inventory, suppliers, risk, benchmarking, and strategic analysis
           </p>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="h-auto p-1 bg-muted/50">
+            <TabsList className="h-auto p-1 bg-muted/50 flex-wrap">
               {tabs.map((tab) => (
                 <TabsTrigger
                   key={tab.id}
                   value={tab.id}
-                  className="flex items-center gap-2 px-4 py-2 data-[state=active]:bg-background"
+                  className="flex items-center gap-2 px-3 py-2 data-[state=active]:bg-background"
                   data-testid={`tab-${tab.id}`}
                 >
                   <tab.icon className="h-4 w-4" />
-                  <span className="hidden sm:inline">{tab.label}</span>
+                  <span className="hidden md:inline">{tab.label}</span>
                 </TabsTrigger>
               ))}
             </TabsList>

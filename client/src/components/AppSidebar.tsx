@@ -3,16 +3,9 @@ import {
   TrendingUp,
   ShoppingCart,
   Settings,
-  FileText,
   BookOpen,
   Wrench,
   Network,
-  PieChart,
-  Database,
-  BookMarked,
-  Beaker,
-  ShieldAlert,
-  CalendarDays,
 } from "lucide-react";
 import {
   Sidebar,
@@ -61,48 +54,6 @@ const mainMenuItems = [
 ];
 
 const bottomMenuItems = [
-  {
-    title: "Reports",
-    url: "/reports",
-    icon: FileText,
-    testId: "sidebar-reports",
-  },
-  {
-    title: "ROI Dashboard",
-    url: "/roi-dashboard",
-    icon: PieChart,
-    testId: "sidebar-roi-dashboard",
-  },
-  {
-    title: "ERP Templates",
-    url: "/erp-templates",
-    icon: Database,
-    testId: "sidebar-erp-templates",
-  },
-  {
-    title: "Action Playbooks",
-    url: "/action-playbooks",
-    icon: BookMarked,
-    testId: "sidebar-action-playbooks",
-  },
-  {
-    title: "Scenario Simulation",
-    url: "/scenario-simulation",
-    icon: Beaker,
-    testId: "sidebar-scenario-simulation",
-  },
-  {
-    title: "Supplier Risk",
-    url: "/supplier-risk",
-    icon: ShieldAlert,
-    testId: "sidebar-supplier-risk",
-  },
-  {
-    title: "S&OP Workflows",
-    url: "/sop-workflows",
-    icon: CalendarDays,
-    testId: "sidebar-sop-workflows",
-  },
   {
     title: "Settings",
     url: "/configuration",

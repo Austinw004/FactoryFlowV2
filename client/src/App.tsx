@@ -8,42 +8,49 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { Header } from "@/components/Header";
 import NotFound from "@/pages/not-found";
 import LandingPage from "@/pages/LandingPage";
-import Dashboard from "@/pages/Dashboard";
+import DashboardHub from "@/pages/DashboardHub";
 import DemandHub from "@/pages/DemandHub";
 import ProcurementHub from "@/pages/ProcurementHub";
 import OperationsHub from "@/pages/OperationsHub";
 import SupplyChainHub from "@/pages/SupplyChainHub";
-import Reports from "@/pages/Reports";
 import Configuration from "@/pages/Configuration";
 import HowItWorks from "@/pages/HowItWorks";
-import RoiDashboard from "@/pages/RoiDashboard";
-import ErpTemplates from "@/pages/ErpTemplates";
-import ActionPlaybooks from "@/pages/ActionPlaybooks";
 import ScenarioSimulation from "@/pages/ScenarioSimulation";
-import SupplierRisk from "@/pages/SupplierRisk";
 import SopWorkflows from "@/pages/SopWorkflows";
 import { useAuth } from "@/hooks/useAuth";
 
+// Dashboard Hub routes
+const DashboardOverviewRoute = () => <DashboardHub initialTab="overview" />;
+const DashboardRoiRoute = () => <DashboardHub initialTab="roi" />;
+const DashboardReportsRoute = () => <DashboardHub initialTab="reports" />;
+
+// Demand Hub routes
 const DemandPlanningRoute = () => <DemandHub initialTab="planning" />;
 const DemandAccuracyRoute = () => <DemandHub initialTab="accuracy" />;
 const DemandHorizonsRoute = () => <DemandHub initialTab="horizons" />;
 const DemandSignalsRoute = () => <DemandHub initialTab="signals" />;
 const DemandSopRoute = () => <DemandHub initialTab="sop" />;
 
+// Procurement Hub routes
 const ProcurementPurchasingRoute = () => <ProcurementHub initialTab="purchasing" />;
 const ProcurementAutoPoRoute = () => <ProcurementHub initialTab="automated-po" />;
 const ProcurementRfqRoute = () => <ProcurementHub initialTab="rfq" />;
+const ProcurementPlaybooksRoute = () => <ProcurementHub initialTab="playbooks" />;
 
+// Operations Hub routes
 const OperationsMachineryRoute = () => <OperationsHub initialTab="machinery" />;
 const OperationsProductionRoute = () => <OperationsHub initialTab="production" />;
 const OperationsMaintenanceRoute = () => <OperationsHub initialTab="maintenance" />;
 const OperationsWorkforceRoute = () => <OperationsHub initialTab="workforce" />;
 const OperationsComplianceRoute = () => <OperationsHub initialTab="compliance" />;
 
+// Supply Chain Hub routes
 const SupplyChainInventoryRoute = () => <SupplyChainHub initialTab="inventory" />;
 const SupplyChainNetworkRoute = () => <SupplyChainHub initialTab="network" />;
+const SupplyChainSupplierRiskRoute = () => <SupplyChainHub initialTab="supplier-risk" />;
 const SupplyChainConsortiumRoute = () => <SupplyChainHub initialTab="consortium" />;
 const SupplyChainBenchmarkingRoute = () => <SupplyChainHub initialTab="benchmarking" />;
+const SupplyChainErpRoute = () => <SupplyChainHub initialTab="erp" />;
 const SupplyChainMaRoute = () => <SupplyChainHub initialTab="ma" />;
 const SupplyChainStrategicRoute = () => <SupplyChainHub initialTab="strategic" />;
 
@@ -70,21 +77,20 @@ function Router() {
   return (
     <Switch>
       {/* Main routes */}
-      <Route path="/" component={Dashboard} />
-      <Route path="/dashboard" component={Dashboard} />
+      <Route path="/" component={DashboardOverviewRoute} />
+      <Route path="/dashboard" component={DashboardOverviewRoute} />
       <Route path="/demand" component={DemandPlanningRoute} />
       <Route path="/procurement" component={ProcurementPurchasingRoute} />
       <Route path="/operations" component={OperationsMachineryRoute} />
       <Route path="/supply-chain" component={SupplyChainInventoryRoute} />
-      <Route path="/reports" component={Reports} />
-      <Route path="/roi-dashboard" component={RoiDashboard} />
-      <Route path="/erp-templates" component={ErpTemplates} />
-      <Route path="/action-playbooks" component={ActionPlaybooks} />
       <Route path="/scenario-simulation" component={ScenarioSimulation} />
-      <Route path="/supplier-risk" component={SupplierRisk} />
       <Route path="/sop-workflows" component={SopWorkflows} />
       <Route path="/configuration" component={Configuration} />
       <Route path="/how-it-works" component={HowItWorks} />
+
+      {/* Dashboard Hub routes */}
+      <Route path="/roi-dashboard" component={DashboardRoiRoute} />
+      <Route path="/reports" component={DashboardReportsRoute} />
 
       {/* Legacy routes - Demand & Forecasting */}
       <Route path="/forecasting" component={DemandPlanningRoute} />
@@ -97,6 +103,7 @@ function Router() {
       {/* Legacy routes - Procurement */}
       <Route path="/automated-po" component={ProcurementAutoPoRoute} />
       <Route path="/rfq-generation" component={ProcurementRfqRoute} />
+      <Route path="/action-playbooks" component={ProcurementPlaybooksRoute} />
 
       {/* Legacy routes - Operations */}
       <Route path="/machinery" component={OperationsMachineryRoute} />
@@ -110,8 +117,10 @@ function Router() {
       <Route path="/inventory-optimization" component={SupplyChainInventoryRoute} />
       <Route path="/traceability" component={SupplyChainNetworkRoute} />
       <Route path="/supply-chain-network" component={SupplyChainNetworkRoute} />
+      <Route path="/supplier-risk" component={SupplyChainSupplierRiskRoute} />
       <Route path="/industry-consortium" component={SupplyChainConsortiumRoute} />
       <Route path="/peer-benchmarking" component={SupplyChainBenchmarkingRoute} />
+      <Route path="/erp-templates" component={SupplyChainErpRoute} />
       <Route path="/ma-intelligence" component={SupplyChainMaRoute} />
       <Route path="/strategic-analysis" component={SupplyChainStrategicRoute} />
 

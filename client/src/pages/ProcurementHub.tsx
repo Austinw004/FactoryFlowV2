@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ShoppingCart, Zap, FileText } from "lucide-react";
+import { ShoppingCart, Zap, FileText, BookMarked } from "lucide-react";
 import Procurement from "./Procurement";
 import AutomatedPO from "./AutomatedPO";
 import RfqDashboard from "./rfq-dashboard";
+import ActionPlaybooks from "./ActionPlaybooks";
 
 const tabs = [
   { id: "purchasing", label: "Purchasing", icon: ShoppingCart, component: Procurement },
   { id: "automated-po", label: "Auto PO", icon: Zap, component: AutomatedPO },
   { id: "rfq", label: "RFQ Generation", icon: FileText, component: RfqDashboard },
+  { id: "playbooks", label: "Action Playbooks", icon: BookMarked, component: ActionPlaybooks },
 ];
 
 interface ProcurementHubProps {
@@ -30,7 +32,7 @@ export default function ProcurementHub({ initialTab = "purchasing" }: Procuremen
             Procurement
           </h1>
           <p className="text-sm text-muted-foreground mb-3">
-            Manage suppliers, automate purchase orders, and generate RFQs
+            Manage suppliers, automate purchase orders, and regime-aware action strategies
           </p>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="h-auto p-1 bg-muted/50">
