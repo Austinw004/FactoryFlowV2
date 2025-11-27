@@ -10,6 +10,8 @@ import {
   PieChart,
   Database,
   BookMarked,
+  Beaker,
+  ShieldAlert,
 } from "lucide-react";
 import {
   Sidebar,
@@ -81,6 +83,18 @@ const bottomMenuItems = [
     url: "/action-playbooks",
     icon: BookMarked,
     testId: "sidebar-action-playbooks",
+  },
+  {
+    title: "Scenario Simulation",
+    url: "/scenario-simulation",
+    icon: Beaker,
+    testId: "sidebar-scenario-simulation",
+  },
+  {
+    title: "Supplier Risk",
+    url: "/supplier-risk",
+    icon: ShieldAlert,
+    testId: "sidebar-supplier-risk",
   },
   {
     title: "Settings",
