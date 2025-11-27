@@ -4141,3 +4141,318 @@ export type SopApprovalRequest = typeof sopApprovalRequests.$inferSelect;
 export type InsertSopApprovalRequest = z.infer<typeof insertSopApprovalRequestSchema>;
 export type SopApprovalAction = typeof sopApprovalActions.$inferSelect;
 export type InsertSopApprovalAction = z.infer<typeof insertSopApprovalActionSchema>;
+
+// ============================================
+// DIGITAL TWIN - Real-Time Supply Chain Mirror
+// ============================================
+
+// Digital Twin Data Feeds - Live data sources
+export const digitalTwinDataFeeds = pgTable("digital_twin_data_feeds", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  
+  // Feed identification
+  name: text("name").notNull(),
+  description: text("description"),
+  feedType: text("feed_type").notNull(), // "inventory", "production", "supplier", "demand", "logistics", "economic", "sensor"
+  sourceSystem: text("source_system"), // "ERP", "WMS", "MES", "IoT", "API", "manual"
+  
+  // Connection configuration
+  connectionType: text("connection_type").notNull(), // "api", "database", "webhook", "file", "mqtt", "internal"
+  connectionConfig: jsonb("connection_config"), // API URL, credentials, query, etc.
+  
+  // Refresh settings
+  refreshInterval: integer("refresh_interval").default(300), // seconds (5 min default)
+  lastRefresh: timestamp("last_refresh"),
+  nextRefresh: timestamp("next_refresh"),
+  isActive: integer("is_active").default(1),
+  
+  // Data mapping
+  dataMapping: jsonb("data_mapping"), // How to map source data to digital twin entities
+  transformRules: jsonb("transform_rules"), // Data transformation rules
+  
+  // Health monitoring
+  status: text("status").default("active"), // "active", "paused", "error", "initializing"
+  lastError: text("last_error"),
+  errorCount: integer("error_count").default(0),
+  successCount: integer("success_count").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("dt_data_feeds_company_idx").on(table.companyId),
+  index("dt_data_feeds_type_idx").on(table.feedType),
+  index("dt_data_feeds_status_idx").on(table.status),
+]);
+
+// Digital Twin Snapshots - Point-in-time state captures
+export const digitalTwinSnapshots = pgTable("digital_twin_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  
+  // Snapshot metadata
+  snapshotType: text("snapshot_type").notNull(), // "full", "incremental", "demand", "supply", "production"
+  capturedAt: timestamp("captured_at").defaultNow().notNull(),
+  
+  // Current state metrics
+  totalInventoryValue: real("total_inventory_value"),
+  totalInventoryUnits: integer("total_inventory_units"),
+  activeSkuCount: integer("active_sku_count"),
+  activeMaterialCount: integer("active_material_count"),
+  activeSupplierCount: integer("active_supplier_count"),
+  openOrderCount: integer("open_order_count"),
+  pendingRfqCount: integer("pending_rfq_count"),
+  
+  // Production state
+  productionCapacity: real("production_capacity"), // percentage
+  machineUtilization: real("machine_utilization"), // percentage
+  oeeScore: real("oee_score"), // Overall Equipment Effectiveness
+  activeMachineryCount: integer("active_machinery_count"),
+  
+  // Supply chain health
+  averageLeadTime: real("average_lead_time"), // days
+  onTimeDeliveryRate: real("on_time_delivery_rate"), // percentage
+  supplierRiskScore: real("supplier_risk_score"), // 0-100
+  
+  // Economic context
+  economicRegime: text("economic_regime"),
+  fdrValue: real("fdr_value"),
+  regimeIntensity: real("regime_intensity"),
+  
+  // Demand signals
+  forecastedDemandValue: real("forecasted_demand_value"),
+  actualDemandValue: real("actual_demand_value"),
+  forecastAccuracy: real("forecast_accuracy"), // MAPE
+  
+  // Full state data (detailed)
+  inventoryState: jsonb("inventory_state"), // Per-material inventory levels
+  productionState: jsonb("production_state"), // Production line status
+  supplyState: jsonb("supply_state"), // Supplier and order status
+  demandState: jsonb("demand_state"), // Demand forecasts and actuals
+  
+  // Alerts at time of snapshot
+  activeAlertCount: integer("active_alert_count"),
+  criticalAlertCount: integer("critical_alert_count"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("dt_snapshots_company_idx").on(table.companyId),
+  index("dt_snapshots_captured_idx").on(table.capturedAt),
+  index("dt_snapshots_type_idx").on(table.snapshotType),
+]);
+
+// Digital Twin Queries - Natural language queries and insights
+export const digitalTwinQueries = pgTable("digital_twin_queries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").references(() => users.id),
+  
+  // Query content
+  queryText: text("query_text").notNull(),
+  queryType: text("query_type").notNull(), // "insight", "prediction", "comparison", "alert", "what_if", "optimization"
+  
+  // Parsed intent
+  parsedIntent: jsonb("parsed_intent"), // NLP-parsed intent and entities
+  targetEntities: text("target_entities").array(), // ["inventory", "production", "supplier"]
+  timeRange: jsonb("time_range"), // {start, end, granularity}
+  
+  // Response
+  responseType: text("response_type"), // "text", "chart", "table", "recommendation", "simulation"
+  responseText: text("response_text"),
+  responseData: jsonb("response_data"), // Structured data for visualization
+  
+  // Performance
+  processingTime: integer("processing_time"), // milliseconds
+  dataSourcesUsed: text("data_sources_used").array(),
+  confidence: real("confidence"), // 0-1 confidence score
+  
+  // Feedback
+  helpfulness: integer("helpfulness"), // 1-5 rating
+  feedback: text("feedback"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("dt_queries_company_idx").on(table.companyId),
+  index("dt_queries_user_idx").on(table.userId),
+  index("dt_queries_type_idx").on(table.queryType),
+  index("dt_queries_created_idx").on(table.createdAt),
+]);
+
+// Digital Twin Simulations - What-if scenarios
+export const digitalTwinSimulations = pgTable("digital_twin_simulations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").references(() => users.id),
+  
+  // Simulation metadata
+  name: text("name").notNull(),
+  description: text("description"),
+  simulationType: text("simulation_type").notNull(), // "demand_shock", "supply_disruption", "price_change", "capacity_change", "regime_shift", "custom"
+  status: text("status").default("draft"), // "draft", "running", "completed", "failed"
+  
+  // Base state (starting point)
+  baseSnapshotId: varchar("base_snapshot_id").references(() => digitalTwinSnapshots.id),
+  baseTimestamp: timestamp("base_timestamp"),
+  
+  // Scenario parameters
+  scenarioParams: jsonb("scenario_params").notNull(), // Detailed simulation parameters
+  /*
+    Example: {
+      demandChange: { percentage: 30, affectedSkus: ["SKU-001"], duration: "3_months" },
+      supplyDisruption: { supplierId: "SUP-001", disruptionType: "delay", delayDays: 14 },
+      priceChange: { materialId: "MAT-001", priceChangePercent: 25 },
+      regimeShift: { targetRegime: "IMBALANCED_EXCESS", fdrValue: 1.8 }
+    }
+  */
+  
+  // Simulation horizon
+  horizonDays: integer("horizon_days").default(90),
+  granularity: text("granularity").default("daily"), // "hourly", "daily", "weekly"
+  
+  // Results
+  results: jsonb("results"), // Full simulation results
+  /*
+    Example: {
+      inventoryImpact: { projected: [...], riskLevel: "high" },
+      costImpact: { additionalCost: 50000, savingsOpportunity: 20000 },
+      productionImpact: { capacityUtilization: [...], bottlenecks: [...] },
+      supplyChainRisk: { score: 75, recommendations: [...] },
+      timeline: [{ day: 1, metrics: {...} }, ...]
+    }
+  */
+  
+  // Summary metrics
+  totalCostImpact: real("total_cost_impact"),
+  riskScore: real("risk_score"),
+  confidenceLevel: real("confidence_level"),
+  keyFindings: text("key_findings").array(),
+  recommendations: jsonb("recommendations"),
+  
+  // Execution info
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  executionTime: integer("execution_time"), // milliseconds
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("dt_simulations_company_idx").on(table.companyId),
+  index("dt_simulations_user_idx").on(table.userId),
+  index("dt_simulations_type_idx").on(table.simulationType),
+  index("dt_simulations_status_idx").on(table.status),
+]);
+
+// Digital Twin Alerts - Real-time anomaly detection
+export const digitalTwinAlerts = pgTable("digital_twin_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  
+  // Alert identification
+  alertType: text("alert_type").notNull(), // "anomaly", "threshold", "prediction", "correlation", "pattern"
+  severity: text("severity").notNull(), // "info", "warning", "critical", "emergency"
+  category: text("category").notNull(), // "inventory", "production", "supply", "demand", "financial", "quality"
+  
+  // Alert content
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  
+  // Entity reference
+  entityType: text("entity_type"), // "sku", "material", "supplier", "machine", "order"
+  entityId: varchar("entity_id"),
+  entityName: text("entity_name"),
+  
+  // Detection details
+  detectedAt: timestamp("detected_at").defaultNow().notNull(),
+  detectedValue: real("detected_value"),
+  expectedValue: real("expected_value"),
+  deviationPercent: real("deviation_percent"),
+  
+  // Context
+  triggerCondition: jsonb("trigger_condition"), // What triggered the alert
+  relatedMetrics: jsonb("related_metrics"), // Additional context metrics
+  
+  // Impact assessment
+  estimatedImpact: real("estimated_impact"), // Financial impact estimate
+  affectedEntities: jsonb("affected_entities"), // List of affected SKUs, materials, etc.
+  
+  // Recommendations
+  suggestedActions: jsonb("suggested_actions"), // Recommended actions
+  automatedActions: jsonb("automated_actions"), // Actions that can be taken automatically
+  
+  // Status tracking
+  status: text("status").default("active"), // "active", "acknowledged", "investigating", "resolved", "dismissed"
+  acknowledgedAt: timestamp("acknowledged_at"),
+  acknowledgedBy: varchar("acknowledged_by").references(() => users.id),
+  resolvedAt: timestamp("resolved_at"),
+  resolvedBy: varchar("resolved_by").references(() => users.id),
+  resolution: text("resolution"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("dt_alerts_company_idx").on(table.companyId),
+  index("dt_alerts_type_idx").on(table.alertType),
+  index("dt_alerts_severity_idx").on(table.severity),
+  index("dt_alerts_status_idx").on(table.status),
+  index("dt_alerts_detected_idx").on(table.detectedAt),
+]);
+
+// Digital Twin KPI Metrics - Time-series performance data
+export const digitalTwinMetrics = pgTable("digital_twin_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  
+  // Metric identification
+  metricName: text("metric_name").notNull(), // "inventory_turnover", "fill_rate", "lead_time", etc.
+  metricCategory: text("metric_category").notNull(), // "inventory", "production", "supply", "demand", "financial"
+  
+  // Time
+  recordedAt: timestamp("recorded_at").defaultNow().notNull(),
+  granularity: text("granularity").notNull(), // "minute", "hour", "day", "week"
+  
+  // Value
+  value: real("value").notNull(),
+  unit: text("unit"), // "percent", "days", "units", "dollars"
+  
+  // Context
+  entityType: text("entity_type"), // Optional entity-specific metric
+  entityId: varchar("entity_id"),
+  
+  // Comparison
+  previousValue: real("previous_value"),
+  targetValue: real("target_value"),
+  changePercent: real("change_percent"),
+  
+  // Anomaly detection
+  isAnomaly: integer("is_anomaly").default(0),
+  anomalyScore: real("anomaly_score"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("dt_metrics_company_idx").on(table.companyId),
+  index("dt_metrics_name_idx").on(table.metricName),
+  index("dt_metrics_recorded_idx").on(table.recordedAt),
+  index("dt_metrics_category_idx").on(table.metricCategory),
+]);
+
+// Digital Twin Schemas
+export const insertDigitalTwinDataFeedSchema = createInsertSchema(digitalTwinDataFeeds).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertDigitalTwinSnapshotSchema = createInsertSchema(digitalTwinSnapshots).omit({ id: true, createdAt: true });
+export const insertDigitalTwinQuerySchema = createInsertSchema(digitalTwinQueries).omit({ id: true, createdAt: true });
+export const insertDigitalTwinSimulationSchema = createInsertSchema(digitalTwinSimulations).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertDigitalTwinAlertSchema = createInsertSchema(digitalTwinAlerts).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertDigitalTwinMetricSchema = createInsertSchema(digitalTwinMetrics).omit({ id: true, createdAt: true });
+
+// Digital Twin Types
+export type DigitalTwinDataFeed = typeof digitalTwinDataFeeds.$inferSelect;
+export type InsertDigitalTwinDataFeed = z.infer<typeof insertDigitalTwinDataFeedSchema>;
+export type DigitalTwinSnapshot = typeof digitalTwinSnapshots.$inferSelect;
+export type InsertDigitalTwinSnapshot = z.infer<typeof insertDigitalTwinSnapshotSchema>;
+export type DigitalTwinQuery = typeof digitalTwinQueries.$inferSelect;
+export type InsertDigitalTwinQuery = z.infer<typeof insertDigitalTwinQuerySchema>;
+export type DigitalTwinSimulation = typeof digitalTwinSimulations.$inferSelect;
+export type InsertDigitalTwinSimulation = z.infer<typeof insertDigitalTwinSimulationSchema>;
+export type DigitalTwinAlert = typeof digitalTwinAlerts.$inferSelect;
+export type InsertDigitalTwinAlert = z.infer<typeof insertDigitalTwinAlertSchema>;
+export type DigitalTwinMetric = typeof digitalTwinMetrics.$inferSelect;
+export type InsertDigitalTwinMetric = z.infer<typeof insertDigitalTwinMetricSchema>;

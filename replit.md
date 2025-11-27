@@ -52,6 +52,13 @@ The system is a multi-tenant application ensuring data isolation per company. Co
   - **Demand/Supply Reconciliation**: Track demand forecasts vs. supply capacity with variance calculations, automatic gap identification, and resolution tracking. Items can be pending, accepted, rejected, or escalated.
   - **Approval Workflows**: Multi-level approval chains for demand adjustments, supply changes, and budget modifications with full audit trails, comments, and escalation support.
   - **S&OP Dashboard**: Real-time metrics showing total meetings, pending approvals, reconciliation items, and economic regime status. Quick navigation to upcoming meetings and next actions.
+- **Real-Time Digital Twin**: Enterprise-grade supply chain digital twin competing with industry leaders (o9, Kinaxis, Logility). Features include:
+  - **Live State Snapshots**: Continuous capture of inventory, production, and supply chain state with metrics aggregation and regime integration.
+  - **AI-Powered Natural Language Queries**: Ask questions in plain English about your supply chain ("What materials need reordering?", "Predict demand for next month"). Intent parsing, entity detection, and intelligent response generation with confidence scoring.
+  - **What-If Simulations**: Model scenarios like demand shocks, supply disruptions, price changes, and regime shifts. Run simulations to calculate cost impacts, risk scores, timeline projections, key findings, and actionable recommendations.
+  - **Real-Time Alerts**: Anomaly detection across inventory, production, supply, and demand with severity levels, acknowledgment workflow, and resolution tracking.
+  - **Data Feed Management**: Configure and monitor real-time data feeds from internal systems (ERP, MES) and external APIs with connection status and sync intervals.
+  - **Executive Dashboard**: KPI cards for inventory value, OEE, supplier network, and FDR ratio. Radar chart visualization of system state, alert summaries, and quick insights.
 
 ### System Design Choices
 

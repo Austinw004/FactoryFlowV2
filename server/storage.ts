@@ -104,7 +104,13 @@ import type {
   SopApprovalChain, InsertSopApprovalChain,
   SopApprovalStep, InsertSopApprovalStep,
   SopApprovalRequest, InsertSopApprovalRequest,
-  SopApprovalAction, InsertSopApprovalAction
+  SopApprovalAction, InsertSopApprovalAction,
+  DigitalTwinDataFeed, InsertDigitalTwinDataFeed,
+  DigitalTwinSnapshot, InsertDigitalTwinSnapshot,
+  DigitalTwinQuery, InsertDigitalTwinQuery,
+  DigitalTwinSimulation, InsertDigitalTwinSimulation,
+  DigitalTwinAlert, InsertDigitalTwinAlert,
+  DigitalTwinMetric, InsertDigitalTwinMetric
 } from "@shared/schema";
 import { 
   users, companies, companyLocations, skus, materials, boms, suppliers, supplierMaterials,
@@ -137,7 +143,9 @@ import {
   scenarioSimulations, scenarioVariants, supplierRiskSnapshots,
   sopMeetingTemplates, sopMeetings, sopMeetingAttendees,
   sopReconciliationItems, sopApprovalChains, sopApprovalSteps,
-  sopApprovalRequests, sopApprovalActions
+  sopApprovalRequests, sopApprovalActions,
+  digitalTwinDataFeeds, digitalTwinSnapshots, digitalTwinQueries,
+  digitalTwinSimulations, digitalTwinAlerts, digitalTwinMetrics
 } from "@shared/schema";
 
 export interface IStorage {
@@ -797,6 +805,43 @@ export interface IStorage {
   // S&OP Approval Actions
   getSopApprovalActions(requestId: string): Promise<SopApprovalAction[]>;
   createSopApprovalAction(action: InsertSopApprovalAction): Promise<SopApprovalAction>;
+  
+  // Digital Twin - Data Feeds
+  getDigitalTwinDataFeeds(companyId: string): Promise<DigitalTwinDataFeed[]>;
+  getDigitalTwinDataFeed(id: string): Promise<DigitalTwinDataFeed | undefined>;
+  createDigitalTwinDataFeed(feed: InsertDigitalTwinDataFeed): Promise<DigitalTwinDataFeed>;
+  updateDigitalTwinDataFeed(id: string, feed: Partial<InsertDigitalTwinDataFeed>): Promise<DigitalTwinDataFeed | undefined>;
+  deleteDigitalTwinDataFeed(id: string): Promise<void>;
+  
+  // Digital Twin - Snapshots
+  getDigitalTwinSnapshots(companyId: string, limit?: number): Promise<DigitalTwinSnapshot[]>;
+  getDigitalTwinSnapshot(id: string): Promise<DigitalTwinSnapshot | undefined>;
+  getLatestDigitalTwinSnapshot(companyId: string): Promise<DigitalTwinSnapshot | undefined>;
+  createDigitalTwinSnapshot(snapshot: InsertDigitalTwinSnapshot): Promise<DigitalTwinSnapshot>;
+  
+  // Digital Twin - Queries
+  getDigitalTwinQueries(companyId: string, limit?: number): Promise<DigitalTwinQuery[]>;
+  getDigitalTwinQuery(id: string): Promise<DigitalTwinQuery | undefined>;
+  createDigitalTwinQuery(query: InsertDigitalTwinQuery): Promise<DigitalTwinQuery>;
+  updateDigitalTwinQuery(id: string, query: Partial<InsertDigitalTwinQuery>): Promise<DigitalTwinQuery | undefined>;
+  
+  // Digital Twin - Simulations
+  getDigitalTwinSimulations(companyId: string): Promise<DigitalTwinSimulation[]>;
+  getDigitalTwinSimulation(id: string): Promise<DigitalTwinSimulation | undefined>;
+  createDigitalTwinSimulation(simulation: InsertDigitalTwinSimulation): Promise<DigitalTwinSimulation>;
+  updateDigitalTwinSimulation(id: string, simulation: Partial<InsertDigitalTwinSimulation>): Promise<DigitalTwinSimulation | undefined>;
+  deleteDigitalTwinSimulation(id: string): Promise<void>;
+  
+  // Digital Twin - Alerts
+  getDigitalTwinAlerts(companyId: string, filters?: { status?: string; severity?: string; category?: string }): Promise<DigitalTwinAlert[]>;
+  getDigitalTwinAlert(id: string): Promise<DigitalTwinAlert | undefined>;
+  createDigitalTwinAlert(alert: InsertDigitalTwinAlert): Promise<DigitalTwinAlert>;
+  updateDigitalTwinAlert(id: string, alert: Partial<InsertDigitalTwinAlert>): Promise<DigitalTwinAlert | undefined>;
+  
+  // Digital Twin - Metrics
+  getDigitalTwinMetrics(companyId: string, filters?: { metricName?: string; category?: string; startDate?: Date; endDate?: Date }): Promise<DigitalTwinMetric[]>;
+  createDigitalTwinMetric(metric: InsertDigitalTwinMetric): Promise<DigitalTwinMetric>;
+  createDigitalTwinMetricsBatch(metrics: InsertDigitalTwinMetric[]): Promise<DigitalTwinMetric[]>;
 }
 
 export class DbStorage implements IStorage {
@@ -3872,6 +3917,185 @@ export class DbStorage implements IStorage {
   async createSopApprovalAction(action: InsertSopApprovalAction): Promise<SopApprovalAction> {
     const [result] = await db.insert(sopApprovalActions).values(action).returning();
     return result;
+  }
+  
+  // Digital Twin - Data Feeds
+  async getDigitalTwinDataFeeds(companyId: string): Promise<DigitalTwinDataFeed[]> {
+    return db.select().from(digitalTwinDataFeeds)
+      .where(eq(digitalTwinDataFeeds.companyId, companyId))
+      .orderBy(desc(digitalTwinDataFeeds.createdAt));
+  }
+  
+  async getDigitalTwinDataFeed(id: string): Promise<DigitalTwinDataFeed | undefined> {
+    const [result] = await db.select().from(digitalTwinDataFeeds)
+      .where(eq(digitalTwinDataFeeds.id, id));
+    return result;
+  }
+  
+  async createDigitalTwinDataFeed(feed: InsertDigitalTwinDataFeed): Promise<DigitalTwinDataFeed> {
+    const [result] = await db.insert(digitalTwinDataFeeds).values(feed).returning();
+    return result;
+  }
+  
+  async updateDigitalTwinDataFeed(id: string, feed: Partial<InsertDigitalTwinDataFeed>): Promise<DigitalTwinDataFeed | undefined> {
+    const [result] = await db.update(digitalTwinDataFeeds)
+      .set({ ...feed, updatedAt: new Date() })
+      .where(eq(digitalTwinDataFeeds.id, id))
+      .returning();
+    return result;
+  }
+  
+  async deleteDigitalTwinDataFeed(id: string): Promise<void> {
+    await db.delete(digitalTwinDataFeeds).where(eq(digitalTwinDataFeeds.id, id));
+  }
+  
+  // Digital Twin - Snapshots
+  async getDigitalTwinSnapshots(companyId: string, limit: number = 100): Promise<DigitalTwinSnapshot[]> {
+    return db.select().from(digitalTwinSnapshots)
+      .where(eq(digitalTwinSnapshots.companyId, companyId))
+      .orderBy(desc(digitalTwinSnapshots.capturedAt))
+      .limit(limit);
+  }
+  
+  async getDigitalTwinSnapshot(id: string): Promise<DigitalTwinSnapshot | undefined> {
+    const [result] = await db.select().from(digitalTwinSnapshots)
+      .where(eq(digitalTwinSnapshots.id, id));
+    return result;
+  }
+  
+  async getLatestDigitalTwinSnapshot(companyId: string): Promise<DigitalTwinSnapshot | undefined> {
+    const [result] = await db.select().from(digitalTwinSnapshots)
+      .where(eq(digitalTwinSnapshots.companyId, companyId))
+      .orderBy(desc(digitalTwinSnapshots.capturedAt))
+      .limit(1);
+    return result;
+  }
+  
+  async createDigitalTwinSnapshot(snapshot: InsertDigitalTwinSnapshot): Promise<DigitalTwinSnapshot> {
+    const [result] = await db.insert(digitalTwinSnapshots).values(snapshot).returning();
+    return result;
+  }
+  
+  // Digital Twin - Queries
+  async getDigitalTwinQueries(companyId: string, limit: number = 50): Promise<DigitalTwinQuery[]> {
+    return db.select().from(digitalTwinQueries)
+      .where(eq(digitalTwinQueries.companyId, companyId))
+      .orderBy(desc(digitalTwinQueries.createdAt))
+      .limit(limit);
+  }
+  
+  async getDigitalTwinQuery(id: string): Promise<DigitalTwinQuery | undefined> {
+    const [result] = await db.select().from(digitalTwinQueries)
+      .where(eq(digitalTwinQueries.id, id));
+    return result;
+  }
+  
+  async createDigitalTwinQuery(query: InsertDigitalTwinQuery): Promise<DigitalTwinQuery> {
+    const [result] = await db.insert(digitalTwinQueries).values(query).returning();
+    return result;
+  }
+  
+  async updateDigitalTwinQuery(id: string, query: Partial<InsertDigitalTwinQuery>): Promise<DigitalTwinQuery | undefined> {
+    const [result] = await db.update(digitalTwinQueries)
+      .set(query)
+      .where(eq(digitalTwinQueries.id, id))
+      .returning();
+    return result;
+  }
+  
+  // Digital Twin - Simulations
+  async getDigitalTwinSimulations(companyId: string): Promise<DigitalTwinSimulation[]> {
+    return db.select().from(digitalTwinSimulations)
+      .where(eq(digitalTwinSimulations.companyId, companyId))
+      .orderBy(desc(digitalTwinSimulations.createdAt));
+  }
+  
+  async getDigitalTwinSimulation(id: string): Promise<DigitalTwinSimulation | undefined> {
+    const [result] = await db.select().from(digitalTwinSimulations)
+      .where(eq(digitalTwinSimulations.id, id));
+    return result;
+  }
+  
+  async createDigitalTwinSimulation(simulation: InsertDigitalTwinSimulation): Promise<DigitalTwinSimulation> {
+    const [result] = await db.insert(digitalTwinSimulations).values(simulation).returning();
+    return result;
+  }
+  
+  async updateDigitalTwinSimulation(id: string, simulation: Partial<InsertDigitalTwinSimulation>): Promise<DigitalTwinSimulation | undefined> {
+    const [result] = await db.update(digitalTwinSimulations)
+      .set({ ...simulation, updatedAt: new Date() })
+      .where(eq(digitalTwinSimulations.id, id))
+      .returning();
+    return result;
+  }
+  
+  async deleteDigitalTwinSimulation(id: string): Promise<void> {
+    await db.delete(digitalTwinSimulations).where(eq(digitalTwinSimulations.id, id));
+  }
+  
+  // Digital Twin - Alerts
+  async getDigitalTwinAlerts(companyId: string, filters?: { status?: string; severity?: string; category?: string }): Promise<DigitalTwinAlert[]> {
+    let conditions = [eq(digitalTwinAlerts.companyId, companyId)];
+    
+    if (filters?.status) {
+      conditions.push(eq(digitalTwinAlerts.status, filters.status));
+    }
+    if (filters?.severity) {
+      conditions.push(eq(digitalTwinAlerts.severity, filters.severity));
+    }
+    if (filters?.category) {
+      conditions.push(eq(digitalTwinAlerts.category, filters.category));
+    }
+    
+    return db.select().from(digitalTwinAlerts)
+      .where(and(...conditions))
+      .orderBy(desc(digitalTwinAlerts.detectedAt));
+  }
+  
+  async getDigitalTwinAlert(id: string): Promise<DigitalTwinAlert | undefined> {
+    const [result] = await db.select().from(digitalTwinAlerts)
+      .where(eq(digitalTwinAlerts.id, id));
+    return result;
+  }
+  
+  async createDigitalTwinAlert(alert: InsertDigitalTwinAlert): Promise<DigitalTwinAlert> {
+    const [result] = await db.insert(digitalTwinAlerts).values(alert).returning();
+    return result;
+  }
+  
+  async updateDigitalTwinAlert(id: string, alert: Partial<InsertDigitalTwinAlert>): Promise<DigitalTwinAlert | undefined> {
+    const [result] = await db.update(digitalTwinAlerts)
+      .set({ ...alert, updatedAt: new Date() })
+      .where(eq(digitalTwinAlerts.id, id))
+      .returning();
+    return result;
+  }
+  
+  // Digital Twin - Metrics
+  async getDigitalTwinMetrics(companyId: string, filters?: { metricName?: string; category?: string; startDate?: Date; endDate?: Date }): Promise<DigitalTwinMetric[]> {
+    let conditions = [eq(digitalTwinMetrics.companyId, companyId)];
+    
+    if (filters?.metricName) {
+      conditions.push(eq(digitalTwinMetrics.metricName, filters.metricName));
+    }
+    if (filters?.category) {
+      conditions.push(eq(digitalTwinMetrics.metricCategory, filters.category));
+    }
+    
+    return db.select().from(digitalTwinMetrics)
+      .where(and(...conditions))
+      .orderBy(desc(digitalTwinMetrics.recordedAt))
+      .limit(1000);
+  }
+  
+  async createDigitalTwinMetric(metric: InsertDigitalTwinMetric): Promise<DigitalTwinMetric> {
+    const [result] = await db.insert(digitalTwinMetrics).values(metric).returning();
+    return result;
+  }
+  
+  async createDigitalTwinMetricsBatch(metrics: InsertDigitalTwinMetric[]): Promise<DigitalTwinMetric[]> {
+    if (metrics.length === 0) return [];
+    return db.insert(digitalTwinMetrics).values(metrics).returning();
   }
 }
 

@@ -45,6 +45,7 @@ const OperationsWorkforceRoute = () => <OperationsHub initialTab="workforce" />;
 const OperationsComplianceRoute = () => <OperationsHub initialTab="compliance" />;
 
 // Supply Chain Hub routes
+const SupplyChainDigitalTwinRoute = () => <SupplyChainHub initialTab="digital-twin" />;
 const SupplyChainInventoryRoute = () => <SupplyChainHub initialTab="inventory" />;
 const SupplyChainNetworkRoute = () => <SupplyChainHub initialTab="network" />;
 const SupplyChainSupplierRiskRoute = () => <SupplyChainHub initialTab="supplier-risk" />;
@@ -113,6 +114,7 @@ function Router() {
       <Route path="/compliance" component={OperationsComplianceRoute} />
 
       {/* Legacy routes - Supply Chain */}
+      <Route path="/digital-twin" component={SupplyChainDigitalTwinRoute} />
       <Route path="/inventory" component={SupplyChainInventoryRoute} />
       <Route path="/inventory-optimization" component={SupplyChainInventoryRoute} />
       <Route path="/traceability" component={SupplyChainNetworkRoute} />

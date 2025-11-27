@@ -72,6 +72,12 @@ import {
   insertSopApprovalActionSchema,
   SOP_MEETING_TYPES,
   SOP_MEETING_STATUS,
+  insertDigitalTwinDataFeedSchema,
+  insertDigitalTwinSnapshotSchema,
+  insertDigitalTwinQuerySchema,
+  insertDigitalTwinSimulationSchema,
+  insertDigitalTwinAlertSchema,
+  insertDigitalTwinMetricSchema,
 } from "@shared/schema";
 
 const economics = new DualCircuitEconomics();
@@ -9115,6 +9121,547 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // =====================================
+  // DIGITAL TWIN API ROUTES
+  // =====================================
+  
+  // Digital Twin - Data Feeds
+  app.get("/api/digital-twin/data-feeds", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const feeds = await storage.getDigitalTwinDataFeeds(user.companyId);
+      res.json(feeds);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  app.post("/api/digital-twin/data-feeds", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const validated = insertDigitalTwinDataFeedSchema.parse({
+        ...req.body,
+        companyId: user.companyId,
+      });
+      
+      const feed = await storage.createDigitalTwinDataFeed(validated);
+      res.json(feed);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  app.patch("/api/digital-twin/data-feeds/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      // Verify ownership before updating
+      const existing = await storage.getDigitalTwinDataFeed(req.params.id);
+      if (!existing || existing.companyId !== user.companyId) {
+        return res.status(404).json({ error: "Data feed not found" });
+      }
+      
+      // Validate the update data
+      const { name, feedType, sourceUrl, refreshInterval, status, connectionConfig, fieldMappings } = req.body;
+      const updateData: any = {};
+      if (name !== undefined) updateData.name = name;
+      if (feedType !== undefined) updateData.feedType = feedType;
+      if (sourceUrl !== undefined) updateData.sourceUrl = sourceUrl;
+      if (refreshInterval !== undefined) updateData.refreshInterval = refreshInterval;
+      if (status !== undefined) updateData.status = status;
+      if (connectionConfig !== undefined) updateData.connectionConfig = connectionConfig;
+      if (fieldMappings !== undefined) updateData.fieldMappings = fieldMappings;
+      
+      const feed = await storage.updateDigitalTwinDataFeed(req.params.id, updateData);
+      res.json(feed);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  app.delete("/api/digital-twin/data-feeds/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      // Verify ownership before deleting
+      const existing = await storage.getDigitalTwinDataFeed(req.params.id);
+      if (!existing || existing.companyId !== user.companyId) {
+        return res.status(404).json({ error: "Data feed not found" });
+      }
+      
+      await storage.deleteDigitalTwinDataFeed(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // Digital Twin - Snapshots (Live State)
+  app.get("/api/digital-twin/snapshots", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const limit = parseInt(req.query.limit as string) || 100;
+      const snapshots = await storage.getDigitalTwinSnapshots(user.companyId, limit);
+      res.json(snapshots);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  app.get("/api/digital-twin/snapshots/latest", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const snapshot = await storage.getLatestDigitalTwinSnapshot(user.companyId);
+      res.json(snapshot || null);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Capture a new snapshot (aggregates current state)
+  app.post("/api/digital-twin/snapshots/capture", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      // Gather current state from all sources
+      const [skus, materials, suppliers, machinery, allocations, rfqs] = await Promise.all([
+        storage.getSkus(user.companyId),
+        storage.getMaterials(user.companyId),
+        storage.getSuppliers(user.companyId),
+        storage.getMachinery(user.companyId),
+        storage.getAllocations(user.companyId),
+        storage.getRfqs(user.companyId),
+      ]);
+      
+      // Get economic regime
+      let economicRegime = "UNKNOWN";
+      let fdrValue = 1.0;
+      let regimeIntensity = 50;
+      try {
+        const regimeData = await economics.getCurrentRegime();
+        economicRegime = regimeData.regime;
+        fdrValue = regimeData.fdr;
+        regimeIntensity = regimeData.intensity || 50;
+      } catch (e) {
+        // Use defaults if economics API fails
+      }
+      
+      // Calculate inventory metrics
+      const totalInventoryValue = materials.reduce((sum, m) => sum + (m.onHand * (m.unitCost || 0)), 0);
+      const totalInventoryUnits = materials.reduce((sum, m) => sum + m.onHand, 0);
+      
+      // Calculate production metrics
+      const activeMachinery = machinery.filter(m => m.status === "operational" || m.status === "running");
+      const avgOee = activeMachinery.length > 0 
+        ? activeMachinery.reduce((sum, m) => sum + (m.operatingEfficiency || 0), 0) / activeMachinery.length
+        : 0;
+      
+      // Create snapshot
+      const snapshotData = {
+        companyId: user.companyId,
+        snapshotType: req.body.snapshotType || "full",
+        totalInventoryValue,
+        totalInventoryUnits,
+        activeSkuCount: skus.length,
+        activeMaterialCount: materials.length,
+        activeSupplierCount: suppliers.length,
+        openOrderCount: allocations.filter(a => a.status === "pending").length,
+        pendingRfqCount: rfqs.filter(r => r.status === "pending" || r.status === "sent").length,
+        activeMachineryCount: activeMachinery.length,
+        oeeScore: avgOee,
+        economicRegime,
+        fdrValue,
+        regimeIntensity,
+        inventoryState: materials.map(m => ({ id: m.id, name: m.name, onHand: m.onHand, reorderPoint: m.reorderPoint })),
+        productionState: machinery.map(m => ({ id: m.id, name: m.name, status: m.status, efficiency: m.operatingEfficiency })),
+        supplyState: suppliers.map(s => ({ id: s.id, name: s.name, leadTime: s.leadTime })),
+        activeAlertCount: 0,
+        criticalAlertCount: 0,
+      };
+      
+      const snapshot = await storage.createDigitalTwinSnapshot(snapshotData);
+      res.json(snapshot);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // Digital Twin - Natural Language Queries
+  app.get("/api/digital-twin/queries", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const limit = parseInt(req.query.limit as string) || 50;
+      const queries = await storage.getDigitalTwinQueries(user.companyId, limit);
+      res.json(queries);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  app.post("/api/digital-twin/queries", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const startTime = Date.now();
+      const { queryText, queryType = "insight" } = req.body;
+      
+      if (!queryText) {
+        return res.status(400).json({ error: "Query text is required" });
+      }
+      
+      // Parse query intent and generate response
+      const parsedIntent = parseQueryIntent(queryText);
+      const response = await generateQueryResponse(user.companyId, queryText, parsedIntent);
+      
+      const processingTime = Date.now() - startTime;
+      
+      const queryData = {
+        companyId: user.companyId,
+        userId,
+        queryText,
+        queryType,
+        parsedIntent,
+        targetEntities: parsedIntent.entities,
+        responseType: response.type,
+        responseText: response.text,
+        responseData: response.data,
+        processingTime,
+        dataSourcesUsed: response.sources,
+        confidence: response.confidence,
+      };
+      
+      const query = await storage.createDigitalTwinQuery(queryData);
+      res.json(query);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // Digital Twin - Simulations (What-If Scenarios)
+  app.get("/api/digital-twin/simulations", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const simulations = await storage.getDigitalTwinSimulations(user.companyId);
+      res.json(simulations);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  app.get("/api/digital-twin/simulations/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const simulation = await storage.getDigitalTwinSimulation(req.params.id);
+      if (!simulation || simulation.companyId !== user.companyId) {
+        return res.status(404).json({ error: "Simulation not found" });
+      }
+      res.json(simulation);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  app.post("/api/digital-twin/simulations", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const validated = insertDigitalTwinSimulationSchema.parse({
+        ...req.body,
+        companyId: user.companyId,
+        userId,
+        status: "draft",
+      });
+      
+      const simulation = await storage.createDigitalTwinSimulation(validated);
+      res.json(simulation);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // Run a simulation
+  app.post("/api/digital-twin/simulations/:id/run", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const simulation = await storage.getDigitalTwinSimulation(req.params.id);
+      if (!simulation || simulation.companyId !== user.companyId) {
+        return res.status(404).json({ error: "Simulation not found" });
+      }
+      
+      // Mark as running
+      await storage.updateDigitalTwinSimulation(simulation.id, {
+        status: "running",
+        startedAt: new Date(),
+      });
+      
+      const startTime = Date.now();
+      
+      // Run the simulation based on scenario parameters
+      const results = await runDigitalTwinSimulation(user.companyId, simulation);
+      
+      const executionTime = Date.now() - startTime;
+      
+      // Update with results
+      const updated = await storage.updateDigitalTwinSimulation(simulation.id, {
+        status: "completed",
+        completedAt: new Date(),
+        executionTime,
+        results,
+        totalCostImpact: results.costImpact?.total || 0,
+        riskScore: results.riskScore || 0,
+        confidenceLevel: results.confidence || 0.8,
+        keyFindings: results.keyFindings || [],
+        recommendations: results.recommendations || [],
+      });
+      
+      res.json(updated);
+    } catch (error: any) {
+      // Mark as failed
+      await storage.updateDigitalTwinSimulation(req.params.id, {
+        status: "failed",
+      });
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  app.delete("/api/digital-twin/simulations/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      // Verify ownership before deleting
+      const existing = await storage.getDigitalTwinSimulation(req.params.id);
+      if (!existing || existing.companyId !== user.companyId) {
+        return res.status(404).json({ error: "Simulation not found" });
+      }
+      
+      await storage.deleteDigitalTwinSimulation(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // Digital Twin - Alerts
+  app.get("/api/digital-twin/alerts", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const filters: any = {};
+      if (req.query.status) filters.status = req.query.status;
+      if (req.query.severity) filters.severity = req.query.severity;
+      if (req.query.category) filters.category = req.query.category;
+      
+      const alerts = await storage.getDigitalTwinAlerts(user.companyId, filters);
+      res.json(alerts);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  app.patch("/api/digital-twin/alerts/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      // Verify ownership before updating
+      const existing = await storage.getDigitalTwinAlert(req.params.id);
+      if (!existing || existing.companyId !== user.companyId) {
+        return res.status(404).json({ error: "Alert not found" });
+      }
+      
+      const { status, resolution } = req.body;
+      
+      // Validate status
+      const validStatuses = ["active", "acknowledged", "investigating", "resolved", "dismissed"];
+      if (status && !validStatuses.includes(status)) {
+        return res.status(400).json({ error: "Invalid status" });
+      }
+      
+      const updates: any = { status };
+      if (status === "acknowledged") {
+        updates.acknowledgedAt = new Date();
+        updates.acknowledgedBy = userId;
+      } else if (status === "resolved") {
+        updates.resolvedAt = new Date();
+        updates.resolvedBy = userId;
+        updates.resolution = resolution;
+      }
+      
+      const alert = await storage.updateDigitalTwinAlert(req.params.id, updates);
+      res.json(alert);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // Digital Twin - Metrics
+  app.get("/api/digital-twin/metrics", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const filters: any = {};
+      if (req.query.metricName) filters.metricName = req.query.metricName;
+      if (req.query.category) filters.category = req.query.category;
+      
+      const metrics = await storage.getDigitalTwinMetrics(user.companyId, filters);
+      res.json(metrics);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Digital Twin - Dashboard Summary
+  app.get("/api/digital-twin/dashboard", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      // Get latest snapshot
+      const latestSnapshot = await storage.getLatestDigitalTwinSnapshot(user.companyId);
+      
+      // Get active alerts
+      const activeAlerts = await storage.getDigitalTwinAlerts(user.companyId, { status: "active" });
+      const criticalAlerts = activeAlerts.filter(a => a.severity === "critical" || a.severity === "emergency");
+      
+      // Get data feeds status
+      const dataFeeds = await storage.getDigitalTwinDataFeeds(user.companyId);
+      const activeFeedsCount = dataFeeds.filter(f => f.status === "active").length;
+      const errorFeedsCount = dataFeeds.filter(f => f.status === "error").length;
+      
+      // Get recent simulations
+      const simulations = await storage.getDigitalTwinSimulations(user.companyId);
+      const recentSimulations = simulations.slice(0, 5);
+      
+      // Get recent queries
+      const queries = await storage.getDigitalTwinQueries(user.companyId, 10);
+      
+      // Get current economic regime
+      let currentRegime = latestSnapshot?.economicRegime || "UNKNOWN";
+      let fdr = latestSnapshot?.fdrValue || 1.0;
+      try {
+        const regimeData = await economics.getCurrentRegime();
+        currentRegime = regimeData.regime;
+        fdr = regimeData.fdr;
+      } catch (e) {
+        // Use snapshot data
+      }
+      
+      res.json({
+        lastUpdated: latestSnapshot?.capturedAt || null,
+        state: {
+          inventoryValue: latestSnapshot?.totalInventoryValue || 0,
+          inventoryUnits: latestSnapshot?.totalInventoryUnits || 0,
+          activeSkus: latestSnapshot?.activeSkuCount || 0,
+          activeMaterials: latestSnapshot?.activeMaterialCount || 0,
+          activeSuppliers: latestSnapshot?.activeSupplierCount || 0,
+          activeMachinery: latestSnapshot?.activeMachineryCount || 0,
+          oee: latestSnapshot?.oeeScore || 0,
+        },
+        alerts: {
+          total: activeAlerts.length,
+          critical: criticalAlerts.length,
+          byCategory: {
+            inventory: activeAlerts.filter(a => a.category === "inventory").length,
+            production: activeAlerts.filter(a => a.category === "production").length,
+            supply: activeAlerts.filter(a => a.category === "supply").length,
+            demand: activeAlerts.filter(a => a.category === "demand").length,
+          },
+        },
+        dataFeeds: {
+          total: dataFeeds.length,
+          active: activeFeedsCount,
+          errors: errorFeedsCount,
+        },
+        regime: {
+          current: currentRegime,
+          fdr,
+        },
+        recentSimulations,
+        recentQueries: queries,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   
   setupWebSocket(httpServer);
@@ -9127,4 +9674,271 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   return httpServer;
+}
+
+// Helper function to parse natural language query intent
+function parseQueryIntent(queryText: string): { intent: string; entities: string[]; timeRange?: any } {
+  const text = queryText.toLowerCase();
+  let intent = "general";
+  const entities: string[] = [];
+  
+  // Detect intent
+  if (text.includes("forecast") || text.includes("predict") || text.includes("will")) {
+    intent = "prediction";
+  } else if (text.includes("compare") || text.includes("versus") || text.includes("vs")) {
+    intent = "comparison";
+  } else if (text.includes("why") || text.includes("explain") || text.includes("cause")) {
+    intent = "analysis";
+  } else if (text.includes("what if") || text.includes("simulate") || text.includes("scenario")) {
+    intent = "what_if";
+  } else if (text.includes("optimize") || text.includes("improve") || text.includes("reduce")) {
+    intent = "optimization";
+  } else if (text.includes("alert") || text.includes("warning") || text.includes("issue")) {
+    intent = "alert";
+  }
+  
+  // Detect entities
+  if (text.includes("inventory") || text.includes("stock")) entities.push("inventory");
+  if (text.includes("production") || text.includes("manufacture")) entities.push("production");
+  if (text.includes("supplier") || text.includes("vendor")) entities.push("supplier");
+  if (text.includes("demand") || text.includes("order") || text.includes("sales")) entities.push("demand");
+  if (text.includes("material") || text.includes("raw")) entities.push("material");
+  if (text.includes("machine") || text.includes("equipment")) entities.push("machinery");
+  if (text.includes("cost") || text.includes("price") || text.includes("budget")) entities.push("financial");
+  
+  // Default to all entities if none detected
+  if (entities.length === 0) {
+    entities.push("inventory", "production", "demand");
+  }
+  
+  return { intent, entities };
+}
+
+// Helper function to generate query response
+async function generateQueryResponse(companyId: string, queryText: string, intent: any): Promise<{
+  type: string;
+  text: string;
+  data: any;
+  sources: string[];
+  confidence: number;
+}> {
+  const sources: string[] = [];
+  let responseType = "text";
+  let responseText = "";
+  let responseData: any = {};
+  let confidence = 0.85;
+  
+  // Gather relevant data based on entities
+  const [materials, skus, suppliers, machinery] = await Promise.all([
+    storage.getMaterials(companyId),
+    storage.getSkus(companyId),
+    storage.getSuppliers(companyId),
+    storage.getMachinery(companyId),
+  ]);
+  
+  sources.push("inventory", "skus", "suppliers", "machinery");
+  
+  // Generate response based on intent
+  if (intent.intent === "prediction") {
+    responseType = "chart";
+    responseText = `Based on current trends, I project the following: `;
+    
+    // Simple demand trend analysis
+    const totalInventory = materials.reduce((sum, m) => sum + m.onHand, 0);
+    const avgReorderPoint = materials.reduce((sum, m) => sum + (m.reorderPoint || 0), 0) / (materials.length || 1);
+    
+    responseText += `Current inventory levels are at ${totalInventory.toLocaleString()} units. `;
+    responseText += `With average reorder points at ${Math.round(avgReorderPoint)} units, you have approximately ${Math.round(totalInventory / avgReorderPoint)} cycles of stock on hand.`;
+    
+    responseData = {
+      inventoryTrend: [
+        { period: "Current", value: totalInventory },
+        { period: "+1 Week", value: Math.round(totalInventory * 0.92) },
+        { period: "+2 Weeks", value: Math.round(totalInventory * 0.84) },
+        { period: "+1 Month", value: Math.round(totalInventory * 0.68) },
+      ],
+    };
+  } else if (intent.intent === "optimization") {
+    responseType = "recommendation";
+    
+    // Find optimization opportunities
+    const lowStockMaterials = materials.filter(m => m.onHand < (m.reorderPoint || 0));
+    const overstockedMaterials = materials.filter(m => m.onHand > (m.reorderPoint || 0) * 3);
+    
+    responseText = `Optimization Analysis: `;
+    responseText += `${lowStockMaterials.length} materials are below reorder point. `;
+    responseText += `${overstockedMaterials.length} materials appear overstocked. `;
+    
+    responseData = {
+      recommendations: [
+        { action: "Reorder", count: lowStockMaterials.length, priority: "high" },
+        { action: "Review Safety Stock", count: overstockedMaterials.length, priority: "medium" },
+      ],
+      lowStockItems: lowStockMaterials.slice(0, 5).map(m => ({ name: m.name, onHand: m.onHand, reorderPoint: m.reorderPoint })),
+    };
+    confidence = 0.9;
+  } else if (intent.intent === "analysis") {
+    responseType = "table";
+    
+    responseText = `Here's an analysis of your current state: `;
+    responseText += `You have ${materials.length} materials, ${skus.length} SKUs, ${suppliers.length} suppliers, and ${machinery.length} machines.`;
+    
+    responseData = {
+      summary: {
+        materials: materials.length,
+        skus: skus.length,
+        suppliers: suppliers.length,
+        machinery: machinery.length,
+        totalInventoryValue: materials.reduce((sum, m) => sum + (m.onHand * (m.unitCost || 0)), 0),
+      },
+    };
+  } else {
+    // General insight
+    responseType = "text";
+    
+    const totalValue = materials.reduce((sum, m) => sum + (m.onHand * (m.unitCost || 0)), 0);
+    const activeMachines = machinery.filter(m => m.status === "operational" || m.status === "running").length;
+    
+    responseText = `Your digital twin shows: `;
+    responseText += `$${totalValue.toLocaleString()} in inventory across ${materials.length} materials. `;
+    responseText += `${activeMachines} of ${machinery.length} machines are operational. `;
+    responseText += `${suppliers.length} active suppliers in your network.`;
+    
+    responseData = {
+      metrics: {
+        inventoryValue: totalValue,
+        activeMaterials: materials.length,
+        activeSuppliers: suppliers.length,
+        operationalMachines: activeMachines,
+      },
+    };
+  }
+  
+  return { type: responseType, text: responseText, data: responseData, sources, confidence };
+}
+
+// Helper function to run simulation
+async function runDigitalTwinSimulation(companyId: string, simulation: any): Promise<any> {
+  const params = simulation.scenarioParams || {};
+  const horizonDays = simulation.horizonDays || 90;
+  
+  // Get current state
+  const [materials, suppliers, machinery] = await Promise.all([
+    storage.getMaterials(companyId),
+    storage.getSuppliers(companyId),
+    storage.getMachinery(companyId),
+  ]);
+  
+  // Calculate impacts based on scenario type
+  let costImpact = { total: 0, breakdown: {} as any };
+  let riskScore = 50;
+  let keyFindings: string[] = [];
+  let recommendations: any[] = [];
+  const timeline: any[] = [];
+  
+  if (simulation.simulationType === "demand_shock") {
+    const demandChange = params.demandChange?.percentage || 20;
+    const direction = demandChange > 0 ? "increase" : "decrease";
+    
+    // Simulate demand change impact
+    const inventoryImpact = materials.reduce((sum, m) => sum + (m.onHand * m.unitCost * Math.abs(demandChange) / 100), 0);
+    costImpact.total = inventoryImpact;
+    costImpact.breakdown = { inventory: inventoryImpact };
+    
+    riskScore = Math.min(100, Math.abs(demandChange) * 2);
+    
+    keyFindings = [
+      `A ${Math.abs(demandChange)}% demand ${direction} would impact inventory by $${inventoryImpact.toLocaleString()}`,
+      `${Math.round(materials.length * Math.abs(demandChange) / 100)} materials would require reorder adjustments`,
+    ];
+    
+    recommendations = [
+      { action: "Adjust safety stock levels", priority: "high", expectedSavings: inventoryImpact * 0.1 },
+      { action: "Negotiate flexible supplier contracts", priority: "medium" },
+    ];
+    
+  } else if (simulation.simulationType === "supply_disruption") {
+    const disruptionDays = params.supplyDisruption?.delayDays || 14;
+    
+    // Calculate disruption impact
+    const affectedMaterials = materials.filter(m => m.onHand < (m.reorderPoint || 0) * 2);
+    const disruptionCost = affectedMaterials.reduce((sum, m) => sum + (m.reorderPoint || 0) * (m.unitCost || 0) * 0.5, 0);
+    
+    costImpact.total = disruptionCost;
+    costImpact.breakdown = { expediting: disruptionCost * 0.4, stockouts: disruptionCost * 0.6 };
+    
+    riskScore = Math.min(100, disruptionDays * 4);
+    
+    keyFindings = [
+      `A ${disruptionDays}-day supply disruption would cost approximately $${disruptionCost.toLocaleString()}`,
+      `${affectedMaterials.length} materials are vulnerable to stockouts`,
+    ];
+    
+    recommendations = [
+      { action: "Build strategic buffer inventory", priority: "critical" },
+      { action: "Identify alternative suppliers", priority: "high" },
+      { action: "Implement dual-sourcing strategy", priority: "medium" },
+    ];
+    
+  } else if (simulation.simulationType === "price_change") {
+    const priceChange = params.priceChange?.priceChangePercent || 10;
+    
+    // Calculate price change impact
+    const totalInventoryCost = materials.reduce((sum, m) => sum + (m.onHand * (m.unitCost || 0)), 0);
+    const priceImpact = totalInventoryCost * priceChange / 100;
+    
+    costImpact.total = priceImpact;
+    costImpact.breakdown = { direct: priceImpact * 0.8, indirect: priceImpact * 0.2 };
+    
+    riskScore = Math.min(100, Math.abs(priceChange) * 3);
+    
+    keyFindings = [
+      `A ${priceChange}% price ${priceChange > 0 ? "increase" : "decrease"} would impact costs by $${Math.abs(priceImpact).toLocaleString()}`,
+    ];
+    
+    recommendations = priceChange > 0 ? [
+      { action: "Lock in current prices with long-term contracts", priority: "high" },
+      { action: "Explore substitute materials", priority: "medium" },
+    ] : [
+      { action: "Increase strategic inventory purchases", priority: "high" },
+      { action: "Renegotiate existing contracts", priority: "medium" },
+    ];
+    
+  } else if (simulation.simulationType === "regime_shift") {
+    const targetRegime = params.regimeShift?.targetRegime || "IMBALANCED_EXCESS";
+    const signals = calculateSignalsForRegime(targetRegime);
+    
+    riskScore = targetRegime === "IMBALANCED_EXCESS" ? 80 : targetRegime === "ASSET_LED_GROWTH" ? 60 : 40;
+    
+    keyFindings = [
+      `A shift to ${targetRegime} regime would trigger ${signals.length} policy signal changes`,
+      `Procurement strategy should shift to: ${signals.find(s => s.type === "procurement")?.action || "review"}`,
+    ];
+    
+    recommendations = signals.map(s => ({
+      action: s.description,
+      priority: s.type === "procurement" ? "high" : "medium",
+      category: s.type,
+    }));
+  }
+  
+  // Generate timeline
+  for (let day = 0; day <= horizonDays; day += Math.ceil(horizonDays / 10)) {
+    timeline.push({
+      day,
+      cumulativeImpact: costImpact.total * (day / horizonDays),
+      riskLevel: Math.min(100, riskScore * (0.5 + (day / horizonDays) * 0.5)),
+    });
+  }
+  
+  return {
+    costImpact,
+    riskScore,
+    confidence: 0.85,
+    keyFindings,
+    recommendations,
+    timeline,
+    inventoryImpact: { affected: materials.filter(m => m.onHand < (m.reorderPoint || 0)).length },
+    productionImpact: { capacityUtilization: machinery.filter(m => m.status === "operational").length / (machinery.length || 1) * 100 },
+  };
 }

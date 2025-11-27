@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Package, Network, BarChart3, Users, Building2, Target, ShieldAlert, Database } from "lucide-react";
+import { Package, Network, BarChart3, Users, Building2, Target, ShieldAlert, Database, Layers } from "lucide-react";
 import InventoryManagement from "./InventoryManagement";
 import SupplyChain from "./SupplyChain";
 import IndustryConsortium from "./IndustryConsortium";
@@ -9,8 +9,10 @@ import MAIntelligence from "./MAIntelligence";
 import StrategicAnalysis from "./StrategicAnalysis";
 import SupplierRisk from "./SupplierRisk";
 import ErpTemplates from "./ErpTemplates";
+import DigitalTwin from "./DigitalTwin";
 
 const tabs = [
+  { id: "digital-twin", label: "Digital Twin", icon: Layers, component: DigitalTwin },
   { id: "inventory", label: "Inventory", icon: Package, component: InventoryManagement },
   { id: "network", label: "Network", icon: Network, component: SupplyChain },
   { id: "supplier-risk", label: "Supplier Risk", icon: ShieldAlert, component: SupplierRisk },
