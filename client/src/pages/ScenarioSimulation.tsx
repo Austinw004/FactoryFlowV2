@@ -288,14 +288,25 @@ function AddVariantDialog({
 }) {
   const { toast } = useToast();
   const [label, setLabel] = useState("");
-  const [fdrValue, setFdrValue] = useState(simulation.baseFdrValue);
-  const [regime, setRegime] = useState(simulation.baseRegime);
+  const [fdrValue, setFdrValue] = useState(simulation.baseFdrValue ?? 1.0);
+  const [regime, setRegime] = useState(simulation.baseRegime ?? "balanced");
   const [commodityAdjustments, setCommodityAdjustments] = useState<Record<string, number>>({});
   const [newCommodity, setNewCommodity] = useState("");
   const [newAdjustment, setNewAdjustment] = useState(0);
+  
+  // Reset form values when dialog opens with fresh simulation data
+  const resetFormValues = () => {
+    setLabel("");
+    setFdrValue(simulation.baseFdrValue ?? 1.0);
+    setRegime(simulation.baseRegime ?? "balanced");
+    setCommodityAdjustments({});
+    setNewCommodity("");
+    setNewAdjustment(0);
+  };
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
+      console.log("[AddVariantDialog] Submitting variant data:", data);
       const res = await apiRequest("POST", `/api/simulations/${simulation.id}/variants`, data);
       return res.json();
     },
@@ -303,10 +314,7 @@ function AddVariantDialog({
       queryClient.invalidateQueries({ queryKey: ["/api/simulations", simulation.id] });
       toast({ title: "Variant added", description: "The scenario variant has been created." });
       onOpenChange(false);
-      setLabel("");
-      setFdrValue(simulation.baseFdrValue);
-      setRegime(simulation.baseRegime);
-      setCommodityAdjustments({});
+      resetFormValues();
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -326,6 +334,7 @@ function AddVariantDialog({
       toast({ title: "Label required", description: "Please enter a variant label.", variant: "destructive" });
       return;
     }
+    console.log("[AddVariantDialog] handleCreate - Current state values:", { label, fdrValue, regime, commodityAdjustments });
     createMutation.mutate({ label, fdrValue, regime, commodityAdjustments });
   };
 
@@ -353,7 +362,10 @@ function AddVariantDialog({
             <Label>FDR Value: {fdrValue.toFixed(2)}</Label>
             <Slider
               value={[fdrValue]}
-              onValueChange={([val]) => setFdrValue(val)}
+              onValueChange={([val]) => {
+                console.log("[AddVariantDialog] Slider changed to:", val);
+                setFdrValue(val);
+              }}
               min={0.5}
               max={2.0}
               step={0.1}
@@ -362,7 +374,10 @@ function AddVariantDialog({
           </div>
           <div className="space-y-2">
             <Label>Economic Regime</Label>
-            <Select value={regime} onValueChange={setRegime}>
+            <Select value={regime} onValueChange={(val) => {
+              console.log("[AddVariantDialog] Regime changed to:", val);
+              setRegime(val);
+            }}>
               <SelectTrigger data-testid="select-variant-regime">
                 <SelectValue />
               </SelectTrigger>
@@ -420,7 +435,7 @@ function AddVariantDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleCreate} disabled={createMutation.isPending} data-testid="button-add-variant">
+          <Button onClick={handleCreate} disabled={createMutation.isPending} data-testid="button-submit-variant">
             {createMutation.isPending ? "Adding..." : "Add Variant"}
           </Button>
         </DialogFooter>
@@ -581,7 +596,7 @@ function SimulationDetail({
           <Button 
             variant="outline" 
             onClick={() => setAddVariantOpen(true)}
-            data-testid="button-add-variant"
+            data-testid="button-open-add-variant"
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Variant
