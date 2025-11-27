@@ -112,6 +112,298 @@ function calculateSignalsForRegime(regime: string) {
   return signals;
 }
 
+// ===== SCENARIO SIMULATION HELPER FUNCTIONS =====
+
+// Calculate procurement cost impact based on FDR and regime changes
+function calculateProcurementImpact(
+  baseFdrValue: number,
+  variantFdrValue: number,
+  baseRegime: string,
+  variantRegime: string
+): number {
+  // FDR impact: Higher FDR typically means higher procurement costs
+  const fdrDelta = variantFdrValue - baseFdrValue;
+  let fdrImpact = fdrDelta * 5; // 5% cost change per 1.0 FDR change
+  
+  // Regime impact adjustments
+  const regimeImpacts: Record<string, number> = {
+    HEALTHY_EXPANSION: 0,
+    ASSET_LED_GROWTH: 8, // Higher costs due to inflation expectations
+    IMBALANCED_EXCESS: 15, // Highest costs in bubble territory
+    REAL_ECONOMY_LEAD: -10, // Lower costs in opportunity zone
+    balanced: 0,
+  };
+  
+  const baseRegimeImpact = regimeImpacts[baseRegime] || 0;
+  const variantRegimeImpact = regimeImpacts[variantRegime] || 0;
+  const regimeDelta = variantRegimeImpact - baseRegimeImpact;
+  
+  return Math.round((fdrImpact + regimeDelta) * 100) / 100;
+}
+
+// Calculate inventory level impact
+function calculateInventoryImpact(
+  baseFdrValue: number,
+  variantFdrValue: number,
+  commodityAdjustments: any
+): number {
+  // FDR impact on inventory strategy
+  const fdrDelta = variantFdrValue - baseFdrValue;
+  let inventoryImpact = 0;
+  
+  // Higher FDR = build less inventory (more risk)
+  if (fdrDelta > 0.3) {
+    inventoryImpact = -15; // Reduce inventory
+  } else if (fdrDelta < -0.3) {
+    inventoryImpact = 20; // Build inventory when favorable
+  }
+  
+  // Commodity price adjustments impact
+  if (commodityAdjustments && typeof commodityAdjustments === 'object') {
+    const adjustments = Object.values(commodityAdjustments) as number[];
+    const avgPriceChange = adjustments.length > 0 
+      ? adjustments.reduce((a, b) => a + b, 0) / adjustments.length 
+      : 0;
+    
+    // If prices expected to rise, build inventory
+    if (avgPriceChange > 10) {
+      inventoryImpact += 10;
+    } else if (avgPriceChange < -10) {
+      inventoryImpact -= 10;
+    }
+  }
+  
+  return Math.round(inventoryImpact * 100) / 100;
+}
+
+// Calculate budget utilization impact
+function calculateBudgetImpact(
+  procurementImpact: number,
+  commodityAdjustments: any
+): number {
+  let budgetImpact = procurementImpact * 0.7; // Procurement is major budget driver
+  
+  // Commodity price adjustments
+  if (commodityAdjustments && typeof commodityAdjustments === 'object') {
+    const adjustments = Object.values(commodityAdjustments) as number[];
+    const avgPriceChange = adjustments.length > 0 
+      ? adjustments.reduce((a, b) => a + b, 0) / adjustments.length 
+      : 0;
+    budgetImpact += avgPriceChange * 0.3;
+  }
+  
+  return Math.round(budgetImpact * 100) / 100;
+}
+
+// Calculate overall risk score for a scenario variant
+function calculateVariantRiskScore(
+  fdrValue: number,
+  regime: string,
+  commodityAdjustments: any
+): number {
+  let riskScore = 50; // Base risk
+  
+  // FDR risk contribution
+  if (fdrValue > 1.5) {
+    riskScore += 25; // High financial excess
+  } else if (fdrValue > 1.2) {
+    riskScore += 15;
+  } else if (fdrValue < 0.8) {
+    riskScore -= 10; // Favorable conditions
+  }
+  
+  // Regime risk contribution
+  const regimeRisks: Record<string, number> = {
+    HEALTHY_EXPANSION: -10,
+    ASSET_LED_GROWTH: 10,
+    IMBALANCED_EXCESS: 25,
+    REAL_ECONOMY_LEAD: -15,
+    balanced: 0,
+  };
+  riskScore += regimeRisks[regime] || 0;
+  
+  // Commodity volatility risk
+  if (commodityAdjustments && typeof commodityAdjustments === 'object') {
+    const adjustments = Object.values(commodityAdjustments) as number[];
+    const volatility = adjustments.length > 0
+      ? Math.sqrt(adjustments.reduce((sum, val) => sum + val * val, 0) / adjustments.length)
+      : 0;
+    riskScore += Math.min(20, volatility * 0.5);
+  }
+  
+  return Math.round(Math.max(0, Math.min(100, riskScore)));
+}
+
+// ===== SUPPLIER RISK SCORING HELPER FUNCTIONS =====
+
+// Calculate financial health score for a supplier (0-100)
+function calculateFinancialHealthScore(supplier: any, financialData: any): number {
+  // If we have actual financial data, use it
+  if (financialData) {
+    let score = 50;
+    if (financialData.creditRating) {
+      const creditScores: Record<string, number> = {
+        'AAA': 95, 'AA': 85, 'A': 75, 'BBB': 65, 'BB': 50, 'B': 35, 'CCC': 20, 'CC': 10, 'C': 5
+      };
+      score = creditScores[financialData.creditRating] || 50;
+    }
+    if (financialData.debtRatio && financialData.debtRatio > 0.7) {
+      score -= 15;
+    }
+    if (financialData.cashFlow && financialData.cashFlow > 0) {
+      score += 10;
+    }
+    return Math.max(0, Math.min(100, score));
+  }
+  
+  // Default score based on available data
+  return 60; // Moderate default score
+}
+
+// Calculate geographic risk score for a supplier (0-100, higher = more risk)
+function calculateGeographicRiskScore(supplier: any): number {
+  // Base risk score
+  let riskScore = 30;
+  
+  // This would ideally check against geopolitical risk data
+  // For now, use simple heuristics
+  if (supplier.contactEmail) {
+    const domain = supplier.contactEmail.split('@')[1] || '';
+    // Higher risk for certain regions (simplified)
+    if (domain.endsWith('.cn') || domain.endsWith('.ru')) {
+      riskScore = 70;
+    } else if (domain.endsWith('.us') || domain.endsWith('.de') || domain.endsWith('.uk')) {
+      riskScore = 20;
+    }
+  }
+  
+  return riskScore;
+}
+
+// Calculate concentration risk (how dependent on single supplier)
+async function calculateConcentrationRiskScore(supplier: any, companyId: string): Promise<number> {
+  const allSuppliers = await storage.getSuppliers(companyId);
+  
+  if (allSuppliers.length <= 1) {
+    return 90; // Very high risk if single supplier
+  }
+  
+  // Get materials for this supplier
+  const supplierMaterials = await storage.getSupplierMaterials(supplier.id);
+  
+  // Higher concentration if supplier provides many materials
+  const materialsCount = supplierMaterials.length;
+  
+  if (materialsCount > 10) return 70;
+  if (materialsCount > 5) return 50;
+  if (materialsCount > 2) return 30;
+  return 20;
+}
+
+// Calculate supplier performance score
+async function calculatePerformanceScore(supplier: any): Promise<number> {
+  // Would ideally check historical delivery data, quality metrics, etc.
+  // For now, return a moderate score
+  return 55;
+}
+
+// Calculate regime impact score (how current regime affects supplier risk)
+function calculateRegimeImpactScore(regime: string, fdrValue: number): number {
+  const regimeImpacts: Record<string, number> = {
+    HEALTHY_EXPANSION: 25, // Low risk
+    ASSET_LED_GROWTH: 45,
+    IMBALANCED_EXCESS: 75, // High risk in bubble
+    REAL_ECONOMY_LEAD: 35,
+    balanced: 40,
+  };
+  
+  let score = regimeImpacts[regime] || 50;
+  
+  // Adjust based on FDR value
+  if (fdrValue > 1.5) score += 15;
+  if (fdrValue < 0.8) score -= 10;
+  
+  return Math.max(0, Math.min(100, score));
+}
+
+// Determine risk tier based on adjusted score
+function getRiskTier(adjustedScore: number): string {
+  if (adjustedScore >= 75) return 'critical';
+  if (adjustedScore >= 50) return 'high';
+  if (adjustedScore >= 25) return 'medium';
+  return 'low';
+}
+
+// Generate recommendations based on risk factors and regime
+function generateRiskRecommendations(
+  riskTier: string,
+  riskFactors: any,
+  regime: string
+): any[] {
+  const recommendations: any[] = [];
+  
+  // Tier-based recommendations
+  if (riskTier === 'critical') {
+    recommendations.push({
+      priority: 'urgent',
+      action: 'Identify alternative suppliers immediately',
+      rationale: 'Critical supplier risk requires immediate diversification',
+      timeframe: '1-2 weeks',
+    });
+    recommendations.push({
+      priority: 'high',
+      action: 'Build strategic inventory buffer',
+      rationale: 'Protect against potential supply disruption',
+      timeframe: '30 days',
+    });
+  } else if (riskTier === 'high') {
+    recommendations.push({
+      priority: 'high',
+      action: 'Develop secondary supplier relationships',
+      rationale: 'Reduce dependency on high-risk supplier',
+      timeframe: '30-60 days',
+    });
+  }
+  
+  // Risk factor specific recommendations
+  if (riskFactors.financial?.score > 60) {
+    recommendations.push({
+      priority: 'medium',
+      action: 'Request updated financial statements',
+      rationale: 'Elevated financial health concerns require monitoring',
+      timeframe: '2 weeks',
+    });
+  }
+  
+  if (riskFactors.concentration?.score > 50) {
+    recommendations.push({
+      priority: 'medium',
+      action: 'Qualify additional suppliers for key materials',
+      rationale: 'Reduce concentration risk through supplier diversification',
+      timeframe: '60-90 days',
+    });
+  }
+  
+  // Regime-specific recommendations
+  if (regime === 'IMBALANCED_EXCESS') {
+    recommendations.push({
+      priority: 'high',
+      action: 'Negotiate fixed-price contracts',
+      rationale: 'Lock in pricing before bubble correction impacts costs',
+      timeframe: '2 weeks',
+    });
+  } else if (regime === 'REAL_ECONOMY_LEAD') {
+    recommendations.push({
+      priority: 'medium',
+      action: 'Explore long-term supply agreements at favorable rates',
+      rationale: 'Capitalize on opportunity zone pricing',
+      timeframe: '30 days',
+    });
+  }
+  
+  return recommendations;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Apply SOC2-lite security hardening
   applySecurityHardening(app);
@@ -7502,6 +7794,596 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ===== SCENARIO SIMULATIONS (WHAT-IF ANALYSIS) =====
+  
+  // Get all scenario simulations for company
+  app.get("/api/simulations", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const simulations = await storage.getScenarioSimulations(user.companyId);
+      res.json(simulations);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Get single simulation with variants
+  app.get("/api/simulations/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const simulation = await storage.getScenarioSimulation(req.params.id);
+      if (!simulation || simulation.companyId !== user.companyId) {
+        return res.status(404).json({ error: "Simulation not found" });
+      }
+      
+      const variants = await storage.getScenarioVariants(req.params.id);
+      res.json({ ...simulation, variants });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Create new simulation
+  app.post("/api/simulations", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const simulation = await storage.createScenarioSimulation({
+        companyId: user.companyId,
+        createdById: userId,
+        name: req.body.name,
+        description: req.body.description,
+        baseFdrValue: req.body.baseFdrValue || 1.0,
+        baseRegime: req.body.baseRegime || "balanced",
+        baseCommodityInputs: req.body.baseCommodityInputs,
+        status: "draft",
+      });
+      
+      await logAudit({
+        action: "create",
+        entityType: "scenario_simulation",
+        entityId: simulation.id,
+        changes: { name: simulation.name },
+        notes: `Created what-if simulation: ${simulation.name}`,
+        req,
+      });
+      
+      res.status(201).json(simulation);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Update simulation
+  app.patch("/api/simulations/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const existing = await storage.getScenarioSimulation(req.params.id);
+      if (!existing || existing.companyId !== user.companyId) {
+        return res.status(404).json({ error: "Simulation not found" });
+      }
+      
+      const updated = await storage.updateScenarioSimulation(req.params.id, req.body);
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Delete simulation
+  app.delete("/api/simulations/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const existing = await storage.getScenarioSimulation(req.params.id);
+      if (!existing || existing.companyId !== user.companyId) {
+        return res.status(404).json({ error: "Simulation not found" });
+      }
+      
+      await storage.deleteScenarioSimulation(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Add variant to simulation
+  app.post("/api/simulations/:id/variants", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const simulation = await storage.getScenarioSimulation(req.params.id);
+      if (!simulation || simulation.companyId !== user.companyId) {
+        return res.status(404).json({ error: "Simulation not found" });
+      }
+      
+      // Calculate impacts based on variant inputs vs base
+      const procurementImpact = calculateProcurementImpact(
+        simulation.baseFdrValue,
+        req.body.fdrValue,
+        simulation.baseRegime,
+        req.body.regime
+      );
+      
+      const inventoryImpact = calculateInventoryImpact(
+        simulation.baseFdrValue,
+        req.body.fdrValue,
+        req.body.commodityAdjustments
+      );
+      
+      const budgetImpact = calculateBudgetImpact(
+        procurementImpact,
+        req.body.commodityAdjustments
+      );
+      
+      const riskScore = calculateVariantRiskScore(
+        req.body.fdrValue,
+        req.body.regime,
+        req.body.commodityAdjustments
+      );
+      
+      const variant = await storage.createScenarioVariant({
+        simulationId: req.params.id,
+        label: req.body.label,
+        fdrValue: req.body.fdrValue,
+        regime: req.body.regime,
+        commodityAdjustments: req.body.commodityAdjustments,
+        procurementImpact,
+        inventoryImpact,
+        budgetImpact,
+        riskScore,
+        isBaseline: req.body.isBaseline ? 1 : 0,
+        allocationImpact: req.body.allocationImpact,
+        forecastImpact: req.body.forecastImpact,
+        comparisonMeta: req.body.comparisonMeta,
+      });
+      
+      res.status(201).json(variant);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Update variant
+  app.patch("/api/simulations/:simulationId/variants/:variantId", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const simulation = await storage.getScenarioSimulation(req.params.simulationId);
+      if (!simulation || simulation.companyId !== user.companyId) {
+        return res.status(404).json({ error: "Simulation not found" });
+      }
+      
+      const updated = await storage.updateScenarioVariant(req.params.variantId, req.body);
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Delete variant
+  app.delete("/api/simulations/:simulationId/variants/:variantId", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const simulation = await storage.getScenarioSimulation(req.params.simulationId);
+      if (!simulation || simulation.companyId !== user.companyId) {
+        return res.status(404).json({ error: "Simulation not found" });
+      }
+      
+      await storage.deleteScenarioVariant(req.params.variantId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Run simulation (calculate all impacts)
+  app.post("/api/simulations/:id/run", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const simulation = await storage.getScenarioSimulation(req.params.id);
+      if (!simulation || simulation.companyId !== user.companyId) {
+        return res.status(404).json({ error: "Simulation not found" });
+      }
+      
+      await storage.updateScenarioSimulation(req.params.id, { status: "running" });
+      
+      const variants = await storage.getScenarioVariants(req.params.id);
+      
+      // Recalculate impacts for each variant
+      for (const variant of variants) {
+        const procurementImpact = calculateProcurementImpact(
+          simulation.baseFdrValue,
+          variant.fdrValue,
+          simulation.baseRegime,
+          variant.regime
+        );
+        
+        const inventoryImpact = calculateInventoryImpact(
+          simulation.baseFdrValue,
+          variant.fdrValue,
+          variant.commodityAdjustments
+        );
+        
+        const budgetImpact = calculateBudgetImpact(
+          procurementImpact,
+          variant.commodityAdjustments
+        );
+        
+        const riskScore = calculateVariantRiskScore(
+          variant.fdrValue,
+          variant.regime,
+          variant.commodityAdjustments
+        );
+        
+        await storage.updateScenarioVariant(variant.id, {
+          procurementImpact,
+          inventoryImpact,
+          budgetImpact,
+          riskScore,
+        });
+      }
+      
+      await storage.updateScenarioSimulation(req.params.id, { status: "completed" });
+      
+      const updatedVariants = await storage.getScenarioVariants(req.params.id);
+      res.json({ ...simulation, status: "completed", variants: updatedVariants });
+    } catch (error: any) {
+      await storage.updateScenarioSimulation(req.params.id, { status: "draft" });
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Compare variants side-by-side
+  app.get("/api/simulations/:id/compare", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const simulation = await storage.getScenarioSimulation(req.params.id);
+      if (!simulation || simulation.companyId !== user.companyId) {
+        return res.status(404).json({ error: "Simulation not found" });
+      }
+      
+      const variants = await storage.getScenarioVariants(req.params.id);
+      
+      // Build comparison data
+      const comparison = {
+        simulation,
+        variants,
+        metrics: {
+          procurementImpact: variants.map(v => ({ label: v.label, value: v.procurementImpact })),
+          inventoryImpact: variants.map(v => ({ label: v.label, value: v.inventoryImpact })),
+          budgetImpact: variants.map(v => ({ label: v.label, value: v.budgetImpact })),
+          riskScore: variants.map(v => ({ label: v.label, value: v.riskScore })),
+        },
+        bestCase: variants.reduce((best, v) => 
+          (v.procurementImpact || 0) < (best?.procurementImpact || 0) ? v : best, variants[0]),
+        worstCase: variants.reduce((worst, v) => 
+          (v.procurementImpact || 0) > (worst?.procurementImpact || 0) ? v : worst, variants[0]),
+      };
+      
+      res.json(comparison);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // ===== SUPPLIER RISK SCORING =====
+  
+  // Get all supplier risk snapshots for company
+  app.get("/api/supplier-risk", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const filters: any = { latestOnly: req.query.latestOnly !== "false" };
+      if (req.query.supplierId) filters.supplierId = req.query.supplierId;
+      if (req.query.regime) filters.regime = req.query.regime;
+      if (req.query.riskTier) filters.riskTier = req.query.riskTier;
+      
+      const snapshots = await storage.getSupplierRiskSnapshots(user.companyId, filters);
+      
+      // Enrich with supplier details
+      const enriched = await Promise.all(snapshots.map(async (snapshot) => {
+        const supplier = await storage.getSupplier(snapshot.supplierId);
+        return { ...snapshot, supplier };
+      }));
+      
+      res.json(enriched);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Get risk snapshot for specific supplier
+  app.get("/api/supplier-risk/:supplierId", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const supplier = await storage.getSupplier(req.params.supplierId);
+      if (!supplier || supplier.companyId !== user.companyId) {
+        return res.status(404).json({ error: "Supplier not found" });
+      }
+      
+      const snapshot = await storage.getLatestSupplierRiskSnapshot(req.params.supplierId);
+      const allSnapshots = await storage.getSupplierRiskSnapshots(user.companyId, { supplierId: req.params.supplierId });
+      
+      res.json({ 
+        current: snapshot, 
+        history: allSnapshots, 
+        supplier 
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Calculate/recalculate risk score for supplier
+  app.post("/api/supplier-risk/:supplierId/calculate", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const supplier = await storage.getSupplier(req.params.supplierId);
+      if (!supplier || supplier.companyId !== user.companyId) {
+        return res.status(404).json({ error: "Supplier not found" });
+      }
+      
+      // Get current FDR and regime
+      const fdrValue = req.body.fdrValue || 1.0;
+      const regime = req.body.regime || "balanced";
+      const fdrSignalStrength = req.body.fdrSignalStrength || 0.5;
+      
+      // Calculate risk components
+      const financialHealthScore = calculateFinancialHealthScore(supplier, req.body.financialData);
+      const geographicRiskScore = calculateGeographicRiskScore(supplier);
+      const concentrationRiskScore = await calculateConcentrationRiskScore(supplier, user.companyId);
+      const performanceScore = await calculatePerformanceScore(supplier);
+      const regimeImpactScore = calculateRegimeImpactScore(regime, fdrValue);
+      
+      // Calculate base score (before FDR adjustment)
+      const baseScore = (
+        financialHealthScore * 0.25 +
+        geographicRiskScore * 0.15 +
+        concentrationRiskScore * 0.20 +
+        performanceScore * 0.25 +
+        regimeImpactScore * 0.15
+      );
+      
+      // Apply FDR adjustment
+      const fdrMultiplier = getFDRRiskMultiplier(fdrValue, regime);
+      const adjustedScore = Math.min(100, Math.max(0, baseScore * fdrMultiplier));
+      
+      // Determine risk tier
+      const riskTier = getRiskTier(adjustedScore);
+      
+      // Generate recommendations based on risk factors
+      const riskFactors = {
+        financial: { score: financialHealthScore, weight: 0.25 },
+        geographic: { score: geographicRiskScore, weight: 0.15 },
+        concentration: { score: concentrationRiskScore, weight: 0.20 },
+        performance: { score: performanceScore, weight: 0.25 },
+        regimeImpact: { score: regimeImpactScore, weight: 0.15 },
+      };
+      
+      const recommendations = generateRiskRecommendations(riskTier, riskFactors, regime);
+      
+      // Create snapshot
+      const snapshot = await storage.createSupplierRiskSnapshot({
+        companyId: user.companyId,
+        supplierId: req.params.supplierId,
+        regime,
+        fdrValue,
+        fdrSignalStrength,
+        baseScore,
+        adjustedScore,
+        riskTier,
+        riskFactors,
+        recommendations,
+        financialHealthScore,
+        geographicRiskScore,
+        concentrationRiskScore,
+        performanceScore,
+        regimeImpactScore,
+        nextEvaluationDue: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      });
+      
+      await logAudit({
+        action: "create",
+        entityType: "supplier_risk_snapshot",
+        entityId: snapshot.id,
+        changes: { supplierId: req.params.supplierId, adjustedScore, riskTier },
+        notes: `Calculated supplier risk: ${supplier.name} - ${riskTier} (${adjustedScore.toFixed(1)})`,
+        req,
+      });
+      
+      res.status(201).json({ ...snapshot, supplier });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Bulk calculate risk for all suppliers
+  app.post("/api/supplier-risk/calculate-all", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const suppliers = await storage.getSuppliers(user.companyId);
+      const fdrValue = req.body.fdrValue || 1.0;
+      const regime = req.body.regime || "balanced";
+      
+      const results = [];
+      
+      for (const supplier of suppliers) {
+        try {
+          const financialHealthScore = calculateFinancialHealthScore(supplier, null);
+          const geographicRiskScore = calculateGeographicRiskScore(supplier);
+          const concentrationRiskScore = await calculateConcentrationRiskScore(supplier, user.companyId);
+          const performanceScore = await calculatePerformanceScore(supplier);
+          const regimeImpactScore = calculateRegimeImpactScore(regime, fdrValue);
+          
+          const baseScore = (
+            financialHealthScore * 0.25 +
+            geographicRiskScore * 0.15 +
+            concentrationRiskScore * 0.20 +
+            performanceScore * 0.25 +
+            regimeImpactScore * 0.15
+          );
+          
+          const fdrMultiplier = getFDRRiskMultiplier(fdrValue, regime);
+          const adjustedScore = Math.min(100, Math.max(0, baseScore * fdrMultiplier));
+          const riskTier = getRiskTier(adjustedScore);
+          
+          const riskFactors = {
+            financial: { score: financialHealthScore, weight: 0.25 },
+            geographic: { score: geographicRiskScore, weight: 0.15 },
+            concentration: { score: concentrationRiskScore, weight: 0.20 },
+            performance: { score: performanceScore, weight: 0.25 },
+            regimeImpact: { score: regimeImpactScore, weight: 0.15 },
+          };
+          
+          const recommendations = generateRiskRecommendations(riskTier, riskFactors, regime);
+          
+          const snapshot = await storage.createSupplierRiskSnapshot({
+            companyId: user.companyId,
+            supplierId: supplier.id,
+            regime,
+            fdrValue,
+            fdrSignalStrength: 0.5,
+            baseScore,
+            adjustedScore,
+            riskTier,
+            riskFactors,
+            recommendations,
+            financialHealthScore,
+            geographicRiskScore,
+            concentrationRiskScore,
+            performanceScore,
+            regimeImpactScore,
+            nextEvaluationDue: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          });
+          
+          results.push({ supplier, snapshot, status: "success" });
+        } catch (err: any) {
+          results.push({ supplier, error: err.message, status: "error" });
+        }
+      }
+      
+      const summary = {
+        total: suppliers.length,
+        successful: results.filter(r => r.status === "success").length,
+        failed: results.filter(r => r.status === "error").length,
+        byTier: {
+          low: results.filter(r => r.snapshot?.riskTier === "low").length,
+          medium: results.filter(r => r.snapshot?.riskTier === "medium").length,
+          high: results.filter(r => r.snapshot?.riskTier === "high").length,
+          critical: results.filter(r => r.snapshot?.riskTier === "critical").length,
+        },
+      };
+      
+      res.json({ summary, results });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Get risk summary/dashboard data
+  app.get("/api/supplier-risk/summary", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const snapshots = await storage.getSupplierRiskSnapshots(user.companyId, { latestOnly: true });
+      
+      const summary = {
+        totalSuppliers: snapshots.length,
+        avgRiskScore: snapshots.length > 0 
+          ? snapshots.reduce((sum, s) => sum + s.adjustedScore, 0) / snapshots.length 
+          : 0,
+        byTier: {
+          low: snapshots.filter(s => s.riskTier === "low").length,
+          medium: snapshots.filter(s => s.riskTier === "medium").length,
+          high: snapshots.filter(s => s.riskTier === "high").length,
+          critical: snapshots.filter(s => s.riskTier === "critical").length,
+        },
+        criticalSuppliers: snapshots
+          .filter(s => s.riskTier === "critical" || s.riskTier === "high")
+          .sort((a, b) => b.adjustedScore - a.adjustedScore)
+          .slice(0, 5),
+        recommendations: snapshots
+          .filter(s => s.recommendations && Array.isArray(s.recommendations))
+          .flatMap(s => (s.recommendations as any[]).map(r => ({ ...r, supplierId: s.supplierId })))
+          .slice(0, 10),
+      };
+      
+      res.json(summary);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
