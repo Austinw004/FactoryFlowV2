@@ -3817,3 +3817,327 @@ export type ActivePlaybookInstance = typeof activePlaybookInstances.$inferSelect
 export type InsertActivePlaybookInstance = z.infer<typeof insertActivePlaybookInstanceSchema>;
 export type PlaybookActionLog = typeof playbookActionLogs.$inferSelect;
 export type InsertPlaybookActionLog = z.infer<typeof insertPlaybookActionLogSchema>;
+
+// ============================================
+// COLLABORATIVE S&OP WORKFLOWS
+// ============================================
+
+// S&OP Meeting Types
+export const SOP_MEETING_TYPES = [
+  "demand_review",      // Weekly demand review with sales team
+  "supply_review",      // Weekly supply review with operations
+  "pre_sop",           // Pre-S&OP reconciliation meeting
+  "executive_sop",     // Executive S&OP decision meeting
+  "custom"             // Custom meeting type
+] as const;
+
+export const SOP_MEETING_STATUS = [
+  "scheduled",
+  "in_progress",
+  "completed",
+  "cancelled"
+] as const;
+
+// S&OP Meeting Templates - Pre-built agendas for different meeting types
+export const sopMeetingTemplates = pgTable("sop_meeting_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").references(() => companies.id, { onDelete: "cascade" }), // null = system template
+  
+  name: text("name").notNull(),
+  description: text("description"),
+  meetingType: text("meeting_type").notNull(), // demand_review, supply_review, pre_sop, executive_sop
+  
+  // Default duration in minutes
+  defaultDuration: integer("default_duration").default(60),
+  
+  // Agenda items template
+  agendaItems: jsonb("agenda_items").notNull(), // Array of { title, description, duration, presenter, order }
+  
+  // Required attendee roles
+  requiredRoles: text("required_roles").array(), // ["sales_manager", "operations_lead", "finance"]
+  
+  // Outputs/deliverables expected from this meeting type
+  expectedOutputs: jsonb("expected_outputs"), // Array of { type, description }
+  
+  // Best practices and guidelines
+  guidelines: text("guidelines"),
+  
+  isSystemDefault: boolean("is_system_default").default(false),
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("sop_meeting_templates_company_idx").on(table.companyId),
+  index("sop_meeting_templates_type_idx").on(table.meetingType),
+]);
+
+// S&OP Meeting Instances - Actual scheduled meetings
+export const sopMeetings = pgTable("sop_meetings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  templateId: varchar("template_id").references(() => sopMeetingTemplates.id),
+  
+  title: text("title").notNull(),
+  meetingType: text("meeting_type").notNull(),
+  description: text("description"),
+  
+  // Scheduling
+  scheduledStart: timestamp("scheduled_start").notNull(),
+  scheduledEnd: timestamp("scheduled_end").notNull(),
+  actualStart: timestamp("actual_start"),
+  actualEnd: timestamp("actual_end"),
+  
+  // Status tracking
+  status: text("status").notNull().default("scheduled"),
+  
+  // Regime context at meeting time
+  regimeAtMeeting: text("regime_at_meeting"),
+  fdrAtMeeting: real("fdr_at_meeting"),
+  
+  // Meeting content
+  agenda: jsonb("agenda"), // Copy of agenda items, can be customized
+  notes: text("notes"),
+  decisions: jsonb("decisions"), // Array of { decision, rationale, owner, deadline }
+  actionItems: jsonb("action_items"), // Array of { task, owner, deadline, status }
+  
+  // Reconciliation data snapshot
+  reconciliationSummary: jsonb("reconciliation_summary"), // Summary of gaps discussed
+  
+  // Organizer
+  organizerId: varchar("organizer_id").references(() => users.id),
+  
+  // Planning horizon this meeting covers
+  planningHorizonStart: timestamp("planning_horizon_start"),
+  planningHorizonEnd: timestamp("planning_horizon_end"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("sop_meetings_company_idx").on(table.companyId),
+  index("sop_meetings_status_idx").on(table.status),
+  index("sop_meetings_scheduled_idx").on(table.scheduledStart),
+]);
+
+// S&OP Meeting Attendees
+export const sopMeetingAttendees = pgTable("sop_meeting_attendees", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  meetingId: varchar("meeting_id").notNull().references(() => sopMeetings.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+  
+  // External attendees (without user account)
+  externalName: text("external_name"),
+  externalEmail: text("external_email"),
+  
+  role: text("role"), // "organizer", "presenter", "required", "optional"
+  department: text("department"), // "sales", "operations", "finance", "executive"
+  
+  // Attendance tracking
+  rsvpStatus: text("rsvp_status").default("pending"), // "pending", "accepted", "declined", "tentative"
+  attended: boolean("attended"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("sop_meeting_attendees_meeting_idx").on(table.meetingId),
+  index("sop_meeting_attendees_user_idx").on(table.userId),
+]);
+
+// S&OP Reconciliation Items - Demand/Supply gaps and resolutions
+export const sopReconciliationItems = pgTable("sop_reconciliation_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  meetingId: varchar("meeting_id").references(() => sopMeetings.id, { onDelete: "set null" }),
+  
+  // What is being reconciled
+  itemType: text("item_type").notNull(), // "sku", "material", "capacity", "budget"
+  itemId: varchar("item_id"), // Reference to SKU, material, etc.
+  itemName: text("item_name").notNull(),
+  
+  // Planning period
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  
+  // Gap analysis
+  demandQuantity: real("demand_quantity").notNull(),
+  supplyQuantity: real("supply_quantity").notNull(),
+  gapQuantity: real("gap_quantity").notNull(), // demand - supply
+  gapPercentage: real("gap_percentage"), // gap as % of demand
+  
+  // Financial impact
+  gapCostImpact: real("gap_cost_impact"), // Estimated cost of the gap
+  
+  // Regime context
+  regime: text("regime"),
+  fdrValue: real("fdr_value"),
+  
+  // Resolution tracking
+  status: text("status").notNull().default("open"), // "open", "in_review", "resolved", "accepted", "escalated"
+  priority: text("priority").default("medium"), // "critical", "high", "medium", "low"
+  
+  // Proposed resolution
+  proposedResolution: text("proposed_resolution"), // "increase_supply", "reduce_demand", "shift_timing", "accept_gap"
+  resolutionDetails: jsonb("resolution_details"), // Specific actions
+  resolutionOwner: varchar("resolution_owner").references(() => users.id),
+  resolutionDeadline: timestamp("resolution_deadline"),
+  
+  // Approval status
+  approvalRequired: boolean("approval_required").default(false),
+  approvalStatus: text("approval_status"), // "pending", "approved", "rejected"
+  approvedBy: varchar("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  
+  notes: text("notes"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("sop_reconciliation_items_company_idx").on(table.companyId),
+  index("sop_reconciliation_items_meeting_idx").on(table.meetingId),
+  index("sop_reconciliation_items_status_idx").on(table.status),
+  index("sop_reconciliation_items_period_idx").on(table.periodStart, table.periodEnd),
+]);
+
+// S&OP Approval Chains - Configurable approval workflows
+export const sopApprovalChains = pgTable("sop_approval_chains", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  
+  name: text("name").notNull(),
+  description: text("description"),
+  
+  // What this chain applies to
+  appliesToType: text("applies_to_type").notNull(), // "procurement", "capacity_change", "budget_adjustment", "demand_override"
+  
+  // Trigger conditions
+  minThreshold: real("min_threshold"), // Minimum value to trigger this chain
+  maxThreshold: real("max_threshold"), // Maximum value (if null, no upper limit)
+  thresholdType: text("threshold_type"), // "amount", "percentage", "quantity"
+  
+  // Chain is active
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("sop_approval_chains_company_idx").on(table.companyId),
+  index("sop_approval_chains_type_idx").on(table.appliesToType),
+]);
+
+// S&OP Approval Steps - Steps within an approval chain
+export const sopApprovalSteps = pgTable("sop_approval_steps", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  chainId: varchar("chain_id").notNull().references(() => sopApprovalChains.id, { onDelete: "cascade" }),
+  
+  stepOrder: integer("step_order").notNull(),
+  name: text("name").notNull(),
+  
+  // Who can approve at this step
+  approverType: text("approver_type").notNull(), // "user", "role", "department"
+  approverId: varchar("approver_id"), // User ID or role name
+  
+  // Approval rules
+  requiresAllApprovers: boolean("requires_all_approvers").default(false), // If multiple approvers, do all need to approve?
+  autoApproveAfterHours: integer("auto_approve_after_hours"), // Auto-approve if no action after X hours
+  canDelegate: boolean("can_delegate").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("sop_approval_steps_chain_idx").on(table.chainId),
+]);
+
+// S&OP Approval Requests - Actual approval requests
+export const sopApprovalRequests = pgTable("sop_approval_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  chainId: varchar("chain_id").notNull().references(() => sopApprovalChains.id),
+  
+  // What is being approved
+  requestType: text("request_type").notNull(),
+  requestTitle: text("request_title").notNull(),
+  requestDescription: text("request_description"),
+  
+  // Reference to the item being approved
+  referenceType: text("reference_type"), // "reconciliation_item", "purchase_order", "budget_adjustment"
+  referenceId: varchar("reference_id"),
+  
+  // Value for threshold checking
+  requestValue: real("request_value"),
+  
+  // Regime context
+  regime: text("regime"),
+  fdrValue: real("fdr_value"),
+  
+  // Request tracking
+  status: text("status").notNull().default("pending"), // "pending", "in_progress", "approved", "rejected", "cancelled"
+  currentStepOrder: integer("current_step_order").default(1),
+  
+  // Requester
+  requesterId: varchar("requester_id").references(() => users.id),
+  
+  // Final decision
+  finalDecision: text("final_decision"), // "approved", "rejected"
+  finalDecisionBy: varchar("final_decision_by").references(() => users.id),
+  finalDecisionAt: timestamp("final_decision_at"),
+  finalDecisionNotes: text("final_decision_notes"),
+  
+  // Urgency
+  priority: text("priority").default("normal"), // "urgent", "high", "normal", "low"
+  dueDate: timestamp("due_date"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("sop_approval_requests_company_idx").on(table.companyId),
+  index("sop_approval_requests_status_idx").on(table.status),
+  index("sop_approval_requests_requester_idx").on(table.requesterId),
+]);
+
+// S&OP Approval Actions - Individual approval/rejection actions
+export const sopApprovalActions = pgTable("sop_approval_actions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  requestId: varchar("request_id").notNull().references(() => sopApprovalRequests.id, { onDelete: "cascade" }),
+  stepId: varchar("step_id").notNull().references(() => sopApprovalSteps.id),
+  
+  // Approver
+  approverId: varchar("approver_id").references(() => users.id),
+  
+  // Action taken
+  action: text("action").notNull(), // "approved", "rejected", "delegated", "requested_info"
+  comments: text("comments"),
+  
+  // Delegation
+  delegatedTo: varchar("delegated_to").references(() => users.id),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("sop_approval_actions_request_idx").on(table.requestId),
+  index("sop_approval_actions_approver_idx").on(table.approverId),
+]);
+
+// S&OP Workflow Schemas
+export const insertSopMeetingTemplateSchema = createInsertSchema(sopMeetingTemplates).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertSopMeetingSchema = createInsertSchema(sopMeetings).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertSopMeetingAttendeeSchema = createInsertSchema(sopMeetingAttendees).omit({ id: true, createdAt: true });
+export const insertSopReconciliationItemSchema = createInsertSchema(sopReconciliationItems).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertSopApprovalChainSchema = createInsertSchema(sopApprovalChains).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertSopApprovalStepSchema = createInsertSchema(sopApprovalSteps).omit({ id: true, createdAt: true });
+export const insertSopApprovalRequestSchema = createInsertSchema(sopApprovalRequests).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertSopApprovalActionSchema = createInsertSchema(sopApprovalActions).omit({ id: true, createdAt: true });
+
+// S&OP Workflow Types
+export type SopMeetingTemplate = typeof sopMeetingTemplates.$inferSelect;
+export type InsertSopMeetingTemplate = z.infer<typeof insertSopMeetingTemplateSchema>;
+export type SopMeeting = typeof sopMeetings.$inferSelect;
+export type InsertSopMeeting = z.infer<typeof insertSopMeetingSchema>;
+export type SopMeetingAttendee = typeof sopMeetingAttendees.$inferSelect;
+export type InsertSopMeetingAttendee = z.infer<typeof insertSopMeetingAttendeeSchema>;
+export type SopReconciliationItem = typeof sopReconciliationItems.$inferSelect;
+export type InsertSopReconciliationItem = z.infer<typeof insertSopReconciliationItemSchema>;
+export type SopApprovalChain = typeof sopApprovalChains.$inferSelect;
+export type InsertSopApprovalChain = z.infer<typeof insertSopApprovalChainSchema>;
+export type SopApprovalStep = typeof sopApprovalSteps.$inferSelect;
+export type InsertSopApprovalStep = z.infer<typeof insertSopApprovalStepSchema>;
+export type SopApprovalRequest = typeof sopApprovalRequests.$inferSelect;
+export type InsertSopApprovalRequest = z.infer<typeof insertSopApprovalRequestSchema>;
+export type SopApprovalAction = typeof sopApprovalActions.$inferSelect;
+export type InsertSopApprovalAction = z.infer<typeof insertSopApprovalActionSchema>;

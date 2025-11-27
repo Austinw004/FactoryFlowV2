@@ -96,7 +96,15 @@ import type {
   PlaybookActionLog, InsertPlaybookActionLog,
   ScenarioSimulation, InsertScenarioSimulation,
   ScenarioVariant, InsertScenarioVariant,
-  SupplierRiskSnapshot, InsertSupplierRiskSnapshot
+  SupplierRiskSnapshot, InsertSupplierRiskSnapshot,
+  SopMeetingTemplate, InsertSopMeetingTemplate,
+  SopMeeting, InsertSopMeeting,
+  SopMeetingAttendee, InsertSopMeetingAttendee,
+  SopReconciliationItem, InsertSopReconciliationItem,
+  SopApprovalChain, InsertSopApprovalChain,
+  SopApprovalStep, InsertSopApprovalStep,
+  SopApprovalRequest, InsertSopApprovalRequest,
+  SopApprovalAction, InsertSopApprovalAction
 } from "@shared/schema";
 import { 
   users, companies, companyLocations, skus, materials, boms, suppliers, supplierMaterials,
@@ -126,7 +134,10 @@ import {
   demandSignalSources, demandSignals, demandSignalAggregates,
   roiMetrics, roiSummary, erpIntegrationTemplates, erpSyncLogs,
   actionPlaybooks, activePlaybookInstances, playbookActionLogs,
-  scenarioSimulations, scenarioVariants, supplierRiskSnapshots
+  scenarioSimulations, scenarioVariants, supplierRiskSnapshots,
+  sopMeetingTemplates, sopMeetings, sopMeetingAttendees,
+  sopReconciliationItems, sopApprovalChains, sopApprovalSteps,
+  sopApprovalRequests, sopApprovalActions
 } from "@shared/schema";
 
 export interface IStorage {
@@ -736,6 +747,56 @@ export interface IStorage {
   getLatestSupplierRiskSnapshot(supplierId: string): Promise<SupplierRiskSnapshot | undefined>;
   createSupplierRiskSnapshot(snapshot: InsertSupplierRiskSnapshot): Promise<SupplierRiskSnapshot>;
   updateSupplierRiskSnapshot(id: string, snapshot: Partial<InsertSupplierRiskSnapshot>): Promise<SupplierRiskSnapshot | undefined>;
+  
+  // S&OP Meeting Templates
+  getSopMeetingTemplates(companyId?: string): Promise<SopMeetingTemplate[]>;
+  getSopMeetingTemplate(id: string): Promise<SopMeetingTemplate | undefined>;
+  createSopMeetingTemplate(template: InsertSopMeetingTemplate): Promise<SopMeetingTemplate>;
+  updateSopMeetingTemplate(id: string, template: Partial<InsertSopMeetingTemplate>): Promise<SopMeetingTemplate | undefined>;
+  deleteSopMeetingTemplate(id: string): Promise<void>;
+  
+  // S&OP Meetings
+  getSopMeetings(companyId: string, filters?: { status?: string; meetingType?: string }): Promise<SopMeeting[]>;
+  getSopMeeting(id: string): Promise<SopMeeting | undefined>;
+  createSopMeeting(meeting: InsertSopMeeting): Promise<SopMeeting>;
+  updateSopMeeting(id: string, meeting: Partial<InsertSopMeeting>): Promise<SopMeeting | undefined>;
+  deleteSopMeeting(id: string): Promise<void>;
+  
+  // S&OP Meeting Attendees
+  getSopMeetingAttendees(meetingId: string): Promise<SopMeetingAttendee[]>;
+  createSopMeetingAttendee(attendee: InsertSopMeetingAttendee): Promise<SopMeetingAttendee>;
+  updateSopMeetingAttendee(id: string, attendee: Partial<InsertSopMeetingAttendee>): Promise<SopMeetingAttendee | undefined>;
+  deleteSopMeetingAttendee(id: string): Promise<void>;
+  
+  // S&OP Reconciliation Items
+  getSopReconciliationItems(companyId: string, filters?: { meetingId?: string; status?: string; priority?: string }): Promise<SopReconciliationItem[]>;
+  getSopReconciliationItem(id: string): Promise<SopReconciliationItem | undefined>;
+  createSopReconciliationItem(item: InsertSopReconciliationItem): Promise<SopReconciliationItem>;
+  updateSopReconciliationItem(id: string, item: Partial<InsertSopReconciliationItem>): Promise<SopReconciliationItem | undefined>;
+  deleteSopReconciliationItem(id: string): Promise<void>;
+  
+  // S&OP Approval Chains
+  getSopApprovalChains(companyId: string): Promise<SopApprovalChain[]>;
+  getSopApprovalChain(id: string): Promise<SopApprovalChain | undefined>;
+  createSopApprovalChain(chain: InsertSopApprovalChain): Promise<SopApprovalChain>;
+  updateSopApprovalChain(id: string, chain: Partial<InsertSopApprovalChain>): Promise<SopApprovalChain | undefined>;
+  deleteSopApprovalChain(id: string): Promise<void>;
+  
+  // S&OP Approval Steps
+  getSopApprovalSteps(chainId: string): Promise<SopApprovalStep[]>;
+  createSopApprovalStep(step: InsertSopApprovalStep): Promise<SopApprovalStep>;
+  updateSopApprovalStep(id: string, step: Partial<InsertSopApprovalStep>): Promise<SopApprovalStep | undefined>;
+  deleteSopApprovalStep(id: string): Promise<void>;
+  
+  // S&OP Approval Requests
+  getSopApprovalRequests(companyId: string, filters?: { status?: string; requesterId?: string }): Promise<SopApprovalRequest[]>;
+  getSopApprovalRequest(id: string): Promise<SopApprovalRequest | undefined>;
+  createSopApprovalRequest(request: InsertSopApprovalRequest): Promise<SopApprovalRequest>;
+  updateSopApprovalRequest(id: string, request: Partial<InsertSopApprovalRequest>): Promise<SopApprovalRequest | undefined>;
+  
+  // S&OP Approval Actions
+  getSopApprovalActions(requestId: string): Promise<SopApprovalAction[]>;
+  createSopApprovalAction(action: InsertSopApprovalAction): Promise<SopApprovalAction>;
 }
 
 export class DbStorage implements IStorage {
@@ -3568,6 +3629,248 @@ export class DbStorage implements IStorage {
       .set(snapshot)
       .where(eq(supplierRiskSnapshots.id, id))
       .returning();
+    return result;
+  }
+  
+  // S&OP Meeting Templates
+  async getSopMeetingTemplates(companyId?: string): Promise<SopMeetingTemplate[]> {
+    if (companyId) {
+      return db.select().from(sopMeetingTemplates)
+        .where(
+          sql`${sopMeetingTemplates.companyId} = ${companyId} OR ${sopMeetingTemplates.companyId} IS NULL`
+        )
+        .orderBy(sopMeetingTemplates.meetingType);
+    }
+    return db.select().from(sopMeetingTemplates)
+      .where(sql`${sopMeetingTemplates.companyId} IS NULL`)
+      .orderBy(sopMeetingTemplates.meetingType);
+  }
+  
+  async getSopMeetingTemplate(id: string): Promise<SopMeetingTemplate | undefined> {
+    const [result] = await db.select().from(sopMeetingTemplates)
+      .where(eq(sopMeetingTemplates.id, id));
+    return result;
+  }
+  
+  async createSopMeetingTemplate(template: InsertSopMeetingTemplate): Promise<SopMeetingTemplate> {
+    const [result] = await db.insert(sopMeetingTemplates).values(template).returning();
+    return result;
+  }
+  
+  async updateSopMeetingTemplate(id: string, template: Partial<InsertSopMeetingTemplate>): Promise<SopMeetingTemplate | undefined> {
+    const [result] = await db.update(sopMeetingTemplates)
+      .set({ ...template, updatedAt: new Date() })
+      .where(eq(sopMeetingTemplates.id, id))
+      .returning();
+    return result;
+  }
+  
+  async deleteSopMeetingTemplate(id: string): Promise<void> {
+    await db.delete(sopMeetingTemplates).where(eq(sopMeetingTemplates.id, id));
+  }
+  
+  // S&OP Meetings
+  async getSopMeetings(companyId: string, filters?: { status?: string; meetingType?: string }): Promise<SopMeeting[]> {
+    let conditions = [eq(sopMeetings.companyId, companyId)];
+    
+    if (filters?.status) {
+      conditions.push(eq(sopMeetings.status, filters.status));
+    }
+    if (filters?.meetingType) {
+      conditions.push(eq(sopMeetings.meetingType, filters.meetingType));
+    }
+    
+    return db.select().from(sopMeetings)
+      .where(and(...conditions))
+      .orderBy(desc(sopMeetings.scheduledStart));
+  }
+  
+  async getSopMeeting(id: string): Promise<SopMeeting | undefined> {
+    const [result] = await db.select().from(sopMeetings)
+      .where(eq(sopMeetings.id, id));
+    return result;
+  }
+  
+  async createSopMeeting(meeting: InsertSopMeeting): Promise<SopMeeting> {
+    const [result] = await db.insert(sopMeetings).values(meeting).returning();
+    return result;
+  }
+  
+  async updateSopMeeting(id: string, meeting: Partial<InsertSopMeeting>): Promise<SopMeeting | undefined> {
+    const [result] = await db.update(sopMeetings)
+      .set({ ...meeting, updatedAt: new Date() })
+      .where(eq(sopMeetings.id, id))
+      .returning();
+    return result;
+  }
+  
+  async deleteSopMeeting(id: string): Promise<void> {
+    await db.delete(sopMeetings).where(eq(sopMeetings.id, id));
+  }
+  
+  // S&OP Meeting Attendees
+  async getSopMeetingAttendees(meetingId: string): Promise<SopMeetingAttendee[]> {
+    return db.select().from(sopMeetingAttendees)
+      .where(eq(sopMeetingAttendees.meetingId, meetingId));
+  }
+  
+  async createSopMeetingAttendee(attendee: InsertSopMeetingAttendee): Promise<SopMeetingAttendee> {
+    const [result] = await db.insert(sopMeetingAttendees).values(attendee).returning();
+    return result;
+  }
+  
+  async updateSopMeetingAttendee(id: string, attendee: Partial<InsertSopMeetingAttendee>): Promise<SopMeetingAttendee | undefined> {
+    const [result] = await db.update(sopMeetingAttendees)
+      .set(attendee)
+      .where(eq(sopMeetingAttendees.id, id))
+      .returning();
+    return result;
+  }
+  
+  async deleteSopMeetingAttendee(id: string): Promise<void> {
+    await db.delete(sopMeetingAttendees).where(eq(sopMeetingAttendees.id, id));
+  }
+  
+  // S&OP Reconciliation Items
+  async getSopReconciliationItems(companyId: string, filters?: { meetingId?: string; status?: string; priority?: string }): Promise<SopReconciliationItem[]> {
+    let conditions = [eq(sopReconciliationItems.companyId, companyId)];
+    
+    if (filters?.meetingId) {
+      conditions.push(eq(sopReconciliationItems.meetingId, filters.meetingId));
+    }
+    if (filters?.status) {
+      conditions.push(eq(sopReconciliationItems.status, filters.status));
+    }
+    if (filters?.priority) {
+      conditions.push(eq(sopReconciliationItems.priority, filters.priority));
+    }
+    
+    return db.select().from(sopReconciliationItems)
+      .where(and(...conditions))
+      .orderBy(desc(sopReconciliationItems.createdAt));
+  }
+  
+  async getSopReconciliationItem(id: string): Promise<SopReconciliationItem | undefined> {
+    const [result] = await db.select().from(sopReconciliationItems)
+      .where(eq(sopReconciliationItems.id, id));
+    return result;
+  }
+  
+  async createSopReconciliationItem(item: InsertSopReconciliationItem): Promise<SopReconciliationItem> {
+    const [result] = await db.insert(sopReconciliationItems).values(item).returning();
+    return result;
+  }
+  
+  async updateSopReconciliationItem(id: string, item: Partial<InsertSopReconciliationItem>): Promise<SopReconciliationItem | undefined> {
+    const [result] = await db.update(sopReconciliationItems)
+      .set({ ...item, updatedAt: new Date() })
+      .where(eq(sopReconciliationItems.id, id))
+      .returning();
+    return result;
+  }
+  
+  async deleteSopReconciliationItem(id: string): Promise<void> {
+    await db.delete(sopReconciliationItems).where(eq(sopReconciliationItems.id, id));
+  }
+  
+  // S&OP Approval Chains
+  async getSopApprovalChains(companyId: string): Promise<SopApprovalChain[]> {
+    return db.select().from(sopApprovalChains)
+      .where(eq(sopApprovalChains.companyId, companyId))
+      .orderBy(sopApprovalChains.name);
+  }
+  
+  async getSopApprovalChain(id: string): Promise<SopApprovalChain | undefined> {
+    const [result] = await db.select().from(sopApprovalChains)
+      .where(eq(sopApprovalChains.id, id));
+    return result;
+  }
+  
+  async createSopApprovalChain(chain: InsertSopApprovalChain): Promise<SopApprovalChain> {
+    const [result] = await db.insert(sopApprovalChains).values(chain).returning();
+    return result;
+  }
+  
+  async updateSopApprovalChain(id: string, chain: Partial<InsertSopApprovalChain>): Promise<SopApprovalChain | undefined> {
+    const [result] = await db.update(sopApprovalChains)
+      .set({ ...chain, updatedAt: new Date() })
+      .where(eq(sopApprovalChains.id, id))
+      .returning();
+    return result;
+  }
+  
+  async deleteSopApprovalChain(id: string): Promise<void> {
+    await db.delete(sopApprovalChains).where(eq(sopApprovalChains.id, id));
+  }
+  
+  // S&OP Approval Steps
+  async getSopApprovalSteps(chainId: string): Promise<SopApprovalStep[]> {
+    return db.select().from(sopApprovalSteps)
+      .where(eq(sopApprovalSteps.chainId, chainId))
+      .orderBy(sopApprovalSteps.stepOrder);
+  }
+  
+  async createSopApprovalStep(step: InsertSopApprovalStep): Promise<SopApprovalStep> {
+    const [result] = await db.insert(sopApprovalSteps).values(step).returning();
+    return result;
+  }
+  
+  async updateSopApprovalStep(id: string, step: Partial<InsertSopApprovalStep>): Promise<SopApprovalStep | undefined> {
+    const [result] = await db.update(sopApprovalSteps)
+      .set(step)
+      .where(eq(sopApprovalSteps.id, id))
+      .returning();
+    return result;
+  }
+  
+  async deleteSopApprovalStep(id: string): Promise<void> {
+    await db.delete(sopApprovalSteps).where(eq(sopApprovalSteps.id, id));
+  }
+  
+  // S&OP Approval Requests
+  async getSopApprovalRequests(companyId: string, filters?: { status?: string; requesterId?: string }): Promise<SopApprovalRequest[]> {
+    let conditions = [eq(sopApprovalRequests.companyId, companyId)];
+    
+    if (filters?.status) {
+      conditions.push(eq(sopApprovalRequests.status, filters.status));
+    }
+    if (filters?.requesterId) {
+      conditions.push(eq(sopApprovalRequests.requesterId, filters.requesterId));
+    }
+    
+    return db.select().from(sopApprovalRequests)
+      .where(and(...conditions))
+      .orderBy(desc(sopApprovalRequests.createdAt));
+  }
+  
+  async getSopApprovalRequest(id: string): Promise<SopApprovalRequest | undefined> {
+    const [result] = await db.select().from(sopApprovalRequests)
+      .where(eq(sopApprovalRequests.id, id));
+    return result;
+  }
+  
+  async createSopApprovalRequest(request: InsertSopApprovalRequest): Promise<SopApprovalRequest> {
+    const [result] = await db.insert(sopApprovalRequests).values(request).returning();
+    return result;
+  }
+  
+  async updateSopApprovalRequest(id: string, request: Partial<InsertSopApprovalRequest>): Promise<SopApprovalRequest | undefined> {
+    const [result] = await db.update(sopApprovalRequests)
+      .set({ ...request, updatedAt: new Date() })
+      .where(eq(sopApprovalRequests.id, id))
+      .returning();
+    return result;
+  }
+  
+  // S&OP Approval Actions
+  async getSopApprovalActions(requestId: string): Promise<SopApprovalAction[]> {
+    return db.select().from(sopApprovalActions)
+      .where(eq(sopApprovalActions.requestId, requestId))
+      .orderBy(sopApprovalActions.createdAt);
+  }
+  
+  async createSopApprovalAction(action: InsertSopApprovalAction): Promise<SopApprovalAction> {
+    const [result] = await db.insert(sopApprovalActions).values(action).returning();
     return result;
   }
 }

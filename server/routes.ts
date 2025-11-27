@@ -62,6 +62,16 @@ import {
   insertRfqSchema,
   insertRfqQuoteSchema,
   insertBenchmarkSubmissionSchema,
+  insertSopMeetingTemplateSchema,
+  insertSopMeetingSchema,
+  insertSopMeetingAttendeeSchema,
+  insertSopReconciliationItemSchema,
+  insertSopApprovalChainSchema,
+  insertSopApprovalStepSchema,
+  insertSopApprovalRequestSchema,
+  insertSopApprovalActionSchema,
+  SOP_MEETING_TYPES,
+  SOP_MEETING_STATUS,
 } from "@shared/schema";
 
 const economics = new DualCircuitEconomics();
@@ -8384,6 +8394,712 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       res.json(summary);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============================================
+  // S&OP WORKFLOW ROUTES
+  // ============================================
+
+  // --- S&OP Meeting Templates ---
+  
+  // Get all meeting templates (system + company-specific)
+  app.get("/api/sop/templates", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const templates = await storage.getSopMeetingTemplates(user.companyId);
+      res.json(templates);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Get single template
+  app.get("/api/sop/templates/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const template = await storage.getSopMeetingTemplate(req.params.id);
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      res.json(template);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Create meeting template
+  app.post("/api/sop/templates", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const validatedData = insertSopMeetingTemplateSchema.parse({
+        ...req.body,
+        companyId: user.companyId,
+      });
+      
+      const template = await storage.createSopMeetingTemplate(validatedData);
+      res.status(201).json(template);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // Update meeting template
+  app.patch("/api/sop/templates/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const template = await storage.updateSopMeetingTemplate(req.params.id, req.body);
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      res.json(template);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // Delete meeting template
+  app.delete("/api/sop/templates/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      await storage.deleteSopMeetingTemplate(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // --- S&OP Meetings ---
+  
+  // Get all meetings
+  app.get("/api/sop/meetings", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const { status, meetingType } = req.query;
+      const meetings = await storage.getSopMeetings(user.companyId, { 
+        status: status as string, 
+        meetingType: meetingType as string 
+      });
+      res.json(meetings);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Get single meeting with attendees
+  app.get("/api/sop/meetings/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const meeting = await storage.getSopMeeting(req.params.id);
+      if (!meeting) {
+        return res.status(404).json({ error: "Meeting not found" });
+      }
+      
+      const attendees = await storage.getSopMeetingAttendees(meeting.id);
+      res.json({ ...meeting, attendees });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Create meeting
+  app.post("/api/sop/meetings", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      // Get current regime context
+      const latestSnapshot = await storage.getLatestEconomicSnapshot(user.companyId);
+      
+      const validatedData = insertSopMeetingSchema.parse({
+        ...req.body,
+        companyId: user.companyId,
+        organizerId: userId,
+        regimeAtMeeting: latestSnapshot?.regime,
+        fdrAtMeeting: latestSnapshot?.fdr,
+      });
+      
+      const meeting = await storage.createSopMeeting(validatedData);
+      res.status(201).json(meeting);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // Update meeting
+  app.patch("/api/sop/meetings/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const meeting = await storage.updateSopMeeting(req.params.id, req.body);
+      if (!meeting) {
+        return res.status(404).json({ error: "Meeting not found" });
+      }
+      res.json(meeting);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // Start meeting
+  app.post("/api/sop/meetings/:id/start", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const meeting = await storage.updateSopMeeting(req.params.id, {
+        status: "in_progress",
+        actualStart: new Date(),
+      });
+      if (!meeting) {
+        return res.status(404).json({ error: "Meeting not found" });
+      }
+      res.json(meeting);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // End meeting
+  app.post("/api/sop/meetings/:id/end", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const meeting = await storage.updateSopMeeting(req.params.id, {
+        status: "completed",
+        actualEnd: new Date(),
+        notes: req.body.notes,
+        decisions: req.body.decisions,
+        actionItems: req.body.actionItems,
+      });
+      if (!meeting) {
+        return res.status(404).json({ error: "Meeting not found" });
+      }
+      res.json(meeting);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // Delete meeting
+  app.delete("/api/sop/meetings/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      await storage.deleteSopMeeting(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // --- Meeting Attendees ---
+  
+  // Add attendee to meeting
+  app.post("/api/sop/meetings/:meetingId/attendees", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const validatedData = insertSopMeetingAttendeeSchema.parse({
+        ...req.body,
+        meetingId: req.params.meetingId,
+      });
+      
+      const attendee = await storage.createSopMeetingAttendee(validatedData);
+      res.status(201).json(attendee);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // Update attendee
+  app.patch("/api/sop/attendees/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const attendee = await storage.updateSopMeetingAttendee(req.params.id, req.body);
+      if (!attendee) {
+        return res.status(404).json({ error: "Attendee not found" });
+      }
+      res.json(attendee);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // Remove attendee
+  app.delete("/api/sop/attendees/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      await storage.deleteSopMeetingAttendee(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // --- S&OP Reconciliation Items ---
+  
+  // Get reconciliation items
+  app.get("/api/sop/reconciliation", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const { meetingId, status, priority } = req.query;
+      const items = await storage.getSopReconciliationItems(user.companyId, {
+        meetingId: meetingId as string,
+        status: status as string,
+        priority: priority as string,
+      });
+      res.json(items);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Get single reconciliation item
+  app.get("/api/sop/reconciliation/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const item = await storage.getSopReconciliationItem(req.params.id);
+      if (!item) {
+        return res.status(404).json({ error: "Reconciliation item not found" });
+      }
+      res.json(item);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Create reconciliation item
+  app.post("/api/sop/reconciliation", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      // Get current regime context
+      const latestSnapshot = await storage.getLatestEconomicSnapshot(user.companyId);
+      
+      const validatedData = insertSopReconciliationItemSchema.parse({
+        ...req.body,
+        companyId: user.companyId,
+        regime: latestSnapshot?.regime,
+        fdrValue: latestSnapshot?.fdr,
+      });
+      
+      const item = await storage.createSopReconciliationItem(validatedData);
+      res.status(201).json(item);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // Update reconciliation item
+  app.patch("/api/sop/reconciliation/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const item = await storage.updateSopReconciliationItem(req.params.id, req.body);
+      if (!item) {
+        return res.status(404).json({ error: "Reconciliation item not found" });
+      }
+      res.json(item);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // Delete reconciliation item
+  app.delete("/api/sop/reconciliation/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      await storage.deleteSopReconciliationItem(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Auto-detect gaps from demand forecasts vs supply
+  app.post("/api/sop/reconciliation/detect-gaps", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const { periodStart, periodEnd, meetingId } = req.body;
+      
+      // Get SKUs and their demand forecasts
+      const skus = await storage.getSkus(user.companyId);
+      const materials = await storage.getMaterials(user.companyId);
+      const latestSnapshot = await storage.getLatestEconomicSnapshot(user.companyId);
+      
+      const gaps: any[] = [];
+      
+      // Check each SKU for demand/supply gaps
+      for (const sku of skus) {
+        const demandHistory = await storage.getDemandHistory(sku.id);
+        const avgDemand = demandHistory.length > 0
+          ? demandHistory.reduce((sum, d) => sum + d.quantity, 0) / demandHistory.length
+          : 0;
+        
+        // Get BOMs for this SKU
+        const boms = await storage.getBomsForSku(sku.id);
+        
+        for (const bom of boms) {
+          const material = materials.find(m => m.id === bom.materialId);
+          if (!material) continue;
+          
+          const requiredQuantity = avgDemand * bom.quantityPerUnit;
+          const availableSupply = material.onHand + material.inbound;
+          const gap = requiredQuantity - availableSupply;
+          
+          if (gap > 0) {
+            // Calculate gap percentage and cost impact
+            const gapPercentage = (gap / requiredQuantity) * 100;
+            
+            gaps.push({
+              itemType: "material",
+              itemId: material.id,
+              itemName: `${material.name} (for ${sku.name})`,
+              periodStart: new Date(periodStart),
+              periodEnd: new Date(periodEnd),
+              demandQuantity: requiredQuantity,
+              supplyQuantity: availableSupply,
+              gapQuantity: gap,
+              gapPercentage,
+              regime: latestSnapshot?.regime,
+              fdrValue: latestSnapshot?.fdr,
+              priority: gapPercentage > 50 ? "critical" : gapPercentage > 25 ? "high" : "medium",
+              meetingId,
+            });
+          }
+        }
+      }
+      
+      // Create reconciliation items for detected gaps
+      const createdItems = [];
+      for (const gap of gaps) {
+        const item = await storage.createSopReconciliationItem({
+          ...gap,
+          companyId: user.companyId,
+        });
+        createdItems.push(item);
+      }
+      
+      res.json({
+        detected: gaps.length,
+        items: createdItems,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // --- S&OP Approval Chains ---
+  
+  // Get approval chains
+  app.get("/api/sop/approval-chains", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const chains = await storage.getSopApprovalChains(user.companyId);
+      
+      // Get steps for each chain
+      const chainsWithSteps = await Promise.all(
+        chains.map(async (chain) => {
+          const steps = await storage.getSopApprovalSteps(chain.id);
+          return { ...chain, steps };
+        })
+      );
+      
+      res.json(chainsWithSteps);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Get single approval chain
+  app.get("/api/sop/approval-chains/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const chain = await storage.getSopApprovalChain(req.params.id);
+      if (!chain) {
+        return res.status(404).json({ error: "Approval chain not found" });
+      }
+      
+      const steps = await storage.getSopApprovalSteps(chain.id);
+      res.json({ ...chain, steps });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Create approval chain
+  app.post("/api/sop/approval-chains", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const { steps, ...chainData } = req.body;
+      
+      const validatedData = insertSopApprovalChainSchema.parse({
+        ...chainData,
+        companyId: user.companyId,
+      });
+      
+      const chain = await storage.createSopApprovalChain(validatedData);
+      
+      // Create steps if provided
+      const createdSteps = [];
+      if (steps && Array.isArray(steps)) {
+        for (let i = 0; i < steps.length; i++) {
+          const stepData = insertSopApprovalStepSchema.parse({
+            ...steps[i],
+            chainId: chain.id,
+            stepOrder: i + 1,
+          });
+          const step = await storage.createSopApprovalStep(stepData);
+          createdSteps.push(step);
+        }
+      }
+      
+      res.status(201).json({ ...chain, steps: createdSteps });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // Update approval chain
+  app.patch("/api/sop/approval-chains/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const chain = await storage.updateSopApprovalChain(req.params.id, req.body);
+      if (!chain) {
+        return res.status(404).json({ error: "Approval chain not found" });
+      }
+      res.json(chain);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // Delete approval chain
+  app.delete("/api/sop/approval-chains/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      await storage.deleteSopApprovalChain(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // --- S&OP Approval Requests ---
+  
+  // Get approval requests
+  app.get("/api/sop/approvals", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const { status } = req.query;
+      const requests = await storage.getSopApprovalRequests(user.companyId, {
+        status: status as string,
+      });
+      res.json(requests);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Get single approval request with actions
+  app.get("/api/sop/approvals/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const request = await storage.getSopApprovalRequest(req.params.id);
+      if (!request) {
+        return res.status(404).json({ error: "Approval request not found" });
+      }
+      
+      const actions = await storage.getSopApprovalActions(request.id);
+      const chain = await storage.getSopApprovalChain(request.chainId);
+      const steps = chain ? await storage.getSopApprovalSteps(chain.id) : [];
+      
+      res.json({ ...request, actions, chain: { ...chain, steps } });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Create approval request
+  app.post("/api/sop/approvals", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      // Get current regime context
+      const latestSnapshot = await storage.getLatestEconomicSnapshot(user.companyId);
+      
+      const validatedData = insertSopApprovalRequestSchema.parse({
+        ...req.body,
+        companyId: user.companyId,
+        requesterId: userId,
+        regime: latestSnapshot?.regime,
+        fdrValue: latestSnapshot?.fdr,
+      });
+      
+      const request = await storage.createSopApprovalRequest(validatedData);
+      res.status(201).json(request);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // Take action on approval request (approve/reject/delegate)
+  app.post("/api/sop/approvals/:id/action", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { action, comments, delegatedTo } = req.body;
+      
+      const request = await storage.getSopApprovalRequest(req.params.id);
+      if (!request) {
+        return res.status(404).json({ error: "Approval request not found" });
+      }
+      
+      // Get current step
+      const steps = await storage.getSopApprovalSteps(request.chainId);
+      const currentStep = steps.find(s => s.stepOrder === request.currentStepOrder);
+      
+      if (!currentStep) {
+        return res.status(400).json({ error: "Invalid approval step" });
+      }
+      
+      // Record the action
+      const actionData = insertSopApprovalActionSchema.parse({
+        requestId: request.id,
+        stepId: currentStep.id,
+        approverId: userId,
+        action,
+        comments,
+        delegatedTo,
+      });
+      
+      await storage.createSopApprovalAction(actionData);
+      
+      // Update request based on action
+      let updateData: any = {};
+      
+      if (action === "approved") {
+        // Check if this is the last step
+        const nextStep = steps.find(s => s.stepOrder === (request.currentStepOrder || 0) + 1);
+        
+        if (nextStep) {
+          // Move to next step
+          updateData = {
+            currentStepOrder: nextStep.stepOrder,
+            status: "in_progress",
+          };
+        } else {
+          // Final approval
+          updateData = {
+            status: "approved",
+            finalDecision: "approved",
+            finalDecisionBy: userId,
+            finalDecisionAt: new Date(),
+          };
+        }
+      } else if (action === "rejected") {
+        updateData = {
+          status: "rejected",
+          finalDecision: "rejected",
+          finalDecisionBy: userId,
+          finalDecisionAt: new Date(),
+          finalDecisionNotes: comments,
+        };
+      }
+      
+      const updatedRequest = await storage.updateSopApprovalRequest(request.id, updateData);
+      res.json(updatedRequest);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // Get S&OP dashboard summary
+  app.get("/api/sop/dashboard", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      // Get upcoming meetings
+      const meetings = await storage.getSopMeetings(user.companyId);
+      const upcomingMeetings = meetings.filter(m => 
+        m.status === "scheduled" && new Date(m.scheduledStart) > new Date()
+      ).slice(0, 5);
+      
+      const inProgressMeetings = meetings.filter(m => m.status === "in_progress");
+      
+      // Get open reconciliation items
+      const reconciliationItems = await storage.getSopReconciliationItems(user.companyId, { status: "open" });
+      const criticalGaps = reconciliationItems.filter(i => i.priority === "critical" || i.priority === "high");
+      
+      // Get pending approvals
+      const approvals = await storage.getSopApprovalRequests(user.companyId, { status: "pending" });
+      
+      // Get current economic context
+      const latestSnapshot = await storage.getLatestEconomicSnapshot(user.companyId);
+      
+      res.json({
+        meetings: {
+          upcoming: upcomingMeetings.length,
+          inProgress: inProgressMeetings.length,
+          thisWeek: meetings.filter(m => {
+            const meetingDate = new Date(m.scheduledStart);
+            const now = new Date();
+            const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+            return meetingDate >= now && meetingDate <= weekFromNow;
+          }).length,
+          nextMeeting: upcomingMeetings[0] || null,
+        },
+        reconciliation: {
+          openItems: reconciliationItems.length,
+          criticalGaps: criticalGaps.length,
+          byPriority: {
+            critical: reconciliationItems.filter(i => i.priority === "critical").length,
+            high: reconciliationItems.filter(i => i.priority === "high").length,
+            medium: reconciliationItems.filter(i => i.priority === "medium").length,
+            low: reconciliationItems.filter(i => i.priority === "low").length,
+          },
+        },
+        approvals: {
+          pending: approvals.length,
+          urgent: approvals.filter(a => a.priority === "urgent" || a.priority === "high").length,
+        },
+        regime: {
+          current: latestSnapshot?.regime || "Unknown",
+          fdr: latestSnapshot?.fdr || 1.0,
+        },
+      });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

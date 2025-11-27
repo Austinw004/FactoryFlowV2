@@ -21,6 +21,7 @@ import ErpTemplates from "@/pages/ErpTemplates";
 import ActionPlaybooks from "@/pages/ActionPlaybooks";
 import ScenarioSimulation from "@/pages/ScenarioSimulation";
 import SupplierRisk from "@/pages/SupplierRisk";
+import SopWorkflows from "@/pages/SopWorkflows";
 import { useAuth } from "@/hooks/useAuth";
 
 const DemandPlanningRoute = () => <DemandHub initialTab="planning" />;
@@ -81,6 +82,7 @@ function Router() {
       <Route path="/action-playbooks" component={ActionPlaybooks} />
       <Route path="/scenario-simulation" component={ScenarioSimulation} />
       <Route path="/supplier-risk" component={SupplierRisk} />
+      <Route path="/sop-workflows" component={SopWorkflows} />
       <Route path="/configuration" component={Configuration} />
       <Route path="/how-it-works" component={HowItWorks} />
 

@@ -12,6 +12,7 @@ import {
   BookMarked,
   Beaker,
   ShieldAlert,
+  CalendarDays,
 } from "lucide-react";
 import {
   Sidebar,
@@ -95,6 +96,12 @@ const bottomMenuItems = [
     url: "/supplier-risk",
     icon: ShieldAlert,
     testId: "sidebar-supplier-risk",
+  },
+  {
+    title: "S&OP Workflows",
+    url: "/sop-workflows",
+    icon: CalendarDays,
+    testId: "sidebar-sop-workflows",
   },
   {
     title: "Settings",
