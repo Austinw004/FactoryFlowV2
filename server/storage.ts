@@ -93,7 +93,10 @@ import type {
   ErpSyncLog, InsertErpSyncLog,
   ActionPlaybook, InsertActionPlaybook,
   ActivePlaybookInstance, InsertActivePlaybookInstance,
-  PlaybookActionLog, InsertPlaybookActionLog
+  PlaybookActionLog, InsertPlaybookActionLog,
+  ScenarioSimulation, InsertScenarioSimulation,
+  ScenarioVariant, InsertScenarioVariant,
+  SupplierRiskSnapshot, InsertSupplierRiskSnapshot
 } from "@shared/schema";
 import { 
   users, companies, companyLocations, skus, materials, boms, suppliers, supplierMaterials,
@@ -122,7 +125,8 @@ import {
   benchmarkSubmissions, benchmarkAggregates, benchmarkComparisons,
   demandSignalSources, demandSignals, demandSignalAggregates,
   roiMetrics, roiSummary, erpIntegrationTemplates, erpSyncLogs,
-  actionPlaybooks, activePlaybookInstances, playbookActionLogs
+  actionPlaybooks, activePlaybookInstances, playbookActionLogs,
+  scenarioSimulations, scenarioVariants, supplierRiskSnapshots
 } from "@shared/schema";
 
 export interface IStorage {
@@ -711,6 +715,27 @@ export interface IStorage {
   getPlaybookActionLogs(instanceId: string): Promise<PlaybookActionLog[]>;
   createPlaybookActionLog(log: InsertPlaybookActionLog): Promise<PlaybookActionLog>;
   updatePlaybookActionLog(id: string, log: Partial<InsertPlaybookActionLog>): Promise<PlaybookActionLog | undefined>;
+  
+  // Scenario Simulations (What-If Analysis)
+  getScenarioSimulations(companyId: string): Promise<ScenarioSimulation[]>;
+  getScenarioSimulation(id: string): Promise<ScenarioSimulation | undefined>;
+  createScenarioSimulation(simulation: InsertScenarioSimulation): Promise<ScenarioSimulation>;
+  updateScenarioSimulation(id: string, simulation: Partial<InsertScenarioSimulation>): Promise<ScenarioSimulation | undefined>;
+  deleteScenarioSimulation(id: string): Promise<void>;
+  
+  // Scenario Variants
+  getScenarioVariants(simulationId: string): Promise<ScenarioVariant[]>;
+  getScenarioVariant(id: string): Promise<ScenarioVariant | undefined>;
+  createScenarioVariant(variant: InsertScenarioVariant): Promise<ScenarioVariant>;
+  updateScenarioVariant(id: string, variant: Partial<InsertScenarioVariant>): Promise<ScenarioVariant | undefined>;
+  deleteScenarioVariant(id: string): Promise<void>;
+  
+  // Supplier Risk Scoring
+  getSupplierRiskSnapshots(companyId: string, filters?: { supplierId?: string; regime?: string; riskTier?: string; latestOnly?: boolean }): Promise<SupplierRiskSnapshot[]>;
+  getSupplierRiskSnapshot(id: string): Promise<SupplierRiskSnapshot | undefined>;
+  getLatestSupplierRiskSnapshot(supplierId: string): Promise<SupplierRiskSnapshot | undefined>;
+  createSupplierRiskSnapshot(snapshot: InsertSupplierRiskSnapshot): Promise<SupplierRiskSnapshot>;
+  updateSupplierRiskSnapshot(id: string, snapshot: Partial<InsertSupplierRiskSnapshot>): Promise<SupplierRiskSnapshot | undefined>;
 }
 
 export class DbStorage implements IStorage {
@@ -3420,6 +3445,128 @@ export class DbStorage implements IStorage {
     const [result] = await db.update(playbookActionLogs)
       .set(log)
       .where(eq(playbookActionLogs.id, id))
+      .returning();
+    return result;
+  }
+  
+  // Scenario Simulations (What-If Analysis)
+  async getScenarioSimulations(companyId: string): Promise<ScenarioSimulation[]> {
+    return db.select().from(scenarioSimulations)
+      .where(eq(scenarioSimulations.companyId, companyId))
+      .orderBy(desc(scenarioSimulations.createdAt));
+  }
+  
+  async getScenarioSimulation(id: string): Promise<ScenarioSimulation | undefined> {
+    const [result] = await db.select().from(scenarioSimulations)
+      .where(eq(scenarioSimulations.id, id));
+    return result;
+  }
+  
+  async createScenarioSimulation(simulation: InsertScenarioSimulation): Promise<ScenarioSimulation> {
+    const [result] = await db.insert(scenarioSimulations).values(simulation).returning();
+    return result;
+  }
+  
+  async updateScenarioSimulation(id: string, simulation: Partial<InsertScenarioSimulation>): Promise<ScenarioSimulation | undefined> {
+    const [result] = await db.update(scenarioSimulations)
+      .set({ ...simulation, updatedAt: new Date() })
+      .where(eq(scenarioSimulations.id, id))
+      .returning();
+    return result;
+  }
+  
+  async deleteScenarioSimulation(id: string): Promise<void> {
+    await db.delete(scenarioSimulations).where(eq(scenarioSimulations.id, id));
+  }
+  
+  // Scenario Variants
+  async getScenarioVariants(simulationId: string): Promise<ScenarioVariant[]> {
+    return db.select().from(scenarioVariants)
+      .where(eq(scenarioVariants.simulationId, simulationId))
+      .orderBy(scenarioVariants.createdAt);
+  }
+  
+  async getScenarioVariant(id: string): Promise<ScenarioVariant | undefined> {
+    const [result] = await db.select().from(scenarioVariants)
+      .where(eq(scenarioVariants.id, id));
+    return result;
+  }
+  
+  async createScenarioVariant(variant: InsertScenarioVariant): Promise<ScenarioVariant> {
+    const [result] = await db.insert(scenarioVariants).values(variant).returning();
+    return result;
+  }
+  
+  async updateScenarioVariant(id: string, variant: Partial<InsertScenarioVariant>): Promise<ScenarioVariant | undefined> {
+    const [result] = await db.update(scenarioVariants)
+      .set(variant)
+      .where(eq(scenarioVariants.id, id))
+      .returning();
+    return result;
+  }
+  
+  async deleteScenarioVariant(id: string): Promise<void> {
+    await db.delete(scenarioVariants).where(eq(scenarioVariants.id, id));
+  }
+  
+  // Supplier Risk Scoring
+  async getSupplierRiskSnapshots(
+    companyId: string, 
+    filters?: { supplierId?: string; regime?: string; riskTier?: string; latestOnly?: boolean }
+  ): Promise<SupplierRiskSnapshot[]> {
+    let conditions = [eq(supplierRiskSnapshots.companyId, companyId)];
+    
+    if (filters?.supplierId) {
+      conditions.push(eq(supplierRiskSnapshots.supplierId, filters.supplierId));
+    }
+    if (filters?.regime) {
+      conditions.push(eq(supplierRiskSnapshots.regime, filters.regime));
+    }
+    if (filters?.riskTier) {
+      conditions.push(eq(supplierRiskSnapshots.riskTier, filters.riskTier));
+    }
+    if (filters?.latestOnly) {
+      conditions.push(eq(supplierRiskSnapshots.isLatest, 1));
+    }
+    
+    return db.select().from(supplierRiskSnapshots)
+      .where(and(...conditions))
+      .orderBy(desc(supplierRiskSnapshots.evaluatedAt));
+  }
+  
+  async getSupplierRiskSnapshot(id: string): Promise<SupplierRiskSnapshot | undefined> {
+    const [result] = await db.select().from(supplierRiskSnapshots)
+      .where(eq(supplierRiskSnapshots.id, id));
+    return result;
+  }
+  
+  async getLatestSupplierRiskSnapshot(supplierId: string): Promise<SupplierRiskSnapshot | undefined> {
+    const [result] = await db.select().from(supplierRiskSnapshots)
+      .where(and(
+        eq(supplierRiskSnapshots.supplierId, supplierId),
+        eq(supplierRiskSnapshots.isLatest, 1)
+      ));
+    return result;
+  }
+  
+  async createSupplierRiskSnapshot(snapshot: InsertSupplierRiskSnapshot): Promise<SupplierRiskSnapshot> {
+    // Mark previous snapshots as not latest
+    if (snapshot.supplierId) {
+      await db.update(supplierRiskSnapshots)
+        .set({ isLatest: 0 })
+        .where(eq(supplierRiskSnapshots.supplierId, snapshot.supplierId));
+    }
+    
+    const [result] = await db.insert(supplierRiskSnapshots)
+      .values({ ...snapshot, isLatest: 1 })
+      .returning();
+    return result;
+  }
+  
+  async updateSupplierRiskSnapshot(id: string, snapshot: Partial<InsertSupplierRiskSnapshot>): Promise<SupplierRiskSnapshot | undefined> {
+    const [result] = await db.update(supplierRiskSnapshots)
+      .set(snapshot)
+      .where(eq(supplierRiskSnapshots.id, id))
       .returning();
     return result;
   }
