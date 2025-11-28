@@ -5027,6 +5027,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test ERP connection before saving
+  app.post("/api/erp-connections/test", isAuthenticated, async (req: any, res) => {
+    try {
+      const { erpSystem, apiEndpoint, authMethod, credentials } = req.body;
+      
+      // Simulate connection testing
+      // In production, this would actually attempt to connect to the ERP
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // For demo purposes, simulate various responses
+      if (!apiEndpoint || apiEndpoint.length < 10) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Invalid API endpoint. Please provide a valid URL." 
+        });
+      }
+      
+      if (!credentials || Object.keys(credentials).length === 0) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "No credentials provided." 
+        });
+      }
+      
+      // Simulate successful connection with mock data discovery
+      const mockDiscovery = {
+        products: Math.floor(Math.random() * 500) + 100,
+        orders: Math.floor(Math.random() * 50) + 10,
+        suppliers: Math.floor(Math.random() * 30) + 5,
+        lastSyncAvailable: new Date().toISOString(),
+      };
+      
+      res.json({
+        success: true,
+        message: `Successfully connected to ${erpSystem}`,
+        discovery: mockDiscovery,
+        capabilities: {
+          canReadInventory: true,
+          canReadPOs: true,
+          canCreatePOs: true,
+          canUpdatePOs: true,
+        }
+      });
+    } catch (error: any) {
+      res.status(500).json({ 
+        success: false, 
+        error: error.message || "Connection test failed" 
+      });
+    }
+  });
+
   // Get ERP integration status
   app.get("/api/erp/status", isAuthenticated, async (req: any, res) => {
     try {

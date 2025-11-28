@@ -3,14 +3,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
@@ -19,23 +21,45 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   Database, 
   Settings, 
   CheckCircle2, 
   AlertCircle,
   ExternalLink,
-  Copy,
-  FileCode,
   Zap,
   Shield,
   RefreshCw,
   Building2,
-  Package
+  Package,
+  ArrowRight,
+  ArrowLeft,
+  Loader2,
+  Check,
+  Key,
+  Link2,
+  Plug,
+  TestTube,
+  Boxes,
+  Sparkles,
+  Circle,
+  XCircle,
+  Info,
+  Play,
+  Clock,
+  Trash2
 } from "lucide-react";
 import { useState } from "react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface ErpTemplate {
   id: string;
@@ -64,342 +88,932 @@ interface ErpTemplate {
 
 interface ErpConnection {
   id: string;
-  erpType: string;
-  connectionName: string;
+  companyId: string;
+  erpSystem: string;
+  erpVersion?: string;
+  apiEndpoint?: string;
+  authMethod?: string;
   status: string;
-  lastSyncAt?: string;
+  lastSync?: string;
+  lastError?: string;
+  canReadPOs: number;
+  canCreatePOs: number;
+  canUpdatePOs: number;
+  canReadInventory: number;
+  createdAt: string;
 }
 
-const ERP_LOGOS: Record<string, { icon: any; color: string }> = {
-  "SAP": { icon: Building2, color: "text-blue-600" },
-  "Oracle NetSuite": { icon: Database, color: "text-red-600" },
-  "Microsoft Dynamics 365": { icon: Package, color: "text-purple-600" },
-  "Sage": { icon: Settings, color: "text-green-600" },
-  "Infor": { icon: Zap, color: "text-orange-600" },
+const ERP_LOGOS: Record<string, { icon: any; color: string; bgColor: string }> = {
+  "SAP": { icon: Building2, color: "text-blue-600", bgColor: "bg-blue-100 dark:bg-blue-900/30" },
+  "Oracle NetSuite": { icon: Database, color: "text-red-600", bgColor: "bg-red-100 dark:bg-red-900/30" },
+  "Microsoft Dynamics 365": { icon: Package, color: "text-purple-600", bgColor: "bg-purple-100 dark:bg-purple-900/30" },
+  "Sage": { icon: Settings, color: "text-green-600", bgColor: "bg-green-100 dark:bg-green-900/30" },
+  "Infor": { icon: Zap, color: "text-orange-600", bgColor: "bg-orange-100 dark:bg-orange-900/30" },
 };
 
-function TemplateCard({ template, onSetup }: { template: ErpTemplate; onSetup: (template: ErpTemplate) => void }) {
-  const erpConfig = ERP_LOGOS[template.erpName] || { icon: Database, color: "text-gray-600" };
-  const Icon = erpConfig.icon;
-  
+const WIZARD_STEPS = [
+  { id: 1, title: "Choose ERP", description: "Select your ERP system", icon: Database },
+  { id: 2, title: "Connect", description: "Enter your credentials", icon: Key },
+  { id: 3, title: "Configure", description: "Select modules & sync options", icon: Settings },
+  { id: 4, title: "Test", description: "Verify connection works", icon: TestTube },
+  { id: 5, title: "Complete", description: "Start syncing", icon: Sparkles },
+];
+
+interface WizardState {
+  step: number;
+  selectedTemplate: ErpTemplate | null;
+  connectionName: string;
+  apiEndpoint: string;
+  authMethod: string;
+  apiKey: string;
+  clientId: string;
+  clientSecret: string;
+  username: string;
+  password: string;
+  selectedModules: string[];
+  syncFrequency: string;
+  dataFlowDirection: string;
+  testStatus: 'idle' | 'testing' | 'success' | 'error';
+  testMessage: string;
+}
+
+function WizardStepIndicator({ currentStep, steps }: { currentStep: number; steps: typeof WIZARD_STEPS }) {
   return (
-    <Card className="hover-elevate cursor-pointer" data-testid={`card-erp-${template.erpName.toLowerCase().replace(/\s/g, '-')}`}>
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className={`h-10 w-10 rounded-lg bg-muted flex items-center justify-center ${erpConfig.color}`}>
-              <Icon className="h-5 w-5" />
-            </div>
-            <div>
-              <CardTitle className="text-lg">{template.displayName || template.erpName}</CardTitle>
-              <CardDescription>{template.erpVersion || 'Latest'}</CardDescription>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            {template.isPopular && (
-              <Badge variant="secondary">Popular</Badge>
-            )}
-            {template.isActive && (
-              <Badge variant="default" className="bg-green-600">Active</Badge>
-            )}
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <p className="text-sm text-muted-foreground">{template.description}</p>
-        
-        <div className="flex flex-wrap gap-2">
-          <Badge variant="secondary" className="gap-1">
-            <RefreshCw className="h-3 w-3" />
-            {template.dataFlowDirection}
-          </Badge>
-          <Badge variant="outline">
-            {template.authMethod}
-          </Badge>
-          <Badge variant="outline">
-            {template.connectionType}
-          </Badge>
-        </div>
-        
-        {template.supportedModules && template.supportedModules.length > 0 && (
-          <div className="pt-2 border-t">
-            <p className="text-xs text-muted-foreground mb-2">Supported Modules:</p>
-            <div className="flex flex-wrap gap-1">
-              {template.supportedModules.slice(0, 4).map((module) => (
-                <Badge key={module} variant="outline" className="text-xs capitalize">
-                  {module}
-                </Badge>
-              ))}
-              {template.supportedModules.length > 4 && (
-                <Badge variant="outline" className="text-xs">
-                  +{template.supportedModules.length - 4} more
-                </Badge>
+    <div className="w-full py-4">
+      <div className="flex items-center justify-between">
+        {steps.map((step, index) => {
+          const isCompleted = currentStep > step.id;
+          const isCurrent = currentStep === step.id;
+          const Icon = step.icon;
+          
+          return (
+            <div key={step.id} className="flex items-center flex-1">
+              <div className="flex flex-col items-center">
+                <div 
+                  className={`
+                    w-10 h-10 rounded-full flex items-center justify-center transition-all
+                    ${isCompleted ? 'bg-green-600 text-white' : ''}
+                    ${isCurrent ? 'bg-primary text-primary-foreground ring-4 ring-primary/20' : ''}
+                    ${!isCompleted && !isCurrent ? 'bg-muted text-muted-foreground' : ''}
+                  `}
+                >
+                  {isCompleted ? <Check className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
+                </div>
+                <div className="mt-2 text-center">
+                  <p className={`text-xs font-medium ${isCurrent ? 'text-primary' : 'text-muted-foreground'}`}>
+                    {step.title}
+                  </p>
+                </div>
+              </div>
+              {index < steps.length - 1 && (
+                <div 
+                  className={`flex-1 h-0.5 mx-2 transition-colors ${
+                    isCompleted ? 'bg-green-600' : 'bg-muted'
+                  }`}
+                />
               )}
             </div>
-          </div>
-        )}
-        
-        <div className="flex gap-2 pt-2">
-          <Button 
-            variant="default" 
-            className="flex-1"
-            onClick={() => onSetup(template)}
-            data-testid={`button-setup-${template.erpName.toLowerCase().replace(/\s/g, '-')}`}
-          >
-            <Settings className="h-4 w-4 mr-2" />
-            Configure
-          </Button>
-          {template.apiDocumentationUrl && (
-            <Button variant="outline" size="icon" asChild>
-              <a href={template.apiDocumentationUrl} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-4 w-4" />
-              </a>
-            </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
-function SetupDialog({ 
-  template, 
-  isOpen, 
-  onClose 
+function Step1SelectERP({ 
+  templates, 
+  selectedTemplate, 
+  onSelect 
 }: { 
-  template: ErpTemplate | null; 
-  isOpen: boolean; 
-  onClose: () => void;
+  templates: ErpTemplate[];
+  selectedTemplate: ErpTemplate | null;
+  onSelect: (template: ErpTemplate) => void;
 }) {
-  const { toast } = useToast();
-  const [copied, setCopied] = useState<string | null>(null);
-  
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <h2 className="text-xl font-semibold">Which ERP system do you use?</h2>
+        <p className="text-muted-foreground mt-1">Select your ERP to get started with the integration</p>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {templates.filter(t => t.isActive).map((template) => {
+          const erpConfig = ERP_LOGOS[template.erpName] || { icon: Database, color: "text-gray-600", bgColor: "bg-gray-100" };
+          const Icon = erpConfig.icon;
+          const isSelected = selectedTemplate?.id === template.id;
+          
+          return (
+            <Card 
+              key={template.id}
+              className={`cursor-pointer transition-all ${
+                isSelected 
+                  ? 'ring-2 ring-primary bg-primary/5' 
+                  : 'hover-elevate'
+              }`}
+              onClick={() => onSelect(template)}
+              data-testid={`select-erp-${template.erpName.toLowerCase().replace(/\s/g, '-')}`}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center gap-4">
+                  <div className={`h-12 w-12 rounded-lg ${erpConfig.bgColor} flex items-center justify-center ${erpConfig.color}`}>
+                    <Icon className="h-6 w-6" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold">{template.displayName || template.erpName}</h3>
+                      {template.isPopular && (
+                        <Badge variant="secondary" className="text-xs">Popular</Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">{template.erpVersion || 'All versions'}</p>
+                  </div>
+                  <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${
+                    isSelected ? 'border-primary bg-primary' : 'border-muted-foreground'
+                  }`}>
+                    {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
+                  </div>
+                </div>
+                {template.description && (
+                  <p className="text-sm text-muted-foreground mt-3">{template.description}</p>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+      
+      {templates.filter(t => !t.isActive).length > 0 && (
+        <div className="text-center pt-4 border-t">
+          <p className="text-sm text-muted-foreground">
+            More integrations coming soon: {templates.filter(t => !t.isActive).map(t => t.erpName).join(', ')}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Step2Connect({ 
+  state, 
+  updateState 
+}: { 
+  state: WizardState;
+  updateState: (updates: Partial<WizardState>) => void;
+}) {
+  const template = state.selectedTemplate;
   if (!template) return null;
   
-  const copyToClipboard = (text: string, field: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(field);
-    setTimeout(() => setCopied(null), 2000);
-    toast({
-      title: "Copied",
-      description: `${field} copied to clipboard`,
+  const erpConfig = ERP_LOGOS[template.erpName] || { icon: Database, color: "text-gray-600", bgColor: "bg-gray-100" };
+  const Icon = erpConfig.icon;
+  
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <div className={`h-16 w-16 rounded-xl ${erpConfig.bgColor} flex items-center justify-center ${erpConfig.color} mx-auto mb-4`}>
+          <Icon className="h-8 w-8" />
+        </div>
+        <h2 className="text-xl font-semibold">Connect to {template.erpName}</h2>
+        <p className="text-muted-foreground mt-1">Enter your connection details below</p>
+      </div>
+      
+      <Card>
+        <CardContent className="p-6 space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="connectionName">Connection Name</Label>
+            <Input
+              id="connectionName"
+              placeholder={`My ${template.erpName} Connection`}
+              value={state.connectionName}
+              onChange={(e) => updateState({ connectionName: e.target.value })}
+              data-testid="input-connection-name"
+            />
+            <p className="text-xs text-muted-foreground">A friendly name to identify this connection</p>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="apiEndpoint">API Endpoint URL</Label>
+            <Input
+              id="apiEndpoint"
+              placeholder={template.sampleConfig?.endpointExample || "https://your-instance.erp.com/api"}
+              value={state.apiEndpoint}
+              onChange={(e) => updateState({ apiEndpoint: e.target.value })}
+              data-testid="input-api-endpoint"
+            />
+            <p className="text-xs text-muted-foreground">Your {template.erpName} API endpoint</p>
+          </div>
+          
+          <div className="space-y-2">
+            <Label>Authentication Method</Label>
+            <Select 
+              value={state.authMethod || template.authMethod} 
+              onValueChange={(value) => updateState({ authMethod: value })}
+            >
+              <SelectTrigger data-testid="select-auth-method">
+                <SelectValue placeholder="Select authentication method" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="oauth2">OAuth 2.0</SelectItem>
+                <SelectItem value="api_key">API Key</SelectItem>
+                <SelectItem value="basic">Username & Password</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {(state.authMethod || template.authMethod) === 'api_key' && (
+            <div className="space-y-2">
+              <Label htmlFor="apiKey">API Key</Label>
+              <Input
+                id="apiKey"
+                type="password"
+                placeholder="Enter your API key"
+                value={state.apiKey}
+                onChange={(e) => updateState({ apiKey: e.target.value })}
+                data-testid="input-api-key"
+              />
+            </div>
+          )}
+          
+          {(state.authMethod || template.authMethod) === 'oauth2' && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="clientId">Client ID</Label>
+                <Input
+                  id="clientId"
+                  placeholder="Enter your OAuth Client ID"
+                  value={state.clientId}
+                  onChange={(e) => updateState({ clientId: e.target.value })}
+                  data-testid="input-client-id"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="clientSecret">Client Secret</Label>
+                <Input
+                  id="clientSecret"
+                  type="password"
+                  placeholder="Enter your OAuth Client Secret"
+                  value={state.clientSecret}
+                  onChange={(e) => updateState({ clientSecret: e.target.value })}
+                  data-testid="input-client-secret"
+                />
+              </div>
+            </>
+          )}
+          
+          {(state.authMethod || template.authMethod) === 'basic' && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="username">Username</Label>
+                <Input
+                  id="username"
+                  placeholder="Enter your username"
+                  value={state.username}
+                  onChange={(e) => updateState({ username: e.target.value })}
+                  data-testid="input-username"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={state.password}
+                  onChange={(e) => updateState({ password: e.target.value })}
+                  data-testid="input-password"
+                />
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+      
+      {template.apiDocumentationUrl && (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertTitle>Need help finding your credentials?</AlertTitle>
+          <AlertDescription>
+            <a 
+              href={template.apiDocumentationUrl} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-primary hover:underline inline-flex items-center gap-1"
+            >
+              View {template.erpName} API documentation <ExternalLink className="h-3 w-3" />
+            </a>
+          </AlertDescription>
+        </Alert>
+      )}
+    </div>
+  );
+}
+
+function Step3Configure({ 
+  state, 
+  updateState 
+}: { 
+  state: WizardState;
+  updateState: (updates: Partial<WizardState>) => void;
+}) {
+  const template = state.selectedTemplate;
+  if (!template) return null;
+  
+  const allModules = template.supportedModules || ['inventory', 'procurement', 'sales', 'production'];
+  
+  const toggleModule = (module: string) => {
+    const current = state.selectedModules;
+    if (current.includes(module)) {
+      updateState({ selectedModules: current.filter(m => m !== module) });
+    } else {
+      updateState({ selectedModules: [...current, module] });
+    }
+  };
+  
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <h2 className="text-xl font-semibold">Configure Your Integration</h2>
+        <p className="text-muted-foreground mt-1">Choose what data to sync and how often</p>
+      </div>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Boxes className="h-4 w-4" />
+            Select Modules to Sync
+          </CardTitle>
+          <CardDescription>Choose which data modules you want to integrate</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {allModules.map((module) => (
+            <div 
+              key={module}
+              className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                state.selectedModules.includes(module) 
+                  ? 'border-primary bg-primary/5' 
+                  : 'border-border hover:bg-muted/50'
+              }`}
+              onClick={() => toggleModule(module)}
+              data-testid={`toggle-module-${module}`}
+            >
+              <Checkbox 
+                checked={state.selectedModules.includes(module)}
+                onCheckedChange={() => toggleModule(module)}
+              />
+              <div className="flex-1">
+                <p className="font-medium capitalize">{module}</p>
+                <p className="text-xs text-muted-foreground">
+                  {module === 'inventory' && 'Sync inventory levels and stock data'}
+                  {module === 'procurement' && 'Create and manage purchase orders'}
+                  {module === 'sales' && 'Sync sales orders and customer data'}
+                  {module === 'production' && 'Sync production schedules and work orders'}
+                </p>
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Sync Settings
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Sync Frequency</Label>
+            <Select 
+              value={state.syncFrequency} 
+              onValueChange={(value) => updateState({ syncFrequency: value })}
+            >
+              <SelectTrigger data-testid="select-sync-frequency">
+                <SelectValue placeholder="Select sync frequency" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="realtime">Real-time (as changes occur)</SelectItem>
+                <SelectItem value="15min">Every 15 minutes</SelectItem>
+                <SelectItem value="hourly">Every hour</SelectItem>
+                <SelectItem value="daily">Once daily</SelectItem>
+                <SelectItem value="manual">Manual only</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="space-y-2">
+            <Label>Data Flow Direction</Label>
+            <Select 
+              value={state.dataFlowDirection || template.dataFlowDirection} 
+              onValueChange={(value) => updateState({ dataFlowDirection: value })}
+            >
+              <SelectTrigger data-testid="select-data-flow">
+                <SelectValue placeholder="Select data flow direction" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="import">Import from ERP only</SelectItem>
+                <SelectItem value="export">Export to ERP only</SelectItem>
+                <SelectItem value="bidirectional">Bidirectional sync</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {state.dataFlowDirection === 'bidirectional' 
+                ? 'Data flows both ways between systems' 
+                : state.dataFlowDirection === 'import'
+                  ? 'Data is imported from your ERP into this system'
+                  : 'Data is exported from this system to your ERP'
+              }
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function Step4Test({ 
+  state, 
+  updateState,
+  onTest
+}: { 
+  state: WizardState;
+  updateState: (updates: Partial<WizardState>) => void;
+  onTest: () => void;
+}) {
+  const template = state.selectedTemplate;
+  if (!template) return null;
+  
+  const erpConfig = ERP_LOGOS[template.erpName] || { icon: Database, color: "text-gray-600", bgColor: "bg-gray-100" };
+  const Icon = erpConfig.icon;
+  
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <h2 className="text-xl font-semibold">Test Your Connection</h2>
+        <p className="text-muted-foreground mt-1">Let's verify everything is working correctly</p>
+      </div>
+      
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex flex-col items-center py-8">
+            <div className={`h-20 w-20 rounded-2xl ${erpConfig.bgColor} flex items-center justify-center ${erpConfig.color} mb-6`}>
+              <Icon className="h-10 w-10" />
+            </div>
+            
+            {state.testStatus === 'idle' && (
+              <>
+                <h3 className="font-semibold text-lg mb-2">Ready to Test</h3>
+                <p className="text-muted-foreground text-center mb-6">
+                  Click the button below to verify your {template.erpName} connection
+                </p>
+                <Button size="lg" onClick={onTest} data-testid="button-test-connection">
+                  <TestTube className="h-4 w-4 mr-2" />
+                  Test Connection
+                </Button>
+              </>
+            )}
+            
+            {state.testStatus === 'testing' && (
+              <>
+                <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+                <h3 className="font-semibold text-lg mb-2">Testing Connection...</h3>
+                <p className="text-muted-foreground text-center">
+                  Connecting to your {template.erpName} instance
+                </p>
+              </>
+            )}
+            
+            {state.testStatus === 'success' && (
+              <>
+                <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4">
+                  <CheckCircle2 className="h-8 w-8 text-green-600" />
+                </div>
+                <h3 className="font-semibold text-lg text-green-600 mb-2">Connection Successful!</h3>
+                <p className="text-muted-foreground text-center mb-2">
+                  {state.testMessage || `Successfully connected to your ${template.erpName} instance`}
+                </p>
+                <Button variant="outline" onClick={onTest} className="mt-4">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Test Again
+                </Button>
+              </>
+            )}
+            
+            {state.testStatus === 'error' && (
+              <>
+                <div className="h-16 w-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
+                  <XCircle className="h-8 w-8 text-red-600" />
+                </div>
+                <h3 className="font-semibold text-lg text-red-600 mb-2">Connection Failed</h3>
+                <p className="text-muted-foreground text-center mb-4">
+                  {state.testMessage || 'Unable to connect. Please check your credentials and try again.'}
+                </p>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => updateState({ step: 2 })}>
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Edit Credentials
+                  </Button>
+                  <Button onClick={onTest}>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Retry
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Connection Summary</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex justify-between py-2 border-b">
+            <span className="text-muted-foreground">Connection Name</span>
+            <span className="font-medium">{state.connectionName || 'Not specified'}</span>
+          </div>
+          <div className="flex justify-between py-2 border-b">
+            <span className="text-muted-foreground">API Endpoint</span>
+            <span className="font-medium text-sm">{state.apiEndpoint || 'Not specified'}</span>
+          </div>
+          <div className="flex justify-between py-2 border-b">
+            <span className="text-muted-foreground">Authentication</span>
+            <span className="font-medium capitalize">{state.authMethod?.replace('_', ' ') || template.authMethod}</span>
+          </div>
+          <div className="flex justify-between py-2 border-b">
+            <span className="text-muted-foreground">Modules</span>
+            <span className="font-medium">{state.selectedModules.length} selected</span>
+          </div>
+          <div className="flex justify-between py-2">
+            <span className="text-muted-foreground">Sync Frequency</span>
+            <span className="font-medium capitalize">{state.syncFrequency?.replace(/(\d+)/, ' $1 ') || 'Not set'}</span>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function Step5Complete({ 
+  state,
+  onFinish
+}: { 
+  state: WizardState;
+  onFinish: () => void;
+}) {
+  const template = state.selectedTemplate;
+  if (!template) return null;
+  
+  const erpConfig = ERP_LOGOS[template.erpName] || { icon: Database, color: "text-gray-600", bgColor: "bg-gray-100" };
+  const Icon = erpConfig.icon;
+  
+  return (
+    <div className="space-y-6">
+      <div className="text-center py-8">
+        <div className="relative inline-block mb-6">
+          <div className={`h-20 w-20 rounded-2xl ${erpConfig.bgColor} flex items-center justify-center ${erpConfig.color}`}>
+            <Icon className="h-10 w-10" />
+          </div>
+          <div className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full bg-green-600 flex items-center justify-center">
+            <CheckCircle2 className="h-5 w-5 text-white" />
+          </div>
+        </div>
+        
+        <h2 className="text-2xl font-bold mb-2">You're All Set!</h2>
+        <p className="text-muted-foreground">
+          Your {template.erpName} integration is ready to go
+        </p>
+      </div>
+      
+      <Card className="border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-900/10">
+        <CardContent className="p-6">
+          <div className="flex items-start gap-4">
+            <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
+              <Sparkles className="h-5 w-5 text-green-600" />
+            </div>
+            <div>
+              <h3 className="font-semibold mb-1">What happens next?</h3>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-600" />
+                  Initial data sync will start automatically
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-600" />
+                  {state.selectedModules.length} modules will be synced ({state.selectedModules.join(', ')})
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-600" />
+                  Data will sync {state.syncFrequency === 'realtime' ? 'in real-time' : state.syncFrequency === 'manual' ? 'when you trigger it' : `every ${state.syncFrequency}`}
+                </li>
+              </ul>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <div className="flex justify-center">
+        <Button size="lg" onClick={onFinish} data-testid="button-finish-setup">
+          <Play className="h-4 w-4 mr-2" />
+          Finish & Start Syncing
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function IntegrationWizard({ 
+  templates,
+  isOpen, 
+  onClose,
+  onSuccess
+}: { 
+  templates: ErpTemplate[];
+  isOpen: boolean; 
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const { toast } = useToast();
+  
+  const [state, setState] = useState<WizardState>({
+    step: 1,
+    selectedTemplate: null,
+    connectionName: '',
+    apiEndpoint: '',
+    authMethod: '',
+    apiKey: '',
+    clientId: '',
+    clientSecret: '',
+    username: '',
+    password: '',
+    selectedModules: [],
+    syncFrequency: 'hourly',
+    dataFlowDirection: 'bidirectional',
+    testStatus: 'idle',
+    testMessage: '',
+  });
+  
+  const updateState = (updates: Partial<WizardState>) => {
+    setState(prev => ({ ...prev, ...updates }));
+  };
+  
+  const createConnectionMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return apiRequest('POST', '/api/erp-connections', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/erp-connections'] });
+      toast({
+        title: "Success!",
+        description: "Your ERP integration has been set up successfully.",
+      });
+      onSuccess();
+      onClose();
+      resetWizard();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create connection. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  const resetWizard = () => {
+    setState({
+      step: 1,
+      selectedTemplate: null,
+      connectionName: '',
+      apiEndpoint: '',
+      authMethod: '',
+      apiKey: '',
+      clientId: '',
+      clientSecret: '',
+      username: '',
+      password: '',
+      selectedModules: [],
+      syncFrequency: 'hourly',
+      dataFlowDirection: 'bidirectional',
+      testStatus: 'idle',
+      testMessage: '',
+    });
+  };
+  
+  const canProceed = () => {
+    switch (state.step) {
+      case 1:
+        return state.selectedTemplate !== null;
+      case 2:
+        const hasCredentials = state.authMethod === 'api_key' 
+          ? state.apiKey.length > 0
+          : state.authMethod === 'oauth2'
+            ? state.clientId.length > 0 && state.clientSecret.length > 0
+            : state.username.length > 0 && state.password.length > 0;
+        return state.connectionName.length > 0 && state.apiEndpoint.length > 0 && hasCredentials;
+      case 3:
+        return state.selectedModules.length > 0 && state.syncFrequency.length > 0;
+      case 4:
+        return state.testStatus === 'success';
+      default:
+        return true;
+    }
+  };
+  
+  const handleTest = async () => {
+    updateState({ testStatus: 'testing' });
+    
+    try {
+      const testData = {
+        erpSystem: state.selectedTemplate?.erpName,
+        apiEndpoint: state.apiEndpoint,
+        authMethod: state.authMethod || state.selectedTemplate?.authMethod,
+        credentials: {
+          apiKey: state.apiKey,
+          clientId: state.clientId,
+          clientSecret: state.clientSecret,
+          username: state.username,
+          password: state.password,
+        }
+      };
+      
+      const response = await apiRequest('POST', '/api/erp-connections/test', testData);
+      const result = await response.json();
+      
+      if (result.success) {
+        updateState({ 
+          testStatus: 'success',
+          testMessage: `Connected to ${state.selectedTemplate?.erpName}. Found ${result.discovery?.products || 0} products and ${result.discovery?.orders || 0} open orders.`
+        });
+      } else {
+        updateState({ 
+          testStatus: 'error',
+          testMessage: result.error || 'Connection test failed. Please check your credentials.'
+        });
+      }
+    } catch (error: any) {
+      updateState({ 
+        testStatus: 'error',
+        testMessage: error.message || 'Connection test failed. Please check your credentials.'
+      });
+    }
+  };
+  
+  const handleFinish = () => {
+    const connectionData = {
+      erpSystem: state.selectedTemplate?.erpName.toLowerCase().replace(/\s/g, '_') || 'unknown',
+      erpVersion: state.selectedTemplate?.erpVersion,
+      apiEndpoint: state.apiEndpoint,
+      authMethod: state.authMethod || state.selectedTemplate?.authMethod,
+      credentialsEncrypted: JSON.stringify({
+        apiKey: state.apiKey,
+        clientId: state.clientId,
+        clientSecret: state.clientSecret,
+        username: state.username,
+        password: state.password,
+      }),
+      canReadPOs: state.selectedModules.includes('procurement') ? 1 : 0,
+      canCreatePOs: state.selectedModules.includes('procurement') ? 1 : 0,
+      canUpdatePOs: state.selectedModules.includes('procurement') ? 1 : 0,
+      canReadInventory: state.selectedModules.includes('inventory') ? 1 : 0,
+      status: 'active',
+    };
+    
+    createConnectionMutation.mutate(connectionData);
+  };
+  
+  const handleSelectTemplate = (template: ErpTemplate) => {
+    updateState({ 
+      selectedTemplate: template,
+      authMethod: template.authMethod,
+      selectedModules: template.supportedModules || [],
+      dataFlowDirection: template.dataFlowDirection,
     });
   };
   
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { onClose(); resetWizard(); } }}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Database className="h-5 w-5" />
-            Configure {template.erpName}
+            <Plug className="h-5 w-5" />
+            ERP Integration Setup
           </DialogTitle>
           <DialogDescription>
-            Follow these steps to connect your {template.erpName} instance
+            Connect your ERP system in just a few steps
           </DialogDescription>
         </DialogHeader>
         
-        <Tabs defaultValue="setup" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="setup">Setup</TabsTrigger>
-            <TabsTrigger value="mappings">Field Mappings</TabsTrigger>
-            <TabsTrigger value="sync">Sync Config</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="setup" className="space-y-4 mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Shield className="h-4 w-4" />
-                  Authentication
-                </CardTitle>
-                <CardDescription>
-                  {template.authMethod} authentication via {template.connectionType}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {template.sampleConfig?.requiredFields && (
-                  <div>
-                    <p className="text-sm font-medium mb-2">Required Fields:</p>
-                    <div className="space-y-2">
-                      {template.sampleConfig.requiredFields.map((field: string) => (
-                        <div key={field} className="flex items-center justify-between p-2 rounded bg-muted/50">
-                          <span className="text-sm font-mono">{field}</span>
-                          <Badge variant="destructive" className="text-xs">Required</Badge>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {template.sampleConfig?.optionalFields && template.sampleConfig.optionalFields.length > 0 && (
-                  <div>
-                    <p className="text-sm font-medium mb-2">Optional Fields:</p>
-                    <div className="space-y-2">
-                      {template.sampleConfig.optionalFields.map((field: string) => (
-                        <div key={field} className="flex items-center justify-between p-2 rounded bg-muted/50">
-                          <span className="text-sm font-mono">{field}</span>
-                          <Badge variant="secondary" className="text-xs">Optional</Badge>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <FileCode className="h-4 w-4" />
-                  Setup Instructions
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {template.setupInstructions ? (
-                  <ol className="space-y-3">
-                    {template.setupInstructions.split('\n').map((instruction, index) => (
-                      <li key={index} className="flex gap-3">
-                        <span className="flex-shrink-0 h-6 w-6 rounded-full bg-primary/10 text-primary text-sm font-medium flex items-center justify-center">
-                          {index + 1}
-                        </span>
-                        <span className="text-sm">{instruction.replace(/^\d+\.\s*/, '')}</span>
-                      </li>
-                    ))}
-                  </ol>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No setup instructions available</p>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="mappings" className="space-y-4 mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Default Field Mappings</CardTitle>
-                <CardDescription>
-                  How your {template.erpName} fields map to our system
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {Object.entries(template.fieldMappings).filter(([k]) => k !== 'customMappings').map(([key, value]) => (
-                    <div key={key} className="flex items-center justify-between p-3 rounded bg-muted/50">
-                      <div>
-                        <span className="text-sm font-medium">{key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</span>
-                        <p className="text-xs text-muted-foreground">{template.erpName} field</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <code className="text-xs bg-background px-2 py-1 rounded">{value as string}</code>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-6 w-6"
-                          onClick={() => copyToClipboard(value as string, key)}
-                        >
-                          {copied === key ? (
-                            <CheckCircle2 className="h-3 w-3 text-green-600" />
-                          ) : (
-                            <Copy className="h-3 w-3" />
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="sync" className="space-y-4 mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Sync Configuration</CardTitle>
-                <CardDescription>
-                  Data synchronization settings
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-3 rounded bg-muted/50">
-                    <p className="text-xs text-muted-foreground">Data Flow Direction</p>
-                    <p className="text-sm font-medium capitalize">{template.dataFlowDirection}</p>
-                  </div>
-                  <div className="p-3 rounded bg-muted/50">
-                    <p className="text-xs text-muted-foreground">Connection Type</p>
-                    <p className="text-sm font-medium uppercase">{template.connectionType}</p>
-                  </div>
-                </div>
-                
-                {template.supportedModules && template.supportedModules.length > 0 && (
-                  <div>
-                    <p className="text-sm font-medium mb-2">Supported Modules:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {template.supportedModules.map((module) => (
-                        <Badge key={module} variant="secondary" className="capitalize">
-                          {module}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {template.sampleConfig?.batchSize && (
-                  <div className="p-3 rounded bg-muted/50">
-                    <p className="text-xs text-muted-foreground">Batch Size</p>
-                    <p className="text-sm font-medium">{template.sampleConfig.batchSize} records</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+        <WizardStepIndicator currentStep={state.step} steps={WIZARD_STEPS} />
         
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Close
-          </Button>
-          <Button data-testid="button-start-integration">
-            Start Integration
-          </Button>
+        <div className="py-4">
+          {state.step === 1 && (
+            <Step1SelectERP 
+              templates={templates}
+              selectedTemplate={state.selectedTemplate}
+              onSelect={handleSelectTemplate}
+            />
+          )}
+          
+          {state.step === 2 && (
+            <Step2Connect state={state} updateState={updateState} />
+          )}
+          
+          {state.step === 3 && (
+            <Step3Configure state={state} updateState={updateState} />
+          )}
+          
+          {state.step === 4 && (
+            <Step4Test state={state} updateState={updateState} onTest={handleTest} />
+          )}
+          
+          {state.step === 5 && (
+            <Step5Complete state={state} onFinish={handleFinish} />
+          )}
+        </div>
+        
+        <DialogFooter className="flex justify-between gap-2">
+          <div>
+            {state.step > 1 && state.step < 5 && (
+              <Button 
+                variant="outline" 
+                onClick={() => updateState({ step: state.step - 1 })}
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="ghost" onClick={() => { onClose(); resetWizard(); }}>
+              Cancel
+            </Button>
+            {state.step < 5 && (
+              <Button 
+                onClick={() => updateState({ step: state.step + 1 })}
+                disabled={!canProceed()}
+                data-testid="button-wizard-next"
+              >
+                {state.step === 4 ? 'Continue' : 'Next'}
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            )}
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
 
-function ConnectionCard({ connection }: { connection: ErpConnection }) {
-  const statusColors: Record<string, string> = {
-    connected: "bg-green-600",
-    disconnected: "bg-red-600",
-    syncing: "bg-yellow-600",
-    error: "bg-red-600",
+function ConnectionCard({ connection, onDelete }: { connection: ErpConnection; onDelete: (id: string) => void }) {
+  const statusConfig: Record<string, { color: string; icon: any }> = {
+    active: { color: "bg-green-600", icon: CheckCircle2 },
+    inactive: { color: "bg-gray-500", icon: Circle },
+    error: { color: "bg-red-600", icon: XCircle },
   };
+  
+  const config = statusConfig[connection.status] || statusConfig.inactive;
+  const StatusIcon = config.icon;
   
   return (
     <Card data-testid={`card-connection-${connection.id}`}>
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Database className="h-5 w-5 text-muted-foreground" />
+            <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
+              <Link2 className="h-5 w-5 text-muted-foreground" />
+            </div>
             <div>
-              <p className="font-medium">{connection.connectionName}</p>
-              <p className="text-sm text-muted-foreground">{connection.erpType}</p>
+              <p className="font-medium capitalize">{connection.erpSystem?.replace('_', ' ')}</p>
+              <p className="text-sm text-muted-foreground">{connection.apiEndpoint}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Badge className={statusColors[connection.status] || "bg-gray-600"}>
+            <Badge className={`${config.color} gap-1`}>
+              <StatusIcon className="h-3 w-3" />
               {connection.status}
             </Badge>
-            <Button variant="ghost" size="sm">
-              <Settings className="h-4 w-4" />
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => onDelete(connection.id)}
+              data-testid={`button-delete-connection-${connection.id}`}
+            >
+              <Trash2 className="h-4 w-4 text-muted-foreground" />
             </Button>
           </div>
         </div>
-        {connection.lastSyncAt && (
-          <p className="text-xs text-muted-foreground mt-2">
-            Last synced: {new Date(connection.lastSyncAt).toLocaleString()}
-          </p>
+        {connection.lastSync && (
+          <div className="flex items-center gap-1 mt-3 text-xs text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            Last synced: {new Date(connection.lastSync).toLocaleString()}
+          </div>
+        )}
+        {connection.lastError && (
+          <Alert variant="destructive" className="mt-3">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="text-xs">{connection.lastError}</AlertDescription>
+          </Alert>
         )}
       </CardContent>
     </Card>
@@ -416,19 +1030,15 @@ function LoadingSkeleton() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {[1, 2, 3, 4, 5].map((i) => (
           <Card key={i}>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <Skeleton className="h-10 w-10 rounded-lg" />
-                <div>
-                  <Skeleton className="h-5 w-32 mb-1" />
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <Skeleton className="h-12 w-12 rounded-lg" />
+                <div className="flex-1">
+                  <Skeleton className="h-5 w-32 mb-2" />
                   <Skeleton className="h-3 w-20" />
                 </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-12 w-full mb-4" />
-              <Skeleton className="h-6 w-full mb-4" />
-              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-12 w-full mt-4" />
             </CardContent>
           </Card>
         ))}
@@ -438,117 +1048,154 @@ function LoadingSkeleton() {
 }
 
 export default function ErpTemplates() {
-  const [selectedTemplate, setSelectedTemplate] = useState<ErpTemplate | null>(null);
-  const [setupDialogOpen, setSetupDialogOpen] = useState(false);
+  const { toast } = useToast();
+  const [wizardOpen, setWizardOpen] = useState(false);
   
   const { data: templates, isLoading: templatesLoading } = useQuery<ErpTemplate[]>({
     queryKey: ["/api/erp/templates"],
   });
   
-  const { data: connections } = useQuery<ErpConnection[]>({
-    queryKey: ["/api/erp/connections"],
+  const { data: connections, refetch: refetchConnections } = useQuery<ErpConnection[]>({
+    queryKey: ["/api/erp-connections"],
   });
   
-  const handleSetup = (template: ErpTemplate) => {
-    setSelectedTemplate(template);
-    setSetupDialogOpen(true);
-  };
+  const deleteConnectionMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest('DELETE', `/api/erp-connections/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/erp-connections'] });
+      toast({
+        title: "Connection removed",
+        description: "The ERP connection has been deleted.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete connection.",
+        variant: "destructive",
+      });
+    }
+  });
   
   if (templatesLoading) {
     return <LoadingSkeleton />;
   }
   
-  const activeTemplates = templates?.filter(t => t.isActive) || [];
-  const inactiveTemplates = templates?.filter(t => !t.isActive) || [];
+  const activeConnections = connections?.filter(c => c.status === 'active') || [];
+  const hasConnections = connections && connections.length > 0;
   
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold" data-testid="heading-erp-templates">
-            ERP Integration Templates
+          <h1 className="text-2xl font-bold" data-testid="heading-erp-integration">
+            ERP Integration
           </h1>
           <p className="text-muted-foreground">
-            Pre-built configurations for the top 5 ERP systems
+            Connect your ERP system to automate data synchronization
           </p>
         </div>
-        <Badge variant="secondary">
-          {activeTemplates.length} templates available
-        </Badge>
+        <Button size="lg" onClick={() => setWizardOpen(true)} data-testid="button-add-erp">
+          <Plug className="h-4 w-4 mr-2" />
+          Add ERP Connection
+        </Button>
       </div>
       
-      {connections && connections.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-lg font-semibold">Your Connections</h2>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {connections.map((connection) => (
-              <ConnectionCard key={connection.id} connection={connection} />
-            ))}
-          </div>
-        </div>
+      {!hasConnections && (
+        <Card className="border-dashed">
+          <CardContent className="py-12 text-center">
+            <div className="mx-auto h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
+              <Database className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">No ERP Connections Yet</h3>
+            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+              Connect your ERP system to automatically sync inventory, purchase orders, and more. Setup takes just a few minutes.
+            </p>
+            <Button size="lg" onClick={() => setWizardOpen(true)}>
+              <Sparkles className="h-4 w-4 mr-2" />
+              Get Started
+            </Button>
+            
+            <div className="mt-8 pt-8 border-t">
+              <p className="text-sm text-muted-foreground mb-4">Supported ERP Systems</p>
+              <div className="flex justify-center gap-6">
+                {Object.entries(ERP_LOGOS).map(([name, config]) => {
+                  const Icon = config.icon;
+                  return (
+                    <div key={name} className="flex flex-col items-center gap-2">
+                      <div className={`h-10 w-10 rounded-lg ${config.bgColor} flex items-center justify-center ${config.color}`}>
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <span className="text-xs text-muted-foreground">{name}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
       
-      <div className="space-y-3">
-        <h2 className="text-lg font-semibold">Available Templates</h2>
-        {activeTemplates.length > 0 ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {activeTemplates.map((template) => (
-              <TemplateCard 
-                key={template.id} 
-                template={template}
-                onSetup={handleSetup}
+      {hasConnections && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Your Connections</h2>
+            <Badge variant="secondary">
+              {activeConnections.length} active
+            </Badge>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {connections?.map((connection) => (
+              <ConnectionCard 
+                key={connection.id} 
+                connection={connection}
+                onDelete={(id) => deleteConnectionMutation.mutate(id)}
               />
             ))}
           </div>
-        ) : (
-          <Card>
-            <CardContent className="p-12 text-center">
-              <Database className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No Templates Available</h3>
-              <p className="text-muted-foreground">
-                ERP integration templates are being configured. Check back soon.
-              </p>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-      
-      {inactiveTemplates.length > 0 && (
-        <Accordion type="single" collapsible className="w-full">
-          <AccordionItem value="coming-soon">
-            <AccordionTrigger className="text-lg font-semibold">
-              Coming Soon ({inactiveTemplates.length})
-            </AccordionTrigger>
-            <AccordionContent>
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 pt-4">
-                {inactiveTemplates.map((template) => (
-                  <Card key={template.id} className="opacity-60">
-                    <CardHeader>
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center text-muted-foreground">
-                          <Database className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <CardTitle className="text-lg">{template.erpName}</CardTitle>
-                          <CardDescription>Coming soon</CardDescription>
-                        </div>
-                      </div>
-                    </CardHeader>
-                  </Card>
-                ))}
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
+        </div>
       )}
       
-      <SetupDialog 
-        template={selectedTemplate}
-        isOpen={setupDialogOpen}
-        onClose={() => {
-          setSetupDialogOpen(false);
-          setSelectedTemplate(null);
-        }}
+      {hasConnections && templates && templates.filter(t => t.isActive).length > 0 && (
+        <div className="space-y-4 pt-6 border-t">
+          <h2 className="text-lg font-semibold">Add Another ERP</h2>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {templates.filter(t => t.isActive).map((template) => {
+              const erpConfig = ERP_LOGOS[template.erpName] || { icon: Database, color: "text-gray-600", bgColor: "bg-gray-100" };
+              const Icon = erpConfig.icon;
+              
+              return (
+                <Card 
+                  key={template.id}
+                  className="hover-elevate cursor-pointer"
+                  onClick={() => setWizardOpen(true)}
+                  data-testid={`card-erp-${template.erpName.toLowerCase().replace(/\s/g, '-')}`}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`h-10 w-10 rounded-lg ${erpConfig.bgColor} flex items-center justify-center ${erpConfig.color}`}>
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="font-medium">{template.displayName}</p>
+                        <p className="text-sm text-muted-foreground">{template.erpVersion || 'All versions'}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      
+      <IntegrationWizard 
+        templates={templates || []}
+        isOpen={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        onSuccess={() => refetchConnections()}
       />
     </div>
   );
