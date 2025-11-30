@@ -1,6 +1,6 @@
 import { useState, useEffect, lazy } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Layers, Target, FlaskConical, Building2, Users } from "lucide-react";
+import { Layers, Target, FlaskConical, Building2, Users, Globe } from "lucide-react";
 import { SafeTabContent } from "@/components/HubErrorBoundary";
 
 const DigitalTwin = lazy(() => import("./DigitalTwin"));
@@ -8,9 +8,11 @@ const StrategicAnalysis = lazy(() => import("./StrategicAnalysis"));
 const ScenarioSimulation = lazy(() => import("./ScenarioSimulation"));
 const MAIntelligence = lazy(() => import("./MAIntelligence"));
 const PeerBenchmarking = lazy(() => import("./peer-benchmarking"));
+const EventMonitoring = lazy(() => import("./EventMonitoring"));
 
 const tabs = [
   { id: "digital-twin", label: "Digital Twin", icon: Layers, Component: DigitalTwin },
+  { id: "events", label: "Event Monitoring", icon: Globe, Component: EventMonitoring },
   { id: "strategic", label: "Strategic Analysis", icon: Target, Component: StrategicAnalysis },
   { id: "scenarios", label: "Scenarios", icon: FlaskConical, Component: ScenarioSimulation },
   { id: "ma", label: "M&A Intelligence", icon: Building2, Component: MAIntelligence },

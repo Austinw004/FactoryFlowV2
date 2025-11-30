@@ -25,6 +25,7 @@ import { IndustryConsortiumEngine } from "./lib/industryConsortium";
 import { MAIntelligenceEngine } from "./lib/maIntelligence";
 import { ScenarioPlanningEngine, type ScenarioInput } from "./lib/scenarioPlanning";
 import { GeopoliticalRiskEngine, type GeopoliticalEvent } from "./lib/geopoliticalRisk";
+import { NewsMonitoringService } from "./lib/newsMonitoring";
 import { WebhookService } from "./lib/webhookService";
 import { DataExportService } from "./lib/dataExport";
 import { DataImportService } from "./lib/dataImport";
@@ -5375,6 +5376,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(analysis);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
+    }
+  });
+
+  // ============================================================
+  // NEWS MONITORING & EVENT ALERTS
+  // ============================================================
+
+  const newsMonitoringService = new NewsMonitoringService(storage);
+
+  // Fetch live supply chain news alerts
+  app.get("/api/news/alerts", isAuthenticated, async (req: any, res) => {
+    try {
+      const currentFDR = parseFloat(req.query.fdr as string) || 1.0;
+      const alerts = await newsMonitoringService.fetchSupplyChainNews(currentFDR);
+      
+      // Filter by category if specified
+      const category = req.query.category as string;
+      const severity = req.query.severity as string;
+      
+      let filteredAlerts = alerts;
+      
+      if (category && category !== 'all') {
+        filteredAlerts = filteredAlerts.filter(a => a.category === category);
+      }
+      
+      if (severity && severity !== 'all') {
+        filteredAlerts = filteredAlerts.filter(a => a.severity === severity);
+      }
+      
+      res.json({
+        alerts: filteredAlerts,
+        total: filteredAlerts.length,
+        lastUpdated: new Date().toISOString(),
+        categories: [
+          { id: 'port_closure', label: 'Port Closures' },
+          { id: 'trade_dispute', label: 'Trade Disputes' },
+          { id: 'natural_disaster', label: 'Natural Disasters' },
+          { id: 'regulatory_change', label: 'Regulatory Changes' },
+          { id: 'supplier_distress', label: 'Supplier Distress' },
+          { id: 'supply_chain_disruption', label: 'Supply Chain Disruptions' },
+          { id: 'commodity_shortage', label: 'Commodity Shortages' },
+          { id: 'labor_strike', label: 'Labor Strikes' },
+          { id: 'geopolitical_tension', label: 'Geopolitical Tensions' },
+          { id: 'economic_crisis', label: 'Economic Crisis' }
+        ]
+      });
+    } catch (error: any) {
+      console.error('News alerts error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get alert summary/statistics
+  app.get("/api/news/summary", isAuthenticated, async (req: any, res) => {
+    try {
+      const currentFDR = parseFloat(req.query.fdr as string) || 1.0;
+      const alerts = await newsMonitoringService.fetchSupplyChainNews(currentFDR);
+      
+      const summary = {
+        totalAlerts: alerts.length,
+        bySeverity: {
+          critical: alerts.filter(a => a.severity === 'critical').length,
+          high: alerts.filter(a => a.severity === 'high').length,
+          medium: alerts.filter(a => a.severity === 'medium').length,
+          low: alerts.filter(a => a.severity === 'low').length
+        },
+        byCategory: {} as Record<string, number>,
+        byRegion: {} as Record<string, number>,
+        topCommoditiesAffected: [] as string[],
+        averageRelevanceScore: 0,
+        criticalAlerts: alerts.filter(a => a.severity === 'critical' || a.severity === 'high'),
+        lastUpdated: new Date().toISOString()
+      };
+      
+      // Count by category
+      for (const alert of alerts) {
+        summary.byCategory[alert.category] = (summary.byCategory[alert.category] || 0) + 1;
+        for (const region of alert.affectedRegions) {
+          summary.byRegion[region] = (summary.byRegion[region] || 0) + 1;
+        }
+      }
+      
+      // Get top commodities
+      const commodityCounts: Record<string, number> = {};
+      for (const alert of alerts) {
+        for (const commodity of alert.affectedCommodities) {
+          commodityCounts[commodity] = (commodityCounts[commodity] || 0) + 1;
+        }
+      }
+      summary.topCommoditiesAffected = Object.entries(commodityCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([commodity]) => commodity);
+      
+      // Calculate average relevance
+      if (alerts.length > 0) {
+        summary.averageRelevanceScore = Math.round(
+          alerts.reduce((sum, a) => sum + a.relevanceScore, 0) / alerts.length
+        );
+      }
+      
+      res.json(summary);
+    } catch (error: any) {
+      console.error('News summary error:', error);
+      res.status(500).json({ error: error.message });
     }
   });
 
