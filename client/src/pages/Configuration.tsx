@@ -122,59 +122,59 @@ export default function Configuration() {
         </Button>
       </div>
 
-      <Tabs defaultValue="company" data-testid="tabs-settings">
-        <TabsList className="grid grid-cols-4 lg:grid-cols-12 h-auto">
-          <TabsTrigger value="company" data-testid="tab-company">
-            <Building2 className="h-4 w-4 mr-2" />
+      <Tabs defaultValue="company" orientation="vertical" className="flex gap-6" data-testid="tabs-settings">
+        <TabsList className="flex flex-col h-auto w-56 shrink-0 bg-muted/50 p-2 rounded-lg">
+          <TabsTrigger value="company" className="w-full justify-start gap-3 px-3 py-2.5" data-testid="tab-company">
+            <Building2 className="h-4 w-4" />
             Company
           </TabsTrigger>
-          <TabsTrigger value="locations" data-testid="tab-locations">
-            <MapPin className="h-4 w-4 mr-2" />
+          <TabsTrigger value="locations" className="w-full justify-start gap-3 px-3 py-2.5" data-testid="tab-locations">
+            <MapPin className="h-4 w-4" />
             Locations
           </TabsTrigger>
-          <TabsTrigger value="budget" data-testid="tab-budget">
-            <DollarSign className="h-4 w-4 mr-2" />
+          <TabsTrigger value="budget" className="w-full justify-start gap-3 px-3 py-2.5" data-testid="tab-budget">
+            <DollarSign className="h-4 w-4" />
             Budget
           </TabsTrigger>
-          <TabsTrigger value="economic" data-testid="tab-economic">
-            <Zap className="h-4 w-4 mr-2" />
+          <TabsTrigger value="economic" className="w-full justify-start gap-3 px-3 py-2.5" data-testid="tab-economic">
+            <Zap className="h-4 w-4" />
             Economic
           </TabsTrigger>
-          <TabsTrigger value="alerts" data-testid="tab-alerts">
-            <Bell className="h-4 w-4 mr-2" />
+          <TabsTrigger value="alerts" className="w-full justify-start gap-3 px-3 py-2.5" data-testid="tab-alerts">
+            <Bell className="h-4 w-4" />
             Alerts
           </TabsTrigger>
-          <TabsTrigger value="communications" data-testid="tab-communications">
-            <Mail className="h-4 w-4 mr-2" />
+          <TabsTrigger value="communications" className="w-full justify-start gap-3 px-3 py-2.5" data-testid="tab-communications">
+            <Mail className="h-4 w-4" />
             Communications
           </TabsTrigger>
-          <TabsTrigger value="integrations" data-testid="tab-integrations">
-            <Plug className="h-4 w-4 mr-2" />
+          <TabsTrigger value="integrations" className="w-full justify-start gap-3 px-3 py-2.5" data-testid="tab-integrations">
+            <Plug className="h-4 w-4" />
             Integrations
           </TabsTrigger>
-          <TabsTrigger value="privacy" data-testid="tab-privacy">
-            <Shield className="h-4 w-4 mr-2" />
+          <TabsTrigger value="privacy" className="w-full justify-start gap-3 px-3 py-2.5" data-testid="tab-privacy">
+            <Shield className="h-4 w-4" />
             Data & Privacy
           </TabsTrigger>
-          <TabsTrigger value="ai" data-testid="tab-ai">
-            <Bot className="h-4 w-4 mr-2" />
+          <TabsTrigger value="ai" className="w-full justify-start gap-3 px-3 py-2.5" data-testid="tab-ai">
+            <Bot className="h-4 w-4" />
             AI Assistant
           </TabsTrigger>
-          <TabsTrigger value="branding" data-testid="tab-branding">
-            <Palette className="h-4 w-4 mr-2" />
+          <TabsTrigger value="branding" className="w-full justify-start gap-3 px-3 py-2.5" data-testid="tab-branding">
+            <Palette className="h-4 w-4" />
             Branding
           </TabsTrigger>
-          <TabsTrigger value="access" data-testid="tab-access">
-            <Users className="h-4 w-4 mr-2" />
+          <TabsTrigger value="access" className="w-full justify-start gap-3 px-3 py-2.5" data-testid="tab-access">
+            <Users className="h-4 w-4" />
             Access Control
           </TabsTrigger>
-          <TabsTrigger value="audit" data-testid="tab-audit">
-            <FileText className="h-4 w-4 mr-2" />
+          <TabsTrigger value="audit" className="w-full justify-start gap-3 px-3 py-2.5" data-testid="tab-audit">
+            <FileText className="h-4 w-4" />
             Audit Logs
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="company" className="space-y-4">
+        <TabsContent value="company" className="flex-1 space-y-4 mt-0">
           <Card>
             <CardHeader>
               <CardTitle>Company Information</CardTitle>
@@ -252,11 +252,11 @@ export default function Configuration() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="locations" className="space-y-4">
+        <TabsContent value="locations" className="flex-1 space-y-4 mt-0">
           <LocationsManagement />
         </TabsContent>
 
-        <TabsContent value="budget" className="space-y-4">
+        <TabsContent value="budget" className="flex-1 space-y-4 mt-0">
           <Card>
             <CardHeader>
               <CardTitle>Budget Configuration</CardTitle>
@@ -314,7 +314,7 @@ export default function Configuration() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="economic" className="space-y-4">
+        <TabsContent value="economic" className="flex-1 space-y-4 mt-0">
           <Card>
             <CardHeader>
               <CardTitle>Economic Policy Preferences</CardTitle>
@@ -396,7 +396,7 @@ export default function Configuration() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="alerts" className="space-y-4">
+        <TabsContent value="alerts" className="flex-1 space-y-4 mt-0">
           <Card>
             <CardHeader>
               <CardTitle>Alert & Notification Settings</CardTitle>
@@ -486,7 +486,7 @@ export default function Configuration() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="communications" className="space-y-4">
+        <TabsContent value="communications" className="flex-1 space-y-4 mt-0">
           <Card>
             <CardHeader>
               <CardTitle>Email Processing & Forwarding</CardTitle>
@@ -591,7 +591,7 @@ export default function Configuration() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="integrations" className="space-y-4">
+        <TabsContent value="integrations" className="flex-1 space-y-4 mt-0">
           <Card>
             <CardHeader>
               <CardTitle>API & Webhook Configuration</CardTitle>
@@ -647,7 +647,7 @@ export default function Configuration() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="privacy" className="space-y-4">
+        <TabsContent value="privacy" className="flex-1 space-y-4 mt-0">
           <Card>
             <CardHeader>
               <CardTitle>Data Retention & Privacy</CardTitle>
@@ -714,7 +714,7 @@ export default function Configuration() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="ai" className="space-y-4">
+        <TabsContent value="ai" className="flex-1 space-y-4 mt-0">
           <Card>
             <CardHeader>
               <CardTitle>AI Assistant Settings</CardTitle>
@@ -833,7 +833,7 @@ export default function Configuration() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="branding" className="space-y-4">
+        <TabsContent value="branding" className="flex-1 space-y-4 mt-0">
           <Card>
             <CardHeader>
               <CardTitle>Company Branding</CardTitle>
@@ -908,10 +908,10 @@ export default function Configuration() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="access" className="space-y-4">
+        <TabsContent value="access" className="flex-1 space-y-4 mt-0">
           <RoleManagement />
         </TabsContent>
-        <TabsContent value="audit" className="space-y-4">
+        <TabsContent value="audit" className="flex-1 space-y-4 mt-0">
           <AuditLogViewer />
         </TabsContent>
       </Tabs>
