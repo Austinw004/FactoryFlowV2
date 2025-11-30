@@ -1,10 +1,32 @@
-# Manufacturing Allocation Intelligence SaaS
+# AllocationIQ - Manufacturing Allocation Intelligence SaaS
 
 ## Overview
 
-This AI-powered SaaS platform optimizes raw material allocation, demand forecasting, and procurement for manufacturing. It utilizes a dual-circuit economic model to analyze economic regimes and generate strategic policy signals. Key capabilities include SKU demand forecasting, prioritized material allocation, counter-cyclical procurement using Financial-to-Real Divergence (FDR) metrics, budget/inventory optimization, and comprehensive machinery lifecycle management. The system supports over 110 tradeable commodities with real-time pricing and a master materials catalog.
+AllocationIQ is an AI-powered SaaS platform that helps manufacturers buy materials at the right time, forecast demand smarter, and optimize production allocation. The platform typically saves customers 15-30% on procurement costs through intelligent timing and allocation optimization.
 
-The platform offers unified UI tools for Strategic Analysis (Economic Scenario Simulation, Geopolitical Risk Assessment) and Supply Chain Intelligence (Material Traceability, Supplier Network monitoring). Enterprise features include multi-tier Supply Chain Network Intelligence with FDR-aware risk scoring, Automated Purchase Order Execution, an Industry Data Consortium for peer benchmarking, and M&A Intelligence. It also provides regulatory compliance, real-time production KPI dashboards with OEE tracking, automated bottleneck detection, and continuous intelligence from external economic APIs.
+### Commercial Status
+- **Brand**: AllocationIQ
+- **Pricing Tiers**: Starter ($299/month), Professional ($799/month), Enterprise (Custom pricing via sales)
+- **Subscription**: Stripe-based with monthly/annual billing options
+- **Proprietary IP**: Economic models and formulas are kept private from public-facing pages
+
+### Core Capabilities
+- SKU demand forecasting with automated retraining
+- Prioritized material allocation optimization
+- Counter-cyclical procurement timing
+- Budget and inventory optimization
+- Comprehensive machinery lifecycle management
+- Real-time pricing for 110+ tradeable commodities
+- Master materials catalog
+
+### Enterprise Features
+- Multi-tier Supply Chain Network Intelligence with risk scoring
+- Automated Purchase Order Execution
+- Industry Data Consortium for peer benchmarking
+- M&A Intelligence
+- Regulatory compliance tracking
+- Real-time production KPI dashboards with OEE tracking
+- Automated bottleneck detection
 
 ## User Preferences
 
