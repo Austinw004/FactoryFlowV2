@@ -73,11 +73,11 @@ export default function LandingPage() {
     },
   ];
 
-  const benefits = [
-    { stat: "15-30%", label: "Lower procurement costs" },
-    { stat: "40%", label: "Fewer stockouts" },
-    { stat: "3x", label: "Faster planning cycles" },
-    { stat: "90+", label: "Days ahead visibility" },
+  const platformStats = [
+    { stat: "110+", label: "Commodity prices tracked" },
+    { stat: "4", label: "Economic regimes detected" },
+    { stat: "Multi-horizon", label: "Demand forecasting" },
+    { stat: "Real-time", label: "Market intelligence" },
   ];
 
   const differentiators = [
@@ -123,19 +123,7 @@ export default function LandingPage() {
     },
   ];
 
-  const testimonials = [
-    {
-      quote: "We reduced our material costs by 22% in the first quarter. The timing signals helped us buy before prices spiked.",
-      author: "VP of Operations",
-      company: "Industrial Components Manufacturer",
-    },
-    {
-      quote: "Finally - demand forecasting that actually accounts for market conditions. Our fill rate went from 78% to 94%.",
-      author: "Supply Chain Director",
-      company: "Precision Parts Supplier",
-    },
-  ];
-
+  
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
@@ -211,10 +199,10 @@ export default function LandingPage() {
       <section className="py-16 border-y bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {benefits.map((benefit, idx) => (
+            {platformStats.map((stat, idx) => (
               <div key={idx} className="text-center">
-                <div className="text-3xl sm:text-4xl font-bold text-primary mb-2">{benefit.stat}</div>
-                <div className="text-sm text-muted-foreground">{benefit.label}</div>
+                <div className="text-3xl sm:text-4xl font-bold text-primary mb-2">{stat.stat}</div>
+                <div className="text-sm text-muted-foreground">{stat.label}</div>
               </div>
             ))}
           </div>
@@ -374,27 +362,6 @@ export default function LandingPage() {
                 </li>
               </ul>
             </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold mb-4">Trusted by Manufacturing Leaders</h2>
-          </div>
-          
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {testimonials.map((testimonial, idx) => (
-              <Card key={idx} className="p-6">
-                <blockquote className="text-lg mb-4">"{testimonial.quote}"</blockquote>
-                <div className="text-sm">
-                  <div className="font-semibold">{testimonial.author}</div>
-                  <div className="text-muted-foreground">{testimonial.company}</div>
-                </div>
-              </Card>
-            ))}
           </div>
         </div>
       </section>
