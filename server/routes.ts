@@ -29,6 +29,8 @@ import { WebhookService } from "./lib/webhookService";
 import { DataExportService } from "./lib/dataExport";
 import { DataImportService } from "./lib/dataImport";
 import { createRfqGenerationService } from "./lib/rfqGeneration";
+import { stripeService } from "./stripeService";
+import { getStripePublishableKey } from "./stripeClient";
 import multer from "multer";
 import { z } from "zod";
 import {
@@ -10143,6 +10145,164 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============================================
+  // STRIPE SUBSCRIPTION ROUTES
+  // ============================================
+  
+  // Get Stripe publishable key (public endpoint)
+  app.get("/api/stripe/config", async (_req, res) => {
+    try {
+      const publishableKey = await getStripePublishableKey();
+      res.json({ publishableKey });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to load Stripe configuration" });
+    }
+  });
+
+  // Get available subscription plans/products
+  app.get("/api/stripe/products", async (_req, res) => {
+    try {
+      const rows = await stripeService.listProductsWithPrices(true);
+
+      // Group prices by product
+      const productsMap = new Map();
+      for (const row of rows) {
+        if (!productsMap.has(row.product_id)) {
+          productsMap.set(row.product_id, {
+            id: row.product_id,
+            name: row.product_name,
+            description: row.product_description,
+            active: row.product_active,
+            metadata: row.product_metadata,
+            prices: []
+          });
+        }
+        if (row.price_id) {
+          productsMap.get(row.product_id).prices.push({
+            id: row.price_id,
+            unit_amount: row.unit_amount,
+            currency: row.currency,
+            recurring: row.recurring,
+            active: row.price_active,
+            metadata: row.price_metadata,
+          });
+        }
+      }
+
+      res.json({ products: Array.from(productsMap.values()) });
+    } catch (error: any) {
+      console.error("Error fetching products:", error);
+      res.status(500).json({ error: "Failed to fetch subscription plans" });
+    }
+  });
+
+  // Get current user's subscription status
+  app.get("/api/stripe/subscription", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await stripeService.getUser(req.user.id);
+      
+      if (!user?.stripeSubscriptionId) {
+        return res.json({ 
+          subscription: null,
+          status: user?.subscriptionStatus || 'none',
+          tier: user?.subscriptionTier || null,
+          trialEndsAt: user?.trialEndsAt || null,
+        });
+      }
+
+      const subscription = await stripeService.getSubscription(user.stripeSubscriptionId);
+      res.json({ 
+        subscription,
+        status: user.subscriptionStatus,
+        tier: user.subscriptionTier,
+        trialEndsAt: user.trialEndsAt,
+      });
+    } catch (error: any) {
+      console.error("Error fetching subscription:", error);
+      res.status(500).json({ error: "Failed to fetch subscription" });
+    }
+  });
+
+  // Create checkout session
+  app.post("/api/stripe/checkout", isAuthenticated, async (req: any, res) => {
+    try {
+      const { priceId, withTrial } = req.body;
+      
+      if (!priceId) {
+        return res.status(400).json({ error: "Price ID is required" });
+      }
+      
+      // Validate price exists and is active in our synced Stripe data
+      const price = await stripeService.getPrice(priceId);
+      if (!price || !price.active) {
+        return res.status(400).json({ error: "Invalid or inactive price" });
+      }
+
+      const user = await stripeService.getUser(req.user.id);
+      
+      // Check if user already has an active subscription
+      if (user.subscriptionStatus === 'active' || user.subscriptionStatus === 'trialing') {
+        return res.status(400).json({ 
+          error: "You already have an active subscription. Please manage it from the billing page." 
+        });
+      }
+      
+      // Check if user already used trial (prevent trial abuse)
+      const allowTrial = withTrial && !user.trialEndsAt;
+      
+      // Create or get customer
+      let customerId = user.stripeCustomerId;
+      if (!customerId) {
+        const customer = await stripeService.createCustomer(
+          user.email || '',
+          user.id,
+          user.name || undefined
+        );
+        await stripeService.updateUserStripeInfo(user.id, { stripeCustomerId: customer.id });
+        customerId = customer.id;
+      }
+
+      const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
+      
+      // Create checkout session with optional 14-day trial (only if never used before)
+      const session = await stripeService.createCheckoutSession(
+        customerId,
+        priceId,
+        `${baseUrl}/billing?success=true`,
+        `${baseUrl}/pricing?canceled=true`,
+        allowTrial ? 14 : undefined
+      );
+
+      res.json({ url: session.url });
+    } catch (error: any) {
+      console.error("Error creating checkout session:", error);
+      res.status(500).json({ error: "Failed to create checkout session" });
+    }
+  });
+
+  // Create customer portal session for managing subscription
+  app.post("/api/stripe/portal", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await stripeService.getUser(req.user.id);
+      
+      if (!user?.stripeCustomerId) {
+        return res.status(400).json({ error: "No active subscription found" });
+      }
+
+      const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
+      
+      const session = await stripeService.createCustomerPortalSession(
+        user.stripeCustomerId,
+        `${baseUrl}/billing`
+      );
+
+      res.json({ url: session.url });
+    } catch (error: any) {
+      console.error("Error creating portal session:", error);
+      res.status(500).json({ error: "Failed to create portal session" });
     }
   });
 

@@ -17,6 +17,8 @@ import StrategyHub from "@/pages/StrategyHub";
 import Configuration from "@/pages/Configuration";
 import HowItWorks from "@/pages/HowItWorks";
 import SopWorkflows from "@/pages/SopWorkflows";
+import Pricing from "@/pages/Pricing";
+import Billing from "@/pages/Billing";
 import { useAuth } from "@/hooks/useAuth";
 
 // Dashboard Hub routes
@@ -131,6 +133,10 @@ function Router() {
       <Route path="/scenario-simulation" component={StrategyScenariosRoute} />
       <Route path="/ma-intelligence" component={StrategyMaRoute} />
       <Route path="/peer-benchmarking" component={StrategyBenchmarkingRoute} />
+
+      {/* Billing & Subscription routes */}
+      <Route path="/pricing" component={Pricing} />
+      <Route path="/billing" component={Billing} />
 
       <Route component={NotFound} />
     </Switch>
