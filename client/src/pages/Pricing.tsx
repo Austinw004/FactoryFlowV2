@@ -195,6 +195,7 @@ export default function Pricing() {
             const Icon = tierIcons[product.metadata?.tier] || Zap;
             const colorClass = tierColors[product.metadata?.tier] || "text-primary";
             const isPopular = product.metadata?.popular === "true";
+            const isEnterprise = product.metadata?.tier === "enterprise";
             const price = product.prices.find(
               (p) => p.recurring?.interval === (isYearly ? "year" : "month")
             );
@@ -230,17 +231,21 @@ export default function Pricing() {
                   <div className="text-center mb-6">
                     <div className="flex items-baseline justify-center gap-1">
                       <span className="text-4xl font-bold">
-                        {formatPrice(price?.unit_amount || null, price?.recurring?.interval)}
+                        {isEnterprise ? "Custom" : formatPrice(price?.unit_amount || null, price?.recurring?.interval)}
                       </span>
-                      {price?.unit_amount && (
+                      {!isEnterprise && price?.unit_amount && (
                         <span className="text-muted-foreground">/month</span>
                       )}
                     </div>
-                    {isYearly && price?.unit_amount && (
+                    {isEnterprise ? (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Tailored pricing for your organization
+                      </p>
+                    ) : isYearly && price?.unit_amount ? (
                       <p className="text-sm text-muted-foreground mt-1">
                         Billed annually (${(price.unit_amount / 100).toLocaleString()}/year)
                       </p>
-                    )}
+                    ) : null}
                   </div>
 
                   {/* Limits */}
@@ -274,6 +279,16 @@ export default function Pricing() {
                   {isCurrentPlan ? (
                     <Button className="w-full" variant="secondary" disabled>
                       Current Plan
+                    </Button>
+                  ) : isEnterprise ? (
+                    <Button
+                      className="w-full"
+                      variant="outline"
+                      onClick={() => window.location.href = "mailto:sales@allocationiq.com"}
+                      data-testid={`button-subscribe-${product.metadata?.tier}`}
+                    >
+                      Contact Sales
+                      <ArrowRight className="h-4 w-4 ml-2" />
                     </Button>
                   ) : (
                     <Button

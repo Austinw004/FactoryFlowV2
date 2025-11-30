@@ -91,8 +91,8 @@ export function AppSidebar() {
             <Network className="h-5 w-5 text-primary-foreground" />
           </div>
           <div>
-            <h2 className="font-semibold text-sm">Manufacturing AI</h2>
-            <p className="text-xs text-muted-foreground">Smart Planning</p>
+            <h2 className="font-semibold text-sm">AllocationIQ</h2>
+            <p className="text-xs text-muted-foreground">Smart Manufacturing</p>
           </div>
         </div>
       </SidebarHeader>

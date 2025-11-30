@@ -81,7 +81,7 @@ export default function Billing() {
     if (success === "true") {
       toast({
         title: "Subscription activated!",
-        description: "Welcome to Manufacturing AI. Your subscription is now active.",
+        description: "Welcome to AllocationIQ. Your subscription is now active.",
       });
       refetch();
       // Clean up URL
