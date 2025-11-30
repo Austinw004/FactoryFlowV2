@@ -182,32 +182,44 @@ export default function Dashboard() {
           </div>
         </div>
         <Card className="p-12">
-          <div className="text-center space-y-4">
+          <div className="text-center space-y-6">
             <Package className="h-16 w-16 mx-auto text-muted-foreground" />
             <div>
-              <h2 className="text-2xl font-semibold mb-2">No Data Available</h2>
-              <p className="text-muted-foreground mb-6">
-                Load sample data to get started with the platform
+              <h2 className="text-2xl font-semibold mb-2">Get Started</h2>
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                Add your products, materials, and suppliers to start using the platform. 
+                Or explore with sample data first.
               </p>
             </div>
-            <Button 
-              onClick={() => seedMutation.mutate()} 
-              disabled={seedMutation.isPending}
-              size="lg"
-              data-testid="button-load-sample-data"
-            >
-              {seedMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Loading Sample Data...
-                </>
-              ) : (
-                <>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Load Sample Data
-                </>
-              )}
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button 
+                onClick={() => setShowCreateSKU(true)}
+                size="lg"
+                data-testid="button-add-first-product"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Your First Product
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => seedMutation.mutate()} 
+                disabled={seedMutation.isPending}
+                size="lg"
+                data-testid="button-load-sample-data"
+              >
+                {seedMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Load Sample Data
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </Card>
       </div>
@@ -260,12 +272,11 @@ export default function Dashboard() {
           <Separator orientation="vertical" className="h-8" />
           <Button 
             variant="outline" 
-            onClick={() => seedMutation.mutate()} 
-            disabled={seedMutation.isPending}
+            onClick={() => setLocation('/data-import')}
             data-testid="button-import-data"
           >
             <Upload className="h-4 w-4 mr-2" />
-            Reload Sample Data
+            Import Data
           </Button>
           <Button 
             variant="outline" 
