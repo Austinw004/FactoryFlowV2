@@ -1,7 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, Boxes, ShoppingCart, BarChart3, ArrowRight, Check, Factory, Shield, Clock, DollarSign, Zap, Building2, Rocket, LineChart, Truck } from "lucide-react";
+import { 
+  TrendingUp, Boxes, ShoppingCart, BarChart3, ArrowRight, Check, Factory, 
+  Shield, Clock, DollarSign, Zap, Building2, Rocket, LineChart, Truck,
+  Eye, Brain, Gauge, Network, AlertTriangle, Sparkles, Target, Layers
+} from "lucide-react";
 import heroImage from "@assets/generated_images/Manufacturing_dashboard_hero_image_d747dc5e.png";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useLocation } from "wouter";
@@ -9,48 +13,85 @@ import { useLocation } from "wouter";
 export default function LandingPage() {
   const [, setLocation] = useLocation();
 
-  const features = [
+  const coreCapabilities = [
+    {
+      icon: Eye,
+      title: "See What's Coming",
+      subtitle: "Demand Forecasting",
+      description: "Predict future demand before it materializes. Our system learns your patterns and adjusts for market conditions your competitors don't see.",
+    },
+    {
+      icon: Brain,
+      title: "Know When to Act",
+      subtitle: "Market Intelligence",
+      description: "Real-time signals tell you when to buy, hold, or accelerate. Stop reacting to markets - start anticipating them.",
+    },
+    {
+      icon: Target,
+      title: "Optimize Every Decision",
+      subtitle: "Smart Allocation",
+      description: "Automatically determine what to make, when to make it, and how to allocate limited materials across priorities.",
+    },
+    {
+      icon: Network,
+      title: "Protect Your Supply Chain",
+      subtitle: "Supplier Intelligence",
+      description: "Score supplier risk, map dependencies, and get alerts before disruptions hit. Full visibility from raw materials to delivery.",
+    },
+  ];
+
+  const platformModules = [
     {
       icon: LineChart,
-      title: "Intelligent Demand Forecasting",
-      description: "Predict future demand with market-aware adjustments that account for economic conditions your competitors miss.",
+      name: "Demand Planning",
+      description: "Multi-horizon forecasting with automated model retraining",
     },
     {
       icon: Boxes,
-      title: "Smart Material Allocation",
-      description: "Automatically optimize which products to make based on material availability, priorities, and constraints.",
+      name: "Material Allocation",
+      description: "Constraint-based optimization across your product mix",
     },
     {
       icon: DollarSign,
-      title: "Counter-Cyclical Procurement",
-      description: "Buy materials when prices are low, not when everyone else is buying. Save 15-30% on procurement costs.",
+      name: "Procurement Timing",
+      description: "Counter-cyclical buying signals to reduce material costs",
     },
     {
       icon: Truck,
-      title: "Supply Chain Intelligence",
-      description: "Full visibility into your supplier network with risk scoring, lead times, and automated RFQ generation.",
+      name: "Supply Chain Mapping",
+      description: "Multi-tier supplier visibility with risk scoring",
+    },
+    {
+      icon: Gauge,
+      name: "Production Analytics",
+      description: "Real-time OEE, bottleneck detection, and efficiency tracking",
+    },
+    {
+      icon: Layers,
+      name: "Digital Twin",
+      description: "Live operational snapshot with what-if simulations",
     },
   ];
 
   const benefits = [
-    { stat: "15-30%", label: "Lower material costs" },
+    { stat: "15-30%", label: "Lower procurement costs" },
     { stat: "40%", label: "Fewer stockouts" },
-    { stat: "2-3x", label: "Faster planning cycles" },
-    { stat: "98%", label: "Customer uptime" },
+    { stat: "3x", label: "Faster planning cycles" },
+    { stat: "90+", label: "Days ahead visibility" },
   ];
 
-  const steps = [
-    { 
-      title: "Connect Your Data", 
-      description: "Import your product catalog, bills of materials, and supplier information in minutes" 
+  const differentiators = [
+    {
+      title: "Proactive, Not Reactive",
+      description: "While others scramble to respond to market changes, you're already positioned. Our intelligence engine spots opportunities and risks before they're obvious.",
     },
-    { 
-      title: "Get Market Intelligence", 
-      description: "Our system analyzes economic conditions to tell you when to buy, hold, or accelerate" 
+    {
+      title: "Unified Operations View",
+      description: "Demand, supply, production, and procurement - all connected. No more siloed spreadsheets or disconnected systems. One platform, one truth.",
     },
-    { 
-      title: "Optimize Operations", 
-      description: "Receive actionable recommendations for procurement, production, and inventory" 
+    {
+      title: "Continuous Learning",
+      description: "Our models don't just run once. They continuously retrain on your data, improving accuracy over time and adapting to your business rhythms.",
     },
   ];
 
@@ -68,7 +109,7 @@ export default function LandingPage() {
       price: "$799",
       period: "/month",
       description: "For established operations",
-      features: ["Up to 1,000 SKUs", "25 Users", "Advanced forecasting", "Priority support", "Real-time market signals", "ERP integration", "Supplier risk scoring"],
+      features: ["Up to 1,000 SKUs", "25 Users", "Advanced forecasting", "Priority support", "Real-time signals", "ERP integration", "Supplier risk scoring"],
       highlighted: true,
       icon: Rocket,
     },
@@ -77,20 +118,20 @@ export default function LandingPage() {
       price: "Custom",
       period: "",
       description: "For large-scale operations",
-      features: ["Unlimited SKUs", "Unlimited Users", "Custom integrations", "Dedicated support", "On-premise option", "SLA guarantee", "Custom reporting"],
+      features: ["Unlimited SKUs", "Unlimited Users", "Custom integrations", "Dedicated support", "On-premise option", "SLA guarantee", "Digital twin"],
       icon: Building2,
     },
   ];
 
   const testimonials = [
     {
-      quote: "We reduced our material costs by 22% in the first quarter by timing our purchases based on market signals.",
-      author: "Operations Director",
+      quote: "We reduced our material costs by 22% in the first quarter. The timing signals helped us buy before prices spiked.",
+      author: "VP of Operations",
       company: "Industrial Components Manufacturer",
     },
     {
-      quote: "The demand forecasting accuracy improved our fill rates from 78% to 94%. Game changer for customer satisfaction.",
-      author: "Supply Chain Manager",
+      quote: "Finally - demand forecasting that actually accounts for market conditions. Our fill rate went from 78% to 94%.",
+      author: "Supply Chain Director",
       company: "Precision Parts Supplier",
     },
   ];
@@ -103,13 +144,13 @@ export default function LandingPage() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center">
-                <Factory className="h-5 w-5 text-primary-foreground" />
+                <Eye className="h-5 w-5 text-primary-foreground" />
               </div>
-              <span className="font-semibold text-lg">AllocationIQ</span>
+              <span className="font-semibold text-lg">Prescient Labs</span>
             </div>
             <div className="hidden md:flex items-center gap-6">
-              <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Features</a>
-              <a href="#how-it-works" className="text-sm text-muted-foreground hover:text-foreground transition-colors">How It Works</a>
+              <a href="#capabilities" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Capabilities</a>
+              <a href="#platform" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Platform</a>
               <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Pricing</a>
             </div>
             <div className="flex items-center gap-4">
@@ -130,13 +171,14 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8">
-              <Badge className="mb-4">Trusted by 200+ Manufacturers</Badge>
+              <Badge className="mb-4">Manufacturing Intelligence Platform</Badge>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight">
-                Buy Materials at the <span className="text-primary">Right Time</span>, Not the Wrong Price
+                See Ahead. <span className="text-primary">Act First.</span> Win More.
               </h1>
               <p className="text-xl text-muted-foreground">
-                Most manufacturers buy when prices are high and cut back when they should be stocking up. 
-                Our AI-powered platform helps you time your procurement, forecast demand, and allocate materials smarter than your competition.
+                Prescient Labs gives manufacturers the foresight to make smarter decisions - 
+                from predicting demand and timing purchases to optimizing production and protecting supply chains.
+                Stop reacting to the market. Start anticipating it.
               </p>
               <div className="flex flex-wrap gap-4">
                 <Button size="lg" asChild data-testid="button-start-free-trial">
@@ -145,11 +187,11 @@ export default function LandingPage() {
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </a>
                 </Button>
-                <Button size="lg" variant="outline" onClick={() => setLocation("/pricing")} data-testid="button-view-pricing">
-                  View Pricing
+                <Button size="lg" variant="outline" onClick={() => setLocation("/how-it-works")} data-testid="button-how-it-works">
+                  See How It Works
                 </Button>
               </div>
-              <p className="text-sm text-muted-foreground">No credit card required. Full access to all features.</p>
+              <p className="text-sm text-muted-foreground">No credit card required. Full platform access.</p>
             </div>
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-transparent rounded-lg" />
@@ -179,15 +221,102 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Problem/Solution Section */}
-      <section className="py-20">
+      {/* Core Capabilities */}
+      <section id="capabilities" className="py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <Badge className="mb-4">Core Capabilities</Badge>
+            <h2 className="text-3xl font-bold mb-4">Intelligence Across Your Entire Operation</h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Four interconnected pillars that transform how you plan, procure, produce, and protect your manufacturing business
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-2 gap-8">
+            {coreCapabilities.map((capability, idx) => (
+              <Card key={idx} className="p-8 hover-elevate" data-testid={`card-capability-${idx}`}>
+                <div className="flex items-start gap-6">
+                  <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                    <capability.icon className="h-8 w-8 text-primary" />
+                  </div>
+                  <div>
+                    <div className="text-sm text-primary font-medium mb-1">{capability.subtitle}</div>
+                    <h3 className="text-xl font-semibold mb-2">{capability.title}</h3>
+                    <p className="text-muted-foreground">{capability.description}</p>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Differentiators */}
+      <section className="py-20 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto text-center mb-16">
-            <h2 className="text-3xl font-bold mb-4">Stop Losing Money on Poor Timing</h2>
+            <h2 className="text-3xl font-bold mb-4">Why Manufacturers Choose Prescient</h2>
             <p className="text-lg text-muted-foreground">
-              Traditional procurement follows the herd. When demand is high, everyone buys - driving up prices. 
-              When markets slow, companies cut back - missing the best buying opportunities. 
-              Our platform analyzes market conditions to help you act before your competitors.
+              It's not just another dashboard. It's a fundamentally different approach to manufacturing intelligence.
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-8">
+            {differentiators.map((diff, idx) => (
+              <div key={idx} className="text-center">
+                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Sparkles className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">{diff.title}</h3>
+                <p className="text-muted-foreground">{diff.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Platform Modules */}
+      <section id="platform" className="py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <Badge className="mb-4">Complete Platform</Badge>
+            <h2 className="text-3xl font-bold mb-4">Everything You Need, Connected</h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Six integrated modules that share data and insights, giving you unprecedented visibility and control
+            </p>
+          </div>
+          
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {platformModules.map((module, idx) => (
+              <Card key={idx} className="p-6 hover-elevate" data-testid={`card-module-${idx}`}>
+                <div className="flex items-center gap-4 mb-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <module.icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <h3 className="font-semibold">{module.name}</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">{module.description}</p>
+              </Card>
+            ))}
+          </div>
+
+          <div className="mt-12 text-center">
+            <Button variant="outline" onClick={() => setLocation("/how-it-works")}>
+              Explore All Features
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Problem/Solution Section */}
+      <section className="py-20 bg-muted/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-3xl mx-auto text-center mb-16">
+            <h2 className="text-3xl font-bold mb-4">The Intelligence Gap</h2>
+            <p className="text-lg text-muted-foreground">
+              Most manufacturers operate with fragmented data, reactive decisions, and limited visibility. 
+              Prescient closes that gap.
             </p>
           </div>
           
@@ -195,26 +324,26 @@ export default function LandingPage() {
             <Card className="p-6 border-destructive/30 bg-destructive/5">
               <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-destructive/20 flex items-center justify-center">
-                  <span className="text-destructive font-bold">X</span>
+                  <AlertTriangle className="h-4 w-4 text-destructive" />
                 </div>
-                The Old Way
+                Operating Blind
               </h3>
               <ul className="space-y-3 text-muted-foreground">
                 <li className="flex items-start gap-2">
                   <span className="text-destructive">-</span>
-                  Buy materials when everyone else is buying (high prices)
+                  Forecasts based on last year's numbers, ignoring market shifts
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-destructive">-</span>
-                  React to demand changes after they happen
+                  Buying materials when prices are already high
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-destructive">-</span>
-                  Manual allocation decisions based on gut feel
+                  Supply chain surprises that halt production
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-destructive">-</span>
-                  Stockouts during high demand, excess during slow periods
+                  Decisions spread across disconnected spreadsheets
                 </li>
               </ul>
             </Card>
@@ -222,26 +351,26 @@ export default function LandingPage() {
             <Card className="p-6 border-primary/30 bg-primary/5">
               <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                  <Check className="h-4 w-4 text-primary" />
+                  <Eye className="h-4 w-4 text-primary" />
                 </div>
-                The AllocationIQ Way
+                Operating with Foresight
               </h3>
               <ul className="space-y-3 text-muted-foreground">
                 <li className="flex items-start gap-2">
                   <Check className="h-4 w-4 text-primary mt-1 shrink-0" />
-                  Buy when market conditions favor lower prices
+                  Forecasts that adapt to current market conditions
                 </li>
                 <li className="flex items-start gap-2">
                   <Check className="h-4 w-4 text-primary mt-1 shrink-0" />
-                  Predict demand shifts before they materialize
+                  Timing signals that tell you when to buy
                 </li>
                 <li className="flex items-start gap-2">
                   <Check className="h-4 w-4 text-primary mt-1 shrink-0" />
-                  Automated allocation based on priorities and constraints
+                  Supplier risks identified before they impact you
                 </li>
                 <li className="flex items-start gap-2">
                   <Check className="h-4 w-4 text-primary mt-1 shrink-0" />
-                  Optimized inventory levels across all conditions
+                  One unified platform for all planning decisions
                 </li>
               </ul>
             </Card>
@@ -249,60 +378,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="py-20 bg-muted/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <Badge className="mb-4">Platform Capabilities</Badge>
-            <h2 className="text-3xl font-bold mb-4">Everything You Need to Optimize Manufacturing</h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              From demand forecasting to supplier management, one platform covers your entire planning process
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {features.map((feature, idx) => (
-              <Card key={idx} className="p-6 hover-elevate" data-testid={`card-feature-${idx}`}>
-                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                  <feature.icon className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
-                <p className="text-sm text-muted-foreground">{feature.description}</p>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section id="how-it-works" className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold mb-4">Simple to Get Started</h2>
-            <p className="text-lg text-muted-foreground">Three steps to smarter manufacturing operations</p>
-          </div>
-          
-          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-            {steps.map((step, idx) => (
-              <div key={idx} className="relative" data-testid={`step-${idx}`}>
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-14 h-14 rounded-full bg-primary text-primary-foreground font-bold text-xl flex items-center justify-center mb-4 shadow-lg">
-                    {idx + 1}
-                  </div>
-                  <h3 className="text-xl font-semibold mb-2">{step.title}</h3>
-                  <p className="text-muted-foreground">{step.description}</p>
-                </div>
-                {idx < steps.length - 1 && (
-                  <ArrowRight className="hidden md:block absolute top-7 -right-4 h-6 w-6 text-muted-foreground" />
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Testimonials */}
-      <section className="py-20 bg-muted/30">
+      <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold mb-4">Trusted by Manufacturing Leaders</h2>
@@ -323,7 +400,7 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-20">
+      <section id="pricing" className="py-20 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold mb-4">Simple, Transparent Pricing</h2>
@@ -365,7 +442,7 @@ export default function LandingPage() {
                   asChild
                   data-testid={`button-select-${plan.name.toLowerCase()}`}
                 >
-                  <a href={plan.name === "Enterprise" ? "mailto:sales@allocationiq.com" : "/api/login"}>
+                  <a href={plan.name === "Enterprise" ? "mailto:sales@prescientlabs.ai" : "/api/login"}>
                     {plan.name === "Enterprise" ? "Contact Sales" : "Start Free Trial"}
                   </a>
                 </Button>
@@ -383,7 +460,7 @@ export default function LandingPage() {
       </section>
 
       {/* Trust Indicators */}
-      <section className="py-16 border-t bg-muted/30">
+      <section className="py-16 border-t">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-3 gap-8">
             <div className="flex items-start gap-4">
@@ -424,11 +501,11 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20">
+      <section className="py-20 bg-muted/30">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold mb-4">Ready to Optimize Your Manufacturing?</h2>
+          <h2 className="text-3xl font-bold mb-4">Ready to See What's Coming?</h2>
           <p className="text-xl text-muted-foreground mb-8">
-            Join 200+ manufacturers already saving on procurement and improving their operations.
+            Join the manufacturers who've stopped guessing and started knowing.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Button size="lg" asChild>
@@ -438,7 +515,7 @@ export default function LandingPage() {
               </a>
             </Button>
             <Button size="lg" variant="outline" asChild>
-              <a href="mailto:sales@allocationiq.com">
+              <a href="mailto:sales@prescientlabs.ai">
                 Talk to Sales
               </a>
             </Button>
@@ -447,16 +524,16 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t py-12 bg-muted/30">
+      <footer className="border-t py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             <div>
-              <h4 className="font-semibold mb-4">Product</h4>
+              <h4 className="font-semibold mb-4">Platform</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#features" className="hover:text-foreground">Features</a></li>
+                <li><a href="#capabilities" className="hover:text-foreground">Capabilities</a></li>
+                <li><a href="#platform" className="hover:text-foreground">Modules</a></li>
                 <li><a href="#pricing" className="hover:text-foreground">Pricing</a></li>
                 <li><a href="#" className="hover:text-foreground">Integrations</a></li>
-                <li><a href="#" className="hover:text-foreground">Security</a></li>
               </ul>
             </div>
             <div>
@@ -487,12 +564,12 @@ export default function LandingPage() {
           <div className="mt-12 pt-8 border-t flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 bg-primary rounded flex items-center justify-center">
-                <Factory className="h-4 w-4 text-primary-foreground" />
+                <Eye className="h-4 w-4 text-primary-foreground" />
               </div>
-              <span className="font-semibold">AllocationIQ</span>
+              <span className="font-semibold">Prescient Labs</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              &copy; 2025 AllocationIQ. All rights reserved.
+              &copy; 2025 Prescient Labs. All rights reserved.
             </p>
           </div>
         </div>

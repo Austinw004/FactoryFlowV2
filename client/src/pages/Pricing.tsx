@@ -284,7 +284,7 @@ export default function Pricing() {
                     <Button
                       className="w-full"
                       variant="outline"
-                      onClick={() => window.location.href = "mailto:sales@allocationiq.com"}
+                      onClick={() => window.location.href = "mailto:sales@prescientlabs.ai"}
                       data-testid={`button-subscribe-${product.metadata?.tier}`}
                     >
                       Contact Sales
@@ -356,7 +356,7 @@ export default function Pricing() {
                 size="lg"
                 variant="secondary"
                 className="shrink-0"
-                onClick={() => window.location.href = "mailto:sales@manufacturingai.com"}
+                onClick={() => window.location.href = "mailto:sales@prescientlabs.ai"}
                 data-testid="button-contact-sales"
               >
                 Contact Sales

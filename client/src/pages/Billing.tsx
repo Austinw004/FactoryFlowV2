@@ -81,7 +81,7 @@ export default function Billing() {
     if (success === "true") {
       toast({
         title: "Subscription activated!",
-        description: "Welcome to AllocationIQ. Your subscription is now active.",
+        description: "Welcome to Prescient Labs. Your subscription is now active.",
       });
       refetch();
       // Clean up URL

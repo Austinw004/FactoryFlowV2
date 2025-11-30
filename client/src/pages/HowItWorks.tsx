@@ -20,7 +20,7 @@ export default function HowItWorks() {
           How It Works
         </h1>
         <p className="text-muted-foreground mt-1">
-          Your guide to getting the most out of AllocationIQ
+          Your guide to getting the most out of Prescient Labs
         </p>
       </div>
 
@@ -37,7 +37,7 @@ export default function HowItWorks() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-2xl">
             <Lightbulb className="h-6 w-6 text-primary" />
-            What AllocationIQ Does for You
+            What Prescient Labs Does for You
           </CardTitle>
           <CardDescription>
             We help you buy materials at the right time and plan production smarter
@@ -46,7 +46,7 @@ export default function HowItWorks() {
         <CardContent className="space-y-4">
           <div className="space-y-3">
             <p className="text-base">
-              <strong className="text-foreground">The core problem we solve:</strong> Most manufacturers buy materials when everyone else is buying (prices are high) and cut back when everyone else cuts back (missing opportunities). AllocationIQ helps you do the opposite - and profit from it.
+              <strong className="text-foreground">The core problem we solve:</strong> Most manufacturers buy materials when everyone else is buying (prices are high) and cut back when everyone else cuts back (missing opportunities). Prescient Labs helps you do the opposite - and profit from it.
             </p>
             
             <div className="grid gap-4 md:grid-cols-2">
@@ -169,7 +169,7 @@ export default function HowItWorks() {
             </h3>
             <div className="space-y-3 text-muted-foreground">
               <p>
-                Most manufacturers are reactive - they respond to what already happened. <strong className="text-foreground">AllocationIQ helps you be proactive</strong> - you act before market conditions fully shift.
+                Most manufacturers are reactive - they respond to what already happened. <strong className="text-foreground">Prescient Labs helps you be proactive</strong> - you act before market conditions fully shift.
               </p>
               
               <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-3">
@@ -350,7 +350,7 @@ export default function HowItWorks() {
                 <span className="font-semibold">ERP Integration - Connect Your Systems</span>
               </AccordionTrigger>
               <AccordionContent className="text-sm text-muted-foreground space-y-2">
-                <p><strong className="text-foreground">What it does:</strong> Connects AllocationIQ with your existing business systems for seamless data flow.</p>
+                <p><strong className="text-foreground">What it does:</strong> Connects Prescient Labs with your existing business systems for seamless data flow.</p>
                 <p><strong className="text-foreground">Supported integrations:</strong></p>
                 <ul className="list-disc pl-6 space-y-1">
                   <li>SAP S/4HANA</li>
@@ -398,7 +398,7 @@ export default function HowItWorks() {
           </p>
           <ul className="list-disc pl-6 space-y-1">
             <li><strong>In-app chat:</strong> Click the support icon in the bottom right corner</li>
-            <li><strong>Email:</strong> support@allocationiq.com</li>
+            <li><strong>Email:</strong> support@prescientlabs.ai</li>
             <li><strong>Enterprise customers:</strong> Your dedicated account manager is available for personalized assistance</li>
           </ul>
           <p className="pt-2">

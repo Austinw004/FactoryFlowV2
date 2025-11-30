@@ -7,6 +7,7 @@ import {
   Wrench,
   Network,
   Lightbulb,
+  Eye,
 } from "lucide-react";
 import {
   Sidebar,
@@ -88,11 +89,11 @@ export function AppSidebar() {
       <SidebarHeader className="p-4 border-b">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-primary rounded-lg flex items-center justify-center">
-            <Network className="h-5 w-5 text-primary-foreground" />
+            <Eye className="h-5 w-5 text-primary-foreground" />
           </div>
           <div>
-            <h2 className="font-semibold text-sm">AllocationIQ</h2>
-            <p className="text-xs text-muted-foreground">Smart Manufacturing</p>
+            <h2 className="font-semibold text-sm">Prescient Labs</h2>
+            <p className="text-xs text-muted-foreground">Manufacturing Intelligence</p>
           </div>
         </div>
       </SidebarHeader>

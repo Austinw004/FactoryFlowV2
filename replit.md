@@ -1,11 +1,12 @@
-# AllocationIQ - Manufacturing Allocation Intelligence SaaS
+# Prescient Labs - Manufacturing Intelligence Platform
 
 ## Overview
 
-AllocationIQ is an AI-powered SaaS platform that helps manufacturers buy materials at the right time, forecast demand smarter, and optimize production allocation. The platform typically saves customers 15-30% on procurement costs through intelligent timing and allocation optimization.
+Prescient Labs gives manufacturers the foresight to make smarter decisions - from predicting demand and timing purchases to optimizing production and protecting supply chains. The platform typically saves customers 15-30% on procurement costs through intelligent timing and proactive operations.
 
 ### Commercial Status
-- **Brand**: AllocationIQ
+- **Brand**: Prescient Labs
+- **Tagline**: "See Ahead. Act First. Win More."
 - **Pricing Tiers**: Starter ($299/month), Professional ($799/month), Enterprise (Custom pricing via sales)
 - **Subscription**: Stripe-based with monthly/annual billing options
 - **Proprietary IP**: Economic models and formulas are kept private from public-facing pages
