@@ -29,12 +29,8 @@ export async function logAudit(params: {
     let context: AuditContext;
     
     if (systemContext && directCompanyId) {
-      context = {
-        userId: "system",
-        companyId: directCompanyId,
-        ipAddress: "127.0.0.1",
-        userAgent: "background-job",
-      };
+      console.log(`[Audit] Skipping audit log for system/background operation: ${action} ${entityType}`);
+      return;
     } else if (req) {
       const user = (req as any).rbacUser || (req as any).user;
       if (!user) {
