@@ -173,7 +173,7 @@ export default function LandingPage() {
             <div className="space-y-8">
               <Badge className="mb-4">Manufacturing Intelligence Platform</Badge>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight">
-                See Ahead. <span className="text-primary">Act First.</span> Win More.
+                See Ahead. <span className="text-primary">Act First.</span> Dominate.
               </h1>
               <p className="text-xl text-muted-foreground">
                 Prescient Labs gives manufacturers the foresight to make smarter decisions - 

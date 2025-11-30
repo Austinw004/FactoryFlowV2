@@ -7,56 +7,56 @@ interface OnboardingData {
   hasSkus: boolean;
   hasMaterials: boolean;
   hasSuppliers: boolean;
-  hasAlertsConfigured: boolean;
+  hasAlertEmail: boolean;
 }
 
 export function useOnboardingSteps() {
   const { data: onboardingData, isLoading } = useQuery<OnboardingData>({
     queryKey: ['/api/onboarding/status'],
-    refetchInterval: 5000, // Refetch every 5 seconds to keep status fresh
+    refetchInterval: 5000,
   });
 
   const steps: OnboardingStep[] = [
     {
       id: 'company-profile',
-      title: 'Set Company Profile',
-      description: 'Add your industry and location to get started',
+      title: 'Set Up Your Company',
+      description: 'Add your industry and location',
       completed: onboardingData?.hasCompanyProfile || false,
       link: '/configuration',
     },
     {
       id: 'budget',
-      title: 'Configure Budget',
-      description: 'Set your monthly budget and time period',
+      title: 'Set Your Budget',
+      description: 'Configure annual budget for planning',
       completed: onboardingData?.hasBudget || false,
       link: '/configuration',
     },
     {
       id: 'sku',
-      title: 'Load Sample Data',
-      description: 'Use sample data to explore platform features',
+      title: 'Add Products',
+      description: 'Create your first product or SKU',
       completed: onboardingData?.hasSkus || false,
-      link: '/dashboard',
+      link: '/demand',
     },
     {
       id: 'material',
-      title: 'Explore Materials',
-      description: 'Review material inventory and pricing',
+      title: 'Add Materials',
+      description: 'Set up your materials catalog',
       completed: onboardingData?.hasMaterials || false,
       link: '/procurement',
     },
     {
       id: 'suppliers',
-      title: 'Review Supply Chain',
-      description: 'Understand supplier relationships',
+      title: 'Add Suppliers',
+      description: 'Configure your supplier network',
       completed: onboardingData?.hasSuppliers || false,
       link: '/supply-chain',
     },
     {
       id: 'alerts',
-      title: 'Configure Alerts',
-      description: 'Get notified about important changes',
-      completed: onboardingData?.hasAlertsConfigured || false,
+      title: 'Set Up Notifications',
+      description: 'Add email for alerts and updates',
+      completed: onboardingData?.hasAlertEmail || false,
       link: '/configuration',
     },
   ];

@@ -6,7 +6,7 @@ Prescient Labs gives manufacturers the foresight to make smarter decisions - fro
 
 ### Commercial Status
 - **Brand**: Prescient Labs
-- **Tagline**: "See Ahead. Act First. Win More."
+- **Tagline**: "See Ahead. Act First. Dominate."
 - **Pricing Tiers**: Starter ($299/month), Professional ($799/month), Enterprise (Custom pricing via sales)
 - **Subscription**: Stripe-based with monthly/annual billing options
 - **Proprietary IP**: Economic models and formulas are kept private from public-facing pages

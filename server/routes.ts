@@ -6555,11 +6555,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate onboarding status
       const status = {
         hasCompanyProfile: !!(company?.industry && company?.location),
-        hasBudget: !!(company?.budget && company?.budget > 0),
+        hasBudget: !!(company?.annualBudget && company?.annualBudget > 0),
         hasSkus: skus.length > 0,
         hasMaterials: materials.length > 0,
         hasSuppliers: suppliers.length > 0,
-        hasAlertsConfigured: !!(company?.enableAllocationAlerts || company?.enablePriceAlerts),
+        hasAlertEmail: !!(company?.alertEmail && company.alertEmail.length > 0),
       };
       
       res.json(status);
