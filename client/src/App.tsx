@@ -83,7 +83,7 @@ function Router() {
   return (
     <Switch>
       {/* Main hub routes */}
-      <Route path="/" component={DashboardOverviewRoute} />
+      <Route path="/" component={StrategyDigitalTwinRoute} />
       <Route path="/dashboard" component={DashboardOverviewRoute} />
       <Route path="/demand" component={DemandPlanningRoute} />
       <Route path="/supply-chain" component={SupplyChainInventoryRoute} />

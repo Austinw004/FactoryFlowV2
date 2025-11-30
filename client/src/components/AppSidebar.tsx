@@ -24,6 +24,12 @@ import { Link, useLocation } from "wouter";
 
 const mainMenuItems = [
   {
+    title: "Strategy & Insights",
+    url: "/strategy",
+    icon: Lightbulb,
+    testId: "sidebar-strategy",
+  },
+  {
     title: "Dashboard",
     url: "/dashboard",
     icon: LayoutDashboard,
@@ -53,12 +59,6 @@ const mainMenuItems = [
     icon: Wrench,
     testId: "sidebar-operations",
   },
-  {
-    title: "Strategy & Insights",
-    url: "/strategy",
-    icon: Lightbulb,
-    testId: "sidebar-strategy",
-  },
 ];
 
 const bottomMenuItems = [
@@ -79,8 +79,12 @@ const bottomMenuItems = [
 export function AppSidebar() {
   const [location] = useLocation();
 
+  const strategyRoutes = ["/", "/strategy", "/digital-twin", "/strategic-analysis", "/scenario-simulation", "/ma-intelligence", "/peer-benchmarking"];
+  const dashboardRoutes = ["/dashboard", "/roi-dashboard", "/reports"];
+  
   const isActive = (url: string) => {
-    if (url === "/dashboard") return location === "/" || location === "/dashboard";
+    if (url === "/strategy") return strategyRoutes.includes(location) || location.startsWith("/strategy");
+    if (url === "/dashboard") return dashboardRoutes.includes(location) || location.startsWith("/dashboard");
     return location.startsWith(url);
   };
 
