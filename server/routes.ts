@@ -431,7 +431,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Initialize RBAC system on startup
   console.log("[RBAC] Initializing permissions...");
-  await initializePermissions(storage);
+  await initializePermissions();
   console.log("[RBAC] Permissions initialized successfully");
 
   // Attach RBAC user to all authenticated API requests (not frontend static files)
@@ -444,7 +444,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      let user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Auto-create company if user doesn't have one
+      if (!user.companyId) {
+        const company = await storage.createCompany({
+          name: `${user.firstName || 'User'}'s Company`,
+        });
+        
+        // Initialize default roles for the new company
+        console.log(`[RBAC] Initializing default roles for company ${company.id}`);
+        await initializeDefaultRoles(company.id);
+        
+        // Assign Admin role to the first user
+        const adminRole = await storage.getRoleByName(company.id, "Admin");
+        if (adminRole) {
+          await storage.assignRoleToUser(userId, adminRole.id, company.id, userId);
+          console.log(`[RBAC] Assigned Admin role to user ${userId}`);
+        }
+        
+        // Update user with company
+        user = await storage.upsertUser({
+          ...user,
+          companyId: company.id,
+        });
+        
+        console.log(`[Auth] Auto-created company ${company.id} for user ${userId}`);
+      }
+      
       res.json(user);
     } catch (error: any) {
       console.error("Error fetching user:", error);
@@ -487,7 +518,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Initialize default roles for the new company
         console.log(`[RBAC] Initializing default roles for company ${company.id}`);
-        await initializeDefaultRoles(storage, company.id);
+        await initializeDefaultRoles(company.id);
         
         // Assign Admin role to the first user
         const adminRole = await storage.getRoleByName(company.id, "Admin");

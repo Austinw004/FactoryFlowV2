@@ -28,7 +28,7 @@ import { useState } from "react";
 
 export default function Dashboard() {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
 
   // Enable WebSocket for real-time updates with regime change notifications
@@ -72,14 +72,17 @@ export default function Dashboard() {
   const { data: regime, isLoading: regimeLoading } = useQuery({
     queryKey: ["/api/economics/regime"],
     refetchInterval: 30000, // Refetch every 30 seconds as fallback
+    enabled: !!user,
   });
 
   const { data: allocations = [], isLoading: allocationsLoading } = useQuery({
     queryKey: ["/api/allocations"],
+    enabled: !!user,
   });
 
   const { data: skus = [], isLoading: skusLoading } = useQuery({
     queryKey: ["/api/skus"],
+    enabled: !!user,
   });
 
   const latestAllocation = Array.isArray(allocations) && allocations.length > 0 
@@ -154,8 +157,8 @@ export default function Dashboard() {
   
   const friendlyRegime = regimeLabels[regimeType] || regimeType;
 
-  // Show loading state
-  if (skusLoading || regimeLoading) {
+  // Show loading state (wait for auth first, then data)
+  if (authLoading || (user && (skusLoading || regimeLoading))) {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -166,63 +169,66 @@ export default function Dashboard() {
   // Show empty state
   if (!hasData) {
     return (
-      <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-semibold">Dashboard</h1>
-            <p className="text-muted-foreground mt-1">
-              Your manufacturing control center
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant={isConnected ? "default" : "outline"} className="gap-1.5">
-              <Radio className={`h-3 w-3 ${isConnected ? 'animate-pulse' : ''}`} />
-              {isConnected ? 'Live Updates' : 'Connecting...'}
-            </Badge>
-          </div>
-        </div>
-        <Card className="p-12">
-          <div className="text-center space-y-6">
-            <Package className="h-16 w-16 mx-auto text-muted-foreground" />
+      <>
+        <div className="p-6 space-y-6">
+          <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-semibold mb-2">Get Started</h2>
-              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                Add your products, materials, and suppliers to start using the platform. 
-                Or explore with sample data first.
+              <h1 className="text-3xl font-semibold">Dashboard</h1>
+              <p className="text-muted-foreground mt-1">
+                Your manufacturing control center
               </p>
             </div>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button 
-                onClick={() => setShowCreateSKU(true)}
-                size="lg"
-                data-testid="button-add-first-product"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Your First Product
-              </Button>
-              <Button 
-                variant="outline"
-                onClick={() => seedMutation.mutate()} 
-                disabled={seedMutation.isPending}
-                size="lg"
-                data-testid="button-load-sample-data"
-              >
-                {seedMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Loading...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Load Sample Data
-                  </>
-                )}
-              </Button>
+            <div className="flex items-center gap-2">
+              <Badge variant={isConnected ? "default" : "outline"} className="gap-1.5">
+                <Radio className={`h-3 w-3 ${isConnected ? 'animate-pulse' : ''}`} />
+                {isConnected ? 'Live Updates' : 'Connecting...'}
+              </Badge>
             </div>
           </div>
-        </Card>
-      </div>
+          <Card className="p-12">
+            <div className="text-center space-y-6">
+              <Package className="h-16 w-16 mx-auto text-muted-foreground" />
+              <div>
+                <h2 className="text-2xl font-semibold mb-2">Get Started</h2>
+                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                  Add your products, materials, and suppliers to start using the platform. 
+                  Or explore with sample data first.
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Button 
+                  onClick={() => setShowCreateSKU(true)}
+                  size="lg"
+                  data-testid="button-add-first-product"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Your First Product
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => seedMutation.mutate()} 
+                  disabled={seedMutation.isPending}
+                  size="lg"
+                  data-testid="button-load-sample-data"
+                >
+                  {seedMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Load Sample Data
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+        <CreateSKUDialog open={showCreateSKU} onOpenChange={setShowCreateSKU} />
+      </>
     );
   }
 

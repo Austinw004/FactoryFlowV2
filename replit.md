@@ -64,6 +64,26 @@ The system is a multi-tenant application ensuring data isolation per company. Co
 
 The frontend uses React with TypeScript and Vite, with `wouter` for routing and TanStack Query for server state management. The backend is an Express.js application with TypeScript, providing RESTful APIs. Drizzle ORM with Neon serverless PostgreSQL is used for the database, featuring a multi-tenant schema with `companyId` for data isolation. Authentication is handled via Replit Auth (OpenID Connect) with Express sessions. The system employs background polling services for continuous data updates and WebSockets for live UI updates, including daily automated forecast retraining, real-time forecast accuracy tracking, automated RFQ generation, and peer benchmarking aggregation services.
 
+## Recent Changes (Nov 2025)
+
+### Authentication & RBAC Flow Fixes
+- **RBAC initialization**: Permissions are seeded at server boot via `initializePermissions()` before any routes are registered
+- **Auto-company creation**: `/api/auth/user` automatically creates a company for new users and initializes default roles
+- **Role assignment**: New users are automatically assigned the Admin role for their company
+
+### Dashboard Loading Improvements
+- API queries (skus, allocations, regime) now wait for user authentication to complete
+- Prevents race conditions where queries fired before company was created
+- Empty state properly renders the CreateSKUDialog for new users
+
+### New User Onboarding Flow
+1. User clicks "Start Free Trial" → triggers OIDC login
+2. On callback, user record is created in database
+3. `/api/auth/user` auto-creates company if user has none
+4. Default RBAC roles (Admin, Procurement Manager, etc.) are initialized for the company
+5. User is assigned Admin role
+6. Dashboard shows "Get Started" empty state with product creation dialog
+
 ## External Dependencies
 
 ### Third-Party Services
