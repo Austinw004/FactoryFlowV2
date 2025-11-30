@@ -7,6 +7,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Header } from "@/components/Header";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { AIAssistant } from "@/components/AIAssistant";
 import NotFound from "@/pages/not-found";
 import LandingPage from "@/pages/LandingPage";
 import DashboardHub from "@/pages/DashboardHub";
@@ -167,6 +168,7 @@ function AppLayout() {
           </main>
         </div>
       </div>
+      <AIAssistant />
     </SidebarProvider>
   );
 }

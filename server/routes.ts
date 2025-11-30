@@ -5484,6 +5484,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================================
+  // AI ASSISTANT ENDPOINTS
+  // ============================================================
+
+  app.post("/api/ai/chat", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "No company associated with user" });
+      }
+
+      const { message, conversationId } = req.body;
+      if (!message || typeof message !== 'string') {
+        return res.status(400).json({ error: "Message is required" });
+      }
+
+      const { aiAssistantService } = await import("./lib/aiAssistant");
+      const response = await aiAssistantService.chat(user.companyId, message, conversationId);
+      
+      res.json(response);
+    } catch (error: any) {
+      console.error('AI chat error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/ai/context", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "No company associated with user" });
+      }
+
+      const { aiAssistantService } = await import("./lib/aiAssistant");
+      const context = await aiAssistantService.getContext(user.companyId);
+      
+      res.json(context);
+    } catch (error: any) {
+      console.error('AI context error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/ai/alerts", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "No company associated with user" });
+      }
+
+      const { aiAssistantService } = await import("./lib/aiAssistant");
+      const alerts = await aiAssistantService.checkProactiveAlerts(user.companyId);
+      
+      res.json({ alerts });
+    } catch (error: any) {
+      console.error('AI alerts error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/ai/action", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "No company associated with user" });
+      }
+
+      const { action } = req.body;
+      if (!action) {
+        return res.status(400).json({ error: "Action is required" });
+      }
+
+      const { aiAssistantService } = await import("./lib/aiAssistant");
+      const result = await aiAssistantService.executeAction(user.companyId, action);
+      
+      res.json(result);
+    } catch (error: any) {
+      console.error('AI action error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/ai/conversation/:conversationId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { conversationId } = req.params;
+      
+      const { aiAssistantService } = await import("./lib/aiAssistant");
+      aiAssistantService.clearConversation(conversationId);
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('AI conversation clear error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Bulk scenario generation endpoints for stress testing
   app.post('/api/scenarios/bulk-test', isAuthenticated, async (req: any, res) => {
     try {
