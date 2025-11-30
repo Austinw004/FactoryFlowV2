@@ -1,5 +1,8 @@
 import { storage } from "../storage";
 import { NewsMonitoringService } from "./newsMonitoring";
+import { calculateMAPEForSKU } from "./forecastMonitoring";
+import { fetchAllCommodityPrices, CommodityPrice } from "./commodityPricing";
+import { calculateSupplierRiskScore } from "./supplyChainRisk";
 
 const newsMonitoringService = new NewsMonitoringService(storage);
 
@@ -54,6 +57,7 @@ export interface PlatformContext {
     totalSkus: number;
     averageMape: number;
     degradedSkus: number;
+    degradationAlerts: Array<{ skuName: string; severity: string; mape: number }>;
   };
   events: {
     totalAlerts: number;
@@ -62,15 +66,17 @@ export interface PlatformContext {
   };
   commodities: {
     totalTracked: number;
-    significantChanges: Array<{ name: string; change: number }>;
+    significantChanges: Array<{ name: string; change: number; price: number }>;
   };
   inventory: {
     lowStockItems: number;
     totalValue: number;
+    criticalItems: Array<{ name: string; onHand: number }>;
   };
   suppliers: {
     totalSuppliers: number;
     atRiskSuppliers: number;
+    riskDetails: Array<{ name: string; riskLevel: string; score: number }>;
   };
 }
 
@@ -144,27 +150,40 @@ class AIAssistantService {
   private conversationHistory: Map<string, AIMessage[]> = new Map();
   private alertCache: Map<string, ProactiveAlert[]> = new Map();
   private lastAlertCheck: Map<string, number> = new Map();
+  private contextCache: Map<string, { context: PlatformContext; timestamp: number }> = new Map();
+  private mapeCache: Map<string, { mape: number; timestamp: number }> = new Map();
 
   async getContext(companyId: string): Promise<PlatformContext> {
+    const cached = this.contextCache.get(companyId);
+    if (cached && Date.now() - cached.timestamp < 120000) {
+      return cached.context;
+    }
+
     try {
       const [
         skus,
         materials,
         suppliers,
         newsAlerts,
-        economicData
+        economicSnapshot,
+        degradationAlerts,
+        commodityAlerts
       ] = await Promise.all([
         storage.getSkus(companyId).catch(() => []),
         storage.getMaterials(companyId).catch(() => []),
         storage.getSuppliers(companyId).catch(() => []),
         newsMonitoringService.fetchSupplyChainNews(1.0).catch(() => []),
-        this.fetchEconomicData().catch(() => null)
+        storage.getLatestEconomicSnapshot(companyId).catch(() => null),
+        storage.getForecastDegradationAlerts(companyId, { resolved: false }).catch(() => []),
+        storage.getCommodityPriceAlerts(companyId).catch(() => [])
       ]);
 
-      const fdr = economicData?.fdr || 1.0;
-      const regime = this.getRegimeFromFDR(fdr);
+      const fdr = economicSnapshot?.fdr || 1.0;
+      const regime = economicSnapshot?.regime || this.getRegimeFromFDR(fdr);
 
-      const lowStockMaterials = materials.filter(m => (m.onHand || 0) <= 10);
+      const mapeResults = await this.getCachedMAPE(companyId, skus);
+
+      const lowStockMaterials = materials.filter(m => (m.onHand || 0) <= (m.reorderPoint || 10));
 
       const criticalAlerts = newsAlerts.filter(
         a => a.severity === "critical" || a.severity === "high"
@@ -179,7 +198,11 @@ class AIAssistantService {
         .slice(0, 3)
         .map(([cat]) => cat);
 
-      return {
+      const supplierRiskAssessments = this.assessSupplierRisksSync(suppliers, fdr);
+
+      const significantPriceChanges = this.extractPriceChangesFromAlerts(commodityAlerts);
+
+      const context: PlatformContext = {
         regime: {
           fdr,
           regime,
@@ -188,8 +211,13 @@ class AIAssistantService {
         },
         forecasts: {
           totalSkus: skus.length,
-          averageMape: 0,
-          degradedSkus: 0
+          averageMape: mapeResults.averageMape,
+          degradedSkus: degradationAlerts.length,
+          degradationAlerts: degradationAlerts.slice(0, 3).map(a => ({
+            skuName: a.skuId,
+            severity: a.severity,
+            mape: a.currentMAPE || 0
+          }))
         },
         events: {
           totalAlerts: newsAlerts.length,
@@ -197,42 +225,122 @@ class AIAssistantService {
           topCategories
         },
         commodities: {
-          totalTracked: 0,
-          significantChanges: []
+          totalTracked: commodityAlerts.length,
+          significantChanges: significantPriceChanges
         },
         inventory: {
           lowStockItems: lowStockMaterials.length,
-          totalValue: materials.reduce((sum, m) => sum + (m.onHand || 0), 0)
+          totalValue: materials.reduce((sum, m) => sum + ((m.onHand || 0) * (m.unitCost || 0)), 0),
+          criticalItems: lowStockMaterials.slice(0, 5).map(m => ({
+            name: m.name,
+            onHand: m.onHand || 0
+          }))
         },
         suppliers: {
           totalSuppliers: suppliers.length,
-          atRiskSuppliers: 0
+          atRiskSuppliers: supplierRiskAssessments.filter(s => s.riskLevel === 'high' || s.riskLevel === 'critical').length,
+          riskDetails: supplierRiskAssessments.slice(0, 5)
         }
       };
+
+      this.contextCache.set(companyId, { context, timestamp: Date.now() });
+      return context;
     } catch (error) {
       console.error("[AI Assistant] Error getting context:", error);
-      return {
-        regime: { fdr: 1.0, regime: "Healthy Expansion", signal: "neutral", confidence: 0.5 },
-        forecasts: { totalSkus: 0, averageMape: 0, degradedSkus: 0 },
-        events: { totalAlerts: 0, criticalAlerts: 0, topCategories: [] },
-        commodities: { totalTracked: 0, significantChanges: [] },
-        inventory: { lowStockItems: 0, totalValue: 0 },
-        suppliers: { totalSuppliers: 0, atRiskSuppliers: 0 }
-      };
+      return this.getDefaultContext();
     }
   }
 
-  private async fetchEconomicData(): Promise<{ fdr: number } | null> {
+  private extractPriceChangesFromAlerts(alerts: any[]): Array<{ name: string; change: number; price: number }> {
+    if (!alerts || alerts.length === 0) return [];
+    
     try {
-      const response = await fetch("https://api.factoryofthefuture.ai/economic-indicators");
-      if (response.ok) {
-        const data = await response.json();
-        return { fdr: data.fdr || 1.0 };
-      }
+      return alerts
+        .filter(a => a.changePercent && Math.abs(a.changePercent) > 3)
+        .map(a => ({
+          name: a.materialName || a.material || 'Unknown',
+          change: a.changePercent || 0,
+          price: a.currentPrice || 0
+        }))
+        .sort((a, b) => Math.abs(b.change) - Math.abs(a.change))
+        .slice(0, 5);
     } catch (error) {
-      console.error("[AI Assistant] Failed to fetch economic data:", error);
+      console.error("[AI Assistant] Error extracting price changes:", error);
+      return [];
     }
-    return null;
+  }
+
+  private async getCachedMAPE(companyId: string, skus: any[]): Promise<{ averageMape: number }> {
+    if (skus.length === 0) return { averageMape: 0 };
+
+    const cached = this.mapeCache.get(companyId);
+    if (cached && Date.now() - cached.timestamp < 300000) {
+      return { averageMape: cached.mape };
+    }
+
+    try {
+      const trackingRecords = await Promise.all(
+        skus.slice(0, 10).map(sku => 
+          storage.getLatestForecastAccuracyBySKU(companyId, sku.id).catch(() => null)
+        )
+      );
+      
+      const validMapes = trackingRecords.filter(r => r !== null && r.mape && r.mape > 0);
+      
+      if (validMapes.length === 0) {
+        const sampleMape = await calculateMAPEForSKU(companyId, skus[0]?.id, 30).catch(() => null);
+        const avgMape = sampleMape?.mape || 0;
+        this.mapeCache.set(companyId, { mape: avgMape, timestamp: Date.now() });
+        return { averageMape: Math.round(avgMape * 100) / 100 };
+      }
+      
+      const avgMape = validMapes.reduce((sum, r) => sum + (r?.mape || 0), 0) / validMapes.length;
+      this.mapeCache.set(companyId, { mape: avgMape, timestamp: Date.now() });
+      return { averageMape: Math.round(avgMape * 100) / 100 };
+    } catch (error) {
+      console.error("[AI Assistant] Error calculating MAPE:", error);
+      return { averageMape: 0 };
+    }
+  }
+
+  private assessSupplierRisksSync(suppliers: any[], fdr: number): Array<{ name: string; riskLevel: string; score: number }> {
+    if (suppliers.length === 0) return [];
+
+    try {
+      return suppliers.slice(0, 10).map(supplier => {
+        const assessment = calculateSupplierRiskScore({
+          financialHealthScore: supplier.financialHealthScore || 70,
+          onTimeDeliveryRate: supplier.onTimeDeliveryRate || 90,
+          qualityScore: supplier.qualityScore || 85,
+          capacityUtilization: supplier.capacityUtilization || 70,
+          bankruptcyRisk: supplier.bankruptcyRisk || 5,
+          currentFDR: fdr,
+          tier: supplier.tier || 1,
+          region: supplier.region || 'US',
+          criticality: supplier.criticality || 'medium'
+        });
+
+        return {
+          name: supplier.name,
+          riskLevel: assessment.riskLevel,
+          score: Math.round(assessment.overallRiskScore)
+        };
+      });
+    } catch (error) {
+      console.error("[AI Assistant] Error assessing supplier risks:", error);
+      return [];
+    }
+  }
+
+  private getDefaultContext(): PlatformContext {
+    return {
+      regime: { fdr: 1.0, regime: "Healthy Expansion", signal: "neutral", confidence: 0.5 },
+      forecasts: { totalSkus: 0, averageMape: 0, degradedSkus: 0, degradationAlerts: [] },
+      events: { totalAlerts: 0, criticalAlerts: 0, topCategories: [] },
+      commodities: { totalTracked: 0, significantChanges: [] },
+      inventory: { lowStockItems: 0, totalValue: 0, criticalItems: [] },
+      suppliers: { totalSuppliers: 0, atRiskSuppliers: 0, riskDetails: [] }
+    };
   }
 
   private getRegimeFromFDR(fdr: number): string {
@@ -290,16 +398,33 @@ class AIAssistantService {
   }
 
   private buildSystemPrompt(context: PlatformContext): string {
+    const forecastDetails = context.forecasts.degradationAlerts.length > 0
+      ? `\n- Degraded SKUs: ${context.forecasts.degradationAlerts.map(a => `${a.skuName} (${a.severity}, MAPE: ${a.mape.toFixed(1)}%)`).join(', ')}`
+      : '';
+
+    const commodityDetails = context.commodities.significantChanges.length > 0
+      ? `\n- Significant price moves: ${context.commodities.significantChanges.map(c => `${c.name} ${c.change > 0 ? '+' : ''}${c.change.toFixed(1)}%`).join(', ')}`
+      : '';
+
+    const supplierDetails = context.suppliers.riskDetails.filter(s => s.riskLevel === 'high' || s.riskLevel === 'critical').length > 0
+      ? `\n- At-risk suppliers: ${context.suppliers.riskDetails.filter(s => s.riskLevel === 'high' || s.riskLevel === 'critical').map(s => `${s.name} (${s.riskLevel})`).join(', ')}`
+      : '';
+
+    const inventoryDetails = context.inventory.criticalItems.length > 0
+      ? `\n- Low stock items: ${context.inventory.criticalItems.map(i => `${i.name} (${i.onHand} on hand)`).join(', ')}`
+      : '';
+
     return `You are an intelligent manufacturing assistant for Prescient Labs, a supply chain intelligence platform. You help procurement managers and operations teams make smarter decisions.
 
 CURRENT PLATFORM STATE:
 - Economic Regime: ${context.regime.regime} (FDR: ${context.regime.fdr.toFixed(2)})
 - Market Signal: ${context.regime.signal.toUpperCase()}
 - Total SKUs: ${context.forecasts.totalSkus}
+- Average Forecast MAPE: ${context.forecasts.averageMape.toFixed(1)}%${forecastDetails}
 - Active supply chain alerts: ${context.events.totalAlerts} (${context.events.criticalAlerts} critical)
-- Top event categories: ${context.events.topCategories.join(', ') || 'None'}
-- Low stock items: ${context.inventory.lowStockItems}
-- Total suppliers: ${context.suppliers.totalSuppliers}
+- Top event categories: ${context.events.topCategories.join(', ') || 'None'}${commodityDetails}
+- Low stock items: ${context.inventory.lowStockItems}${inventoryDetails}
+- Total suppliers: ${context.suppliers.totalSuppliers} (${context.suppliers.atRiskSuppliers} at risk)${supplierDetails}
 
 REGIME-SPECIFIC GUIDANCE:
 ${this.getRegimeGuidance(context.regime.regime)}
@@ -357,7 +482,7 @@ Keep responses concise and actionable. Focus on data-driven recommendations. Whe
         id: `action_forecast_${Date.now()}`,
         type: "forecast",
         label: "View Demand Forecasts",
-        description: "See AI-powered demand predictions for your SKUs",
+        description: `See AI-powered demand predictions (Avg MAPE: ${context.forecasts.averageMape.toFixed(1)}%)`,
         confidence: 0.85
       });
     }
@@ -409,6 +534,29 @@ Keep responses concise and actionable. Focus on data-driven recommendations. Whe
       });
     }
 
+    if (context.forecasts.degradedSkus > 0) {
+      insights.push({
+        category: "Forecast Health",
+        title: `${context.forecasts.degradedSkus} SKUs with Degraded Forecasts`,
+        description: "Some forecast models need attention. Consider reviewing demand signals and retraining models.",
+        impact: "negative",
+        confidence: 0.88,
+        source: "Forecast Monitoring"
+      });
+    }
+
+    if (context.commodities.significantChanges.length > 0) {
+      const biggestMove = context.commodities.significantChanges[0];
+      insights.push({
+        category: "Commodities",
+        title: `Significant Price Movement: ${biggestMove.name}`,
+        description: `${biggestMove.name} ${biggestMove.change > 0 ? 'up' : 'down'} ${Math.abs(biggestMove.change).toFixed(1)}% in 24 hours. Review impact on material costs.`,
+        impact: biggestMove.change > 0 ? "negative" : "positive",
+        confidence: 0.92,
+        source: "Commodity Pricing"
+      });
+    }
+
     if (context.inventory.lowStockItems > 0) {
       insights.push({
         category: "Inventory",
@@ -420,7 +568,18 @@ Keep responses concise and actionable. Focus on data-driven recommendations. Whe
       });
     }
 
-    return insights;
+    if (context.suppliers.atRiskSuppliers > 0) {
+      insights.push({
+        category: "Supplier Risk",
+        title: `${context.suppliers.atRiskSuppliers} Suppliers at Elevated Risk`,
+        description: "Some suppliers show elevated risk scores. Review contingency plans and alternative sources.",
+        impact: "negative",
+        confidence: 0.85,
+        source: "Supplier Risk Model"
+      });
+    }
+
+    return insights.slice(0, 5);
   }
 
   async checkProactiveAlerts(companyId: string): Promise<ProactiveAlert[]> {
@@ -460,6 +619,18 @@ Keep responses concise and actionable. Focus on data-driven recommendations. Whe
       });
     }
 
+    if (context.forecasts.degradedSkus >= 2) {
+      alerts.push({
+        id: `alert_forecast_${now}`,
+        type: "forecast_degradation",
+        severity: "warning",
+        title: "Multiple Forecast Models Degraded",
+        description: `${context.forecasts.degradedSkus} SKU forecast models show degraded accuracy.`,
+        recommendation: "Navigate to Demand Hub to review and retrain affected models.",
+        timestamp: new Date().toISOString()
+      });
+    }
+
     if (context.events.criticalAlerts >= 3) {
       alerts.push({
         id: `alert_events_${now}`,
@@ -472,6 +643,19 @@ Keep responses concise and actionable. Focus on data-driven recommendations. Whe
       });
     }
 
+    if (context.commodities.significantChanges.length >= 3) {
+      const bigMoves = context.commodities.significantChanges.slice(0, 3);
+      alerts.push({
+        id: `alert_commodities_${now}`,
+        type: "price_change",
+        severity: "warning",
+        title: "Multiple Commodity Price Swings",
+        description: `${context.commodities.significantChanges.length} commodities with >3% price change: ${bigMoves.map(c => c.name).join(', ')}`,
+        recommendation: "Review material cost impacts and consider adjusting procurement timing.",
+        timestamp: new Date().toISOString()
+      });
+    }
+
     if (context.inventory.lowStockItems >= 5) {
       alerts.push({
         id: `alert_inventory_${now}`,
@@ -480,6 +664,18 @@ Keep responses concise and actionable. Focus on data-driven recommendations. Whe
         title: "Multiple Low Stock Items",
         description: `${context.inventory.lowStockItems} materials are below reorder point.`,
         recommendation: "Navigate to Procurement Hub to generate RFQs for replenishment.",
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (context.suppliers.atRiskSuppliers >= 2) {
+      alerts.push({
+        id: `alert_suppliers_${now}`,
+        type: "risk",
+        severity: "warning",
+        title: "Multiple At-Risk Suppliers",
+        description: `${context.suppliers.atRiskSuppliers} suppliers show high or critical risk levels.`,
+        recommendation: "Review supplier risk assessments and prepare contingency sourcing plans.",
         timestamp: new Date().toISOString()
       });
     }
@@ -500,7 +696,7 @@ Keep responses concise and actionable. Focus on data-driven recommendations. Whe
 
         case "rfq":
           const materials = await storage.getMaterials(companyId);
-          const lowStock = materials.filter(m => (m.onHand || 0) <= 10);
+          const lowStock = materials.filter(m => (m.onHand || 0) <= (m.reorderPoint || 10));
           return {
             success: true,
             message: `Found ${lowStock.length} materials with low stock. Navigate to Procurement to generate RFQs.`,

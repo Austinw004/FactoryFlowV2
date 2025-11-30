@@ -60,6 +60,12 @@ The system is a multi-tenant application ensuring data isolation per company. Co
 - **Real-Time Digital Twin**: Enterprise-grade supply chain digital twin with live state snapshots, AI-powered natural language queries, what-if simulations, and real-time alerts.
 - **Multi-Tier Supplier Mapping**: Enterprise-grade supply chain visibility with network graph visualization, dependency analysis, regional risk assessment, and sub-tier alerts.
 - **Geopolitical & Event Monitoring**: Real-time news scanning for supply chain events (port closures, trade disputes, natural disasters, regulatory changes, supplier distress) with FDR-aware impact analysis and regime-specific recommendations.
+- **AI Assistant**: Conversational AI interface with four core capabilities:
+  1. **Chat Interface**: Natural language queries about forecasts, risks, market timing, and procurement strategies
+  2. **Proactive Alerts**: Automatic notifications for regime changes, critical events, forecast degradation, and inventory issues
+  3. **Action Automation**: Quick actions to trigger simulations, generate RFQs, and navigate to relevant features
+  4. **Context-Aware Insights**: Real-time insights based on economic regime, supply chain events, and inventory levels
+  - Uses Replit AI Integrations (OpenAI) with graceful fallback responses
 
 ### System Design Choices
 
