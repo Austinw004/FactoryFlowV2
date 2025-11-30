@@ -1,8 +1,9 @@
 import { storage } from "../storage";
 import { NewsMonitoringService } from "./newsMonitoring";
-import { calculateMAPEForSKU } from "./forecastMonitoring";
+import { calculateMAPEForSKU, checkForDegradation } from "./forecastMonitoring";
 import { fetchAllCommodityPrices, CommodityPrice } from "./commodityPricing";
 import { calculateSupplierRiskScore } from "./supplyChainRisk";
+import { calculateOEE, detectBottlenecks } from "./productionKPIs";
 
 const newsMonitoringService = new NewsMonitoringService(storage);
 
@@ -20,7 +21,7 @@ export interface AIResponse {
 
 export interface AIAction {
   id: string;
-  type: "simulation" | "rfq" | "analysis" | "forecast" | "alert";
+  type: "simulation" | "rfq" | "analysis" | "forecast" | "alert" | "sop" | "production";
   label: string;
   description: string;
   params?: Record<string, unknown>;
@@ -38,7 +39,7 @@ export interface AIInsight {
 
 export interface ProactiveAlert {
   id: string;
-  type: "regime_change" | "event" | "forecast_degradation" | "price_change" | "risk";
+  type: "regime_change" | "event" | "forecast_degradation" | "price_change" | "risk" | "production" | "sop";
   severity: "info" | "warning" | "critical";
   title: string;
   description: string;
@@ -57,7 +58,16 @@ export interface PlatformContext {
     totalSkus: number;
     averageMape: number;
     degradedSkus: number;
-    degradationAlerts: Array<{ skuName: string; severity: string; mape: number }>;
+    retrainingNeeded: number;
+    degradationAlerts: Array<{ 
+      skuName: string; 
+      severity: string; 
+      mape: number;
+      previousMape?: number;
+      trend: string;
+      recommendedAction?: string;
+    }>;
+    accuracyTrend: "improving" | "stable" | "declining";
   };
   events: {
     totalAlerts: number;
@@ -66,7 +76,14 @@ export interface PlatformContext {
   };
   commodities: {
     totalTracked: number;
-    significantChanges: Array<{ name: string; change: number; price: number }>;
+    significantChanges: Array<{ name: string; change: number; price: number; trend?: string }>;
+    priceTrends: {
+      rising: number;
+      falling: number;
+      stable: number;
+    };
+    buySignals: string[];
+    sellSignals: string[];
   };
   inventory: {
     lowStockItems: number;
@@ -76,7 +93,57 @@ export interface PlatformContext {
   suppliers: {
     totalSuppliers: number;
     atRiskSuppliers: number;
-    riskDetails: Array<{ name: string; riskLevel: string; score: number }>;
+    riskDetails: Array<{ 
+      name: string; 
+      riskLevel: string; 
+      score: number;
+      tier?: number;
+      cascadingImpact?: string;
+    }>;
+    multiTierRisks: Array<{
+      supplierId: string;
+      supplierName: string;
+      tier: number;
+      affectedMaterials: number;
+      riskFactors: string[];
+    }>;
+  };
+  production: {
+    averageOEE: number;
+    availability: number;
+    performance: number;
+    quality: number;
+    totalDowntimeMinutes: number;
+    activeBottlenecks: number;
+    bottleneckDetails: Array<{
+      location: string;
+      impactLevel: string;
+      throughputLoss: number;
+      recommendation: string;
+    }>;
+    recentRuns: number;
+    unitsProducedToday: number;
+  };
+  sop: {
+    activeScenarios: number;
+    pendingApprovals: number;
+    openActionItems: number;
+    overdueActionItems: number;
+    upcomingMeetings: number;
+    criticalGaps: number;
+    scenarioDetails: Array<{
+      name: string;
+      status: string;
+      gapCategory?: string;
+      dueDate?: string;
+    }>;
+    actionItemDetails: Array<{
+      title: string;
+      priority: string;
+      status: string;
+      dueDate?: string;
+      assignee?: string;
+    }>;
   };
 }
 
@@ -167,7 +234,17 @@ class AIAssistantService {
         newsAlerts,
         economicSnapshot,
         degradationAlerts,
-        commodityAlerts
+        commodityAlerts,
+        productionMetrics,
+        productionRuns,
+        downtimeEvents,
+        bottlenecks,
+        sopScenarios,
+        sopActionItems,
+        sopMeetings,
+        sopGapAnalyses,
+        supplierRiskSnapshots,
+        forecastTracking
       ] = await Promise.all([
         storage.getSkus(companyId).catch(() => []),
         storage.getMaterials(companyId).catch(() => []),
@@ -175,7 +252,17 @@ class AIAssistantService {
         newsMonitoringService.fetchSupplyChainNews(1.0).catch(() => []),
         storage.getLatestEconomicSnapshot(companyId).catch(() => null),
         storage.getForecastDegradationAlerts(companyId, { resolved: false }).catch(() => []),
-        storage.getCommodityPriceAlerts(companyId).catch(() => [])
+        storage.getCommodityPriceAlerts(companyId).catch(() => []),
+        storage.getProductionMetrics(companyId).catch(() => []),
+        storage.getProductionRuns(companyId).catch(() => []),
+        storage.getDowntimeEvents(companyId).catch(() => []),
+        storage.getProductionBottlenecks(companyId).catch(() => []),
+        storage.getSopScenarios(companyId).catch(() => []),
+        storage.getSopActionItems(companyId).catch(() => []),
+        storage.getSopMeetingNotes(companyId).catch(() => []),
+        storage.getSopGapAnalyses(companyId).catch(() => []),
+        storage.getSupplierRiskSnapshots(companyId, { latestOnly: true }).catch(() => []),
+        storage.getForecastAccuracyTracking(companyId, { limit: 50 }).catch(() => [])
       ]);
 
       const fdr = economicSnapshot?.fdr || 1.0;
@@ -201,6 +288,15 @@ class AIAssistantService {
       const supplierRiskAssessments = this.assessSupplierRisksSync(suppliers, fdr);
 
       const significantPriceChanges = this.extractPriceChangesFromAlerts(commodityAlerts);
+      const commodityContext = this.analyzeCommodityTrends(commodityAlerts, fdr);
+
+      const forecastContext = this.analyzeForecasts(degradationAlerts, forecastTracking, skus);
+
+      const supplierContext = this.analyzeSupplierRisks(suppliers, supplierRiskSnapshots, fdr);
+
+      const productionContext = this.analyzeProduction(productionMetrics, productionRuns, downtimeEvents, bottlenecks);
+
+      const sopContext = this.analyzeSOP(sopScenarios, sopActionItems, sopMeetings, sopGapAnalyses);
 
       const context: PlatformContext = {
         regime: {
@@ -213,11 +309,9 @@ class AIAssistantService {
           totalSkus: skus.length,
           averageMape: mapeResults.averageMape,
           degradedSkus: degradationAlerts.length,
-          degradationAlerts: degradationAlerts.slice(0, 3).map(a => ({
-            skuName: a.skuId,
-            severity: a.severity,
-            mape: a.currentMAPE || 0
-          }))
+          retrainingNeeded: forecastContext.retrainingNeeded,
+          degradationAlerts: forecastContext.alerts,
+          accuracyTrend: forecastContext.trend
         },
         events: {
           totalAlerts: newsAlerts.length,
@@ -226,7 +320,10 @@ class AIAssistantService {
         },
         commodities: {
           totalTracked: commodityAlerts.length,
-          significantChanges: significantPriceChanges
+          significantChanges: significantPriceChanges,
+          priceTrends: commodityContext.trends,
+          buySignals: commodityContext.buySignals,
+          sellSignals: commodityContext.sellSignals
         },
         inventory: {
           lowStockItems: lowStockMaterials.length,
@@ -239,8 +336,11 @@ class AIAssistantService {
         suppliers: {
           totalSuppliers: suppliers.length,
           atRiskSuppliers: supplierRiskAssessments.filter(s => s.riskLevel === 'high' || s.riskLevel === 'critical').length,
-          riskDetails: supplierRiskAssessments.slice(0, 5)
-        }
+          riskDetails: supplierContext.riskDetails,
+          multiTierRisks: supplierContext.multiTierRisks
+        },
+        production: productionContext,
+        sop: sopContext
       };
 
       this.contextCache.set(companyId, { context, timestamp: Date.now() });
@@ -249,6 +349,241 @@ class AIAssistantService {
       console.error("[AI Assistant] Error getting context:", error);
       return this.getDefaultContext();
     }
+  }
+
+  private analyzeCommodityTrends(alerts: any[], fdr: number): { 
+    trends: { rising: number; falling: number; stable: number };
+    buySignals: string[];
+    sellSignals: string[];
+  } {
+    const trends = { rising: 0, falling: 0, stable: 0 };
+    const buySignals: string[] = [];
+    const sellSignals: string[] = [];
+
+    alerts.forEach(a => {
+      const change = a.changePercent || 0;
+      if (change > 3) {
+        trends.rising++;
+        if (fdr <= 0.9) {
+          buySignals.push(a.materialName || a.material || 'Unknown');
+        }
+      } else if (change < -3) {
+        trends.falling++;
+        buySignals.push(a.materialName || a.material || 'Unknown');
+      } else {
+        trends.stable++;
+      }
+      
+      if (change > 8 && fdr >= 1.1) {
+        sellSignals.push(a.materialName || a.material || 'Unknown');
+      }
+    });
+
+    return { trends, buySignals: buySignals.slice(0, 5), sellSignals: sellSignals.slice(0, 5) };
+  }
+
+  private analyzeForecasts(degradationAlerts: any[], trackingRecords: any[], skus: any[]): {
+    retrainingNeeded: number;
+    alerts: Array<{ skuName: string; severity: string; mape: number; previousMape?: number; trend: string; recommendedAction?: string }>;
+    trend: "improving" | "stable" | "declining";
+  } {
+    const retrainingNeeded = degradationAlerts.filter(a => a.severity === 'critical' || a.severity === 'high').length;
+    
+    const skuMap = new Map(skus.map(s => [s.id, s.name]));
+    
+    const alerts = degradationAlerts.slice(0, 5).map(a => {
+      const previousRecords = trackingRecords.filter(t => t.skuId === a.skuId);
+      const previousMape = previousRecords.length > 1 ? previousRecords[1]?.mape : undefined;
+      const currentMape = a.currentMAPE || 0;
+      
+      let trend = "stable";
+      if (previousMape && currentMape > previousMape * 1.1) trend = "worsening";
+      else if (previousMape && currentMape < previousMape * 0.9) trend = "improving";
+      
+      let recommendedAction = "Monitor closely";
+      if (a.severity === 'critical') recommendedAction = "Immediate retraining required";
+      else if (a.severity === 'high') recommendedAction = "Schedule retraining this week";
+      
+      return {
+        skuName: skuMap.get(a.skuId) || a.skuId,
+        severity: a.severity,
+        mape: currentMape,
+        previousMape,
+        trend,
+        recommendedAction
+      };
+    });
+
+    let overallTrend: "improving" | "stable" | "declining" = "stable";
+    const recentRecords = trackingRecords.slice(0, 20);
+    if (recentRecords.length >= 5) {
+      const recentAvg = recentRecords.slice(0, 10).reduce((s, r) => s + (r.mape || 0), 0) / Math.min(10, recentRecords.length);
+      const olderAvg = recentRecords.slice(10, 20).reduce((s, r) => s + (r.mape || 0), 0) / Math.min(10, recentRecords.length - 10);
+      if (olderAvg > 0) {
+        if (recentAvg < olderAvg * 0.9) overallTrend = "improving";
+        else if (recentAvg > olderAvg * 1.1) overallTrend = "declining";
+      }
+    }
+
+    return { retrainingNeeded, alerts, trend: overallTrend };
+  }
+
+  private analyzeSupplierRisks(suppliers: any[], riskSnapshots: any[], fdr: number): {
+    riskDetails: Array<{ name: string; riskLevel: string; score: number; tier?: number; cascadingImpact?: string }>;
+    multiTierRisks: Array<{ supplierId: string; supplierName: string; tier: number; affectedMaterials: number; riskFactors: string[] }>;
+  } {
+    const snapshotMap = new Map(riskSnapshots.map(s => [s.supplierId, s]));
+    
+    const riskDetails = suppliers.slice(0, 10).map(supplier => {
+      const snapshot = snapshotMap.get(supplier.id);
+      const assessment = calculateSupplierRiskScore({
+        financialHealthScore: snapshot?.financialHealthScore || supplier.financialHealthScore || 70,
+        onTimeDeliveryRate: snapshot?.onTimeDeliveryRate || supplier.onTimeDeliveryRate || 90,
+        qualityScore: snapshot?.qualityScore || supplier.qualityScore || 85,
+        capacityUtilization: snapshot?.capacityUtilization || supplier.capacityUtilization || 70,
+        bankruptcyRisk: snapshot?.bankruptcyRisk || supplier.bankruptcyRisk || 5,
+        currentFDR: fdr,
+        tier: snapshot?.tier || supplier.tier || 1,
+        region: snapshot?.region || supplier.region || 'US',
+        criticality: snapshot?.criticality || supplier.criticality || 'medium'
+      });
+
+      let cascadingImpact = "Low";
+      if (assessment.riskLevel === 'critical' && (snapshot?.tier || 1) === 1) {
+        cascadingImpact = "Critical - Direct supplier";
+      } else if (assessment.riskLevel === 'high') {
+        cascadingImpact = "High - May affect production";
+      } else if (assessment.riskLevel === 'medium') {
+        cascadingImpact = "Medium - Monitor closely";
+      }
+
+      return {
+        name: supplier.name,
+        riskLevel: assessment.riskLevel,
+        score: Math.round(assessment.overallRiskScore),
+        tier: snapshot?.tier || supplier.tier || 1,
+        cascadingImpact
+      };
+    });
+
+    const multiTierRisks = riskSnapshots
+      .filter(s => s.tier && s.tier > 1 && s.overallRiskScore && s.overallRiskScore > 60)
+      .slice(0, 5)
+      .map(s => {
+        const supplier = suppliers.find(sup => sup.id === s.supplierId);
+        const riskFactors: string[] = [];
+        if ((s.financialHealthScore || 100) < 50) riskFactors.push("Poor financial health");
+        if ((s.onTimeDeliveryRate || 100) < 80) riskFactors.push("Delivery issues");
+        if ((s.qualityScore || 100) < 70) riskFactors.push("Quality concerns");
+        if (s.bankruptcyRisk && s.bankruptcyRisk > 30) riskFactors.push("Bankruptcy risk");
+        
+        return {
+          supplierId: s.supplierId,
+          supplierName: supplier?.name || 'Unknown Supplier',
+          tier: s.tier || 2,
+          affectedMaterials: 0,
+          riskFactors
+        };
+      });
+
+    return { riskDetails, multiTierRisks };
+  }
+
+  private analyzeProduction(metrics: any[], runs: any[], downtimeEvents: any[], bottlenecks: any[]): PlatformContext['production'] {
+    const recentMetrics = metrics.slice(0, 20);
+    
+    const avgOEE = recentMetrics.length > 0 
+      ? recentMetrics.reduce((s, m) => s + (m.oee || 0), 0) / recentMetrics.length 
+      : 0;
+    const avgAvailability = recentMetrics.length > 0 
+      ? recentMetrics.reduce((s, m) => s + (m.availability || 0), 0) / recentMetrics.length 
+      : 0;
+    const avgPerformance = recentMetrics.length > 0 
+      ? recentMetrics.reduce((s, m) => s + (m.performance || 0), 0) / recentMetrics.length 
+      : 0;
+    const avgQuality = recentMetrics.length > 0 
+      ? recentMetrics.reduce((s, m) => s + (m.quality || 0), 0) / recentMetrics.length 
+      : 0;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayDowntime = downtimeEvents
+      .filter(e => new Date(e.startTime) >= today)
+      .reduce((s, e) => s + (e.durationMinutes || 0), 0);
+
+    const activeBottlenecks = bottlenecks.filter(b => b.status === 'active');
+    
+    const bottleneckDetails = activeBottlenecks.slice(0, 5).map(b => ({
+      location: b.location || 'Unknown',
+      impactLevel: b.impactLevel || 'medium',
+      throughputLoss: b.throughputLoss || 0,
+      recommendation: Array.isArray(b.recommendedActions) && b.recommendedActions.length > 0 
+        ? b.recommendedActions[0]?.action || 'Review and address'
+        : 'Review and address'
+    }));
+
+    const todayRuns = runs.filter(r => new Date(r.startTime) >= today);
+    const unitsToday = todayRuns.reduce((s, r) => s + (r.producedUnits || 0), 0);
+
+    return {
+      averageOEE: Math.round(avgOEE * 100) / 100,
+      availability: Math.round(avgAvailability * 100) / 100,
+      performance: Math.round(avgPerformance * 100) / 100,
+      quality: Math.round(avgQuality * 100) / 100,
+      totalDowntimeMinutes: Math.round(todayDowntime),
+      activeBottlenecks: activeBottlenecks.length,
+      bottleneckDetails,
+      recentRuns: runs.length,
+      unitsProducedToday: unitsToday
+    };
+  }
+
+  private analyzeSOP(scenarios: any[], actionItems: any[], meetings: any[], gapAnalyses: any[]): PlatformContext['sop'] {
+    const activeScenarios = scenarios.filter(s => s.status === 'active');
+    const pendingApprovals = scenarios.filter(s => s.status === 'draft' && !s.approvedBy);
+    
+    const openActionItems = actionItems.filter(a => a.status === 'open' || a.status === 'in_progress');
+    const now = new Date();
+    const overdueItems = openActionItems.filter(a => a.dueDate && new Date(a.dueDate) < now);
+    
+    const upcomingMeetings = meetings.filter(m => new Date(m.meetingDate) > now);
+    
+    const criticalGaps = gapAnalyses.filter(g => g.gapCategory === 'shortage_critical');
+
+    const scenarioDetails = activeScenarios.slice(0, 5).map(s => {
+      const relatedGap = gapAnalyses.find(g => g.scenarioId === s.id);
+      return {
+        name: s.name,
+        status: s.status,
+        gapCategory: relatedGap?.gapCategory,
+        dueDate: s.endDate ? new Date(s.endDate).toISOString().split('T')[0] : undefined
+      };
+    });
+
+    const actionItemDetails = openActionItems
+      .sort((a, b) => {
+        const priorityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+        return (priorityOrder[a.priority] || 3) - (priorityOrder[b.priority] || 3);
+      })
+      .slice(0, 5)
+      .map(a => ({
+        title: a.title,
+        priority: a.priority,
+        status: a.status,
+        dueDate: a.dueDate ? new Date(a.dueDate).toISOString().split('T')[0] : undefined,
+        assignee: a.assignedTo || undefined
+      }));
+
+    return {
+      activeScenarios: activeScenarios.length,
+      pendingApprovals: pendingApprovals.length,
+      openActionItems: openActionItems.length,
+      overdueActionItems: overdueItems.length,
+      upcomingMeetings: upcomingMeetings.length,
+      criticalGaps: criticalGaps.length,
+      scenarioDetails,
+      actionItemDetails
+    };
   }
 
   private extractPriceChangesFromAlerts(alerts: any[]): Array<{ name: string; change: number; price: number }> {
@@ -335,11 +670,13 @@ class AIAssistantService {
   private getDefaultContext(): PlatformContext {
     return {
       regime: { fdr: 1.0, regime: "Healthy Expansion", signal: "neutral", confidence: 0.5 },
-      forecasts: { totalSkus: 0, averageMape: 0, degradedSkus: 0, degradationAlerts: [] },
+      forecasts: { totalSkus: 0, averageMape: 0, degradedSkus: 0, retrainingNeeded: 0, degradationAlerts: [], accuracyTrend: "stable" },
       events: { totalAlerts: 0, criticalAlerts: 0, topCategories: [] },
-      commodities: { totalTracked: 0, significantChanges: [] },
+      commodities: { totalTracked: 0, significantChanges: [], priceTrends: { rising: 0, falling: 0, stable: 0 }, buySignals: [], sellSignals: [] },
       inventory: { lowStockItems: 0, totalValue: 0, criticalItems: [] },
-      suppliers: { totalSuppliers: 0, atRiskSuppliers: 0, riskDetails: [] }
+      suppliers: { totalSuppliers: 0, atRiskSuppliers: 0, riskDetails: [], multiTierRisks: [] },
+      production: { averageOEE: 0, availability: 0, performance: 0, quality: 0, totalDowntimeMinutes: 0, activeBottlenecks: 0, bottleneckDetails: [], recentRuns: 0, unitsProducedToday: 0 },
+      sop: { activeScenarios: 0, pendingApprovals: 0, openActionItems: 0, overdueActionItems: 0, upcomingMeetings: 0, criticalGaps: 0, scenarioDetails: [], actionItemDetails: [] }
     };
   }
 
@@ -399,45 +736,97 @@ class AIAssistantService {
 
   private buildSystemPrompt(context: PlatformContext): string {
     const forecastDetails = context.forecasts.degradationAlerts.length > 0
-      ? `\n- Degraded SKUs: ${context.forecasts.degradationAlerts.map(a => `${a.skuName} (${a.severity}, MAPE: ${a.mape.toFixed(1)}%)`).join(', ')}`
+      ? `\n  - Degraded SKUs: ${context.forecasts.degradationAlerts.map(a => `${a.skuName} (${a.severity}, MAPE: ${a.mape.toFixed(1)}%, ${a.trend})`).join(', ')}`
+      : '';
+    const forecastTrend = `\n  - Accuracy trend: ${context.forecasts.accuracyTrend}`;
+    const retrainingInfo = context.forecasts.retrainingNeeded > 0 
+      ? `\n  - Models needing retraining: ${context.forecasts.retrainingNeeded}`
       : '';
 
     const commodityDetails = context.commodities.significantChanges.length > 0
-      ? `\n- Significant price moves: ${context.commodities.significantChanges.map(c => `${c.name} ${c.change > 0 ? '+' : ''}${c.change.toFixed(1)}%`).join(', ')}`
+      ? `\n  - Significant price moves: ${context.commodities.significantChanges.map(c => `${c.name} ${c.change > 0 ? '+' : ''}${c.change.toFixed(1)}%`).join(', ')}`
+      : '';
+    const commodityTrends = `\n  - Price trends: ${context.commodities.priceTrends.rising} rising, ${context.commodities.priceTrends.falling} falling, ${context.commodities.priceTrends.stable} stable`;
+    const buySignals = context.commodities.buySignals.length > 0 
+      ? `\n  - Buy signals: ${context.commodities.buySignals.join(', ')}`
       : '';
 
     const supplierDetails = context.suppliers.riskDetails.filter(s => s.riskLevel === 'high' || s.riskLevel === 'critical').length > 0
-      ? `\n- At-risk suppliers: ${context.suppliers.riskDetails.filter(s => s.riskLevel === 'high' || s.riskLevel === 'critical').map(s => `${s.name} (${s.riskLevel})`).join(', ')}`
+      ? `\n  - At-risk suppliers: ${context.suppliers.riskDetails.filter(s => s.riskLevel === 'high' || s.riskLevel === 'critical').map(s => `${s.name} (Tier ${s.tier || 1}, ${s.riskLevel}, ${s.cascadingImpact})`).join(', ')}`
+      : '';
+    const multiTierRisks = context.suppliers.multiTierRisks.length > 0
+      ? `\n  - Multi-tier risks: ${context.suppliers.multiTierRisks.map(r => `${r.supplierName} (Tier ${r.tier}): ${r.riskFactors.join(', ')}`).join('; ')}`
       : '';
 
     const inventoryDetails = context.inventory.criticalItems.length > 0
-      ? `\n- Low stock items: ${context.inventory.criticalItems.map(i => `${i.name} (${i.onHand} on hand)`).join(', ')}`
+      ? `\n  - Low stock items: ${context.inventory.criticalItems.map(i => `${i.name} (${i.onHand} on hand)`).join(', ')}`
       : '';
 
-    return `You are an intelligent manufacturing assistant for Prescient Labs, a supply chain intelligence platform. You help procurement managers and operations teams make smarter decisions.
+    const productionDetails = context.production.averageOEE > 0
+      ? `\n  - OEE: ${context.production.averageOEE.toFixed(1)}% (Availability: ${context.production.availability.toFixed(1)}%, Performance: ${context.production.performance.toFixed(1)}%, Quality: ${context.production.quality.toFixed(1)}%)`
+      : '';
+    const downtimeInfo = context.production.totalDowntimeMinutes > 0
+      ? `\n  - Today's downtime: ${context.production.totalDowntimeMinutes} minutes`
+      : '';
+    const bottleneckInfo = context.production.activeBottlenecks > 0
+      ? `\n  - Active bottlenecks: ${context.production.activeBottlenecks} (${context.production.bottleneckDetails.map(b => `${b.location}: ${b.impactLevel}`).join(', ')})`
+      : '';
+
+    const sopDetails = context.sop.activeScenarios > 0 || context.sop.openActionItems > 0
+      ? `\n  - Active scenarios: ${context.sop.activeScenarios}, Pending approvals: ${context.sop.pendingApprovals}`
+      : '';
+    const actionItemInfo = context.sop.openActionItems > 0
+      ? `\n  - Open action items: ${context.sop.openActionItems}${context.sop.overdueActionItems > 0 ? ` (${context.sop.overdueActionItems} overdue)` : ''}`
+      : '';
+    const criticalGapInfo = context.sop.criticalGaps > 0
+      ? `\n  - Critical S&OP gaps: ${context.sop.criticalGaps}`
+      : '';
+
+    return `You are an intelligent manufacturing operations copilot for Prescient Labs, an advanced supply chain intelligence platform. You provide data-driven guidance to procurement managers, operations teams, and executives.
 
 CURRENT PLATFORM STATE:
-- Economic Regime: ${context.regime.regime} (FDR: ${context.regime.fdr.toFixed(2)})
+
+ECONOMIC CONTEXT:
+- Regime: ${context.regime.regime} (FDR: ${context.regime.fdr.toFixed(2)})
 - Market Signal: ${context.regime.signal.toUpperCase()}
+- Confidence: ${(context.regime.confidence * 100).toFixed(0)}%
+
+DEMAND FORECASTING:
 - Total SKUs: ${context.forecasts.totalSkus}
-- Average Forecast MAPE: ${context.forecasts.averageMape.toFixed(1)}%${forecastDetails}
-- Active supply chain alerts: ${context.events.totalAlerts} (${context.events.criticalAlerts} critical)
-- Top event categories: ${context.events.topCategories.join(', ') || 'None'}${commodityDetails}
-- Low stock items: ${context.inventory.lowStockItems}${inventoryDetails}
-- Total suppliers: ${context.suppliers.totalSuppliers} (${context.suppliers.atRiskSuppliers} at risk)${supplierDetails}
+- Average MAPE: ${context.forecasts.averageMape.toFixed(1)}%${forecastTrend}${forecastDetails}${retrainingInfo}
+
+COMMODITY INTELLIGENCE:
+- Tracking: ${context.commodities.totalTracked} commodities${commodityTrends}${commodityDetails}${buySignals}
+
+SUPPLY CHAIN:
+- Total suppliers: ${context.suppliers.totalSuppliers} (${context.suppliers.atRiskSuppliers} at elevated risk)${supplierDetails}${multiTierRisks}
+- Active alerts: ${context.events.totalAlerts} (${context.events.criticalAlerts} critical)
+- Event categories: ${context.events.topCategories.join(', ') || 'None'}
+
+INVENTORY:
+- Low stock items: ${context.inventory.lowStockItems}
+- Total value: $${context.inventory.totalValue.toLocaleString()}${inventoryDetails}
+
+PRODUCTION PERFORMANCE:${productionDetails || '\n  - No recent production data'}${downtimeInfo}${bottleneckInfo}
+- Units produced today: ${context.production.unitsProducedToday}
+
+S&OP WORKFLOWS:${sopDetails}${actionItemInfo}${criticalGapInfo}
+- Upcoming meetings: ${context.sop.upcomingMeetings}
 
 REGIME-SPECIFIC GUIDANCE:
 ${this.getRegimeGuidance(context.regime.regime)}
 
 CAPABILITIES:
-- Answer questions about forecasts, inventory, suppliers, and market conditions
-- Recommend procurement timing based on FDR regime
-- Analyze supply chain risks and suggest mitigations
-- Help with scenario planning and what-if analysis
-- Generate RFQ suggestions for low-stock items
+- Answer questions about forecasts, inventory, suppliers, production, and market conditions
+- Recommend procurement timing based on FDR regime and commodity trends
+- Analyze supply chain risks including multi-tier supplier dependencies
+- Provide production performance insights (OEE, bottlenecks, downtime)
+- Help with S&OP scenario planning and action item tracking
+- Generate RFQ suggestions based on inventory levels and market timing
+- Identify forecast models needing retraining
 - Explain economic indicators and their manufacturing impact
 
-Keep responses concise and actionable. Focus on data-driven recommendations. When uncertain, acknowledge limitations and suggest where to find more information in the platform.`;
+Keep responses concise and actionable. Focus on data-driven recommendations with specific numbers. Prioritize critical issues first. When suggesting actions, reference specific platform features.`;
   }
 
   private getRegimeGuidance(regime: string): string {
@@ -495,6 +884,44 @@ Keep responses concise and actionable. Focus on data-driven recommendations. Whe
         description: `Review ${context.suppliers.atRiskSuppliers} at-risk suppliers and ${context.events.criticalAlerts} critical alerts`,
         confidence: 0.8
       });
+    }
+
+    if (lowerMessage.includes("oee") || lowerMessage.includes("production") || lowerMessage.includes("downtime") || 
+        lowerMessage.includes("bottleneck") || lowerMessage.includes("efficiency")) {
+      actions.push({
+        id: `action_production_${Date.now()}`,
+        type: "production",
+        label: "View Production KPIs",
+        description: `Current OEE: ${context.production.averageOEE.toFixed(1)}%, ${context.production.activeBottlenecks} active bottlenecks`,
+        params: { oee: context.production.averageOEE, bottlenecks: context.production.activeBottlenecks },
+        confidence: 0.85
+      });
+    }
+
+    if (lowerMessage.includes("s&op") || lowerMessage.includes("sop") || lowerMessage.includes("planning") ||
+        lowerMessage.includes("action item") || lowerMessage.includes("meeting") || lowerMessage.includes("approval")) {
+      actions.push({
+        id: `action_sop_${Date.now()}`,
+        type: "sop",
+        label: "View S&OP Dashboard",
+        description: `${context.sop.openActionItems} open action items, ${context.sop.pendingApprovals} pending approvals`,
+        params: { actionItems: context.sop.openActionItems, approvals: context.sop.pendingApprovals },
+        confidence: 0.85
+      });
+    }
+
+    if (lowerMessage.includes("retrain") || lowerMessage.includes("model") || 
+        (lowerMessage.includes("accuracy") && lowerMessage.includes("forecast"))) {
+      if (context.forecasts.retrainingNeeded > 0) {
+        actions.push({
+          id: `action_retrain_${Date.now()}`,
+          type: "forecast",
+          label: "Retrain Forecast Models",
+          description: `${context.forecasts.retrainingNeeded} models need retraining`,
+          params: { retrainingCount: context.forecasts.retrainingNeeded },
+          confidence: 0.9
+        });
+      }
     }
 
     return actions;
@@ -579,7 +1006,76 @@ Keep responses concise and actionable. Focus on data-driven recommendations. Whe
       });
     }
 
-    return insights.slice(0, 5);
+    if (context.production.averageOEE > 0 && context.production.averageOEE < 65) {
+      insights.push({
+        category: "Production",
+        title: "OEE Below Target",
+        description: `Current OEE at ${context.production.averageOEE.toFixed(1)}% is below world-class target of 85%. Focus on ${context.production.availability < 85 ? 'availability' : context.production.performance < 95 ? 'performance' : 'quality'} improvements.`,
+        impact: "negative",
+        confidence: 0.88,
+        source: "Production KPIs"
+      });
+    }
+
+    if (context.production.activeBottlenecks > 0) {
+      const criticalBottleneck = context.production.bottleneckDetails.find(b => b.impactLevel === 'critical' || b.impactLevel === 'high');
+      insights.push({
+        category: "Production",
+        title: `${context.production.activeBottlenecks} Active Bottlenecks`,
+        description: criticalBottleneck 
+          ? `Critical bottleneck at ${criticalBottleneck.location} causing ${criticalBottleneck.throughputLoss.toFixed(1)}% throughput loss.`
+          : "Production bottlenecks detected. Review operations for optimization opportunities.",
+        impact: "negative",
+        confidence: 0.9,
+        source: "Bottleneck Detection"
+      });
+    }
+
+    if (context.sop.overdueActionItems > 0) {
+      insights.push({
+        category: "S&OP",
+        title: `${context.sop.overdueActionItems} Overdue Action Items`,
+        description: "S&OP action items are past due. Review and update status to maintain planning accuracy.",
+        impact: "negative",
+        confidence: 0.92,
+        source: "S&OP Workflows"
+      });
+    }
+
+    if (context.sop.criticalGaps > 0) {
+      insights.push({
+        category: "S&OP",
+        title: `${context.sop.criticalGaps} Critical Supply-Demand Gaps`,
+        description: "Critical gaps between demand and supply capacity detected. Immediate attention required.",
+        impact: "negative",
+        confidence: 0.95,
+        source: "S&OP Gap Analysis"
+      });
+    }
+
+    if (context.commodities.buySignals.length > 2) {
+      insights.push({
+        category: "Commodities",
+        title: "Multiple Buy Signals Active",
+        description: `${context.commodities.buySignals.length} commodities showing favorable buying conditions: ${context.commodities.buySignals.slice(0, 3).join(', ')}`,
+        impact: "positive",
+        confidence: 0.85,
+        source: "Commodity Intelligence"
+      });
+    }
+
+    if (context.forecasts.accuracyTrend === "declining") {
+      insights.push({
+        category: "Forecast Health",
+        title: "Forecast Accuracy Declining",
+        description: "Overall forecast accuracy is trending downward. Review demand signals and consider model updates.",
+        impact: "negative",
+        confidence: 0.87,
+        source: "Forecast Monitoring"
+      });
+    }
+
+    return insights.slice(0, 7);
   }
 
   async checkProactiveAlerts(companyId: string): Promise<ProactiveAlert[]> {
@@ -680,6 +1176,78 @@ Keep responses concise and actionable. Focus on data-driven recommendations. Whe
       });
     }
 
+    if (context.production.averageOEE > 0 && context.production.averageOEE < 60) {
+      alerts.push({
+        id: `alert_oee_${now}`,
+        type: "production",
+        severity: "warning",
+        title: "OEE Below Critical Threshold",
+        description: `Overall Equipment Effectiveness at ${context.production.averageOEE.toFixed(1)}% is well below target.`,
+        recommendation: "Review production metrics and address availability, performance, or quality issues.",
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (context.production.activeBottlenecks >= 2) {
+      alerts.push({
+        id: `alert_bottleneck_${now}`,
+        type: "production",
+        severity: "critical",
+        title: "Multiple Production Bottlenecks",
+        description: `${context.production.activeBottlenecks} active bottlenecks impacting throughput.`,
+        recommendation: "Address bottlenecks immediately to restore production capacity.",
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (context.production.totalDowntimeMinutes > 120) {
+      alerts.push({
+        id: `alert_downtime_${now}`,
+        type: "production",
+        severity: "warning",
+        title: "Significant Production Downtime",
+        description: `${context.production.totalDowntimeMinutes} minutes of downtime today.`,
+        recommendation: "Review downtime causes and implement corrective measures.",
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (context.sop.overdueActionItems >= 3) {
+      alerts.push({
+        id: `alert_sop_overdue_${now}`,
+        type: "sop",
+        severity: "warning",
+        title: "Multiple Overdue S&OP Actions",
+        description: `${context.sop.overdueActionItems} S&OP action items are past due.`,
+        recommendation: "Update action item status and address blockers.",
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (context.sop.criticalGaps >= 1) {
+      alerts.push({
+        id: `alert_sop_gap_${now}`,
+        type: "sop",
+        severity: "critical",
+        title: "Critical Supply-Demand Gap",
+        description: `${context.sop.criticalGaps} critical gaps between forecasted demand and supply capacity.`,
+        recommendation: "Review S&OP scenarios and develop mitigation plans immediately.",
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (context.suppliers.multiTierRisks.length >= 2) {
+      alerts.push({
+        id: `alert_multitier_${now}`,
+        type: "risk",
+        severity: "warning",
+        title: "Multi-Tier Supply Chain Risks",
+        description: `${context.suppliers.multiTierRisks.length} sub-tier suppliers showing elevated risk.`,
+        recommendation: "Review supply chain network and develop alternative sourcing strategies.",
+        timestamp: new Date().toISOString()
+      });
+    }
+
     this.alertCache.set(companyId, alerts);
     return alerts;
   }
@@ -722,6 +1290,20 @@ Keep responses concise and actionable. Focus on data-driven recommendations. Whe
             success: true,
             message: "Navigate to Event Monitoring for risk analysis.",
             data: { redirect: "/strategy?tab=events" }
+          };
+
+        case "production":
+          return {
+            success: true,
+            message: "Navigate to Production Hub to view OEE metrics and bottleneck analysis.",
+            data: { redirect: "/production" }
+          };
+
+        case "sop":
+          return {
+            success: true,
+            message: "Navigate to S&OP workflows to review scenarios and action items.",
+            data: { redirect: "/sop" }
           };
 
         default:
