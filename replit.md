@@ -59,6 +59,7 @@ The system is a multi-tenant application ensuring data isolation per company. Co
 - **Collaborative S&OP Workflows**: Full-featured Sales & Operations Planning module with meeting management, demand/supply reconciliation, and approval workflows.
 - **Real-Time Digital Twin**: Enterprise-grade supply chain digital twin with live state snapshots, AI-powered natural language queries, what-if simulations, and real-time alerts.
 - **Multi-Tier Supplier Mapping**: Enterprise-grade supply chain visibility with network graph visualization, dependency analysis, regional risk assessment, and sub-tier alerts.
+- **Geopolitical & Event Monitoring**: Real-time news scanning for supply chain events (port closures, trade disputes, natural disasters, regulatory changes, supplier distress) with FDR-aware impact analysis and regime-specific recommendations.
 
 ### System Design Choices
 
