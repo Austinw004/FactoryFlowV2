@@ -1,14 +1,16 @@
-import { LayoutDashboard, PieChart, FileText, Activity } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState } from "react";
-import Dashboard from "./Dashboard";
-import RoiDashboard from "./RoiDashboard";
-import Reports from "./Reports";
+import { LayoutDashboard, PieChart, FileText } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState, Suspense, lazy } from "react";
+import { SafeTabContent } from "@/components/HubErrorBoundary";
+
+const Dashboard = lazy(() => import("./Dashboard"));
+const RoiDashboard = lazy(() => import("./RoiDashboard"));
+const Reports = lazy(() => import("./Reports"));
 
 const tabs = [
-  { id: "overview", label: "Overview", icon: LayoutDashboard, component: Dashboard },
-  { id: "roi", label: "ROI Analytics", icon: PieChart, component: RoiDashboard },
-  { id: "reports", label: "Reports", icon: FileText, component: Reports },
+  { id: "overview", label: "Overview", icon: LayoutDashboard, Component: Dashboard },
+  { id: "roi", label: "ROI Analytics", icon: PieChart, Component: RoiDashboard },
+  { id: "reports", label: "Reports", icon: FileText, Component: Reports },
 ];
 
 interface DashboardHubProps {
@@ -42,7 +44,11 @@ export default function DashboardHub({ initialTab = "overview" }: DashboardHubPr
       
       <div className="flex-1 overflow-y-auto">
         {tabs.map((tab) => (
-          activeTab === tab.id && <tab.component key={tab.id} />
+          activeTab === tab.id && (
+            <SafeTabContent key={tab.id} tabName={tab.label}>
+              <tab.Component />
+            </SafeTabContent>
+          )
         ))}
       </div>
     </div>

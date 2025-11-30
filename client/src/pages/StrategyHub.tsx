@@ -1,18 +1,20 @@
-import { useState, useEffect } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState, useEffect, lazy } from "react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Layers, Target, FlaskConical, Building2, Users } from "lucide-react";
-import DigitalTwin from "./DigitalTwin";
-import StrategicAnalysis from "./StrategicAnalysis";
-import ScenarioSimulation from "./ScenarioSimulation";
-import MAIntelligence from "./MAIntelligence";
-import PeerBenchmarking from "./peer-benchmarking";
+import { SafeTabContent } from "@/components/HubErrorBoundary";
+
+const DigitalTwin = lazy(() => import("./DigitalTwin"));
+const StrategicAnalysis = lazy(() => import("./StrategicAnalysis"));
+const ScenarioSimulation = lazy(() => import("./ScenarioSimulation"));
+const MAIntelligence = lazy(() => import("./MAIntelligence"));
+const PeerBenchmarking = lazy(() => import("./peer-benchmarking"));
 
 const tabs = [
-  { id: "digital-twin", label: "Digital Twin", icon: Layers, component: DigitalTwin },
-  { id: "strategic", label: "Strategic Analysis", icon: Target, component: StrategicAnalysis },
-  { id: "scenarios", label: "Scenarios", icon: FlaskConical, component: ScenarioSimulation },
-  { id: "ma", label: "M&A Intelligence", icon: Building2, component: MAIntelligence },
-  { id: "benchmarking", label: "Benchmarking", icon: Users, component: PeerBenchmarking },
+  { id: "digital-twin", label: "Digital Twin", icon: Layers, Component: DigitalTwin },
+  { id: "strategic", label: "Strategic Analysis", icon: Target, Component: StrategicAnalysis },
+  { id: "scenarios", label: "Scenarios", icon: FlaskConical, Component: ScenarioSimulation },
+  { id: "ma", label: "M&A Intelligence", icon: Building2, Component: MAIntelligence },
+  { id: "benchmarking", label: "Benchmarking", icon: Users, Component: PeerBenchmarking },
 ];
 
 interface StrategyHubProps {
@@ -56,7 +58,11 @@ export default function StrategyHub({ initialTab = "digital-twin" }: StrategyHub
       
       <div className="flex-1 overflow-auto">
         {tabs.map((tab) => (
-          activeTab === tab.id && <tab.component key={tab.id} />
+          activeTab === tab.id && (
+            <SafeTabContent key={tab.id} tabName={tab.label}>
+              <tab.Component />
+            </SafeTabContent>
+          )
         ))}
       </div>
     </div>

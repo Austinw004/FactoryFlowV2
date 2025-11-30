@@ -1,20 +1,22 @@
-import { useState, useEffect } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState, useEffect, lazy } from "react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Package, Network, ShieldAlert, Database, BarChart3, GitBranch } from "lucide-react";
-import InventoryManagement from "./InventoryManagement";
-import SupplyChain from "./SupplyChain";
-import SupplierRisk from "./SupplierRisk";
-import ErpTemplates from "./ErpTemplates";
-import IndustryConsortium from "./IndustryConsortium";
-import MultiTierSupplierMapping from "./MultiTierSupplierMapping";
+import { SafeTabContent } from "@/components/HubErrorBoundary";
+
+const InventoryManagement = lazy(() => import("./InventoryManagement"));
+const SupplyChain = lazy(() => import("./SupplyChain"));
+const SupplierRisk = lazy(() => import("./SupplierRisk"));
+const ErpTemplates = lazy(() => import("./ErpTemplates"));
+const IndustryConsortium = lazy(() => import("./IndustryConsortium"));
+const MultiTierSupplierMapping = lazy(() => import("./MultiTierSupplierMapping"));
 
 const tabs = [
-  { id: "inventory", label: "Inventory", icon: Package, component: InventoryManagement },
-  { id: "network", label: "Network", icon: Network, component: SupplyChain },
-  { id: "multi-tier", label: "Multi-Tier Map", icon: GitBranch, component: MultiTierSupplierMapping },
-  { id: "supplier-risk", label: "Supplier Risk", icon: ShieldAlert, component: SupplierRisk },
-  { id: "erp", label: "ERP Integration", icon: Database, component: ErpTemplates },
-  { id: "consortium", label: "Consortium", icon: BarChart3, component: IndustryConsortium },
+  { id: "inventory", label: "Inventory", icon: Package, Component: InventoryManagement },
+  { id: "network", label: "Network", icon: Network, Component: SupplyChain },
+  { id: "multi-tier", label: "Multi-Tier Map", icon: GitBranch, Component: MultiTierSupplierMapping },
+  { id: "supplier-risk", label: "Supplier Risk", icon: ShieldAlert, Component: SupplierRisk },
+  { id: "erp", label: "ERP Integration", icon: Database, Component: ErpTemplates },
+  { id: "consortium", label: "Consortium", icon: BarChart3, Component: IndustryConsortium },
 ];
 
 interface SupplyChainHubProps {
@@ -58,7 +60,11 @@ export default function SupplyChainHub({ initialTab = "inventory" }: SupplyChain
       
       <div className="flex-1 overflow-auto">
         {tabs.map((tab) => (
-          activeTab === tab.id && <tab.component key={tab.id} />
+          activeTab === tab.id && (
+            <SafeTabContent key={tab.id} tabName={tab.label}>
+              <tab.Component />
+            </SafeTabContent>
+          )
         ))}
       </div>
     </div>

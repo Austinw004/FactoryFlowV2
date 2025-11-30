@@ -1,18 +1,20 @@
-import { useState, useEffect } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState, useEffect, lazy } from "react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Wrench, Activity, Radio, Users, Shield } from "lucide-react";
-import Machinery from "./Machinery";
-import ProductionKPIs from "./ProductionKPIs";
-import PredictiveMaintenance from "./PredictiveMaintenance";
-import WorkforceScheduling from "./WorkforceScheduling";
-import Compliance from "./Compliance";
+import { SafeTabContent } from "@/components/HubErrorBoundary";
+
+const Machinery = lazy(() => import("./Machinery"));
+const ProductionKPIs = lazy(() => import("./ProductionKPIs"));
+const PredictiveMaintenance = lazy(() => import("./PredictiveMaintenance"));
+const WorkforceScheduling = lazy(() => import("./WorkforceScheduling"));
+const Compliance = lazy(() => import("./Compliance"));
 
 const tabs = [
-  { id: "machinery", label: "Machinery", icon: Wrench, component: Machinery },
-  { id: "production", label: "Production", icon: Activity, component: ProductionKPIs },
-  { id: "maintenance", label: "Maintenance", icon: Radio, component: PredictiveMaintenance },
-  { id: "workforce", label: "Workforce", icon: Users, component: WorkforceScheduling },
-  { id: "compliance", label: "Compliance", icon: Shield, component: Compliance },
+  { id: "machinery", label: "Machinery", icon: Wrench, Component: Machinery },
+  { id: "production", label: "Production", icon: Activity, Component: ProductionKPIs },
+  { id: "maintenance", label: "Maintenance", icon: Radio, Component: PredictiveMaintenance },
+  { id: "workforce", label: "Workforce", icon: Users, Component: WorkforceScheduling },
+  { id: "compliance", label: "Compliance", icon: Shield, Component: Compliance },
 ];
 
 interface OperationsHubProps {
@@ -56,7 +58,11 @@ export default function OperationsHub({ initialTab = "machinery" }: OperationsHu
       
       <div className="flex-1 overflow-auto">
         {tabs.map((tab) => (
-          activeTab === tab.id && <tab.component key={tab.id} />
+          activeTab === tab.id && (
+            <SafeTabContent key={tab.id} tabName={tab.label}>
+              <tab.Component />
+            </SafeTabContent>
+          )
         ))}
       </div>
     </div>

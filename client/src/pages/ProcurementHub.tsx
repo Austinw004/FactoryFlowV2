@@ -1,16 +1,18 @@
-import { useState, useEffect } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState, useEffect, lazy } from "react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ShoppingCart, Zap, FileText, BookMarked } from "lucide-react";
-import Procurement from "./Procurement";
-import AutomatedPO from "./AutomatedPO";
-import RfqDashboard from "./rfq-dashboard";
-import ActionPlaybooks from "./ActionPlaybooks";
+import { SafeTabContent } from "@/components/HubErrorBoundary";
+
+const Procurement = lazy(() => import("./Procurement"));
+const AutomatedPO = lazy(() => import("./AutomatedPO"));
+const RfqDashboard = lazy(() => import("./rfq-dashboard"));
+const ActionPlaybooks = lazy(() => import("./ActionPlaybooks"));
 
 const tabs = [
-  { id: "purchasing", label: "Purchasing", icon: ShoppingCart, component: Procurement },
-  { id: "automated-po", label: "Auto PO", icon: Zap, component: AutomatedPO },
-  { id: "rfq", label: "RFQ Generation", icon: FileText, component: RfqDashboard },
-  { id: "playbooks", label: "Action Playbooks", icon: BookMarked, component: ActionPlaybooks },
+  { id: "purchasing", label: "Purchasing", icon: ShoppingCart, Component: Procurement },
+  { id: "automated-po", label: "Auto PO", icon: Zap, Component: AutomatedPO },
+  { id: "rfq", label: "RFQ Generation", icon: FileText, Component: RfqDashboard },
+  { id: "playbooks", label: "Action Playbooks", icon: BookMarked, Component: ActionPlaybooks },
 ];
 
 interface ProcurementHubProps {
@@ -54,7 +56,11 @@ export default function ProcurementHub({ initialTab = "purchasing" }: Procuremen
       
       <div className="flex-1 overflow-auto">
         {tabs.map((tab) => (
-          activeTab === tab.id && <tab.component key={tab.id} />
+          activeTab === tab.id && (
+            <SafeTabContent key={tab.id} tabName={tab.label}>
+              <tab.Component />
+            </SafeTabContent>
+          )
         ))}
       </div>
     </div>
