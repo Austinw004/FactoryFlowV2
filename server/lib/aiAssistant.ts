@@ -796,7 +796,8 @@ DEMAND FORECASTING:
 - Average MAPE: ${context.forecasts.averageMape.toFixed(1)}%${forecastTrend}${forecastDetails}${retrainingInfo}
 
 COMMODITY INTELLIGENCE:
-- Tracking: ${context.commodities.totalTracked} commodities${commodityTrends}${commodityDetails}${buySignals}
+- Tracking: ${context.commodities.totalTracked} commodities${commodityTrends}${commodityDetails}${buySignals}${context.commodities.sellSignals.length > 0 ? `\n  - Sell signals (prices may drop): ${context.commodities.sellSignals.join(', ')}` : ''}
+- Rising commodities are candidates to increase in value; falling commodities may present buying opportunities
 
 SUPPLY CHAIN:
 - Total suppliers: ${context.suppliers.totalSuppliers} (${context.suppliers.atRiskSuppliers} at elevated risk)${supplierDetails}${multiTierRisks}
@@ -825,6 +826,14 @@ CAPABILITIES:
 - Generate RFQ suggestions based on inventory levels and market timing
 - Identify forecast models needing retraining
 - Explain economic indicators and their manufacturing impact
+
+ANSWERING PRICE/VALUE PREDICTION QUESTIONS:
+When users ask about materials/commodities that will "rise in value", "increase in price", "go up", or similar price prediction questions:
+1. Use the COMMODITY INTELLIGENCE data above (price trends, significant changes, buy/sell signals)
+2. Consider the current economic regime - in overheating/expansion regimes, prices tend to rise; in cooling/contraction, prices tend to fall
+3. Reference specific commodities showing rising trends from the data
+4. If limited commodity data is available, explain this and suggest they add materials to track
+5. NEVER answer price questions with inventory cycle data - those are completely different concepts
 
 Keep responses concise and actionable. Focus on data-driven recommendations with specific numbers. Prioritize critical issues first. When suggesting actions, reference specific platform features.`;
   }
