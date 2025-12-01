@@ -41,8 +41,8 @@ export function CreateMaterialDialog({ open, onOpenChange }: CreateMaterialDialo
   });
   
   const filteredCommodities = commodities.filter(c =>
-    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.code.toLowerCase().includes(searchQuery.toLowerCase())
+    (c.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+    (c.code?.toLowerCase() || '').includes(searchQuery.toLowerCase())
   );
   
   const createMaterialMutation = useMutation({
