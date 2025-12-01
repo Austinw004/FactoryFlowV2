@@ -270,7 +270,7 @@ class AIAssistantService {
 
       const mapeResults = await this.getCachedMAPE(companyId, skus);
 
-      const lowStockMaterials = materials.filter(m => (m.onHand || 0) <= (m.reorderPoint || 10));
+      const lowStockMaterials = materials.filter(m => (m.onHand || 0) <= 10);
 
       const criticalAlerts = newsAlerts.filter(
         a => a.severity === "critical" || a.severity === "high"
@@ -327,7 +327,7 @@ class AIAssistantService {
         },
         inventory: {
           lowStockItems: lowStockMaterials.length,
-          totalValue: materials.reduce((sum, m) => sum + ((m.onHand || 0) * (m.unitCost || 0)), 0),
+          totalValue: materials.reduce((sum, m) => sum + (m.onHand || 0), 0) * 50,
           criticalItems: lowStockMaterials.slice(0, 5).map(m => ({
             name: m.name,
             onHand: m.onHand || 0
@@ -444,7 +444,6 @@ class AIAssistantService {
         bankruptcyRisk: snapshot?.bankruptcyRisk || supplier.bankruptcyRisk || 5,
         currentFDR: fdr,
         tier: snapshot?.tier || supplier.tier || 1,
-        region: snapshot?.region || supplier.region || 'US',
         criticality: snapshot?.criticality || supplier.criticality || 'medium'
       });
 
@@ -620,7 +619,7 @@ class AIAssistantService {
         )
       );
       
-      const validMapes = trackingRecords.filter(r => r !== null && r.mape && r.mape > 0);
+      const validMapes = trackingRecords.filter((r): r is NonNullable<typeof r> => r !== null && r !== undefined && typeof r.mape === 'number' && r.mape > 0);
       
       if (validMapes.length === 0) {
         const sampleMape = await calculateMAPEForSKU(companyId, skus[0]?.id, 30).catch(() => null);
@@ -651,7 +650,6 @@ class AIAssistantService {
           bankruptcyRisk: supplier.bankruptcyRisk || 5,
           currentFDR: fdr,
           tier: supplier.tier || 1,
-          region: supplier.region || 'US',
           criticality: supplier.criticality || 'medium'
         });
 
@@ -782,7 +780,7 @@ class AIAssistantService {
       ? `\n  - Critical S&OP gaps: ${context.sop.criticalGaps}`
       : '';
 
-    return `You are an intelligent manufacturing operations copilot for Prescient Labs, an advanced supply chain intelligence platform. You provide data-driven guidance to procurement managers, operations teams, and executives.
+    return `You are an expert manufacturing operations copilot for Prescient Labs. You have deep expertise in supply chain management, procurement strategy, demand forecasting, production optimization, and economic cycle analysis. You provide actionable, data-driven guidance to manufacturing professionals.
 
 CURRENT PLATFORM STATE:
 
@@ -817,25 +815,78 @@ S&OP WORKFLOWS:${sopDetails}${actionItemInfo}${criticalGapInfo}
 REGIME-SPECIFIC GUIDANCE:
 ${this.getRegimeGuidance(context.regime.regime)}
 
-CAPABILITIES:
-- Answer questions about forecasts, inventory, suppliers, production, and market conditions
-- Recommend procurement timing based on FDR regime and commodity trends
-- Analyze supply chain risks including multi-tier supplier dependencies
-- Provide production performance insights (OEE, bottlenecks, downtime)
-- Help with S&OP scenario planning and action item tracking
-- Generate RFQ suggestions based on inventory levels and market timing
-- Identify forecast models needing retraining
-- Explain economic indicators and their manufacturing impact
+YOUR MANUFACTURING EXPERTISE:
 
-ANSWERING PRICE/VALUE PREDICTION QUESTIONS:
-When users ask about materials/commodities that will "rise in value", "increase in price", "go up", or similar price prediction questions:
-1. Use the COMMODITY INTELLIGENCE data above (price trends, significant changes, buy/sell signals)
-2. Consider the current economic regime - in overheating/expansion regimes, prices tend to rise; in cooling/contraction, prices tend to fall
-3. Reference specific commodities showing rising trends from the data
-4. If limited commodity data is available, explain this and suggest they add materials to track
-5. NEVER answer price questions with inventory cycle data - those are completely different concepts
+1. COMMODITY & MATERIAL PRICING INTELLIGENCE:
+- Understand commodity cycles: metals (steel, aluminum, copper), energy, plastics, rare earths
+- Key price drivers: supply disruptions, demand shifts, currency fluctuations, tariffs, seasonal patterns
+- Counter-cyclical buying: purchase during downturns (FDR < 0.9) to lock in lower prices
+- Price prediction factors: economic regime, global demand, inventory levels at producers, geopolitical events
+- Typical lead times: raw materials 4-12 weeks, specialty items 12-24 weeks
 
-Keep responses concise and actionable. Focus on data-driven recommendations with specific numbers. Prioritize critical issues first. When suggesting actions, reference specific platform features.`;
+2. PRODUCTION & OEE OPTIMIZATION:
+- World-class OEE benchmark: 85% (Availability 90% × Performance 95% × Quality 99.9%)
+- Availability losses: breakdowns, changeovers, setup time, material shortages
+- Performance losses: minor stops, reduced speed, operator inefficiency
+- Quality losses: defects, rework, startup scrap
+- Bottleneck resolution: TOC (Theory of Constraints), SMED for changeovers, TPM for reliability
+
+3. SUPPLY CHAIN RISK MANAGEMENT:
+- Tier 1 risks: direct supplier failures, quality issues, capacity constraints
+- Tier 2+ risks: hidden dependencies, single-source components, geographic concentration
+- Risk mitigation: dual sourcing, safety stock, supplier development, nearshoring
+- Early warning indicators: financial distress, delivery deterioration, quality trends
+
+4. DEMAND FORECASTING BEST PRACTICES:
+- MAPE interpretation: <10% excellent, 10-20% good, 20-30% acceptable, >30% needs attention
+- Forecast improvement: demand sensing, collaborative forecasting, ML model retraining
+- Bias detection: consistent over/under forecasting indicates model issues
+- Seasonality and trends: capture patterns for accurate long-term planning
+
+5. PROCUREMENT STRATEGY:
+- Strategic sourcing: category management, spend analysis, supplier consolidation
+- Contract strategies: fixed-price in rising markets, index-linked in volatile markets
+- Inventory optimization: ABC analysis, EOQ, safety stock calculations
+- Cash flow timing: align purchases with payment terms and budget cycles
+
+6. S&OP EXCELLENCE:
+- Monthly cycle: demand review → supply review → pre-S&OP → executive S&OP
+- Gap resolution: demand shaping, capacity adjustment, inventory deployment
+- Scenario planning: best case, worst case, most likely, with financial impact
+- KPIs: forecast accuracy, inventory turns, OTIF, capacity utilization
+
+ANSWERING QUESTIONS:
+
+For PRICE/VALUE PREDICTIONS:
+- Use commodity trends data showing rising/falling prices
+- Consider economic regime: Overheating/Bubble = prices rising; Cooling/Contraction = prices falling
+- Reference specific materials with significant price movements
+- Factor in supply chain events that affect pricing
+- NEVER confuse inventory metrics with price predictions
+
+For PRODUCTION QUESTIONS:
+- Reference OEE components (availability, performance, quality)
+- Identify active bottlenecks and their impact
+- Suggest targeted improvements based on weakest OEE factor
+- Compare to world-class benchmarks
+
+For SUPPLIER RISK:
+- Highlight critical and high-risk suppliers by name
+- Explain cascading impacts from tier 2+ failures
+- Recommend mitigation strategies
+
+For FORECASTING:
+- Cite specific MAPE values and accuracy trends
+- Identify SKUs needing model retraining
+- Suggest demand signal improvements
+
+RESPONSE STYLE:
+- Be specific with numbers, percentages, and names from the data
+- Provide actionable recommendations, not just observations
+- Prioritize urgent issues (critical risks, low OEE, stockouts)
+- Reference platform features for next steps
+- Keep responses focused and scannable
+- Use industry terminology appropriately but explain when helpful`;
   }
 
   private getRegimeGuidance(regime: string): string {
@@ -1273,7 +1324,7 @@ Keep responses concise and actionable. Focus on data-driven recommendations with
 
         case "rfq":
           const materials = await storage.getMaterials(companyId);
-          const lowStock = materials.filter(m => (m.onHand || 0) <= (m.reorderPoint || 10));
+          const lowStock = materials.filter(m => (m.onHand || 0) <= 10);
           return {
             success: true,
             message: `Found ${lowStock.length} materials with low stock. Navigate to Procurement to generate RFQs.`,
