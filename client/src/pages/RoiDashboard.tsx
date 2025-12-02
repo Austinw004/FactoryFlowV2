@@ -12,6 +12,7 @@ import {
   Activity,
   Target
 } from "lucide-react";
+import { PlatformValueScore } from "@/components/PlatformValueScore";
 import {
   LineChart,
   Line,
@@ -212,6 +213,7 @@ export default function RoiDashboard() {
             Track your platform savings, forecast accuracy improvements, and operational efficiency gains
           </p>
         </div>
+        <PlatformValueScore />
         <EmptyState />
       </div>
     );
@@ -258,6 +260,8 @@ export default function RoiDashboard() {
           {data.metricsCount} metrics tracked
         </Badge>
       </div>
+
+      <PlatformValueScore />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <MetricCard
