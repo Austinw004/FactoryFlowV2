@@ -21,6 +21,7 @@ import HowItWorks from "@/pages/HowItWorks";
 import SopWorkflows from "@/pages/SopWorkflows";
 import Pricing from "@/pages/Pricing";
 import Billing from "@/pages/Billing";
+import CommodityForecasts from "@/pages/CommodityForecasts";
 import { useAuth } from "@/hooks/useAuth";
 
 // Dashboard Hub routes
@@ -112,6 +113,7 @@ function Router() {
       <Route path="/automated-po" component={ProcurementAutoPoRoute} />
       <Route path="/rfq-generation" component={ProcurementRfqRoute} />
       <Route path="/action-playbooks" component={ProcurementPlaybooksRoute} />
+      <Route path="/commodity-forecasts" component={CommodityForecasts} />
 
       {/* Operations routes */}
       <Route path="/machinery" component={OperationsMachineryRoute} />

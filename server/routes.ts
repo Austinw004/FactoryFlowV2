@@ -6457,6 +6457,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================================================
+  // COMMODITY PRICE FORECASTING
+  // ============================================================================
+
+  // Get commodity price forecasts
+  app.get("/api/commodity-forecasts", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+
+      // Import forecasting engine
+      const { generateCommodityForecasts } = await import('./lib/commodityForecasting');
+      
+      // Get materials to track
+      const materials = await storage.getMaterials(user.companyId);
+      const materialCodes = req.query.codes 
+        ? (req.query.codes as string).split(',')
+        : materials.map(m => m.code).slice(0, 10); // Limit to first 10 by default
+      
+      // Get current regime
+      const snapshots = await storage.getEconomicSnapshots(user.companyId);
+      const latestSnapshot = snapshots[0];
+      const regime = latestSnapshot?.regime || 'HEALTHY_EXPANSION';
+      const fdr = latestSnapshot?.fdr || 1.0;
+      
+      const forecasts = await generateCommodityForecasts(materialCodes, regime, fdr);
+      
+      res.json({
+        forecasts,
+        regime,
+        fdr,
+        generatedAt: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("Error generating commodity forecasts:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get commodity forecast summary
+  app.get("/api/commodity-forecasts/summary", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+
+      const { getCommodityForecastSummary } = await import('./lib/commodityForecasting');
+      
+      // Get materials to track
+      const materials = await storage.getMaterials(user.companyId);
+      const materialCodes = materials.map(m => m.code).slice(0, 20);
+      
+      // Get current regime
+      const snapshots = await storage.getEconomicSnapshots(user.companyId);
+      const latestSnapshot = snapshots[0];
+      const regime = latestSnapshot?.regime || 'HEALTHY_EXPANSION';
+      const fdr = latestSnapshot?.fdr || 1.0;
+      
+      const summary = await getCommodityForecastSummary(materialCodes, regime, fdr);
+      
+      res.json({
+        ...summary,
+        regime,
+        fdr,
+        generatedAt: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("Error generating commodity forecast summary:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Get alert triggers (recent + unacknowledged)
   app.get("/api/alert-triggers", isAuthenticated, async (req: any, res) => {
     try {
@@ -7630,6 +7707,179 @@ export async function registerRoutes(app: Express): Promise<Server> {
         bySource,
         recentMetrics: recentMetrics.slice(0, 20),
         metricsCount: allMetrics.length,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============================================================================
+  // PLATFORM VALUE SCORE
+  // ============================================================================
+
+  // Get platform value score and comprehensive value metrics
+  app.get("/api/platform/value-score", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+
+      const companyId = user.companyId;
+
+      // Gather all data needed for value calculation
+      const [
+        roiMetrics,
+        skus,
+        materials,
+        suppliers,
+        forecasts,
+        productionMetrics,
+        rfqs,
+        allocations,
+      ] = await Promise.all([
+        storage.getRoiMetrics(companyId),
+        storage.getSkus(companyId),
+        storage.getMaterials(companyId),
+        storage.getSuppliers(companyId),
+        storage.getMultiHorizonForecasts(companyId),
+        storage.getProductionMetrics(companyId),
+        storage.getRfqs(companyId),
+        storage.getAllocations(companyId),
+      ]);
+
+      // Calculate procurement savings from ROI metrics
+      const procurementSavings = roiMetrics
+        .filter(m => m.metricType === "procurement_savings")
+        .reduce((sum, m) => sum + (m.value || 0), 0);
+
+      // Calculate forecast accuracy gains (value of better predictions)
+      const forecastMetrics = roiMetrics.filter(m => m.metricType === "forecast_accuracy");
+      const avgMapeImprovement = forecastMetrics.length > 0
+        ? forecastMetrics.reduce((sum, m) => sum + (m.value || 0), 0) / forecastMetrics.length
+        : 0;
+      // Estimate value: Each 1% MAPE improvement ~ 0.5% of inventory value saved
+      const totalInventoryValue = materials.reduce((sum, m) => sum + ((m.onHand || 0) * 10), 0); // Assume $10 avg per unit
+      const forecastAccuracyGains = Math.round(avgMapeImprovement * 0.005 * totalInventoryValue);
+
+      // Calculate risk mitigation value
+      // Value of avoiding supply chain disruptions (based on supplier coverage and monitoring)
+      const supplierCoveragePercent = suppliers.length > 0 ? Math.min(100, suppliers.length * 10) : 0;
+      const riskMitigationValue = Math.round(totalInventoryValue * 0.02 * (supplierCoveragePercent / 100));
+
+      // Calculate time saved
+      const timeSavedMetrics = roiMetrics.filter(m => m.metricType === "time_saved");
+      const timeSavedHours = timeSavedMetrics.reduce((sum, m) => sum + (m.value || 0), 0);
+      // Value time at $75/hour for procurement staff
+      const timeSavedDollars = timeSavedHours * 75;
+
+      // Calculate inventory optimization value
+      const inventoryMetrics = roiMetrics.filter(m => m.metricType === "inventory_optimization");
+      const inventoryOptimization = inventoryMetrics.reduce((sum, m) => sum + (m.value || 0), 0);
+
+      // Total value delivered
+      const totalValueDelivered = procurementSavings + forecastAccuracyGains + riskMitigationValue + timeSavedDollars + inventoryOptimization;
+
+      // Calculate value growth rate (compare last 30 days to previous 30 days)
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+      
+      const recentValue = roiMetrics
+        .filter(m => new Date(m.createdAt!) > thirtyDaysAgo)
+        .reduce((sum, m) => sum + (m.value || 0), 0);
+      const previousValue = roiMetrics
+        .filter(m => new Date(m.createdAt!) > sixtyDaysAgo && new Date(m.createdAt!) <= thirtyDaysAgo)
+        .reduce((sum, m) => sum + (m.value || 0), 0);
+      
+      const valueGrowthRate = previousValue > 0 ? ((recentValue - previousValue) / previousValue) * 100 : (recentValue > 0 ? 100 : 0);
+
+      // Calculate Platform Score (0-100) based on usage and data quality
+      const dataQuality = Math.min(100, Math.round(
+        (skus.length > 0 ? 25 : 0) +
+        (materials.length > 0 ? 25 : 0) +
+        (suppliers.length > 0 ? 25 : 0) +
+        (forecasts.length > 0 ? 25 : 0)
+      ));
+
+      const featureAdoption = Math.min(100, Math.round(
+        (allocations.length > 0 ? 20 : 0) +
+        (rfqs.length > 0 ? 20 : 0) +
+        (productionMetrics.length > 0 ? 20 : 0) +
+        (roiMetrics.length > 0 ? 20 : 0) +
+        (forecasts.length > 0 ? 20 : 0)
+      ));
+
+      // Forecast accuracy score
+      const forecastAccuracy = avgMapeImprovement > 0 
+        ? Math.min(100, Math.round(100 - avgMapeImprovement)) 
+        : (forecasts.length > 0 ? 70 : 0);
+
+      const supplierCoverage = supplierCoveragePercent;
+
+      // Integration depth (based on configured features)
+      const integrationDepth = Math.min(100, Math.round(
+        (skus.length > 5 ? 20 : skus.length * 4) +
+        (materials.length > 10 ? 20 : materials.length * 2) +
+        (suppliers.length > 3 ? 20 : suppliers.length * 7) +
+        (allocations.length > 0 ? 20 : 0) +
+        (productionMetrics.length > 0 ? 20 : 0)
+      ));
+
+      const platformScore = Math.round(
+        (dataQuality * 0.25) +
+        (featureAdoption * 0.25) +
+        (forecastAccuracy * 0.2) +
+        (supplierCoverage * 0.15) +
+        (integrationDepth * 0.15)
+      );
+
+      // Value breakdown by category
+      const valueBreakdown = [
+        { category: "Procurement Savings", value: procurementSavings, percent: totalValueDelivered > 0 ? Math.round((procurementSavings / totalValueDelivered) * 100) : 0 },
+        { category: "Forecast Accuracy", value: forecastAccuracyGains, percent: totalValueDelivered > 0 ? Math.round((forecastAccuracyGains / totalValueDelivered) * 100) : 0 },
+        { category: "Risk Mitigation", value: riskMitigationValue, percent: totalValueDelivered > 0 ? Math.round((riskMitigationValue / totalValueDelivered) * 100) : 0 },
+        { category: "Time Saved", value: timeSavedDollars, percent: totalValueDelivered > 0 ? Math.round((timeSavedDollars / totalValueDelivered) * 100) : 0 },
+        { category: "Inventory Optimization", value: inventoryOptimization, percent: totalValueDelivered > 0 ? Math.round((inventoryOptimization / totalValueDelivered) * 100) : 0 },
+      ].filter(item => item.value > 0);
+
+      // Monthly value trend (last 6 months)
+      const monthlyValueTrend: { month: string; value: number }[] = [];
+      for (let i = 5; i >= 0; i--) {
+        const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
+        const monthValue = roiMetrics
+          .filter(m => {
+            const date = new Date(m.createdAt!);
+            return date >= monthStart && date <= monthEnd;
+          })
+          .reduce((sum, m) => sum + (m.value || 0), 0);
+        monthlyValueTrend.push({
+          month: monthStart.toLocaleString('default', { month: 'short' }),
+          value: monthValue
+        });
+      }
+
+      res.json({
+        totalValueDelivered,
+        procurementSavings,
+        forecastAccuracyGains,
+        riskMitigationValue,
+        timeSavedHours,
+        timeSavedDollars,
+        inventoryOptimization,
+        valueGrowthRate,
+        monthlyValueTrend,
+        valueBreakdown,
+        platformScore,
+        scoreComponents: {
+          dataQuality,
+          featureAdoption,
+          forecastAccuracy,
+          supplierCoverage,
+          integrationDepth,
+        },
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
