@@ -55,28 +55,28 @@ export default function PeerBenchmarking() {
   const [selectedMaterial, setSelectedMaterial] = useState<string | null>(null);
 
   const { data: submissions = [] } = useQuery<any[]>({
-    queryKey: ["/api/benchmarking/my-submissions"],
+    queryKey: ["/api/benchmarks/submissions"],
   });
 
   const { data: comparisons = [] } = useQuery<any[]>({
-    queryKey: ["/api/benchmarking/compare"],
+    queryKey: ["/api/benchmarks/comparisons"],
   });
 
   const { data: aggregates = [] } = useQuery<any[]>({
-    queryKey: ["/api/benchmarking/aggregates"],
+    queryKey: ["/api/benchmarks/aggregates"],
   });
 
   const submitMutation = useMutation({
     mutationFn: async (data: SubmitFormData) => {
-      return apiRequest("POST", "/api/benchmarking/submit", {
+      return apiRequest("POST", "/api/benchmarks/submit", {
         ...data,
         snapshotDate: new Date().toISOString(),
         shareConsent: data.shareConsent ? 1 : 0,
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/benchmarking/my-submissions"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/benchmarking/compare"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/benchmarks/submissions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/benchmarks/comparisons"] });
       toast({
         title: "Benchmark data submitted",
         description: "Your cost data has been added to the industry dataset.",
