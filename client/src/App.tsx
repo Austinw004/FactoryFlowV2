@@ -22,6 +22,8 @@ import SopWorkflows from "@/pages/SopWorkflows";
 import Pricing from "@/pages/Pricing";
 import Billing from "@/pages/Billing";
 import CommodityForecasts from "@/pages/CommodityForecasts";
+import ApiDocumentation from "@/pages/ApiDocumentation";
+import PlatformAnalytics from "@/pages/PlatformAnalytics";
 import { useAuth } from "@/hooks/useAuth";
 
 // Dashboard Hub routes
@@ -141,6 +143,10 @@ function Router() {
       {/* Billing & Subscription routes */}
       <Route path="/pricing" component={Pricing} />
       <Route path="/billing" component={Billing} />
+
+      {/* Developer & Integration routes */}
+      <Route path="/api-docs" component={ApiDocumentation} />
+      <Route path="/platform-analytics" component={PlatformAnalytics} />
 
       <Route component={NotFound} />
     </Switch>
