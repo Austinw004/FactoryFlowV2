@@ -12,7 +12,7 @@ import {
   Activity,
   Target
 } from "lucide-react";
-import { PlatformValueScore } from "@/components/PlatformValueScore";
+import PlatformValueScore from "@/components/PlatformValueScore";
 import {
   LineChart,
   Line,
