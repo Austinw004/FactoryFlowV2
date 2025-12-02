@@ -6480,8 +6480,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : materials.map(m => m.code).slice(0, 10); // Limit to first 10 by default
       
       // Get current regime
-      const snapshots = await storage.getEconomicSnapshots(user.companyId);
-      const latestSnapshot = snapshots[0];
+      const latestSnapshot = await storage.getLatestEconomicSnapshot(user.companyId);
       const regime = latestSnapshot?.regime || 'HEALTHY_EXPANSION';
       const fdr = latestSnapshot?.fdr || 1.0;
       
@@ -6515,8 +6514,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const materialCodes = materials.map(m => m.code).slice(0, 20);
       
       // Get current regime
-      const snapshots = await storage.getEconomicSnapshots(user.companyId);
-      const latestSnapshot = snapshots[0];
+      const latestSnapshot = await storage.getLatestEconomicSnapshot(user.companyId);
       const regime = latestSnapshot?.regime || 'HEALTHY_EXPANSION';
       const fdr = latestSnapshot?.fdr || 1.0;
       
