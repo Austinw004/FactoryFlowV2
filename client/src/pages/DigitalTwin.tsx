@@ -18,12 +18,10 @@ import { format } from "date-fns";
 import {
   Activity,
   Layers,
-  MessageSquare,
   FlaskConical,
   AlertTriangle,
   Database,
   RefreshCw,
-  Send,
   Play,
   Trash2,
   Eye,
@@ -38,10 +36,8 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  Bot,
   Sparkles,
   BarChart3,
-  Settings,
 } from "lucide-react";
 import {
   LineChart,
@@ -331,14 +327,10 @@ export default function DigitalTwin() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview" className="gap-2" data-testid="tab-overview">
             <Activity className="h-4 w-4" />
             Overview
-          </TabsTrigger>
-          <TabsTrigger value="assistant" className="gap-2" data-testid="tab-assistant">
-            <Bot className="h-4 w-4" />
-            AI Assistant
           </TabsTrigger>
           <TabsTrigger value="simulations" className="gap-2" data-testid="tab-simulations">
             <FlaskConical className="h-4 w-4" />
@@ -511,94 +503,6 @@ export default function DigitalTwin() {
                   </RadarChart>
                 </ResponsiveContainer>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="assistant" className="space-y-6 mt-6">
-          <Card className="border-purple-500/20 bg-gradient-to-br from-purple-500/5 to-background">
-            <CardHeader className="text-center pb-2">
-              <div className="mx-auto w-16 h-16 rounded-full bg-purple-500/20 flex items-center justify-center mb-4">
-                <Bot className="h-8 w-8 text-purple-500" />
-              </div>
-              <CardTitle className="text-2xl">Agentic AI Assistant</CardTitle>
-              <CardDescription className="text-base">
-                Your AI assistant has been enhanced with autonomous capabilities
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="text-center space-y-6">
-              <div className="grid gap-4 md:grid-cols-3 text-left">
-                <div className="p-4 rounded-lg bg-muted/50">
-                  <div className="flex items-center gap-2 mb-2">
-                    <MessageSquare className="h-4 w-4 text-purple-500" />
-                    <span className="font-medium text-sm">Natural Language Queries</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Ask about inventory, demand forecasts, supplier risks, and more
-                  </p>
-                </div>
-                <div className="p-4 rounded-lg bg-muted/50">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Zap className="h-4 w-4 text-purple-500" />
-                    <span className="font-medium text-sm">Autonomous Actions</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    AI can create POs, rebalance inventory, and adjust safety stock
-                  </p>
-                </div>
-                <div className="p-4 rounded-lg bg-muted/50">
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertTriangle className="h-4 w-4 text-purple-500" />
-                    <span className="font-medium text-sm">Proactive Alerts</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Get notified about regime changes, risks, and opportunities
-                  </p>
-                </div>
-              </div>
-              
-              <div className="pt-4">
-                <p className="text-sm text-muted-foreground mb-4">
-                  Access the full Agentic AI experience using the floating assistant button or visit the Agentic AI page
-                </p>
-                <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                  <Button 
-                    onClick={() => {
-                      const button = document.querySelector('[data-testid="button-ai-assistant-open"]') as HTMLButtonElement;
-                      button?.click();
-                    }}
-                    className="bg-purple-600 hover:bg-purple-700"
-                    data-testid="button-open-ai-assistant"
-                  >
-                    <Bot className="h-4 w-4 mr-2" />
-                    Open AI Assistant
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    onClick={() => window.location.href = '/agentic-ai'}
-                    data-testid="button-go-agentic-ai"
-                  >
-                    <Settings className="h-4 w-4 mr-2" />
-                    Configure Agentic AI
-                  </Button>
-                </div>
-              </div>
-
-              {queries.length > 0 && (
-                <div className="pt-6 border-t">
-                  <h3 className="text-sm font-medium mb-3 text-left">Recent Queries (Legacy)</h3>
-                  <ScrollArea className="h-48">
-                    <div className="space-y-2">
-                      {queries.slice(0, 5).map((q) => (
-                        <div key={q.id} className="p-3 rounded-lg bg-muted/50 text-left">
-                          <p className="text-sm font-medium">{q.queryText}</p>
-                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{q.responseText}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </div>
-              )}
             </CardContent>
           </Card>
         </TabsContent>

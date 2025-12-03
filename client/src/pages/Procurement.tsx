@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -21,6 +22,8 @@ import {
 import type { Supplier, Material } from "@shared/schema";
 
 export default function Procurement() {
+  const [, navigate] = useLocation();
+
   const { data: suppliers, isLoading: isLoadingSuppliers } = useQuery<Supplier[]>({
     queryKey: ["/api/suppliers"],
   });
@@ -77,9 +80,8 @@ export default function Procurement() {
 
   const signal = getProcurementSignal();
 
-  const openAIAssistant = (query?: string) => {
-    const button = document.querySelector('[data-testid="button-ai-assistant-open"]') as HTMLButtonElement;
-    button?.click();
+  const goToAgenticAI = () => {
+    navigate("/agentic-ai");
   };
 
   const getLowStockMaterials = () => {
@@ -153,7 +155,7 @@ export default function Procurement() {
           </p>
         </div>
         <Button
-          onClick={() => openAIAssistant()}
+          onClick={() => goToAgenticAI()}
           className="bg-purple-600 hover:bg-purple-700"
           data-testid="button-procurement-ai-assistant"
         >
@@ -245,7 +247,7 @@ export default function Procurement() {
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  onClick={() => openAIAssistant()}
+                  onClick={() => goToAgenticAI()}
                   data-testid={`button-recommendation-action-${index}`}
                 >
                   <ArrowRight className="h-4 w-4" />
@@ -256,7 +258,7 @@ export default function Procurement() {
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => openAIAssistant()}
+                onClick={() => goToAgenticAI()}
                 data-testid="button-get-more-insights"
               >
                 <Bot className="h-4 w-4 mr-2" />
