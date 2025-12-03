@@ -11296,7 +11296,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get current economic data for context
-      const indicatorData = await economics.getIndicators();
+      await economics.fetch();
+      const currentRegime = economics.regime;
+      const currentFdr = economics.fdr;
 
       const pendingActions = [
         {
@@ -11327,8 +11329,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             confidence: 0.92,
             reasoning: "Current price is 5% below 30-day average. Ordering now saves $2,400 vs. projected prices.",
           },
-          economicRegime: indicatorData.regime || "HEALTHY",
-          fdrValue: indicatorData.fdr || 1.0,
+          economicRegime: currentRegime || "HEALTHY_EXPANSION",
+          fdrValue: currentFdr || 1.0,
           approvalDeadline: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
           createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
         },
@@ -11357,8 +11359,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             confidence: 0.88,
             reasoning: "Demand patterns show West region surge. Rebalancing prevents $4,200 in expedited shipping costs.",
           },
-          economicRegime: indicatorData.regime || "HEALTHY",
-          fdrValue: indicatorData.fdr || 1.0,
+          economicRegime: currentRegime || "HEALTHY_EXPANSION",
+          fdrValue: currentFdr || 1.0,
           approvalDeadline: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
           createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
         },
@@ -11612,8 +11614,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const companyId = req.user.companyId;
 
       // Get current economic context
-      const indicatorData = await economics.getIndicators();
-      const currentRegime = indicatorData.regime || "HEALTHY";
+      await economics.fetch();
+      const currentRegime = economics.regime || "HEALTHY_EXPANSION";
 
       // Analyze message intent for agentic actions
       const lowerMessage = message.toLowerCase();
@@ -11621,17 +11623,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let responseText = "";
       let canAutoExecute = false;
 
-      if (lowerMessage.includes("create") && (lowerMessage.includes("po") || lowerMessage.includes("order"))) {
+      if (lowerMessage.includes("create") && (lowerMessage.includes("po") || lowerMessage.includes("order") || lowerMessage.includes("purchase"))) {
         suggestedActions.push({
+          id: `action_create_po_${Date.now()}`,
           type: "create_po",
           label: "Create Purchase Order",
-          description: "I can draft a purchase order for you. Which material do you need?",
+          description: "Draft a purchase order for low-stock materials",
           requiresApproval: true,
           confidence: 0.85,
         });
         responseText = "I can help you create a purchase order. Based on current inventory levels and the economic regime (" + currentRegime + "), I recommend reviewing low-stock items first. Would you like me to identify materials that need reordering?";
       } else if (lowerMessage.includes("rebalance") || lowerMessage.includes("redistribute")) {
         suggestedActions.push({
+          id: `action_rebalance_${Date.now()}`,
           type: "rebalance_inventory",
           label: "Rebalance Inventory",
           description: "Analyze and optimize inventory distribution across locations",
@@ -11641,6 +11645,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         responseText = "I can analyze your inventory distribution and suggest optimal rebalancing. This typically saves 10-15% on expedited shipping costs. Should I run the analysis?";
       } else if (lowerMessage.includes("adjust") && lowerMessage.includes("safety stock")) {
         suggestedActions.push({
+          id: `action_safety_stock_${Date.now()}`,
           type: "adjust_safety_stock",
           label: "Adjust Safety Stock",
           description: "Modify safety stock levels based on regime and forecast",
@@ -11651,6 +11656,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         responseText = `Given the current ${currentRegime} regime, I recommend adjusting safety stock levels. Should I automatically apply the regime-based multipliers, or would you prefer to review each SKU individually?`;
       } else if (lowerMessage.includes("risk") || lowerMessage.includes("supplier")) {
         suggestedActions.push({
+          id: `action_risk_${Date.now()}`,
           type: "assess_supplier_risk",
           label: "Assess Supplier Risk",
           description: "Run comprehensive supplier risk analysis",
@@ -11668,7 +11674,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         canAutoExecute,
         context: {
           regime: currentRegime,
-          fdr: indicatorData.fdr,
+          fdr: economics.fdr,
           timestamp: new Date().toISOString(),
         },
       });
