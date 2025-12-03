@@ -4573,6 +4573,390 @@ export const digitalTwinMetrics = pgTable("digital_twin_metrics", {
   index("dt_metrics_category_idx").on(table.metricCategory),
 ]);
 
+// ============================================================================
+// AGENTIC AI SYSTEM - Autonomous Actions & Intelligent Automation
+// ============================================================================
+
+// AI Agent Profiles - Different AI agents with specific capabilities
+export const aiAgents = pgTable("ai_agents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  
+  // Agent identity
+  name: text("name").notNull(), // "Procurement Agent", "Inventory Agent", etc.
+  description: text("description"),
+  agentType: text("agent_type").notNull(), // "procurement", "inventory", "forecasting", "supplier", "production", "custom"
+  avatar: text("avatar"), // Icon/image for the agent
+  
+  // Capabilities & permissions
+  capabilities: text("capabilities").array(), // ["create_po", "adjust_inventory", "send_rfq", "rebalance_stock"]
+  maxAutonomyLevel: text("max_autonomy_level").default("suggest"), // "suggest", "auto_draft", "auto_execute", "full_autonomous"
+  
+  // Activation
+  isEnabled: integer("is_enabled").default(1),
+  priority: integer("priority").default(50), // 1-100, higher = more important
+  
+  // Learning & adaptation
+  learningEnabled: integer("learning_enabled").default(1),
+  confidenceThreshold: real("confidence_threshold").default(0.75), // Min confidence to take action
+  
+  // Limits
+  dailyActionLimit: integer("daily_action_limit").default(100),
+  dailyValueLimit: real("daily_value_limit"), // Max $ value of actions per day
+  
+  // Scheduling
+  activeHoursStart: text("active_hours_start").default("08:00"),
+  activeHoursEnd: text("active_hours_end").default("18:00"),
+  activeDays: text("active_days").array().default(sql`ARRAY['monday','tuesday','wednesday','thursday','friday']`),
+  timezone: text("timezone").default("America/New_York"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("ai_agents_company_idx").on(table.companyId),
+  index("ai_agents_type_idx").on(table.agentType),
+]);
+
+// AI Automation Rules - Configurable triggers and conditions
+export const aiAutomationRules = pgTable("ai_automation_rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  agentId: varchar("agent_id").references(() => aiAgents.id, { onDelete: "cascade" }),
+  
+  // Rule identification
+  name: text("name").notNull(),
+  description: text("description"),
+  category: text("category").notNull(), // "procurement", "inventory", "safety_stock", "reorder", "supplier", "budget", "regime"
+  
+  // Trigger conditions (when to fire)
+  triggerType: text("trigger_type").notNull(), // "threshold", "schedule", "event", "regime_change", "forecast", "compound"
+  triggerConditions: jsonb("trigger_conditions").notNull(),
+  /*
+    Examples:
+    { type: "threshold", metric: "inventory_level", operator: "<", value: 100, materialId: "MAT-001" }
+    { type: "schedule", cron: "0 8 * * MON", timezone: "America/New_York" }
+    { type: "event", eventType: "price_spike", threshold: 0.15 }
+    { type: "regime_change", fromRegime: "any", toRegime: "IMBALANCED_EXCESS" }
+    { type: "compound", logic: "AND", conditions: [...] }
+  */
+  
+  // Action to take when triggered
+  actionType: text("action_type").notNull(), // "create_po", "adjust_safety_stock", "rebalance_inventory", "send_alert", "generate_rfq", "pause_orders", "escalate"
+  actionConfig: jsonb("action_config").notNull(),
+  /*
+    Examples:
+    { type: "create_po", materialId: "MAT-001", quantity: "auto_calculate", supplierId: "preferred", urgency: "normal" }
+    { type: "adjust_safety_stock", skuIds: ["all"], adjustmentPercent: 15, direction: "increase" }
+    { type: "rebalance_inventory", fromLocations: ["WAREHOUSE-A"], toLocations: ["WAREHOUSE-B"], targetBalance: "equal" }
+    { type: "send_alert", channels: ["email", "in_app"], recipients: ["procurement_managers"], template: "low_stock" }
+  */
+  
+  // Execution settings
+  autonomyLevel: text("autonomy_level").default("suggest"), // "suggest", "auto_draft", "auto_execute"
+  requiresApproval: integer("requires_approval").default(1),
+  approverRoles: text("approver_roles").array(), // ["procurement_manager", "finance_director"]
+  approvalTimeout: integer("approval_timeout").default(24), // Hours before auto-escalation
+  
+  // Guardrails & limits
+  maxExecutionsPerDay: integer("max_executions_per_day").default(10),
+  maxValuePerExecution: real("max_value_per_execution"), // Max $ value
+  cooldownMinutes: integer("cooldown_minutes").default(60), // Min time between executions
+  
+  // Regime-aware behavior
+  regimeOverrides: jsonb("regime_overrides"),
+  /*
+    {
+      "BUBBLE": { enabled: false },
+      "IMBALANCED_EXCESS": { adjustmentMultiplier: 1.5 },
+      "HEALTHY": { enabled: true }
+    }
+  */
+  
+  // Status
+  isEnabled: integer("is_enabled").default(1),
+  priority: integer("priority").default(50),
+  
+  // Metrics
+  executionCount: integer("execution_count").default(0),
+  lastExecutedAt: timestamp("last_executed_at"),
+  successRate: real("success_rate"),
+  avgSavings: real("avg_savings"), // Average $ saved per execution
+  
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("ai_rules_company_idx").on(table.companyId),
+  index("ai_rules_agent_idx").on(table.agentId),
+  index("ai_rules_category_idx").on(table.category),
+  index("ai_rules_enabled_idx").on(table.isEnabled),
+]);
+
+// AI Actions - Log of all actions taken or suggested by AI agents
+export const aiActions = pgTable("ai_actions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  agentId: varchar("agent_id").references(() => aiAgents.id),
+  ruleId: varchar("rule_id").references(() => aiAutomationRules.id),
+  
+  // Action details
+  actionType: text("action_type").notNull(), // Same as rule actionType
+  actionPayload: jsonb("action_payload").notNull(), // Full action details
+  
+  // Context when action was triggered
+  triggerContext: jsonb("trigger_context"), // What triggered this action
+  economicRegime: text("economic_regime"), // Regime at time of action
+  fdrValue: real("fdr_value"), // FDR at time of action
+  
+  // Execution status
+  status: text("status").default("pending"), // "pending", "awaiting_approval", "approved", "rejected", "executing", "completed", "failed", "cancelled"
+  
+  // Impact assessment
+  estimatedImpact: jsonb("estimated_impact"),
+  /*
+    {
+      costSavings: 5000,
+      riskReduction: 0.15,
+      efficiencyGain: 0.08,
+      affectedItems: 12,
+      confidence: 0.85
+    }
+  */
+  
+  // Approval workflow
+  requiresApproval: integer("requires_approval").default(1),
+  approvalDeadline: timestamp("approval_deadline"),
+  approvedBy: varchar("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  rejectedBy: varchar("rejected_by").references(() => users.id),
+  rejectedAt: timestamp("rejected_at"),
+  rejectionReason: text("rejection_reason"),
+  
+  // Execution results
+  executedAt: timestamp("executed_at"),
+  executionResult: jsonb("execution_result"),
+  actualImpact: jsonb("actual_impact"), // Measured after execution
+  errorMessage: text("error_message"),
+  
+  // Related entities
+  relatedEntityType: text("related_entity_type"), // "purchase_order", "inventory_transfer", "rfq", etc.
+  relatedEntityId: varchar("related_entity_id"),
+  
+  // User feedback
+  feedbackRating: integer("feedback_rating"), // 1-5
+  feedbackComment: text("feedback_comment"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("ai_actions_company_idx").on(table.companyId),
+  index("ai_actions_agent_idx").on(table.agentId),
+  index("ai_actions_rule_idx").on(table.ruleId),
+  index("ai_actions_status_idx").on(table.status),
+  index("ai_actions_created_idx").on(table.createdAt),
+  index("ai_actions_type_idx").on(table.actionType),
+]);
+
+// AI Approval Workflows - Multi-step approval chains
+export const aiApprovalWorkflows = pgTable("ai_approval_workflows", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  
+  // Workflow identity
+  name: text("name").notNull(),
+  description: text("description"),
+  
+  // When to use this workflow
+  actionTypes: text("action_types").array(), // Which action types use this workflow
+  minValue: real("min_value"), // Minimum $ value to require this workflow
+  maxValue: real("max_value"), // Maximum $ value (higher values may need different workflow)
+  
+  // Approval steps
+  steps: jsonb("steps").notNull(),
+  /*
+    [
+      { order: 1, role: "procurement_manager", required: true, timeout: 4 },
+      { order: 2, role: "finance_director", required: true, timeout: 24, minValue: 10000 },
+      { order: 3, role: "ceo", required: false, timeout: 48, minValue: 50000 }
+    ]
+  */
+  
+  // Escalation
+  escalationPolicy: jsonb("escalation_policy"),
+  autoApproveOnTimeout: integer("auto_approve_on_timeout").default(0),
+  
+  isEnabled: integer("is_enabled").default(1),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("ai_approval_workflows_company_idx").on(table.companyId),
+]);
+
+// AI Agent Learning - Track agent learning and improvement
+export const aiAgentLearning = pgTable("ai_agent_learning", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  agentId: varchar("agent_id").notNull().references(() => aiAgents.id, { onDelete: "cascade" }),
+  
+  // Learning event
+  learningType: text("learning_type").notNull(), // "action_feedback", "prediction_accuracy", "user_correction", "pattern_detection"
+  
+  // What was learned
+  insight: text("insight").notNull(),
+  context: jsonb("context"), // Contextual data
+  
+  // Impact on behavior
+  confidenceAdjustment: real("confidence_adjustment"), // How much to adjust confidence
+  behaviorChange: jsonb("behavior_change"), // Changes to make
+  
+  // Source
+  sourceActionId: varchar("source_action_id").references(() => aiActions.id),
+  sourceUserId: varchar("source_user_id").references(() => users.id),
+  
+  appliedAt: timestamp("applied_at"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("ai_learning_company_idx").on(table.companyId),
+  index("ai_learning_agent_idx").on(table.agentId),
+]);
+
+// AI Guardrails - Safety limits and constraints
+export const aiGuardrails = pgTable("ai_guardrails", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  
+  // Guardrail identification
+  name: text("name").notNull(),
+  description: text("description"),
+  guardrailType: text("guardrail_type").notNull(), // "spending_limit", "quantity_limit", "time_restriction", "supplier_restriction", "approval_requirement", "escalation"
+  
+  // Scope
+  appliesToAgents: text("applies_to_agents").array(), // Agent IDs or ["all"]
+  appliesToActionTypes: text("applies_to_action_types").array(),
+  
+  // Conditions
+  conditions: jsonb("conditions").notNull(),
+  /*
+    Examples:
+    { type: "spending_limit", period: "daily", limit: 50000 }
+    { type: "quantity_limit", material: "all", maxQuantity: 1000 }
+    { type: "time_restriction", blockedHours: ["00:00-06:00"], blockedDays: ["saturday", "sunday"] }
+    { type: "supplier_restriction", allowedSuppliers: ["SUP-001", "SUP-002"] }
+    { type: "regime_restriction", blockedRegimes: ["BUBBLE", "IMBALANCED_DEFICIT"] }
+  */
+  
+  // Enforcement
+  enforcementLevel: text("enforcement_level").default("hard"), // "soft" (warn), "hard" (block), "escalate"
+  
+  // Violation handling
+  onViolation: text("on_violation").default("block"), // "block", "warn", "escalate", "require_approval"
+  notifyOnViolation: text("notify_on_violation").array(), // User IDs or roles
+  
+  isEnabled: integer("is_enabled").default(1),
+  priority: integer("priority").default(50),
+  
+  // Metrics
+  violationCount: integer("violation_count").default(0),
+  lastViolationAt: timestamp("last_violation_at"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("ai_guardrails_company_idx").on(table.companyId),
+  index("ai_guardrails_type_idx").on(table.guardrailType),
+]);
+
+// AI Execution Queue - Pending and scheduled actions
+export const aiExecutionQueue = pgTable("ai_execution_queue", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  actionId: varchar("action_id").notNull().references(() => aiActions.id, { onDelete: "cascade" }),
+  
+  // Scheduling
+  scheduledFor: timestamp("scheduled_for").notNull(),
+  priority: integer("priority").default(50),
+  
+  // Status
+  status: text("status").default("queued"), // "queued", "processing", "completed", "failed", "cancelled"
+  attempts: integer("attempts").default(0),
+  maxAttempts: integer("max_attempts").default(3),
+  lastAttemptAt: timestamp("last_attempt_at"),
+  
+  // Results
+  completedAt: timestamp("completed_at"),
+  errorMessage: text("error_message"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("ai_queue_company_idx").on(table.companyId),
+  index("ai_queue_scheduled_idx").on(table.scheduledFor),
+  index("ai_queue_status_idx").on(table.status),
+]);
+
+// AI Performance Metrics - Track agent and rule performance
+export const aiPerformanceMetrics = pgTable("ai_performance_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  agentId: varchar("agent_id").references(() => aiAgents.id),
+  ruleId: varchar("rule_id").references(() => aiAutomationRules.id),
+  
+  // Time period
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  granularity: text("granularity").notNull(), // "hourly", "daily", "weekly", "monthly"
+  
+  // Action metrics
+  actionsTriggered: integer("actions_triggered").default(0),
+  actionsApproved: integer("actions_approved").default(0),
+  actionsRejected: integer("actions_rejected").default(0),
+  actionsExecuted: integer("actions_executed").default(0),
+  actionsFailed: integer("actions_failed").default(0),
+  
+  // Impact metrics
+  totalCostSavings: real("total_cost_savings").default(0),
+  totalRiskReduction: real("total_risk_reduction").default(0),
+  totalEfficiencyGain: real("total_efficiency_gain").default(0),
+  
+  // Quality metrics
+  avgConfidenceScore: real("avg_confidence_score"),
+  avgUserRating: real("avg_user_rating"),
+  falsePositiveRate: real("false_positive_rate"),
+  
+  // Timing metrics
+  avgApprovalTime: real("avg_approval_time"), // Hours
+  avgExecutionTime: real("avg_execution_time"), // Seconds
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("ai_metrics_company_idx").on(table.companyId),
+  index("ai_metrics_agent_idx").on(table.agentId),
+  index("ai_metrics_period_idx").on(table.periodStart),
+]);
+
+// AI Agent Schemas
+export const insertAiAgentSchema = createInsertSchema(aiAgents).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertAiAutomationRuleSchema = createInsertSchema(aiAutomationRules).omit({ id: true, createdAt: true, updatedAt: true, executionCount: true, lastExecutedAt: true, successRate: true, avgSavings: true });
+export const insertAiActionSchema = createInsertSchema(aiActions).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertAiApprovalWorkflowSchema = createInsertSchema(aiApprovalWorkflows).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertAiGuardrailSchema = createInsertSchema(aiGuardrails).omit({ id: true, createdAt: true, updatedAt: true, violationCount: true, lastViolationAt: true });
+
+// AI Agent Types
+export type AiAgent = typeof aiAgents.$inferSelect;
+export type InsertAiAgent = z.infer<typeof insertAiAgentSchema>;
+export type AiAutomationRule = typeof aiAutomationRules.$inferSelect;
+export type InsertAiAutomationRule = z.infer<typeof insertAiAutomationRuleSchema>;
+export type AiAction = typeof aiActions.$inferSelect;
+export type InsertAiAction = z.infer<typeof insertAiActionSchema>;
+export type AiApprovalWorkflow = typeof aiApprovalWorkflows.$inferSelect;
+export type InsertAiApprovalWorkflow = z.infer<typeof insertAiApprovalWorkflowSchema>;
+export type AiGuardrail = typeof aiGuardrails.$inferSelect;
+export type InsertAiGuardrail = z.infer<typeof insertAiGuardrailSchema>;
+export type AiAgentLearning = typeof aiAgentLearning.$inferSelect;
+export type AiExecutionQueue = typeof aiExecutionQueue.$inferSelect;
+export type AiPerformanceMetric = typeof aiPerformanceMetrics.$inferSelect;
+
 // Digital Twin Schemas
 export const insertDigitalTwinDataFeedSchema = createInsertSchema(digitalTwinDataFeeds).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertDigitalTwinSnapshotSchema = createInsertSchema(digitalTwinSnapshots).omit({ id: true, createdAt: true });

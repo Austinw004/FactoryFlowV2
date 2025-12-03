@@ -24,6 +24,7 @@ import Billing from "@/pages/Billing";
 import CommodityForecasts from "@/pages/CommodityForecasts";
 import ApiDocumentation from "@/pages/ApiDocumentation";
 import PlatformAnalytics from "@/pages/PlatformAnalytics";
+import AgenticAI from "@/pages/AgenticAI";
 import { useAuth } from "@/hooks/useAuth";
 
 // Dashboard Hub routes
@@ -147,6 +148,9 @@ function Router() {
       {/* Developer & Integration routes */}
       <Route path="/api-docs" component={ApiDocumentation} />
       <Route path="/platform-analytics" component={PlatformAnalytics} />
+      
+      {/* Agentic AI route */}
+      <Route path="/agentic-ai" component={AgenticAI} />
 
       <Route component={NotFound} />
     </Switch>

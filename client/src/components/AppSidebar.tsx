@@ -8,6 +8,7 @@ import {
   Network,
   Lightbulb,
   Eye,
+  Bot,
 } from "lucide-react";
 import {
   Sidebar,
@@ -58,6 +59,12 @@ const mainMenuItems = [
     url: "/operations",
     icon: Wrench,
     testId: "sidebar-operations",
+  },
+  {
+    title: "Agentic AI",
+    url: "/agentic-ai",
+    icon: Bot,
+    testId: "sidebar-agentic-ai",
   },
 ];
 
