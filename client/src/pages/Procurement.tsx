@@ -3,7 +3,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, AlertCircle, TrendingDown, TrendingUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { 
+  ShoppingCart, 
+  AlertCircle, 
+  TrendingDown, 
+  TrendingUp, 
+  Bot, 
+  Sparkles, 
+  AlertTriangle,
+  CheckCircle2,
+  ArrowRight,
+  Zap,
+  Package,
+  BarChart2,
+} from "lucide-react";
 import type { Supplier, Material } from "@shared/schema";
 
 export default function Procurement() {
@@ -63,16 +77,195 @@ export default function Procurement() {
 
   const signal = getProcurementSignal();
 
+  const openAIAssistant = (query?: string) => {
+    const button = document.querySelector('[data-testid="button-ai-assistant-open"]') as HTMLButtonElement;
+    button?.click();
+  };
+
+  const getLowStockMaterials = () => {
+    if (!materials) return [];
+    return materials.filter(m => {
+      const safetyLevel = 10;
+      return m.onHand < safetyLevel;
+    });
+  };
+
+  const getAIRecommendations = () => {
+    const lowStock = getLowStockMaterials();
+    const recommendations: Array<{
+      type: 'warning' | 'opportunity' | 'action';
+      title: string;
+      description: string;
+      priority: 'high' | 'medium' | 'low';
+    }> = [];
+
+    if (lowStock.length > 0) {
+      recommendations.push({
+        type: 'warning',
+        title: `${lowStock.length} materials below safety stock`,
+        description: `Consider reordering ${lowStock.map(m => m.name).slice(0, 3).join(', ')}${lowStock.length > 3 ? ` and ${lowStock.length - 3} more` : ''}`,
+        priority: 'high',
+      });
+    }
+
+    if (signal?.action === 'Buy') {
+      recommendations.push({
+        type: 'opportunity',
+        title: 'Favorable buying conditions',
+        description: 'Market conditions suggest good timing for bulk procurement to lock in lower prices',
+        priority: 'medium',
+      });
+    }
+
+    if (signal?.action === 'Hold') {
+      recommendations.push({
+        type: 'action',
+        title: 'Defer non-critical orders',
+        description: 'High market divergence detected. Consider postponing non-essential procurement',
+        priority: 'high',
+      });
+    }
+
+    if (suppliers && suppliers.length < 3) {
+      recommendations.push({
+        type: 'warning',
+        title: 'Low supplier diversification',
+        description: 'Consider adding more suppliers to reduce supply chain risk',
+        priority: 'medium',
+      });
+    }
+
+    return recommendations;
+  };
+
+  const recommendations = getAIRecommendations();
+  const lowStockMaterials = getLowStockMaterials();
+
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold" data-testid="heading-procurement">
-          Procurement Management
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Counter-cyclical procurement strategy based on economic indicators
-        </p>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold" data-testid="heading-procurement">
+            Procurement Management
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Counter-cyclical procurement strategy based on economic indicators
+          </p>
+        </div>
+        <Button
+          onClick={() => openAIAssistant()}
+          className="bg-purple-600 hover:bg-purple-700"
+          data-testid="button-procurement-ai-assistant"
+        >
+          <Bot className="h-4 w-4 mr-2" />
+          Ask AI About Procurement
+        </Button>
       </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card data-testid="card-total-materials">
+          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Materials</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{materials?.length || 0}</div>
+            <p className="text-xs text-muted-foreground">Tracked in system</p>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-low-stock-count">
+          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Low Stock</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-yellow-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{lowStockMaterials.length}</div>
+            <p className="text-xs text-muted-foreground">Below safety stock</p>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-active-suppliers">
+          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Suppliers</CardTitle>
+            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{suppliers?.length || 0}</div>
+            <p className="text-xs text-muted-foreground">In network</p>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-market-signal">
+          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Market Signal</CardTitle>
+            <BarChart2 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <Badge variant={signal?.variant || 'secondary'} data-testid="badge-market-signal">
+                {signal?.action || 'Unknown'}
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">FDR: {regime?.fdr?.toFixed(2) || 'N/A'}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {recommendations.length > 0 && (
+        <Card className="border-purple-500/20 bg-gradient-to-r from-purple-500/5 to-background" data-testid="card-ai-recommendations">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-purple-500" />
+              AI Procurement Insights
+            </CardTitle>
+            <CardDescription>
+              Recommendations based on current inventory levels and market conditions
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {recommendations.map((rec, index) => (
+              <div 
+                key={index} 
+                className="flex items-start gap-3 p-3 rounded-lg bg-muted/50"
+                data-testid={`recommendation-${index}`}
+              >
+                {rec.type === 'warning' && <AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5" />}
+                {rec.type === 'opportunity' && <Zap className="h-5 w-5 text-green-500 mt-0.5" />}
+                {rec.type === 'action' && <CheckCircle2 className="h-5 w-5 text-blue-500 mt-0.5" />}
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-sm">{rec.title}</span>
+                    <Badge variant="outline" className="text-xs">
+                      {rec.priority}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">{rec.description}</p>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => openAIAssistant()}
+                  data-testid={`button-recommendation-action-${index}`}
+                >
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+            <div className="pt-2 text-center">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => openAIAssistant()}
+                data-testid="button-get-more-insights"
+              >
+                <Bot className="h-4 w-4 mr-2" />
+                Get More AI Insights
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {signal && (
         <Card data-testid="card-procurement-signal">
