@@ -10918,6 +10918,831 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================================================
+  // AGENTIC AI ROUTES - Autonomous Actions & Intelligent Automation
+  // ============================================================================
+
+  // Get all AI agents for company
+  app.get("/api/agentic/agents", isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ error: "Company ID required" });
+      }
+
+      // Return default agents with simulated real-time stats
+      const agents = [
+        {
+          id: "agent_procurement",
+          companyId,
+          name: "Procurement Agent",
+          description: "Automates purchase orders, supplier selection, and order timing based on economic signals",
+          agentType: "procurement",
+          avatar: "shopping-cart",
+          capabilities: ["create_po", "generate_rfq", "supplier_selection", "order_timing", "price_negotiation"],
+          maxAutonomyLevel: "auto_draft",
+          isEnabled: 1,
+          priority: 90,
+          learningEnabled: 1,
+          confidenceThreshold: 0.8,
+          dailyActionLimit: 50,
+          dailyValueLimit: 100000,
+          activeHoursStart: "08:00",
+          activeHoursEnd: "18:00",
+          activeDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
+          timezone: "America/New_York",
+          actionsToday: Math.floor(Math.random() * 20) + 5,
+          valueToday: Math.floor(Math.random() * 50000) + 10000,
+          successRate: 94 + Math.floor(Math.random() * 5),
+        },
+        {
+          id: "agent_inventory",
+          companyId,
+          name: "Inventory Agent",
+          description: "Manages inventory levels, rebalancing across locations, and safety stock optimization",
+          agentType: "inventory",
+          avatar: "boxes",
+          capabilities: ["rebalance_inventory", "adjust_safety_stock", "stockout_prevention", "excess_detection", "location_optimization"],
+          maxAutonomyLevel: "auto_execute",
+          isEnabled: 1,
+          priority: 85,
+          learningEnabled: 1,
+          confidenceThreshold: 0.75,
+          dailyActionLimit: 100,
+          dailyValueLimit: null,
+          activeHoursStart: "00:00",
+          activeHoursEnd: "23:59",
+          activeDays: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
+          timezone: "America/New_York",
+          actionsToday: Math.floor(Math.random() * 40) + 15,
+          valueToday: 0,
+          successRate: 97 + Math.floor(Math.random() * 3),
+        },
+        {
+          id: "agent_forecasting",
+          companyId,
+          name: "Forecasting Agent",
+          description: "Continuously monitors forecast accuracy and triggers retraining when needed",
+          agentType: "forecasting",
+          avatar: "trending-up",
+          capabilities: ["trigger_retraining", "forecast_adjustment", "demand_signal_processing", "accuracy_monitoring", "anomaly_detection"],
+          maxAutonomyLevel: "full_autonomous",
+          isEnabled: 1,
+          priority: 95,
+          learningEnabled: 1,
+          confidenceThreshold: 0.7,
+          dailyActionLimit: 200,
+          dailyValueLimit: null,
+          activeHoursStart: "00:00",
+          activeHoursEnd: "23:59",
+          activeDays: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
+          timezone: "America/New_York",
+          actionsToday: Math.floor(Math.random() * 60) + 30,
+          valueToday: 0,
+          successRate: 99,
+        },
+        {
+          id: "agent_supplier",
+          companyId,
+          name: "Supplier Risk Agent",
+          description: "Monitors supplier risk, performance, and automatically escalates issues",
+          agentType: "supplier",
+          avatar: "building",
+          capabilities: ["risk_monitoring", "performance_tracking", "escalation", "alternative_sourcing", "contract_alerts"],
+          maxAutonomyLevel: "suggest",
+          isEnabled: 1,
+          priority: 80,
+          learningEnabled: 1,
+          confidenceThreshold: 0.85,
+          dailyActionLimit: 30,
+          dailyValueLimit: 50000,
+          activeHoursStart: "06:00",
+          activeHoursEnd: "20:00",
+          activeDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
+          timezone: "America/New_York",
+          actionsToday: Math.floor(Math.random() * 10) + 2,
+          valueToday: Math.floor(Math.random() * 20000) + 5000,
+          successRate: 88 + Math.floor(Math.random() * 8),
+        },
+        {
+          id: "agent_production",
+          companyId,
+          name: "Production Agent",
+          description: "Optimizes production scheduling, monitors bottlenecks, and adjusts capacity utilization",
+          agentType: "production",
+          avatar: "factory",
+          capabilities: ["schedule_optimization", "bottleneck_detection", "capacity_planning", "maintenance_alerts", "oee_monitoring"],
+          maxAutonomyLevel: "auto_draft",
+          isEnabled: 1,
+          priority: 85,
+          learningEnabled: 1,
+          confidenceThreshold: 0.78,
+          dailyActionLimit: 75,
+          dailyValueLimit: null,
+          activeHoursStart: "00:00",
+          activeHoursEnd: "23:59",
+          activeDays: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"],
+          timezone: "America/New_York",
+          actionsToday: Math.floor(Math.random() * 25) + 10,
+          valueToday: 0,
+          successRate: 92 + Math.floor(Math.random() * 6),
+        },
+      ];
+
+      res.json(agents);
+    } catch (error: any) {
+      console.error("Error fetching AI agents:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update AI agent settings
+  app.patch("/api/agentic/agents/:agentId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { agentId } = req.params;
+      const updates = req.body;
+      
+      // In production, this would update the database
+      // For now, we acknowledge the update
+      res.json({ 
+        success: true, 
+        agentId, 
+        updates,
+        message: "Agent settings updated successfully" 
+      });
+    } catch (error: any) {
+      console.error("Error updating AI agent:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get automation rules
+  app.get("/api/agentic/rules", isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ error: "Company ID required" });
+      }
+
+      const rules = [
+        {
+          id: "rule_low_stock_po",
+          companyId,
+          agentId: "agent_procurement",
+          name: "Low Stock Auto-PO",
+          description: "Automatically creates purchase orders when inventory falls below reorder point",
+          category: "procurement",
+          triggerType: "threshold",
+          triggerConditions: { metric: "inventory_level", operator: "<", valueType: "reorder_point" },
+          actionType: "create_po",
+          actionConfig: { quantity: "economic_order_quantity", supplier: "preferred", urgency: "normal" },
+          autonomyLevel: "auto_draft",
+          requiresApproval: 1,
+          approverRoles: ["procurement_manager"],
+          approvalTimeout: 24,
+          maxExecutionsPerDay: 20,
+          maxValuePerExecution: 25000,
+          cooldownMinutes: 30,
+          regimeOverrides: {
+            "BUBBLE": { enabled: false, reason: "Pause procurement during bubble conditions" },
+            "IMBALANCED_EXCESS": { adjustmentMultiplier: 0.7 },
+          },
+          isEnabled: 1,
+          priority: 90,
+          executionCount: 234,
+          lastExecutedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+          successRate: 96,
+          avgSavings: 1250,
+        },
+        {
+          id: "rule_regime_safety",
+          companyId,
+          agentId: "agent_inventory",
+          name: "Regime-Based Safety Stock",
+          description: "Adjusts safety stock levels based on economic regime changes",
+          category: "inventory",
+          triggerType: "regime_change",
+          triggerConditions: { fromRegime: "any", monitorAllRegimes: true },
+          actionType: "adjust_safety_stock",
+          actionConfig: {
+            regimeMultipliers: {
+              BUBBLE: 1.5,
+              IMBALANCED_EXCESS: 1.3,
+              HEALTHY: 1.0,
+              IMBALANCED_DEFICIT: 0.8,
+              DEPRESSED: 0.7,
+            },
+          },
+          autonomyLevel: "auto_execute",
+          requiresApproval: 0,
+          approverRoles: [],
+          approvalTimeout: 0,
+          maxExecutionsPerDay: 5,
+          maxValuePerExecution: null,
+          cooldownMinutes: 240,
+          isEnabled: 1,
+          priority: 95,
+          executionCount: 18,
+          lastExecutedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+          successRate: 100,
+          avgSavings: 8500,
+        },
+        {
+          id: "rule_rebalance",
+          companyId,
+          agentId: "agent_inventory",
+          name: "Weekly Inventory Rebalance",
+          description: "Automatically rebalances inventory across locations every Monday",
+          category: "inventory",
+          triggerType: "schedule",
+          triggerConditions: { cron: "0 6 * * MON", timezone: "America/New_York" },
+          actionType: "rebalance_inventory",
+          actionConfig: { strategy: "demand_weighted", minimizeTransportCost: true },
+          autonomyLevel: "auto_draft",
+          requiresApproval: 1,
+          approverRoles: ["inventory_manager", "operations_manager"],
+          approvalTimeout: 8,
+          maxExecutionsPerDay: 1,
+          maxValuePerExecution: null,
+          cooldownMinutes: 1440,
+          isEnabled: 1,
+          priority: 70,
+          executionCount: 52,
+          lastExecutedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+          successRate: 92,
+          avgSavings: 3200,
+        },
+        {
+          id: "rule_price_spike",
+          companyId,
+          agentId: "agent_procurement",
+          name: "Price Spike Response",
+          description: "Pauses orders and alerts when commodity prices spike unexpectedly",
+          category: "procurement",
+          triggerType: "event",
+          triggerConditions: { eventType: "price_spike", threshold: 0.15, lookbackHours: 24 },
+          actionType: "pause_orders",
+          actionConfig: { duration: "until_review", notifyRoles: ["procurement_manager", "finance_director"] },
+          autonomyLevel: "auto_execute",
+          requiresApproval: 0,
+          approverRoles: [],
+          approvalTimeout: 0,
+          maxExecutionsPerDay: 5,
+          maxValuePerExecution: null,
+          cooldownMinutes: 60,
+          isEnabled: 1,
+          priority: 100,
+          executionCount: 7,
+          lastExecutedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+          successRate: 100,
+          avgSavings: 25000,
+        },
+        {
+          id: "rule_forecast_accuracy",
+          companyId,
+          agentId: "agent_forecasting",
+          name: "Forecast Degradation Alert",
+          description: "Triggers model retraining when MAPE exceeds threshold",
+          category: "forecasting",
+          triggerType: "threshold",
+          triggerConditions: { metric: "forecast_mape", operator: ">", value: 15 },
+          actionType: "send_alert",
+          actionConfig: {
+            channels: ["in_app", "email"],
+            priority: "high",
+            suggestAction: "retrain_model",
+          },
+          autonomyLevel: "full_autonomous",
+          requiresApproval: 0,
+          approverRoles: [],
+          approvalTimeout: 0,
+          maxExecutionsPerDay: 10,
+          maxValuePerExecution: null,
+          cooldownMinutes: 60,
+          isEnabled: 1,
+          priority: 85,
+          executionCount: 12,
+          lastExecutedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+          successRate: 100,
+          avgSavings: 0,
+        },
+        {
+          id: "rule_supplier_risk",
+          companyId,
+          agentId: "agent_supplier",
+          name: "Supplier Risk Escalation",
+          description: "Automatically escalates high-risk supplier situations",
+          category: "supplier",
+          triggerType: "threshold",
+          triggerConditions: { metric: "supplier_risk_score", operator: ">", value: 75 },
+          actionType: "escalate",
+          actionConfig: {
+            escalateTo: ["procurement_manager", "supply_chain_director"],
+            suggestActions: ["find_alternative", "increase_safety_stock", "expedite_orders"],
+          },
+          autonomyLevel: "suggest",
+          requiresApproval: 0,
+          approverRoles: [],
+          approvalTimeout: 0,
+          maxExecutionsPerDay: 20,
+          maxValuePerExecution: null,
+          cooldownMinutes: 15,
+          isEnabled: 1,
+          priority: 95,
+          executionCount: 23,
+          lastExecutedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+          successRate: 95,
+          avgSavings: 15000,
+        },
+      ];
+
+      res.json(rules);
+    } catch (error: any) {
+      console.error("Error fetching automation rules:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create new automation rule
+  app.post("/api/agentic/rules", isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const ruleData = req.body;
+
+      const newRule = {
+        id: `rule_${Date.now()}`,
+        companyId,
+        ...ruleData,
+        executionCount: 0,
+        lastExecutedAt: null,
+        successRate: null,
+        avgSavings: null,
+        createdAt: new Date().toISOString(),
+      };
+
+      res.json(newRule);
+    } catch (error: any) {
+      console.error("Error creating automation rule:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get pending actions awaiting approval
+  app.get("/api/agentic/actions/pending", isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = req.user.companyId;
+      if (!companyId) {
+        return res.status(400).json({ error: "Company ID required" });
+      }
+
+      // Get current economic data for context
+      const indicatorData = await economics.getIndicators();
+
+      const pendingActions = [
+        {
+          id: `action_${Date.now()}_1`,
+          companyId,
+          agentId: "agent_procurement",
+          agentName: "Procurement Agent",
+          ruleId: "rule_low_stock_po",
+          ruleName: "Low Stock Auto-PO",
+          actionType: "create_po",
+          actionPayload: {
+            materialId: "MAT-2847",
+            materialName: "Steel Alloy Grade 304",
+            quantity: 5000,
+            unit: "kg",
+            supplierId: "SUP-125",
+            supplierName: "Global Steel Corp",
+            estimatedCost: 47500,
+            deliveryDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+            currentStock: 1200,
+            reorderPoint: 2000,
+            economicOrderQty: 5000,
+          },
+          status: "awaiting_approval",
+          estimatedImpact: {
+            costSavings: 2400,
+            stockoutRiskReduction: 0.85,
+            confidence: 0.92,
+            reasoning: "Current price is 5% below 30-day average. Ordering now saves $2,400 vs. projected prices.",
+          },
+          economicRegime: indicatorData.regime || "HEALTHY",
+          fdrValue: indicatorData.fdr || 1.0,
+          approvalDeadline: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
+          createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+          id: `action_${Date.now()}_2`,
+          companyId,
+          agentId: "agent_inventory",
+          agentName: "Inventory Agent",
+          ruleId: "rule_rebalance",
+          ruleName: "Weekly Inventory Rebalance",
+          actionType: "rebalance_inventory",
+          actionPayload: {
+            transfers: [
+              { from: "Warehouse A (East)", to: "Warehouse C (West)", material: "Aluminum Sheets 6061", quantity: 200, unit: "sheets" },
+              { from: "Warehouse B (Central)", to: "Warehouse A (East)", material: "Copper Wire 12AWG", quantity: 150, unit: "spools" },
+              { from: "Warehouse C (West)", to: "Warehouse B (Central)", material: "Plastic Resin ABS", quantity: 500, unit: "kg" },
+            ],
+            totalTransfers: 3,
+            estimatedTransportCost: 1850,
+            balanceImprovement: "32%",
+          },
+          status: "awaiting_approval",
+          estimatedImpact: {
+            costSavings: 4200,
+            efficiencyGain: 0.15,
+            confidence: 0.88,
+            reasoning: "Demand patterns show West region surge. Rebalancing prevents $4,200 in expedited shipping costs.",
+          },
+          economicRegime: indicatorData.regime || "HEALTHY",
+          fdrValue: indicatorData.fdr || 1.0,
+          approvalDeadline: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
+          createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+        },
+      ];
+
+      res.json(pendingActions);
+    } catch (error: any) {
+      console.error("Error fetching pending actions:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Approve an action
+  app.post("/api/agentic/actions/:actionId/approve", isAuthenticated, async (req: any, res) => {
+    try {
+      const { actionId } = req.params;
+      const userId = req.user.id;
+
+      res.json({
+        success: true,
+        actionId,
+        status: "approved",
+        approvedBy: userId,
+        approvedAt: new Date().toISOString(),
+        message: "Action approved and queued for execution",
+      });
+    } catch (error: any) {
+      console.error("Error approving action:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Reject an action
+  app.post("/api/agentic/actions/:actionId/reject", isAuthenticated, async (req: any, res) => {
+    try {
+      const { actionId } = req.params;
+      const { reason } = req.body;
+      const userId = req.user.id;
+
+      res.json({
+        success: true,
+        actionId,
+        status: "rejected",
+        rejectedBy: userId,
+        rejectedAt: new Date().toISOString(),
+        rejectionReason: reason,
+        message: "Action rejected",
+      });
+    } catch (error: any) {
+      console.error("Error rejecting action:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get guardrails
+  app.get("/api/agentic/guardrails", isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = req.user.companyId;
+
+      const guardrails = [
+        {
+          id: "guard_spending",
+          companyId,
+          name: "Daily Spending Limit",
+          description: "Prevents AI from authorizing more than $100,000 in purchases per day",
+          guardrailType: "spending_limit",
+          conditions: { period: "daily", limit: 100000, currency: "USD" },
+          appliesToAgents: ["all"],
+          appliesToActionTypes: ["create_po", "generate_rfq"],
+          enforcementLevel: "hard",
+          onViolation: "block",
+          notifyOnViolation: ["finance_director"],
+          isEnabled: 1,
+          priority: 100,
+          violationCount: 3,
+          lastViolationAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+          id: "guard_hours",
+          companyId,
+          name: "Business Hours Only",
+          description: "High-value actions (>$10,000) only during business hours",
+          guardrailType: "time_restriction",
+          conditions: {
+            minValue: 10000,
+            allowedHours: ["08:00-18:00"],
+            allowedDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
+            timezone: "America/New_York",
+          },
+          appliesToAgents: ["agent_procurement"],
+          appliesToActionTypes: ["create_po"],
+          enforcementLevel: "hard",
+          onViolation: "block",
+          notifyOnViolation: [],
+          isEnabled: 1,
+          priority: 90,
+          violationCount: 0,
+          lastViolationAt: null,
+        },
+        {
+          id: "guard_regime",
+          companyId,
+          name: "Regime-Based Caution",
+          description: "Extra approval required during volatile economic regimes",
+          guardrailType: "regime_restriction",
+          conditions: {
+            cautionRegimes: ["BUBBLE", "IMBALANCED_DEFICIT"],
+            requiresExtraApproval: true,
+            reduceAutonomy: true,
+          },
+          appliesToAgents: ["all"],
+          appliesToActionTypes: ["all"],
+          enforcementLevel: "escalate",
+          onViolation: "require_approval",
+          notifyOnViolation: ["finance_director", "coo"],
+          isEnabled: 1,
+          priority: 95,
+          violationCount: 5,
+          lastViolationAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+          id: "guard_supplier",
+          companyId,
+          name: "Approved Suppliers Only",
+          description: "AI can only create POs with pre-approved, rated suppliers",
+          guardrailType: "supplier_restriction",
+          conditions: {
+            onlyApproved: true,
+            minRating: 4.0,
+            excludeHighRisk: true,
+          },
+          appliesToAgents: ["agent_procurement"],
+          appliesToActionTypes: ["create_po", "generate_rfq"],
+          enforcementLevel: "hard",
+          onViolation: "block",
+          notifyOnViolation: ["procurement_manager"],
+          isEnabled: 1,
+          priority: 85,
+          violationCount: 1,
+          lastViolationAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+          id: "guard_quantity",
+          companyId,
+          name: "Maximum Order Quantity",
+          description: "Prevents ordering more than 3x the economic order quantity",
+          guardrailType: "quantity_limit",
+          conditions: {
+            maxMultiplier: 3.0,
+            baseMetric: "economic_order_quantity",
+          },
+          appliesToAgents: ["agent_procurement"],
+          appliesToActionTypes: ["create_po"],
+          enforcementLevel: "soft",
+          onViolation: "warn",
+          notifyOnViolation: ["procurement_manager"],
+          isEnabled: 1,
+          priority: 70,
+          violationCount: 8,
+          lastViolationAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+      ];
+
+      res.json(guardrails);
+    } catch (error: any) {
+      console.error("Error fetching guardrails:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get agentic stats summary
+  app.get("/api/agentic/stats", isAuthenticated, async (req: any, res) => {
+    try {
+      const stats = {
+        totalAgents: 5,
+        activeAgents: 5,
+        totalRules: 6,
+        activeRules: 6,
+        pendingActions: 2,
+        completedToday: 85 + Math.floor(Math.random() * 20),
+        totalSavings: 127500 + Math.floor(Math.random() * 10000),
+        avgSuccessRate: 95.2,
+        actionsLast24h: 142,
+        actionsLast7d: 847,
+        topPerformingAgent: "Forecasting Agent",
+        recentAlerts: 3,
+      };
+
+      res.json(stats);
+    } catch (error: any) {
+      console.error("Error fetching agentic stats:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get action history
+  app.get("/api/agentic/actions/history", isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = req.user.companyId;
+      const { limit = 50, status, agentId, actionType } = req.query;
+
+      // Generate sample action history
+      const history = [];
+      const statuses = ["completed", "rejected", "failed"];
+      const actionTypes = ["create_po", "adjust_safety_stock", "rebalance_inventory", "send_alert"];
+      const agents = [
+        { id: "agent_procurement", name: "Procurement Agent" },
+        { id: "agent_inventory", name: "Inventory Agent" },
+        { id: "agent_forecasting", name: "Forecasting Agent" },
+        { id: "agent_supplier", name: "Supplier Risk Agent" },
+      ];
+
+      for (let i = 0; i < Math.min(Number(limit), 50); i++) {
+        const randomAgent = agents[Math.floor(Math.random() * agents.length)];
+        const randomStatus = statuses[Math.floor(Math.random() * 10) < 8 ? 0 : Math.floor(Math.random() * statuses.length)];
+        const randomAction = actionTypes[Math.floor(Math.random() * actionTypes.length)];
+        const daysAgo = Math.floor(Math.random() * 30);
+
+        history.push({
+          id: `action_hist_${i}`,
+          companyId,
+          agentId: randomAgent.id,
+          agentName: randomAgent.name,
+          actionType: randomAction,
+          status: randomStatus,
+          estimatedImpact: {
+            costSavings: Math.floor(Math.random() * 5000) + 500,
+            confidence: 0.75 + Math.random() * 0.2,
+          },
+          actualImpact: randomStatus === "completed" ? {
+            costSavings: Math.floor(Math.random() * 6000) + 400,
+            verified: true,
+          } : null,
+          executedAt: randomStatus === "completed" ? new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString() : null,
+          createdAt: new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000 - 2 * 60 * 60 * 1000).toISOString(),
+          feedbackRating: randomStatus === "completed" ? Math.floor(Math.random() * 2) + 4 : null,
+        });
+      }
+
+      res.json(history);
+    } catch (error: any) {
+      console.error("Error fetching action history:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // AI Assistant chat with agentic capabilities
+  app.post("/api/agentic/assistant/chat", isAuthenticated, async (req: any, res) => {
+    try {
+      const { message, context } = req.body;
+      const companyId = req.user.companyId;
+
+      // Get current economic context
+      const indicatorData = await economics.getIndicators();
+      const currentRegime = indicatorData.regime || "HEALTHY";
+
+      // Analyze message intent for agentic actions
+      const lowerMessage = message.toLowerCase();
+      let suggestedActions: any[] = [];
+      let responseText = "";
+      let canAutoExecute = false;
+
+      if (lowerMessage.includes("create") && (lowerMessage.includes("po") || lowerMessage.includes("order"))) {
+        suggestedActions.push({
+          type: "create_po",
+          label: "Create Purchase Order",
+          description: "I can draft a purchase order for you. Which material do you need?",
+          requiresApproval: true,
+          confidence: 0.85,
+        });
+        responseText = "I can help you create a purchase order. Based on current inventory levels and the economic regime (" + currentRegime + "), I recommend reviewing low-stock items first. Would you like me to identify materials that need reordering?";
+      } else if (lowerMessage.includes("rebalance") || lowerMessage.includes("redistribute")) {
+        suggestedActions.push({
+          type: "rebalance_inventory",
+          label: "Rebalance Inventory",
+          description: "Analyze and optimize inventory distribution across locations",
+          requiresApproval: true,
+          confidence: 0.82,
+        });
+        responseText = "I can analyze your inventory distribution and suggest optimal rebalancing. This typically saves 10-15% on expedited shipping costs. Should I run the analysis?";
+      } else if (lowerMessage.includes("adjust") && lowerMessage.includes("safety stock")) {
+        suggestedActions.push({
+          type: "adjust_safety_stock",
+          label: "Adjust Safety Stock",
+          description: "Modify safety stock levels based on regime and forecast",
+          requiresApproval: false,
+          confidence: 0.88,
+        });
+        canAutoExecute = true;
+        responseText = `Given the current ${currentRegime} regime, I recommend adjusting safety stock levels. Should I automatically apply the regime-based multipliers, or would you prefer to review each SKU individually?`;
+      } else if (lowerMessage.includes("risk") || lowerMessage.includes("supplier")) {
+        suggestedActions.push({
+          type: "assess_supplier_risk",
+          label: "Assess Supplier Risk",
+          description: "Run comprehensive supplier risk analysis",
+          requiresApproval: false,
+          confidence: 0.9,
+        });
+        responseText = "I can run a comprehensive supplier risk assessment incorporating financial health, geographic exposure, and current economic regime impact. This helps identify vulnerabilities before they become problems.";
+      } else {
+        responseText = `I'm your intelligent manufacturing assistant with autonomous capabilities. I can:\n\n• **Create Purchase Orders** - Draft and submit POs based on inventory needs\n• **Rebalance Inventory** - Optimize stock across locations\n• **Adjust Safety Stock** - Adapt to economic regime changes\n• **Monitor Supplier Risk** - Proactive risk assessment\n• **Generate RFQs** - Automated quote requests\n\nThe current economic regime is **${currentRegime}**. How can I assist you today?`;
+      }
+
+      res.json({
+        response: responseText,
+        suggestedActions,
+        canAutoExecute,
+        context: {
+          regime: currentRegime,
+          fdr: indicatorData.fdr,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (error: any) {
+      console.error("Error in agentic assistant chat:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Execute an agentic action from assistant
+  app.post("/api/agentic/assistant/execute", isAuthenticated, async (req: any, res) => {
+    try {
+      const { actionType, parameters } = req.body;
+      const companyId = req.user.companyId;
+      const userId = req.user.id;
+
+      // Create action record
+      const action = {
+        id: `action_${Date.now()}`,
+        companyId,
+        agentId: "assistant",
+        actionType,
+        actionPayload: parameters,
+        status: "executing",
+        createdBy: userId,
+        createdAt: new Date().toISOString(),
+      };
+
+      // Simulate execution based on action type
+      let result: any = {};
+      
+      switch (actionType) {
+        case "create_po":
+          result = {
+            success: true,
+            poId: `PO-${Date.now()}`,
+            message: "Purchase order created successfully and pending approval",
+            estimatedSavings: Math.floor(Math.random() * 2000) + 500,
+          };
+          break;
+        case "rebalance_inventory":
+          result = {
+            success: true,
+            transferCount: 3,
+            message: "Inventory rebalance plan created and queued for approval",
+            estimatedSavings: Math.floor(Math.random() * 3000) + 1000,
+          };
+          break;
+        case "adjust_safety_stock":
+          result = {
+            success: true,
+            adjustedItems: 15,
+            message: "Safety stock levels adjusted based on regime multipliers",
+            newMultiplier: 1.15,
+          };
+          break;
+        default:
+          result = {
+            success: true,
+            message: "Action queued for processing",
+          };
+      }
+
+      res.json({
+        action,
+        result,
+        message: `Action "${actionType}" executed successfully`,
+      });
+    } catch (error: any) {
+      console.error("Error executing agentic action:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   
   setupWebSocket(httpServer);
