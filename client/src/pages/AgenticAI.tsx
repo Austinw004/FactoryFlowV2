@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,6 +56,11 @@ import {
   Building,
   Boxes,
   CircleDot,
+  Send,
+  MessageSquare,
+  Sparkles,
+  Lightbulb,
+  Loader2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -140,6 +145,36 @@ interface AgenticStats {
   avgSuccessRate: number;
 }
 
+interface AIAction {
+  id: string;
+  type: "simulation" | "rfq" | "analysis" | "forecast" | "alert" | "create_po" | "rebalance_inventory" | "adjust_safety_stock" | "assess_supplier_risk";
+  label: string;
+  description: string;
+  params?: Record<string, unknown>;
+  confidence: number;
+  requiresApproval?: boolean;
+  canAutoExecute?: boolean;
+}
+
+interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  suggestedActions?: AIAction[];
+  timestamp: Date;
+}
+
+interface AgenticChatResponse {
+  response: string;
+  suggestedActions: AIAction[];
+  canAutoExecute: boolean;
+  context: {
+    regime: string;
+    fdr: number;
+    timestamp: string;
+  };
+}
+
 const agentTypeIcons: Record<string, typeof Bot> = {
   procurement: ShoppingCart,
   inventory: Boxes,
@@ -184,12 +219,38 @@ const triggerTypeLabels: Record<string, string> = {
   compound: "Compound Trigger",
 };
 
+const chatActionTypeIcons: Record<string, typeof ShoppingCart> = {
+  create_po: ShoppingCart,
+  rebalance_inventory: Boxes,
+  adjust_safety_stock: Boxes,
+  assess_supplier_risk: Building,
+};
+
+const suggestedQuestions = [
+  "Create a purchase order for low-stock materials",
+  "Rebalance inventory across warehouses",
+  "Adjust safety stock based on current regime",
+  "Optimize procurement timing for current market conditions",
+  "Identify supplier risk and suggest alternatives",
+  "What autonomous actions are pending?"
+];
+
 export default function AgenticAI() {
   const { toast } = useToast();
   const [selectedAgent, setSelectedAgent] = useState<AiAgent | null>(null);
   const [selectedRule, setSelectedRule] = useState<AutomationRule | null>(null);
   const [showRuleBuilder, setShowRuleBuilder] = useState(false);
   const [showAgentConfig, setShowAgentConfig] = useState(false);
+  
+  const [chatInput, setChatInput] = useState("");
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [conversationId] = useState(`agentic_${Date.now()}`);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
 
   const { data: stats } = useQuery<AgenticStats>({
     queryKey: ["/api/agentic/stats"],
@@ -249,6 +310,81 @@ export default function AgenticAI() {
       toast({ title: "Action rejected", description: "The action has been rejected." });
     },
   });
+
+  const chatMutation = useMutation({
+    mutationFn: async (message: string) => {
+      const res = await apiRequest("POST", "/api/ai/agentic-chat", { 
+        message,
+        conversationId,
+        context: { regime: currentRegime }
+      });
+      return res.json();
+    },
+    onSuccess: (data: AgenticChatResponse) => {
+      setChatMessages(prev => [...prev, {
+        id: `msg_${Date.now()}`,
+        role: "assistant",
+        content: data.response,
+        suggestedActions: data.suggestedActions,
+        timestamp: new Date()
+      }]);
+    },
+    onError: () => {
+      setChatMessages(prev => [...prev, {
+        id: `msg_${Date.now()}`,
+        role: "assistant",
+        content: "I apologize, but I'm having trouble processing your request. Please try again or check your connection.",
+        timestamp: new Date()
+      }]);
+    }
+  });
+
+  const executeActionMutation = useMutation({
+    mutationFn: async ({ actionType, parameters }: { actionType: string; parameters?: any }) => {
+      const res = await apiRequest("POST", "/api/agentic/execute", { actionType, parameters });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({ 
+        title: "Action executed", 
+        description: data.message || "The action has been executed successfully." 
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/agentic/actions/pending"] });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Action failed", 
+        description: error.message || "Failed to execute the action.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleSendChat = () => {
+    if (!chatInput.trim() || chatMutation.isPending) return;
+    
+    const userMessage: ChatMessage = {
+      id: `msg_${Date.now()}`,
+      role: "user",
+      content: chatInput.trim(),
+      timestamp: new Date()
+    };
+    
+    setChatMessages(prev => [...prev, userMessage]);
+    chatMutation.mutate(chatInput.trim());
+    setChatInput("");
+  };
+
+  const handleChatKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendChat();
+    }
+  };
+
+  const handleQuickAction = (action: AIAction) => {
+    executeActionMutation.mutate({ actionType: action.type, parameters: action.params });
+  };
 
   const defaultAgents: AiAgent[] = [
     {
@@ -642,8 +778,12 @@ export default function AgenticAI() {
         </Card>
       </div>
 
-      <Tabs defaultValue="agents" className="space-y-4">
+      <Tabs defaultValue="chat" className="space-y-4">
         <TabsList data-testid="tabs-main">
+          <TabsTrigger value="chat" data-testid="tab-chat">
+            <MessageSquare className="h-4 w-4 mr-2" />
+            Chat
+          </TabsTrigger>
           <TabsTrigger value="agents" data-testid="tab-agents">
             <Bot className="h-4 w-4 mr-2" />
             AI Agents
@@ -668,6 +808,242 @@ export default function AgenticAI() {
             Action History
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="chat" className="space-y-4">
+          <div className="grid lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <Card className="h-[600px] flex flex-col">
+                <CardHeader className="border-b pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-purple-500/20">
+                      <Bot className="h-5 w-5 text-purple-500" />
+                    </div>
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        Agentic AI Chat
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                          Autonomous
+                        </Badge>
+                      </CardTitle>
+                      <CardDescription>
+                        Ask questions or request autonomous actions
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-1 flex flex-col p-0">
+                  <ScrollArea className="flex-1 p-4">
+                    <div className="space-y-4">
+                      {chatMessages.length === 0 ? (
+                        <div className="text-center py-12">
+                          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-purple-500/10 flex items-center justify-center">
+                            <Sparkles className="h-8 w-8 text-purple-500" />
+                          </div>
+                          <h3 className="font-semibold text-lg mb-2">Agentic AI Assistant</h3>
+                          <p className="text-muted-foreground text-sm mb-6">
+                            I can take autonomous actions on your behalf. Ask me anything about your supply chain, 
+                            or request actions like creating purchase orders or rebalancing inventory.
+                          </p>
+                          <div className="space-y-2 max-w-md mx-auto">
+                            <p className="text-xs font-medium text-muted-foreground px-1">Try asking:</p>
+                            {suggestedQuestions.slice(0, 4).map((q, idx) => (
+                              <Button
+                                key={idx}
+                                variant="outline"
+                                className="w-full justify-start text-left h-auto py-2 px-3 text-sm"
+                                onClick={() => {
+                                  setChatInput(q);
+                                  textareaRef.current?.focus();
+                                }}
+                                data-testid={`button-suggested-question-${idx}`}
+                              >
+                                <Lightbulb className="h-3 w-3 mr-2 flex-shrink-0 text-yellow-500" />
+                                <span className="line-clamp-1">{q}</span>
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        chatMessages.map((msg) => (
+                          <div
+                            key={msg.id}
+                            className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                          >
+                            {msg.role === "assistant" && (
+                              <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                                <Bot className="h-4 w-4 text-purple-500" />
+                              </div>
+                            )}
+                            <div
+                              className={`max-w-[80%] rounded-lg p-3 ${
+                                msg.role === "user"
+                                  ? "bg-primary text-primary-foreground"
+                                  : "bg-muted"
+                              }`}
+                              data-testid={`chat-message-${msg.id}`}
+                            >
+                              <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                              
+                              {msg.suggestedActions && msg.suggestedActions.length > 0 && (
+                                <div className="mt-3 pt-3 border-t border-foreground/10 space-y-2">
+                                  <p className="text-xs font-medium flex items-center gap-1">
+                                    <Bot className="h-3 w-3" /> Suggested Actions
+                                  </p>
+                                  {msg.suggestedActions.map((action, idx) => {
+                                    const ActionIcon = chatActionTypeIcons[action.type] || Zap;
+                                    return (
+                                      <Button
+                                        key={idx}
+                                        variant="secondary"
+                                        size="sm"
+                                        className="w-full justify-start text-left h-auto py-2"
+                                        onClick={() => handleQuickAction(action)}
+                                        data-testid={`button-action-${action.type}-${idx}`}
+                                      >
+                                        <ActionIcon className="h-3 w-3 mr-2" />
+                                        <div className="flex-1">
+                                          <p className="font-medium text-xs">{action.label}</p>
+                                          <p className="text-xs text-muted-foreground">{action.description}</p>
+                                        </div>
+                                        <Badge variant="outline" className="ml-2 text-[10px]">
+                                          {Math.round(action.confidence * 100)}%
+                                        </Badge>
+                                      </Button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                            {msg.role === "user" && (
+                              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                                <MessageSquare className="h-4 w-4 text-primary-foreground" />
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      )}
+                      {chatMutation.isPending && (
+                        <div className="flex gap-3 justify-start">
+                          <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                            <Bot className="h-4 w-4 text-purple-500" />
+                          </div>
+                          <div className="bg-muted rounded-lg p-3">
+                            <div className="flex items-center gap-2">
+                              <Loader2 className="h-4 w-4 animate-spin text-purple-500" />
+                              <span className="text-sm text-muted-foreground">Thinking...</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      <div ref={messagesEndRef} />
+                    </div>
+                  </ScrollArea>
+                  <div className="border-t p-4">
+                    <div className="flex gap-2">
+                      <Textarea
+                        ref={textareaRef}
+                        placeholder="Ask me anything or request an action..."
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        onKeyDown={handleChatKeyDown}
+                        className="min-h-[44px] max-h-32 resize-none"
+                        rows={1}
+                        data-testid="input-chat"
+                      />
+                      <Button
+                        onClick={handleSendChat}
+                        disabled={!chatInput.trim() || chatMutation.isPending}
+                        className="bg-purple-600 hover:bg-purple-700"
+                        data-testid="button-send-chat"
+                      >
+                        {chatMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Send className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-yellow-500" />
+                    Quick Actions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {suggestedQuestions.map((q, idx) => (
+                    <Button
+                      key={idx}
+                      variant="outline"
+                      className="w-full justify-start text-left h-auto py-2 px-3 text-sm"
+                      onClick={() => {
+                        setChatInput(q);
+                        textareaRef.current?.focus();
+                      }}
+                      data-testid={`button-quick-action-${idx}`}
+                    >
+                      <Lightbulb className="h-3 w-3 mr-2 flex-shrink-0 text-yellow-500" />
+                      <span className="line-clamp-2 text-xs">{q}</span>
+                    </Button>
+                  ))}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-green-500" />
+                    Current Context
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Economic Regime</span>
+                    <Badge variant="outline">{currentRegime}</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Active Agents</span>
+                    <Badge variant="secondary">{displayStats.activeAgents}</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Pending Actions</span>
+                    <Badge variant={displayStats.pendingActions > 0 ? "destructive" : "secondary"}>
+                      {displayStats.pendingActions}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Today's Savings</span>
+                    <Badge variant="secondary" className="text-green-600">
+                      ${displayStats.totalSavings.toLocaleString()}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-purple-500/5 border-purple-500/20">
+                <CardContent className="pt-4">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-full bg-purple-500/20">
+                      <Brain className="h-4 w-4 text-purple-500" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">Autonomous Mode Active</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        AI agents are running and can take actions automatically based on your configured rules.
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
 
         <TabsContent value="agents" className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
