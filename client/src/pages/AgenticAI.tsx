@@ -61,6 +61,18 @@ import {
   Sparkles,
   Lightbulb,
   Loader2,
+  Globe,
+  Palette,
+  Volume2,
+  Mail,
+  Building2,
+  Briefcase,
+  LayoutDashboard,
+  Monitor,
+  Sun,
+  Moon,
+  Type,
+  Save,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -248,6 +260,51 @@ export default function AgenticAI() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const prevMessageCountRef = useRef(0);
+  
+  // User preference settings state
+  const [userSettings, setUserSettings] = useState({
+    // Profile & Business Context
+    industry: "",
+    companySize: "",
+    role: "",
+    primaryUseCase: "",
+    
+    // Display Preferences
+    layoutDensity: "comfortable",
+    defaultPage: "dashboard",
+    showConfidenceScores: true,
+    showReasoningSteps: true,
+    
+    // Notification Preferences
+    emailDigest: "daily",
+    inAppNotifications: true,
+    alertOnPendingActions: true,
+    alertOnAutonomousExecutions: true,
+    alertOnRegimeChanges: true,
+    alertOnForecastDegradation: true,
+    
+    // Dashboard Customization
+    preferredChartType: "line",
+    showTrendIndicators: true,
+    highlightAnomalies: true,
+    defaultTimeRange: "30d",
+    
+    // Regional Settings
+    currency: "USD",
+    dateFormat: "MM/DD/YYYY",
+    timezone: "America/New_York",
+    numberFormat: "1,234.56",
+    
+    // Accessibility
+    fontSize: "medium",
+    reduceMotion: false,
+    highContrast: false,
+  });
+  
+  const updateSetting = (key: string, value: any) => {
+    setUserSettings(prev => ({ ...prev, [key]: value }));
+    toast({ title: "Setting updated", description: `${key.replace(/([A-Z])/g, ' $1').trim()} has been updated.` });
+  };
   
   useEffect(() => {
     if (chatMessages.length > 0 && chatMessages.length > prevMessageCountRef.current) {
@@ -810,6 +867,10 @@ export default function AgenticAI() {
           <TabsTrigger value="history" data-testid="tab-history">
             <History className="h-4 w-4 mr-2" />
             Action History
+          </TabsTrigger>
+          <TabsTrigger value="settings" data-testid="tab-settings">
+            <Settings className="h-4 w-4 mr-2" />
+            Settings
           </TabsTrigger>
         </TabsList>
 
@@ -1436,6 +1497,505 @@ export default function AgenticAI() {
                 <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>Action history will appear here as agents take actions.</p>
                 <p className="text-sm">View completed, rejected, and failed actions with full audit trail.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="settings" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold">Settings</h2>
+              <p className="text-muted-foreground">Customize your experience and preferences</p>
+            </div>
+            <Button data-testid="button-save-all-settings">
+              <Save className="h-4 w-4 mr-2" />
+              Save All Changes
+            </Button>
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-6">
+            {/* Profile & Business Context */}
+            <Card data-testid="card-profile-settings">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-primary" />
+                  Profile & Business Context
+                </CardTitle>
+                <CardDescription>Help us tailor the platform to your needs</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="industry">Industry</Label>
+                  <Select value={userSettings.industry} onValueChange={(v) => updateSetting("industry", v)}>
+                    <SelectTrigger id="industry" data-testid="select-industry">
+                      <SelectValue placeholder="Select your industry" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="aerospace">Aerospace & Defense</SelectItem>
+                      <SelectItem value="automotive">Automotive</SelectItem>
+                      <SelectItem value="chemicals">Chemicals</SelectItem>
+                      <SelectItem value="electronics">Electronics & High-Tech</SelectItem>
+                      <SelectItem value="food">Food & Beverage</SelectItem>
+                      <SelectItem value="industrial">Industrial Manufacturing</SelectItem>
+                      <SelectItem value="medical">Medical Devices</SelectItem>
+                      <SelectItem value="metals">Metals & Mining</SelectItem>
+                      <SelectItem value="pharma">Pharmaceuticals</SelectItem>
+                      <SelectItem value="plastics">Plastics & Packaging</SelectItem>
+                      <SelectItem value="textiles">Textiles & Apparel</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="companySize">Company Size</Label>
+                  <Select value={userSettings.companySize} onValueChange={(v) => updateSetting("companySize", v)}>
+                    <SelectTrigger id="companySize" data-testid="select-company-size">
+                      <SelectValue placeholder="Select company size" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="startup">Startup (1-50 employees)</SelectItem>
+                      <SelectItem value="small">Small (51-200 employees)</SelectItem>
+                      <SelectItem value="medium">Medium (201-1,000 employees)</SelectItem>
+                      <SelectItem value="large">Large (1,001-5,000 employees)</SelectItem>
+                      <SelectItem value="enterprise">Enterprise (5,000+ employees)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="role">Your Role</Label>
+                  <Select value={userSettings.role} onValueChange={(v) => updateSetting("role", v)}>
+                    <SelectTrigger id="role" data-testid="select-role">
+                      <SelectValue placeholder="Select your role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="executive">Executive (C-Suite/VP)</SelectItem>
+                      <SelectItem value="director">Director/Senior Manager</SelectItem>
+                      <SelectItem value="manager">Manager</SelectItem>
+                      <SelectItem value="analyst">Analyst/Specialist</SelectItem>
+                      <SelectItem value="procurement">Procurement Lead</SelectItem>
+                      <SelectItem value="supply-chain">Supply Chain Manager</SelectItem>
+                      <SelectItem value="operations">Operations Manager</SelectItem>
+                      <SelectItem value="finance">Finance/Controller</SelectItem>
+                      <SelectItem value="it">IT/Systems Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="primaryUseCase">Primary Use Case</Label>
+                  <Select value={userSettings.primaryUseCase} onValueChange={(v) => updateSetting("primaryUseCase", v)}>
+                    <SelectTrigger id="primaryUseCase" data-testid="select-use-case">
+                      <SelectValue placeholder="What brings you to Prescient Labs?" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="demand-forecasting">Demand Forecasting</SelectItem>
+                      <SelectItem value="procurement">Procurement Optimization</SelectItem>
+                      <SelectItem value="inventory">Inventory Management</SelectItem>
+                      <SelectItem value="supply-chain">Supply Chain Visibility</SelectItem>
+                      <SelectItem value="production">Production Planning</SelectItem>
+                      <SelectItem value="risk">Risk Management</SelectItem>
+                      <SelectItem value="cost-reduction">Cost Reduction</SelectItem>
+                      <SelectItem value="all">All of the Above</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Display Preferences */}
+            <Card data-testid="card-display-settings">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Monitor className="h-5 w-5 text-primary" />
+                  Display Preferences
+                </CardTitle>
+                <CardDescription>Customize how information is displayed</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="layoutDensity">Layout Density</Label>
+                  <Select value={userSettings.layoutDensity} onValueChange={(v) => updateSetting("layoutDensity", v)}>
+                    <SelectTrigger id="layoutDensity" data-testid="select-layout-density">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="compact">Compact - More data, less spacing</SelectItem>
+                      <SelectItem value="comfortable">Comfortable - Balanced view</SelectItem>
+                      <SelectItem value="spacious">Spacious - More breathing room</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="defaultPage">Default Landing Page</Label>
+                  <Select value={userSettings.defaultPage} onValueChange={(v) => updateSetting("defaultPage", v)}>
+                    <SelectTrigger id="defaultPage" data-testid="select-default-page">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="dashboard">Dashboard</SelectItem>
+                      <SelectItem value="forecasting">Demand Forecasting</SelectItem>
+                      <SelectItem value="allocation">Allocation</SelectItem>
+                      <SelectItem value="procurement">Procurement</SelectItem>
+                      <SelectItem value="agentic-ai">Agentic AI</SelectItem>
+                      <SelectItem value="digital-twin">Digital Twin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <Separator />
+                
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Show Confidence Scores</Label>
+                    <p className="text-xs text-muted-foreground">Display AI confidence levels on predictions</p>
+                  </div>
+                  <Switch 
+                    checked={userSettings.showConfidenceScores} 
+                    onCheckedChange={(v) => updateSetting("showConfidenceScores", v)}
+                    data-testid="switch-confidence-scores"
+                  />
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Show Reasoning Steps</Label>
+                    <p className="text-xs text-muted-foreground">See how AI arrives at recommendations</p>
+                  </div>
+                  <Switch 
+                    checked={userSettings.showReasoningSteps} 
+                    onCheckedChange={(v) => updateSetting("showReasoningSteps", v)}
+                    data-testid="switch-reasoning-steps"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Notification Preferences */}
+            <Card data-testid="card-notification-settings">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Bell className="h-5 w-5 text-primary" />
+                  Notification Preferences
+                </CardTitle>
+                <CardDescription>Control how and when you receive alerts</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="emailDigest">Email Digest Frequency</Label>
+                  <Select value={userSettings.emailDigest} onValueChange={(v) => updateSetting("emailDigest", v)}>
+                    <SelectTrigger id="emailDigest" data-testid="select-email-digest">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="realtime">Real-time (Immediate)</SelectItem>
+                      <SelectItem value="hourly">Hourly Digest</SelectItem>
+                      <SelectItem value="daily">Daily Digest</SelectItem>
+                      <SelectItem value="weekly">Weekly Summary</SelectItem>
+                      <SelectItem value="never">Never (Disable Email)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <Separator />
+                
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>In-App Notifications</Label>
+                    <p className="text-xs text-muted-foreground">Show notifications within the platform</p>
+                  </div>
+                  <Switch 
+                    checked={userSettings.inAppNotifications} 
+                    onCheckedChange={(v) => updateSetting("inAppNotifications", v)}
+                    data-testid="switch-in-app-notifications"
+                  />
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Alert on Pending Actions</Label>
+                    <p className="text-xs text-muted-foreground">Notify when actions need your approval</p>
+                  </div>
+                  <Switch 
+                    checked={userSettings.alertOnPendingActions} 
+                    onCheckedChange={(v) => updateSetting("alertOnPendingActions", v)}
+                    data-testid="switch-alert-pending"
+                  />
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Alert on Autonomous Executions</Label>
+                    <p className="text-xs text-muted-foreground">Notify when AI takes autonomous actions</p>
+                  </div>
+                  <Switch 
+                    checked={userSettings.alertOnAutonomousExecutions} 
+                    onCheckedChange={(v) => updateSetting("alertOnAutonomousExecutions", v)}
+                    data-testid="switch-alert-autonomous"
+                  />
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Alert on Regime Changes</Label>
+                    <p className="text-xs text-muted-foreground">Notify when economic regime changes</p>
+                  </div>
+                  <Switch 
+                    checked={userSettings.alertOnRegimeChanges} 
+                    onCheckedChange={(v) => updateSetting("alertOnRegimeChanges", v)}
+                    data-testid="switch-alert-regime"
+                  />
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Alert on Forecast Degradation</Label>
+                    <p className="text-xs text-muted-foreground">Notify when forecast accuracy drops</p>
+                  </div>
+                  <Switch 
+                    checked={userSettings.alertOnForecastDegradation} 
+                    onCheckedChange={(v) => updateSetting("alertOnForecastDegradation", v)}
+                    data-testid="switch-alert-forecast"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Dashboard Customization */}
+            <Card data-testid="card-dashboard-settings">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <LayoutDashboard className="h-5 w-5 text-primary" />
+                  Dashboard Customization
+                </CardTitle>
+                <CardDescription>Personalize your dashboard experience</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="chartType">Preferred Chart Type</Label>
+                  <Select value={userSettings.preferredChartType} onValueChange={(v) => updateSetting("preferredChartType", v)}>
+                    <SelectTrigger id="chartType" data-testid="select-chart-type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="line">Line Charts</SelectItem>
+                      <SelectItem value="bar">Bar Charts</SelectItem>
+                      <SelectItem value="area">Area Charts</SelectItem>
+                      <SelectItem value="mixed">Mixed (Context-Dependent)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="timeRange">Default Time Range</Label>
+                  <Select value={userSettings.defaultTimeRange} onValueChange={(v) => updateSetting("defaultTimeRange", v)}>
+                    <SelectTrigger id="timeRange" data-testid="select-time-range">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="7d">Last 7 Days</SelectItem>
+                      <SelectItem value="30d">Last 30 Days</SelectItem>
+                      <SelectItem value="90d">Last 90 Days</SelectItem>
+                      <SelectItem value="12m">Last 12 Months</SelectItem>
+                      <SelectItem value="ytd">Year to Date</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <Separator />
+                
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Show Trend Indicators</Label>
+                    <p className="text-xs text-muted-foreground">Display up/down arrows on metrics</p>
+                  </div>
+                  <Switch 
+                    checked={userSettings.showTrendIndicators} 
+                    onCheckedChange={(v) => updateSetting("showTrendIndicators", v)}
+                    data-testid="switch-trend-indicators"
+                  />
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Highlight Anomalies</Label>
+                    <p className="text-xs text-muted-foreground">Emphasize unusual data points</p>
+                  </div>
+                  <Switch 
+                    checked={userSettings.highlightAnomalies} 
+                    onCheckedChange={(v) => updateSetting("highlightAnomalies", v)}
+                    data-testid="switch-highlight-anomalies"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Regional Settings */}
+            <Card data-testid="card-regional-settings">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="h-5 w-5 text-primary" />
+                  Regional Settings
+                </CardTitle>
+                <CardDescription>Configure locale and formatting preferences</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="currency">Currency</Label>
+                  <Select value={userSettings.currency} onValueChange={(v) => updateSetting("currency", v)}>
+                    <SelectTrigger id="currency" data-testid="select-currency">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USD">USD - US Dollar ($)</SelectItem>
+                      <SelectItem value="EUR">EUR - Euro (€)</SelectItem>
+                      <SelectItem value="GBP">GBP - British Pound (£)</SelectItem>
+                      <SelectItem value="CAD">CAD - Canadian Dollar (C$)</SelectItem>
+                      <SelectItem value="AUD">AUD - Australian Dollar (A$)</SelectItem>
+                      <SelectItem value="JPY">JPY - Japanese Yen (¥)</SelectItem>
+                      <SelectItem value="CNY">CNY - Chinese Yuan (¥)</SelectItem>
+                      <SelectItem value="INR">INR - Indian Rupee (₹)</SelectItem>
+                      <SelectItem value="MXN">MXN - Mexican Peso (MX$)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="dateFormat">Date Format</Label>
+                  <Select value={userSettings.dateFormat} onValueChange={(v) => updateSetting("dateFormat", v)}>
+                    <SelectTrigger id="dateFormat" data-testid="select-date-format">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="MM/DD/YYYY">MM/DD/YYYY (US)</SelectItem>
+                      <SelectItem value="DD/MM/YYYY">DD/MM/YYYY (UK/EU)</SelectItem>
+                      <SelectItem value="YYYY-MM-DD">YYYY-MM-DD (ISO)</SelectItem>
+                      <SelectItem value="DD.MM.YYYY">DD.MM.YYYY (German)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="timezone">Timezone</Label>
+                  <Select value={userSettings.timezone} onValueChange={(v) => updateSetting("timezone", v)}>
+                    <SelectTrigger id="timezone" data-testid="select-timezone">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="America/New_York">Eastern Time (ET)</SelectItem>
+                      <SelectItem value="America/Chicago">Central Time (CT)</SelectItem>
+                      <SelectItem value="America/Denver">Mountain Time (MT)</SelectItem>
+                      <SelectItem value="America/Los_Angeles">Pacific Time (PT)</SelectItem>
+                      <SelectItem value="Europe/London">London (GMT/BST)</SelectItem>
+                      <SelectItem value="Europe/Paris">Central European (CET)</SelectItem>
+                      <SelectItem value="Asia/Tokyo">Japan (JST)</SelectItem>
+                      <SelectItem value="Asia/Shanghai">China (CST)</SelectItem>
+                      <SelectItem value="Asia/Kolkata">India (IST)</SelectItem>
+                      <SelectItem value="Australia/Sydney">Sydney (AEST)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="numberFormat">Number Format</Label>
+                  <Select value={userSettings.numberFormat} onValueChange={(v) => updateSetting("numberFormat", v)}>
+                    <SelectTrigger id="numberFormat" data-testid="select-number-format">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1,234.56">1,234.56 (US/UK)</SelectItem>
+                      <SelectItem value="1.234,56">1.234,56 (EU)</SelectItem>
+                      <SelectItem value="1 234.56">1 234.56 (French)</SelectItem>
+                      <SelectItem value="1'234.56">1'234.56 (Swiss)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Accessibility */}
+            <Card data-testid="card-accessibility-settings">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Type className="h-5 w-5 text-primary" />
+                  Accessibility
+                </CardTitle>
+                <CardDescription>Adjust display for your comfort and needs</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="fontSize">Text Size</Label>
+                  <Select value={userSettings.fontSize} onValueChange={(v) => updateSetting("fontSize", v)}>
+                    <SelectTrigger id="fontSize" data-testid="select-font-size">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="small">Small</SelectItem>
+                      <SelectItem value="medium">Medium (Default)</SelectItem>
+                      <SelectItem value="large">Large</SelectItem>
+                      <SelectItem value="xlarge">Extra Large</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <Separator />
+                
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Reduce Motion</Label>
+                    <p className="text-xs text-muted-foreground">Minimize animations and transitions</p>
+                  </div>
+                  <Switch 
+                    checked={userSettings.reduceMotion} 
+                    onCheckedChange={(v) => updateSetting("reduceMotion", v)}
+                    data-testid="switch-reduce-motion"
+                  />
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>High Contrast Mode</Label>
+                    <p className="text-xs text-muted-foreground">Increase contrast for better visibility</p>
+                  </div>
+                  <Switch 
+                    checked={userSettings.highContrast} 
+                    onCheckedChange={(v) => updateSetting("highContrast", v)}
+                    data-testid="switch-high-contrast"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Data & Export Section */}
+          <Card data-testid="card-data-export">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-primary" />
+                Data & Export
+              </CardTitle>
+              <CardDescription>Manage your data and export options</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-3 gap-4">
+                <Button variant="outline" className="h-auto py-4 flex-col gap-2" data-testid="button-export-settings">
+                  <Settings className="h-5 w-5" />
+                  <span>Export Settings</span>
+                  <span className="text-xs text-muted-foreground">Download your preferences</span>
+                </Button>
+                <Button variant="outline" className="h-auto py-4 flex-col gap-2" data-testid="button-export-data">
+                  <FileText className="h-5 w-5" />
+                  <span>Export All Data</span>
+                  <span className="text-xs text-muted-foreground">Download your data as CSV</span>
+                </Button>
+                <Button variant="outline" className="h-auto py-4 flex-col gap-2" data-testid="button-import-settings">
+                  <RefreshCw className="h-5 w-5" />
+                  <span>Import Settings</span>
+                  <span className="text-xs text-muted-foreground">Restore from backup</span>
+                </Button>
               </div>
             </CardContent>
           </Card>
