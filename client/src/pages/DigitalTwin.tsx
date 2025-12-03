@@ -41,6 +41,7 @@ import {
   Bot,
   Sparkles,
   BarChart3,
+  Settings,
 } from "lucide-react";
 import {
   LineChart,
@@ -515,138 +516,89 @@ export default function DigitalTwin() {
         </TabsContent>
 
         <TabsContent value="assistant" className="space-y-6 mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bot className="h-5 w-5" />
-                AI Supply Chain Assistant
-              </CardTitle>
-              <CardDescription>
-                Ask questions about your supply chain in natural language
+          <Card className="border-purple-500/20 bg-gradient-to-br from-purple-500/5 to-background">
+            <CardHeader className="text-center pb-2">
+              <div className="mx-auto w-16 h-16 rounded-full bg-purple-500/20 flex items-center justify-center mb-4">
+                <Bot className="h-8 w-8 text-purple-500" />
+              </div>
+              <CardTitle className="text-2xl">Agentic AI Assistant</CardTitle>
+              <CardDescription className="text-base">
+                Your AI assistant has been enhanced with autonomous capabilities
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="flex gap-2 mb-6">
-                <Input
-                  placeholder="Ask anything... e.g., 'What materials are low on stock?' or 'Predict demand for next month'"
-                  value={queryInput}
-                  onChange={(e) => setQueryInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSubmitQuery()}
-                  className="flex-1"
-                  data-testid="input-query"
-                />
-                <Button 
-                  onClick={handleSubmitQuery} 
-                  disabled={queryMutation.isPending || !queryInput.trim()}
-                  data-testid="button-submit-query"
-                >
-                  {queryMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-
-              <div className="flex flex-wrap gap-2 mb-6">
-                <Badge 
-                  variant="outline" 
-                  className="cursor-pointer hover-elevate"
-                  onClick={() => setQueryInput("What is my current inventory status?")}
-                >
-                  Inventory status
-                </Badge>
-                <Badge 
-                  variant="outline" 
-                  className="cursor-pointer hover-elevate"
-                  onClick={() => setQueryInput("Which materials need reordering?")}
-                >
-                  Reorder alerts
-                </Badge>
-                <Badge 
-                  variant="outline" 
-                  className="cursor-pointer hover-elevate"
-                  onClick={() => setQueryInput("Predict demand for the next month")}
-                >
-                  Demand forecast
-                </Badge>
-                <Badge 
-                  variant="outline" 
-                  className="cursor-pointer hover-elevate"
-                  onClick={() => setQueryInput("How can I optimize my supply chain costs?")}
-                >
-                  Cost optimization
-                </Badge>
-                <Badge 
-                  variant="outline" 
-                  className="cursor-pointer hover-elevate"
-                  onClick={() => setQueryInput("What if demand increases by 30%?")}
-                >
-                  What-if scenario
-                </Badge>
-              </div>
-
-              <ScrollArea className="h-96">
-                <div className="space-y-4">
-                  {queriesLoading ? (
-                    <Skeleton className="h-24" />
-                  ) : queries.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>No queries yet. Start by asking a question above.</p>
-                    </div>
-                  ) : (
-                    queries.map((q) => (
-                      <Card key={q.id} className="bg-muted/50">
-                        <CardContent className="pt-4">
-                          <div className="flex items-start gap-3 mb-3">
-                            <div className="bg-primary/10 p-2 rounded-full">
-                              <MessageSquare className="h-4 w-4" />
-                            </div>
-                            <div className="flex-1">
-                              <p className="font-medium">{q.queryText}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {format(new Date(q.createdAt), "PPp")}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-3 ml-8">
-                            <div className="bg-primary p-2 rounded-full">
-                              <Sparkles className="h-4 w-4 text-primary-foreground" />
-                            </div>
-                            <div className="flex-1">
-                              <p className="text-sm">{q.responseText}</p>
-                              {q.responseData && q.responseType === "chart" && q.responseData.inventoryTrend && (
-                                <div className="h-32 mt-4">
-                                  <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={q.responseData.inventoryTrend}>
-                                      <XAxis dataKey="period" fontSize={10} />
-                                      <YAxis fontSize={10} />
-                                      <Tooltip />
-                                      <Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} />
-                                    </LineChart>
-                                  </ResponsiveContainer>
-                                </div>
-                              )}
-                              <div className="flex items-center gap-2 mt-2">
-                                <Badge variant="outline" className="text-xs">
-                                  {q.responseType}
-                                </Badge>
-                                <Badge variant="outline" className="text-xs">
-                                  {q.processingTime}ms
-                                </Badge>
-                                <Badge variant="outline" className="text-xs">
-                                  {Math.round(q.confidence * 100)}% confidence
-                                </Badge>
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))
-                  )}
+            <CardContent className="text-center space-y-6">
+              <div className="grid gap-4 md:grid-cols-3 text-left">
+                <div className="p-4 rounded-lg bg-muted/50">
+                  <div className="flex items-center gap-2 mb-2">
+                    <MessageSquare className="h-4 w-4 text-purple-500" />
+                    <span className="font-medium text-sm">Natural Language Queries</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Ask about inventory, demand forecasts, supplier risks, and more
+                  </p>
                 </div>
-              </ScrollArea>
+                <div className="p-4 rounded-lg bg-muted/50">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Zap className="h-4 w-4 text-purple-500" />
+                    <span className="font-medium text-sm">Autonomous Actions</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    AI can create POs, rebalance inventory, and adjust safety stock
+                  </p>
+                </div>
+                <div className="p-4 rounded-lg bg-muted/50">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className="h-4 w-4 text-purple-500" />
+                    <span className="font-medium text-sm">Proactive Alerts</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Get notified about regime changes, risks, and opportunities
+                  </p>
+                </div>
+              </div>
+              
+              <div className="pt-4">
+                <p className="text-sm text-muted-foreground mb-4">
+                  Access the full Agentic AI experience using the floating assistant button or visit the Agentic AI page
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <Button 
+                    onClick={() => {
+                      const button = document.querySelector('[data-testid="button-ai-assistant-open"]') as HTMLButtonElement;
+                      button?.click();
+                    }}
+                    className="bg-purple-600 hover:bg-purple-700"
+                    data-testid="button-open-ai-assistant"
+                  >
+                    <Bot className="h-4 w-4 mr-2" />
+                    Open AI Assistant
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => window.location.href = '/agentic-ai'}
+                    data-testid="button-go-agentic-ai"
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    Configure Agentic AI
+                  </Button>
+                </div>
+              </div>
+
+              {queries.length > 0 && (
+                <div className="pt-6 border-t">
+                  <h3 className="text-sm font-medium mb-3 text-left">Recent Queries (Legacy)</h3>
+                  <ScrollArea className="h-48">
+                    <div className="space-y-2">
+                      {queries.slice(0, 5).map((q) => (
+                        <div key={q.id} className="p-3 rounded-lg bg-muted/50 text-left">
+                          <p className="text-sm font-medium">{q.queryText}</p>
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{q.responseText}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

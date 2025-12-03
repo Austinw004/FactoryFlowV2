@@ -25,6 +25,12 @@ import { Link, useLocation } from "wouter";
 
 const mainMenuItems = [
   {
+    title: "Agentic AI",
+    url: "/agentic-ai",
+    icon: Bot,
+    testId: "sidebar-agentic-ai",
+  },
+  {
     title: "Strategy & Insights",
     url: "/strategy",
     icon: Lightbulb,
@@ -59,12 +65,6 @@ const mainMenuItems = [
     url: "/operations",
     icon: Wrench,
     testId: "sidebar-operations",
-  },
-  {
-    title: "Agentic AI",
-    url: "/agentic-ai",
-    icon: Bot,
-    testId: "sidebar-agentic-ai",
   },
 ];
 
