@@ -308,10 +308,14 @@ export function AIAssistant() {
     "Create a purchase order for low-stock materials",
     "Rebalance inventory across warehouses",
     "Adjust safety stock based on current regime",
+    "Optimize procurement timing for current market conditions",
+    "Identify supplier risk and suggest alternatives",
     "What autonomous actions are pending?"
   ] : [
     "What's my biggest supply chain risk right now?",
     "Should I buy materials this month?",
+    "Which materials should I reorder now?",
+    "Analyze procurement cost trends",
     "Which SKUs need attention?",
     "Run a tariff simulation"
   ];
