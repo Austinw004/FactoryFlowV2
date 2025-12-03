@@ -483,12 +483,21 @@ export class NewsMonitoringService {
       const daysAgo = Math.floor(Math.random() * 3);
       const publishedAt = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000);
 
+      const sources = [
+        { name: 'Reuters', url: 'https://www.reuters.com/business/supply-chain/' },
+        { name: 'Bloomberg', url: 'https://www.bloomberg.com/supply-chain' },
+        { name: 'WSJ', url: 'https://www.wsj.com/news/logistics' },
+        { name: 'Financial Times', url: 'https://www.ft.com/supply-chains' },
+        { name: 'AP News', url: 'https://apnews.com/hub/supply-chain' }
+      ];
+      const selectedSource = sources[Math.floor(Math.random() * sources.length)];
+      
       alerts.push({
         id: this.generateId(event.title, publishedAt.toISOString()),
         title: event.title,
         description: event.description,
-        source: ['Reuters', 'Bloomberg', 'WSJ', 'Financial Times', 'AP News'][Math.floor(Math.random() * 5)],
-        sourceUrl: '#',
+        source: selectedSource.name,
+        sourceUrl: selectedSource.url,
         publishedAt,
         category: event.category,
         severity: event.severity,

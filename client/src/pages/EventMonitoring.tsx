@@ -311,7 +311,21 @@ export default function EventMonitoring() {
                         ))}
                       </div>
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>{alert.source}</span>
+                        {alert.sourceUrl && alert.sourceUrl !== '#' ? (
+                          <a 
+                            href={alert.sourceUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 hover:text-primary transition-colors"
+                            onClick={(e) => e.stopPropagation()}
+                            data-testid={`link-source-${alert.id}`}
+                          >
+                            {alert.source}
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        ) : (
+                          <span>{alert.source}</span>
+                        )}
                         <span>{formatDistanceToNow(new Date(alert.publishedAt), { addSuffix: true })}</span>
                       </div>
                       {alert.fdrImpact && (
@@ -536,8 +550,22 @@ export default function EventMonitoring() {
                     </Badge>
                   </div>
                   <CardTitle>{selectedAlert.title}</CardTitle>
-                  <CardDescription className="mt-2">
-                    {selectedAlert.source} • {formatDistanceToNow(new Date(selectedAlert.publishedAt), { addSuffix: true })}
+                  <CardDescription className="mt-2 flex items-center gap-1 flex-wrap">
+                    {selectedAlert.sourceUrl && selectedAlert.sourceUrl !== '#' ? (
+                      <a 
+                        href={selectedAlert.sourceUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 hover:text-primary transition-colors"
+                        data-testid="link-modal-source"
+                      >
+                        {selectedAlert.source}
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    ) : (
+                      <span>{selectedAlert.source}</span>
+                    )}
+                    <span>• {formatDistanceToNow(new Date(selectedAlert.publishedAt), { addSuffix: true })}</span>
                   </CardDescription>
                 </div>
                 <Button variant="ghost" size="icon" onClick={() => setSelectedAlert(null)} data-testid="button-close-modal">
