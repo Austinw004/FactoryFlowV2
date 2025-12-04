@@ -239,12 +239,14 @@ const chatActionTypeIcons: Record<string, typeof ShoppingCart> = {
 };
 
 const suggestedQuestions = [
-  "Create a purchase order for low-stock materials",
-  "Rebalance inventory across warehouses",
-  "Adjust safety stock based on current regime",
-  "Optimize procurement timing for current market conditions",
-  "Identify supplier risk and suggest alternatives",
-  "What autonomous actions are pending?"
+  "Which suppliers have exposure to Asian ports?",
+  "Show SKUs at risk of stockout in the next 30 days",
+  "What materials are impacted by current weather alerts?",
+  "Which commodities should we buy now based on futures?",
+  "List suppliers in regions with high geopolitical risk",
+  "What's the current consumer sentiment impact on demand?",
+  "Show me the FDR adjustment from external variables",
+  "Identify single-source materials with supply risk",
 ];
 
 export default function AgenticAI() {

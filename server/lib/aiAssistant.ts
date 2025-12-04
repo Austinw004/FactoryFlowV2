@@ -4,6 +4,7 @@ import { calculateMAPEForSKU, checkForDegradation } from "./forecastMonitoring";
 import { fetchAllCommodityPrices, CommodityPrice } from "./commodityPricing";
 import { calculateSupplierRiskScore } from "./supplyChainRisk";
 import { calculateOEE, detectBottlenecks } from "./productionKPIs";
+import { fetchExternalVariables } from "./externalAPIs";
 
 const newsMonitoringService = new NewsMonitoringService(storage);
 
@@ -145,6 +146,31 @@ export interface PlatformContext {
       assignee?: string;
     }>;
   };
+  externalVariables?: {
+    weather: {
+      activeAlerts: number;
+      logisticsRisk: number;
+      impactedRegions: string[];
+      hurricaneSeason: boolean;
+    };
+    commodityFutures: {
+      buySignals: string[];
+      sellSignals: string[];
+      topMover: string;
+    };
+    consumerSentiment: {
+      index: number;
+      trend: string;
+      demandImpact: string;
+    };
+    socialTrends: {
+      overallSentiment: number;
+      riskSignals: string[];
+      trendingTopics: string[];
+    };
+    fdrAdjustment: number;
+    adjustedFdr: number;
+  };
 }
 
 async function callOpenAI(messages: Array<{ role: string; content: string }>): Promise<string> {
@@ -189,6 +215,39 @@ async function callOpenAI(messages: Array<{ role: string; content: string }>): P
 
 function generateFallbackResponse(userMessage: string): string {
   const lowerMessage = userMessage.toLowerCase();
+  
+  // Natural language supply chain queries
+  if (lowerMessage.includes("supplier") && (lowerMessage.includes("port") || lowerMessage.includes("asian") || lowerMessage.includes("exposure"))) {
+    return "To identify suppliers with port exposure, I recommend checking the Supply Chain section under Multi-Tier Supplier Mapping. This shows supplier locations, regional dependencies, and logistics risk factors. You can filter by region to see which suppliers have Asian port dependencies.";
+  }
+  
+  if (lowerMessage.includes("stockout") || (lowerMessage.includes("sku") && lowerMessage.includes("risk"))) {
+    return "SKU stockout risk is tracked in the Demand Hub. Look for items with low inventory levels, high demand velocity, and long lead times. The system automatically flags SKUs at risk based on current stock vs. forecasted demand.";
+  }
+  
+  if (lowerMessage.includes("weather") && (lowerMessage.includes("impact") || lowerMessage.includes("material") || lowerMessage.includes("alert"))) {
+    return "Weather impact on materials is monitored through the Digital Twin's Data Feeds tab. Check the External Variables section for active weather alerts, logistics risk scores, and impacted regions. Materials from affected areas are automatically flagged.";
+  }
+  
+  if (lowerMessage.includes("commodit") && (lowerMessage.includes("buy") || lowerMessage.includes("future"))) {
+    return "Commodity buying signals are derived from futures curve analysis. Commodities in backwardation (futures below spot) suggest buying opportunities, while contango (futures above spot) suggests waiting. Check the Data Feeds tab for current buy/sell signals.";
+  }
+  
+  if (lowerMessage.includes("geopolitical") || (lowerMessage.includes("region") && lowerMessage.includes("risk"))) {
+    return "Geopolitical risk by region is tracked in Strategy Hub under Event Monitoring. Suppliers are scored based on their geographic location, political stability, and trade policy exposure. High-risk regions are highlighted with specific risk factors.";
+  }
+  
+  if (lowerMessage.includes("sentiment") || lowerMessage.includes("consumer")) {
+    return "Consumer sentiment data is integrated into the Extended FDR model. Current sentiment affects demand forecast adjustments - bullish sentiment increases forecasts, bearish decreases them. View the Digital Twin Data Feeds for the current Consumer Sentiment Index.";
+  }
+  
+  if (lowerMessage.includes("fdr") && (lowerMessage.includes("adjust") || lowerMessage.includes("external"))) {
+    return "The FDR adjustment from external variables is shown in the Digital Twin's Data Feeds tab. External factors (weather, sentiment, futures, social trends) modify the base FDR to provide a more accurate economic signal.";
+  }
+  
+  if (lowerMessage.includes("single-source") || lowerMessage.includes("single source")) {
+    return "Single-source material risks are identified in the Supply Chain section. Look for materials with only one approved supplier - these represent concentration risk. The system recommends dual-sourcing for critical materials.";
+  }
   
   if (lowerMessage.includes("risk") || lowerMessage.includes("alert")) {
     return "Based on current platform data, I can see your supply chain risk indicators. To get the most accurate analysis, please check the Event Monitoring tab in Strategy Hub for real-time alerts and risk assessments.";
@@ -298,6 +357,39 @@ class AIAssistantService {
 
       const sopContext = this.analyzeSOP(sopScenarios, sopActionItems, sopMeetings, sopGapAnalyses);
 
+      // Fetch external variables for enhanced context
+      let externalVarsContext = undefined;
+      try {
+        const extVars = await fetchExternalVariables(fdr);
+        externalVarsContext = {
+          weather: {
+            activeAlerts: extVars.weather?.alerts?.length || 0,
+            logisticsRisk: extVars.weather?.logisticsRiskScore || 0,
+            impactedRegions: extVars.weather?.impactedRegions || [],
+            hurricaneSeason: extVars.weather?.hurricaneSeasonActive || false
+          },
+          commodityFutures: {
+            buySignals: extVars.commodityFutures?.backwardation || [],
+            sellSignals: extVars.commodityFutures?.contango || [],
+            topMover: extVars.commodityFutures?.contracts?.sort((a: any, b: any) => Math.abs(b.change24h) - Math.abs(a.change24h))[0]?.commodity || ''
+          },
+          consumerSentiment: {
+            index: extVars.consumerSentiment?.currentIndex || 0,
+            trend: extVars.consumerSentiment?.trend || 'stable',
+            demandImpact: extVars.consumerSentiment?.demandForecastImpact || 'neutral'
+          },
+          socialTrends: {
+            overallSentiment: extVars.socialTrends?.overallSentiment || 0,
+            riskSignals: extVars.socialTrends?.riskSignals || [],
+            trendingTopics: extVars.socialTrends?.trendingTopics || []
+          },
+          fdrAdjustment: extVars.fdrImpact?.adjustment || 0,
+          adjustedFdr: extVars.fdrImpact?.adjustedFdr || fdr
+        };
+      } catch (e) {
+        console.log("[AI Assistant] External variables unavailable, continuing without");
+      }
+
       const context: PlatformContext = {
         regime: {
           fdr,
@@ -340,7 +432,8 @@ class AIAssistantService {
           multiTierRisks: supplierContext.multiTierRisks
         },
         production: productionContext,
-        sop: sopContext
+        sop: sopContext,
+        externalVariables: externalVarsContext
       };
 
       this.contextCache.set(companyId, { context, timestamp: Date.now() });
@@ -780,14 +873,35 @@ class AIAssistantService {
       ? `\n  - Critical S&OP gaps: ${context.sop.criticalGaps}`
       : '';
 
+    // External variables context
+    const extVars = context.externalVariables;
+    const externalVarsSection = extVars ? `
+
+EXTERNAL VARIABLES (Extended FDR Intelligence):
+- Weather & Logistics: ${extVars.weather.activeAlerts} alerts, ${extVars.weather.logisticsRisk}% risk score${extVars.weather.hurricaneSeason ? ', Hurricane season active' : ''}
+  - Impacted regions: ${extVars.weather.impactedRegions.length > 0 ? extVars.weather.impactedRegions.join(', ') : 'None'}
+- Commodity Futures: ${extVars.commodityFutures.buySignals.length} buy signals (backwardation), ${extVars.commodityFutures.sellSignals.length} sell signals (contango)
+  - Top mover: ${extVars.commodityFutures.topMover || 'None'}
+- Consumer Sentiment: Index ${extVars.consumerSentiment.index.toFixed(1)}, Trend: ${extVars.consumerSentiment.trend}, Demand impact: ${extVars.consumerSentiment.demandImpact}
+- Social/News Trends: Sentiment ${extVars.socialTrends.overallSentiment}/100, ${extVars.socialTrends.riskSignals.length} risk signals
+  - Trending: ${extVars.socialTrends.trendingTopics.slice(0, 3).join(', ') || 'None'}
+- FDR Adjustment: ${extVars.fdrAdjustment > 0 ? '+' : ''}${extVars.fdrAdjustment.toFixed(3)} → Adjusted FDR: ${extVars.adjustedFdr.toFixed(2)}` : '';
+
     return `You are an expert manufacturing operations copilot for Prescient Labs. You have deep expertise in supply chain management, procurement strategy, demand forecasting, production optimization, and economic cycle analysis. You provide actionable, data-driven guidance to manufacturing professionals.
+
+You excel at answering NATURAL LANGUAGE QUERIES about supply chain data. Users may ask questions in plain English like:
+- "Which suppliers have exposure to Asian ports?"
+- "Show SKUs at risk of stockout"
+- "What materials are impacted by hurricane season?"
+- "List suppliers in regions with high geopolitical risk"
+- "Which commodities should we buy now?"
 
 CURRENT PLATFORM STATE:
 
 ECONOMIC CONTEXT:
 - Regime: ${context.regime.regime} (FDR: ${context.regime.fdr.toFixed(2)})
 - Market Signal: ${context.regime.signal.toUpperCase()}
-- Confidence: ${(context.regime.confidence * 100).toFixed(0)}%
+- Confidence: ${(context.regime.confidence * 100).toFixed(0)}%${externalVarsSection}
 
 DEMAND FORECASTING:
 - Total SKUs: ${context.forecasts.totalSkus}
@@ -880,13 +994,37 @@ For FORECASTING:
 - Identify SKUs needing model retraining
 - Suggest demand signal improvements
 
+For NATURAL LANGUAGE SUPPLY CHAIN QUERIES:
+When users ask questions like "which suppliers...", "show me...", "list...", "what materials...", you should:
+- Parse the intent and filter criteria from their natural language
+- Search through the relevant data (suppliers, SKUs, materials, alerts)
+- Present results in a clear, scannable format (bulleted lists or brief tables)
+- Include relevant metrics (risk scores, inventory levels, geographic exposure)
+- Suggest follow-up actions based on findings
+
+COMMON QUERY PATTERNS:
+- Port/Region exposure: Check supplier locations and multi-tier dependencies against impacted regions
+- Stockout risk: Low inventory + high demand velocity + long lead times
+- Weather impact: Cross-reference logistics risk regions with supplier/material locations
+- Buy/Sell signals: Use commodity futures backwardation (buy) vs contango (sell)
+- Risk concentration: Single-source materials, geographic clustering
+- Forecast accuracy: MAPE trends, degradation alerts, retraining needs
+
+For EXTERNAL VARIABLES:
+- Weather/logistics alerts affect port-dependent suppliers and shipping lanes
+- Consumer sentiment shifts demand forecasts (bullish = increase, bearish = decrease)
+- Social trend risk signals may indicate emerging supply chain disruptions
+- Commodity futures curves indicate optimal buy/sell timing
+- FDR adjustment reflects combined impact of all external factors
+
 RESPONSE STYLE:
 - Be specific with numbers, percentages, and names from the data
 - Provide actionable recommendations, not just observations
 - Prioritize urgent issues (critical risks, low OEE, stockouts)
 - Reference platform features for next steps
 - Keep responses focused and scannable
-- Use industry terminology appropriately but explain when helpful`;
+- Use industry terminology appropriately but explain when helpful
+- For natural language queries, lead with the direct answer then provide context`;
   }
 
   private getRegimeGuidance(regime: string): string {

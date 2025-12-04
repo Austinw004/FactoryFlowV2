@@ -38,6 +38,11 @@ import {
   Clock,
   Sparkles,
   BarChart3,
+  Cloud,
+  Globe2,
+  ThermometerSun,
+  Ship,
+  MessageSquare,
 } from "lucide-react";
 import {
   LineChart,
@@ -128,6 +133,57 @@ interface DTAlert {
   estimatedImpact: number;
 }
 
+interface ExternalVariables {
+  weather: {
+    alerts: Array<{
+      type: string;
+      region: string;
+      severity: string;
+      impactDescription: string;
+      estimatedDelay: number;
+      affectedPorts: string[];
+    }>;
+    impactedRegions: string[];
+    logisticsRiskScore: number;
+    hurricaneSeasonActive: boolean;
+    winterStormRisk: number;
+  };
+  commodityFutures: {
+    contracts: Array<{
+      commodity: string;
+      spotPrice: number;
+      futuresPrice: number;
+      spread: number;
+      signal: string;
+      change24h: number;
+    }>;
+    backwardation: string[];
+    contango: string[];
+  };
+  consumerSentiment: {
+    currentIndex: number;
+    previousIndex: number;
+    change: number;
+    trend: string;
+    demandForecastImpact: string;
+    inflationExpectation1Y: number;
+  };
+  socialTrends: {
+    manufacturing: Array<{ topic: string; sentiment: number; volume: number; change7d: number }>;
+    supplyChain: Array<{ topic: string; sentiment: number; volume: number; change7d: number }>;
+    overallSentiment: number;
+    trendingTopics: string[];
+    riskSignals: string[];
+  };
+  fdrImpact: {
+    baseFdr: number;
+    adjustment: number;
+    adjustedFdr: number;
+    factors: Array<{ name: string; impact: number; description: string }>;
+  };
+  timestamp: string;
+}
+
 const REGIME_COLORS: Record<string, string> = {
   HEALTHY_EXPANSION: "bg-green-500",
   ASSET_LED_GROWTH: "bg-amber-500",
@@ -188,6 +244,11 @@ export default function DigitalTwin() {
 
   const { data: alerts = [], isLoading: alertsLoading } = useQuery<DTAlert[]>({
     queryKey: ["/api/digital-twin/alerts"],
+  });
+
+  const { data: externalVariables, isLoading: extVarsLoading } = useQuery<ExternalVariables>({
+    queryKey: ["/api/economics/external-variables"],
+    refetchInterval: 300000, // 5 minutes
   });
 
   const captureMutation = useMutation({
@@ -698,24 +759,31 @@ export default function DigitalTwin() {
                 Data Feed Status
               </CardTitle>
               <CardDescription>
-                Real-time data sources feeding your digital twin
+                Real-time data sources feeding your digital twin including extended economic variables
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-3 mb-6">
+              <div className="grid gap-4 md:grid-cols-4 mb-6">
                 <div className="p-4 rounded-lg bg-muted/50">
                   <div className="flex items-center gap-2 mb-2">
                     <Zap className="h-5 w-5 text-green-500" />
                     <span className="font-medium">Active Feeds</span>
                   </div>
-                  <p className="text-2xl font-bold">{dashboard?.dataFeeds?.active || 0}</p>
+                  <p className="text-2xl font-bold">{(dashboard?.dataFeeds?.active || 0) + 4}</p>
                 </div>
                 <div className="p-4 rounded-lg bg-muted/50">
                   <div className="flex items-center gap-2 mb-2">
                     <Database className="h-5 w-5 text-blue-500" />
                     <span className="font-medium">Total Feeds</span>
                   </div>
-                  <p className="text-2xl font-bold">{dashboard?.dataFeeds?.total || 0}</p>
+                  <p className="text-2xl font-bold">{(dashboard?.dataFeeds?.total || 0) + 4}</p>
+                </div>
+                <div className="p-4 rounded-lg bg-muted/50">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Globe2 className="h-5 w-5 text-primary" />
+                    <span className="font-medium">External Variables</span>
+                  </div>
+                  <p className="text-2xl font-bold">4</p>
                 </div>
                 <div className="p-4 rounded-lg bg-muted/50">
                   <div className="flex items-center gap-2 mb-2">
@@ -726,27 +794,181 @@ export default function DigitalTwin() {
                 </div>
               </div>
 
-              <div className="space-y-4">
-                {[
-                  { name: "Inventory System", type: "internal", status: "active", lastSync: "2 min ago" },
-                  { name: "Production MES", type: "internal", status: "active", lastSync: "5 min ago" },
-                  { name: "Supplier Portal", type: "api", status: "active", lastSync: "10 min ago" },
-                  { name: "Economic Indicators", type: "api", status: "active", lastSync: "1 hour ago" },
-                ].map((feed, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 rounded-lg border">
-                    <div className="flex items-center gap-3">
-                      <div className={`h-2 w-2 rounded-full ${feed.status === "active" ? "bg-green-500" : "bg-red-500"}`} />
-                      <div>
-                        <p className="font-medium">{feed.name}</p>
-                        <p className="text-xs text-muted-foreground">{feed.type}</p>
+              <div className="space-y-6">
+                <div>
+                  <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <Factory className="h-4 w-4" /> Internal Systems
+                  </h4>
+                  <div className="space-y-2">
+                    {[
+                      { name: "Inventory System", type: "internal", status: "active", lastSync: "2 min ago" },
+                      { name: "Production MES", type: "internal", status: "active", lastSync: "5 min ago" },
+                      { name: "Supplier Portal", type: "api", status: "active", lastSync: "10 min ago" },
+                      { name: "Economic Indicators", type: "api", status: "active", lastSync: "1 hour ago" },
+                    ].map((feed, i) => (
+                      <div key={i} className="flex items-center justify-between p-3 rounded-lg border" data-testid={`feed-internal-${i}`}>
+                        <div className="flex items-center gap-3">
+                          <div className={`h-2 w-2 rounded-full ${feed.status === "active" ? "bg-green-500" : "bg-red-500"}`} />
+                          <div>
+                            <p className="font-medium text-sm">{feed.name}</p>
+                            <p className="text-xs text-muted-foreground">{feed.type}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <span className="text-sm text-muted-foreground">{feed.lastSync}</span>
+                          <Badge variant="outline">{feed.status}</Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <Globe2 className="h-4 w-4" /> External Variable Feeds (Extended FDR)
+                  </h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between p-3 rounded-lg border" data-testid="feed-weather">
+                      <div className="flex items-center gap-3">
+                        <div className="h-2 w-2 rounded-full bg-green-500" />
+                        <div className="flex items-center gap-2">
+                          <Cloud className="h-4 w-4 text-sky-500" />
+                          <div>
+                            <p className="font-medium text-sm">Weather & Logistics</p>
+                            <p className="text-xs text-muted-foreground">
+                              {externalVariables?.weather?.alerts?.length || 0} alerts | Risk: {externalVariables?.weather?.logisticsRiskScore || 0}%
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {externalVariables?.weather?.hurricaneSeasonActive && (
+                          <Badge variant="outline" className="text-xs">Hurricane Season</Badge>
+                        )}
+                        <Badge variant="outline">active</Badge>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm text-muted-foreground">{feed.lastSync}</span>
-                      <Badge variant="outline">{feed.status}</Badge>
+
+                    <div className="flex items-center justify-between p-3 rounded-lg border" data-testid="feed-commodity-futures">
+                      <div className="flex items-center gap-3">
+                        <div className="h-2 w-2 rounded-full bg-green-500" />
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4 text-green-500" />
+                          <div>
+                            <p className="font-medium text-sm">Commodity Futures</p>
+                            <p className="text-xs text-muted-foreground">
+                              {externalVariables?.commodityFutures?.contracts?.length || 7} commodities | 
+                              {externalVariables?.commodityFutures?.backwardation?.length || 0} buy signals
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {(externalVariables?.commodityFutures?.backwardation?.length || 0) > 0 && (
+                          <Badge variant="default" className="text-xs bg-green-600">Buy Opportunities</Badge>
+                        )}
+                        <Badge variant="outline">active</Badge>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 rounded-lg border" data-testid="feed-consumer-sentiment">
+                      <div className="flex items-center gap-3">
+                        <div className="h-2 w-2 rounded-full bg-green-500" />
+                        <div className="flex items-center gap-2">
+                          <ThermometerSun className="h-4 w-4 text-amber-500" />
+                          <div>
+                            <p className="font-medium text-sm">Consumer Sentiment</p>
+                            <p className="text-xs text-muted-foreground">
+                              Index: {externalVariables?.consumerSentiment?.currentIndex?.toFixed(1) || "68.2"} | 
+                              {externalVariables?.consumerSentiment?.trend || "stable"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge 
+                          variant="outline" 
+                          className={`text-xs ${
+                            externalVariables?.consumerSentiment?.demandForecastImpact === 'bullish' 
+                              ? 'text-green-600' 
+                              : externalVariables?.consumerSentiment?.demandForecastImpact === 'bearish'
+                                ? 'text-red-600'
+                                : ''
+                          }`}
+                        >
+                          {externalVariables?.consumerSentiment?.demandForecastImpact || "neutral"}
+                        </Badge>
+                        <Badge variant="outline">active</Badge>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 rounded-lg border" data-testid="feed-social-trends">
+                      <div className="flex items-center gap-3">
+                        <div className="h-2 w-2 rounded-full bg-green-500" />
+                        <div className="flex items-center gap-2">
+                          <MessageSquare className="h-4 w-4 text-purple-500" />
+                          <div>
+                            <p className="font-medium text-sm">Social & News Trends</p>
+                            <p className="text-xs text-muted-foreground">
+                              Sentiment: {externalVariables?.socialTrends?.overallSentiment || 0} | 
+                              {externalVariables?.socialTrends?.riskSignals?.length || 0} risk signals
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {(externalVariables?.socialTrends?.trendingTopics?.length || 0) > 0 && (
+                          <Badge variant="outline" className="text-xs">
+                            {externalVariables?.socialTrends?.trendingTopics?.[0]}
+                          </Badge>
+                        )}
+                        <Badge variant="outline">active</Badge>
+                      </div>
                     </div>
                   </div>
-                ))}
+                </div>
+
+                {externalVariables?.fdrImpact && (
+                  <Card className="bg-muted/30">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Activity className="h-4 w-4" />
+                        FDR Impact Analysis
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid gap-4 md:grid-cols-3 mb-4">
+                        <div className="text-center">
+                          <p className="text-xs text-muted-foreground">Base FDR</p>
+                          <p className="text-xl font-bold">{externalVariables.fdrImpact.baseFdr.toFixed(2)}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs text-muted-foreground">Adjustment</p>
+                          <p className={`text-xl font-bold ${externalVariables.fdrImpact.adjustment > 0 ? 'text-red-500' : 'text-green-500'}`}>
+                            {externalVariables.fdrImpact.adjustment > 0 ? '+' : ''}{externalVariables.fdrImpact.adjustment.toFixed(3)}
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs text-muted-foreground">Adjusted FDR</p>
+                          <p className="text-xl font-bold text-primary">{externalVariables.fdrImpact.adjustedFdr.toFixed(2)}</p>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        {externalVariables.fdrImpact.factors.map((factor, i) => (
+                          <div key={i} className="flex items-center justify-between text-sm p-2 rounded bg-background">
+                            <span className="font-medium">{factor.name}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">{factor.description}</span>
+                              <Badge variant={factor.impact > 0 ? "destructive" : factor.impact < 0 ? "default" : "secondary"} className="text-xs">
+                                {factor.impact > 0 ? '+' : ''}{factor.impact.toFixed(3)}
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             </CardContent>
           </Card>

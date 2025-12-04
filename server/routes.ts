@@ -604,6 +604,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // External Variables for Extended FDR Analysis
+  app.get("/api/economics/external-variables", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      // Check cache first
+      const cacheKey = `externalVariables:${user.companyId}`;
+      const cachedData = globalCache.get<any>(cacheKey);
+      if (cachedData) {
+        return res.json(cachedData);
+      }
+      
+      const { 
+        fetchAllExternalVariables, 
+        calculateExternalVariableImpact 
+      } = await import("./lib/externalAPIs");
+      
+      const variables = await fetchAllExternalVariables();
+      const impact = calculateExternalVariableImpact(variables);
+      
+      // Get current regime for context
+      const snapshot = await storage.getLatestEconomicSnapshot(user.companyId);
+      const baseFdr = snapshot?.fdr || economics.fdr || 1.0;
+      const adjustedFdr = Math.max(0.2, Math.min(5.0, baseFdr + impact.fdrAdjustment));
+      
+      const responseData = {
+        ...variables,
+        fdrImpact: {
+          baseFdr,
+          adjustment: impact.fdrAdjustment,
+          adjustedFdr,
+          factors: impact.factors
+        }
+      };
+      
+      // Cache for 30 minutes
+      globalCache.set(cacheKey, responseData, 'economicData');
+      
+      res.json(responseData);
+    } catch (error: any) {
+      console.error("Error fetching external variables:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Master Materials Catalog Endpoint
   app.get("/api/materials/catalog", isAuthenticated, async (req: any, res) => {
     try {
@@ -5507,6 +5557,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(response);
     } catch (error: any) {
       console.error('AI chat error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Agentic AI Chat endpoint with autonomous action capabilities
+  app.post("/api/ai/agentic-chat", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "No company associated with user" });
+      }
+
+      const { message, conversationId } = req.body;
+      if (!message || typeof message !== 'string') {
+        return res.status(400).json({ error: "Message is required" });
+      }
+
+      const { aiAssistantService } = await import("./lib/aiAssistant");
+      const response = await aiAssistantService.chat(user.companyId, message, conversationId);
+      
+      res.json(response);
+    } catch (error: any) {
+      console.error('Agentic AI chat error:', error);
       res.status(500).json({ error: error.message });
     }
   });
