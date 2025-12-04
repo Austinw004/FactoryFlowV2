@@ -97,8 +97,8 @@ function Router() {
 
   return (
     <Switch>
-      {/* Main hub routes */}
-      <Route path="/" component={StrategyDigitalTwinRoute} />
+      {/* Main hub routes - Dashboard is default for new users to see Get Started */}
+      <Route path="/" component={DashboardOverviewRoute} />
       <Route path="/dashboard" component={DashboardOverviewRoute} />
       <Route path="/demand" component={DemandPlanningRoute} />
       <Route path="/supply-chain" component={SupplyChainInventoryRoute} />

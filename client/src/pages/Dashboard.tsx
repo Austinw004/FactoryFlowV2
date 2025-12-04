@@ -96,14 +96,15 @@ export default function Dashboard() {
 
   const seedMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/seed"),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         title: "Success",
         description: "Sample data has been loaded successfully!",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/allocations"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/skus"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/materials"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/allocations"], refetchType: 'all' });
+      await queryClient.invalidateQueries({ queryKey: ["/api/skus"], refetchType: 'all' });
+      await queryClient.invalidateQueries({ queryKey: ["/api/materials"], refetchType: 'all' });
+      await queryClient.invalidateQueries({ queryKey: ["/api/suppliers"], refetchType: 'all' });
     },
     onError: (error: Error) => {
       toast({

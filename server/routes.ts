@@ -669,6 +669,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { seedData } = await import("./seed");
       const result = await seedData(user.companyId!);
       
+      // Invalidate server-side cache for this company's data
+      const companyId = user.companyId!;
+      globalCache.invalidate(`masterData:skus:${companyId}`);
+      globalCache.invalidate(`masterData:materials:${companyId}`);
+      globalCache.invalidate(`masterData:suppliers:${companyId}`);
+      globalCache.invalidate(`masterData:allocations:${companyId}`);
+      console.log(`[Seed] Invalidated cache for company ${companyId}`);
+      
       res.json({ message: "Seed data created successfully", result });
     } catch (error: any) {
       console.error("Seed error:", error);

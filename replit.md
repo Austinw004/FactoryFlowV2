@@ -82,6 +82,13 @@ The frontend uses React with TypeScript and Vite, with `wouter` for routing and 
 - API queries (skus, allocations, regime) now wait for user authentication to complete
 - Prevents race conditions where queries fired before company was created
 - Empty state properly renders the CreateSKUDialog for new users
+- Default route changed from Digital Twin to Dashboard so new users see "Get Started" onboarding
+
+### Sample Data Seeding Fix (Dec 2025)
+- Fixed server-side cache invalidation after seeding using `globalCache.invalidate()`
+- Added frontend cache invalidation with `refetchType: 'all'` for immediate UI updates
+- Cache keys invalidated: skus, materials, suppliers, allocations for the company
+- "Load Sample Data" button now properly populates dashboard with 3 SKUs and materials
 
 ### New User Onboarding Flow (3-Step Wizard)
 New users are guided through a comprehensive onboarding wizard:
