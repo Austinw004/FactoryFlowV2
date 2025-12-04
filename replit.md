@@ -83,13 +83,31 @@ The frontend uses React with TypeScript and Vite, with `wouter` for routing and 
 - Prevents race conditions where queries fired before company was created
 - Empty state properly renders the CreateSKUDialog for new users
 
-### New User Onboarding Flow
-1. User clicks "Start Free Trial" → triggers OIDC login
-2. On callback, user record is created in database
-3. `/api/auth/user` auto-creates company if user has none
-4. Default RBAC roles (Admin, Procurement Manager, etc.) are initialized for the company
-5. User is assigned Admin role
-6. Dashboard shows "Get Started" empty state with product creation dialog
+### New User Onboarding Flow (3-Step Wizard)
+New users are guided through a comprehensive onboarding wizard:
+
+**Step 1 - Company Setup:**
+- User enters company name (required)
+- Optional: Select industry (Electronics, Automotive, etc.)
+- Optional: Select company size
+- POST `/api/onboarding/company` creates/updates company
+
+**Step 2 - Team Invitations:**
+- Add team members by email
+- Assign roles (Admin, Manager, Viewer)
+- Can be skipped if working solo
+- POST `/api/onboarding/invite-team` processes invitations
+
+**Step 3 - Platform Launch:**
+- Welcome message and platform overview
+- POST `/api/onboarding/complete` marks onboarding done
+- Redirects to main dashboard
+
+**Technical Implementation:**
+- `users.onboarding_complete` flag (integer: 0/1) tracks completion status
+- `useAuth` hook includes `needsOnboarding` state
+- `App.tsx` routes users without completed onboarding to `/onboarding`
+- After completion, users see full dashboard with sidebar navigation
 
 ## External Dependencies
 
