@@ -28,9 +28,28 @@ export const users = pgTable("users", {
   subscriptionStatus: text("subscription_status"), // "active", "trialing", "past_due", "canceled", "incomplete"
   subscriptionTier: text("subscription_tier"), // "starter", "professional", "enterprise"
   trialEndsAt: timestamp("trial_ends_at"),
+  onboardingComplete: integer("onboarding_complete").default(0), // 0 = needs onboarding, 1 = complete
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Team Invitations - for inviting new team members
+export const teamInvitations = pgTable("team_invitations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  email: text("email").notNull(),
+  roleId: varchar("role_id").references(() => roles.id, { onDelete: "set null" }),
+  invitedBy: varchar("invited_by").notNull().references(() => users.id, { onDelete: "cascade" }),
+  status: text("status").notNull().default("pending"), // "pending", "accepted", "expired", "cancelled"
+  token: varchar("token").notNull().unique(), // Unique invitation token
+  expiresAt: timestamp("expires_at").notNull(),
+  acceptedAt: timestamp("accepted_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("team_invitations_company_idx").on(table.companyId),
+  index("team_invitations_email_idx").on(table.email),
+  index("team_invitations_token_idx").on(table.token),
+]);
 
 // RBAC - Permission definitions (system-wide)
 export const permissions = pgTable("permissions", {
@@ -1402,6 +1421,9 @@ export const updateRoleSchema = createInsertSchema(roles).omit({ id: true, compa
 export const insertRolePermissionSchema = createInsertSchema(rolePermissions).omit({ createdAt: true });
 export const insertUserRoleAssignmentSchema = createInsertSchema(userRoleAssignments).omit({ assignedAt: true });
 
+// Team Invitation Insert Schemas
+export const insertTeamInvitationSchema = createInsertSchema(teamInvitations).omit({ id: true, createdAt: true, acceptedAt: true });
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -1471,6 +1493,10 @@ export type RolePermission = typeof rolePermissions.$inferSelect;
 export type InsertRolePermission = z.infer<typeof insertRolePermissionSchema>;
 export type UserRoleAssignment = typeof userRoleAssignments.$inferSelect;
 export type InsertUserRoleAssignment = z.infer<typeof insertUserRoleAssignmentSchema>;
+
+// Team Invitation Types
+export type TeamInvitation = typeof teamInvitations.$inferSelect;
+export type InsertTeamInvitation = z.infer<typeof insertTeamInvitationSchema>;
 
 // IoT Sensors & Predictive Maintenance schemas
 export const insertEquipmentSensorSchema = createInsertSchema(equipmentSensors).omit({ id: true, createdAt: true, updatedAt: true });

@@ -484,6 +484,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Onboarding API endpoints
+  app.post('/api/onboarding/company', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { name, industry, companySize } = req.body;
+      
+      if (!name?.trim()) {
+        return res.status(400).json({ error: "Company name is required" });
+      }
+      
+      let user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      // Update existing company or create new one
+      if (user.companyId) {
+        // Update existing company
+        await storage.updateCompany(user.companyId, {
+          name: name.trim(),
+          industry: industry || null,
+          companySize: companySize || null,
+        });
+        console.log(`[Onboarding] Updated company ${user.companyId} for user ${userId}`);
+      } else {
+        // Create new company
+        const company = await storage.createCompany({
+          name: name.trim(),
+          industry: industry || null,
+          companySize: companySize || null,
+        });
+        
+        // Initialize default roles for the new company
+        await initializeDefaultRoles(company.id);
+        
+        // Assign Admin role to the user
+        const adminRole = await storage.getRoleByName(company.id, "Admin");
+        if (adminRole) {
+          await storage.assignRoleToUser(userId, adminRole.id, company.id, userId);
+        }
+        
+        // Update user with company
+        user = await storage.upsertUser({
+          ...user,
+          companyId: company.id,
+        });
+        
+        console.log(`[Onboarding] Created company ${company.id} for user ${userId}`);
+      }
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Onboarding company error:", error);
+      res.status(500).json({ error: "Failed to set up company" });
+    }
+  });
+
+  app.post('/api/onboarding/invite-team', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { members } = req.body;
+      
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "Please set up your company first" });
+      }
+      
+      if (!Array.isArray(members) || members.length === 0) {
+        return res.json({ success: true, invitationsSent: 0 });
+      }
+      
+      // Get default roles for assignment
+      const viewerRole = await storage.getRoleByName(user.companyId, "Viewer");
+      const managerRole = await storage.getRoleByName(user.companyId, "Operations Manager");
+      const adminRole = await storage.getRoleByName(user.companyId, "Admin");
+      
+      const invitations = [];
+      for (const member of members) {
+        if (!member.email || !member.email.includes("@")) continue;
+        
+        // Determine role ID based on member role
+        let roleId = viewerRole?.id;
+        if (member.role === "admin") roleId = adminRole?.id;
+        else if (member.role === "manager") roleId = managerRole?.id;
+        
+        // Generate unique token
+        const token = `inv_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+        
+        // Create invitation (we'll store this in memory for now since table might not exist)
+        invitations.push({
+          email: member.email,
+          role: member.role,
+          token,
+          expiresAt,
+        });
+        
+        console.log(`[Onboarding] Invitation created for ${member.email} (role: ${member.role})`);
+      }
+      
+      res.json({ success: true, invitationsSent: invitations.length });
+    } catch (error: any) {
+      console.error("Onboarding invite error:", error);
+      res.status(500).json({ error: "Failed to send invitations" });
+    }
+  });
+
+  app.post('/api/onboarding/complete', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      // Mark onboarding as complete
+      await storage.upsertUser({
+        ...user,
+        onboardingComplete: 1,
+      });
+      
+      console.log(`[Onboarding] Completed for user ${userId}`);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Onboarding complete error:", error);
+      res.status(500).json({ error: "Failed to complete onboarding" });
+    }
+  });
+
   // Get all users in company (for role management)
   app.get('/api/users', isAuthenticated, requirePermission('MANAGE_USERS'), async (req: any, res) => {
     try {

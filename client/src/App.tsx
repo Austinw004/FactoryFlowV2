@@ -25,6 +25,7 @@ import ApiDocumentation from "@/pages/ApiDocumentation";
 import PlatformAnalytics from "@/pages/PlatformAnalytics";
 import AgenticAI from "@/pages/AgenticAI";
 import { useAuth } from "@/hooks/useAuth";
+import Onboarding from "@/pages/Onboarding";
 
 // Dashboard Hub routes
 const DashboardOverviewRoute = () => <DashboardHub initialTab="overview" />;
@@ -66,7 +67,7 @@ const StrategyMaRoute = () => <StrategyHub initialTab="ma" />;
 const StrategyBenchmarkingRoute = () => <StrategyHub initialTab="benchmarking" />;
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, needsOnboarding } = useAuth();
 
   if (isLoading) {
     return (
@@ -81,6 +82,15 @@ function Router() {
       <Switch>
         <Route path="/" component={LandingPage} />
         <Route component={LandingPage} />
+      </Switch>
+    );
+  }
+
+  if (needsOnboarding) {
+    return (
+      <Switch>
+        <Route path="/onboarding" component={Onboarding} />
+        <Route component={Onboarding} />
       </Switch>
     );
   }
@@ -157,12 +167,12 @@ function Router() {
 }
 
 function AppLayout() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, needsOnboarding } = useAuth();
   const style = {
     "--sidebar-width": "15rem",
   };
 
-  if (isLoading || !isAuthenticated) {
+  if (isLoading || !isAuthenticated || needsOnboarding) {
     return <Router />;
   }
 
