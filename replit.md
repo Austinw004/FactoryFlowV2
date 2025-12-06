@@ -173,9 +173,9 @@ The following integrations need to be set up before publishing:
 - **To set up**: Use Replit's integration panel or provide an API key as a secret
 
 ### Stripe (for payments)
-- **Status**: Needs reconnection
-- **Impact**: Subscription billing won't work until configured
-- **To set up**: Use Replit's Stripe integration in the integrations panel
+- **Status**: Connected ✓ (Dec 2025)
+- **Keys**: STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY configured as secrets
+- **Webhook**: Auto-configured at /api/stripe/webhook
 
 ### Legal Pages Added (Dec 2025)
 - Terms of Service: `/terms`
