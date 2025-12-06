@@ -161,3 +161,23 @@ New users are guided through a comprehensive onboarding wizard:
 -   **Frontend**: `react`, `wouter`, `@tanstack/react-query`, `tailwindcss`, `recharts`, `@radix-ui/*`, `class-variance-authority`, `cmdk`, `lucide-react`
 -   **Backend**: `express`, `drizzle-orm`, `drizzle-zod`, `zod`, `passport`, `openid-client`, `axios`
 -   **Database & Sessions**: `@neondatabase/serverless`, `connect-pg-simple`, `ws`
+
+## Pending Integrations (Dec 2025)
+
+The following integrations need to be set up before publishing:
+
+### Email Service (for team invitations)
+- **Status**: Not configured
+- **Options**: SendGrid, Resend, or Brevo (all have free tiers)
+- **Impact**: Team invitation emails won't be sent until configured
+- **To set up**: Use Replit's integration panel or provide an API key as a secret
+
+### Stripe (for payments)
+- **Status**: Needs reconnection
+- **Impact**: Subscription billing won't work until configured
+- **To set up**: Use Replit's Stripe integration in the integrations panel
+
+### Legal Pages Added (Dec 2025)
+- Terms of Service: `/terms`
+- Privacy Policy: `/privacy`
+- Both linked from landing page footer
