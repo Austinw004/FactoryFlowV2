@@ -1832,6 +1832,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Auto-generate multi-horizon forecasts for all SKUs
+  app.post("/api/multi-horizon-forecasts/generate", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const { createForecastPopulationService } = await import("./lib/forecastPopulation");
+      const forecastService = createForecastPopulationService(storage);
+      const result = await forecastService.populateForecasts(user.companyId);
+      
+      await logAudit({
+        action: "generate",
+        entityType: "multi_horizon_forecasts",
+        entityId: user.companyId,
+        changes: result,
+        notes: `Generated ${result.forecastsCreated} forecasts for ${result.skusProcessed} SKUs`,
+        req,
+      });
+      
+      res.json({
+        success: true,
+        ...result,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.patch("/api/multi-horizon-forecasts/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -4875,6 +4906,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Generate risk snapshots for all suppliers (continuous monitoring)
+  app.post("/api/supply-chain/risk-snapshots/generate", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+      
+      const { createSupplierRiskMonitoringService } = await import("./lib/supplierRiskMonitoring");
+      const riskService = createSupplierRiskMonitoringService(storage);
+      const result = await riskService.generateRiskSnapshots(user.companyId);
+      
+      res.json({
+        success: true,
+        ...result,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Supplier Links - Network connections between suppliers
   app.get("/api/supply-chain/links", isAuthenticated, async (req: any, res) => {
     try {
@@ -5610,6 +5662,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(scoring);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Generate M&A intelligence (targets and recommendations)
+  app.post("/api/ma/generate", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+      
+      const { createMAIntelligenceService } = await import("./lib/maIntelligencePopulation");
+      const maService = createMAIntelligenceService(storage);
+      const result = await maService.generateMAIntelligence(user.companyId);
+      
+      res.json({
+        success: true,
+        ...result,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Generate production metrics and OEE calculations
+  app.post("/api/production-metrics/generate", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+      
+      const { createProductionMetricsService } = await import("./lib/productionMetricsPopulation");
+      const metricsService = createProductionMetricsService(storage);
+      const result = await metricsService.generateProductionMetrics(user.companyId);
+      
+      res.json({
+        success: true,
+        ...result,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Generate workforce analytics
+  app.post("/api/workforce/analytics", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+      
+      const { createWorkforceAnalyticsService } = await import("./lib/workforceAnalytics");
+      const workforceService = createWorkforceAnalyticsService(storage);
+      const result = await workforceService.generateWorkforceAnalytics(user.companyId);
+      
+      res.json({
+        success: true,
+        ...result,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get enhanced direction prediction
+  app.post("/api/direction-accuracy/enhance", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+      
+      const { createDirectionAccuracyService } = await import("./lib/directionAccuracyEnhancement");
+      const directionService = createDirectionAccuracyService(storage);
+      const result = await directionService.enhanceDirectionPrediction(user.companyId);
+      
+      res.json({
+        success: true,
+        ...result,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get workforce projection
+  app.get("/api/workforce/projection", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+      
+      const months = parseInt(req.query.months as string) || 12;
+      
+      const { createWorkforceAnalyticsService } = await import("./lib/workforceAnalytics");
+      const workforceService = createWorkforceAnalyticsService(storage);
+      const result = await workforceService.getWorkforceProjection(user.companyId, months);
+      
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
   });
 
@@ -6656,6 +6812,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== Smart Alerts & Monitoring =====
 
+  // Generate all alerts for company
+  app.post("/api/alerts/generate", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      const { getAlertGenerationService } = await import("./lib/alertGeneration");
+      const alertService = getAlertGenerationService(storage);
+      const result = await alertService.generateAllAlerts(user.companyId);
+      
+      await logAudit({
+        action: "generate",
+        entityType: "alerts",
+        entityId: user.companyId,
+        changes: result,
+        notes: `Generated ${result.totalAlerts} alerts`,
+        req,
+      });
+      
+      res.json({
+        success: true,
+        ...result,
+      });
+    } catch (error: any) {
+      console.error("Error generating alerts:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get all alerts summary for company
+  app.get("/api/alerts/summary", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      const [maintenanceAlerts, forecastAlerts] = await Promise.all([
+        storage.getMaintenanceAlerts(user.companyId),
+        storage.getForecastDegradationAlerts(user.companyId, {}),
+      ]);
+      
+      // Get regime alerts from alert_triggers table
+      const { alertTriggers } = await import("@shared/schema");
+      const regimeAlerts = await db
+        .select()
+        .from(alertTriggers)
+        .where(eq(alertTriggers.companyId, user.companyId))
+        .orderBy(sql`created_at DESC`)
+        .limit(20);
+      
+      res.json({
+        summary: {
+          total: maintenanceAlerts.length + forecastAlerts.length + regimeAlerts.length,
+          maintenance: maintenanceAlerts.length,
+          forecast: forecastAlerts.length,
+          regime: regimeAlerts.length,
+        },
+        active: {
+          maintenance: maintenanceAlerts.filter((a: any) => a.status === "active").length,
+          forecast: forecastAlerts.filter((a: any) => a.status === "active").length,
+          regime: regimeAlerts.filter((a: any) => !a.acknowledged).length,
+        },
+        alerts: {
+          maintenance: maintenanceAlerts.slice(0, 5),
+          forecast: forecastAlerts.slice(0, 5),
+          regime: regimeAlerts.slice(0, 5),
+        },
+      });
+    } catch (error: any) {
+      console.error("Error fetching alerts summary:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Get all FDR alerts for company
   app.get("/api/fdr-alerts", isAuthenticated, async (req: any, res) => {
     try {
@@ -7460,6 +7693,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Trigger benchmark aggregation (admin function)
+  app.post("/api/benchmarks/aggregate", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const { createBenchmarkAggregationService } = await import("./lib/benchmarkAggregation");
+      const benchmarkService = createBenchmarkAggregationService(storage);
+      
+      // Auto-submit from this company's supplier materials first
+      const submitted = await benchmarkService.autoSubmitFromSupplierMaterials(user.companyId);
+      
+      // Then run aggregation
+      const result = await benchmarkService.aggregateAll();
+      
+      await logAudit({
+        action: "aggregate",
+        entityType: "benchmark",
+        entityId: user.companyId,
+        changes: { ...result, submittedFromCompany: submitted },
+        notes: `Aggregated benchmarks: ${result.aggregates} created from ${result.processed} submissions`,
+        req,
+      });
+      
+      res.json({
+        success: true,
+        submittedFromCompany: submitted,
+        ...result,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Security Monitoring Endpoints
   app.get("/api/security/events", isAuthenticated, rateLimiters.api, async (req: any, res) => {
     try {
@@ -8054,6 +8324,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         bySource,
         recentMetrics: recentMetrics.slice(0, 20),
         metricsCount: allMetrics.length,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Trigger ROI calculation for the current company
+  app.post("/api/roi/calculate", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const { getRoiCalculationService } = await import("./lib/roiCalculation");
+      const roiService = getRoiCalculationService(storage);
+      const result = await roiService.calculateAndStoreRoi(user.companyId);
+      
+      await logAudit({
+        action: "calculate",
+        entityType: "roi_metrics",
+        entityId: user.companyId,
+        changes: result,
+        notes: `Calculated ROI metrics: $${result.totalValueDelivered.toFixed(2)} total value`,
+        req,
+      });
+      
+      res.json({
+        success: true,
+        ...result,
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
