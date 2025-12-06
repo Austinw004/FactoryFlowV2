@@ -6,7 +6,7 @@ import {
   Shield, Clock, DollarSign, Zap, Building2, Rocket, LineChart, Truck,
   Eye, Brain, Gauge, Network, AlertTriangle, Sparkles, Target, Layers
 } from "lucide-react";
-import heroImage from "@assets/ai_assistant_app_cropped.png";
+import heroImage from "@assets/Screenshot_2025-12-06_at_2.06.49_pm_1765051647586.png";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useLocation } from "wouter";
 
