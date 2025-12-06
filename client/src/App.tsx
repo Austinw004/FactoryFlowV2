@@ -26,6 +26,8 @@ import PlatformAnalytics from "@/pages/PlatformAnalytics";
 import AgenticAI from "@/pages/AgenticAI";
 import { useAuth } from "@/hooks/useAuth";
 import Onboarding from "@/pages/Onboarding";
+import TermsOfService from "@/pages/TermsOfService";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
 
 // Dashboard Hub routes
 const DashboardOverviewRoute = () => <DashboardHub initialTab="overview" />;
@@ -81,6 +83,10 @@ function Router() {
     return (
       <Switch>
         <Route path="/" component={LandingPage} />
+        <Route path="/terms" component={TermsOfService} />
+        <Route path="/privacy" component={PrivacyPolicy} />
+        <Route path="/how-it-works" component={HowItWorks} />
+        <Route path="/pricing" component={Pricing} />
         <Route component={LandingPage} />
       </Switch>
     );
