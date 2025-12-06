@@ -90,6 +90,29 @@ The frontend uses React with TypeScript and Vite, with `wouter` for routing and 
 - Cache keys invalidated: skus, materials, suppliers, allocations for the company
 - "Load Sample Data" button now properly populates dashboard with 3 SKUs and materials
 
+### Thesis-Aligned Regime Intelligence (Dec 2025)
+Enhanced FDR model with thesis-aligned improvements that reinforce economic regime understanding:
+
+**New Capabilities:**
+- **FDR Velocity & Acceleration Tracking**: Monitors rate of change in FDR to predict regime transitions before they happen
+- **Regime Transition Prediction**: Calculates probability and estimated time to next regime change based on FDR trajectory
+- **Regime Duration Modeling**: Tracks typical regime durations (e.g., Asset-Led Growth: ~270 days) with confidence decay as regimes extend beyond typical duration
+- **Dynamic Confidence Scoring**: Confidence based on FDR stability within regime, regime maturity, transition risk, and data quality
+- **Data-Driven Regime Factors**: Forecasting factors learned from historical accuracy rather than static values
+- **Procurement Timing Signals**: Actionable recommendations (BUY_NOW, LOCK_PRICES, DEFER, COUNTER_CYCLICAL_OPPORTUNITY) based on regime and FDR trends
+
+**New API Endpoints:**
+- `GET /api/economics/regime-intelligence`: Comprehensive FDR analysis with all intelligence data
+- `GET /api/economics/procurement-signal`: Direct procurement timing recommendation
+
+**Enhanced Existing Endpoint:**
+- `GET /api/economics/regime` now includes `intelligence` object with fdrTrend, transitionPrediction, regimeDuration, confidence, and procurementSignal
+
+**Key Files:**
+- `server/lib/regimeIntelligence.ts`: Core regime intelligence module
+- `server/lib/economics.ts`: Enhanced with intelligence integration
+- `server/lib/forecasting.ts`: Uses optimized regime factors with confidence-adjusted bounds
+
 ### New User Onboarding Flow (3-Step Wizard)
 New users are guided through a comprehensive onboarding wizard:
 

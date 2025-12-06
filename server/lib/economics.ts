@@ -1,3 +1,5 @@
+import { regimeIntelligence, RegimeIntelligence } from "./regimeIntelligence";
+
 export type Regime = "HEALTHY_EXPANSION" | "ASSET_LED_GROWTH" | "IMBALANCED_EXCESS" | "REAL_ECONOMY_LEAD";
 
 export interface EconomicData {
@@ -30,6 +32,7 @@ export class DualCircuitEconomics {
   fdr: number;
   regime: Regime;
   lastRegimeChange: RegimeChange | null;
+  intelligence: RegimeIntelligence;
 
   constructor() {
     this.data = {
@@ -43,6 +46,7 @@ export class DualCircuitEconomics {
     this.fdr = 1.0;
     this.regime = "HEALTHY_EXPANSION";
     this.lastRegimeChange = null;
+    this.intelligence = regimeIntelligence;
   }
 
   async fetch(): Promise<EconomicData> {
@@ -66,6 +70,14 @@ export class DualCircuitEconomics {
     this.computeFdr();
     this.detectRegime();
     
+    // Record FDR snapshot for regime intelligence tracking
+    this.intelligence.recordFDRSnapshot(
+      this.fdr, 
+      this.regime, 
+      this.data.ci_loans_growth, 
+      this.data.margin_debt_growth
+    );
+    
     // Return regime change information
     if (previousRegime !== this.regime) {
       console.log(`[Economics] Regime change detected: ${previousRegime} → ${this.regime} (FDR: ${this.fdr.toFixed(2)})`);
@@ -78,6 +90,36 @@ export class DualCircuitEconomics {
     }
     
     return this.data;
+  }
+
+  /**
+   * Get comprehensive regime intelligence summary
+   * Includes: FDR trends, transition predictions, confidence scores, procurement signals
+   */
+  getRegimeIntelligence() {
+    return this.intelligence.getIntelligenceSummary();
+  }
+
+  /**
+   * Get optimized regime factor for forecasting
+   * Data-driven rather than static factors
+   */
+  getOptimizedRegimeFactor(): number {
+    return this.intelligence.getOptimizedRegimeFactor(this.regime);
+  }
+
+  /**
+   * Get procurement timing signal based on current regime and FDR trends
+   */
+  getProcurementSignal() {
+    return this.intelligence.getProcurementTimingSignal();
+  }
+
+  /**
+   * Update regime factor based on prediction accuracy feedback
+   */
+  recordPredictionAccuracy(predicted: number, actual: number): void {
+    this.intelligence.updateRegimeFactorFromAccuracy(this.regime, predicted, actual);
   }
   
   getRegimeChange() {

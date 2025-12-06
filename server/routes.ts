@@ -705,6 +705,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Try to get latest snapshot from background jobs
       const snapshot = await storage.getLatestEconomicSnapshot(user.companyId);
       
+      // Get regime intelligence (thesis-aligned FDR analysis)
+      const intelligence = economics.getRegimeIntelligence();
+      
       if (snapshot) {
         // Use persisted snapshot data
         const responseData = {
@@ -720,6 +723,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           source: snapshot.source,
           timestamp: snapshot.timestamp,
           signals: calculateSignalsForRegime(snapshot.regime),
+          // Thesis-aligned regime intelligence
+          intelligence: {
+            fdrTrend: intelligence.fdrAnalysis,
+            transitionPrediction: intelligence.transitionPrediction,
+            regimeDuration: intelligence.regimeDuration,
+            confidence: intelligence.confidenceScoring,
+            procurementSignal: intelligence.procurementSignal,
+          },
         };
         
         // Cache with regime-aware TTL
@@ -735,6 +746,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           data: economics.data,
           source: 'balance_sheet',
           signals: calculateSignalsForRegime(economics.regime),
+          // Thesis-aligned regime intelligence
+          intelligence: {
+            fdrTrend: intelligence.fdrAnalysis,
+            transitionPrediction: intelligence.transitionPrediction,
+            regimeDuration: intelligence.regimeDuration,
+            confidence: intelligence.confidenceScoring,
+            procurementSignal: intelligence.procurementSignal,
+          },
         });
       }
     } catch (error: any) {
@@ -788,6 +807,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(responseData);
     } catch (error: any) {
       console.error("Error fetching external variables:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Regime Intelligence Endpoint - Thesis-aligned FDR analysis
+  app.get("/api/economics/regime-intelligence", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      // Ensure economics data is fresh
+      await economics.fetch();
+      
+      // Get comprehensive regime intelligence
+      const intelligence = economics.getRegimeIntelligence();
+      
+      res.json({
+        ...intelligence,
+        timestamp: new Date().toISOString(),
+        description: "Thesis-aligned regime intelligence: FDR trends, transition predictions, and procurement timing signals"
+      });
+    } catch (error: any) {
+      console.error("Error fetching regime intelligence:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Procurement Timing Signal Endpoint
+  app.get("/api/economics/procurement-signal", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      // Ensure economics data is fresh
+      await economics.fetch();
+      
+      // Get procurement timing signal
+      const signal = economics.getProcurementSignal();
+      
+      res.json({
+        ...signal,
+        regime: economics.regime,
+        fdr: economics.fdr,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("Error fetching procurement signal:", error);
       res.status(500).json({ error: error.message });
     }
   });
