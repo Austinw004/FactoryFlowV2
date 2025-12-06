@@ -35,6 +35,7 @@ import { stripeService } from "./stripeService";
 import { getStripePublishableKey } from "./stripeClient";
 import multer from "multer";
 import { z } from "zod";
+import { sendTeamInvitation } from "./lib/emailService";
 import {
   insertCompanySchema,
   insertSkuSchema,
@@ -552,6 +553,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Please set up your company first" });
       }
       
+      const company = await storage.getCompany(user.companyId);
+      const inviterName = user.firstName && user.lastName 
+        ? `${user.firstName} ${user.lastName}` 
+        : user.email || 'A team member';
+      const companyName = company?.name || 'Your Company';
+      
       if (!Array.isArray(members) || members.length === 0) {
         return res.json({ success: true, invitationsSent: 0 });
       }
@@ -562,30 +569,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const adminRole = await storage.getRoleByName(user.companyId, "Admin");
       
       const invitations = [];
+      const emailResults = [];
+      
       for (const member of members) {
         if (!member.email || !member.email.includes("@")) continue;
         
         // Determine role ID based on member role
         let roleId = viewerRole?.id;
-        if (member.role === "admin") roleId = adminRole?.id;
-        else if (member.role === "manager") roleId = managerRole?.id;
+        let roleName = "Viewer";
+        if (member.role === "admin") {
+          roleId = adminRole?.id;
+          roleName = "Admin";
+        } else if (member.role === "manager") {
+          roleId = managerRole?.id;
+          roleName = "Operations Manager";
+        }
         
         // Generate unique token
         const token = `inv_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
         
-        // Create invitation (we'll store this in memory for now since table might not exist)
+        // Create invitation link
+        const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+          : 'https://prescientlabs.io';
+        const inviteLink = `${baseUrl}/invite/${token}`;
+        
+        // Send invitation email
+        const emailResult = await sendTeamInvitation(
+          member.email,
+          member.name || '',
+          inviterName,
+          companyName,
+          roleName,
+          inviteLink
+        );
+        
+        emailResults.push({ email: member.email, success: emailResult.success });
+        
+        // Create invitation record
         invitations.push({
           email: member.email,
           role: member.role,
           token,
           expiresAt,
+          emailSent: emailResult.success,
         });
         
-        console.log(`[Onboarding] Invitation created for ${member.email} (role: ${member.role})`);
+        console.log(`[Onboarding] Invitation ${emailResult.success ? 'sent' : 'created (email failed)'} for ${member.email} (role: ${member.role})`);
       }
       
-      res.json({ success: true, invitationsSent: invitations.length });
+      const successCount = emailResults.filter(r => r.success).length;
+      res.json({ 
+        success: true, 
+        invitationsSent: invitations.length,
+        emailsSent: successCount,
+        emailsFailed: invitations.length - successCount
+      });
     } catch (error: any) {
       console.error("Onboarding invite error:", error);
       res.status(500).json({ error: "Failed to send invitations" });

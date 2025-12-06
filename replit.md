@@ -167,10 +167,10 @@ New users are guided through a comprehensive onboarding wizard:
 The following integrations need to be set up before publishing:
 
 ### Email Service (for team invitations)
-- **Status**: Not configured
-- **Options**: SendGrid, Resend, or Brevo (all have free tiers)
-- **Impact**: Team invitation emails won't be sent until configured
-- **To set up**: Use Replit's integration panel or provide an API key as a secret
+- **Status**: Configured ✓ (Dec 2025)
+- **Provider**: SendPulse (15,000 emails/month free tier)
+- **Keys**: SENDPULSE_API_USER_ID, SENDPULSE_API_SECRET configured as secrets
+- **Implementation**: `server/lib/emailService.ts` with team invitation templates
 
 ### Stripe (for payments)
 - **Status**: Connected ✓ (Dec 2025)
