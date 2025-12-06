@@ -109,9 +109,16 @@ Enhanced FDR model with thesis-aligned improvements that reinforce economic regi
 - `GET /api/economics/regime` now includes `intelligence` object with fdrTrend, transitionPrediction, regimeDuration, confidence, and procurementSignal
 
 **Key Files:**
-- `server/lib/regimeIntelligence.ts`: Core regime intelligence module
+- `server/lib/regimeIntelligence.ts`: Core regime intelligence module (company-scoped instances)
 - `server/lib/economics.ts`: Enhanced with intelligence integration
 - `server/lib/forecasting.ts`: Uses optimized regime factors with confidence-adjusted bounds
+- `server/storage.ts`: Added `getEconomicSnapshotHistory()` for loading historical FDR data
+
+**Multi-Tenancy Architecture:**
+- `RegimeIntelligence.forCompany(companyId)` returns company-scoped instances
+- Historical FDR data loaded from company's economic snapshots via `storage.getEconomicSnapshotHistory()`
+- API endpoints initialize intelligence from stored snapshots before serving requests
+- Each company's regime analysis is isolated and derived from their specific data
 
 ### New User Onboarding Flow (3-Step Wizard)
 New users are guided through a comprehensive onboarding wizard:

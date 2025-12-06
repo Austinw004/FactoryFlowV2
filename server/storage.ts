@@ -474,6 +474,7 @@ export interface IStorage {
   
   // Economic Snapshots
   getLatestEconomicSnapshot(companyId: string): Promise<EconomicSnapshot | undefined>;
+  getEconomicSnapshotHistory(companyId: string, limit?: number): Promise<EconomicSnapshot[]>;
   createEconomicSnapshot(snapshot: InsertEconomicSnapshot): Promise<EconomicSnapshot>;
   
   // Research Validation System (Historical Predictions & Backtesting - NOT USER-FACING)
@@ -2202,6 +2203,14 @@ export class DbStorage implements IStorage {
       .orderBy(sql`${economicSnapshots.timestamp} DESC`)
       .limit(1);
     return snapshot;
+  }
+
+  async getEconomicSnapshotHistory(companyId: string, limit: number = 100): Promise<EconomicSnapshot[]> {
+    return await db.select()
+      .from(economicSnapshots)
+      .where(eq(economicSnapshots.companyId, companyId))
+      .orderBy(sql`${economicSnapshots.timestamp} DESC`)
+      .limit(limit);
   }
 
   async createEconomicSnapshot(insertSnapshot: InsertEconomicSnapshot): Promise<EconomicSnapshot> {

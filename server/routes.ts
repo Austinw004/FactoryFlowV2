@@ -9,6 +9,7 @@ import { logAudit } from "./lib/auditLogger";
 import { globalCache } from "./lib/caching";
 import { DualCircuitEconomics } from "./lib/economics";
 import { DemandForecaster } from "./lib/forecasting";
+import { getCompanyRegimeIntelligence } from "./lib/regimeIntelligence";
 import { AllocationEngine } from "./lib/allocation";
 import { setupWebSocket, getConnectedClientCount } from "./websocket";
 import { applySecurityHardening, securityMonitor, rateLimiters } from "./lib/securityHardening";
@@ -705,8 +706,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Try to get latest snapshot from background jobs
       const snapshot = await storage.getLatestEconomicSnapshot(user.companyId);
       
-      // Get regime intelligence (thesis-aligned FDR analysis)
-      const intelligence = economics.getRegimeIntelligence();
+      // Get company-scoped regime intelligence (thesis-aligned FDR analysis)
+      const regimeIntel = getCompanyRegimeIntelligence(user.companyId);
+      
+      // Load historical snapshots to initialize intelligence if needed
+      if (!regimeIntel.isInitialized()) {
+        const historicalSnapshots = await storage.getEconomicSnapshotHistory(user.companyId, 100);
+        // Always call initializeFromSnapshots to set the flag (even with empty array)
+        regimeIntel.initializeFromSnapshots(historicalSnapshots.map(s => ({
+          fdr: Number(s.fdr),
+          regime: s.regime as any,
+          timestamp: new Date(s.timestamp),
+        })));
+      }
+      
+      // Record current snapshot if available
+      if (snapshot) {
+        regimeIntel.recordFDRSnapshot(Number(snapshot.fdr), snapshot.regime as any);
+      }
+      
+      // Get intelligence summary
+      const intelligenceSummary = regimeIntel.getIntelligenceSummary();
       
       if (snapshot) {
         // Use persisted snapshot data
@@ -723,13 +743,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           source: snapshot.source,
           timestamp: snapshot.timestamp,
           signals: calculateSignalsForRegime(snapshot.regime),
-          // Thesis-aligned regime intelligence
+          // Thesis-aligned regime intelligence (company-scoped)
           intelligence: {
-            fdrTrend: intelligence.fdrAnalysis,
-            transitionPrediction: intelligence.transitionPrediction,
-            regimeDuration: intelligence.regimeDuration,
-            confidence: intelligence.confidenceScoring,
-            procurementSignal: intelligence.procurementSignal,
+            fdrTrend: intelligenceSummary.fdrAnalysis,
+            transitionPrediction: intelligenceSummary.transitionPrediction,
+            regimeDuration: intelligenceSummary.regimeDuration,
+            confidence: intelligenceSummary.confidenceScoring,
+            procurementSignal: intelligenceSummary.procurementSignal,
           },
         };
         
@@ -739,20 +759,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json(responseData);
       } else {
         // Fallback to balance sheet calculation if no snapshot exists
-        await economics.fetch();
+        // Derive regime/fdr from company-specific intelligence, not global economics
+        const companyRegime = regimeIntel.getCurrentRegime();
+        const companyFdr = regimeIntel.getCurrentFDR();
+        
         res.json({
-          regime: economics.regime,
-          fdr: economics.fdr,
-          data: economics.data,
-          source: 'balance_sheet',
-          signals: calculateSignalsForRegime(economics.regime),
-          // Thesis-aligned regime intelligence
+          regime: companyRegime,
+          fdr: companyFdr,
+          data: {}, // No legacy balance sheet data in company-specific mode
+          source: 'company_intelligence',
+          signals: calculateSignalsForRegime(companyRegime),
+          // Thesis-aligned regime intelligence (company-scoped)
           intelligence: {
-            fdrTrend: intelligence.fdrAnalysis,
-            transitionPrediction: intelligence.transitionPrediction,
-            regimeDuration: intelligence.regimeDuration,
-            confidence: intelligence.confidenceScoring,
-            procurementSignal: intelligence.procurementSignal,
+            fdrTrend: intelligenceSummary.fdrAnalysis,
+            transitionPrediction: intelligenceSummary.transitionPrediction,
+            regimeDuration: intelligenceSummary.regimeDuration,
+            confidence: intelligenceSummary.confidenceScoring,
+            procurementSignal: intelligenceSummary.procurementSignal,
           },
         });
       }
@@ -786,9 +809,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const variables = await fetchAllExternalVariables();
       const impact = calculateExternalVariableImpact(variables);
       
-      // Get current regime for context
+      // Get current FDR from company-specific data (not global economics)
       const snapshot = await storage.getLatestEconomicSnapshot(user.companyId);
-      const baseFdr = snapshot?.fdr || economics.fdr || 1.0;
+      const baseFdr = snapshot?.fdr ? Number(snapshot.fdr) : 1.0;
       const adjustedFdr = Math.max(0.2, Math.min(5.0, baseFdr + impact.fdrAdjustment));
       
       const responseData = {
@@ -811,7 +834,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Regime Intelligence Endpoint - Thesis-aligned FDR analysis
+  // Regime Intelligence Endpoint - Thesis-aligned FDR analysis (company-scoped)
   app.get("/api/economics/regime-intelligence", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -821,14 +844,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User not associated with a company" });
       }
       
-      // Ensure economics data is fresh
-      await economics.fetch();
+      // Get company-scoped regime intelligence
+      const regimeIntel = getCompanyRegimeIntelligence(user.companyId);
       
-      // Get comprehensive regime intelligence
-      const intelligence = economics.getRegimeIntelligence();
+      // Load historical snapshots to initialize intelligence if needed
+      if (!regimeIntel.isInitialized()) {
+        const historicalSnapshots = await storage.getEconomicSnapshotHistory(user.companyId, 100);
+        // Always call initializeFromSnapshots to set the flag (even with empty array)
+        regimeIntel.initializeFromSnapshots(historicalSnapshots.map(s => ({
+          fdr: Number(s.fdr),
+          regime: s.regime as any,
+          timestamp: new Date(s.timestamp),
+        })));
+      }
+      
+      // Record latest snapshot if available
+      const snapshot = await storage.getLatestEconomicSnapshot(user.companyId);
+      if (snapshot) {
+        regimeIntel.recordFDRSnapshot(Number(snapshot.fdr), snapshot.regime as any);
+      }
+      
+      // Get comprehensive intelligence summary
+      const intelligence = regimeIntel.getIntelligenceSummary();
       
       res.json({
         ...intelligence,
+        companyId: user.companyId,
         timestamp: new Date().toISOString(),
         description: "Thesis-aligned regime intelligence: FDR trends, transition predictions, and procurement timing signals"
       });
@@ -838,7 +879,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Procurement Timing Signal Endpoint
+  // Procurement Timing Signal Endpoint (company-scoped)
   app.get("/api/economics/procurement-signal", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -848,16 +889,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User not associated with a company" });
       }
       
-      // Ensure economics data is fresh
-      await economics.fetch();
+      // Get company-scoped regime intelligence
+      const regimeIntel = getCompanyRegimeIntelligence(user.companyId);
       
-      // Get procurement timing signal
-      const signal = economics.getProcurementSignal();
+      // Load historical snapshots to initialize intelligence if needed
+      if (!regimeIntel.isInitialized()) {
+        const historicalSnapshots = await storage.getEconomicSnapshotHistory(user.companyId, 100);
+        // Always call initializeFromSnapshots to set the flag (even with empty array)
+        regimeIntel.initializeFromSnapshots(historicalSnapshots.map(s => ({
+          fdr: Number(s.fdr),
+          regime: s.regime as any,
+          timestamp: new Date(s.timestamp),
+        })));
+      }
+      
+      // Get latest snapshot for current regime/FDR
+      const snapshot = await storage.getLatestEconomicSnapshot(user.companyId);
+      if (snapshot) {
+        regimeIntel.recordFDRSnapshot(Number(snapshot.fdr), snapshot.regime as any);
+      }
+      
+      // Get procurement timing signal from company-specific intelligence
+      const signal = regimeIntel.getProcurementTimingSignal();
+      
+      // Derive regime/fdr from company-specific intelligence (not global economics)
+      const companyRegime = regimeIntel.getCurrentRegime();
+      const companyFdr = regimeIntel.getCurrentFDR();
       
       res.json({
         ...signal,
-        regime: economics.regime,
-        fdr: economics.fdr,
+        regime: companyRegime,
+        fdr: companyFdr,
+        companyId: user.companyId,
         timestamp: new Date().toISOString(),
       });
     } catch (error: any) {

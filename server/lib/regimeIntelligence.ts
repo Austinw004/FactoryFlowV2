@@ -93,6 +93,7 @@ export class RegimeIntelligence {
   private fdrHistory: FDRSnapshot[] = [];
   private regimeStartDate: Date = new Date();
   private currentRegime: Regime = 'HEALTHY_EXPANSION';
+  private _initialized: boolean = false;
   private historicalRegimeAccuracy: Record<Regime, { predictions: number; correct: number; factor: number }> = {
     HEALTHY_EXPANSION: { predictions: 0, correct: 0, factor: 1.0 },
     ASSET_LED_GROWTH: { predictions: 0, correct: 0, factor: 0.96 },
@@ -103,6 +104,7 @@ export class RegimeIntelligence {
   constructor(companyId: string = 'default') {
     this.companyId = companyId;
     this.fdrHistory = [];
+    this._initialized = false;
   }
 
   /**
@@ -141,6 +143,8 @@ export class RegimeIntelligence {
     gdpReal?: number;
     gdpNominal?: number;
   }>): void {
+    // Mark as initialized even if empty to prevent repeated DB reads
+    this._initialized = true;
     if (snapshots.length === 0) return;
 
     // Sort by timestamp ascending
@@ -185,14 +189,32 @@ export class RegimeIntelligence {
       }
     }
     
+    // Mark as initialized to prevent repeated DB loads
+    this._initialized = true;
     console.log(`[RegimeIntelligence] Initialized company ${this.companyId} with ${this.fdrHistory.length} snapshots, current regime: ${this.currentRegime}`);
   }
 
   /**
    * Check if intelligence has been initialized with historical data
+   * Uses explicit flag to avoid repeated DB loads
    */
   isInitialized(): boolean {
-    return this.fdrHistory.length > 0;
+    return this._initialized;
+  }
+  
+  /**
+   * Get current regime from company-specific data (not global economics)
+   */
+  getCurrentRegime(): Regime {
+    return this.currentRegime;
+  }
+  
+  /**
+   * Get current FDR from company-specific history (not global economics)
+   */
+  getCurrentFDR(): number {
+    if (this.fdrHistory.length === 0) return 1.0;
+    return this.fdrHistory[this.fdrHistory.length - 1].fdr;
   }
 
   recordFDRSnapshot(fdr: number, regime: Regime, mrGrowth: number = 0, maGrowth: number = 0): void {
