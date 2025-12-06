@@ -196,14 +196,14 @@ export default function LandingPage() {
                       <div className="h-4 bg-background/60 rounded-md max-w-xs mx-auto" />
                     </div>
                   </div>
-                  {/* Cropped screenshot - only shows the app interface */}
-                  <div className="relative overflow-hidden" style={{ height: '420px' }}>
+                  {/* Cropped screenshot - only shows the app interface starting from the black sidebar */}
+                  <div className="relative overflow-hidden" style={{ height: '400px' }}>
                     <img 
                       src={heroImage} 
                       alt="Prescient Labs AI Assistant - Autonomous manufacturing intelligence" 
                       className="w-full h-auto absolute"
                       style={{ 
-                        top: '-38px',
+                        top: '-58px',
                         objectFit: 'cover',
                         objectPosition: 'top left'
                       }}
