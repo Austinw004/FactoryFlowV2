@@ -6,7 +6,7 @@ import {
   Shield, Clock, DollarSign, Zap, Building2, Rocket, LineChart, Truck,
   Eye, Brain, Gauge, Network, AlertTriangle, Sparkles, Target, Layers
 } from "lucide-react";
-import heroImage from "@assets/Screenshot_2025-12-06_at_1.54.59_pm_1765051215062.png";
+import heroImage from "@assets/ai_assistant_app_cropped.png";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useLocation } from "wouter";
 
@@ -185,30 +185,13 @@ export default function LandingPage() {
               {/* Marketing-style presentation with gradient background */}
               <div className="absolute -inset-4 bg-gradient-to-br from-primary/30 via-primary/10 to-transparent rounded-3xl blur-2xl" />
               <div className="relative">
-                {/* Device frame effect */}
-                <div className="rounded-xl overflow-hidden border-2 border-border/50 shadow-2xl bg-background">
-                  {/* Fake browser header */}
-                  <div className="h-8 bg-muted/80 flex items-center px-3 gap-1.5 border-b">
-                    <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
-                    <div className="flex-1 mx-8">
-                      <div className="h-4 bg-background/60 rounded-md max-w-xs mx-auto" />
-                    </div>
-                  </div>
-                  {/* Cropped screenshot - only shows the app interface starting from the black sidebar */}
-                  <div className="relative overflow-hidden" style={{ height: '400px' }}>
-                    <img 
-                      src={heroImage} 
-                      alt="Prescient Labs AI Assistant - Autonomous manufacturing intelligence" 
-                      className="w-full h-auto absolute"
-                      style={{ 
-                        top: '-58px',
-                        objectFit: 'cover',
-                        objectPosition: 'top left'
-                      }}
-                    />
-                  </div>
+                {/* Clean app screenshot with professional framing */}
+                <div className="rounded-xl overflow-hidden border-2 border-border/50 shadow-2xl">
+                  <img 
+                    src={heroImage} 
+                    alt="Prescient Labs AI Assistant - Autonomous manufacturing intelligence" 
+                    className="w-full h-auto"
+                  />
                 </div>
                 {/* Floating badge */}
                 <div className="absolute -bottom-4 -right-4 bg-primary text-primary-foreground px-4 py-2 rounded-lg shadow-lg text-sm font-medium">
