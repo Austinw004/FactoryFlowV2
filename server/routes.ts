@@ -5906,17 +5906,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const newsMonitoringService = new NewsMonitoringService(storage);
 
-  // Fetch live supply chain news alerts
+  // Fetch live supply chain news alerts - company-aware prioritization
   app.get("/api/news/alerts", isAuthenticated, async (req: any, res) => {
     try {
+      const companyId = req.user?.companyId;
       const currentFDR = parseFloat(req.query.fdr as string) || 1.0;
       const alerts = await newsMonitoringService.fetchSupplyChainNews(currentFDR);
+      
+      // Get company context for relevance scoring
+      let companyContext: {
+        industry?: string;
+        materials: string[];
+        supplierRegions: string[];
+      } = { materials: [], supplierRegions: [] };
+      
+      if (companyId) {
+        const [company, materials, suppliers] = await Promise.all([
+          storage.getCompany(companyId),
+          storage.getMaterials(companyId),
+          storage.getSuppliers(companyId)
+        ]);
+        
+        companyContext = {
+          industry: company?.industry || undefined,
+          materials: materials.map((m: { name: string }) => m.name.toLowerCase()),
+          supplierRegions: Array.from(new Set(suppliers.map((s: { region?: string | null }) => s.region).filter(Boolean) as string[]))
+        };
+      }
+      
+      // Industry-to-commodity mapping for relevance
+      const industryMaterials: Record<string, string[]> = {
+        'electronics': ['copper', 'aluminum', 'lithium', 'cobalt', 'rare earth', 'silicon', 'gold', 'silver', 'palladium'],
+        'automotive': ['steel', 'aluminum', 'copper', 'lithium', 'cobalt', 'rubber', 'platinum', 'palladium'],
+        'aerospace': ['titanium', 'aluminum', 'nickel', 'steel', 'carbon fiber', 'cobalt'],
+        'machinery': ['steel', 'iron', 'copper', 'aluminum', 'zinc'],
+        'chemicals': ['natural gas', 'oil', 'ethylene', 'propylene', 'chlorine'],
+        'food_beverage': ['wheat', 'corn', 'sugar', 'coffee', 'cocoa', 'palm oil'],
+        'textiles': ['cotton', 'polyester', 'nylon', 'wool'],
+        'construction': ['steel', 'cement', 'lumber', 'copper', 'aluminum', 'glass']
+      };
+      
+      // Calculate company-specific relevance for each alert
+      const enrichedAlerts = alerts.map(alert => {
+        let companyRelevanceScore = alert.relevanceScore;
+        const relevanceReasons: string[] = [];
+        
+        // Check if alert affects company's materials
+        const alertCommodities = alert.affectedCommodities.map(c => c.toLowerCase());
+        const matchingMaterials = companyContext.materials.filter(m => 
+          alertCommodities.some(c => c.includes(m) || m.includes(c))
+        );
+        if (matchingMaterials.length > 0) {
+          companyRelevanceScore += 25;
+          relevanceReasons.push(`Affects your materials: ${matchingMaterials.join(', ')}`);
+        }
+        
+        // Check if alert affects company's supplier regions
+        const alertRegions = alert.affectedRegions.map(r => r.toLowerCase());
+        const matchingRegions = companyContext.supplierRegions.filter(r =>
+          alertRegions.some(ar => ar.includes(r.toLowerCase()) || r.toLowerCase().includes(ar))
+        );
+        if (matchingRegions.length > 0) {
+          companyRelevanceScore += 20;
+          relevanceReasons.push(`Affects your supplier region: ${matchingRegions.join(', ')}`);
+        }
+        
+        // Check if alert affects industry-relevant commodities
+        if (companyContext.industry) {
+          const industryKey = companyContext.industry.toLowerCase().replace(/\s+/g, '_');
+          const relevantCommodities = industryMaterials[industryKey] || [];
+          const industryMatches = relevantCommodities.filter(c =>
+            alertCommodities.some(ac => ac.includes(c) || c.includes(ac))
+          );
+          if (industryMatches.length > 0 && matchingMaterials.length === 0) {
+            companyRelevanceScore += 15;
+            relevanceReasons.push(`Relevant to ${companyContext.industry} industry`);
+          }
+        }
+        
+        // Boost severity-based relevance
+        if (alert.severity === 'critical') companyRelevanceScore += 10;
+        if (alert.severity === 'high') companyRelevanceScore += 5;
+        
+        return {
+          ...alert,
+          companyRelevanceScore: Math.min(100, companyRelevanceScore),
+          relevanceReasons,
+          isDirectlyRelevant: relevanceReasons.length > 0
+        };
+      });
+      
+      // Sort by company relevance (most relevant first)
+      enrichedAlerts.sort((a, b) => b.companyRelevanceScore - a.companyRelevanceScore);
       
       // Filter by category if specified
       const category = req.query.category as string;
       const severity = req.query.severity as string;
       
-      let filteredAlerts = alerts;
+      let filteredAlerts = enrichedAlerts;
       
       if (category && category !== 'all') {
         filteredAlerts = filteredAlerts.filter(a => a.category === category);
@@ -5929,6 +6016,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         alerts: filteredAlerts,
         total: filteredAlerts.length,
+        companyContext: {
+          industry: companyContext.industry,
+          materialsTracked: companyContext.materials.length,
+          regionsMonitored: companyContext.supplierRegions.length
+        },
         lastUpdated: new Date().toISOString(),
         categories: [
           { id: 'port_closure', label: 'Port Closures' },

@@ -34,6 +34,9 @@ interface NewsAlert {
   category: string;
   severity: 'low' | 'medium' | 'high' | 'critical';
   relevanceScore: number;
+  companyRelevanceScore?: number;
+  relevanceReasons?: string[];
+  isDirectlyRelevant?: boolean;
   affectedRegions: string[];
   affectedCommodities: string[];
   keywords: string[];
@@ -53,6 +56,11 @@ interface AlertsResponse {
   total: number;
   lastUpdated: string;
   categories: Array<{ id: string; label: string }>;
+  companyContext?: {
+    industry?: string;
+    materialsTracked: number;
+    regionsMonitored: number;
+  };
 }
 
 interface SummaryResponse {
@@ -104,7 +112,7 @@ export default function EventMonitoring() {
   const [severityFilter, setSeverityFilter] = useState<string>('all');
   const [selectedAlert, setSelectedAlert] = useState<NewsAlert | null>(null);
 
-  const { data: economicData } = useQuery({
+  const { data: economicData } = useQuery<{ fdr?: number }>({
     queryKey: ["/api/economic-indicators"],
   });
 
@@ -136,6 +144,8 @@ export default function EventMonitoring() {
 
   const alerts = alertsData?.alerts || [];
   const categories = alertsData?.categories || [];
+  const companyContext = alertsData?.companyContext;
+  const directlyRelevantCount = alerts.filter(a => a.isDirectlyRelevant).length;
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -159,6 +169,41 @@ export default function EventMonitoring() {
           </Button>
         </div>
       </div>
+
+      {companyContext && (companyContext.materialsTracked > 0 || companyContext.regionsMonitored > 0 || companyContext.industry) && (
+        <Card className="border-primary/20 bg-primary/5" data-testid="card-company-context">
+          <CardContent className="py-3">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-6 text-sm">
+                <div className="flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-primary" />
+                  <span className="font-medium">Personalized for your operations:</span>
+                </div>
+                {companyContext.industry && (
+                  <span className="text-muted-foreground">
+                    Industry: <span className="font-medium text-foreground">{companyContext.industry}</span>
+                  </span>
+                )}
+                {companyContext.materialsTracked > 0 && (
+                  <span className="text-muted-foreground">
+                    <span className="font-medium text-foreground">{companyContext.materialsTracked}</span> materials tracked
+                  </span>
+                )}
+                {companyContext.regionsMonitored > 0 && (
+                  <span className="text-muted-foreground">
+                    <span className="font-medium text-foreground">{companyContext.regionsMonitored}</span> supplier regions
+                  </span>
+                )}
+              </div>
+              {directlyRelevantCount > 0 && (
+                <Badge className="bg-primary text-primary-foreground">
+                  {directlyRelevantCount} events directly affect you
+                </Badge>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card data-testid="card-total-alerts">
@@ -278,7 +323,14 @@ export default function EventMonitoring() {
                             <IconComponent className="h-4 w-4" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <CardTitle className="text-base line-clamp-2">{alert.title}</CardTitle>
+                            <div className="flex items-center gap-2">
+                              <CardTitle className="text-base line-clamp-2">{alert.title}</CardTitle>
+                              {alert.isDirectlyRelevant && (
+                                <Badge className="bg-primary/15 text-primary border-primary/30 text-xs shrink-0">
+                                  Relevant to You
+                                </Badge>
+                              )}
+                            </div>
                             <div className="flex items-center gap-2 mt-1 flex-wrap">
                               <Badge variant="outline" className="text-xs">
                                 {categoryLabels[alert.category] || alert.category}
@@ -287,6 +339,11 @@ export default function EventMonitoring() {
                                 {alert.severity.toUpperCase()}
                               </Badge>
                             </div>
+                            {alert.relevanceReasons && alert.relevanceReasons.length > 0 && (
+                              <div className="mt-2 text-xs text-primary font-medium">
+                                {alert.relevanceReasons[0]}
+                              </div>
+                            )}
                           </div>
                         </div>
                         <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
