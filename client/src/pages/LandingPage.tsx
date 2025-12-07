@@ -509,23 +509,23 @@ export default function LandingPage() {
                 <li><a href="#capabilities" className="hover:text-foreground">Capabilities</a></li>
                 <li><a href="#platform" className="hover:text-foreground">Modules</a></li>
                 <li><a href="#pricing" className="hover:text-foreground">Pricing</a></li>
-                <li><a href="#" className="hover:text-foreground">Integrations</a></li>
+                <li><a href="/integration-checklist" className="hover:text-foreground" data-testid="link-integrations">Integrations</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Company</h4>
+              <h4 className="font-semibold mb-4">Sales</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-foreground">About</a></li>
-                <li><a href="#" className="hover:text-foreground">Careers</a></li>
-                <li><a href="#" className="hover:text-foreground">Contact</a></li>
+                <li><a href="/pilot-program" className="hover:text-foreground" data-testid="link-pilot">Pilot Program</a></li>
+                <li><a href="/roi-calculator" className="hover:text-foreground" data-testid="link-roi">ROI Calculator</a></li>
+                <li><a href="mailto:sales@prescientlabs.ai" className="hover:text-foreground">Contact Sales</a></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold mb-4">Resources</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-foreground">Documentation</a></li>
-                <li><a href="#" className="hover:text-foreground">Blog</a></li>
-                <li><a href="#" className="hover:text-foreground">Case Studies</a></li>
+                <li><a href="/how-it-works" className="hover:text-foreground">How It Works</a></li>
+                <li><a href="/security" className="hover:text-foreground" data-testid="link-security-faq">Security FAQ</a></li>
+                <li><a href="/pricing" className="hover:text-foreground">Pricing</a></li>
               </ul>
             </div>
             <div>
@@ -533,7 +533,7 @@ export default function LandingPage() {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><a href="/privacy" className="hover:text-foreground" data-testid="link-privacy">Privacy Policy</a></li>
                 <li><a href="/terms" className="hover:text-foreground" data-testid="link-terms">Terms of Service</a></li>
-                <li><a href="#" className="hover:text-foreground">Security</a></li>
+                <li><a href="/security" className="hover:text-foreground">Security</a></li>
               </ul>
             </div>
           </div>

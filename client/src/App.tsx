@@ -28,6 +28,10 @@ import { useAuth } from "@/hooks/useAuth";
 import Onboarding from "@/pages/Onboarding";
 import TermsOfService from "@/pages/TermsOfService";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import IntegrationChecklist from "@/pages/IntegrationChecklist";
+import PilotProgram from "@/pages/PilotProgram";
+import RoiCalculator from "@/pages/RoiCalculator";
+import SecurityFaq from "@/pages/SecurityFaq";
 
 // Dashboard Hub routes
 const DashboardOverviewRoute = () => <DashboardHub initialTab="overview" />;
@@ -87,6 +91,10 @@ function Router() {
         <Route path="/privacy" component={PrivacyPolicy} />
         <Route path="/how-it-works" component={HowItWorks} />
         <Route path="/pricing" component={Pricing} />
+        <Route path="/integration-checklist" component={IntegrationChecklist} />
+        <Route path="/pilot-program" component={PilotProgram} />
+        <Route path="/roi-calculator" component={RoiCalculator} />
+        <Route path="/security" component={SecurityFaq} />
         <Route component={LandingPage} />
       </Switch>
     );
