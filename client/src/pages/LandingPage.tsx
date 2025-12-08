@@ -443,6 +443,52 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Integration Partners */}
+      <section className="py-12 bg-muted/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-8">
+            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+              Connects With Your Existing Systems
+            </p>
+          </div>
+          <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12">
+            <div className="flex flex-col items-center gap-2 opacity-70 hover:opacity-100 transition-opacity">
+              <div className="w-16 h-16 rounded-lg bg-background border flex items-center justify-center">
+                <span className="text-2xl font-bold text-blue-600">SAP</span>
+              </div>
+              <span className="text-xs text-muted-foreground">SAP S/4HANA</span>
+            </div>
+            <div className="flex flex-col items-center gap-2 opacity-70 hover:opacity-100 transition-opacity">
+              <div className="w-16 h-16 rounded-lg bg-background border flex items-center justify-center">
+                <span className="text-lg font-bold text-red-600">Oracle</span>
+              </div>
+              <span className="text-xs text-muted-foreground">NetSuite</span>
+            </div>
+            <div className="flex flex-col items-center gap-2 opacity-70 hover:opacity-100 transition-opacity">
+              <div className="w-16 h-16 rounded-lg bg-background border flex items-center justify-center">
+                <span className="text-sm font-bold text-blue-500">Microsoft</span>
+              </div>
+              <span className="text-xs text-muted-foreground">Dynamics 365</span>
+            </div>
+            <div className="flex flex-col items-center gap-2 opacity-70 hover:opacity-100 transition-opacity">
+              <div className="w-16 h-16 rounded-lg bg-background border flex items-center justify-center">
+                <span className="text-lg font-bold text-green-600">Sage</span>
+              </div>
+              <span className="text-xs text-muted-foreground">Sage X3</span>
+            </div>
+            <div className="flex flex-col items-center gap-2 opacity-70 hover:opacity-100 transition-opacity">
+              <div className="w-16 h-16 rounded-lg bg-background border flex items-center justify-center">
+                <span className="text-lg font-bold text-orange-600">Infor</span>
+              </div>
+              <span className="text-xs text-muted-foreground">CloudSuite</span>
+            </div>
+          </div>
+          <p className="text-center text-xs text-muted-foreground mt-6">
+            Pre-built integration templates available. Custom integrations supported.
+          </p>
+        </div>
+      </section>
+
       {/* Pricing Section */}
       <section id="pricing" className="py-20 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
