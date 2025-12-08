@@ -32,6 +32,7 @@ import IntegrationChecklist from "@/pages/IntegrationChecklist";
 import PilotProgram from "@/pages/PilotProgram";
 import RoiCalculator from "@/pages/RoiCalculator";
 import SecurityFaq from "@/pages/SecurityFaq";
+import NotificationSettings from "@/pages/NotificationSettings";
 
 // Dashboard Hub routes
 const DashboardOverviewRoute = () => <DashboardHub initialTab="overview" />;
@@ -120,6 +121,7 @@ function Router() {
       <Route path="/operations" component={OperationsMachineryRoute} />
       <Route path="/strategy" component={StrategyDigitalTwinRoute} />
       <Route path="/configuration" component={Configuration} />
+      <Route path="/notification-settings" component={NotificationSettings} />
       <Route path="/how-it-works" component={HowItWorks} />
       <Route path="/sop-workflows" component={SopWorkflows} />
 

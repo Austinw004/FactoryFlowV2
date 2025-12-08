@@ -13,7 +13,9 @@ import { MaterialsAtRiskWidget } from "@/components/MaterialsAtRiskWidget";
 import { RegimeActionCards } from "@/components/RegimeActionCards";
 import { IndustryInsightsPanel, IndustryBanner } from "@/components/IndustryInsightsPanel";
 import { InfoTooltip } from "@/components/InfoTooltip";
-import { TrendingUp, DollarSign, Package, AlertCircle, Plus, Upload, GitCompare, Loader2, Globe, Radio, Package2, Building2, Box } from "lucide-react";
+import { ActivityFeed } from "@/components/ActivityFeed";
+import { generateDashboardPDF } from "@/lib/pdfExport";
+import { TrendingUp, DollarSign, Package, AlertCircle, Plus, Upload, GitCompare, Loader2, Globe, Radio, Package2, Building2, Box, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +29,17 @@ import { useLocation } from "wouter";
 import { useOnboardingSteps } from "@/hooks/useOnboardingSteps";
 import React from "react";
 import { useState } from "react";
+
+const regimeDescriptions: Record<string, string> = {
+  HEALTHY_EXPANSION: "Balanced and healthy market conditions. Standard procurement pace recommended.",
+  ASSET_LED_GROWTH: "Market heating up - prices starting to rise. Consider accelerating key purchases.",
+  IMBALANCED_EXCESS: "Bubble territory - prices too high. Defer non-critical purchases, renegotiate contracts.",
+  REAL_ECONOMY_LEAD: "Opportunity zone - best time to buy. Lock in favorable pricing now.",
+};
+
+function getRegimeDescription(regime: string): string {
+  return regimeDescriptions[regime] || "Economic conditions are being analyzed.";
+}
 
 export default function Dashboard() {
   const { toast } = useToast();
@@ -305,6 +318,41 @@ export default function Dashboard() {
             <Plus className="h-4 w-4 mr-2" />
             New Allocation
           </Button>
+          <Separator orientation="vertical" className="h-8" />
+          <Button 
+            variant="outline"
+            onClick={() => {
+              generateDashboardPDF({
+                companyName: user?.firstName ? `${user.firstName}'s Company` : 'Prescient Labs',
+                exportDate: new Date().toLocaleDateString(),
+                fdr,
+                regime: friendlyRegime,
+                regimeDescription: getRegimeDescription(regimeType),
+                totalSKUs: Array.isArray(skus) ? skus.length : 0,
+                avgFillRate,
+                actionItems: policySignals.length,
+                allocations: allocationData.slice(0, 10).map(a => ({
+                  skuName: a.sku?.name || 'Unknown',
+                  materialName: a.material?.name || 'Unknown',
+                  quantity: a.quantity,
+                  priority: a.priority?.toString() || 'Normal',
+                })),
+                policySignals: policySignals.slice(0, 5).map(s => ({
+                  title: s.title,
+                  description: s.description,
+                  urgency: s.urgency,
+                })),
+              });
+              toast({
+                title: "Report exported",
+                description: "Your dashboard report has been downloaded as a PDF.",
+              });
+            }}
+            data-testid="button-export-pdf"
+          >
+            <FileDown className="h-4 w-4 mr-2" />
+            Export PDF
+          </Button>
         </div>
       </div>
 
@@ -527,6 +575,9 @@ export default function Dashboard() {
           Connect demand history data to view forecasting trends
         </p>
       </Card>
+      
+      {/* Activity Feed */}
+      <ActivityFeed limit={10} />
       
       {/* Creation Dialogs */}
       <CreateSKUDialog open={showCreateSKU} onOpenChange={setShowCreateSKU} />

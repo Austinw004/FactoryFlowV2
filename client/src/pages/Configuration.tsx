@@ -13,6 +13,8 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useState, useEffect } from "react";
+import { Link } from "wouter";
+import { ChevronRight } from "lucide-react";
 import type { Company, User, Role } from "@shared/schema";
 import { LocationsManagement } from "@/components/LocationsManagement";
 
@@ -482,6 +484,29 @@ export default function Configuration() {
                   </p>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bell className="h-5 w-5" />
+                Advanced Notification Preferences
+              </CardTitle>
+              <CardDescription>
+                Fine-tune your notification preferences with granular control over each alert type
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Link href="/notification-settings">
+                <Button variant="outline" className="w-full justify-between" data-testid="link-notification-settings">
+                  <span className="flex items-center gap-2">
+                    <Bell className="h-4 w-4" />
+                    Manage All Notification Settings
+                  </span>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         </TabsContent>

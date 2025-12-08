@@ -5004,3 +5004,76 @@ export type DigitalTwinAlert = typeof digitalTwinAlerts.$inferSelect;
 export type InsertDigitalTwinAlert = z.infer<typeof insertDigitalTwinAlertSchema>;
 export type DigitalTwinMetric = typeof digitalTwinMetrics.$inferSelect;
 export type InsertDigitalTwinMetric = z.infer<typeof insertDigitalTwinMetricSchema>;
+
+// Activity Log - Track user and system actions
+export const activityLogs = pgTable("activity_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+  
+  // Activity details
+  activityType: text("activity_type").notNull(), // "forecast_run", "allocation_created", "sku_added", "material_updated", "regime_change", "rfq_generated", "report_exported", "settings_changed", "user_invited", "data_imported"
+  title: text("title").notNull(), // Human-readable title
+  description: text("description"), // Optional longer description
+  
+  // Context
+  entityType: text("entity_type"), // "sku", "material", "supplier", "allocation", "forecast", "rfq"
+  entityId: varchar("entity_id"),
+  metadata: jsonb("metadata"), // Additional context (e.g., { skuCount: 5, accuracy: 0.95 })
+  
+  // Classification
+  category: text("category").notNull().default("general"), // "forecasting", "procurement", "inventory", "settings", "system"
+  severity: text("severity").default("info"), // "info", "success", "warning", "error"
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("activity_logs_company_idx").on(table.companyId),
+  index("activity_logs_user_idx").on(table.userId),
+  index("activity_logs_type_idx").on(table.activityType),
+  index("activity_logs_created_idx").on(table.createdAt),
+]);
+
+// User Notification Preferences - Per-user settings
+export const userNotificationPreferences = pgTable("user_notification_preferences", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  
+  // In-App Notifications
+  inAppEnabled: integer("in_app_enabled").default(1),
+  inAppRegimeChanges: integer("in_app_regime_changes").default(1),
+  inAppForecastAlerts: integer("in_app_forecast_alerts").default(1),
+  inAppLowStock: integer("in_app_low_stock").default(1),
+  inAppBudgetAlerts: integer("in_app_budget_alerts").default(1),
+  inAppSystemUpdates: integer("in_app_system_updates").default(1),
+  
+  // Email Notifications
+  emailEnabled: integer("email_enabled").default(1),
+  emailRegimeChanges: integer("email_regime_changes").default(1),
+  emailForecastAlerts: integer("email_forecast_alerts").default(0), // Off by default
+  emailLowStock: integer("email_low_stock").default(1),
+  emailBudgetAlerts: integer("email_budget_alerts").default(1),
+  emailWeeklyDigest: integer("email_weekly_digest").default(1),
+  emailDailyDigest: integer("email_daily_digest").default(0),
+  
+  // Notification Frequency
+  digestFrequency: text("digest_frequency").default("weekly"), // "realtime", "daily", "weekly", "none"
+  quietHoursStart: text("quiet_hours_start"), // "22:00"
+  quietHoursEnd: text("quiet_hours_end"), // "08:00"
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("user_notif_prefs_user_idx").on(table.userId),
+  index("user_notif_prefs_company_idx").on(table.companyId),
+]);
+
+// Activity Log Schemas
+export const insertActivityLogSchema = createInsertSchema(activityLogs).omit({ id: true, createdAt: true });
+export type ActivityLog = typeof activityLogs.$inferSelect;
+export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;
+
+// User Notification Preferences Schemas
+export const insertUserNotificationPreferencesSchema = createInsertSchema(userNotificationPreferences).omit({ id: true, createdAt: true, updatedAt: true });
+export type UserNotificationPreferences = typeof userNotificationPreferences.$inferSelect;
+export type InsertUserNotificationPreferences = z.infer<typeof insertUserNotificationPreferencesSchema>;

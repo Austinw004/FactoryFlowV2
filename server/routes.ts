@@ -738,6 +738,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Activity Logs API
+  app.get('/api/activity-logs', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no associated company" });
+      }
+      
+      const limit = parseInt(req.query.limit as string) || 20;
+      const activities = await storage.getActivityLogs(user.companyId, limit);
+      res.json(activities);
+    } catch (error: any) {
+      console.error("Error fetching activity logs:", error);
+      res.status(500).json({ error: "Failed to fetch activity logs" });
+    }
+  });
+
+  app.post('/api/activity-logs', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no associated company" });
+      }
+      
+      const activity = await storage.createActivityLog({
+        companyId: user.companyId,
+        userId,
+        ...req.body,
+      });
+      res.status(201).json(activity);
+    } catch (error: any) {
+      console.error("Error creating activity log:", error);
+      res.status(500).json({ error: "Failed to create activity log" });
+    }
+  });
+
+  // User Notification Preferences API
+  app.get('/api/notification-preferences', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no associated company" });
+      }
+      
+      let prefs = await storage.getUserNotificationPreferences(userId, user.companyId);
+      
+      // Return default preferences if none exist
+      if (!prefs) {
+        prefs = {
+          id: '',
+          userId,
+          companyId: user.companyId,
+          inAppEnabled: 1,
+          inAppRegimeChanges: 1,
+          inAppForecastAlerts: 1,
+          inAppLowStock: 1,
+          inAppBudgetAlerts: 1,
+          inAppSystemUpdates: 1,
+          emailEnabled: 1,
+          emailRegimeChanges: 1,
+          emailForecastAlerts: 0,
+          emailLowStock: 1,
+          emailBudgetAlerts: 1,
+          emailWeeklyDigest: 1,
+          emailDailyDigest: 0,
+          digestFrequency: 'weekly',
+          quietHoursStart: null,
+          quietHoursEnd: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+      }
+      res.json(prefs);
+    } catch (error: any) {
+      console.error("Error fetching notification preferences:", error);
+      res.status(500).json({ error: "Failed to fetch notification preferences" });
+    }
+  });
+
+  app.put('/api/notification-preferences', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no associated company" });
+      }
+      
+      const prefs = await storage.upsertUserNotificationPreferences({
+        userId,
+        companyId: user.companyId,
+        ...req.body,
+      });
+      res.json(prefs);
+    } catch (error: any) {
+      console.error("Error saving notification preferences:", error);
+      res.status(500).json({ error: "Failed to save notification preferences" });
+    }
+  });
+
   // Economic regime endpoint - reads from latest snapshot
   app.get("/api/economics/regime", isAuthenticated, async (req: any, res) => {
     try {

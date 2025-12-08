@@ -114,7 +114,9 @@ import type {
   SupplierTier, InsertSupplierTier,
   SupplierRelationship, InsertSupplierRelationship,
   SupplierRegionRisk, InsertSupplierRegionRisk,
-  SupplierTierAlert, InsertSupplierTierAlert
+  SupplierTierAlert, InsertSupplierTierAlert,
+  ActivityLog, InsertActivityLog,
+  UserNotificationPreferences, InsertUserNotificationPreferences
 } from "@shared/schema";
 import { 
   users, companies, companyLocations, skus, materials, boms, suppliers, supplierMaterials,
@@ -150,7 +152,8 @@ import {
   sopApprovalRequests, sopApprovalActions,
   digitalTwinDataFeeds, digitalTwinSnapshots, digitalTwinQueries,
   digitalTwinSimulations, digitalTwinAlerts, digitalTwinMetrics,
-  supplierTiers, supplierRelationships, supplierRegionRisks, supplierTierAlerts
+  supplierTiers, supplierRelationships, supplierRegionRisks, supplierTierAlerts,
+  activityLogs, userNotificationPreferences
 } from "@shared/schema";
 
 export interface IStorage {
@@ -879,6 +882,14 @@ export interface IStorage {
   getDigitalTwinMetrics(companyId: string, filters?: { metricName?: string; category?: string; startDate?: Date; endDate?: Date }): Promise<DigitalTwinMetric[]>;
   createDigitalTwinMetric(metric: InsertDigitalTwinMetric): Promise<DigitalTwinMetric>;
   createDigitalTwinMetricsBatch(metrics: InsertDigitalTwinMetric[]): Promise<DigitalTwinMetric[]>;
+  
+  // Activity Logs
+  getActivityLogs(companyId: string, limit?: number): Promise<ActivityLog[]>;
+  createActivityLog(log: InsertActivityLog): Promise<ActivityLog>;
+  
+  // User Notification Preferences
+  getUserNotificationPreferences(userId: string, companyId: string): Promise<UserNotificationPreferences | undefined>;
+  upsertUserNotificationPreferences(prefs: InsertUserNotificationPreferences): Promise<UserNotificationPreferences>;
 }
 
 export class DbStorage implements IStorage {
@@ -4264,6 +4275,44 @@ export class DbStorage implements IStorage {
   async createDigitalTwinMetricsBatch(metrics: InsertDigitalTwinMetric[]): Promise<DigitalTwinMetric[]> {
     if (metrics.length === 0) return [];
     return db.insert(digitalTwinMetrics).values(metrics).returning();
+  }
+  
+  // Activity Logs
+  async getActivityLogs(companyId: string, limit: number = 20): Promise<ActivityLog[]> {
+    return db.select().from(activityLogs)
+      .where(eq(activityLogs.companyId, companyId))
+      .orderBy(desc(activityLogs.createdAt))
+      .limit(limit);
+  }
+  
+  async createActivityLog(log: InsertActivityLog): Promise<ActivityLog> {
+    const [result] = await db.insert(activityLogs).values(log).returning();
+    return result;
+  }
+  
+  // User Notification Preferences
+  async getUserNotificationPreferences(userId: string, companyId: string): Promise<UserNotificationPreferences | undefined> {
+    const [result] = await db.select().from(userNotificationPreferences)
+      .where(and(
+        eq(userNotificationPreferences.userId, userId),
+        eq(userNotificationPreferences.companyId, companyId)
+      ));
+    return result;
+  }
+  
+  async upsertUserNotificationPreferences(prefs: InsertUserNotificationPreferences): Promise<UserNotificationPreferences> {
+    const existing = await this.getUserNotificationPreferences(prefs.userId, prefs.companyId);
+    
+    if (existing) {
+      const [updated] = await db.update(userNotificationPreferences)
+        .set({ ...prefs, updatedAt: new Date() })
+        .where(eq(userNotificationPreferences.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(userNotificationPreferences).values(prefs).returning();
+      return created;
+    }
   }
 }
 
