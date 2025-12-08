@@ -19,24 +19,32 @@ export default function LandingPage() {
       title: "See What's Coming",
       subtitle: "Demand Forecasting",
       description: "Predict future demand before it materializes. Our system learns your patterns and adjusts for market conditions your competitors don't see.",
+      howToUse: "Upload your sales history, add your products, and the platform automatically generates 30/60/90-day forecasts. Review weekly to adjust production schedules.",
+      keyBenefit: "Reduce overproduction by 20-30% while avoiding stockouts",
     },
     {
       icon: Brain,
       title: "Know When to Act",
       subtitle: "Market Intelligence",
       description: "Real-time signals tell you when to buy, hold, or accelerate. Stop reacting to markets - start anticipating them.",
+      howToUse: "Check your dashboard daily for the current market signal. Green means buy aggressively, yellow means proceed normally, red means preserve cash and wait.",
+      keyBenefit: "Time purchases to save 15-30% on material costs annually",
     },
     {
       icon: Target,
       title: "Optimize Every Decision",
       subtitle: "Smart Allocation",
       description: "Automatically determine what to make, when to make it, and how to allocate limited materials across priorities.",
+      howToUse: "Set your product priorities and constraints, then run the optimizer before each production cycle. Get clear recommendations on what to produce first.",
+      keyBenefit: "Maximize revenue from limited materials during supply constraints",
     },
     {
       icon: Network,
       title: "Protect Your Supply Chain",
       subtitle: "Supplier Intelligence",
       description: "Score supplier risk, map dependencies, and get alerts before disruptions hit. Full visibility from raw materials to delivery.",
+      howToUse: "Add your suppliers with location and material data. The platform monitors risks and alerts you to potential disruptions before they impact production.",
+      keyBenefit: "Identify supply chain vulnerabilities before they become crises",
     },
   ];
 
@@ -45,31 +53,37 @@ export default function LandingPage() {
       icon: LineChart,
       name: "Demand Planning",
       description: "Multi-horizon forecasting with automated model retraining",
+      details: "30/60/90-day forecasts that continuously improve as you add more sales data",
     },
     {
       icon: Boxes,
       name: "Material Allocation",
       description: "Constraint-based optimization across your product mix",
+      details: "Input your priorities and constraints, get optimal production recommendations",
     },
     {
       icon: DollarSign,
       name: "Procurement Timing",
       description: "Counter-cyclical buying signals to reduce material costs",
+      details: "Clear buy/hold/wait signals based on market conditions and your inventory",
     },
     {
       icon: Truck,
       name: "Supply Chain Mapping",
       description: "Multi-tier supplier visibility with risk scoring",
+      details: "Visual network map showing all supplier dependencies and risk hotspots",
     },
     {
       icon: Gauge,
       name: "Production Analytics",
       description: "Real-time OEE, bottleneck detection, and efficiency tracking",
+      details: "Monitor availability, performance, and quality with automatic alerts",
     },
     {
       icon: Layers,
       name: "Digital Twin",
       description: "Live operational snapshot with what-if simulations",
+      details: "Ask questions in plain English and run scenarios without affecting real data",
     },
   ];
 
@@ -238,10 +252,20 @@ export default function LandingPage() {
                   <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                     <capability.icon className="h-8 w-8 text-primary" />
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <div className="text-sm text-primary font-medium mb-1">{capability.subtitle}</div>
                     <h3 className="text-xl font-semibold mb-2">{capability.title}</h3>
-                    <p className="text-muted-foreground">{capability.description}</p>
+                    <p className="text-muted-foreground mb-4">{capability.description}</p>
+                    <div className="space-y-3 pt-3 border-t">
+                      <div>
+                        <p className="text-xs font-medium text-primary uppercase tracking-wide mb-1">How to Use</p>
+                        <p className="text-sm text-muted-foreground">{capability.howToUse}</p>
+                      </div>
+                      <div className="flex items-center gap-2 bg-primary/5 rounded-lg p-3">
+                        <Check className="h-4 w-4 text-primary shrink-0" />
+                        <p className="text-sm font-medium">{capability.keyBenefit}</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </Card>
@@ -294,7 +318,8 @@ export default function LandingPage() {
                   </div>
                   <h3 className="font-semibold">{module.name}</h3>
                 </div>
-                <p className="text-sm text-muted-foreground">{module.description}</p>
+                <p className="text-sm text-muted-foreground mb-3">{module.description}</p>
+                <p className="text-xs text-primary/80 border-t pt-3">{module.details}</p>
               </Card>
             ))}
           </div>

@@ -81,6 +81,192 @@ export default function HowItWorks() {
         </CardContent>
       </Card>
 
+      {/* GETTING STARTED SECTION */}
+      <Card data-testid="card-getting-started">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-2xl">
+            <Zap className="h-6 w-6" />
+            Getting Started - Your First Week
+          </CardTitle>
+          <CardDescription>
+            Follow these steps to get value from Prescient Labs quickly
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="p-4 rounded-lg border bg-card space-y-2">
+              <div className="flex items-center gap-2 text-primary font-semibold">
+                <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">1</span>
+                <span>Day 1: Set Up Your Products</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Add your top 5-10 products (SKUs) with basic information: name, material requirements, and target margins. Start with your highest-volume items.
+              </p>
+              <p className="text-xs text-primary/80 mt-2">
+                Navigate to: Dashboard → Add SKU
+              </p>
+            </div>
+
+            <div className="p-4 rounded-lg border bg-card space-y-2">
+              <div className="flex items-center gap-2 text-primary font-semibold">
+                <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">2</span>
+                <span>Day 2: Add Your Materials</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Enter the raw materials you purchase regularly. Include unit costs and typical lead times. Link materials to the products that use them.
+              </p>
+              <p className="text-xs text-primary/80 mt-2">
+                Navigate to: Materials → Add Material
+              </p>
+            </div>
+
+            <div className="p-4 rounded-lg border bg-card space-y-2">
+              <div className="flex items-center gap-2 text-primary font-semibold">
+                <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">3</span>
+                <span>Day 3: Enter Your Suppliers</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Add your key suppliers with their locations and the materials they provide. This enables supply chain risk monitoring and automated quote requests.
+              </p>
+              <p className="text-xs text-primary/80 mt-2">
+                Navigate to: Suppliers → Add Supplier
+              </p>
+            </div>
+
+            <div className="p-4 rounded-lg border bg-card space-y-2">
+              <div className="flex items-center gap-2 text-primary font-semibold">
+                <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">4</span>
+                <span>Day 4: Review Market Signals</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Check your dashboard for the current market condition indicator. Understand what the signal means for your purchasing decisions this week.
+              </p>
+              <p className="text-xs text-primary/80 mt-2">
+                Navigate to: Dashboard (see "Market Conditions" card)
+              </p>
+            </div>
+
+            <div className="p-4 rounded-lg border bg-card space-y-2">
+              <div className="flex items-center gap-2 text-primary font-semibold">
+                <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">5</span>
+                <span>Day 5: Run Your First Forecast</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                With your products set up, the system automatically generates demand forecasts. Review the 30-day predictions and compare to your expectations.
+              </p>
+              <p className="text-xs text-primary/80 mt-2">
+                Navigate to: Demand Planning
+              </p>
+            </div>
+
+            <div className="p-4 rounded-lg border bg-card space-y-2">
+              <div className="flex items-center gap-2 text-primary font-semibold">
+                <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">6</span>
+                <span>Week 2: Optimize Allocation</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Set your product priorities and run the allocation optimizer. See exactly how to split limited materials across products for maximum value.
+              </p>
+              <p className="text-xs text-primary/80 mt-2">
+                Navigate to: Allocation → Run Optimization
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+            <h4 className="font-semibold text-foreground mb-2">Pro Tip: Start Simple</h4>
+            <p className="text-sm text-muted-foreground">
+              You don't need to enter every product and material on day one. Start with your top items and expand over time. The platform becomes more valuable as you add more data, but you'll see benefits immediately with just your core products.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* DAILY WORKFLOW SECTION */}
+      <Card data-testid="card-daily-workflow">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-2xl">
+            <BookOpen className="h-6 w-6" />
+            Recommended Daily & Weekly Routines
+          </CardTitle>
+          <CardDescription>
+            How to get the most value from the platform on an ongoing basis
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-primary" />
+                Daily Check (5 minutes)
+              </h3>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <span className="text-primary mt-0.5">1.</span>
+                  <span>Check the <strong className="text-foreground">Dashboard</strong> for current market conditions and any alerts</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary mt-0.5">2.</span>
+                  <span>Review the <strong className="text-foreground">AI Assistant</strong> for any proactive recommendations</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary mt-0.5">3.</span>
+                  <span>Check <strong className="text-foreground">Inventory Alerts</strong> for any materials running low</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-primary" />
+                Weekly Review (30 minutes)
+              </h3>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <span className="text-primary mt-0.5">1.</span>
+                  <span>Review <strong className="text-foreground">Demand Forecasts</strong> and compare to actual sales</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary mt-0.5">2.</span>
+                  <span>Run <strong className="text-foreground">Allocation Optimizer</strong> for next production cycle</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary mt-0.5">3.</span>
+                  <span>Check <strong className="text-foreground">Supplier Risk Scores</strong> for any changes</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary mt-0.5">4.</span>
+                  <span>Review <strong className="text-foreground">Production Metrics</strong> (OEE, bottlenecks)</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              <Target className="h-5 w-5 text-primary" />
+              Monthly Strategic Review (1 hour)
+            </h3>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="p-3 rounded-lg border bg-card">
+                <p className="font-medium text-sm mb-1">Procurement Analysis</p>
+                <p className="text-xs text-muted-foreground">Review savings achieved through better timing. Track materials purchased during favorable vs. unfavorable conditions.</p>
+              </div>
+              <div className="p-3 rounded-lg border bg-card">
+                <p className="font-medium text-sm mb-1">Forecast Accuracy</p>
+                <p className="text-xs text-muted-foreground">Compare predictions to actuals. Note which products forecast well and which need adjustment.</p>
+              </div>
+              <div className="p-3 rounded-lg border bg-card">
+                <p className="font-medium text-sm mb-1">Supply Chain Health</p>
+                <p className="text-xs text-muted-foreground">Review supplier performance trends. Identify any suppliers needing diversification or replacement.</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* MARKET INTELLIGENCE SECTION */}
       <Card data-testid="card-market-intelligence">
         <CardHeader>
