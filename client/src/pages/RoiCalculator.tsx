@@ -21,11 +21,11 @@ export default function RoiCalculator() {
   const [forecastAccuracy, setForecastAccuracy] = useState(65);
   const [procurementCycles, setProcurementCycles] = useState(12);
 
-  // Conservative estimate percentages
-  const PROCUREMENT_SAVINGS_RATE = 0.18; // 18% average from counter-cyclical timing
-  const FORECAST_IMPROVEMENT = 0.30; // 30% MAPE improvement
-  const STOCKOUT_REDUCTION = 0.25; // 25% reduction in stockouts
-  const CARRYING_COST_RATE = 0.20; // 20% of inventory value annually
+  // Projected estimate percentages (not proven, for estimation purposes only)
+  const PROCUREMENT_SAVINGS_RATE = 0.18; // 18% projected from counter-cyclical timing opportunity
+  const FORECAST_IMPROVEMENT = 0.30; // 30% MAPE improvement potential
+  const STOCKOUT_REDUCTION = 0.25; // 25% reduction potential in stockouts
+  const CARRYING_COST_RATE = 0.20; // 20% industry standard carrying cost rate
 
   // Calculations
   const procurementSavings = annualSpend * PROCUREMENT_SAVINGS_RATE;
@@ -284,27 +284,28 @@ export default function RoiCalculator() {
       {/* Methodology */}
       <section className="py-16 bg-muted/30">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-xl font-semibold mb-6 text-center">How We Calculate This</h2>
+          <h2 className="text-xl font-semibold mb-6 text-center">Estimation Methodology</h2>
+          <p className="text-sm text-muted-foreground text-center mb-6">These are projected estimates based on counter-cyclical procurement research, not guaranteed results.</p>
           <div className="grid sm:grid-cols-3 gap-6">
             <Card className="p-6">
-              <div className="text-2xl font-bold text-primary mb-2">18%</div>
-              <div className="font-medium mb-1">Procurement Savings</div>
+              <div className="text-2xl font-bold text-primary mb-2">Up to 18%</div>
+              <div className="font-medium mb-1">Potential Procurement Savings</div>
               <p className="text-sm text-muted-foreground">
-                Average savings from counter-cyclical buying - purchasing when economic indicators signal optimal timing.
+                Estimated savings opportunity from counter-cyclical buying - purchasing when economic indicators signal optimal timing.
               </p>
             </Card>
             <Card className="p-6">
-              <div className="text-2xl font-bold text-primary mb-2">30%</div>
-              <div className="font-medium mb-1">MAPE Improvement</div>
+              <div className="text-2xl font-bold text-primary mb-2">Up to 30%</div>
+              <div className="font-medium mb-1">Potential MAPE Improvement</div>
               <p className="text-sm text-muted-foreground">
-                Typical forecast accuracy improvement from regime-aware models with automated retraining.
+                Projected forecast accuracy improvement from regime-aware models with automated retraining.
               </p>
             </Card>
             <Card className="p-6">
-              <div className="text-2xl font-bold text-primary mb-2">8 hrs</div>
-              <div className="font-medium mb-1">Per Cycle Saved</div>
+              <div className="text-2xl font-bold text-primary mb-2">~8 hrs</div>
+              <div className="font-medium mb-1">Estimated Time Saved</div>
               <p className="text-sm text-muted-foreground">
-                Average time saved per procurement cycle through automation and AI assistance.
+                Estimated time savings per procurement cycle through automation and AI assistance.
               </p>
             </Card>
           </div>
@@ -315,9 +316,9 @@ export default function RoiCalculator() {
       <section className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <Sparkles className="h-12 w-12 mx-auto mb-4 text-primary" />
-          <h2 className="text-2xl font-bold mb-4">Ready to Validate These Numbers?</h2>
+          <h2 className="text-2xl font-bold mb-4">Ready to Validate These Estimates?</h2>
           <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
-            Start a pilot to see real results with your own data. Most customers see first savings within 4 weeks.
+            Start a pilot to test these projections with your own data and see real results.
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <Button size="lg" onClick={() => setLocation("/pilot-program")} data-testid="button-start-pilot">

@@ -70,7 +70,7 @@ export default function HowItWorks() {
                   <span>The Results</span>
                 </div>
                 <ul className="space-y-1 text-sm text-muted-foreground">
-                  <li><strong className="text-foreground">15-30% lower material costs</strong> - Strategic timing beats panic buying</li>
+                  <li><strong className="text-foreground">Lower material costs</strong> - Strategic timing beats panic buying</li>
                   <li><strong className="text-foreground">Better cash flow</strong> - Optimize inventory levels for conditions</li>
                   <li><strong className="text-foreground">Fewer stockouts</strong> - Proactive planning keeps you stocked</li>
                   <li><strong className="text-foreground">Higher margins</strong> - Lower costs + better timing = more profit</li>

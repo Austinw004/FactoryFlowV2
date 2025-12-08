@@ -116,8 +116,8 @@ export default function SecurityFaq() {
           a: "Yes. We conduct annual third-party penetration tests and continuous vulnerability scanning. Critical findings are addressed within 24 hours, high severity within 7 days.",
         },
         {
-          q: "What is your uptime SLA?",
-          a: "We target 99.9% uptime for our production environment. Enterprise customers can negotiate custom SLAs with financial credits for downtime exceeding agreed thresholds.",
+          q: "What is your uptime target?",
+          a: "We architect for high availability with redundant infrastructure. Enterprise customers can negotiate custom SLAs with defined uptime targets and financial credits for downtime.",
         },
         {
           q: "How do you handle security incidents?",

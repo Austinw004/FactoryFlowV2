@@ -490,11 +490,11 @@ export default function ApiDocumentation() {
         </Card>
         <Card data-testid="card-uptime">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Uptime SLA</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Availability</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">99.9%</div>
-            <p className="text-xs text-muted-foreground">Enterprise guarantee</p>
+            <div className="text-2xl font-bold">High</div>
+            <p className="text-xs text-muted-foreground">Redundant infrastructure</p>
           </CardContent>
         </Card>
       </div>

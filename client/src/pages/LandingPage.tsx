@@ -20,7 +20,7 @@ export default function LandingPage() {
       subtitle: "Demand Forecasting",
       description: "Predict future demand before it materializes. Our system learns your patterns and adjusts for market conditions your competitors don't see.",
       howToUse: "Upload your sales history, add your products, and the platform automatically generates 30/60/90-day forecasts. Review weekly to adjust production schedules.",
-      keyBenefit: "Reduce overproduction by 20-30% while avoiding stockouts",
+      keyBenefit: "Better demand visibility to reduce overproduction and avoid stockouts",
     },
     {
       icon: Brain,
@@ -28,7 +28,7 @@ export default function LandingPage() {
       subtitle: "Market Intelligence",
       description: "Real-time signals tell you when to buy, hold, or accelerate. Stop reacting to markets - start anticipating them.",
       howToUse: "Check your dashboard daily for the current market signal. Green means buy aggressively, yellow means proceed normally, red means preserve cash and wait.",
-      keyBenefit: "Time purchases to save 15-30% on material costs annually",
+      keyBenefit: "Time purchases strategically to lower material costs",
     },
     {
       icon: Target,
@@ -411,9 +411,9 @@ export default function LandingPage() {
                 <Shield className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <h3 className="font-semibold mb-1">Enterprise Security</h3>
+                <h3 className="font-semibold mb-1">Enterprise-Grade Security</h3>
                 <p className="text-sm text-muted-foreground">
-                  SOC 2 Type II compliant. Your data is encrypted at rest and in transit.
+                  Your data is encrypted at rest and in transit. Role-based access controls included.
                 </p>
               </div>
             </div>
@@ -422,9 +422,9 @@ export default function LandingPage() {
                 <Clock className="h-6 w-6 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <h3 className="font-semibold mb-1">Quick Setup</h3>
+                <h3 className="font-semibold mb-1">Fast Onboarding</h3>
                 <p className="text-sm text-muted-foreground">
-                  Get started in under 30 minutes. Import data from any ERP system.
+                  Self-service setup with guided onboarding. ERP integration templates available.
                 </p>
               </div>
             </div>
@@ -433,9 +433,9 @@ export default function LandingPage() {
                 <BarChart3 className="h-6 w-6 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <h3 className="font-semibold mb-1">Proven Results</h3>
+                <h3 className="font-semibold mb-1">Designed for ROI</h3>
                 <p className="text-sm text-muted-foreground">
-                  Average customer sees ROI within 90 days of implementation.
+                  Built to deliver measurable procurement savings through better timing decisions.
                 </p>
               </div>
             </div>

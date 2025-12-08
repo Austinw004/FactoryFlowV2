@@ -281,10 +281,7 @@ export default function PlatformAnalytics() {
               <span className="text-3xl font-bold">{metrics.activeUsers30d}</span>
               <span className="text-sm text-muted-foreground">/ {metrics.totalUsers}</span>
             </div>
-            <div className="flex items-center gap-1 mt-1">
-              <ArrowUp className="h-3 w-3 text-emerald-500" />
-              <span className="text-xs text-emerald-600">+12% from last month</span>
-            </div>
+            <p className="text-xs text-muted-foreground mt-1">Active in last 30 days</p>
           </CardContent>
         </Card>
 
@@ -297,10 +294,7 @@ export default function PlatformAnalytics() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{(metrics.totalApiCalls / 1000000).toFixed(1)}M</div>
-            <div className="flex items-center gap-1 mt-1">
-              <ArrowUp className="h-3 w-3 text-emerald-500" />
-              <span className="text-xs text-emerald-600">+23% growth</span>
-            </div>
+            <p className="text-xs text-muted-foreground mt-1">Total requests</p>
           </CardContent>
         </Card>
 
