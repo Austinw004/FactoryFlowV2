@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TrendingUp, TrendingDown, Target, BarChart3, AlertCircle } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { InfoTooltip } from "@/components/InfoTooltip";
 
 interface ForecastMetrics {
   overallMape: number | null;
@@ -146,7 +147,10 @@ export default function ForecastAccuracy() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card data-testid="card-overall-mape">
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Overall MAPE</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-1">
+              Overall MAPE
+              <InfoTooltip term="mape" />
+            </CardTitle>
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>

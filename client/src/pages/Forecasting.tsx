@@ -1,13 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { TrendingUp, TrendingDown, AlertCircle, DollarSign, ChevronDown, ChevronUp } from "lucide-react";
+import { TrendingUp, TrendingDown, AlertCircle, DollarSign, ChevronDown, ChevronUp, Plus, BarChart3 } from "lucide-react";
 import type { Sku, DemandHistory } from "@shared/schema";
+import { InfoTooltip } from "@/components/InfoTooltip";
 
 interface CommodityPrice {
   material: string;
@@ -64,15 +66,30 @@ export default function Forecasting() {
     );
   }
 
+  const [, navigate] = useLocation();
+
   if (!skus || skus.length === 0) {
     return (
       <div className="p-6">
-        <Alert data-testid="alert-no-skus">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            No SKUs configured. Please add SKUs in the Configuration page to see demand forecasts.
-          </AlertDescription>
-        </Alert>
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold">Demand Forecasting</h1>
+          <p className="text-muted-foreground mt-1">
+            Regime-aware demand predictions for optimal production planning
+          </p>
+        </div>
+        <Card className="border-dashed" data-testid="card-no-skus">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <BarChart3 className="h-16 w-16 text-muted-foreground mb-4" />
+            <h3 className="font-semibold text-xl mb-2">Start Forecasting Demand</h3>
+            <p className="text-sm text-muted-foreground text-center max-w-md mb-6">
+              Add your products (SKUs) to see AI-powered demand forecasts that automatically adjust based on economic conditions.
+            </p>
+            <Button size="lg" onClick={() => navigate("/configuration")} data-testid="button-add-first-sku">
+              <Plus className="h-5 w-5 mr-2" />
+              Add Your First Product
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -94,6 +111,7 @@ export default function Forecasting() {
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5" />
               Current Economic Regime
+              <InfoTooltip term="regime" />
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -105,7 +123,10 @@ export default function Forecasting() {
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">FDR Score:</span>
+                <span className="text-sm text-muted-foreground flex items-center gap-1">
+                  FDR Score
+                  <InfoTooltip term="fdr" />
+                </span>
                 <span className="font-semibold" data-testid="text-fdr-score">
                   {regime.fdr?.toFixed(2) || "0.00"}
                 </span>

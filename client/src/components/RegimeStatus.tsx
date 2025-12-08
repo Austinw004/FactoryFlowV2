@@ -2,6 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Activity } from "lucide-react";
+import { InfoTooltip } from "@/components/InfoTooltip";
 
 type Regime = "HEALTHY_EXPANSION" | "ASSET_LED_GROWTH" | "IMBALANCED_EXCESS" | "REAL_ECONOMY_LEAD";
 
@@ -48,6 +49,7 @@ export function RegimeStatus({ regime, fdr, intensity }: RegimeStatusProps) {
           <div className="flex items-center gap-2">
             <Activity className="h-5 w-5 text-muted-foreground" />
             <h3 className="font-semibold text-lg">Business Climate</h3>
+            <InfoTooltip term="regime" />
           </div>
           <Badge variant={config.variant} data-testid="badge-regime-type">
             {config.label}
@@ -56,7 +58,10 @@ export function RegimeStatus({ regime, fdr, intensity }: RegimeStatusProps) {
         
         <div className="space-y-2">
           <div className="flex justify-between items-center text-sm">
-            <span className="text-muted-foreground">Condition Score</span>
+            <span className="text-muted-foreground flex items-center gap-1">
+              Condition Score
+              <InfoTooltip term="fdr" />
+            </span>
             <span className="font-mono font-semibold" data-testid="text-fdr-score">{fdr.toFixed(2)}</span>
           </div>
           <Progress value={intensity} className="h-2" data-testid="progress-intensity" />

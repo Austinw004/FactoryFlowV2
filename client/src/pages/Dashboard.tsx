@@ -12,6 +12,7 @@ import { FDRTrendChart } from "@/components/FDRTrendChart";
 import { MaterialsAtRiskWidget } from "@/components/MaterialsAtRiskWidget";
 import { RegimeActionCards } from "@/components/RegimeActionCards";
 import { IndustryInsightsPanel, IndustryBanner } from "@/components/IndustryInsightsPanel";
+import { InfoTooltip } from "@/components/InfoTooltip";
 import { TrendingUp, DollarSign, Package, AlertCircle, Plus, Upload, GitCompare, Loader2, Globe, Radio, Package2, Building2, Box } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -331,6 +332,7 @@ export default function Dashboard() {
           value={fdr.toFixed(2)}
           subtitle={friendlyRegime}
           trend={{ value: "Live", positive: true }}
+          tooltipTerm="fdr"
         />
         <KPICard
           icon={DollarSign}
@@ -343,6 +345,7 @@ export default function Dashboard() {
           label="Avg Fill Rate"
           value={`${avgFillRate}%`}
           trend={{ value: "Current", positive: Number(avgFillRate) > 90 }}
+          tooltipTerm="allocation"
         />
         <KPICard
           icon={AlertCircle}
