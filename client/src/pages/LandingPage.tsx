@@ -377,6 +377,47 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Trust Indicators */}
+      <section className="py-16 border-t">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900 flex items-center justify-center shrink-0">
+                <Shield className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <h3 className="font-semibold mb-1">Enterprise Security</h3>
+                <p className="text-sm text-muted-foreground">
+                  SOC 2 Type II compliant. Your data is encrypted at rest and in transit.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900 flex items-center justify-center shrink-0">
+                <Clock className="h-6 w-6 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <h3 className="font-semibold mb-1">Quick Setup</h3>
+                <p className="text-sm text-muted-foreground">
+                  Get started in under 30 minutes. Import data from any ERP system.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900 flex items-center justify-center shrink-0">
+                <BarChart3 className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                <h3 className="font-semibold mb-1">Proven Results</h3>
+                <p className="text-sm text-muted-foreground">
+                  Average customer sees ROI within 90 days of implementation.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Pricing Section */}
       <section id="pricing" className="py-20 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -433,47 +474,6 @@ export default function LandingPage() {
               Compare all features in detail
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* Trust Indicators */}
-      <section className="py-16 border-t">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900 flex items-center justify-center shrink-0">
-                <Shield className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Enterprise Security</h3>
-                <p className="text-sm text-muted-foreground">
-                  SOC 2 Type II compliant. Your data is encrypted at rest and in transit.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900 flex items-center justify-center shrink-0">
-                <Clock className="h-6 w-6 text-green-600 dark:text-green-400" />
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Quick Setup</h3>
-                <p className="text-sm text-muted-foreground">
-                  Get started in under 30 minutes. Import data from any ERP system.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900 flex items-center justify-center shrink-0">
-                <BarChart3 className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Proven Results</h3>
-                <p className="text-sm text-muted-foreground">
-                  Average customer sees ROI within 90 days of implementation.
-                </p>
-              </div>
-            </div>
           </div>
         </div>
       </section>
