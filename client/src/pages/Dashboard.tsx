@@ -11,6 +11,7 @@ import { CreateSupplierDialog } from "@/components/CreateSupplierDialog";
 import { FDRTrendChart } from "@/components/FDRTrendChart";
 import { MaterialsAtRiskWidget } from "@/components/MaterialsAtRiskWidget";
 import { RegimeActionCards } from "@/components/RegimeActionCards";
+import { IndustryInsightsPanel, IndustryBanner } from "@/components/IndustryInsightsPanel";
 import { TrendingUp, DollarSign, Package, AlertCircle, Plus, Upload, GitCompare, Loader2, Globe, Radio, Package2, Building2, Box } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -239,9 +240,12 @@ export default function Dashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-semibold">Dashboard</h1>
-          <p className="text-muted-foreground mt-1">
-            Your manufacturing control center
-          </p>
+          <div className="flex items-center gap-4 mt-1">
+            <p className="text-muted-foreground">
+              Your manufacturing control center
+            </p>
+            <IndustryBanner />
+          </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Badge variant={isConnected ? "default" : "outline"} className="gap-1.5" data-testid="badge-connection-status">
@@ -387,6 +391,13 @@ export default function Dashboard() {
           </Card>
         </div>
         <PolicySignals signals={policySignals} />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2">
+          <IndustryInsightsPanel maxItems={4} />
+        </div>
+        <MaterialsAtRiskWidget />
       </div>
 
       <Card className="p-6">

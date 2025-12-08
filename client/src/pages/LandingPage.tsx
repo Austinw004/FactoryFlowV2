@@ -157,47 +157,49 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="relative overflow-hidden py-20 sm:py-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="space-y-8">
-              <Badge className="mb-4">Manufacturing Intelligence Platform</Badge>
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight">
-                See Ahead. <span className="text-primary">Act First.</span> Dominate.
-              </h1>
-              <p className="text-xl text-muted-foreground">
-                Prescient Labs gives manufacturers the foresight to make smarter decisions - 
-                from predicting demand and timing purchases to optimizing production and protecting supply chains.
-                Stop reacting to the market. Start anticipating it.
-              </p>
-              <div className="flex flex-wrap gap-4">
-                <Button size="lg" asChild data-testid="button-start-free-trial">
-                  <a href="/api/login">
-                    Start 14-Day Free Trial
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </a>
-                </Button>
-                <Button size="lg" variant="outline" onClick={() => setLocation("/how-it-works")} data-testid="button-how-it-works">
-                  See How It Works
-                </Button>
-              </div>
-              <p className="text-sm text-muted-foreground">No credit card required. Full platform access.</p>
+          {/* Text content centered */}
+          <div className="max-w-3xl mx-auto text-center space-y-8 mb-16">
+            <Badge className="mb-4">Manufacturing Intelligence Platform</Badge>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight">
+              See Ahead. <span className="text-primary">Act First.</span> Dominate.
+            </h1>
+            <p className="text-xl text-muted-foreground">
+              Prescient Labs gives manufacturers the foresight to make smarter decisions - 
+              from predicting demand and timing purchases to optimizing production and protecting supply chains.
+              Stop reacting to the market. Start anticipating it.
+            </p>
+            <div className="flex flex-wrap gap-4 justify-center">
+              <Button size="lg" asChild data-testid="button-start-free-trial">
+                <a href="/api/login">
+                  Start 14-Day Free Trial
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </a>
+              </Button>
+              <Button size="lg" variant="outline" onClick={() => setLocation("/how-it-works")} data-testid="button-how-it-works">
+                See How It Works
+              </Button>
             </div>
+            <p className="text-sm text-muted-foreground">No credit card required. Full platform access.</p>
+          </div>
+          
+          {/* Hero image below text content */}
+          <div className="relative max-w-5xl mx-auto">
+            {/* Marketing-style presentation with gradient background */}
+            <div className="absolute -inset-4 bg-gradient-to-br from-primary/30 via-primary/10 to-transparent rounded-3xl blur-2xl" />
             <div className="relative">
-              {/* Marketing-style presentation with gradient background */}
-              <div className="absolute -inset-4 bg-gradient-to-br from-primary/30 via-primary/10 to-transparent rounded-3xl blur-2xl" />
-              <div className="relative">
-                {/* Clean app screenshot with professional framing */}
-                <div className="rounded-xl overflow-hidden border-2 border-border/50 shadow-2xl">
-                  <img 
-                    src={heroImage} 
-                    alt="Prescient Labs AI Assistant - Autonomous manufacturing intelligence" 
-                    className="w-full h-auto"
-                  />
-                </div>
-                {/* Floating badge */}
-                <div className="absolute -bottom-4 -right-4 bg-primary text-primary-foreground px-4 py-2 rounded-lg shadow-lg text-sm font-medium">
-                  <Sparkles className="h-4 w-4 inline mr-2" />
-                  AI-Powered
-                </div>
+              {/* Clean app screenshot with professional framing */}
+              <div className="rounded-xl overflow-hidden border-2 border-border/50 shadow-2xl">
+                <img 
+                  src={heroImage} 
+                  alt="Prescient Labs AI Assistant - Autonomous manufacturing intelligence" 
+                  className="w-full h-auto"
+                  data-testid="img-hero-screenshot"
+                />
+              </div>
+              {/* Floating badge */}
+              <div className="absolute -bottom-4 -right-4 bg-primary text-primary-foreground px-4 py-2 rounded-lg shadow-lg text-sm font-medium">
+                <Sparkles className="h-4 w-4 inline mr-2" />
+                AI-Powered
               </div>
             </div>
           </div>

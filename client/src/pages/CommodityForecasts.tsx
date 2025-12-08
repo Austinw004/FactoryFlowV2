@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
+import { IndustryCommoditySuggestions } from "@/components/IndustryCommoditySuggestions";
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -270,6 +271,8 @@ export default function CommodityForecasts() {
           30/60/90 day price predictions for tracked commodities and materials
         </p>
       </div>
+
+      <IndustryCommoditySuggestions />
 
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

@@ -5,6 +5,7 @@ import { fetchAllCommodityPrices, CommodityPrice } from "./commodityPricing";
 import { calculateSupplierRiskScore } from "./supplyChainRisk";
 import { calculateOEE, detectBottlenecks } from "./productionKPIs";
 import { fetchExternalVariables } from "./externalAPIs";
+import { getAISystemPromptEnhancements, getIndustryConfig } from "./industryPersonalization";
 
 const newsMonitoringService = new NewsMonitoringService(storage);
 
@@ -49,6 +50,15 @@ export interface ProactiveAlert {
 }
 
 export interface PlatformContext {
+  industry?: {
+    name: string;
+    relevantCommodities: string[];
+    keyMaterials: string[];
+    typicalKPIs: string[];
+    riskFactors: string[];
+    procurementFocus: string[];
+    aiContextHints: string[];
+  };
   regime: {
     fdr: number;
     regime: string;
@@ -390,7 +400,28 @@ class AIAssistantService {
         console.log("[AI Assistant] External variables unavailable, continuing without");
       }
 
+      // Fetch company industry for personalized context
+      let industryContext = undefined;
+      try {
+        const company = await storage.getCompany(companyId);
+        if (company?.industry) {
+          const config = getIndustryConfig(company.industry);
+          industryContext = {
+            name: config.industry,
+            relevantCommodities: config.relevantCommodities,
+            keyMaterials: config.keyMaterials,
+            typicalKPIs: config.typicalKPIs,
+            riskFactors: config.riskFactors,
+            procurementFocus: config.procurementFocus,
+            aiContextHints: config.aiContextHints,
+          };
+        }
+      } catch (e) {
+        console.log("[AI Assistant] Could not fetch company industry");
+      }
+
       const context: PlatformContext = {
+        industry: industryContext,
         regime: {
           fdr,
           regime,
@@ -887,7 +918,21 @@ EXTERNAL VARIABLES (Extended FDR Intelligence):
   - Trending: ${extVars.socialTrends.trendingTopics.slice(0, 3).join(', ') || 'None'}
 - FDR Adjustment: ${extVars.fdrAdjustment > 0 ? '+' : ''}${extVars.fdrAdjustment.toFixed(3)} → Adjusted FDR: ${extVars.adjustedFdr.toFixed(2)}` : '';
 
-    return `You are an expert manufacturing operations copilot for Prescient Labs. You have deep expertise in supply chain management, procurement strategy, demand forecasting, production optimization, and economic cycle analysis. You provide actionable, data-driven guidance to manufacturing professionals.
+    // Industry-specific context
+    const industrySection = context.industry ? `
+
+COMPANY INDUSTRY CONTEXT:
+- Industry: ${context.industry.name}
+- Key Commodities: ${context.industry.relevantCommodities.slice(0, 5).join(', ')}
+- Typical Materials: ${context.industry.keyMaterials.slice(0, 4).join(', ')}
+- Key KPIs: ${context.industry.typicalKPIs.slice(0, 4).join(', ')}
+- Primary Risk Factors: ${context.industry.riskFactors.slice(0, 3).join(', ')}
+- Procurement Focus: ${context.industry.procurementFocus.slice(0, 3).join(', ')}
+
+INDUSTRY-SPECIFIC GUIDANCE:
+${context.industry.aiContextHints.map((hint, i) => `${i + 1}. ${hint}`).join('\n')}` : '';
+
+    return `You are an expert manufacturing operations copilot for Prescient Labs.${context.industry ? ` You are specialized in the ${context.industry.name} industry.` : ''} You have deep expertise in supply chain management, procurement strategy, demand forecasting, production optimization, and economic cycle analysis. You provide actionable, data-driven guidance to manufacturing professionals.
 
 You excel at answering NATURAL LANGUAGE QUERIES about supply chain data. Users may ask questions in plain English like:
 - "Which suppliers have exposure to Asian ports?"
@@ -896,7 +941,7 @@ You excel at answering NATURAL LANGUAGE QUERIES about supply chain data. Users m
 - "List suppliers in regions with high geopolitical risk"
 - "Which commodities should we buy now?"
 
-CURRENT PLATFORM STATE:
+CURRENT PLATFORM STATE:${industrySection}
 
 ECONOMIC CONTEXT:
 - Regime: ${context.regime.regime} (FDR: ${context.regime.fdr.toFixed(2)})

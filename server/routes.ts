@@ -36,6 +36,7 @@ import { getStripePublishableKey } from "./stripeClient";
 import multer from "multer";
 import { z } from "zod";
 import { sendTeamInvitation } from "./lib/emailService";
+import { getIndustryConfig, preconfigurePlatformForIndustry } from "./lib/industryPersonalization";
 import {
   insertCompanySchema,
   insertSkuSchema,
@@ -510,6 +511,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           companySize: companySize || null,
         });
         console.log(`[Onboarding] Updated company ${user.companyId} for user ${userId}`);
+        
+        // Pre-configure platform based on industry selection
+        if (industry) {
+          const preconfigResult = await preconfigurePlatformForIndustry(user.companyId, industry, storage);
+          console.log(`[Onboarding] Pre-configuration complete: ${preconfigResult.materialsCreated} materials created`);
+        }
       } else {
         // Create new company
         const company = await storage.createCompany({
@@ -534,6 +541,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         console.log(`[Onboarding] Created company ${company.id} for user ${userId}`);
+        
+        // Pre-configure platform based on industry selection
+        if (industry) {
+          const preconfigResult = await preconfigurePlatformForIndustry(company.id, industry, storage);
+          console.log(`[Onboarding] Pre-configuration complete: ${preconfigResult.materialsCreated} materials created`);
+        }
       }
       
       res.json({ success: true });
@@ -7315,6 +7328,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error acknowledging regime notification:", error);
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Industry-aware recommendations endpoint
+  app.get("/api/company/industry-recommendations", isAuthenticated, async (req: any, res) => {
+    try {
+      const { getIndustryRecommendations } = await import("./lib/industryPersonalization");
+      
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !user.companyId) {
+        return res.status(400).json({ message: "User has no company" });
+      }
+      
+      const company = await storage.getCompany(user.companyId);
+      const skus = await storage.getSkus(user.companyId);
+      const materials = await storage.getMaterials(user.companyId);
+      const suppliers = await storage.getSuppliers(user.companyId);
+      
+      const recommendations = getIndustryRecommendations(company?.industry, {
+        hasSkus: skus.length > 0,
+        hasMaterials: materials.length > 0,
+        hasSuppliers: suppliers.length > 0,
+        skuCount: skus.length,
+        materialCount: materials.length,
+        supplierCount: suppliers.length,
+      });
+      
+      res.json({
+        ...recommendations,
+        companyName: company?.name,
+        companySize: company?.companySize,
+      });
+    } catch (error: any) {
+      console.error("Error fetching industry recommendations:", error);
+      res.status(500).json({ message: "Failed to fetch industry recommendations" });
     }
   });
 
