@@ -832,10 +832,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User has no associated company" });
       }
       
+      // Sanitize input - remove fields that shouldn't be set by client
+      const { id, createdAt, updatedAt, ...sanitizedBody } = req.body;
+      
       const prefs = await storage.upsertUserNotificationPreferences({
         userId,
         companyId: user.companyId,
-        ...req.body,
+        ...sanitizedBody,
       });
       res.json(prefs);
     } catch (error: any) {

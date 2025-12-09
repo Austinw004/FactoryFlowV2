@@ -181,3 +181,29 @@ The following integrations need to be set up before publishing:
 - Terms of Service: `/terms`
 - Privacy Policy: `/privacy`
 - Both linked from landing page footer
+
+### Dashboard Enhancements (Dec 2025)
+- **PDF Export**: Dashboard now has "Export PDF" button that generates a downloadable PDF report with:
+  - Economic regime status and FDR score
+  - KPI summary (SKUs, fill rate, action items)
+  - Recent allocations table
+  - Recommended actions from policy signals
+  - Implementation: `client/src/lib/pdfExport.ts` using jsPDF
+- **Activity Feed**: Real-time activity timeline at bottom of Dashboard showing user actions and system events
+  - Component: `client/src/components/ActivityFeed.tsx`
+  - Backend: `activity_logs` table with storage methods
+
+### Notification Settings (Dec 2025)
+- **Dedicated Page**: `/notification-settings` for granular notification control
+  - In-app notification toggles (regime changes, forecast alerts, low stock, budget, system)
+  - Email notification toggles with digest frequency options
+  - Quiet hours configuration
+  - Implementation: `client/src/pages/NotificationSettings.tsx`
+- **Link from Configuration**: Configuration -> Alerts tab now has link to full notification settings
+- **Database**: `user_notification_preferences` table stores per-user settings
+
+### Contextual Help Tooltips
+- **InfoTooltip Component**: Reusable tooltip explaining platform-specific terms
+  - Terms: FDR, Regime, MAPE, Market Signal, Allocation
+  - Used across Dashboard, Forecasting, Procurement, ForecastAccuracy pages
+  - Implementation: `client/src/components/InfoTooltip.tsx`

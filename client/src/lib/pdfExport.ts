@@ -132,12 +132,15 @@ export function generateDashboardPDF(data: DashboardData): boolean {
     const maxSignals = Math.min(data.policySignals.length, 5);
     for (let i = 0; i < maxSignals; i++) {
       const signal = data.policySignals[i];
+      const urgencyText = (signal.urgency || 'info').toUpperCase();
+      const titleText = signal.title || 'Recommendation';
+      const descriptionText = signal.description || '';
       doc.setFont('helvetica', 'bold');
-      doc.text(`${signal.urgency.toUpperCase()}: ${signal.title}`, 25, yPosition);
+      doc.text(`${urgencyText}: ${titleText}`, 25, yPosition);
       yPosition += 5;
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
-      const signalLines = doc.splitTextToSize(signal.description, pageWidth - 50);
+      const signalLines = doc.splitTextToSize(descriptionText, pageWidth - 50);
       doc.text(signalLines, 30, yPosition);
       yPosition += signalLines.length * 4 + 5;
       doc.setFontSize(10);
