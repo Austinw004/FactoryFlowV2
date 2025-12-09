@@ -106,3 +106,5 @@ integrations = ["javascript_log_in_with_replit:1.0.0", "javascript_database:1.0.
 
 [userenv.shared]
 ENCRYPTION_KEY = "4b373b98f181b23ddd962ad9c3d73e1f13297b93f9d02903983cdf97e7519187"
+TESTING_VITE_STRIPE_PUBLIC_KEY = "pk_test_51SZFrW9F4Ysa19m8rfX4euq4MSWRB1nBjIw0km1UkvudrZKUKdod5xS333StKRijHGDScb9hNxhaIrgMxKMkKoDC00JcaNJl85"
+TESTING_STRIPE_SECRET_KEY = "sk_test_51SZFrW9F4Ysa19m81xsXhQImTK9A9wBX7eujhtW5etcXtKbTm5lZL7BnBBwNnywDOe9OE3D5axMEU42Dg6rk5NH600Ip0Pirh8"

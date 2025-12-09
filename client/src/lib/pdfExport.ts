@@ -22,8 +22,9 @@ interface DashboardData {
   }>;
 }
 
-export function generateDashboardPDF(data: DashboardData): void {
-  const doc = new jsPDF();
+export function generateDashboardPDF(data: DashboardData): boolean {
+  try {
+    const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   let yPosition = 20;
   
@@ -156,6 +157,11 @@ export function generateDashboardPDF(data: DashboardData): void {
     );
   }
   
-  const filename = `prescient-dashboard-${new Date().toISOString().split('T')[0]}.pdf`;
-  doc.save(filename);
+    const filename = `prescient-dashboard-${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(filename);
+    return true;
+  } catch (error) {
+    console.error('PDF generation failed:', error);
+    return false;
+  }
 }

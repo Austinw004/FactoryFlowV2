@@ -322,7 +322,7 @@ export default function Dashboard() {
           <Button 
             variant="outline"
             onClick={() => {
-              generateDashboardPDF({
+              const success = generateDashboardPDF({
                 companyName: user?.firstName ? `${user.firstName}'s Company` : 'Prescient Labs',
                 exportDate: new Date().toLocaleDateString(),
                 fdr,
@@ -331,22 +331,30 @@ export default function Dashboard() {
                 totalSKUs: Array.isArray(skus) ? skus.length : 0,
                 avgFillRate,
                 actionItems: policySignals.length,
-                allocations: allocationData.slice(0, 10).map(a => ({
-                  skuName: a.sku?.name || 'Unknown',
-                  materialName: a.material?.name || 'Unknown',
-                  quantity: a.quantity,
+                allocations: allocationData.slice(0, 10).map((a: any) => ({
+                  skuName: a.sku || 'Unknown',
+                  materialName: 'Allocated Material',
+                  quantity: a.allocatedUnits || 0,
                   priority: a.priority?.toString() || 'Normal',
                 })),
-                policySignals: policySignals.slice(0, 5).map(s => ({
+                policySignals: policySignals.slice(0, 5).map((s: any) => ({
                   title: s.title,
                   description: s.description,
                   urgency: s.urgency,
                 })),
               });
-              toast({
-                title: "Report exported",
-                description: "Your dashboard report has been downloaded as a PDF.",
-              });
+              if (success) {
+                toast({
+                  title: "Report exported",
+                  description: "Your dashboard report has been downloaded as a PDF.",
+                });
+              } else {
+                toast({
+                  title: "Export failed",
+                  description: "There was an error generating the PDF. Please try again.",
+                  variant: "destructive",
+                });
+              }
             }}
             data-testid="button-export-pdf"
           >
