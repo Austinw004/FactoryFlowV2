@@ -4,7 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { 
   Check, ArrowLeft, Calendar, Target, Users, Zap,
   BarChart3, Shield, Clock, ArrowRight, Sparkles, DollarSign,
-  TrendingUp, FileCheck, Handshake
+  TrendingUp, FileCheck, Handshake, Video, ClipboardCheck, X,
+  CheckCircle2, AlertCircle
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useLocation } from "wouter";
@@ -345,6 +346,186 @@ export default function PilotProgram() {
                 <span>{item}</span>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Live Demo Booking */}
+      <section className="py-16 bg-muted/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <Badge className="mb-4" variant="outline">
+              <Video className="h-3 w-3 mr-1" />
+              See It In Action
+            </Badge>
+            <h2 className="text-2xl font-bold mb-4">Book a Live Demo</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              See how our platform identifies savings opportunities with your specific use case. Choose the format that works best for you.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
+            <Card className="p-6" data-testid="card-demo-quick">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Clock className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Quick Overview</h3>
+                  <p className="text-sm text-muted-foreground">15 minutes</p>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground mb-4">
+                A focused walkthrough of key features: economic regime intelligence, procurement signals, and AI assistant.
+              </p>
+              <ul className="space-y-2 mb-6">
+                <li className="flex items-center gap-2 text-sm">
+                  <Check className="h-4 w-4 text-green-500" />
+                  <span>Platform overview</span>
+                </li>
+                <li className="flex items-center gap-2 text-sm">
+                  <Check className="h-4 w-4 text-green-500" />
+                  <span>Live AI demo</span>
+                </li>
+                <li className="flex items-center gap-2 text-sm">
+                  <Check className="h-4 w-4 text-green-500" />
+                  <span>Q&A session</span>
+                </li>
+              </ul>
+              <Button className="w-full" variant="outline" asChild data-testid="link-demo-quick">
+                <a href="mailto:demos@prescientlabs.ai?subject=Quick Demo Request (15 min)">
+                  Book Quick Demo
+                </a>
+              </Button>
+            </Card>
+
+            <Card className="p-6 ring-2 ring-primary" data-testid="card-demo-deep">
+              <Badge className="mb-4">Recommended</Badge>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Target className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Deep Dive</h3>
+                  <p className="text-sm text-muted-foreground">45 minutes</p>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground mb-4">
+                Comprehensive session with your team. We'll discuss your specific challenges and show tailored solutions.
+              </p>
+              <ul className="space-y-2 mb-6">
+                <li className="flex items-center gap-2 text-sm">
+                  <Check className="h-4 w-4 text-green-500" />
+                  <span>Full platform tour</span>
+                </li>
+                <li className="flex items-center gap-2 text-sm">
+                  <Check className="h-4 w-4 text-green-500" />
+                  <span>Custom scenario walkthrough</span>
+                </li>
+                <li className="flex items-center gap-2 text-sm">
+                  <Check className="h-4 w-4 text-green-500" />
+                  <span>ROI estimation for your business</span>
+                </li>
+                <li className="flex items-center gap-2 text-sm">
+                  <Check className="h-4 w-4 text-green-500" />
+                  <span>Integration planning discussion</span>
+                </li>
+              </ul>
+              <Button className="w-full" asChild data-testid="link-demo-deep">
+                <a href="mailto:demos@prescientlabs.ai?subject=Deep Dive Demo Request (45 min)">
+                  Book Deep Dive
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </a>
+              </Button>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Pilot Readiness Checklist */}
+      <section className="py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <Badge className="mb-4" variant="outline">
+              <ClipboardCheck className="h-3 w-3 mr-1" />
+              Self-Assessment
+            </Badge>
+            <h2 className="text-2xl font-bold mb-4">Are You Pilot-Ready?</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Check if your organization is positioned to maximize value from a pilot. Most manufacturers who meet these criteria see results within 4 weeks.
+            </p>
+          </div>
+
+          <div className="max-w-3xl mx-auto">
+            <Card className="p-8" data-testid="card-readiness-checklist">
+              <div className="space-y-6">
+                {[
+                  {
+                    question: "Do you have 12+ months of procurement or purchase order data?",
+                    why: "Historical data enables accurate baseline measurement and savings verification.",
+                    ideal: true,
+                  },
+                  {
+                    question: "Is your annual procurement spend $1M or more?",
+                    why: "Higher spend volumes mean larger absolute savings opportunities.",
+                    ideal: true,
+                  },
+                  {
+                    question: "Do you manage at least 100 SKUs or material types?",
+                    why: "More SKUs provide better forecasting accuracy and optimization potential.",
+                    ideal: true,
+                  },
+                  {
+                    question: "Do you have a dedicated procurement or supply chain team?",
+                    why: "A designated point of contact ensures smooth pilot execution.",
+                    ideal: true,
+                  },
+                  {
+                    question: "Are you currently experiencing forecast inaccuracies or stockouts?",
+                    why: "Existing pain points indicate high improvement potential.",
+                    ideal: true,
+                  },
+                  {
+                    question: "Can you export data from your ERP or procurement system?",
+                    why: "Data access is essential for integration and baseline establishment.",
+                    ideal: true,
+                  },
+                ].map((item, idx) => (
+                  <div key={idx} className="flex gap-4" data-testid={`readiness-item-${idx}`}>
+                    <div className="shrink-0 mt-1">
+                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
+                        <span className="text-xs font-semibold text-primary">{idx + 1}</span>
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium mb-1">{item.question}</p>
+                      <p className="text-sm text-muted-foreground">{item.why}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-8 pt-6 border-t">
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-green-500/10 border border-green-500/20">
+                  <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-green-800 dark:text-green-400">4+ Yes answers?</p>
+                    <p className="text-sm text-green-700 dark:text-green-500">
+                      You're an excellent candidate for a pilot. Let's discuss your specific situation.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20 mt-3">
+                  <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-amber-800 dark:text-amber-400">Fewer than 4?</p>
+                    <p className="text-sm text-amber-700 dark:text-amber-500">
+                      We may still be able to help. Book a call to explore options tailored to your situation.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </Card>
           </div>
         </div>
       </section>
