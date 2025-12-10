@@ -7,8 +7,15 @@ Prescient Labs gives manufacturers the foresight to make smarter decisions - fro
 ### Commercial Status
 - **Brand**: Prescient Labs
 - **Tagline**: "See Ahead. Act First. Dominate."
-- **Pricing Tiers**: Starter ($299/month), Professional ($799/month), Enterprise (Custom pricing via sales)
-- **Subscription**: Stripe-based with monthly/annual billing options
+- **Pricing Model**: 100% Performance-Based / ROI-Based (Dec 2025)
+  - Zero upfront fees, zero monthly subscriptions
+  - Tiered success fees based on verified procurement savings:
+    - 25% of first $250K in savings
+    - 20% of savings from $250K-$500K
+    - 15% of savings above $500K
+  - Example: $400K annual savings = $92,500 fee (customer keeps $307,500)
+- **Savings Verification**: Joint sign-off on baseline, monthly tracking, quarterly settlements, independent audit rights
+- **Subscription**: Stripe-based payment processing for success fees
 - **Proprietary IP**: Economic models and formulas are kept private from public-facing pages
 
 ### Core Capabilities

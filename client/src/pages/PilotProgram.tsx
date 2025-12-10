@@ -3,7 +3,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
   Check, ArrowLeft, Calendar, Target, Users, Zap,
-  BarChart3, Shield, Clock, ArrowRight, Sparkles
+  BarChart3, Shield, Clock, ArrowRight, Sparkles, DollarSign,
+  TrendingUp, FileCheck, Handshake
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useLocation } from "wouter";
@@ -64,95 +65,74 @@ export default function PilotProgram() {
 
   const successMetrics = [
     {
-      metric: "Procurement Savings Identified",
+      metric: "Projected Procurement Savings",
       target: "$50K - $500K+",
-      description: "Counter-cyclical buying opportunities surfaced during pilot",
+      description: "Estimated counter-cyclical buying opportunities (varies by spend volume)",
     },
     {
-      metric: "Forecast Accuracy Improvement",
+      metric: "Projected Accuracy Improvement",
       target: "15-35% MAPE reduction",
-      description: "Compared to your current forecasting methods",
+      description: "Estimated improvement vs. baseline (results vary by data quality)",
     },
     {
-      metric: "Time to Insight",
+      metric: "Target Time to Insight",
       target: "< 24 hours",
-      description: "From market event to actionable recommendation",
+      description: "Goal for market event to actionable recommendation",
     },
     {
-      metric: "User Adoption",
+      metric: "Target User Adoption",
       target: "> 80%",
-      description: "Active usage among provisioned users",
+      description: "Goal for active usage among provisioned users",
     },
   ];
 
-  const investmentOptions = [
-    {
-      name: "Standard Pilot",
-      price: "$15,000",
-      duration: "8 weeks",
-      features: [
-        "Up to 500 SKUs",
-        "5 user licenses",
-        "Weekly check-ins",
-        "Email support",
-        "Basic integration (CSV/API)",
-        "Standard onboarding",
-      ],
-      bestFor: "Small to mid-size manufacturers",
-    },
-    {
-      name: "Enterprise Pilot",
-      price: "$30,000",
-      duration: "12 weeks",
-      features: [
-        "Unlimited SKUs",
-        "15 user licenses",
-        "Bi-weekly executive reviews",
-        "Priority support",
-        "ERP integration included",
-        "Concierge onboarding",
-        "Custom success metrics",
-        "Dedicated success manager",
-      ],
-      bestFor: "Large manufacturers, multi-site operations",
-      highlighted: true,
-    },
-    {
-      name: "Success-Based",
-      price: "Custom",
-      duration: "Negotiated",
-      features: [
-        "Lower upfront investment",
-        "Performance-based fees",
-        "Tied to documented savings",
-        "Mutual skin in the game",
-        "Flexible scope",
-        "Partnership approach",
-      ],
-      bestFor: "Risk-averse organizations, strategic partnerships",
-    },
-  ];
+  const successFeeModel = {
+    headline: "Pay Only When You Save",
+    subheadline: "Zero upfront costs. We only get paid when you realize verified savings.",
+    tiers: [
+      { range: "First $250K", percentage: "25%", description: "Of verified procurement savings" },
+      { range: "$250K - $500K", percentage: "20%", description: "Reduced rate on additional savings" },
+      { range: "Above $500K", percentage: "15%", description: "Best rate for largest outcomes" },
+    ],
+    included: [
+      "Full platform access during pilot",
+      "Unlimited SKUs and users",
+      "Dedicated success manager",
+      "ERP integration support",
+      "Weekly optimization reviews",
+      "AI assistant capabilities",
+      "Quarterly savings attestation",
+      "Independent audit rights",
+    ],
+    verification: [
+      "Baseline established from prior 12-month normalized spend",
+      "Adjustments for volume, mix, and commodity indices",
+      "Monthly tracking with quarterly settlements",
+      "Joint sign-off on documented savings",
+      "Auditable data from your ERP/procurement systems",
+    ],
+  };
 
   const whyPilot = [
     {
       icon: Shield,
-      title: "Low Risk",
-      description: "Limited commitment before full investment. Prove value with your own data.",
+      title: "Zero Financial Risk",
+      description: "No upfront investment required. You only pay when verified savings are realized.",
     },
     {
       icon: Target,
-      title: "Measurable Outcomes",
-      description: "Clear success metrics agreed upfront. No ambiguity about results.",
+      title: "Aligned Incentives",
+      description: "We earn only a percentage of your savings. Our success depends on your success.",
     },
     {
       icon: Users,
-      title: "Executive Alignment",
-      description: "Weekly reviews ensure leadership stays informed and engaged.",
+      title: "Full Transparency",
+      description: "Joint verification of all savings claims. Independent audit rights included.",
     },
     {
       icon: Zap,
       title: "Fast Time-to-Value",
-      description: "See first insights within 2 weeks. Savings opportunities within 4 weeks.",
+      description: "Expect first insights within 2 weeks and savings opportunities within 4 weeks.",
     },
   ];
 
@@ -178,10 +158,10 @@ export default function PilotProgram() {
       {/* Hero */}
       <section className="py-16 border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <Badge className="mb-4">Pilot Program</Badge>
-          <h1 className="text-4xl font-bold mb-4">Prove the Value Before You Commit</h1>
+          <Badge className="mb-4">100% Performance-Based</Badge>
+          <h1 className="text-4xl font-bold mb-4">Zero Risk. We Only Win When You Win.</h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            A structured 8-12 week program to demonstrate measurable ROI with your own data, your own team, and your own use cases.
+            No upfront fees. No monthly subscriptions. You pay a percentage of the verified savings we help you achieve — nothing more.
           </p>
         </div>
       </section>
@@ -239,9 +219,9 @@ export default function PilotProgram() {
       {/* Success Metrics */}
       <section className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-bold mb-8 text-center">Success Metrics</h2>
+          <h2 className="text-2xl font-bold mb-8 text-center">Projected Outcomes</h2>
           <p className="text-center text-muted-foreground mb-8 max-w-2xl mx-auto">
-            We agree on measurable outcomes before the pilot begins. No ambiguity about what success looks like.
+            These are estimated results based on typical customer profiles. Actual outcomes vary based on spend volume, data quality, and market conditions.
           </p>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
             {successMetrics.map((metric, idx) => (
@@ -255,36 +235,88 @@ export default function PilotProgram() {
         </div>
       </section>
 
-      {/* Investment Options */}
+      {/* ROI-Based Pricing */}
       <section className="py-16 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-bold mb-8 text-center">Investment Options</h2>
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {investmentOptions.map((option, idx) => (
-              <Card 
-                key={idx} 
-                className={`p-6 ${option.highlighted ? 'ring-2 ring-primary' : ''}`}
-                data-testid={`card-option-${idx}`}
-              >
-                {option.highlighted && (
-                  <Badge className="mb-4">Most Popular</Badge>
-                )}
-                <h3 className="text-xl font-semibold mb-2">{option.name}</h3>
-                <div className="flex items-baseline gap-2 mb-4">
-                  <span className="text-3xl font-bold">{option.price}</span>
-                  <span className="text-muted-foreground">/ {option.duration}</span>
+          <div className="text-center mb-12">
+            <Badge className="mb-4" variant="outline">
+              <Handshake className="h-3 w-3 mr-1" />
+              Performance-Based Partnership
+            </Badge>
+            <h2 className="text-3xl font-bold mb-4">{successFeeModel.headline}</h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              {successFeeModel.subheadline}
+            </p>
+          </div>
+
+          {/* Success Fee Tiers */}
+          <Card className="p-8 max-w-4xl mx-auto mb-8" data-testid="card-pricing-tiers">
+            <div className="flex items-center gap-2 mb-6">
+              <DollarSign className="h-5 w-5 text-primary" />
+              <h3 className="text-lg font-semibold">Tiered Success Fees</h3>
+            </div>
+            <div className="grid md:grid-cols-3 gap-6 mb-8">
+              {successFeeModel.tiers.map((tier, idx) => (
+                <div 
+                  key={idx} 
+                  className="text-center p-6 rounded-lg bg-muted/50 border"
+                  data-testid={`tier-${idx}`}
+                >
+                  <div className="text-3xl font-bold text-primary mb-2">{tier.percentage}</div>
+                  <div className="font-medium mb-1">{tier.range}</div>
+                  <div className="text-sm text-muted-foreground">{tier.description}</div>
                 </div>
-                <p className="text-sm text-muted-foreground mb-6">{option.bestFor}</p>
-                <ul className="space-y-2">
-                  {option.features.map((feature, fIdx) => (
-                    <li key={fIdx} className="flex items-start gap-2 text-sm">
-                      <Check className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-            ))}
+              ))}
+            </div>
+            <div className="text-center p-4 bg-primary/5 rounded-lg border border-primary/20">
+              <p className="text-sm">
+                <strong>Example:</strong> If we help you save $400K annually, our fee would be{" "}
+                <span className="font-semibold text-primary">$92,500</span>{" "}
+                (25% of $250K = $62,500 + 20% of $150K = $30,000) — you keep <span className="font-semibold text-green-600">$307,500</span>.
+              </p>
+            </div>
+          </Card>
+
+          {/* What's Included & Verification */}
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            <Card className="p-6" data-testid="card-included">
+              <div className="flex items-center gap-2 mb-4">
+                <TrendingUp className="h-5 w-5 text-primary" />
+                <h3 className="font-semibold">What's Included</h3>
+              </div>
+              <ul className="space-y-2">
+                {successFeeModel.included.map((item, idx) => (
+                  <li key={idx} className="flex items-start gap-2 text-sm">
+                    <Check className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+
+            <Card className="p-6" data-testid="card-verification">
+              <div className="flex items-center gap-2 mb-4">
+                <FileCheck className="h-5 w-5 text-primary" />
+                <h3 className="font-semibold">Savings Verification</h3>
+              </div>
+              <ul className="space-y-2">
+                {successFeeModel.verification.map((item, idx) => (
+                  <li key={idx} className="flex items-start gap-2 text-sm">
+                    <Check className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          </div>
+
+          {/* Trust Statement */}
+          <div className="text-center mt-8 max-w-2xl mx-auto">
+            <p className="text-sm text-muted-foreground">
+              <Shield className="h-4 w-4 inline-block mr-1 text-primary" />
+              <strong>Our commitment:</strong> If we don't deliver measurable savings, you pay nothing. 
+              We succeed only when you succeed.
+            </p>
           </div>
         </div>
       </section>
@@ -320,10 +352,10 @@ export default function PilotProgram() {
       {/* CTA */}
       <section className="py-16 bg-primary text-primary-foreground">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <Sparkles className="h-12 w-12 mx-auto mb-4 opacity-80" />
-          <h2 className="text-2xl font-bold mb-4">Ready to See What's Possible?</h2>
+          <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-80" />
+          <h2 className="text-2xl font-bold mb-4">Start Saving With Zero Risk</h2>
           <p className="text-primary-foreground/80 mb-8 max-w-xl mx-auto">
-            Schedule a discovery call to discuss your specific challenges and how a pilot could address them.
+            Schedule a discovery call to discuss your procurement spend and estimated savings potential. No commitment required.
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <Button size="lg" variant="secondary" asChild data-testid="link-schedule-call">
