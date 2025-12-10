@@ -10,6 +10,7 @@ import { CreateMaterialDialog } from "@/components/CreateMaterialDialog";
 import { CreateSupplierDialog } from "@/components/CreateSupplierDialog";
 import { FDRTrendChart } from "@/components/FDRTrendChart";
 import { MaterialsAtRiskWidget } from "@/components/MaterialsAtRiskWidget";
+import { QuickWinsWidget } from "@/components/QuickWinsWidget";
 import { RegimeActionCards } from "@/components/RegimeActionCards";
 import { IndustryInsightsPanel, IndustryBanner } from "@/components/IndustryInsightsPanel";
 import { InfoTooltip } from "@/components/InfoTooltip";
@@ -456,7 +457,10 @@ export default function Dashboard() {
         <div className="lg:col-span-2">
           <IndustryInsightsPanel maxItems={4} />
         </div>
-        <MaterialsAtRiskWidget />
+        <div className="space-y-4">
+          <QuickWinsWidget />
+          <MaterialsAtRiskWidget />
+        </div>
       </div>
 
       <Card className="p-6">

@@ -1,5 +1,5 @@
 import { db } from "@db";
-import { eq, and, sql, desc } from "drizzle-orm";
+import { eq, and, sql, desc, inArray } from "drizzle-orm";
 import type { 
   User, InsertUser, UpsertUser, Company, InsertCompany,
   CompanyLocation, InsertCompanyLocation, UpdateCompanyLocation,
@@ -195,6 +195,7 @@ export interface IStorage {
   
   // BOMs
   getBomsForSku(skuId: string): Promise<Bom[]>;
+  getAllBomsForCompany(companyId: string): Promise<Bom[]>;
   createBom(bom: InsertBom): Promise<Bom>;
   deleteBom(skuId: string, materialId: string): Promise<void>;
   
@@ -205,10 +206,12 @@ export interface IStorage {
   
   // Supplier Materials
   getSupplierMaterials(supplierId: string): Promise<SupplierMaterial[]>;
+  getAllSupplierMaterialsForCompany(companyId: string): Promise<SupplierMaterial[]>;
   createSupplierMaterial(sm: InsertSupplierMaterial): Promise<SupplierMaterial>;
   
   // Demand History
   getDemandHistory(skuId: string): Promise<DemandHistory[]>;
+  getAllDemandHistoryForCompany(companyId: string): Promise<DemandHistory[]>;
   createDemandHistory(dh: InsertDemandHistory): Promise<DemandHistory>;
   bulkCreateDemandHistory(dhs: InsertDemandHistory[]): Promise<void>;
   
@@ -1114,6 +1117,13 @@ export class DbStorage implements IStorage {
     return db.select().from(boms).where(eq(boms.skuId, skuId));
   }
 
+  async getAllBomsForCompany(companyId: string): Promise<Bom[]> {
+    const companySkus = await db.select({ id: skus.id }).from(skus).where(eq(skus.companyId, companyId));
+    if (companySkus.length === 0) return [];
+    const skuIds = companySkus.map(s => s.id);
+    return db.select().from(boms).where(inArray(boms.skuId, skuIds));
+  }
+
   async createBom(insertBom: InsertBom): Promise<Bom> {
     const [bom] = await db.insert(boms).values(insertBom).returning();
     return bom;
@@ -1141,6 +1151,13 @@ export class DbStorage implements IStorage {
     return db.select().from(supplierMaterials).where(eq(supplierMaterials.supplierId, supplierId));
   }
 
+  async getAllSupplierMaterialsForCompany(companyId: string): Promise<SupplierMaterial[]> {
+    const companySuppliers = await db.select({ id: suppliers.id }).from(suppliers).where(eq(suppliers.companyId, companyId));
+    if (companySuppliers.length === 0) return [];
+    const supplierIds = companySuppliers.map(s => s.id);
+    return db.select().from(supplierMaterials).where(inArray(supplierMaterials.supplierId, supplierIds));
+  }
+
   async createSupplierMaterial(insertSm: InsertSupplierMaterial): Promise<SupplierMaterial> {
     const [sm] = await db.insert(supplierMaterials).values(insertSm).returning();
     return sm;
@@ -1148,6 +1165,13 @@ export class DbStorage implements IStorage {
 
   async getDemandHistory(skuId: string): Promise<DemandHistory[]> {
     return db.select().from(demandHistory).where(eq(demandHistory.skuId, skuId));
+  }
+
+  async getAllDemandHistoryForCompany(companyId: string): Promise<DemandHistory[]> {
+    const companySkus = await db.select({ id: skus.id }).from(skus).where(eq(skus.companyId, companyId));
+    if (companySkus.length === 0) return [];
+    const skuIds = companySkus.map(s => s.id);
+    return db.select().from(demandHistory).where(inArray(demandHistory.skuId, skuIds));
   }
 
   async createDemandHistory(insertDh: InsertDemandHistory): Promise<DemandHistory> {

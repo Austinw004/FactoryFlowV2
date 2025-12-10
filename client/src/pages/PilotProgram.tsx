@@ -8,6 +8,7 @@ import {
   CheckCircle2, AlertCircle
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { SEOHead } from "@/components/SEOHead";
 import { useLocation } from "wouter";
 
 export default function PilotProgram() {
@@ -139,6 +140,10 @@ export default function PilotProgram() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead 
+        title="Risk-Free Pilot Program - Prescient Labs"
+        description="Start with zero upfront cost. Our performance-based pilot program lets you prove ROI before committing. Pay only when you see verified savings."
+      />
       {/* Navigation */}
       <nav className="border-b sticky top-0 bg-background/95 backdrop-blur z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

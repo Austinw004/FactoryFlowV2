@@ -1,6 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { db } from "@db";
+import { sql } from "drizzle-orm";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { attachRbacUser, requirePermission } from "./middleware/rbac";
 import rbacRoutes from "./routes/rbac";
@@ -443,6 +445,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // RBAC routes (roles, permissions, user role assignments)
   app.use('/api/rbac', rbacRoutes);
+
+  // Health check endpoint for monitoring
+  app.get('/api/health', async (req, res) => {
+    try {
+      const startTime = Date.now();
+      
+      // Check database connectivity with a lightweight query
+      let dbStatus = 'healthy';
+      try {
+        await db.execute(sql`SELECT 1`);
+      } catch {
+        dbStatus = 'unhealthy';
+      }
+      const dbLatency = Date.now() - startTime;
+      
+      // Get cache stats
+      const cacheStats = globalCache.getStats();
+      
+      // Get WebSocket connection count
+      const wsConnections = getConnectedClientCount();
+      
+      res.json({
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        version: '1.0.0',
+        uptime: process.uptime(),
+        checks: {
+          database: { status: 'ok', latencyMs: dbLatency },
+          cache: { status: 'ok', activeEntries: cacheStats.activeEntries },
+          websocket: { status: 'ok', connections: wsConnections },
+        },
+      });
+    } catch (error: any) {
+      res.status(503).json({
+        status: 'unhealthy',
+        timestamp: new Date().toISOString(),
+        error: error.message,
+      });
+    }
+  });
 
   // Auth endpoints
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
@@ -1567,14 +1609,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const cacheKey = `masterData:materials:${user.companyId}`;
       const cached = globalCache.get<any>(cacheKey);
-      if (cached) {
-        return res.json(cached);
+      let materials = cached;
+      
+      if (!materials) {
+        materials = await storage.getMaterials(user.companyId);
+        globalCache.set(cacheKey, materials, 'masterData');
       }
       
-      const materials = await storage.getMaterials(user.companyId);
-      globalCache.set(cacheKey, materials, 'masterData');
-      
-      res.json(materials);
+      if (req.query.paginate === 'true') {
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+        const offset = (page - 1) * limit;
+        const paginatedMaterials = materials.slice(offset, offset + limit);
+        
+        res.json({
+          data: paginatedMaterials,
+          pagination: {
+            page,
+            limit,
+            total: materials.length,
+            totalPages: Math.ceil(materials.length / limit),
+            hasMore: offset + limit < materials.length,
+          }
+        });
+      } else {
+        res.json(materials);
+      }
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -2146,8 +2206,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
+      
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+      const offset = (page - 1) * limit;
+      
       const allocations = await storage.getAllocations(user.companyId);
-      res.json(allocations);
+      
+      if (req.query.paginate === 'true') {
+        const paginatedAllocations = allocations.slice(offset, offset + limit);
+        res.json({
+          data: paginatedAllocations,
+          pagination: {
+            page,
+            limit,
+            total: allocations.length,
+            totalPages: Math.ceil(allocations.length / limit),
+            hasMore: offset + limit < allocations.length,
+          }
+        });
+      } else {
+        res.json(allocations);
+      }
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -2206,26 +2286,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { budget, name, budgetDurationValue, budgetDurationUnit, horizonStart, directMaterialRequirements } = validationResult.data;
 
-      // Fetch company data
+      // Fetch company data in parallel (batched queries - no N+1)
       const companyId = user.companyId;
-      const skus = await storage.getSkus(companyId);
-      const materials = await storage.getMaterials(companyId);
-      const suppliers = await storage.getSuppliers(companyId);
+      const [skus, materials, suppliers, allBoms, allSupplierMaterials, allDemandHistory] = await Promise.all([
+        storage.getSkus(companyId),
+        storage.getMaterials(companyId),
+        storage.getSuppliers(companyId),
+        storage.getAllBomsForCompany(companyId),
+        storage.getAllSupplierMaterialsForCompany(companyId),
+        storage.getAllDemandHistoryForCompany(companyId),
+      ]);
 
       // Get economic regime
       await economics.fetch();
       const signals = economics.signals();
 
-      // Build BOM map
+      // Build BOM map from batched data
       const bomMap: Record<string, Record<string, number>> = {};
       for (const sku of skus) {
-        const boms = await storage.getBomsForSku(sku.id);
         bomMap[sku.id] = {};
-        for (const bom of boms) {
-          const material = materials.find(m => m.id === bom.materialId);
-          if (material) {
-            bomMap[sku.id][material.code] = bom.quantityPerUnit;
-          }
+      }
+      for (const bom of allBoms) {
+        const material = materials.find(m => m.id === bom.materialId);
+        if (material && bomMap[bom.skuId]) {
+          bomMap[bom.skuId][material.code] = bom.quantityPerUnit;
         }
       }
 
@@ -2237,37 +2321,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         inbound[mat.code] = mat.inbound;
       }
 
-      // Build supplier terms map (both by code and by ID for direct material flow)
+      // Build supplier terms map from batched data
       const supplierTerms: Record<string, any> = {};
       const supplierTermsById: Record<string, any> = {};
-      for (const supplier of suppliers) {
-        const sms = await storage.getSupplierMaterials(supplier.id);
-        for (const sm of sms) {
-          const material = materials.find(m => m.id === sm.materialId);
-          if (material) {
-            supplierTerms[material.code] = {
-              unit_cost: sm.unitCost,
-              lead_time_days: sm.leadTimeDays,
-            };
-            supplierTermsById[material.id] = {
-              unit_cost: sm.unitCost,
-              lead_time_days: sm.leadTimeDays,
-              materialCode: material.code,
-              materialName: material.name,
-              unit: material.unit,
-            };
-          }
+      for (const sm of allSupplierMaterials) {
+        const material = materials.find(m => m.id === sm.materialId);
+        if (material) {
+          supplierTerms[material.code] = {
+            unit_cost: sm.unitCost,
+            lead_time_days: sm.leadTimeDays,
+          };
+          supplierTermsById[material.id] = {
+            unit_cost: sm.unitCost,
+            lead_time_days: sm.leadTimeDays,
+            materialCode: material.code,
+            materialName: material.name,
+            unit: material.unit,
+          };
         }
       }
 
       // Check if using direct material requirements mode
       const useDirectMaterials = directMaterialRequirements && Array.isArray(directMaterialRequirements) && directMaterialRequirements.length > 0;
 
-      // Build demand history for forecasting
+      // Build demand history from batched data
       const historyBySku: Record<string, number[]> = {};
       for (const sku of skus) {
-        const history = await storage.getDemandHistory(sku.id);
-        historyBySku[sku.id] = history
+        historyBySku[sku.id] = [];
+      }
+      for (const dh of allDemandHistory) {
+        if (historyBySku[dh.skuId]) {
+          historyBySku[dh.skuId].push({ period: dh.period, units: dh.units } as any);
+        }
+      }
+      // Sort and map to just units
+      for (const skuId of Object.keys(historyBySku)) {
+        const history = historyBySku[skuId] as any[];
+        historyBySku[skuId] = history
           .sort((a, b) => a.period.localeCompare(b.period))
           .map(h => h.units);
       }

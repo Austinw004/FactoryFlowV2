@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import heroImage from "@assets/Screenshot_2025-12-06_at_2.06.49_pm_1765051647586.png";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { SEOHead } from "@/components/SEOHead";
 import { useLocation } from "wouter";
 
 export default function LandingPage() {
@@ -140,6 +141,10 @@ export default function LandingPage() {
   
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead 
+        title="Prescient Labs - Manufacturing Intelligence Platform"
+        description="Give your manufacturing operation the foresight to make smarter decisions. Predict demand, time purchases, and optimize production with AI-powered intelligence."
+      />
       {/* Navigation */}
       <nav className="border-b sticky top-0 bg-background/95 backdrop-blur z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
