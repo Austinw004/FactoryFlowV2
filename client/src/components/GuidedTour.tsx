@@ -5,10 +5,14 @@ import { ChevronRight, ChevronLeft, Sparkles, BarChart3, Network, Gauge, Message
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import {
-  SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface TourStep {
   id: string;
@@ -136,19 +140,15 @@ export function SidebarTour() {
 
   if (hasSeenTour) {
     return (
-      <div className="border-t p-2">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={handleRestart}
-              data-testid="button-restart-tour"
-            >
-              <Sparkles className="h-4 w-4" />
-              <span>Take a Tour</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </div>
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          onClick={handleRestart}
+          data-testid="button-restart-tour"
+        >
+          <Sparkles className="h-4 w-4" />
+          <span>Take a Tour</span>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
     );
   }
 
@@ -156,13 +156,10 @@ export function SidebarTour() {
   const Icon = step.icon;
 
   return (
-    <div className="border-t p-2" data-testid="sidebar-tour">
-      <SidebarMenu>
-        <SidebarMenuItem>
-          <SidebarMenuButton
-            onClick={handleToggleExpand}
-            data-testid="button-toggle-tour"
-          >
+    <SidebarMenuItem data-testid="sidebar-tour">
+      <Collapsible open={isExpanded} onOpenChange={handleToggleExpand}>
+        <CollapsibleTrigger asChild>
+          <SidebarMenuButton data-testid="button-toggle-tour">
             <Sparkles className="h-4 w-4" />
             <span className="flex-1">Platform Tour</span>
             <Badge variant="secondary" className="text-xs px-1.5 py-0 mr-1">
@@ -174,65 +171,59 @@ export function SidebarTour() {
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
             )}
           </SidebarMenuButton>
-        </SidebarMenuItem>
-      </SidebarMenu>
-
-      <div
-        className={cn(
-          "overflow-hidden transition-all duration-200",
-          isExpanded ? "max-h-[300px] opacity-100" : "max-h-0 opacity-0"
-        )}
-      >
-        <div className="p-3 space-y-3">
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-              <Icon className="h-4 w-4 text-primary" />
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="px-2 py-3 space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <Icon className="h-4 w-4 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <h4 className="text-sm font-medium leading-tight">{step.title}</h4>
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                  {step.description}
+                </p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <h4 className="text-sm font-medium leading-tight">{step.title}</h4>
-              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                {step.description}
-              </p>
+
+            <div className="flex items-center justify-between gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrev}
+                disabled={currentStep === 0}
+                className="h-7 px-2"
+                data-testid="button-tour-prev"
+              >
+                <ChevronLeft className="h-3 w-3" />
+              </Button>
+              
+              <div className="flex gap-1">
+                {tourSteps.map((_, idx) => (
+                  <div
+                    key={idx}
+                    className={cn(
+                      "w-1.5 h-1.5 rounded-full transition-colors",
+                      idx === currentStep ? "bg-primary" : "bg-muted"
+                    )}
+                  />
+                ))}
+              </div>
+              
+              <Button
+                size="sm"
+                onClick={handleNext}
+                className="h-7 px-3"
+                data-testid="button-tour-next"
+              >
+                {currentStep === tourSteps.length - 1 ? "Done" : "Next"}
+                {currentStep < tourSteps.length - 1 && <ChevronRight className="h-3 w-3 ml-1" />}
+              </Button>
             </div>
           </div>
-
-          <div className="flex items-center justify-between gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handlePrev}
-              disabled={currentStep === 0}
-              className="h-7 px-2"
-              data-testid="button-tour-prev"
-            >
-              <ChevronLeft className="h-3 w-3" />
-            </Button>
-            
-            <div className="flex gap-1">
-              {tourSteps.map((_, idx) => (
-                <div
-                  key={idx}
-                  className={cn(
-                    "w-1.5 h-1.5 rounded-full transition-colors",
-                    idx === currentStep ? "bg-primary" : "bg-muted"
-                  )}
-                />
-              ))}
-            </div>
-            
-            <Button
-              size="sm"
-              onClick={handleNext}
-              className="h-7 px-3"
-              data-testid="button-tour-next"
-            >
-              {currentStep === tourSteps.length - 1 ? "Done" : "Next"}
-              {currentStep < tourSteps.length - 1 && <ChevronRight className="h-3 w-3 ml-1" />}
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </SidebarMenuItem>
   );
 }
 
