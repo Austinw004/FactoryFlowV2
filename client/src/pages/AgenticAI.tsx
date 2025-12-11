@@ -177,10 +177,13 @@ interface ChatMessage {
 }
 
 interface AgenticChatResponse {
-  response: string;
-  suggestedActions: AIAction[];
-  canAutoExecute: boolean;
-  context: {
+  message: string;
+  response?: string; // Legacy field alias
+  actions?: AIAction[];
+  suggestedActions?: AIAction[]; // Legacy field alias
+  insights?: any[];
+  canAutoExecute?: boolean;
+  context?: {
     regime: string;
     fdr: number;
     timestamp: string;
@@ -387,8 +390,8 @@ export default function AgenticAI() {
       setChatMessages(prev => [...prev, {
         id: `msg_${Date.now()}`,
         role: "assistant",
-        content: data.response,
-        suggestedActions: data.suggestedActions,
+        content: data.message || data.response || "",
+        suggestedActions: data.actions || data.suggestedActions,
         timestamp: new Date()
       }]);
     },
