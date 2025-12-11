@@ -747,7 +747,7 @@ export default function Integrations() {
                       <h3 className="font-semibold mb-1">{integration.name}</h3>
                       <p className="text-sm text-muted-foreground mb-3">{integration.description}</p>
                       {integration.status === "available" && (
-                        <Button size="sm" className="w-full" onClick={() => handleConnect(integration)} data-testid={`button-connect-${integration.id}`}>
+                        <Button size="sm" className="w-full" onClick={() => handleConnect(integration)} data-testid={`button-connect-popular-${integration.id}`}>
                           Connect <ArrowRight className="w-4 h-4 ml-2" />
                         </Button>
                       )}
