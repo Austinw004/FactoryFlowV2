@@ -11,6 +11,7 @@ import { logAudit } from "./lib/auditLogger";
 import { globalCache } from "./lib/caching";
 import { DualCircuitEconomics } from "./lib/economics";
 import { DemandForecaster } from "./lib/forecasting";
+import { EnhancedDemandForecaster, LeadIndicatorService, type DemandDataPoint } from "./lib/enhancedForecasting";
 import { getCompanyRegimeIntelligence } from "./lib/regimeIntelligence";
 import { AllocationEngine } from "./lib/allocation";
 import { setupWebSocket, getConnectedClientCount } from "./websocket";
@@ -1129,6 +1130,185 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error("Error fetching procurement signal:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Enhanced Forecasting Endpoint - 6 Thesis-Aligned Improvements
+  app.post("/api/forecasting/enhanced", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      const { skuId, monthsAhead = 3, customerId } = req.body;
+      
+      if (!skuId) {
+        return res.status(400).json({ error: "skuId is required" });
+      }
+      
+      // Get SKU demand history
+      const demandHistory = await storage.getDemandHistoryBySku(skuId);
+      
+      // Get economic snapshots to tag demand by regime
+      const snapshots = await storage.getEconomicSnapshotHistory(user.companyId, 365);
+      const regimeByDate: Record<string, string> = {};
+      for (const snap of snapshots) {
+        const dateKey = new Date(snap.timestamp).toISOString().split('T')[0];
+        regimeByDate[dateKey] = snap.regime;
+      }
+      
+      // Build demand data with regime tagging
+      const historyData: Record<string, DemandDataPoint[]> = {
+        [skuId]: demandHistory.map(h => {
+          const dateKey = new Date(h.createdAt).toISOString().split('T')[0];
+          return {
+            units: h.units,
+            date: new Date(h.createdAt),
+            regime: (regimeByDate[dateKey] || 'HEALTHY_EXPANSION') as any,
+            customerId: customerId,
+          };
+        }),
+      };
+      
+      // Create enhanced forecaster
+      const forecaster = new EnhancedDemandForecaster(user.companyId, historyData);
+      forecaster.trainRegimeSpecificModels();
+      
+      // Add lead indicators
+      const leadService = new LeadIndicatorService();
+      leadService.addPMIIndicator(52.0, 51.5);
+      leadService.addNewOrdersIndicator(1000, 980);
+      forecaster.setLeadIndicators(leadService.getIndicators());
+      
+      // Get current regime from company intelligence
+      const regimeIntel = getCompanyRegimeIntelligence(user.companyId);
+      if (!regimeIntel.isInitialized()) {
+        regimeIntel.initializeFromSnapshots(snapshots.map(s => ({
+          fdr: Number(s.fdr),
+          regime: s.regime as any,
+          timestamp: new Date(s.timestamp),
+        })));
+      }
+      
+      const currentRegime = regimeIntel.getCurrentRegime();
+      
+      // Generate enhanced forecast
+      const result = forecaster.enhancedForecast(skuId, monthsAhead, currentRegime, customerId);
+      
+      res.json({
+        ...result,
+        skuId,
+        regime: currentRegime,
+        companyId: user.companyId,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("Error generating enhanced forecast:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Enhanced Forecasting Accuracy Comparison Endpoint
+  app.get("/api/forecasting/accuracy-comparison", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      // Get all SKUs for company
+      const skus = await storage.getSkusByCompany(user.companyId);
+      
+      if (skus.length === 0) {
+        return res.json({
+          message: "No SKUs found for comparison",
+          skusTested: 0,
+          dataPoints: 0,
+          baseline: { mape: 0, byRegime: {} },
+          enhanced: { mape: 0, byRegime: {}, enhancements: [] },
+          improvement: { overall: 0, byRegime: {} },
+        });
+      }
+      
+      // Get economic snapshots for regime tagging
+      const snapshots = await storage.getEconomicSnapshotHistory(user.companyId, 365);
+      const regimeByDate: Record<string, string> = {};
+      for (const snap of snapshots) {
+        const dateKey = new Date(snap.timestamp).toISOString().split('T')[0];
+        regimeByDate[dateKey] = snap.regime;
+      }
+      
+      // Build test data
+      const testData: Record<string, DemandDataPoint[]> = {};
+      let totalDataPoints = 0;
+      
+      for (const sku of skus) {
+        const demandHistory = await storage.getDemandHistoryBySku(sku.id);
+        testData[sku.id] = demandHistory.map(h => {
+          const dateKey = new Date(h.createdAt).toISOString().split('T')[0];
+          return {
+            units: h.units,
+            date: new Date(h.createdAt),
+            regime: (regimeByDate[dateKey] || 'HEALTHY_EXPANSION') as any,
+          };
+        });
+        totalDataPoints += demandHistory.length;
+      }
+      
+      if (totalDataPoints < 10) {
+        return res.json({
+          message: "Insufficient data for accuracy comparison",
+          skusTested: skus.length,
+          dataPoints: totalDataPoints,
+          baseline: { mape: 0, byRegime: {} },
+          enhanced: { mape: 0, byRegime: {}, enhancements: [] },
+          improvement: { overall: 0, byRegime: {} },
+        });
+      }
+      
+      // Run comparison
+      const forecaster = new EnhancedDemandForecaster(user.companyId, testData);
+      const comparison = forecaster.runAccuracyComparison(testData);
+      
+      res.json({
+        companyId: user.companyId,
+        skusTested: skus.length,
+        dataPoints: totalDataPoints,
+        baseline: {
+          mape: comparison.baselineMAPE,
+          byRegime: comparison.byRegime,
+        },
+        enhanced: {
+          mape: comparison.enhancedMAPE,
+          byRegime: comparison.byRegime,
+          enhancements: [
+            'Regime-Specific Model Tuning',
+            'Granular Regime Signals',
+            'Historical Lookback by Regime',
+            'Volatility Weighting',
+            'Lead Indicators',
+            'Customer Sensitivity',
+          ],
+        },
+        improvement: {
+          overall: comparison.improvement,
+          byRegime: Object.fromEntries(
+            Object.entries(comparison.byRegime).map(([regime, data]) => [
+              regime,
+              (data as any).improvement || 0,
+            ])
+          ),
+        },
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("Error running accuracy comparison:", error);
       res.status(500).json({ error: error.message });
     }
   });
