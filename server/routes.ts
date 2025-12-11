@@ -39,7 +39,8 @@ import { getStripePublishableKey } from "./stripeClient";
 import multer from "multer";
 import { z } from "zod";
 import { sendTeamInvitation } from "./lib/emailService";
-import { getIndustryConfig, preconfigurePlatformForIndustry } from "./lib/industryPersonalization";
+import { preconfigurePlatformForIndustry } from "./lib/industryPersonalization";
+import { getIndustryConfig } from "@shared/industryConfig";
 import {
   insertCompanySchema,
   insertSkuSchema,

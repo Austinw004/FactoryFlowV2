@@ -9,6 +9,7 @@ import {
   Lightbulb,
   Eye,
   Bot,
+  Plug,
 } from "lucide-react";
 import {
   Sidebar,
@@ -70,6 +71,12 @@ const mainMenuItems = [
 ];
 
 const bottomMenuItems = [
+  {
+    title: "Integrations",
+    url: "/integrations",
+    icon: Plug,
+    testId: "sidebar-integrations",
+  },
   {
     title: "Settings",
     url: "/configuration",

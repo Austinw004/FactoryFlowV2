@@ -36,6 +36,7 @@ import RoiCalculator from "@/pages/RoiCalculator";
 import SecurityFaq from "@/pages/SecurityFaq";
 import NotificationSettings from "@/pages/NotificationSettings";
 import ShopFloorMode from "@/pages/ShopFloorMode";
+import Integrations from "@/pages/Integrations";
 
 // Dashboard Hub routes
 const DashboardOverviewRoute = () => <DashboardHub initialTab="overview" />;
@@ -182,6 +183,7 @@ function Router() {
       {/* Developer & Integration routes */}
       <Route path="/api-docs" component={ApiDocumentation} />
       <Route path="/platform-analytics" component={PlatformAnalytics} />
+      <Route path="/integrations" component={Integrations} />
       
       {/* Agentic AI route */}
       <Route path="/agentic-ai" component={AgenticAI} />
