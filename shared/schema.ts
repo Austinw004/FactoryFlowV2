@@ -605,6 +605,86 @@ export const complianceApprovals = pgTable("compliance_approvals", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Audit Findings - Track findings from audits with owner assignment and closure
+export const auditFindings = pgTable("audit_findings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  auditId: varchar("audit_id").references(() => complianceAudits.id, { onDelete: "set null" }),
+  findingNumber: text("finding_number").notNull(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  severity: text("severity").notNull().default("minor"), // "critical", "major", "minor", "observation"
+  category: text("category").notNull(), // "safety", "environmental", "quality", "documentation", "process"
+  status: text("status").notNull().default("open"), // "open", "in_progress", "resolved", "closed", "overdue"
+  assignedTo: varchar("assigned_to").references(() => users.id),
+  assignedToName: text("assigned_to_name"),
+  dueDate: timestamp("due_date"),
+  closedDate: timestamp("closed_date"),
+  rootCause: text("root_cause"),
+  correctiveAction: text("corrective_action"),
+  preventiveAction: text("preventive_action"),
+  evidence: text("evidence"), // URL or description of supporting evidence
+  verifiedBy: varchar("verified_by").references(() => users.id),
+  verifiedAt: timestamp("verified_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Audit Checklist Templates - Pre-built checklists for ISO, OSHA, EPA
+export const auditChecklistTemplates = pgTable("audit_checklist_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").references(() => companies.id, { onDelete: "cascade" }), // null for system templates
+  name: text("name").notNull(),
+  standard: text("standard").notNull(), // "ISO_9001", "OSHA_SAFETY", "EPA_ENVIRONMENTAL", "ISO_14001", "ISO_45001"
+  version: text("version").notNull(),
+  description: text("description"),
+  isSystemTemplate: boolean("is_system_template").notNull().default(false),
+  checklistItems: jsonb("checklist_items").notNull(), // Array of { id, section, item, requirement, guidance }
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Compliance Calendar Events - Pre-populated with manufacturing deadlines
+export const complianceCalendarEvents = pgTable("compliance_calendar_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  eventType: text("event_type").notNull(), // "deadline", "renewal", "audit", "training", "inspection", "filing"
+  regulatoryBody: text("regulatory_body"), // "OSHA", "EPA", "ISO", "FDA", "STATE", "LOCAL"
+  dueDate: timestamp("due_date").notNull(),
+  reminderDays: integer("reminder_days").default(30), // Days before to send reminder
+  status: text("status").notNull().default("upcoming"), // "upcoming", "completed", "overdue", "dismissed"
+  relatedDocumentId: varchar("related_document_id").references(() => complianceDocuments.id, { onDelete: "set null" }),
+  description: text("description"),
+  isRecurring: boolean("is_recurring").default(false),
+  recurrencePattern: text("recurrence_pattern"), // "annual", "quarterly", "monthly"
+  lastCompleted: timestamp("last_completed"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Employee Training Records - Track safety training completion
+export const employeeTrainingRecords = pgTable("employee_training_records", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  employeeId: varchar("employee_id"), // Optional link to workforce management system
+  employeeName: text("employee_name").notNull(),
+  trainingType: text("training_type").notNull(), // "safety", "hazmat", "equipment", "emergency", "quality", "environmental"
+  trainingName: text("training_name").notNull(),
+  provider: text("provider"), // Training provider/instructor
+  completionDate: timestamp("completion_date"),
+  expirationDate: timestamp("expiration_date"),
+  status: text("status").notNull().default("not_started"), // "not_started", "in_progress", "completed", "expired", "overdue"
+  certificateUrl: text("certificate_url"),
+  score: real("score"), // Test score if applicable
+  passingScore: real("passing_score"),
+  hoursCompleted: real("hours_completed"),
+  hoursRequired: real("hours_required"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Production KPIs and OEE Tracking
 export const productionRuns = pgTable("production_runs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1406,6 +1486,13 @@ export const updateComplianceRegulationSchema = createInsertSchema(complianceReg
 export const insertComplianceAuditSchema = createInsertSchema(complianceAudits).omit({ id: true, createdAt: true, updatedAt: true });
 export const updateComplianceAuditSchema = createInsertSchema(complianceAudits).omit({ id: true, companyId: true, createdAt: true }).partial();
 export const insertComplianceApprovalSchema = createInsertSchema(complianceApprovals).omit({ id: true, createdAt: true, requestedAt: true, respondedAt: true });
+export const insertAuditFindingSchema = createInsertSchema(auditFindings).omit({ id: true, createdAt: true, updatedAt: true });
+export const updateAuditFindingSchema = createInsertSchema(auditFindings).omit({ id: true, companyId: true, createdAt: true }).partial();
+export const insertAuditChecklistTemplateSchema = createInsertSchema(auditChecklistTemplates).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertComplianceCalendarEventSchema = createInsertSchema(complianceCalendarEvents).omit({ id: true, createdAt: true, updatedAt: true });
+export const updateComplianceCalendarEventSchema = createInsertSchema(complianceCalendarEvents).omit({ id: true, companyId: true, createdAt: true }).partial();
+export const insertEmployeeTrainingRecordSchema = createInsertSchema(employeeTrainingRecords).omit({ id: true, createdAt: true, updatedAt: true });
+export const updateEmployeeTrainingRecordSchema = createInsertSchema(employeeTrainingRecords).omit({ id: true, companyId: true, createdAt: true }).partial();
 export const insertProductionRunSchema = createInsertSchema(productionRuns).omit({ id: true, createdAt: true, updatedAt: true });
 export const updateProductionRunSchema = createInsertSchema(productionRuns).omit({ id: true, companyId: true, createdAt: true }).partial();
 export const insertProductionMetricSchema = createInsertSchema(productionMetrics).omit({ id: true, createdAt: true });
@@ -1475,6 +1562,14 @@ export type ComplianceAudit = typeof complianceAudits.$inferSelect;
 export type InsertComplianceAudit = z.infer<typeof insertComplianceAuditSchema>;
 export type ComplianceApproval = typeof complianceApprovals.$inferSelect;
 export type InsertComplianceApproval = z.infer<typeof insertComplianceApprovalSchema>;
+export type AuditFinding = typeof auditFindings.$inferSelect;
+export type InsertAuditFinding = z.infer<typeof insertAuditFindingSchema>;
+export type AuditChecklistTemplate = typeof auditChecklistTemplates.$inferSelect;
+export type InsertAuditChecklistTemplate = z.infer<typeof insertAuditChecklistTemplateSchema>;
+export type ComplianceCalendarEvent = typeof complianceCalendarEvents.$inferSelect;
+export type InsertComplianceCalendarEvent = z.infer<typeof insertComplianceCalendarEventSchema>;
+export type EmployeeTrainingRecord = typeof employeeTrainingRecords.$inferSelect;
+export type InsertEmployeeTrainingRecord = z.infer<typeof insertEmployeeTrainingRecordSchema>;
 export type ProductionRun = typeof productionRuns.$inferSelect;
 export type InsertProductionRun = z.infer<typeof insertProductionRunSchema>;
 export type ProductionMetric = typeof productionMetrics.$inferSelect;

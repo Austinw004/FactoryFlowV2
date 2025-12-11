@@ -3352,6 +3352,451 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========================================
+  // AUDIT FINDINGS ROUTES
+  // ========================================
+
+  // Get all audit findings
+  app.get("/api/compliance/findings", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "User must be associated with a company" });
+      }
+
+      const findings = await storage.getAuditFindings(user.companyId);
+      res.json(findings);
+    } catch (error: any) {
+      console.error("Error fetching audit findings:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create audit finding
+  app.post("/api/compliance/findings", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "User must be associated with a company" });
+      }
+
+      const finding = await storage.createAuditFinding({
+        ...req.body,
+        companyId: user.companyId,
+      });
+      
+      res.status(201).json(finding);
+    } catch (error: any) {
+      console.error("Error creating audit finding:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update audit finding
+  app.patch("/api/compliance/findings/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "User must be associated with a company" });
+      }
+
+      const finding = await storage.updateAuditFinding(req.params.id, req.body);
+      if (!finding) {
+        return res.status(404).json({ error: "Finding not found" });
+      }
+      
+      res.json(finding);
+    } catch (error: any) {
+      console.error("Error updating audit finding:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ========================================
+  // COMPLIANCE CALENDAR ROUTES
+  // ========================================
+
+  // Get compliance calendar events
+  app.get("/api/compliance/calendar", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "User must be associated with a company" });
+      }
+
+      const events = await storage.getComplianceCalendarEvents(user.companyId);
+      res.json(events);
+    } catch (error: any) {
+      console.error("Error fetching calendar events:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create calendar event
+  app.post("/api/compliance/calendar", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "User must be associated with a company" });
+      }
+
+      const event = await storage.createComplianceCalendarEvent({
+        ...req.body,
+        companyId: user.companyId,
+      });
+      
+      res.status(201).json(event);
+    } catch (error: any) {
+      console.error("Error creating calendar event:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update calendar event
+  app.patch("/api/compliance/calendar/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "User must be associated with a company" });
+      }
+
+      const event = await storage.updateComplianceCalendarEvent(req.params.id, req.body);
+      if (!event) {
+        return res.status(404).json({ error: "Event not found" });
+      }
+      
+      res.json(event);
+    } catch (error: any) {
+      console.error("Error updating calendar event:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Seed default calendar events for common manufacturing deadlines
+  app.post("/api/compliance/calendar/seed-defaults", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "User must be associated with a company" });
+      }
+
+      const now = new Date();
+      const currentYear = now.getFullYear();
+
+      // Pre-populated manufacturing compliance deadlines
+      const defaultEvents = [
+        { title: "OSHA Form 300A Posting Deadline", eventType: "deadline", regulatoryBody: "OSHA", dueDate: new Date(currentYear, 1, 1), description: "Post OSHA Form 300A (Summary of Work-Related Injuries and Illnesses) in a visible location from Feb 1 - April 30", isRecurring: true, recurrencePattern: "annual" },
+        { title: "OSHA Form 300 Log Certification", eventType: "deadline", regulatoryBody: "OSHA", dueDate: new Date(currentYear, 1, 1), description: "Certify OSHA 300 Log for previous year", isRecurring: true, recurrencePattern: "annual" },
+        { title: "EPA Tier II Hazardous Chemical Inventory", eventType: "filing", regulatoryBody: "EPA", dueDate: new Date(currentYear, 2, 1), description: "Submit Tier II forms for hazardous chemicals stored on-site (EPCRA Section 312)", isRecurring: true, recurrencePattern: "annual" },
+        { title: "EPA TRI Form R Reporting", eventType: "filing", regulatoryBody: "EPA", dueDate: new Date(currentYear, 6, 1), description: "Submit Toxic Release Inventory (TRI) Form R for covered facilities", isRecurring: true, recurrencePattern: "annual" },
+        { title: "ISO 9001 Surveillance Audit", eventType: "audit", regulatoryBody: "ISO", dueDate: new Date(currentYear, 5, 15), description: "Annual surveillance audit to maintain ISO 9001 certification", isRecurring: true, recurrencePattern: "annual" },
+        { title: "ISO 14001 Environmental Audit", eventType: "audit", regulatoryBody: "ISO", dueDate: new Date(currentYear, 8, 15), description: "Environmental management system surveillance audit", isRecurring: true, recurrencePattern: "annual" },
+        { title: "Annual Fire Extinguisher Inspection", eventType: "inspection", regulatoryBody: "OSHA", dueDate: new Date(currentYear, 0, 15), description: "Conduct annual inspection of all fire extinguishers per OSHA 29 CFR 1910.157", isRecurring: true, recurrencePattern: "annual" },
+        { title: "Emergency Action Plan Review", eventType: "renewal", regulatoryBody: "OSHA", dueDate: new Date(currentYear, 0, 31), description: "Review and update Emergency Action Plan (EAP) per OSHA requirements", isRecurring: true, recurrencePattern: "annual" },
+        { title: "Hazard Communication Training", eventType: "training", regulatoryBody: "OSHA", dueDate: new Date(currentYear, 3, 30), description: "Annual HazCom training for employees handling hazardous chemicals", isRecurring: true, recurrencePattern: "annual" },
+        { title: "Lockout/Tagout Program Review", eventType: "renewal", regulatoryBody: "OSHA", dueDate: new Date(currentYear, 11, 31), description: "Annual review of LOTO procedures per 29 CFR 1910.147", isRecurring: true, recurrencePattern: "annual" },
+      ];
+
+      const createdEvents = [];
+      for (const eventData of defaultEvents) {
+        const event = await storage.createComplianceCalendarEvent({
+          ...eventData,
+          companyId: user.companyId,
+          reminderDays: 30,
+          status: "upcoming",
+        });
+        createdEvents.push(event);
+      }
+      
+      res.status(201).json({ message: `Created ${createdEvents.length} default compliance calendar events`, events: createdEvents });
+    } catch (error: any) {
+      console.error("Error seeding calendar events:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ========================================
+  // AUDIT CHECKLIST TEMPLATES ROUTES
+  // ========================================
+
+  // Get checklist templates (company + system templates)
+  app.get("/api/compliance/checklists", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "User must be associated with a company" });
+      }
+
+      const templates = await storage.getAuditChecklistTemplates(user.companyId);
+      res.json(templates);
+    } catch (error: any) {
+      console.error("Error fetching checklist templates:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create checklist template
+  app.post("/api/compliance/checklists", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "User must be associated with a company" });
+      }
+
+      const template = await storage.createAuditChecklistTemplate({
+        ...req.body,
+        companyId: user.companyId,
+        isSystemTemplate: false,
+      });
+      
+      res.status(201).json(template);
+    } catch (error: any) {
+      console.error("Error creating checklist template:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Seed system checklist templates (ISO 9001, OSHA, EPA)
+  app.post("/api/compliance/checklists/seed-system", isAuthenticated, async (req: any, res) => {
+    try {
+      // Create system-wide checklist templates
+      const systemTemplates = [
+        {
+          name: "ISO 9001:2015 Quality Audit Checklist",
+          standard: "ISO_9001",
+          version: "2015",
+          description: "Comprehensive checklist for ISO 9001:2015 Quality Management System audits",
+          isSystemTemplate: true,
+          checklistItems: [
+            { id: "4.1", section: "4. Context of Organization", item: "Understanding the organization and its context", requirement: "Has the organization determined external and internal issues relevant to its purpose?", guidance: "Review strategic planning documents and SWOT analysis" },
+            { id: "4.2", section: "4. Context of Organization", item: "Understanding needs and expectations of interested parties", requirement: "Are interested parties identified and their requirements determined?", guidance: "Check stakeholder register and requirements matrix" },
+            { id: "5.1", section: "5. Leadership", item: "Leadership and commitment", requirement: "Does top management demonstrate leadership and commitment to the QMS?", guidance: "Interview top management, review meeting minutes" },
+            { id: "5.2", section: "5. Leadership", item: "Quality policy", requirement: "Is there a documented quality policy appropriate to the organization?", guidance: "Review quality policy document and communication records" },
+            { id: "6.1", section: "6. Planning", item: "Actions to address risks and opportunities", requirement: "Are risks and opportunities identified and addressed?", guidance: "Review risk register and mitigation plans" },
+            { id: "7.1", section: "7. Support", item: "Resources", requirement: "Are necessary resources determined and provided?", guidance: "Review resource allocation and budgets" },
+            { id: "8.1", section: "8. Operation", item: "Operational planning and control", requirement: "Are processes planned, implemented, and controlled?", guidance: "Review process documentation and control plans" },
+            { id: "9.1", section: "9. Performance Evaluation", item: "Monitoring, measurement, analysis and evaluation", requirement: "Is performance monitored and evaluated?", guidance: "Review KPIs, dashboards, and analysis reports" },
+            { id: "10.1", section: "10. Improvement", item: "Continual improvement", requirement: "Is there evidence of continual improvement?", guidance: "Review improvement projects and corrective actions" },
+          ],
+        },
+        {
+          name: "OSHA Safety Compliance Checklist",
+          standard: "OSHA_SAFETY",
+          version: "2024",
+          description: "General industry safety compliance checklist per OSHA 29 CFR 1910",
+          isSystemTemplate: true,
+          checklistItems: [
+            { id: "1910.22", section: "Walking-Working Surfaces", item: "General requirements", requirement: "Are floors kept clean, dry, and free of hazards?", guidance: "Walk through facility, check for slip/trip hazards" },
+            { id: "1910.37", section: "Means of Egress", item: "Exit routes", requirement: "Are exit routes maintained and clearly marked?", guidance: "Verify exit signs illuminated and paths unobstructed" },
+            { id: "1910.95", section: "Occupational Noise", item: "Hearing conservation program", requirement: "Is a hearing conservation program in place where required?", guidance: "Check noise monitoring and audiometric testing records" },
+            { id: "1910.134", section: "Respiratory Protection", item: "Respiratory program", requirement: "Is there a written respiratory protection program?", guidance: "Review program documentation and fit testing records" },
+            { id: "1910.147", section: "Control of Hazardous Energy", item: "Lockout/Tagout procedures", requirement: "Are LOTO procedures documented and followed?", guidance: "Review LOTO procedures and training records" },
+            { id: "1910.157", section: "Fire Protection", item: "Portable fire extinguishers", requirement: "Are fire extinguishers properly maintained and inspected?", guidance: "Check inspection tags and extinguisher locations" },
+            { id: "1910.178", section: "Powered Industrial Trucks", item: "Forklift operations", requirement: "Are forklift operators trained and certified?", guidance: "Review operator training certifications" },
+            { id: "1910.1200", section: "Hazard Communication", item: "HazCom program", requirement: "Is there a written hazard communication program?", guidance: "Review HazCom program, SDSs, and training records" },
+          ],
+        },
+        {
+          name: "EPA Environmental Compliance Checklist",
+          standard: "EPA_ENVIRONMENTAL",
+          version: "2024",
+          description: "Environmental compliance checklist covering major EPA regulations",
+          isSystemTemplate: true,
+          checklistItems: [
+            { id: "RCRA.1", section: "Hazardous Waste", item: "Waste determination", requirement: "Is hazardous waste properly characterized?", guidance: "Review waste characterization documentation" },
+            { id: "RCRA.2", section: "Hazardous Waste", item: "Storage compliance", requirement: "Is hazardous waste stored properly with appropriate containers and labeling?", guidance: "Inspect storage areas, check container integrity and labels" },
+            { id: "RCRA.3", section: "Hazardous Waste", item: "Manifest system", requirement: "Are hazardous waste manifests maintained correctly?", guidance: "Review manifest files and tracking documentation" },
+            { id: "CAA.1", section: "Clean Air Act", item: "Air permits", requirement: "Are required air permits current and conditions met?", guidance: "Review air permits and compliance records" },
+            { id: "CAA.2", section: "Clean Air Act", item: "Emissions monitoring", requirement: "Is emissions monitoring conducted as required?", guidance: "Check monitoring records and test reports" },
+            { id: "CWA.1", section: "Clean Water Act", item: "NPDES permits", requirement: "Are wastewater discharge permits current?", guidance: "Review NPDES permit and discharge monitoring reports" },
+            { id: "EPCRA.1", section: "Community Right-to-Know", item: "Chemical inventory", requirement: "Is Tier II reporting completed annually?", guidance: "Review Tier II forms and chemical inventory" },
+            { id: "SPCC.1", section: "Oil Pollution Prevention", item: "SPCC Plan", requirement: "Is there a current SPCC Plan for oil storage?", guidance: "Review SPCC Plan and secondary containment" },
+          ],
+        },
+      ];
+
+      // Check if system templates already exist
+      const existingTemplates = await storage.getSystemChecklistTemplates();
+      if (existingTemplates.length > 0) {
+        return res.json({ message: "System templates already exist", templates: existingTemplates });
+      }
+
+      const createdTemplates = [];
+      for (const templateData of systemTemplates) {
+        const template = await storage.createAuditChecklistTemplate(templateData);
+        createdTemplates.push(template);
+      }
+      
+      res.status(201).json({ message: `Created ${createdTemplates.length} system checklist templates`, templates: createdTemplates });
+    } catch (error: any) {
+      console.error("Error seeding checklist templates:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ========================================
+  // EMPLOYEE TRAINING RECORDS ROUTES
+  // ========================================
+
+  // Get training records
+  app.get("/api/compliance/training", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "User must be associated with a company" });
+      }
+
+      const records = await storage.getEmployeeTrainingRecords(user.companyId);
+      res.json(records);
+    } catch (error: any) {
+      console.error("Error fetching training records:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create training record
+  app.post("/api/compliance/training", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "User must be associated with a company" });
+      }
+
+      const record = await storage.createEmployeeTrainingRecord({
+        ...req.body,
+        companyId: user.companyId,
+      });
+      
+      res.status(201).json(record);
+    } catch (error: any) {
+      console.error("Error creating training record:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update training record
+  app.patch("/api/compliance/training/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "User must be associated with a company" });
+      }
+
+      const record = await storage.updateEmployeeTrainingRecord(req.params.id, req.body);
+      if (!record) {
+        return res.status(404).json({ error: "Training record not found" });
+      }
+      
+      res.json(record);
+    } catch (error: any) {
+      console.error("Error updating training record:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ========================================
+  // COMPLIANCE SCORE & DASHBOARD ROUTES
+  // ========================================
+
+  // Get compliance score and summary
+  app.get("/api/compliance/score", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(403).json({ error: "User must be associated with a company" });
+      }
+
+      // Fetch all compliance data
+      const [documents, audits, findings, calendarEvents, trainingRecords] = await Promise.all([
+        storage.getComplianceDocuments(user.companyId),
+        storage.getComplianceAudits(user.companyId),
+        storage.getAuditFindings(user.companyId),
+        storage.getComplianceCalendarEvents(user.companyId),
+        storage.getEmployeeTrainingRecords(user.companyId),
+      ]);
+
+      const now = new Date();
+      const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+      // Calculate document health (30% weight)
+      const approvedDocs = documents.filter((d: any) => d.status === "approved" || d.status === "active").length;
+      const expiredDocs = documents.filter((d: any) => d.expirationDate && new Date(d.expirationDate) < now).length;
+      const docScore = documents.length > 0 ? ((approvedDocs - expiredDocs) / documents.length) * 100 : 100;
+
+      // Calculate audit health (30% weight)
+      const completedAudits = audits.filter((a: any) => a.status === "completed").length;
+      const failedAudits = audits.filter((a: any) => a.status === "failed").length;
+      const auditScore = audits.length > 0 ? ((completedAudits - failedAudits * 2) / Math.max(completedAudits, 1)) * 100 : 100;
+
+      // Calculate findings health (20% weight) - fewer open findings = higher score
+      const openFindings = findings.filter((f: any) => f.status === "open" || f.status === "overdue").length;
+      const criticalFindings = findings.filter((f: any) => (f.status === "open" || f.status === "overdue") && f.severity === "critical").length;
+      const findingsScore = Math.max(0, 100 - (openFindings * 5) - (criticalFindings * 20));
+
+      // Calculate training health (20% weight)
+      const completedTraining = trainingRecords.filter((t: any) => t.status === "completed").length;
+      const expiredTraining = trainingRecords.filter((t: any) => t.status === "expired" || t.status === "overdue").length;
+      const trainingScore = trainingRecords.length > 0 ? ((completedTraining - expiredTraining) / trainingRecords.length) * 100 : 100;
+
+      // Weighted overall score
+      const overallScore = Math.max(0, Math.min(100, Math.round(
+        docScore * 0.3 + 
+        Math.max(0, auditScore) * 0.3 + 
+        findingsScore * 0.2 + 
+        Math.max(0, trainingScore) * 0.2
+      )));
+
+      // Calculate expiring documents
+      const expiringDocs = documents.filter((d: any) => 
+        d.expirationDate && 
+        new Date(d.expirationDate) > now && 
+        new Date(d.expirationDate) <= thirtyDaysFromNow
+      );
+
+      // Upcoming deadlines
+      const upcomingDeadlines = calendarEvents.filter((e: any) => 
+        e.status === "upcoming" && 
+        new Date(e.dueDate) > now && 
+        new Date(e.dueDate) <= thirtyDaysFromNow
+      );
+
+      res.json({
+        score: overallScore,
+        breakdown: {
+          documents: Math.round(Math.max(0, docScore)),
+          audits: Math.round(Math.max(0, auditScore)),
+          findings: Math.round(findingsScore),
+          training: Math.round(Math.max(0, trainingScore)),
+        },
+        alerts: {
+          expiringDocuments: expiringDocs.length,
+          openFindings: openFindings,
+          criticalFindings: criticalFindings,
+          upcomingDeadlines: upcomingDeadlines.length,
+          expiredTraining: expiredTraining,
+        },
+        expiringDocuments: expiringDocs,
+        upcomingDeadlines: upcomingDeadlines,
+      });
+    } catch (error: any) {
+      console.error("Error calculating compliance score:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ========================================
   // PRODUCTION KPI ROUTES
   // ========================================
 

@@ -11,6 +11,10 @@ import type {
   MaintenanceRecord, InsertMaintenanceRecord,
   ComplianceDocument, InsertComplianceDocument,
   ComplianceAudit, InsertComplianceAudit,
+  AuditFinding, InsertAuditFinding,
+  AuditChecklistTemplate, InsertAuditChecklistTemplate,
+  ComplianceCalendarEvent, InsertComplianceCalendarEvent,
+  EmployeeTrainingRecord, InsertEmployeeTrainingRecord,
   ProductionRun, InsertProductionRun,
   ProductionMetric, InsertProductionMetric,
   DowntimeEvent, InsertDowntimeEvent,
@@ -122,6 +126,7 @@ import {
   users, companies, companyLocations, skus, materials, boms, suppliers, supplierMaterials,
   demandHistory, allocations, allocationResults, priceAlerts, machinery, maintenanceRecords,
   complianceDocuments, complianceAudits, complianceRegulations,
+  auditFindings, auditChecklistTemplates, complianceCalendarEvents, employeeTrainingRecords,
   productionRuns, productionMetrics, downtimeEvents, productionBottlenecks,
   equipmentSensors, sensorReadings, maintenanceAlerts, maintenancePredictions,
   inventoryOptimizations, demandPredictions, inventoryRecommendations,
@@ -266,6 +271,27 @@ export interface IStorage {
   // Compliance Audits
   getComplianceAudits(companyId: string): Promise<ComplianceAudit[]>;
   createComplianceAudit(audit: InsertComplianceAudit): Promise<ComplianceAudit>;
+  
+  // Audit Findings
+  getAuditFindings(companyId: string): Promise<AuditFinding[]>;
+  getAuditFindingsByAudit(auditId: string): Promise<AuditFinding[]>;
+  createAuditFinding(finding: InsertAuditFinding): Promise<AuditFinding>;
+  updateAuditFinding(id: string, finding: Partial<InsertAuditFinding>): Promise<AuditFinding | undefined>;
+  
+  // Audit Checklist Templates
+  getAuditChecklistTemplates(companyId: string): Promise<AuditChecklistTemplate[]>;
+  getSystemChecklistTemplates(): Promise<AuditChecklistTemplate[]>;
+  createAuditChecklistTemplate(template: InsertAuditChecklistTemplate): Promise<AuditChecklistTemplate>;
+  
+  // Compliance Calendar Events
+  getComplianceCalendarEvents(companyId: string): Promise<ComplianceCalendarEvent[]>;
+  createComplianceCalendarEvent(event: InsertComplianceCalendarEvent): Promise<ComplianceCalendarEvent>;
+  updateComplianceCalendarEvent(id: string, event: Partial<InsertComplianceCalendarEvent>): Promise<ComplianceCalendarEvent | undefined>;
+  
+  // Employee Training Records
+  getEmployeeTrainingRecords(companyId: string): Promise<EmployeeTrainingRecord[]>;
+  createEmployeeTrainingRecord(record: InsertEmployeeTrainingRecord): Promise<EmployeeTrainingRecord>;
+  updateEmployeeTrainingRecord(id: string, record: Partial<InsertEmployeeTrainingRecord>): Promise<EmployeeTrainingRecord | undefined>;
   
   // Production Runs
   getProductionRuns(companyId: string): Promise<ProductionRun[]>;
@@ -1347,6 +1373,71 @@ export class DbStorage implements IStorage {
   async createComplianceAudit(insertAudit: InsertComplianceAudit): Promise<ComplianceAudit> {
     const [audit] = await db.insert(complianceAudits).values(insertAudit).returning();
     return audit;
+  }
+
+  // Audit Finding methods
+  async getAuditFindings(companyId: string): Promise<AuditFinding[]> {
+    return db.select().from(auditFindings).where(eq(auditFindings.companyId, companyId));
+  }
+
+  async getAuditFindingsByAudit(auditId: string): Promise<AuditFinding[]> {
+    return db.select().from(auditFindings).where(eq(auditFindings.auditId, auditId));
+  }
+
+  async createAuditFinding(insertFinding: InsertAuditFinding): Promise<AuditFinding> {
+    const [finding] = await db.insert(auditFindings).values(insertFinding).returning();
+    return finding;
+  }
+
+  async updateAuditFinding(id: string, updateData: Partial<InsertAuditFinding>): Promise<AuditFinding | undefined> {
+    const [finding] = await db.update(auditFindings).set({ ...updateData, updatedAt: new Date() }).where(eq(auditFindings.id, id)).returning();
+    return finding;
+  }
+
+  // Audit Checklist Template methods
+  async getAuditChecklistTemplates(companyId: string): Promise<AuditChecklistTemplate[]> {
+    return db.select().from(auditChecklistTemplates).where(
+      sql`${auditChecklistTemplates.companyId} = ${companyId} OR ${auditChecklistTemplates.isSystemTemplate} = true`
+    );
+  }
+
+  async getSystemChecklistTemplates(): Promise<AuditChecklistTemplate[]> {
+    return db.select().from(auditChecklistTemplates).where(eq(auditChecklistTemplates.isSystemTemplate, true));
+  }
+
+  async createAuditChecklistTemplate(insertTemplate: InsertAuditChecklistTemplate): Promise<AuditChecklistTemplate> {
+    const [template] = await db.insert(auditChecklistTemplates).values(insertTemplate).returning();
+    return template;
+  }
+
+  // Compliance Calendar Event methods
+  async getComplianceCalendarEvents(companyId: string): Promise<ComplianceCalendarEvent[]> {
+    return db.select().from(complianceCalendarEvents).where(eq(complianceCalendarEvents.companyId, companyId));
+  }
+
+  async createComplianceCalendarEvent(insertEvent: InsertComplianceCalendarEvent): Promise<ComplianceCalendarEvent> {
+    const [event] = await db.insert(complianceCalendarEvents).values(insertEvent).returning();
+    return event;
+  }
+
+  async updateComplianceCalendarEvent(id: string, updateData: Partial<InsertComplianceCalendarEvent>): Promise<ComplianceCalendarEvent | undefined> {
+    const [event] = await db.update(complianceCalendarEvents).set({ ...updateData, updatedAt: new Date() }).where(eq(complianceCalendarEvents.id, id)).returning();
+    return event;
+  }
+
+  // Employee Training Record methods
+  async getEmployeeTrainingRecords(companyId: string): Promise<EmployeeTrainingRecord[]> {
+    return db.select().from(employeeTrainingRecords).where(eq(employeeTrainingRecords.companyId, companyId));
+  }
+
+  async createEmployeeTrainingRecord(insertRecord: InsertEmployeeTrainingRecord): Promise<EmployeeTrainingRecord> {
+    const [record] = await db.insert(employeeTrainingRecords).values(insertRecord).returning();
+    return record;
+  }
+
+  async updateEmployeeTrainingRecord(id: string, updateData: Partial<InsertEmployeeTrainingRecord>): Promise<EmployeeTrainingRecord | undefined> {
+    const [record] = await db.update(employeeTrainingRecords).set({ ...updateData, updatedAt: new Date() }).where(eq(employeeTrainingRecords.id, id)).returning();
+    return record;
   }
 
   // Production Run methods
