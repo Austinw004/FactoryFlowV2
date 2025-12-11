@@ -4,6 +4,11 @@ import { Badge } from "@/components/ui/badge";
 import { ChevronRight, ChevronLeft, Sparkles, BarChart3, Network, Gauge, MessageSquare, Check, ChevronDown, ChevronUp } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
+import {
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@/components/ui/sidebar";
 
 interface TourStep {
   id: string;
@@ -131,17 +136,18 @@ export function SidebarTour() {
 
   if (hasSeenTour) {
     return (
-      <div className="px-2 py-2 border-t">
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={handleRestart}
-          className="w-full justify-start gap-2 h-9"
-          data-testid="button-restart-tour"
-        >
-          <Sparkles className="h-4 w-4" />
-          <span>Take a Tour</span>
-        </Button>
+      <div className="border-t p-2">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={handleRestart}
+              data-testid="button-restart-tour"
+            >
+              <Sparkles className="h-4 w-4" />
+              <span>Take a Tour</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </div>
     );
   }
@@ -150,26 +156,26 @@ export function SidebarTour() {
   const Icon = step.icon;
 
   return (
-    <div className="border-t" data-testid="sidebar-tour">
-      <Button
-        variant="ghost"
-        onClick={handleToggleExpand}
-        className="w-full justify-between h-10 px-4 rounded-none"
-        data-testid="button-toggle-tour"
-      >
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-primary" />
-          <span className="text-sm font-medium">Platform Tour</span>
-          <Badge variant="secondary" className="text-xs px-1.5 py-0">
-            {currentStep + 1}/{tourSteps.length}
-          </Badge>
-        </div>
-        {isExpanded ? (
-          <ChevronUp className="h-4 w-4 text-muted-foreground" />
-        ) : (
-          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-        )}
-      </Button>
+    <div className="border-t p-2" data-testid="sidebar-tour">
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            onClick={handleToggleExpand}
+            data-testid="button-toggle-tour"
+          >
+            <Sparkles className="h-4 w-4" />
+            <span className="flex-1">Platform Tour</span>
+            <Badge variant="secondary" className="text-xs px-1.5 py-0 mr-1">
+              {currentStep + 1}/{tourSteps.length}
+            </Badge>
+            {isExpanded ? (
+              <ChevronUp className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            )}
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
 
       <div
         className={cn(
