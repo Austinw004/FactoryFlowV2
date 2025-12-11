@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, TrendingUp, Target, Lightbulb, CheckCircle2, Factory, DollarSign, Package, BarChart3, Truck, Settings, AlertTriangle, ShieldCheck } from "lucide-react";
+import { BookOpen, TrendingUp, Target, Lightbulb, CheckCircle2, Factory, DollarSign, Package, BarChart3, Truck, Settings, AlertTriangle, ShieldCheck, Zap } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { 
   Accordion,

@@ -11956,7 +11956,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all AI agents for company
   app.get("/api/agentic/agents", isAuthenticated, async (req: any, res) => {
     try {
-      const companyId = req.user.companyId;
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      const companyId = user?.companyId;
       if (!companyId) {
         return res.status(400).json({ error: "Company ID required" });
       }
@@ -12110,7 +12112,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get automation rules
   app.get("/api/agentic/rules", isAuthenticated, async (req: any, res) => {
     try {
-      const companyId = req.user.companyId;
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      const companyId = user?.companyId;
       if (!companyId) {
         return res.status(400).json({ error: "Company ID required" });
       }
@@ -12297,7 +12301,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create new automation rule
   app.post("/api/agentic/rules", isAuthenticated, async (req: any, res) => {
     try {
-      const companyId = req.user.companyId;
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      const companyId = user?.companyId;
       const ruleData = req.body;
 
       const newRule = {
@@ -12321,7 +12327,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get pending actions awaiting approval
   app.get("/api/agentic/actions/pending", isAuthenticated, async (req: any, res) => {
     try {
-      const companyId = req.user.companyId;
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      const companyId = user?.companyId;
       if (!companyId) {
         return res.status(400).json({ error: "Company ID required" });
       }
@@ -12449,7 +12457,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get guardrails
   app.get("/api/agentic/guardrails", isAuthenticated, async (req: any, res) => {
     try {
-      const companyId = req.user.companyId;
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      const companyId = user?.companyId || "default";
 
       const guardrails = [
         {
@@ -12590,7 +12600,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get action history
   app.get("/api/agentic/actions/history", isAuthenticated, async (req: any, res) => {
     try {
-      const companyId = req.user.companyId;
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      const companyId = user?.companyId || "default";
       const { limit = 50, status, agentId, actionType } = req.query;
 
       // Generate sample action history
@@ -12642,7 +12654,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/agentic/assistant/chat", isAuthenticated, async (req: any, res) => {
     try {
       const { message, context } = req.body;
-      const companyId = req.user.companyId;
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      const companyId = user?.companyId;
 
       // Get current economic context
       await economics.fetch();
@@ -12719,8 +12733,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/agentic/assistant/execute", isAuthenticated, async (req: any, res) => {
     try {
       const { actionType, parameters } = req.body;
-      const companyId = req.user.companyId;
-      const userId = req.user.id;
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      const companyId = user?.companyId;
+      const userId = user?.id;
 
       // Create action record
       const action = {
