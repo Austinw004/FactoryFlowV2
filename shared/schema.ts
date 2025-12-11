@@ -1270,6 +1270,65 @@ export const skillRequirements = pgTable("skill_requirements", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Employee Skill Certifications for Skills Matrix
+export const employeeSkillCertifications = pgTable("employee_skill_certifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: "cascade" }),
+  skillCode: text("skill_code").notNull(),
+  skillLevel: integer("skill_level").notNull().default(1), // 1=Basic, 2=Intermediate, 3=Advanced, 4=Expert
+  certifiedDate: timestamp("certified_date"),
+  expirationDate: timestamp("expiration_date"),
+  certifiedBy: varchar("certified_by").references(() => users.id),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("skill_cert_company_idx").on(table.companyId),
+  index("skill_cert_employee_idx").on(table.employeeId),
+]);
+
+// Weekly Shift Schedules for Schedule Builder
+export const weeklySchedules = pgTable("weekly_schedules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  weekStartDate: timestamp("week_start_date").notNull(),
+  department: text("department").notNull(),
+  status: text("status").notNull().default("draft"), // "draft", "published", "archived"
+  publishedAt: timestamp("published_at"),
+  publishedBy: varchar("published_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("weekly_schedule_company_idx").on(table.companyId),
+  index("weekly_schedule_week_idx").on(table.weekStartDate),
+]);
+
+// Shift Assignments for Schedule Builder
+export const shiftAssignments = pgTable("shift_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  scheduleId: varchar("schedule_id").references(() => weeklySchedules.id, { onDelete: "cascade" }),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: "cascade" }),
+  shiftDate: timestamp("shift_date").notNull(),
+  shiftType: text("shift_type").notNull(), // "day", "evening", "night"
+  startTime: text("start_time").notNull(), // "06:00"
+  endTime: text("end_time").notNull(), // "14:00"
+  hoursScheduled: real("hours_scheduled").notNull(),
+  department: text("department").notNull(),
+  productionLine: text("production_line"),
+  status: text("status").notNull().default("scheduled"), // "scheduled", "worked", "absent", "late"
+  actualHours: real("actual_hours"),
+  overtimeHours: real("overtime_hours").default(0),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("shift_assignment_company_idx").on(table.companyId),
+  index("shift_assignment_employee_idx").on(table.employeeId),
+  index("shift_assignment_date_idx").on(table.shiftDate),
+]);
+
 export const staffAssignments = pgTable("staff_assignments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   shiftId: varchar("shift_id").notNull().references(() => workShifts.id, { onDelete: "cascade" }),
@@ -1670,6 +1729,11 @@ export const updateEmployeeSchema = createInsertSchema(employees).omit({ id: tru
 export const insertWorkShiftSchema = createInsertSchema(workShifts).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertSkillRequirementSchema = createInsertSchema(skillRequirements).omit({ id: true, createdAt: true });
 export const insertStaffAssignmentSchema = createInsertSchema(staffAssignments).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertEmployeeSkillCertificationSchema = createInsertSchema(employeeSkillCertifications).omit({ id: true, createdAt: true, updatedAt: true });
+export const updateEmployeeSkillCertificationSchema = createInsertSchema(employeeSkillCertifications).omit({ id: true, companyId: true, createdAt: true }).partial();
+export const insertWeeklyScheduleSchema = createInsertSchema(weeklySchedules).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertShiftAssignmentSchema = createInsertSchema(shiftAssignments).omit({ id: true, createdAt: true, updatedAt: true });
+export const updateShiftAssignmentSchema = createInsertSchema(shiftAssignments).omit({ id: true, companyId: true, createdAt: true }).partial();
 
 export type Employee = typeof employees.$inferSelect;
 export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
@@ -1680,6 +1744,14 @@ export type SkillRequirement = typeof skillRequirements.$inferSelect;
 export type InsertSkillRequirement = z.infer<typeof insertSkillRequirementSchema>;
 export type StaffAssignment = typeof staffAssignments.$inferSelect;
 export type InsertStaffAssignment = z.infer<typeof insertStaffAssignmentSchema>;
+export type EmployeeSkillCertification = typeof employeeSkillCertifications.$inferSelect;
+export type InsertEmployeeSkillCertification = z.infer<typeof insertEmployeeSkillCertificationSchema>;
+export type UpdateEmployeeSkillCertification = z.infer<typeof updateEmployeeSkillCertificationSchema>;
+export type WeeklySchedule = typeof weeklySchedules.$inferSelect;
+export type InsertWeeklySchedule = z.infer<typeof insertWeeklyScheduleSchema>;
+export type ShiftAssignment = typeof shiftAssignments.$inferSelect;
+export type InsertShiftAssignment = z.infer<typeof insertShiftAssignmentSchema>;
+export type UpdateShiftAssignment = z.infer<typeof updateShiftAssignmentSchema>;
 
 // Comprehensive Employee Management schemas
 export const insertEmployeePayrollSchema = createInsertSchema(employeePayroll).omit({ id: true, createdAt: true, updatedAt: true });

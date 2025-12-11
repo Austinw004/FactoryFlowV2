@@ -1,5 +1,5 @@
 import { db } from "@db";
-import { eq, and, sql, desc, inArray } from "drizzle-orm";
+import { eq, and, sql, desc, inArray, gte, lte, lt } from "drizzle-orm";
 import type { 
   User, InsertUser, UpsertUser, Company, InsertCompany,
   CompanyLocation, InsertCompanyLocation, UpdateCompanyLocation,
@@ -120,7 +120,10 @@ import type {
   SupplierRegionRisk, InsertSupplierRegionRisk,
   SupplierTierAlert, InsertSupplierTierAlert,
   ActivityLog, InsertActivityLog,
-  UserNotificationPreferences, InsertUserNotificationPreferences
+  UserNotificationPreferences, InsertUserNotificationPreferences,
+  EmployeeSkillCertification, InsertEmployeeSkillCertification,
+  WeeklySchedule, InsertWeeklySchedule,
+  ShiftAssignment, InsertShiftAssignment
 } from "@shared/schema";
 import { 
   users, companies, companyLocations, skus, materials, boms, suppliers, supplierMaterials,
@@ -158,7 +161,8 @@ import {
   digitalTwinDataFeeds, digitalTwinSnapshots, digitalTwinQueries,
   digitalTwinSimulations, digitalTwinAlerts, digitalTwinMetrics,
   supplierTiers, supplierRelationships, supplierRegionRisks, supplierTierAlerts,
-  activityLogs, userNotificationPreferences
+  activityLogs, userNotificationPreferences,
+  employeeSkillCertifications, weeklySchedules, shiftAssignments
 } from "@shared/schema";
 
 export interface IStorage {
@@ -431,6 +435,27 @@ export interface IStorage {
   getStaffAssignments(companyId: string): Promise<StaffAssignment[]>;
   getStaffAssignmentsByShift(shiftId: string): Promise<StaffAssignment[]>;
   createStaffAssignment(assignment: InsertStaffAssignment): Promise<StaffAssignment>;
+  
+  // Employee Skill Certifications (Skills Matrix)
+  getEmployeeSkillCertifications(companyId: string): Promise<EmployeeSkillCertification[]>;
+  getEmployeeSkillCertificationsByEmployee(employeeId: string): Promise<EmployeeSkillCertification[]>;
+  createEmployeeSkillCertification(cert: InsertEmployeeSkillCertification): Promise<EmployeeSkillCertification>;
+  updateEmployeeSkillCertification(id: string, cert: Partial<InsertEmployeeSkillCertification>): Promise<EmployeeSkillCertification | undefined>;
+  deleteEmployeeSkillCertification(id: string): Promise<void>;
+  
+  // Shift Assignments (Schedule Builder)
+  getShiftAssignments(companyId: string): Promise<ShiftAssignment[]>;
+  getShiftAssignmentsByDate(companyId: string, date: Date): Promise<ShiftAssignment[]>;
+  getShiftAssignmentsByEmployee(employeeId: string): Promise<ShiftAssignment[]>;
+  getShiftAssignmentsByWeek(companyId: string, weekStart: Date): Promise<ShiftAssignment[]>;
+  createShiftAssignment(assignment: InsertShiftAssignment): Promise<ShiftAssignment>;
+  updateShiftAssignment(id: string, assignment: Partial<InsertShiftAssignment>): Promise<ShiftAssignment | undefined>;
+  deleteShiftAssignment(id: string): Promise<void>;
+  
+  // Weekly Schedules
+  getWeeklySchedules(companyId: string): Promise<WeeklySchedule[]>;
+  getWeeklySchedule(id: string): Promise<WeeklySchedule | undefined>;
+  createWeeklySchedule(schedule: InsertWeeklySchedule): Promise<WeeklySchedule>;
   
   // Employee Payroll
   getEmployeePayroll(companyId: string): Promise<EmployeePayroll[]>;
@@ -2014,6 +2039,93 @@ export class DbStorage implements IStorage {
   async createStaffAssignment(insertAssignment: InsertStaffAssignment): Promise<StaffAssignment> {
     const [assignment] = await db.insert(staffAssignments).values(insertAssignment).returning();
     return assignment;
+  }
+
+  // Employee Skill Certifications (Skills Matrix) methods
+  async getEmployeeSkillCertifications(companyId: string): Promise<EmployeeSkillCertification[]> {
+    return db.select().from(employeeSkillCertifications).where(eq(employeeSkillCertifications.companyId, companyId));
+  }
+
+  async getEmployeeSkillCertificationsByEmployee(employeeId: string): Promise<EmployeeSkillCertification[]> {
+    return db.select().from(employeeSkillCertifications).where(eq(employeeSkillCertifications.employeeId, employeeId));
+  }
+
+  async createEmployeeSkillCertification(insertCert: InsertEmployeeSkillCertification): Promise<EmployeeSkillCertification> {
+    const [cert] = await db.insert(employeeSkillCertifications).values(insertCert).returning();
+    return cert;
+  }
+
+  async updateEmployeeSkillCertification(id: string, updateData: Partial<InsertEmployeeSkillCertification>): Promise<EmployeeSkillCertification | undefined> {
+    const [cert] = await db.update(employeeSkillCertifications).set({ ...updateData, updatedAt: new Date() }).where(eq(employeeSkillCertifications.id, id)).returning();
+    return cert;
+  }
+
+  async deleteEmployeeSkillCertification(id: string): Promise<void> {
+    await db.delete(employeeSkillCertifications).where(eq(employeeSkillCertifications.id, id));
+  }
+
+  // Shift Assignments (Schedule Builder) methods
+  async getShiftAssignments(companyId: string): Promise<ShiftAssignment[]> {
+    return db.select().from(shiftAssignments).where(eq(shiftAssignments.companyId, companyId)).orderBy(desc(shiftAssignments.shiftDate));
+  }
+
+  async getShiftAssignmentsByDate(companyId: string, date: Date): Promise<ShiftAssignment[]> {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+    return db.select().from(shiftAssignments).where(
+      and(
+        eq(shiftAssignments.companyId, companyId),
+        gte(shiftAssignments.shiftDate, startOfDay),
+        lte(shiftAssignments.shiftDate, endOfDay)
+      )
+    );
+  }
+
+  async getShiftAssignmentsByEmployee(employeeId: string): Promise<ShiftAssignment[]> {
+    return db.select().from(shiftAssignments).where(eq(shiftAssignments.employeeId, employeeId)).orderBy(desc(shiftAssignments.shiftDate));
+  }
+
+  async getShiftAssignmentsByWeek(companyId: string, weekStart: Date): Promise<ShiftAssignment[]> {
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+    return db.select().from(shiftAssignments).where(
+      and(
+        eq(shiftAssignments.companyId, companyId),
+        gte(shiftAssignments.shiftDate, weekStart),
+        lt(shiftAssignments.shiftDate, weekEnd)
+      )
+    );
+  }
+
+  async createShiftAssignment(insertAssignment: InsertShiftAssignment): Promise<ShiftAssignment> {
+    const [assignment] = await db.insert(shiftAssignments).values(insertAssignment).returning();
+    return assignment;
+  }
+
+  async updateShiftAssignment(id: string, updateData: Partial<InsertShiftAssignment>): Promise<ShiftAssignment | undefined> {
+    const [assignment] = await db.update(shiftAssignments).set({ ...updateData, updatedAt: new Date() }).where(eq(shiftAssignments.id, id)).returning();
+    return assignment;
+  }
+
+  async deleteShiftAssignment(id: string): Promise<void> {
+    await db.delete(shiftAssignments).where(eq(shiftAssignments.id, id));
+  }
+
+  // Weekly Schedules methods
+  async getWeeklySchedules(companyId: string): Promise<WeeklySchedule[]> {
+    return db.select().from(weeklySchedules).where(eq(weeklySchedules.companyId, companyId)).orderBy(desc(weeklySchedules.weekStartDate));
+  }
+
+  async getWeeklySchedule(id: string): Promise<WeeklySchedule | undefined> {
+    const [schedule] = await db.select().from(weeklySchedules).where(eq(weeklySchedules.id, id));
+    return schedule;
+  }
+
+  async createWeeklySchedule(insertSchedule: InsertWeeklySchedule): Promise<WeeklySchedule> {
+    const [schedule] = await db.insert(weeklySchedules).values(insertSchedule).returning();
+    return schedule;
   }
 
   // Employee Payroll methods

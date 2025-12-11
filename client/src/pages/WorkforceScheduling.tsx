@@ -48,7 +48,15 @@ import {
   Shield,
   AlertCircle,
   CheckCircle2,
-  Clock
+  Clock,
+  Grid3X3,
+  Calendar,
+  Timer,
+  Lightbulb,
+  Plus,
+  UserCheck,
+  UserX,
+  AlertTriangle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -58,7 +66,7 @@ export default function WorkforceScheduling() {
   const { toast } = useToast();
   const [openEmployeeDialog, setOpenEmployeeDialog] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState("employees");
+  const [activeTab, setActiveTab] = useState("coverage");
 
   const { data: employees = [], isLoading: employeesLoading } = useQuery<any[]>({
     queryKey: ["/api/workforce/employees"],
@@ -88,12 +96,125 @@ export default function WorkforceScheduling() {
     enabled: selectedEmployee !== null,
   });
 
+  // New queries for enhanced workforce features
+  const { data: skillCertifications = [] } = useQuery<any[]>({
+    queryKey: ["/api/workforce/skill-certifications"],
+  });
+
+  const { data: skillRequirements = [] } = useQuery<any[]>({
+    queryKey: ["/api/workforce/skills"],
+  });
+
+  const { data: todaysCoverage } = useQuery<any>({
+    queryKey: ["/api/workforce/todays-coverage"],
+  });
+
+  const { data: overtimeTracking } = useQuery<any>({
+    queryKey: ["/api/workforce/overtime-tracking"],
+  });
+
+  const { data: staffingRecommendations } = useQuery<any>({
+    queryKey: ["/api/workforce/staffing-recommendations"],
+  });
+
+  const { data: shiftAssignments = [] } = useQuery<any[]>({
+    queryKey: ["/api/workforce/shift-assignments"],
+  });
+
+  // State for skill matrix dialog
+  const [openSkillDialog, setOpenSkillDialog] = useState(false);
+  const [skillEmployeeId, setSkillEmployeeId] = useState("");
+  const [skillCode, setSkillCode] = useState("");
+  const [skillLevel, setSkillLevel] = useState("");
+
+  // State for shift assignment dialog
+  const [openShiftDialog, setOpenShiftDialog] = useState(false);
+  const [shiftEmployeeId, setShiftEmployeeId] = useState("");
+  const [shiftType, setShiftType] = useState("");
+  const [shiftDepartment, setShiftDepartment] = useState("");
+
+  const createSkillCertMutation = useMutation({
+    mutationFn: async (data: any) => 
+      apiRequest("POST", "/api/workforce/skill-certifications", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/workforce/skill-certifications"] });
+      toast({ title: "Skill certification added" });
+      setOpenSkillDialog(false);
+      setSkillEmployeeId("");
+      setSkillCode("");
+      setSkillLevel("");
+    },
+    onError: () => {
+      toast({ title: "Failed to add skill certification", variant: "destructive" });
+    },
+  });
+
+  const createShiftAssignmentMutation = useMutation({
+    mutationFn: async (data: any) => 
+      apiRequest("POST", "/api/workforce/shift-assignments", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/workforce/shift-assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/workforce/todays-coverage"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/workforce/overtime-tracking"] });
+      toast({ title: "Shift assigned successfully" });
+      setOpenShiftDialog(false);
+      setShiftEmployeeId("");
+      setShiftType("");
+      setShiftDepartment("");
+    },
+    onError: () => {
+      toast({ title: "Failed to assign shift", variant: "destructive" });
+    },
+  });
+
+  const handleCreateSkillCert = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!skillEmployeeId || !skillCode || !skillLevel) {
+      toast({ title: "Please fill all required fields", variant: "destructive" });
+      return;
+    }
+    const formData = new FormData(e.currentTarget);
+    createSkillCertMutation.mutate({
+      employeeId: skillEmployeeId,
+      skillCode,
+      skillLevel: parseInt(skillLevel),
+      certifiedDate: formData.get("certifiedDate") ? new Date(formData.get("certifiedDate") as string).toISOString() : null,
+      expirationDate: formData.get("expirationDate") ? new Date(formData.get("expirationDate") as string).toISOString() : null,
+    });
+  };
+
+  const handleCreateShiftAssignment = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!shiftEmployeeId || !shiftType || !shiftDepartment) {
+      toast({ title: "Please fill all required fields", variant: "destructive" });
+      return;
+    }
+    const formData = new FormData(e.currentTarget);
+    const shiftDate = formData.get("shiftDate") as string;
+    const startTime = formData.get("startTime") as string;
+    const endTime = formData.get("endTime") as string;
+    
+    // Calculate hours
+    const [startH, startM] = startTime.split(":").map(Number);
+    const [endH, endM] = endTime.split(":").map(Number);
+    let hoursScheduled = (endH + endM / 60) - (startH + startM / 60);
+    if (hoursScheduled < 0) hoursScheduled += 24; // Overnight shift
+    
+    createShiftAssignmentMutation.mutate({
+      employeeId: shiftEmployeeId,
+      shiftDate: new Date(shiftDate).toISOString(),
+      shiftType,
+      startTime,
+      endTime,
+      hoursScheduled,
+      department: shiftDepartment,
+      productionLine: formData.get("productionLine") || null,
+    });
+  };
+
   const createEmployeeMutation = useMutation({
     mutationFn: async (data: any) => 
-      apiRequest("/api/workforce/employees", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
+      apiRequest("POST", "/api/workforce/employees", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/workforce/employees"] });
       toast({ title: "Employee added successfully" });
@@ -299,37 +420,80 @@ export default function WorkforceScheduling() {
         </Card>
       </div>
 
+      {/* Regime-Aware Staffing Recommendations */}
+      {staffingRecommendations?.recommendations?.length > 0 && (
+        <Card className="border-l-4 border-l-blue-500">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Lightbulb className="h-5 w-5 text-blue-500" />
+              Regime-Aware Staffing Insights
+              <Badge variant="outline">{staffingRecommendations.regime}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {staffingRecommendations.recommendations.map((rec: any, idx: number) => (
+                <div key={idx} className="flex items-start gap-2 p-2 rounded-lg bg-muted/50">
+                  <Badge variant={rec.priority === "high" ? "destructive" : rec.priority === "medium" ? "default" : "secondary"} className="text-xs">
+                    {rec.priority}
+                  </Badge>
+                  <span className="text-sm">{rec.message}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid grid-cols-7 w-full">
-          <TabsTrigger value="employees" data-testid="tab-employees">
-            <Users className="h-4 w-4 mr-2" />
-            Employees
-          </TabsTrigger>
-          <TabsTrigger value="payroll" data-testid="tab-payroll">
-            <DollarSign className="h-4 w-4 mr-2" />
-            Payroll
-          </TabsTrigger>
-          <TabsTrigger value="benefits" data-testid="tab-benefits">
-            <Heart className="h-4 w-4 mr-2" />
-            Benefits
-          </TabsTrigger>
-          <TabsTrigger value="timeoff" data-testid="tab-timeoff">
-            <CalendarClock className="h-4 w-4 mr-2" />
-            Time Off
-          </TabsTrigger>
-          <TabsTrigger value="documents" data-testid="tab-documents">
-            <FileText className="h-4 w-4 mr-2" />
-            Documents
-          </TabsTrigger>
-          <TabsTrigger value="reviews" data-testid="tab-reviews">
-            <Star className="h-4 w-4 mr-2" />
-            Reviews
-          </TabsTrigger>
-          <TabsTrigger value="emergency" data-testid="tab-emergency">
-            <Phone className="h-4 w-4 mr-2" />
-            Emergency
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto">
+          <TabsList className="inline-flex min-w-full">
+            <TabsTrigger value="coverage" data-testid="tab-coverage">
+              <UserCheck className="h-4 w-4 mr-2" />
+              Today
+            </TabsTrigger>
+            <TabsTrigger value="skills" data-testid="tab-skills">
+              <Grid3X3 className="h-4 w-4 mr-2" />
+              Skills
+            </TabsTrigger>
+            <TabsTrigger value="scheduling" data-testid="tab-scheduling">
+              <Calendar className="h-4 w-4 mr-2" />
+              Schedule
+            </TabsTrigger>
+            <TabsTrigger value="overtime" data-testid="tab-overtime">
+              <Timer className="h-4 w-4 mr-2" />
+              Overtime
+            </TabsTrigger>
+            <TabsTrigger value="employees" data-testid="tab-employees">
+              <Users className="h-4 w-4 mr-2" />
+              Employees
+            </TabsTrigger>
+            <TabsTrigger value="payroll" data-testid="tab-payroll">
+              <DollarSign className="h-4 w-4 mr-2" />
+              Payroll
+            </TabsTrigger>
+            <TabsTrigger value="benefits" data-testid="tab-benefits">
+              <Heart className="h-4 w-4 mr-2" />
+              Benefits
+            </TabsTrigger>
+            <TabsTrigger value="timeoff" data-testid="tab-timeoff">
+              <CalendarClock className="h-4 w-4 mr-2" />
+              Time Off
+            </TabsTrigger>
+            <TabsTrigger value="documents" data-testid="tab-documents">
+              <FileText className="h-4 w-4 mr-2" />
+              Documents
+            </TabsTrigger>
+            <TabsTrigger value="reviews" data-testid="tab-reviews">
+              <Star className="h-4 w-4 mr-2" />
+              Reviews
+            </TabsTrigger>
+            <TabsTrigger value="emergency" data-testid="tab-emergency">
+              <Phone className="h-4 w-4 mr-2" />
+              Emergency
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="employees" className="space-y-4">
           <Card>
@@ -880,6 +1044,514 @@ export default function WorkforceScheduling() {
                   </Table>
                 )}
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Today's Coverage Tab */}
+        <TabsContent value="coverage" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardDescription className="flex items-center gap-2">
+                  <UserCheck className="h-4 w-4 text-green-500" />
+                  Scheduled Today
+                </CardDescription>
+                <CardTitle className="text-3xl" data-testid="text-scheduled-today">
+                  {todaysCoverage?.scheduled || 0}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardDescription className="flex items-center gap-2">
+                  <UserX className="h-4 w-4 text-orange-500" />
+                  On Leave
+                </CardDescription>
+                <CardTitle className="text-3xl" data-testid="text-on-leave">
+                  {todaysCoverage?.onLeave || 0}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardDescription className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-blue-500" />
+                  Available
+                </CardDescription>
+                <CardTitle className="text-3xl" data-testid="text-available">
+                  {todaysCoverage?.available || 0}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardDescription className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Total Active
+                </CardDescription>
+                <CardTitle className="text-3xl">
+                  {todaysCoverage?.totalActive || 0}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <UserCheck className="h-5 w-5 text-green-500" />
+                  Working Today
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {!todaysCoverage?.scheduledEmployees?.length ? (
+                  <p className="text-muted-foreground text-sm">No employees scheduled for today</p>
+                ) : (
+                  <div className="space-y-2">
+                    {todaysCoverage.scheduledEmployees.map((emp: any) => (
+                      <div key={emp.id} className="flex items-center justify-between p-2 rounded bg-muted/50">
+                        <span className="font-medium">{emp.firstName} {emp.lastName}</span>
+                        <Badge variant="outline" className="capitalize">{emp.department}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <UserX className="h-5 w-5 text-orange-500" />
+                  On Leave Today
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {!todaysCoverage?.onLeaveEmployees?.length ? (
+                  <p className="text-muted-foreground text-sm">No employees on leave today</p>
+                ) : (
+                  <div className="space-y-2">
+                    {todaysCoverage.onLeaveEmployees.map((emp: any) => (
+                      <div key={emp.id} className="flex items-center justify-between p-2 rounded bg-orange-50 dark:bg-orange-950/20">
+                        <span className="font-medium">{emp.firstName} {emp.lastName}</span>
+                        <Badge variant="secondary" className="capitalize">{emp.department}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* Skills Matrix Tab */}
+        <TabsContent value="skills" className="space-y-4">
+          <div className="flex justify-between items-center flex-wrap gap-2">
+            <h2 className="text-xl font-semibold">Skills Matrix</h2>
+            <Dialog open={openSkillDialog} onOpenChange={setOpenSkillDialog}>
+              <DialogTrigger asChild>
+                <Button data-testid="button-add-skill-cert">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Certification
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add Skill Certification</DialogTitle>
+                  <DialogDescription>
+                    Record a skill certification for an employee
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleCreateSkillCert}>
+                  <div className="space-y-4 py-4">
+                    <div>
+                      <Label htmlFor="skillEmployee">Employee</Label>
+                      <Select value={skillEmployeeId} onValueChange={setSkillEmployeeId}>
+                        <SelectTrigger data-testid="select-skill-employee">
+                          <SelectValue placeholder="Select employee" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {employees.map((emp: any) => (
+                            <SelectItem key={emp.id} value={emp.id}>
+                              {emp.firstName} {emp.lastName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="skillCode">Skill</Label>
+                      <Select value={skillCode} onValueChange={setSkillCode}>
+                        <SelectTrigger data-testid="select-skill-code">
+                          <SelectValue placeholder="Select skill" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="CNC_OPERATION">CNC Operation</SelectItem>
+                          <SelectItem value="WELDING_MIG">MIG Welding</SelectItem>
+                          <SelectItem value="WELDING_TIG">TIG Welding</SelectItem>
+                          <SelectItem value="FORKLIFT">Forklift Operation</SelectItem>
+                          <SelectItem value="QUALITY_INSPECTION">Quality Inspection</SelectItem>
+                          <SelectItem value="ELECTRICAL">Electrical Systems</SelectItem>
+                          <SelectItem value="PLC_PROGRAMMING">PLC Programming</SelectItem>
+                          <SelectItem value="HYDRAULICS">Hydraulics</SelectItem>
+                          <SelectItem value="SAFETY_LEAD">Safety Leadership</SelectItem>
+                          <SelectItem value="FIRST_AID">First Aid/CPR</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="skillLevel">Skill Level</Label>
+                      <Select value={skillLevel} onValueChange={setSkillLevel}>
+                        <SelectTrigger data-testid="select-skill-level">
+                          <SelectValue placeholder="Select level" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">1 - Basic</SelectItem>
+                          <SelectItem value="2">2 - Intermediate</SelectItem>
+                          <SelectItem value="3">3 - Advanced</SelectItem>
+                          <SelectItem value="4">4 - Expert</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="certifiedDate">Certified Date</Label>
+                        <Input id="certifiedDate" name="certifiedDate" type="date" data-testid="input-certified-date" />
+                      </div>
+                      <div>
+                        <Label htmlFor="expirationDate">Expiration Date</Label>
+                        <Input id="expirationDate" name="expirationDate" type="date" data-testid="input-expiration-date" />
+                      </div>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button type="submit" disabled={createSkillCertMutation.isPending} data-testid="button-submit-skill">
+                      {createSkillCertMutation.isPending ? "Adding..." : "Add Certification"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Employee Skills Grid</CardTitle>
+              <CardDescription>
+                Visual grid showing employee certifications by skill. Levels: 1=Basic, 2=Intermediate, 3=Advanced, 4=Expert
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {employees.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Grid3X3 className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>Add employees to build the skills matrix</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="sticky left-0 bg-background">Employee</TableHead>
+                        <TableHead className="text-center">CNC</TableHead>
+                        <TableHead className="text-center">MIG Weld</TableHead>
+                        <TableHead className="text-center">TIG Weld</TableHead>
+                        <TableHead className="text-center">Forklift</TableHead>
+                        <TableHead className="text-center">QC</TableHead>
+                        <TableHead className="text-center">Electrical</TableHead>
+                        <TableHead className="text-center">PLC</TableHead>
+                        <TableHead className="text-center">First Aid</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {employees.map((emp: any) => {
+                        const empCerts = skillCertifications.filter((c: any) => c.employeeId === emp.id);
+                        const getLevel = (code: string) => {
+                          const cert = empCerts.find((c: any) => c.skillCode === code);
+                          return cert?.skillLevel || 0;
+                        };
+                        const levelBadge = (level: number) => {
+                          if (level === 0) return <span className="text-muted-foreground">-</span>;
+                          const colors = ["", "bg-slate-200 text-slate-800", "bg-blue-200 text-blue-800", "bg-green-200 text-green-800", "bg-purple-200 text-purple-800"];
+                          return <Badge className={colors[level]}>{level}</Badge>;
+                        };
+                        return (
+                          <TableRow key={emp.id}>
+                            <TableCell className="sticky left-0 bg-background font-medium">
+                              {emp.firstName} {emp.lastName}
+                            </TableCell>
+                            <TableCell className="text-center">{levelBadge(getLevel("CNC_OPERATION"))}</TableCell>
+                            <TableCell className="text-center">{levelBadge(getLevel("WELDING_MIG"))}</TableCell>
+                            <TableCell className="text-center">{levelBadge(getLevel("WELDING_TIG"))}</TableCell>
+                            <TableCell className="text-center">{levelBadge(getLevel("FORKLIFT"))}</TableCell>
+                            <TableCell className="text-center">{levelBadge(getLevel("QUALITY_INSPECTION"))}</TableCell>
+                            <TableCell className="text-center">{levelBadge(getLevel("ELECTRICAL"))}</TableCell>
+                            <TableCell className="text-center">{levelBadge(getLevel("PLC_PROGRAMMING"))}</TableCell>
+                            <TableCell className="text-center">{levelBadge(getLevel("FIRST_AID"))}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Shift Scheduling Tab */}
+        <TabsContent value="scheduling" className="space-y-4">
+          <div className="flex justify-between items-center flex-wrap gap-2">
+            <h2 className="text-xl font-semibold">Shift Schedule</h2>
+            <Dialog open={openShiftDialog} onOpenChange={setOpenShiftDialog}>
+              <DialogTrigger asChild>
+                <Button data-testid="button-assign-shift">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Assign Shift
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Assign Shift</DialogTitle>
+                  <DialogDescription>
+                    Schedule an employee for a shift
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleCreateShiftAssignment}>
+                  <div className="space-y-4 py-4">
+                    <div>
+                      <Label htmlFor="shiftEmployee">Employee</Label>
+                      <Select value={shiftEmployeeId} onValueChange={setShiftEmployeeId}>
+                        <SelectTrigger data-testid="select-shift-employee">
+                          <SelectValue placeholder="Select employee" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {employees.filter((e: any) => e.status === "active").map((emp: any) => (
+                            <SelectItem key={emp.id} value={emp.id}>
+                              {emp.firstName} {emp.lastName} ({emp.department})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="shiftDate">Shift Date</Label>
+                      <Input id="shiftDate" name="shiftDate" type="date" required data-testid="input-shift-date" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="startTime">Start Time</Label>
+                        <Input id="startTime" name="startTime" type="time" required defaultValue="06:00" data-testid="input-start-time" />
+                      </div>
+                      <div>
+                        <Label htmlFor="endTime">End Time</Label>
+                        <Input id="endTime" name="endTime" type="time" required defaultValue="14:00" data-testid="input-end-time" />
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="shiftType">Shift Type</Label>
+                      <Select value={shiftType} onValueChange={setShiftType}>
+                        <SelectTrigger data-testid="select-shift-type">
+                          <SelectValue placeholder="Select shift type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="day">Day Shift (6am-2pm)</SelectItem>
+                          <SelectItem value="evening">Evening Shift (2pm-10pm)</SelectItem>
+                          <SelectItem value="night">Night Shift (10pm-6am)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="shiftDepartment">Department</Label>
+                      <Select value={shiftDepartment} onValueChange={setShiftDepartment}>
+                        <SelectTrigger data-testid="select-shift-department">
+                          <SelectValue placeholder="Select department" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="production">Production</SelectItem>
+                          <SelectItem value="quality">Quality</SelectItem>
+                          <SelectItem value="maintenance">Maintenance</SelectItem>
+                          <SelectItem value="logistics">Logistics</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="productionLine">Production Line (Optional)</Label>
+                      <Input id="productionLine" name="productionLine" placeholder="e.g., Line A, Assembly 1" data-testid="input-production-line" />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button type="submit" disabled={createShiftAssignmentMutation.isPending} data-testid="button-submit-shift">
+                      {createShiftAssignmentMutation.isPending ? "Assigning..." : "Assign Shift"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Scheduled Shifts</CardTitle>
+              <CardDescription>
+                View and manage employee shift assignments
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {shiftAssignments.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Calendar className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>No shifts scheduled. Click "Assign Shift" to get started.</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Employee</TableHead>
+                      <TableHead>Shift</TableHead>
+                      <TableHead>Time</TableHead>
+                      <TableHead>Department</TableHead>
+                      <TableHead>Hours</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {shiftAssignments.slice(0, 20).map((shift: any) => {
+                      const emp = employees.find((e: any) => e.id === shift.employeeId);
+                      return (
+                        <TableRow key={shift.id}>
+                          <TableCell>{format(new Date(shift.shiftDate), 'MMM d, yyyy')}</TableCell>
+                          <TableCell className="font-medium">
+                            {emp ? `${emp.firstName} ${emp.lastName}` : 'Unknown'}
+                          </TableCell>
+                          <TableCell className="capitalize">{shift.shiftType}</TableCell>
+                          <TableCell>{shift.startTime} - {shift.endTime}</TableCell>
+                          <TableCell className="capitalize">{shift.department}</TableCell>
+                          <TableCell>{shift.hoursScheduled?.toFixed(1)}h</TableCell>
+                          <TableCell>
+                            <Badge variant={shift.status === 'scheduled' ? 'default' : shift.status === 'worked' ? 'secondary' : 'destructive'}>
+                              {shift.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Overtime Tracking Tab */}
+        <TabsContent value="overtime" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardDescription>Total Scheduled This Week</CardDescription>
+                <CardTitle className="text-3xl" data-testid="text-total-scheduled">
+                  {overtimeTracking?.summary?.totalEmployeesScheduled || 0}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-muted-foreground">
+                  Employees with shifts this week
+                </p>
+              </CardContent>
+            </Card>
+            <Card className={overtimeTracking?.summary?.approachingOvertime > 0 ? "border-l-4 border-l-orange-500" : ""}>
+              <CardHeader className="pb-3">
+                <CardDescription className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-orange-500" />
+                  Approaching Overtime
+                </CardDescription>
+                <CardTitle className="text-3xl text-orange-600" data-testid="text-approaching-overtime">
+                  {overtimeTracking?.summary?.approachingOvertime || 0}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-muted-foreground">
+                  35+ hours scheduled (close to 40)
+                </p>
+              </CardContent>
+            </Card>
+            <Card className={overtimeTracking?.summary?.inOvertime > 0 ? "border-l-4 border-l-red-500" : ""}>
+              <CardHeader className="pb-3">
+                <CardDescription className="flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-red-500" />
+                  In Overtime
+                </CardDescription>
+                <CardTitle className="text-3xl text-red-600" data-testid="text-in-overtime">
+                  {overtimeTracking?.summary?.inOvertime || 0}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-muted-foreground">
+                  Over 40 hours scheduled
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Timer className="h-5 w-5" />
+                Weekly Hours Tracking
+              </CardTitle>
+              <CardDescription>
+                Week of {overtimeTracking?.weekStart ? format(new Date(overtimeTracking.weekStart), 'MMM d, yyyy') : 'Current Week'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!overtimeTracking?.employees?.length ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Timer className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>No employees have hours scheduled this week</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Employee</TableHead>
+                      <TableHead>Department</TableHead>
+                      <TableHead>Scheduled</TableHead>
+                      <TableHead>Max Hours</TableHead>
+                      <TableHead>Remaining</TableHead>
+                      <TableHead>OT Eligible</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {overtimeTracking.employees.map((emp: any) => (
+                      <TableRow key={emp.employeeId} className={emp.inOvertime ? "bg-red-50 dark:bg-red-950/20" : emp.approachingOvertime ? "bg-orange-50 dark:bg-orange-950/20" : ""}>
+                        <TableCell className="font-medium">{emp.employeeName}</TableCell>
+                        <TableCell className="capitalize">{emp.department}</TableCell>
+                        <TableCell>{emp.hoursScheduled?.toFixed(1)}h</TableCell>
+                        <TableCell>{emp.maxHoursPerWeek}h</TableCell>
+                        <TableCell>{emp.remainingRegularHours?.toFixed(1)}h</TableCell>
+                        <TableCell>
+                          <Badge variant={emp.overtimeEligible ? "default" : "secondary"}>
+                            {emp.overtimeEligible ? "Yes" : "No"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {emp.inOvertime ? (
+                            <Badge variant="destructive">Over Limit</Badge>
+                          ) : emp.approachingOvertime ? (
+                            <Badge className="bg-orange-500 hover:bg-orange-600">Warning</Badge>
+                          ) : (
+                            <Badge variant="secondary">Normal</Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

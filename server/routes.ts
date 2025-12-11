@@ -4639,6 +4639,334 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========================================
+  // SKILLS MATRIX & SHIFT SCHEDULING
+  // ========================================
+
+  // Get employee skill certifications (Skills Matrix)
+  app.get("/api/workforce/skill-certifications", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      const certs = await storage.getEmployeeSkillCertifications(user.companyId);
+      res.json(certs);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create employee skill certification
+  app.post("/api/workforce/skill-certifications", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      const { insertEmployeeSkillCertificationSchema } = await import("@shared/schema");
+      const certData = insertEmployeeSkillCertificationSchema.parse({
+        ...req.body,
+        companyId: user.companyId,
+        certifiedDate: req.body.certifiedDate ? new Date(req.body.certifiedDate) : null,
+        expirationDate: req.body.expirationDate ? new Date(req.body.expirationDate) : null,
+      });
+      const cert = await storage.createEmployeeSkillCertification(certData);
+      res.status(201).json(cert);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Update employee skill certification
+  app.patch("/api/workforce/skill-certifications/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const cert = await storage.updateEmployeeSkillCertification(req.params.id, req.body);
+      if (!cert) {
+        return res.status(404).json({ error: "Skill certification not found" });
+      }
+      res.json(cert);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Delete employee skill certification
+  app.delete("/api/workforce/skill-certifications/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.deleteEmployeeSkillCertification(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get shift assignments (Schedule Builder)
+  app.get("/api/workforce/shift-assignments", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      const { date, weekStart } = req.query;
+      let assignments;
+      if (date) {
+        assignments = await storage.getShiftAssignmentsByDate(user.companyId, new Date(date));
+      } else if (weekStart) {
+        assignments = await storage.getShiftAssignmentsByWeek(user.companyId, new Date(weekStart));
+      } else {
+        assignments = await storage.getShiftAssignments(user.companyId);
+      }
+      res.json(assignments);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create shift assignment
+  app.post("/api/workforce/shift-assignments", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      const { insertShiftAssignmentSchema } = await import("@shared/schema");
+      const assignmentData = insertShiftAssignmentSchema.parse({
+        ...req.body,
+        companyId: user.companyId,
+        shiftDate: new Date(req.body.shiftDate),
+      });
+      const assignment = await storage.createShiftAssignment(assignmentData);
+      res.status(201).json(assignment);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Update shift assignment
+  app.patch("/api/workforce/shift-assignments/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const assignment = await storage.updateShiftAssignment(req.params.id, req.body);
+      if (!assignment) {
+        return res.status(404).json({ error: "Shift assignment not found" });
+      }
+      res.json(assignment);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Delete shift assignment
+  app.delete("/api/workforce/shift-assignments/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.deleteShiftAssignment(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get today's coverage (for Today's Coverage View)
+  app.get("/api/workforce/todays-coverage", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const [employees, todaysShifts, timeOffRequests] = await Promise.all([
+        storage.getEmployees(user.companyId),
+        storage.getShiftAssignmentsByDate(user.companyId, today),
+        storage.getEmployeeTimeOffRequests(user.companyId),
+      ]);
+      
+      const activeEmployees = employees.filter((e: any) => e.status === "active");
+      const workingToday = todaysShifts.map((s: any) => s.employeeId);
+      const onLeaveToday = timeOffRequests.filter((t: any) => {
+        if (t.status !== "approved") return false;
+        const start = new Date(t.startDate);
+        const end = new Date(t.endDate);
+        return today >= start && today <= end;
+      }).map((t: any) => t.employeeId);
+      
+      const scheduled = activeEmployees.filter((e: any) => workingToday.includes(e.id));
+      const onLeave = activeEmployees.filter((e: any) => onLeaveToday.includes(e.id));
+      const available = activeEmployees.filter((e: any) => !workingToday.includes(e.id) && !onLeaveToday.includes(e.id));
+      
+      res.json({
+        totalActive: activeEmployees.length,
+        scheduled: scheduled.length,
+        onLeave: onLeave.length,
+        available: available.length,
+        scheduledEmployees: scheduled,
+        onLeaveEmployees: onLeave,
+        availableEmployees: available,
+        shifts: todaysShifts,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get overtime tracking data
+  app.get("/api/workforce/overtime-tracking", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      // Get this week's start (Monday)
+      const today = new Date();
+      const dayOfWeek = today.getDay();
+      const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      const weekStart = new Date(today);
+      weekStart.setDate(today.getDate() + mondayOffset);
+      weekStart.setHours(0, 0, 0, 0);
+      
+      const [employees, weekShifts, payrollData] = await Promise.all([
+        storage.getEmployees(user.companyId),
+        storage.getShiftAssignmentsByWeek(user.companyId, weekStart),
+        storage.getEmployeePayroll(user.companyId),
+      ]);
+      
+      // Calculate hours per employee this week
+      const employeeHours: Record<string, { scheduled: number; actual: number; overtime: number }> = {};
+      
+      weekShifts.forEach((shift: any) => {
+        if (!employeeHours[shift.employeeId]) {
+          employeeHours[shift.employeeId] = { scheduled: 0, actual: 0, overtime: 0 };
+        }
+        employeeHours[shift.employeeId].scheduled += shift.hoursScheduled || 0;
+        employeeHours[shift.employeeId].actual += shift.actualHours || 0;
+        employeeHours[shift.employeeId].overtime += shift.overtimeHours || 0;
+      });
+      
+      // Build overtime tracking data with alerts
+      const tracking = employees.map((emp: any) => {
+        const hours = employeeHours[emp.id] || { scheduled: 0, actual: 0, overtime: 0 };
+        const maxHours = emp.maxHoursPerWeek || 40;
+        const payroll = payrollData.find((p: any) => p.employeeId === emp.id);
+        const overtimeEligible = payroll?.overtimeEligible ?? 1;
+        
+        // Alert threshold: 35 hours (approaching 40)
+        const approachingOvertime = hours.scheduled >= maxHours - 5;
+        const inOvertime = hours.scheduled > maxHours;
+        
+        return {
+          employeeId: emp.id,
+          employeeName: `${emp.firstName} ${emp.lastName}`,
+          department: emp.department,
+          hoursScheduled: hours.scheduled,
+          hoursActual: hours.actual,
+          overtimeHours: hours.overtime,
+          maxHoursPerWeek: maxHours,
+          overtimeEligible: overtimeEligible === 1,
+          approachingOvertime,
+          inOvertime,
+          remainingRegularHours: Math.max(0, maxHours - hours.scheduled),
+        };
+      }).filter((e: any) => e.hoursScheduled > 0 || e.approachingOvertime || e.inOvertime);
+      
+      res.json({
+        weekStart: weekStart.toISOString(),
+        employees: tracking,
+        summary: {
+          totalEmployeesScheduled: tracking.length,
+          approachingOvertime: tracking.filter((t: any) => t.approachingOvertime).length,
+          inOvertime: tracking.filter((t: any) => t.inOvertime).length,
+        },
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get regime-aware staffing recommendations
+  app.get("/api/workforce/staffing-recommendations", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+      
+      const [employees, regimeData] = await Promise.all([
+        storage.getEmployees(user.companyId),
+        storage.getLatestEconomicSnapshot(user.companyId),
+      ]);
+      
+      const activeEmployees = employees.filter((e: any) => e.status === "active");
+      const byDepartment: Record<string, number> = {};
+      activeEmployees.forEach((e: any) => {
+        byDepartment[e.department] = (byDepartment[e.department] || 0) + 1;
+      });
+      
+      const regime = regimeData?.currentRegime || "Healthy Expansion";
+      const fdr = regimeData?.fdr || 1.0;
+      
+      // Generate regime-aware recommendations
+      const recommendations: Array<{ type: string; priority: string; message: string; department?: string }> = [];
+      
+      if (regime === "Asset-Led Growth" || regime === "Healthy Expansion") {
+        recommendations.push({
+          type: "hiring",
+          priority: "high",
+          message: `Expansion detected (${regime}) - Consider hiring temp workers for high-demand production lines`,
+        });
+        if (byDepartment["production"] && byDepartment["production"] < 10) {
+          recommendations.push({
+            type: "hiring",
+            priority: "medium",
+            message: "Production department understaffed for expansion phase - recommend 2-3 additional operators",
+            department: "production",
+          });
+        }
+      } else if (regime === "Bubble Territory") {
+        recommendations.push({
+          type: "caution",
+          priority: "high",
+          message: "Bubble Territory detected - Avoid long-term hiring commitments, prefer contract workers",
+        });
+      } else if (regime === "Recessionary" || regime === "Debt-Deleveraging") {
+        recommendations.push({
+          type: "optimization",
+          priority: "high",
+          message: `${regime} detected - Focus on cross-training existing staff rather than new hires`,
+        });
+        recommendations.push({
+          type: "efficiency",
+          priority: "medium",
+          message: "Consider consolidating shifts to reduce overtime costs during downturn",
+        });
+      }
+      
+      // Add general recommendations based on workforce data
+      if (activeEmployees.length > 0) {
+        const avgPerformance = activeEmployees.reduce((sum: number, e: any) => sum + (e.performanceRating || 0), 0) / activeEmployees.length;
+        if (avgPerformance < 3.5) {
+          recommendations.push({
+            type: "training",
+            priority: "medium",
+            message: "Average performance rating below target - Consider additional training programs",
+          });
+        }
+      }
+      
+      res.json({
+        regime,
+        fdr,
+        totalEmployees: activeEmployees.length,
+        byDepartment,
+        recommendations,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ========================================
   // COMPREHENSIVE EMPLOYEE MANAGEMENT
   // ========================================
 
