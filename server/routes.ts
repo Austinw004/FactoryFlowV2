@@ -1297,6 +1297,210 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Operations Command Center - What Needs Attention Today
+  app.get("/api/operations/attention", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no company association" });
+      }
+
+      const items: any[] = [];
+      const now = new Date();
+      const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+      // Check machinery needing maintenance
+      const machinery = await storage.getMachinery(user.companyId);
+      const machinesNeedingMaintenance = machinery.filter((m: any) => {
+        if (m.status === 'retired') return false;
+        if (!m.nextMaintenanceDate) return false;
+        const nextMaint = new Date(m.nextMaintenanceDate);
+        return nextMaint <= thirtyDaysFromNow;
+      });
+
+      const overdueCount = machinesNeedingMaintenance.filter((m: any) => 
+        new Date(m.nextMaintenanceDate) < now
+      ).length;
+
+      if (overdueCount > 0) {
+        items.push({
+          id: "machinery-overdue",
+          type: "machinery",
+          severity: "critical",
+          title: "Maintenance Overdue",
+          description: `${overdueCount} machine${overdueCount > 1 ? 's have' : ' has'} overdue maintenance`,
+          link: "/operations/machinery",
+          count: overdueCount,
+        });
+      }
+
+      const upcomingCount = machinesNeedingMaintenance.length - overdueCount;
+      if (upcomingCount > 0) {
+        items.push({
+          id: "machinery-upcoming",
+          type: "machinery",
+          severity: "warning",
+          title: "Maintenance Due Soon",
+          description: `${upcomingCount} machine${upcomingCount > 1 ? 's' : ''} need maintenance within 30 days`,
+          link: "/operations/machinery",
+          count: upcomingCount,
+        });
+      }
+
+      // Check sensor alerts
+      const sensors = await storage.getSensors(user.companyId);
+      const sensorAlerts = await storage.getSensorAlerts(user.companyId);
+      const activeCriticalAlerts = sensorAlerts.filter((a: any) => 
+        a.status === 'active' && a.severity === 'critical'
+      );
+      const activeWarningAlerts = sensorAlerts.filter((a: any) => 
+        a.status === 'active' && a.severity !== 'critical'
+      );
+
+      if (activeCriticalAlerts.length > 0) {
+        items.push({
+          id: "sensors-critical",
+          type: "sensor",
+          severity: "critical",
+          title: "Critical Sensor Alerts",
+          description: `${activeCriticalAlerts.length} sensor${activeCriticalAlerts.length > 1 ? 's' : ''} in critical state`,
+          link: "/operations/maintenance",
+          count: activeCriticalAlerts.length,
+        });
+      }
+
+      if (activeWarningAlerts.length > 0) {
+        items.push({
+          id: "sensors-warning",
+          type: "sensor",
+          severity: "warning",
+          title: "Sensor Warnings",
+          description: `${activeWarningAlerts.length} sensor${activeWarningAlerts.length > 1 ? 's' : ''} outside normal range`,
+          link: "/operations/maintenance",
+          count: activeWarningAlerts.length,
+        });
+      }
+
+      // Check time off requests pending
+      const timeOffRequests = await storage.getTimeOffRequests(user.companyId);
+      const pendingTimeOff = timeOffRequests.filter((r: any) => r.status === 'pending');
+      if (pendingTimeOff.length > 0) {
+        items.push({
+          id: "workforce-timeoff",
+          type: "workforce",
+          severity: "info",
+          title: "Time Off Requests",
+          description: `${pendingTimeOff.length} request${pendingTimeOff.length > 1 ? 's' : ''} pending approval`,
+          link: "/operations/workforce",
+          count: pendingTimeOff.length,
+        });
+      }
+
+      // Check compliance documents expiring
+      const complianceDocs = await storage.getComplianceDocuments(user.companyId);
+      const expiringDocs = complianceDocs.filter((d: any) => {
+        if (!d.expiryDate) return false;
+        const expiry = new Date(d.expiryDate);
+        return expiry <= thirtyDaysFromNow && expiry >= now;
+      });
+      const expiredDocs = complianceDocs.filter((d: any) => {
+        if (!d.expiryDate) return false;
+        return new Date(d.expiryDate) < now;
+      });
+
+      if (expiredDocs.length > 0) {
+        items.push({
+          id: "compliance-expired",
+          type: "compliance",
+          severity: "critical",
+          title: "Documents Expired",
+          description: `${expiredDocs.length} compliance document${expiredDocs.length > 1 ? 's have' : ' has'} expired`,
+          link: "/operations/compliance",
+          count: expiredDocs.length,
+        });
+      }
+
+      if (expiringDocs.length > 0) {
+        items.push({
+          id: "compliance-expiring",
+          type: "compliance",
+          severity: "warning",
+          title: "Documents Expiring Soon",
+          description: `${expiringDocs.length} document${expiringDocs.length > 1 ? 's' : ''} expiring within 30 days`,
+          link: "/operations/compliance",
+          count: expiringDocs.length,
+        });
+      }
+
+      // Check upcoming audits
+      const audits = await storage.getComplianceAudits(user.companyId);
+      const upcomingAudits = audits.filter((a: any) => {
+        if (a.status !== 'scheduled') return false;
+        const auditDate = new Date(a.scheduledDate);
+        return auditDate <= thirtyDaysFromNow && auditDate >= now;
+      });
+
+      if (upcomingAudits.length > 0) {
+        items.push({
+          id: "compliance-audits",
+          type: "compliance",
+          severity: "info",
+          title: "Upcoming Audits",
+          description: `${upcomingAudits.length} audit${upcomingAudits.length > 1 ? 's' : ''} scheduled within 30 days`,
+          link: "/operations/compliance",
+          count: upcomingAudits.length,
+        });
+      }
+
+      // Check low OEE production runs
+      const productionRuns = await storage.getProductionRuns(user.companyId);
+      const recentRuns = productionRuns.filter((r: any) => {
+        const runDate = new Date(r.startTime);
+        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        return runDate >= sevenDaysAgo;
+      });
+
+      // Calculate OEE for recent runs
+      const lowOeeRuns = recentRuns.filter((run: any) => {
+        const plannedMinutes = run.plannedDuration || 480;
+        const actualMinutes = plannedMinutes - (run.downtimeMinutes || 0);
+        const availability = actualMinutes / plannedMinutes;
+        const performance = run.plannedUnits > 0 ? run.producedUnits / run.plannedUnits : 0;
+        const quality = run.producedUnits > 0 ? (run.producedUnits - (run.defectUnits || 0)) / run.producedUnits : 0;
+        const oee = availability * performance * quality * 100;
+        return oee < 60;
+      });
+
+      if (lowOeeRuns.length > 0) {
+        items.push({
+          id: "production-low-oee",
+          type: "production",
+          severity: "warning",
+          title: "Low OEE Production Runs",
+          description: `${lowOeeRuns.length} run${lowOeeRuns.length > 1 ? 's' : ''} below 60% OEE this week`,
+          link: "/operations/production",
+          count: lowOeeRuns.length,
+        });
+      }
+
+      // Sort by severity
+      const severityOrder = { critical: 0, warning: 1, info: 2 };
+      items.sort((a, b) => severityOrder[a.severity as keyof typeof severityOrder] - severityOrder[b.severity as keyof typeof severityOrder]);
+
+      const summary = {
+        critical: items.filter(i => i.severity === 'critical').length,
+        warning: items.filter(i => i.severity === 'warning').length,
+        info: items.filter(i => i.severity === 'info').length,
+        total: items.length,
+      };
+
+      res.json({ items, summary });
+    } catch (error: any) {
+      console.error("Error fetching operations attention items:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Machinery Endpoints
   app.get("/api/machinery", isAuthenticated, async (req: any, res) => {
     try {

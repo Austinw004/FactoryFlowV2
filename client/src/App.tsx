@@ -35,6 +35,7 @@ import PilotProgram from "@/pages/PilotProgram";
 import RoiCalculator from "@/pages/RoiCalculator";
 import SecurityFaq from "@/pages/SecurityFaq";
 import NotificationSettings from "@/pages/NotificationSettings";
+import ShopFloorMode from "@/pages/ShopFloorMode";
 
 // Dashboard Hub routes
 const DashboardOverviewRoute = () => <DashboardHub initialTab="overview" />;
@@ -151,6 +152,12 @@ function Router() {
       <Route path="/predictive-maintenance" component={OperationsMaintenanceRoute} />
       <Route path="/workforce" component={OperationsWorkforceRoute} />
       <Route path="/compliance" component={OperationsComplianceRoute} />
+      <Route path="/shop-floor" component={ShopFloorMode} />
+      <Route path="/operations/machinery" component={OperationsMachineryRoute} />
+      <Route path="/operations/production" component={OperationsProductionRoute} />
+      <Route path="/operations/maintenance" component={OperationsMaintenanceRoute} />
+      <Route path="/operations/workforce" component={OperationsWorkforceRoute} />
+      <Route path="/operations/compliance" component={OperationsComplianceRoute} />
 
       {/* Supply Chain routes */}
       <Route path="/inventory" component={SupplyChainInventoryRoute} />

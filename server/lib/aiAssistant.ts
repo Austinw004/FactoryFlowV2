@@ -279,7 +279,93 @@ function generateFallbackResponse(userMessage: string): string {
     return "The automated RFQ system monitors your inventory levels. Navigate to Procurement Hub to see pending RFQs and generate new ones based on current stock levels.";
   }
   
-  return "I'm here to help with your manufacturing intelligence needs. You can ask about demand forecasts, supply chain risks, market timing, or procurement strategies. How can I assist you today?";
+  // Operations queries - Machinery
+  if (lowerMessage.includes("machine") && (lowerMessage.includes("maintenance") || lowerMessage.includes("due") || lowerMessage.includes("overdue"))) {
+    return "To see machines needing maintenance, check the Operations Command Center at the top of the Operations page. It shows all machines with overdue or upcoming maintenance. You can also view the Machinery tab for the full equipment list with maintenance status badges.";
+  }
+  
+  if (lowerMessage.includes("machine") && (lowerMessage.includes("status") || lowerMessage.includes("operational") || lowerMessage.includes("down"))) {
+    return "Machine status is tracked in the Operations > Machinery tab. Each machine displays its current status (operational, maintenance, down, or retired). The Operations Command Center also alerts you to any critical equipment issues.";
+  }
+  
+  if (lowerMessage.includes("depreciation") || (lowerMessage.includes("machine") && lowerMessage.includes("value"))) {
+    return "Equipment depreciation is calculated automatically based on purchase cost, salvage value, and useful life. View the Machinery tab and click on any machine to see its current book value, depreciation schedule, and total maintenance costs.";
+  }
+  
+  // Operations queries - OEE and Production
+  if (lowerMessage.includes("oee") || (lowerMessage.includes("overall") && lowerMessage.includes("equipment"))) {
+    return "OEE (Overall Equipment Effectiveness) is tracked in Operations > Production tab. The dashboard shows average OEE, broken down into Availability, Performance, and Quality components. Production runs with OEE below 60% are flagged for attention.";
+  }
+  
+  if (lowerMessage.includes("production") && (lowerMessage.includes("run") || lowerMessage.includes("log") || lowerMessage.includes("shift"))) {
+    return "Log production runs in the Operations > Production tab, or use Shop Floor Mode for quick mobile-friendly entry. Each run tracks units produced, defects, and downtime to calculate OEE metrics.";
+  }
+  
+  if (lowerMessage.includes("downtime") || lowerMessage.includes("availability")) {
+    return "Downtime is tracked per production run in the Operations > Production tab. The system calculates availability as (Planned Time - Downtime) / Planned Time. High downtime affects your OEE score - check the Production KPI dashboard for patterns.";
+  }
+  
+  if (lowerMessage.includes("bottleneck") || lowerMessage.includes("throughput")) {
+    return "Production bottlenecks are automatically detected in the Operations > Production tab under the Insights section. The system analyzes production runs to identify equipment or processes limiting throughput.";
+  }
+  
+  // Operations queries - Predictive Maintenance
+  if (lowerMessage.includes("sensor") || lowerMessage.includes("iot")) {
+    return "IoT sensors are managed in Operations > Maintenance tab. You can add sensors to equipment, set thresholds for warnings and critical alerts, and view real-time readings. The system generates maintenance predictions based on sensor data.";
+  }
+  
+  if (lowerMessage.includes("alert") && (lowerMessage.includes("sensor") || lowerMessage.includes("equipment"))) {
+    return "Sensor alerts appear in the Operations Command Center and the Maintenance tab. Critical alerts require immediate attention - the system flags sensors reading outside their defined thresholds.";
+  }
+  
+  if (lowerMessage.includes("predict") && lowerMessage.includes("maintenance")) {
+    return "Predictive maintenance uses sensor data and historical patterns to forecast equipment failures. Check Operations > Maintenance > Predictions tab for ML-based failure predictions with confidence scores.";
+  }
+  
+  // Operations queries - Workforce
+  if (lowerMessage.includes("employee") || lowerMessage.includes("staff") || lowerMessage.includes("workforce")) {
+    return "Workforce management is in Operations > Workforce tab. You can view the employee directory, manage payroll settings, track benefits enrollment, and approve time-off requests.";
+  }
+  
+  if ((lowerMessage.includes("time") && lowerMessage.includes("off")) || lowerMessage.includes("vacation") || lowerMessage.includes("pto")) {
+    return "Time-off requests are managed in Operations > Workforce > Time Off tab. Pending requests appear in the Operations Command Center. Managers can approve or deny requests from the dashboard.";
+  }
+  
+  if (lowerMessage.includes("certified") || lowerMessage.includes("qualification") || lowerMessage.includes("skill")) {
+    return "Employee qualifications and certifications should be tracked in their employee profile under Operations > Workforce. This helps identify who can operate specific machinery and ensures coverage requirements are met.";
+  }
+  
+  if (lowerMessage.includes("payroll") || lowerMessage.includes("salary")) {
+    return "Payroll information is managed in Operations > Workforce > Payroll tab. You can view annual salary totals, hourly rates, and compensation details for each employee.";
+  }
+  
+  // Operations queries - Compliance
+  if (lowerMessage.includes("compliance") || lowerMessage.includes("audit")) {
+    return "Compliance management is in Operations > Compliance tab. Track compliance documents with version control, schedule audits, and monitor document expirations. The system alerts you when documents are expiring or audits are upcoming.";
+  }
+  
+  if (lowerMessage.includes("document") && (lowerMessage.includes("expir") || lowerMessage.includes("renew"))) {
+    return "Document expirations are tracked in Operations > Compliance. Documents expiring within 30 days appear in the Operations Command Center as warnings. You can set up renewal reminders and track document versions.";
+  }
+  
+  if (lowerMessage.includes("iso") || lowerMessage.includes("osha") || lowerMessage.includes("certification")) {
+    return "Certification and regulatory documents are managed in Operations > Compliance > Documents tab. Add documents with their type (policy, procedure, certificate, permit) and track their status through the approval workflow.";
+  }
+  
+  // Operations - General
+  if (lowerMessage.includes("shop floor") || lowerMessage.includes("mobile")) {
+    return "Shop Floor Mode provides a mobile-friendly interface for floor workers. Access it from the Operations page - it allows quick logging of production runs, marking maintenance complete, and reporting equipment issues in just a few taps.";
+  }
+  
+  if (lowerMessage.includes("attention") || lowerMessage.includes("what needs")) {
+    return "The Operations Command Center at the top of the Operations page shows everything needing attention today: machines due for maintenance, sensor alerts, pending time-off requests, expiring documents, and low OEE production runs.";
+  }
+  
+  if (lowerMessage.includes("playbook") || (lowerMessage.includes("regime") && lowerMessage.includes("operation"))) {
+    return "The Regime Operations Playbook provides guidance for each economic regime. Click 'Regime Playbook' in the Operations header to see recommended actions for staffing, maintenance, inventory, and spending based on current economic conditions.";
+  }
+  
+  return "I'm here to help with your manufacturing intelligence needs. You can ask about demand forecasts, supply chain risks, market timing, procurement strategies, machinery maintenance, production KPIs, workforce management, or compliance. How can I assist you today?";
 }
 
 class AIAssistantService {
