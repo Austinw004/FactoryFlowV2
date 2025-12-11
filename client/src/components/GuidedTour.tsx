@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { X, ChevronRight, ChevronLeft, Sparkles, BarChart3, Network, Gauge, MessageSquare, Check, Minimize2, Maximize2 } from "lucide-react";
+import { ChevronRight, ChevronLeft, Sparkles, BarChart3, Network, Gauge, MessageSquare, Check, ChevronDown, ChevronUp } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { cn } from "@/lib/utils";
 
 interface TourStep {
   id: string;
@@ -57,49 +57,37 @@ const tourSteps: TourStep[] = [
 ];
 
 const TOUR_STORAGE_PREFIX = "prescient_tour_completed_";
+const TOUR_COLLAPSED_PREFIX = "prescient_tour_collapsed_";
 
-export function GuidedTour() {
+export function SidebarTour() {
   const { user, isLoading } = useAuth();
-  const [isOpen, setIsOpen] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
   const [hasSeenTour, setHasSeenTour] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
 
   const storageKey = user?.id ? `${TOUR_STORAGE_PREFIX}${user.id}` : null;
+  const collapsedKey = user?.id ? `${TOUR_COLLAPSED_PREFIX}${user.id}` : null;
 
   useEffect(() => {
-    if (isLoading || !storageKey) return;
+    if (isLoading || !storageKey || !collapsedKey) return;
     
     const tourCompleted = localStorage.getItem(storageKey);
+    const isCollapsed = localStorage.getItem(collapsedKey);
+    
     if (!tourCompleted) {
       setHasSeenTour(false);
-      const timer = setTimeout(() => {
-        setIsOpen(true);
-        setIsInitialized(true);
-      }, 1500);
-      return () => clearTimeout(timer);
+      setIsExpanded(isCollapsed !== "true");
     } else {
       setHasSeenTour(true);
-      setIsInitialized(true);
     }
-  }, [storageKey, isLoading]);
+    setIsInitialized(true);
+  }, [storageKey, collapsedKey, isLoading]);
 
   const handleComplete = () => {
     if (storageKey) {
       localStorage.setItem(storageKey, "true");
     }
-    setIsOpen(false);
-    setIsMinimized(false);
-    setHasSeenTour(true);
-  };
-
-  const handleSkip = () => {
-    if (storageKey) {
-      localStorage.setItem(storageKey, "true");
-    }
-    setIsOpen(false);
-    setIsMinimized(false);
     setHasSeenTour(true);
   };
 
@@ -117,51 +105,42 @@ export function GuidedTour() {
     }
   };
 
+  const handleToggleExpand = () => {
+    const newExpanded = !isExpanded;
+    setIsExpanded(newExpanded);
+    if (collapsedKey) {
+      localStorage.setItem(collapsedKey, newExpanded ? "false" : "true");
+    }
+  };
+
   const handleRestart = () => {
     setCurrentStep(0);
-    setIsOpen(true);
-    setIsMinimized(false);
-  };
-
-  const handleMinimize = () => {
-    setIsMinimized(true);
-  };
-
-  const handleExpand = () => {
-    setIsMinimized(false);
+    setHasSeenTour(false);
+    setIsExpanded(true);
+    if (storageKey) {
+      localStorage.removeItem(storageKey);
+    }
+    if (collapsedKey) {
+      localStorage.removeItem(collapsedKey);
+    }
   };
 
   if (!isInitialized || isLoading) {
     return null;
   }
 
-  if (!isOpen) {
-    if (!hasSeenTour) return null;
+  if (hasSeenTour) {
     return (
-      <Button 
-        variant="outline" 
-        size="sm" 
-        onClick={handleRestart}
-        className="gap-2"
-        data-testid="button-restart-tour"
-      >
-        <Sparkles className="h-4 w-4" />
-        Tour
-      </Button>
-    );
-  }
-
-  if (isMinimized) {
-    return (
-      <div className="fixed bottom-4 right-4 z-50" data-testid="guided-tour-minimized">
+      <div className="px-2 py-2 border-t">
         <Button 
-          onClick={handleExpand}
-          className="gap-2 shadow-lg"
-          data-testid="button-expand-tour"
+          variant="ghost" 
+          size="sm" 
+          onClick={handleRestart}
+          className="w-full justify-start gap-2 h-9"
+          data-testid="button-restart-tour"
         >
           <Sparkles className="h-4 w-4" />
-          Continue Tour ({currentStep + 1}/{tourSteps.length})
-          <Maximize2 className="h-4 w-4" />
+          <span>Take a Tour</span>
         </Button>
       </div>
     );
@@ -171,73 +150,86 @@ export function GuidedTour() {
   const Icon = step.icon;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" data-testid="guided-tour-modal">
-      <Card className="max-w-md w-full mx-4 animate-in fade-in zoom-in duration-200">
-        <CardHeader className="pb-4">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <Icon className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <CardTitle className="text-lg">{step.title}</CardTitle>
-                <Badge variant="outline" className="mt-1">
-                  Step {currentStep + 1} of {tourSteps.length}
-                </Badge>
-              </div>
+    <div className="border-t" data-testid="sidebar-tour">
+      <Button
+        variant="ghost"
+        onClick={handleToggleExpand}
+        className="w-full justify-between h-10 px-4 rounded-none"
+        data-testid="button-toggle-tour"
+      >
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-primary" />
+          <span className="text-sm font-medium">Platform Tour</span>
+          <Badge variant="secondary" className="text-xs px-1.5 py-0">
+            {currentStep + 1}/{tourSteps.length}
+          </Badge>
+        </div>
+        {isExpanded ? (
+          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+        ) : (
+          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+        )}
+      </Button>
+
+      <div
+        className={cn(
+          "overflow-hidden transition-all duration-200",
+          isExpanded ? "max-h-[300px] opacity-100" : "max-h-0 opacity-0"
+        )}
+      >
+        <div className="p-3 space-y-3">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <Icon className="h-4 w-4 text-primary" />
             </div>
-            <div className="flex items-center gap-1">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={handleMinimize} 
-                title="Minimize tour"
-                data-testid="button-minimize-tour"
-              >
-                <Minimize2 className="h-4 w-4" />
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={handleSkip} 
-                title="Skip tour"
-                data-testid="button-skip-tour"
-              >
-                <X className="h-4 w-4" />
-              </Button>
+            <div className="min-w-0">
+              <h4 className="text-sm font-medium leading-tight">{step.title}</h4>
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                {step.description}
+              </p>
             </div>
           </div>
-        </CardHeader>
-        <CardContent>
-          <CardDescription className="text-base">{step.description}</CardDescription>
-        </CardContent>
-        <CardFooter className="flex justify-between gap-2">
-          <Button
-            variant="outline"
-            onClick={handlePrev}
-            disabled={currentStep === 0}
-            className="gap-1"
-            data-testid="button-tour-prev"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Back
-          </Button>
-          <div className="flex gap-1">
-            {tourSteps.map((_, idx) => (
-              <div
-                key={idx}
-                className={`w-2 h-2 rounded-full transition-colors ${
-                  idx === currentStep ? "bg-primary" : "bg-muted"
-                }`}
-              />
-            ))}
+
+          <div className="flex items-center justify-between gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePrev}
+              disabled={currentStep === 0}
+              className="h-7 px-2"
+              data-testid="button-tour-prev"
+            >
+              <ChevronLeft className="h-3 w-3" />
+            </Button>
+            
+            <div className="flex gap-1">
+              {tourSteps.map((_, idx) => (
+                <div
+                  key={idx}
+                  className={cn(
+                    "w-1.5 h-1.5 rounded-full transition-colors",
+                    idx === currentStep ? "bg-primary" : "bg-muted"
+                  )}
+                />
+              ))}
+            </div>
+            
+            <Button
+              size="sm"
+              onClick={handleNext}
+              className="h-7 px-3"
+              data-testid="button-tour-next"
+            >
+              {currentStep === tourSteps.length - 1 ? "Done" : "Next"}
+              {currentStep < tourSteps.length - 1 && <ChevronRight className="h-3 w-3 ml-1" />}
+            </Button>
           </div>
-          <Button onClick={handleNext} className="gap-1" data-testid="button-tour-next">
-            {currentStep === tourSteps.length - 1 ? "Get Started" : "Next"}
-            {currentStep < tourSteps.length - 1 && <ChevronRight className="h-4 w-4" />}
-          </Button>
-        </CardFooter>
-      </Card>
+        </div>
+      </div>
     </div>
   );
+}
+
+export function GuidedTour() {
+  return null;
 }
