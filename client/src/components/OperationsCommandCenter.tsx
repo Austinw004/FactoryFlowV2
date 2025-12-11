@@ -57,9 +57,10 @@ const severityBadgeStyles = {
 };
 
 export function OperationsCommandCenter() {
-  const { data, isLoading } = useQuery<OperationsAttentionData>({
+  const { data, isLoading, isError, refetch } = useQuery<OperationsAttentionData>({
     queryKey: ["/api/operations/attention"],
     refetchInterval: 60000,
+    retry: 2,
   });
 
   if (isLoading) {
@@ -78,8 +79,37 @@ export function OperationsCommandCenter() {
     );
   }
 
-  const items = data?.items || [];
-  const summary = data?.summary || { critical: 0, warning: 0, info: 0, total: 0 };
+  if (isError || !data) {
+    return (
+      <Card className="mb-6 bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800">
+        <CardContent className="py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900 flex items-center justify-center">
+                <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <p className="font-medium text-amber-800 dark:text-amber-200">Unable to Load Attention Items</p>
+                <p className="text-sm text-amber-600 dark:text-amber-400">Could not fetch operations data</p>
+              </div>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => refetch()}
+              data-testid="button-retry-attention"
+            >
+              <Clock className="h-4 w-4 mr-1" />
+              Retry
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const items = data.items || [];
+  const summary = data.summary || { critical: 0, warning: 0, info: 0, total: 0 };
 
   if (summary.total === 0) {
     return (
