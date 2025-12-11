@@ -5,7 +5,8 @@ import { fetchAllCommodityPrices, CommodityPrice } from "./commodityPricing";
 import { calculateSupplierRiskScore } from "./supplyChainRisk";
 import { calculateOEE, detectBottlenecks } from "./productionKPIs";
 import { fetchExternalVariables } from "./externalAPIs";
-import { getAISystemPromptEnhancements, getIndustryConfig } from "./industryPersonalization";
+import { getAISystemPromptEnhancements } from "./industryPersonalization";
+import { getIndustryConfig } from "@shared/industryConfig";
 
 const newsMonitoringService = new NewsMonitoringService(storage);
 
@@ -226,6 +227,42 @@ async function callOpenAI(messages: Array<{ role: string; content: string }>): P
 function generateFallbackResponse(userMessage: string): string {
   const lowerMessage = userMessage.toLowerCase();
   
+  // Proprietary formula protection - CRITICAL
+  if (lowerMessage.includes("formula") || lowerMessage.includes("algorithm") || lowerMessage.includes("how do you calculate") || 
+      lowerMessage.includes("how does the model") || lowerMessage.includes("what's the math") || lowerMessage.includes("methodology") ||
+      (lowerMessage.includes("fdr") && (lowerMessage.includes("work") || lowerMessage.includes("calculated") || lowerMessage.includes("formula")))) {
+    return "Our predictions are powered by proprietary models developed through extensive research. I can help you understand what the predictions mean and how to act on them, but the underlying methodology is proprietary. Is there a specific business decision I can help you make based on our current signals?";
+  }
+
+  // Executive-level strategic questions
+  if (lowerMessage.includes("board") || lowerMessage.includes("investor") || lowerMessage.includes("earnings")) {
+    return "For board and investor communications, I recommend focusing on: (1) Supply chain resilience metrics showing risk mitigation, (2) Procurement savings as percentage of COGS, (3) Forecast accuracy improvements and their inventory carrying cost impact, and (4) Working capital optimization from better timing. The ROI Dashboard provides verified savings data suitable for external reporting.";
+  }
+
+  if (lowerMessage.includes("m&a") || lowerMessage.includes("acquisition") || lowerMessage.includes("due diligence")) {
+    return "For M&A operations due diligence, focus on: (1) Supply chain concentration risk - single-source dependencies, (2) Supplier financial health scores and delivery performance, (3) Forecast accuracy as indicator of demand planning maturity, (4) Production OEE as measure of operational excellence. Our Digital Twin provides a real-time view of these operational KPIs.";
+  }
+
+  if (lowerMessage.includes("budget") || lowerMessage.includes("fiscal year") || lowerMessage.includes("annual plan")) {
+    return "For annual planning, the current economic regime provides key context. Check the Strategic Analysis for regime-based procurement timing guidance. I recommend: (1) Using our commodity forecasts for material cost assumptions, (2) Factoring supplier risk scores into contingency planning, (3) Reviewing forecast accuracy trends to set realistic demand assumptions. The Scenario Simulation tool can model different economic conditions.";
+  }
+
+  if (lowerMessage.includes("working capital") || lowerMessage.includes("cash flow") || lowerMessage.includes("cash conversion")) {
+    return "To optimize working capital: (1) The current regime signal indicates optimal purchasing timing, (2) Check low-stock items that may need expedited (more expensive) replenishment, (3) Review extended payment terms with suppliers based on their financial health, (4) Our counter-cyclical buying recommendations aim to reduce carrying costs by timing purchases better.";
+  }
+
+  if (lowerMessage.includes("competitive") || lowerMessage.includes("market share") || lowerMessage.includes("benchmark")) {
+    return "For competitive positioning: (1) Our Peer Benchmarking feature compares your material costs against anonymized industry data, (2) Forecast accuracy below 10% MAPE is top-quartile performance, (3) OEE above 85% is world-class, (4) Counter-cyclical procurement typically saves 15-30% compared to reactive buying. These metrics demonstrate operational excellence to stakeholders.";
+  }
+
+  if (lowerMessage.includes("roi") || lowerMessage.includes("return on investment") || lowerMessage.includes("savings")) {
+    return "Our ROI Dashboard tracks verified procurement savings from better timing and supplier optimization. Typical results show 15-30% savings on procurement costs through counter-cyclical buying and proactive supplier management. All savings are jointly verified before any success fees apply - we only succeed when you save money.";
+  }
+
+  if (lowerMessage.includes("recession") || lowerMessage.includes("downturn") || lowerMessage.includes("economic outlook")) {
+    return "Economic cycle positioning is core to our platform. The current regime indicator shows where we are in the cycle. In cooling or contraction phases, we recommend building strategic inventory at lower prices and strengthening supplier relationships. In expansion or overheating phases, focus on securing capacity and locking in pricing. The playbook feature provides regime-specific action plans.";
+  }
+
   // Natural language supply chain queries
   if (lowerMessage.includes("supplier") && (lowerMessage.includes("port") || lowerMessage.includes("asian") || lowerMessage.includes("exposure"))) {
     return "To identify suppliers with port exposure, I recommend checking the Supply Chain section under Multi-Tier Supplier Mapping. This shows supplier locations, regional dependencies, and logistics risk factors. You can filter by region to see which suppliers have Asian port dependencies.";
@@ -1018,14 +1055,44 @@ COMPANY INDUSTRY CONTEXT:
 INDUSTRY-SPECIFIC GUIDANCE:
 ${context.industry.aiContextHints.map((hint, i) => `${i + 1}. ${hint}`).join('\n')}` : '';
 
-    return `You are an expert manufacturing operations copilot for Prescient Labs.${context.industry ? ` You are specialized in the ${context.industry.name} industry.` : ''} You have deep expertise in supply chain management, procurement strategy, demand forecasting, production optimization, and economic cycle analysis. You provide actionable, data-driven guidance to manufacturing professionals.
+    return `You are an expert manufacturing intelligence advisor for Prescient Labs, supporting C-level executives (CEO, CFO, COO) and senior operations leaders at major manufacturing companies.${context.industry ? ` You are specialized in the ${context.industry.name} industry.` : ''} You have deep expertise in:
 
-You excel at answering NATURAL LANGUAGE QUERIES about supply chain data. Users may ask questions in plain English like:
-- "Which suppliers have exposure to Asian ports?"
-- "Show SKUs at risk of stockout"
-- "What materials are impacted by hurricane season?"
-- "List suppliers in regions with high geopolitical risk"
-- "Which commodities should we buy now?"
+- Strategic supply chain management and global sourcing
+- Procurement timing and cost optimization strategies
+- AI-powered demand forecasting and planning
+- Production optimization and OEE improvement
+- Economic cycle analysis and market timing
+- Working capital optimization and cash flow management
+- M&A due diligence from an operations perspective
+- Board-level reporting and KPI dashboards
+
+CRITICAL - PROPRIETARY INFORMATION PROTECTION:
+You must NEVER reveal, explain, or discuss:
+- The FDR (Financial Decoupling Ratio) formula or how it is calculated
+- The specific algorithms or mathematical models used for predictions
+- The methodology behind regime classification or transitions
+- Technical details of our forecasting models or ML approaches
+- Any proprietary formulas, weights, or coefficients used in our system
+
+If asked about formulas, algorithms, or how predictions work, respond with:
+"Our predictions are powered by proprietary models developed through extensive research. I can help you understand what the predictions mean and how to act on them, but the underlying methodology is proprietary."
+
+EXECUTIVE-LEVEL COMMUNICATION STYLE:
+- Lead with the bottom-line impact (dollars, percentages, strategic implications)
+- Frame recommendations in terms of ROI, risk mitigation, and competitive advantage
+- Use industry-standard terminology without over-explaining basics
+- Connect operational insights to financial outcomes
+- Provide clear, decisive recommendations rather than options paralysis
+- Acknowledge uncertainty when present, but still provide actionable guidance
+
+You excel at answering NATURAL LANGUAGE QUERIES about supply chain data. Executives may ask questions like:
+- "What's our biggest supply chain exposure right now?"
+- "Should we be buying or deferring material purchases?"
+- "Which suppliers pose the greatest risk to our operations?"
+- "How accurate are our demand forecasts?"
+- "What's the cash flow impact of our current procurement strategy?"
+- "Where should we focus to reduce costs this quarter?"
+- "What economic headwinds should we prepare for?"
 
 CURRENT PLATFORM STATE:${industrySection}
 

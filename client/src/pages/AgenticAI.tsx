@@ -269,7 +269,7 @@ export default function AgenticAI() {
     industry: "",
     companySize: "",
     role: "",
-    primaryUseCase: "",
+    primaryUseCases: [] as string[],
     
     // Display Preferences
     layoutDensity: "comfortable",
@@ -1586,23 +1586,53 @@ export default function AgenticAI() {
                   </Select>
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="primaryUseCase">Primary Use Case</Label>
-                  <Select value={userSettings.primaryUseCase} onValueChange={(v) => updateSetting("primaryUseCase", v)}>
-                    <SelectTrigger id="primaryUseCase" data-testid="select-use-case">
-                      <SelectValue placeholder="What brings you to Prescient Labs?" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="demand-forecasting">Demand Forecasting</SelectItem>
-                      <SelectItem value="procurement">Procurement Optimization</SelectItem>
-                      <SelectItem value="inventory">Inventory Management</SelectItem>
-                      <SelectItem value="supply-chain">Supply Chain Visibility</SelectItem>
-                      <SelectItem value="production">Production Planning</SelectItem>
-                      <SelectItem value="risk">Risk Management</SelectItem>
-                      <SelectItem value="cost-reduction">Cost Reduction</SelectItem>
-                      <SelectItem value="all">All of the Above</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="space-y-3">
+                  <Label>Primary Use Cases (Select all that apply)</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { id: "demand-forecasting", label: "Demand Forecasting" },
+                      { id: "procurement", label: "Procurement Optimization" },
+                      { id: "inventory", label: "Inventory Management" },
+                      { id: "supply-chain", label: "Supply Chain Visibility" },
+                      { id: "production", label: "Production Planning" },
+                      { id: "risk", label: "Risk Management" },
+                      { id: "cost-reduction", label: "Cost Reduction" },
+                      { id: "market-timing", label: "Market Timing" },
+                    ].map((useCase) => (
+                      <div 
+                        key={useCase.id} 
+                        className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all hover-elevate ${
+                          userSettings.primaryUseCases.includes(useCase.id) 
+                            ? "border-primary bg-primary/5" 
+                            : "border-border"
+                        }`}
+                        onClick={() => {
+                          const current = userSettings.primaryUseCases;
+                          const updated = current.includes(useCase.id)
+                            ? current.filter(u => u !== useCase.id)
+                            : [...current, useCase.id];
+                          setUserSettings(prev => ({ ...prev, primaryUseCases: updated }));
+                        }}
+                        data-testid={`checkbox-usecase-${useCase.id}`}
+                      >
+                        <div className={`w-4 h-4 rounded border flex items-center justify-center ${
+                          userSettings.primaryUseCases.includes(useCase.id) 
+                            ? "bg-primary border-primary" 
+                            : "border-muted-foreground"
+                        }`}>
+                          {userSettings.primaryUseCases.includes(useCase.id) && (
+                            <CheckCircle className="h-3 w-3 text-primary-foreground" />
+                          )}
+                        </div>
+                        <span className="text-sm">{useCase.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {userSettings.primaryUseCases.length > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      {userSettings.primaryUseCases.length} use case{userSettings.primaryUseCases.length > 1 ? 's' : ''} selected
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>
