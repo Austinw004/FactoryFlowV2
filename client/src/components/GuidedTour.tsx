@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { X, ChevronRight, ChevronLeft, Sparkles, BarChart3, Network, Gauge, MessageSquare, Check } from "lucide-react";
+import { X, ChevronRight, ChevronLeft, Sparkles, BarChart3, Network, Gauge, MessageSquare, Check, Minimize2, Maximize2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 interface TourStep {
@@ -61,6 +61,7 @@ const TOUR_STORAGE_PREFIX = "prescient_tour_completed_";
 export function GuidedTour() {
   const { user, isLoading } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [hasSeenTour, setHasSeenTour] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -89,6 +90,7 @@ export function GuidedTour() {
       localStorage.setItem(storageKey, "true");
     }
     setIsOpen(false);
+    setIsMinimized(false);
     setHasSeenTour(true);
   };
 
@@ -97,6 +99,7 @@ export function GuidedTour() {
       localStorage.setItem(storageKey, "true");
     }
     setIsOpen(false);
+    setIsMinimized(false);
     setHasSeenTour(true);
   };
 
@@ -117,6 +120,15 @@ export function GuidedTour() {
   const handleRestart = () => {
     setCurrentStep(0);
     setIsOpen(true);
+    setIsMinimized(false);
+  };
+
+  const handleMinimize = () => {
+    setIsMinimized(true);
+  };
+
+  const handleExpand = () => {
+    setIsMinimized(false);
   };
 
   if (!isInitialized || isLoading) {
@@ -139,6 +151,22 @@ export function GuidedTour() {
     );
   }
 
+  if (isMinimized) {
+    return (
+      <div className="fixed bottom-4 right-4 z-50" data-testid="guided-tour-minimized">
+        <Button 
+          onClick={handleExpand}
+          className="gap-2 shadow-lg"
+          data-testid="button-expand-tour"
+        >
+          <Sparkles className="h-4 w-4" />
+          Continue Tour ({currentStep + 1}/{tourSteps.length})
+          <Maximize2 className="h-4 w-4" />
+        </Button>
+      </div>
+    );
+  }
+
   const step = tourSteps[currentStep];
   const Icon = step.icon;
 
@@ -146,7 +174,7 @@ export function GuidedTour() {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" data-testid="guided-tour-modal">
       <Card className="max-w-md w-full mx-4 animate-in fade-in zoom-in duration-200">
         <CardHeader className="pb-4">
-          <div className="flex items-start justify-between">
+          <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                 <Icon className="h-5 w-5 text-primary" />
@@ -158,9 +186,26 @@ export function GuidedTour() {
                 </Badge>
               </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={handleSkip} data-testid="button-skip-tour">
-              <X className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleMinimize} 
+                title="Minimize tour"
+                data-testid="button-minimize-tour"
+              >
+                <Minimize2 className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleSkip} 
+                title="Skip tour"
+                data-testid="button-skip-tour"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
