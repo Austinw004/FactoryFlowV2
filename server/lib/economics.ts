@@ -101,6 +101,21 @@ export class DualCircuitEconomics {
   }
 
   /**
+   * Get current regime with core metrics
+   * Returns regime, FDR, and intelligence data
+   */
+  getCurrentRegime() {
+    const intelligence = this.intelligence.getIntelligenceSummary();
+    return {
+      regime: this.regime,
+      fdr: this.fdr,
+      policySignals: intelligence.procurementSignal,
+      intelligence,
+      lastUpdated: this.data.last_updated,
+    };
+  }
+
+  /**
    * Get optimized regime factor for forecasting
    * Data-driven rather than static factors
    */

@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { db } from "@db";
-import { sql } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { attachRbacUser, requirePermission } from "./middleware/rbac";
 import rbacRoutes from "./routes/rbac";
@@ -3148,14 +3148,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const triggers = await rfqGenerationService.identifyRfqTriggers(user.companyId);
       
-      await logAudit(
-        storage,
-        user.companyId,
-        userId,
-        'rfq_scan',
-        `Scanned for RFQ opportunities. Found ${triggers.length} materials below reorder point.`,
-        { triggerCount: triggers.length }
-      );
+      await logAudit({
+        action: "view",
+        entityType: "rfq_scan",
+        notes: `Scanned for RFQ opportunities. Found ${triggers.length} materials below reorder point.`,
+        req,
+      });
 
       res.json(triggers);
     } catch (error: any) {
@@ -3177,14 +3175,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const successCount = results.filter(r => r.success).length;
       
-      await logAudit(
-        storage,
-        user.companyId,
-        userId,
-        'rfq_auto_generate',
-        `Auto-generated ${successCount} RFQs from ${results.length} opportunities.`,
-        { results }
-      );
+      await logAudit({
+        action: "generate",
+        entityType: "rfq_auto_generate",
+        notes: `Auto-generated ${successCount} RFQs from ${results.length} opportunities.`,
+        req,
+      });
 
       res.json({
         success: true,
@@ -3225,14 +3221,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const rfq = await storage.createRfq(rfqData);
       
-      await logAudit(
-        storage,
-        user.companyId,
-        userId,
-        'rfq_create',
-        `Created manual RFQ ${rfq.rfqNumber} for material ${rfq.materialId}`,
-        { rfqId: rfq.id }
-      );
+      await logAudit({
+        action: "create",
+        entityType: "rfq",
+        entityId: rfq.id,
+        notes: `Created manual RFQ ${rfq.rfqNumber} for material ${rfq.materialId}`,
+        req,
+      });
 
       res.status(201).json(rfq);
     } catch (error: any) {
@@ -3260,14 +3255,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const updatedRfq = await storage.updateRfq(req.params.id, req.body);
       
-      await logAudit(
-        storage,
-        user.companyId,
-        userId,
-        'rfq_update',
-        `Updated RFQ ${existingRfq.rfqNumber}`,
-        { rfqId: req.params.id, changes: req.body }
-      );
+      await logAudit({
+        action: "update",
+        entityType: "rfq",
+        entityId: req.params.id,
+        notes: `Updated RFQ ${existingRfq.rfqNumber}`,
+        changes: req.body,
+        req,
+      });
 
       res.json(updatedRfq);
     } catch (error: any) {
@@ -3300,14 +3295,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sentAt: new Date(),
       });
 
-      await logAudit(
-        storage,
-        user.companyId,
-        userId,
-        'rfq_approve',
-        `Approved and sent RFQ ${rfq.rfqNumber}`,
-        { rfqId: req.params.id }
-      );
+      await logAudit({
+        action: "update",
+        entityType: "rfq",
+        entityId: req.params.id,
+        notes: `Approved and sent RFQ ${rfq.rfqNumber}`,
+        req,
+      });
 
       res.json(updatedRfq);
     } catch (error: any) {
@@ -3335,14 +3329,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await storage.deleteRfq(req.params.id);
       
-      await logAudit(
-        storage,
-        user.companyId,
-        userId,
-        'rfq_delete',
-        `Deleted RFQ ${rfq.rfqNumber}`,
-        { rfqId: req.params.id }
-      );
+      await logAudit({
+        action: "delete",
+        entityType: "rfq",
+        entityId: req.params.id,
+        notes: `Deleted RFQ ${rfq.rfqNumber}`,
+        req,
+      });
 
       res.json({ success: true });
     } catch (error: any) {
@@ -3388,14 +3381,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "quotes_received",
       });
 
-      await logAudit(
-        storage,
-        user.companyId,
-        userId,
-        'rfq_quote_add',
-        `Added quote from supplier ${quote.supplierId} to RFQ ${rfq.rfqNumber}`,
-        { rfqId: req.params.rfqId, quoteId: quote.id }
-      );
+      await logAudit({
+        action: "create",
+        entityType: "rfq_quote",
+        entityId: quote.id,
+        notes: `Added quote from supplier ${quote.supplierId} to RFQ ${rfq.rfqNumber}`,
+        req,
+      });
 
       res.status(201).json(quote);
     } catch (error: any) {
@@ -12049,7 +12041,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const sku of skus) {
         const demandHistory = await storage.getDemandHistory(sku.id);
         const avgDemand = demandHistory.length > 0
-          ? demandHistory.reduce((sum, d) => sum + d.quantity, 0) / demandHistory.length
+          ? demandHistory.reduce((sum, d) => sum + d.units, 0) / demandHistory.length
           : 0;
         
         // Get BOMs for this SKU
