@@ -241,15 +241,58 @@ const chatActionTypeIcons: Record<string, typeof ShoppingCart> = {
   assess_supplier_risk: Building,
 };
 
-const suggestedQuestions = [
-  "Which suppliers have exposure to Asian ports?",
-  "Show SKUs at risk of stockout in the next 30 days",
-  "What materials are impacted by current weather alerts?",
-  "Which commodities should we buy now based on futures?",
-  "List suppliers in regions with high geopolitical risk",
-  "What's the current consumer sentiment impact on demand?",
-  "Show me the FDR adjustment from external variables",
-  "Identify single-source materials with supply risk",
+const quickActionCategories = [
+  {
+    category: "Opportunities",
+    icon: TrendingUp,
+    color: "text-green-500",
+    bgColor: "bg-green-500/10",
+    questions: [
+      { short: "What should I buy now?", full: "Which commodities should we buy now based on futures and market timing?" },
+      { short: "Where can we save money?", full: "Show me the top opportunities to reduce procurement costs this month." },
+      { short: "Best timing for purchases?", full: "What's the optimal timing for major purchases based on current market conditions?" },
+    ]
+  },
+  {
+    category: "Risks & Alerts",
+    icon: AlertTriangle,
+    color: "text-red-500",
+    bgColor: "bg-red-500/10",
+    questions: [
+      { short: "What needs my attention?", full: "What are the critical issues that need my attention today?" },
+      { short: "Supply chain risks?", full: "Which suppliers or materials have the highest risk exposure right now?" },
+      { short: "Stockout warnings?", full: "Show me SKUs at risk of stockout in the next 30 days." },
+    ]
+  },
+  {
+    category: "Operations",
+    icon: Gauge,
+    color: "text-blue-500",
+    bgColor: "bg-blue-500/10",
+    questions: [
+      { short: "How are we performing?", full: "Give me a summary of our key operational metrics and performance." },
+      { short: "Forecast accuracy?", full: "How accurate are our demand forecasts and where can we improve?" },
+      { short: "Production status?", full: "What's the current production status and any bottlenecks?" },
+    ]
+  },
+  {
+    category: "Strategy",
+    icon: Target,
+    color: "text-purple-500",
+    bgColor: "bg-purple-500/10",
+    questions: [
+      { short: "Market outlook?", full: "What's the current economic regime and what does it mean for our strategy?" },
+      { short: "Supplier recommendations?", full: "Which suppliers should we strengthen relationships with based on current conditions?" },
+      { short: "Budget planning help?", full: "What should I consider for next quarter's budget based on current trends?" },
+    ]
+  }
+];
+
+const conversationalStarters = [
+  "What should I focus on today?",
+  "Give me the executive summary",
+  "What opportunities am I missing?",
+  "How's our supply chain health?",
 ];
 
 export default function AgenticAI() {
@@ -426,18 +469,19 @@ export default function AgenticAI() {
     }
   });
 
-  const handleSendChat = () => {
-    if (!chatInput.trim() || chatMutation.isPending) return;
+  const handleSendChat = (directMessage?: string) => {
+    const messageToSend = directMessage || chatInput.trim();
+    if (!messageToSend || chatMutation.isPending) return;
     
     const userMessage: ChatMessage = {
       id: `msg_${Date.now()}`,
       role: "user",
-      content: chatInput.trim(),
+      content: messageToSend,
       timestamp: new Date()
     };
     
     setChatMessages(prev => [...prev, userMessage]);
-    chatMutation.mutate(chatInput.trim());
+    chatMutation.mutate(messageToSend);
     setChatInput("");
   };
 
@@ -905,33 +949,70 @@ export default function AgenticAI() {
                   <ScrollArea className="flex-1 p-4">
                     <div className="space-y-4">
                       {chatMessages.length === 0 ? (
-                        <div className="text-center py-12">
-                          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-purple-500/10 flex items-center justify-center">
-                            <Sparkles className="h-8 w-8 text-purple-500" />
+                        <div className="py-8 px-4">
+                          <div className="text-center mb-8">
+                            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center">
+                              <Sparkles className="h-8 w-8 text-purple-500" />
+                            </div>
+                            <h3 className="font-semibold text-xl mb-2">Hi! I'm your AI Assistant</h3>
+                            <p className="text-muted-foreground text-sm max-w-md mx-auto">
+                              Ask me anything in plain English. I understand your business context and can help with procurement, forecasting, risks, and strategy.
+                            </p>
                           </div>
-                          <h3 className="font-semibold text-lg mb-2">Agentic AI Assistant</h3>
-                          <p className="text-muted-foreground text-sm mb-6">
-                            I can take autonomous actions on your behalf. Ask me anything about your supply chain, 
-                            or request actions like creating purchase orders or rebalancing inventory.
+                          
+                          <div className="max-w-lg mx-auto mb-6">
+                            <p className="text-xs font-medium text-muted-foreground mb-3 text-center">Quick Start - Just Click:</p>
+                            <div className="flex flex-wrap gap-2 justify-center">
+                              {conversationalStarters.map((starter, idx) => (
+                                <Button
+                                  key={idx}
+                                  variant="outline"
+                                  size="sm"
+                                  className="rounded-full"
+                                  onClick={() => {
+                                    setChatInput(starter);
+                                    handleSendChat(starter);
+                                  }}
+                                  data-testid={`button-starter-${idx}`}
+                                >
+                                  {starter}
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3 max-w-lg mx-auto">
+                            {quickActionCategories.map((cat, catIdx) => {
+                              const CategoryIcon = cat.icon;
+                              return (
+                                <div key={catIdx} className={`rounded-lg p-3 ${cat.bgColor} border border-transparent`}>
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <CategoryIcon className={`h-4 w-4 ${cat.color}`} />
+                                    <span className={`text-sm font-medium ${cat.color}`}>{cat.category}</span>
+                                  </div>
+                                  <div className="space-y-1">
+                                    {cat.questions.slice(0, 2).map((q, qIdx) => (
+                                      <button
+                                        key={qIdx}
+                                        className="w-full text-left text-xs py-1.5 px-2 rounded hover:bg-background/50 transition-colors"
+                                        onClick={() => {
+                                          setChatInput(q.full);
+                                          handleSendChat(q.full);
+                                        }}
+                                        data-testid={`button-cat-${catIdx}-q-${qIdx}`}
+                                      >
+                                        {q.short}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          
+                          <p className="text-center text-xs text-muted-foreground mt-6">
+                            Or just type your question below - I'll understand!
                           </p>
-                          <div className="space-y-2 max-w-md mx-auto">
-                            <p className="text-xs font-medium text-muted-foreground px-1">Try asking:</p>
-                            {suggestedQuestions.slice(0, 4).map((q, idx) => (
-                              <Button
-                                key={idx}
-                                variant="outline"
-                                className="w-full justify-start text-left h-auto py-2 px-3 text-sm"
-                                onClick={() => {
-                                  setChatInput(q);
-                                  textareaRef.current?.focus();
-                                }}
-                                data-testid={`button-suggested-question-${idx}`}
-                              >
-                                <Lightbulb className="h-3 w-3 mr-2 flex-shrink-0 text-yellow-500" />
-                                <span className="line-clamp-1">{q}</span>
-                              </Button>
-                            ))}
-                          </div>
                         </div>
                       ) : (
                         chatMessages.map((msg) => (
@@ -1021,7 +1102,7 @@ export default function AgenticAI() {
                         data-testid="input-chat"
                       />
                       <Button
-                        onClick={handleSendChat}
+                        onClick={() => handleSendChat()}
                         disabled={!chatInput.trim() || chatMutation.isPending}
                         className="bg-purple-600 hover:bg-purple-700"
                         data-testid="button-send-chat"
@@ -1040,28 +1121,38 @@ export default function AgenticAI() {
 
             <div className="space-y-4">
               <Card>
-                <CardHeader>
+                <CardHeader className="pb-2">
                   <CardTitle className="text-sm flex items-center gap-2">
                     <Zap className="h-4 w-4 text-yellow-500" />
                     Quick Actions
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2">
-                  {suggestedQuestions.map((q, idx) => (
-                    <Button
-                      key={idx}
-                      variant="outline"
-                      className="w-full justify-start text-left h-auto py-2 px-3 text-sm"
-                      onClick={() => {
-                        setChatInput(q);
-                        textareaRef.current?.focus();
-                      }}
-                      data-testid={`button-quick-action-${idx}`}
-                    >
-                      <Lightbulb className="h-3 w-3 mr-2 flex-shrink-0 text-yellow-500" />
-                      <span className="line-clamp-2 text-xs">{q}</span>
-                    </Button>
-                  ))}
+                <CardContent className="space-y-3">
+                  {quickActionCategories.map((cat, catIdx) => {
+                    const CategoryIcon = cat.icon;
+                    return (
+                      <div key={catIdx}>
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <CategoryIcon className={`h-3 w-3 ${cat.color}`} />
+                          <span className={`text-xs font-medium ${cat.color}`}>{cat.category}</span>
+                        </div>
+                        <div className="space-y-1">
+                          {cat.questions.map((q, qIdx) => (
+                            <Button
+                              key={qIdx}
+                              variant="ghost"
+                              size="sm"
+                              className="w-full justify-start text-left h-auto py-1.5 px-2 text-xs"
+                              onClick={() => handleSendChat(q.full)}
+                              data-testid={`button-quick-${catIdx}-${qIdx}`}
+                            >
+                              {q.short}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </CardContent>
               </Card>
 
