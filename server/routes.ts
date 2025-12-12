@@ -475,7 +475,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         uptime: process.uptime(),
         checks: {
           database: { status: 'ok', latencyMs: dbLatency },
-          cache: { status: 'ok', activeEntries: cacheStats.activeEntries },
+          cache: { status: 'ok', activeEntries: cacheStats.size },
           websocket: { status: 'ok', connections: wsConnections },
         },
       });
@@ -713,7 +713,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all users in company (for role management)
-  app.get('/api/users', isAuthenticated, requirePermission('MANAGE_USERS'), async (req: any, res) => {
+  app.get('/api/users', isAuthenticated, requirePermission('manage_users'), async (req: any, res) => {
     try {
       const companyId = req.rbacUser?.companyId;
       

@@ -14,7 +14,7 @@ interface AuditContext {
 }
 
 export async function logAudit(params: {
-  action: "create" | "update" | "delete" | "export" | "import" | "login" | "logout" | "assign" | "remove";
+  action: "create" | "update" | "delete" | "export" | "import" | "login" | "logout" | "assign" | "remove" | "generate" | "aggregate" | "calculate" | "run" | "execute" | "view";
   entityType: string;
   entityId?: string;
   changes?: any;
