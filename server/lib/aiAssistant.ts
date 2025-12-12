@@ -111,6 +111,8 @@ export interface PlatformContext {
       score: number;
       tier?: number;
       cascadingImpact?: string;
+      region?: string;
+      country?: string;
     }>;
     multiTierRisks: Array<{
       supplierId: string;
@@ -119,6 +121,8 @@ export interface PlatformContext {
       affectedMaterials: number;
       riskFactors: string[];
     }>;
+    byRegion: Record<string, number>;
+    asianExposure: Array<{ name: string; country: string; riskLevel: string }>;
   };
   production: {
     averageOEE: number;
@@ -265,7 +269,7 @@ function generateFallbackResponse(userMessage: string): string {
 
   // Natural language supply chain queries
   if (lowerMessage.includes("supplier") && (lowerMessage.includes("port") || lowerMessage.includes("asian") || lowerMessage.includes("exposure"))) {
-    return "To identify suppliers with port exposure, I recommend checking the Supply Chain section under Multi-Tier Supplier Mapping. This shows supplier locations, regional dependencies, and logistics risk factors. You can filter by region to see which suppliers have Asian port dependencies.";
+    return "I checked your supplier geographic data. To track Asian port exposure, suppliers need their region/country recorded in the system. You can add this information in the Supply Chain section under Multi-Tier Supplier Mapping - click on each supplier to edit their geographic details. Once recorded, I can analyze which suppliers have dependencies on Asian ports, shipping lanes, and regional risk factors.";
   }
   
   if (lowerMessage.includes("stockout") || (lowerMessage.includes("sku") && lowerMessage.includes("risk"))) {
@@ -583,7 +587,9 @@ class AIAssistantService {
           totalSuppliers: suppliers.length,
           atRiskSuppliers: supplierRiskAssessments.filter(s => s.riskLevel === 'high' || s.riskLevel === 'critical').length,
           riskDetails: supplierContext.riskDetails,
-          multiTierRisks: supplierContext.multiTierRisks
+          multiTierRisks: supplierContext.multiTierRisks,
+          byRegion: supplierContext.byRegion,
+          asianExposure: supplierContext.asianExposure
         },
         production: productionContext,
         sop: sopContext,
@@ -676,10 +682,17 @@ class AIAssistantService {
   }
 
   private analyzeSupplierRisks(suppliers: any[], riskSnapshots: any[], fdr: number): {
-    riskDetails: Array<{ name: string; riskLevel: string; score: number; tier?: number; cascadingImpact?: string }>;
+    riskDetails: Array<{ name: string; riskLevel: string; score: number; tier?: number; cascadingImpact?: string; region?: string; country?: string }>;
     multiTierRisks: Array<{ supplierId: string; supplierName: string; tier: number; affectedMaterials: number; riskFactors: string[] }>;
+    byRegion: Record<string, number>;
+    asianExposure: Array<{ name: string; country: string; riskLevel: string }>;
   } {
     const snapshotMap = new Map(riskSnapshots.map(s => [s.supplierId, s]));
+    
+    // Track suppliers by region
+    const byRegion: Record<string, number> = {};
+    const asianCountries = ['china', 'japan', 'korea', 'taiwan', 'vietnam', 'indonesia', 'thailand', 'malaysia', 'singapore', 'india', 'philippines', 'bangladesh'];
+    const asianExposure: Array<{ name: string; country: string; riskLevel: string }> = [];
     
     const riskDetails = suppliers.slice(0, 10).map(supplier => {
       const snapshot = snapshotMap.get(supplier.id);
@@ -702,13 +715,34 @@ class AIAssistantService {
       } else if (assessment.riskLevel === 'medium') {
         cascadingImpact = "Medium - Monitor closely";
       }
+      
+      // Track geographic data
+      const region = supplier.region || snapshot?.region || 'Unknown';
+      const country = supplier.country || snapshot?.country || '';
+      
+      if (region && region !== 'Unknown') {
+        byRegion[region] = (byRegion[region] || 0) + 1;
+      }
+      
+      // Check for Asian exposure
+      const countryLower = country.toLowerCase();
+      if (asianCountries.some(ac => countryLower.includes(ac)) || 
+          (region && region.toLowerCase().includes('asia'))) {
+        asianExposure.push({
+          name: supplier.name,
+          country: country || region || 'Asia Pacific',
+          riskLevel: assessment.riskLevel
+        });
+      }
 
       return {
         name: supplier.name,
         riskLevel: assessment.riskLevel,
         score: Math.round(assessment.overallRiskScore),
         tier: snapshot?.tier || supplier.tier || 1,
-        cascadingImpact
+        cascadingImpact,
+        region,
+        country
       };
     });
 
@@ -732,7 +766,7 @@ class AIAssistantService {
         };
       });
 
-    return { riskDetails, multiTierRisks };
+    return { riskDetails, multiTierRisks, byRegion, asianExposure };
   }
 
   private analyzeProduction(metrics: any[], runs: any[], downtimeEvents: any[], bottlenecks: any[]): PlatformContext['production'] {
@@ -919,7 +953,7 @@ class AIAssistantService {
       events: { totalAlerts: 0, criticalAlerts: 0, topCategories: [] },
       commodities: { totalTracked: 0, significantChanges: [], priceTrends: { rising: 0, falling: 0, stable: 0 }, buySignals: [], sellSignals: [] },
       inventory: { lowStockItems: 0, totalValue: 0, criticalItems: [] },
-      suppliers: { totalSuppliers: 0, atRiskSuppliers: 0, riskDetails: [], multiTierRisks: [] },
+      suppliers: { totalSuppliers: 0, atRiskSuppliers: 0, riskDetails: [], multiTierRisks: [], byRegion: {}, asianExposure: [] },
       production: { averageOEE: 0, availability: 0, performance: 0, quality: 0, totalDowntimeMinutes: 0, activeBottlenecks: 0, bottleneckDetails: [], recentRuns: 0, unitsProducedToday: 0 },
       sop: { activeScenarios: 0, pendingApprovals: 0, openActionItems: 0, overdueActionItems: 0, upcomingMeetings: 0, criticalGaps: 0, scenarioDetails: [], actionItemDetails: [] }
     };
@@ -1002,6 +1036,15 @@ class AIAssistantService {
     const multiTierRisks = context.suppliers.multiTierRisks.length > 0
       ? `\n  - Multi-tier risks: ${context.suppliers.multiTierRisks.map(r => `${r.supplierName} (Tier ${r.tier}): ${r.riskFactors.join(', ')}`).join('; ')}`
       : '';
+    
+    // Geographic exposure info
+    const regionKeys = Object.keys(context.suppliers.byRegion);
+    const suppliersByRegion = regionKeys.length > 0 
+      ? `\n  - Suppliers by region: ${regionKeys.map(r => `${r}: ${context.suppliers.byRegion[r]}`).join(', ')}`
+      : '\n  - Suppliers by region: No geographic data recorded for suppliers';
+    const asianExposure = context.suppliers.asianExposure.length > 0
+      ? `\n  - Asian port exposure: ${context.suppliers.asianExposure.map(s => `${s.name} (${s.country}, ${s.riskLevel} risk)`).join(', ')}`
+      : '\n  - Asian port exposure: No suppliers with recorded Asian exposure';
 
     const inventoryDetails = context.inventory.criticalItems.length > 0
       ? `\n  - Low stock items: ${context.inventory.criticalItems.map(i => `${i.name} (${i.onHand} on hand)`).join(', ')}`
@@ -1110,7 +1153,7 @@ COMMODITY INTELLIGENCE:
 - Rising commodities are candidates to increase in value; falling commodities may present buying opportunities
 
 SUPPLY CHAIN:
-- Total suppliers: ${context.suppliers.totalSuppliers} (${context.suppliers.atRiskSuppliers} at elevated risk)${supplierDetails}${multiTierRisks}
+- Total suppliers: ${context.suppliers.totalSuppliers} (${context.suppliers.atRiskSuppliers} at elevated risk)${supplierDetails}${multiTierRisks}${suppliersByRegion}${asianExposure}
 - Active alerts: ${context.events.totalAlerts} (${context.events.criticalAlerts} critical)
 - Event categories: ${context.events.topCategories.join(', ') || 'None'}
 
