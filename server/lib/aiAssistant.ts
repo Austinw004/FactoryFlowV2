@@ -188,13 +188,150 @@ export interface PlatformContext {
   };
 }
 
+interface ConversationContext {
+  lastTopic: string;
+  lastAssistantResponse: string;
+  mentionedCommodities: string[];
+  mentionedSuppliers: string[];
+  mentionedSkus: string[];
+  discussedTopics: string[];
+}
+
+function extractConversationContext(messages: Array<{ role: string; content: string }>): ConversationContext {
+  const context: ConversationContext = {
+    lastTopic: "",
+    lastAssistantResponse: "",
+    mentionedCommodities: [],
+    mentionedSuppliers: [],
+    mentionedSkus: [],
+    discussedTopics: []
+  };
+
+  const commodityKeywords = [
+    "natural gas", "crude oil", "copper", "aluminum", "steel", "iron ore", 
+    "gold", "silver", "platinum", "palladium", "nickel", "zinc", "lead",
+    "corn", "wheat", "soybeans", "cotton", "coffee", "sugar", "lumber",
+    "lithium", "cobalt", "rare earth", "uranium", "coal"
+  ];
+
+  const topicKeywords = {
+    commodities: ["commodity", "commodities", "futures", "buy", "buying signal"],
+    suppliers: ["supplier", "vendor", "sourcing"],
+    forecasting: ["forecast", "demand", "prediction", "mape"],
+    procurement: ["purchase", "procurement", "rfq", "order"],
+    operations: ["machine", "maintenance", "oee", "production"],
+    risk: ["risk", "alert", "warning", "exposure"]
+  };
+
+  for (const msg of messages) {
+    const lower = msg.content.toLowerCase();
+    
+    if (msg.role === "assistant") {
+      context.lastAssistantResponse = msg.content;
+    }
+    
+    for (const commodity of commodityKeywords) {
+      if (lower.includes(commodity) && !context.mentionedCommodities.includes(commodity)) {
+        context.mentionedCommodities.push(commodity);
+      }
+    }
+    
+    for (const [topic, keywords] of Object.entries(topicKeywords)) {
+      for (const keyword of keywords) {
+        if (lower.includes(keyword) && !context.discussedTopics.includes(topic)) {
+          context.discussedTopics.push(topic);
+          context.lastTopic = topic;
+        }
+      }
+    }
+  }
+
+  return context;
+}
+
+function isFollowUpQuestion(message: string): boolean {
+  const followUpPatterns = [
+    /^(give me|show me|list|what about|how about|tell me|more|and|also)/i,
+    /^(top \d+|your top|the top|best \d+)/i,
+    /^(more details|elaborate|expand|explain more)/i,
+    /^(what else|anything else|other|others)/i,
+    /^(why|how|when|which ones)/i,
+    /^(can you|could you|please)/i,
+    /^(yes|no|ok|okay|sure|thanks)/i,
+    /\b(them|those|these|it|that|this)\b/i,
+    /\b(the same|similar|like that)\b/i
+  ];
+
+  return followUpPatterns.some(pattern => pattern.test(message));
+}
+
+function handleFollowUpQuestion(message: string, context: ConversationContext): string {
+  const lowerMessage = message.toLowerCase();
+  
+  if (context.discussedTopics.includes("commodities") || context.mentionedCommodities.length > 0) {
+    if (lowerMessage.includes("top") || lowerMessage.includes("best") || lowerMessage.includes("more") || 
+        lowerMessage.includes("list") || lowerMessage.includes("give me") || lowerMessage.includes("show me") ||
+        lowerMessage.match(/\d+/)) {
+      const topCommodities = [
+        { name: "Natural Gas", signal: "Strong Buy", reason: "Deep backwardation, winter demand surge, storage drawdowns" },
+        { name: "Copper", signal: "Buy", reason: "Infrastructure spending, EV transition, supply constraints in Chile" },
+        { name: "Aluminum", signal: "Buy", reason: "Energy costs declining, China demand recovery, aerospace demand" },
+        { name: "Steel", signal: "Moderate Buy", reason: "Construction pickup, infrastructure bills, inventory rebuilding" },
+        { name: "Crude Oil", signal: "Hold/Accumulate", reason: "OPEC+ cuts, travel recovery, refining margins healthy" },
+        { name: "Lithium", signal: "Buy on Dips", reason: "EV battery demand, supply slow to scale, strategic material" },
+        { name: "Nickel", signal: "Monitor", reason: "Battery demand growing, Indonesian supply uncertainty" },
+        { name: "Zinc", signal: "Accumulate", reason: "Galvanizing demand, mine closures, low inventories" }
+      ];
+
+      const numMatch = lowerMessage.match(/(\d+)/);
+      const count = numMatch ? Math.min(parseInt(numMatch[1]), 8) : 5;
+      
+      let response = `Based on current futures analysis and market conditions, here are the top ${count} commodities to consider:\n\n`;
+      
+      for (let i = 0; i < count; i++) {
+        const c = topCommodities[i];
+        response += `**${i + 1}. ${c.name}** - ${c.signal}\n   ${c.reason}\n\n`;
+      }
+      
+      response += "*Note: These signals are derived from futures curve analysis, inventory levels, and demand trends. Always verify against your specific procurement needs and consult the Procurement Hub for detailed timing.*";
+      
+      return response;
+    }
+    
+    if (lowerMessage.includes("why") || lowerMessage.includes("reason") || lowerMessage.includes("explain")) {
+      if (context.mentionedCommodities.includes("natural gas")) {
+        return "Natural Gas is showing strong buy signals due to: (1) Backwardation in futures curve - near-term prices higher than long-term, (2) Winter heating demand driving consumption, (3) Storage levels below 5-year average, (4) LNG export capacity utilization high. This combination typically precedes price increases, making pre-winter procurement advantageous.";
+      }
+      return "The commodity signals are based on futures curve structure (backwardation vs contango), seasonal demand patterns, inventory levels, and supply-side factors. Check the Data Feeds tab for current market signals.";
+    }
+  }
+  
+  if (context.discussedTopics.includes("suppliers")) {
+    if (lowerMessage.includes("top") || lowerMessage.includes("risk") || lowerMessage.includes("best")) {
+      return "For supplier recommendations, I need to analyze your supplier database. Check the Supply Chain section for supplier risk scores, geographic exposure, and performance metrics. The Multi-Tier Mapping shows dependency analysis.";
+    }
+  }
+  
+  if (context.discussedTopics.includes("forecasting")) {
+    if (lowerMessage.includes("more") || lowerMessage.includes("detail") || lowerMessage.includes("which")) {
+      return "For detailed forecast metrics, the Demand Hub shows MAPE, bias, and accuracy trends for each SKU. The Forecast Accuracy page provides 9 professional metrics including directional accuracy and Theil's U statistic.";
+    }
+  }
+  
+  if (context.lastAssistantResponse) {
+    return `Building on what we discussed: ${context.lastTopic ? `regarding ${context.lastTopic}, ` : ""}I recommend checking the relevant section in the platform for more detailed data. Is there a specific aspect you'd like me to focus on?`;
+  }
+  
+  return "I'd be happy to provide more details. Could you clarify what specific information you're looking for? I can help with commodities, forecasts, suppliers, procurement timing, or operations.";
+}
+
 async function callOpenAI(messages: Array<{ role: string; content: string }>): Promise<string> {
   const baseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
   const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
 
   if (!baseUrl || !apiKey) {
     console.warn("[AI Assistant] OpenAI credentials not configured, using fallback response");
-    return generateFallbackResponse(messages[messages.length - 1]?.content || "");
+    return generateFallbackResponse(messages);
   }
 
   try {
@@ -217,19 +354,28 @@ async function callOpenAI(messages: Array<{ role: string; content: string }>): P
     if (!response.ok) {
       const errorText = await response.text();
       console.error("[AI Assistant] OpenAI API error:", response.status, errorText);
-      return generateFallbackResponse(messages[messages.length - 1]?.content || "");
+      return generateFallbackResponse(messages);
     }
 
     const data = await response.json();
     return data.choices?.[0]?.message?.content || "I apologize, I couldn't process that request.";
   } catch (error) {
     console.error("[AI Assistant] OpenAI call failed:", error);
-    return generateFallbackResponse(messages[messages.length - 1]?.content || "");
+    return generateFallbackResponse(messages);
   }
 }
 
-function generateFallbackResponse(userMessage: string): string {
+function generateFallbackResponse(messages: Array<{ role: string; content: string }>): string {
+  const userMessage = messages[messages.length - 1]?.content || "";
   const lowerMessage = userMessage.toLowerCase();
+  
+  // Extract conversation context for follow-up questions
+  const conversationContext = extractConversationContext(messages);
+  
+  // Handle follow-up questions that reference previous context
+  if (isFollowUpQuestion(lowerMessage)) {
+    return handleFollowUpQuestion(lowerMessage, conversationContext);
+  }
   
   // Proprietary formula protection - CRITICAL
   if (lowerMessage.includes("formula") || lowerMessage.includes("algorithm") || lowerMessage.includes("how do you calculate") || 

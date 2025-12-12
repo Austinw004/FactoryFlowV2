@@ -73,6 +73,11 @@ The system is a multi-tenant application ensuring data isolation per company. Co
   3. **Action Automation**: Quick actions to trigger simulations, generate RFQs, and navigate to relevant features
   4. **Context-Aware Insights**: Real-time insights based on economic regime, supply chain events, and inventory levels
   - Uses Replit AI Integrations (OpenAI) with graceful fallback responses
+  - **Fully Conversational**: Maintains conversation context across messages for natural follow-up questions
+    - Tracks discussed topics (commodities, suppliers, forecasting, procurement, operations)
+    - Remembers mentioned entities (specific commodities, SKUs, suppliers)
+    - Handles follow-up patterns like "give me your top 5", "tell me more", "why?"
+    - Works even in fallback mode when OpenAI is not configured
 
 ### System Design Choices
 
