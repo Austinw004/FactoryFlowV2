@@ -354,6 +354,13 @@ export interface IStorage {
     predictionsWithActuals: number;
     avgPredicted: number | null;
     avgActual: number | null;
+    // Enhanced metrics
+    trackingSignal: number | null;
+    theilsU: number | null;
+    directionalAccuracy: number | null;
+    confidenceHitRate: number | null;
+    mae: number | null;
+    rmse: number | null;
   }>;
   getForecastAccuracyByPeriod(companyId: string): Promise<Array<{
     period: string;
@@ -1640,7 +1647,8 @@ export class DbStorage implements IStorage {
 
   // Forecast Accuracy methods
   async getForecastAccuracyMetrics(companyId: string) {
-    const result = await db
+    // Get basic metrics from demand predictions
+    const basicResult = await db
       .select({
         totalPredictions: sql<number>`COUNT(*)::int`,
         predictionsWithActuals: sql<number>`COUNT(CASE WHEN ${demandPredictions.actualDemand} IS NOT NULL THEN 1 END)::int`,
@@ -1659,12 +1667,46 @@ export class DbStorage implements IStorage {
               WHEN ${demandPredictions.actualDemand} IS NOT NULL 
               THEN (${demandPredictions.predictedDemand} - ${demandPredictions.actualDemand})
             END
-          )`
+          )`,
+        mae: sql<number>`
+          AVG(
+            CASE 
+              WHEN ${demandPredictions.actualDemand} IS NOT NULL 
+              THEN ABS(${demandPredictions.predictedDemand} - ${demandPredictions.actualDemand})
+            END
+          )`,
+        rmse: sql<number>`
+          SQRT(AVG(
+            CASE 
+              WHEN ${demandPredictions.actualDemand} IS NOT NULL 
+              THEN POWER(${demandPredictions.predictedDemand} - ${demandPredictions.actualDemand}, 2)
+            END
+          ))`
       })
       .from(demandPredictions)
       .where(eq(demandPredictions.companyId, companyId));
+
+    // Get enhanced metrics from forecast accuracy tracking (most recent per SKU, then averaged)
+    const enhancedResult = await db
+      .select({
+        avgTrackingSignal: sql<number>`AVG(${forecastAccuracyTracking.trackingSignal})`,
+        avgTheilsU: sql<number>`AVG(${forecastAccuracyTracking.theilsU})`,
+        avgDirectionalAccuracy: sql<number>`AVG(${forecastAccuracyTracking.directionalAccuracy})`,
+        avgConfidenceHitRate: sql<number>`AVG(${forecastAccuracyTracking.confidenceHitRate})`
+      })
+      .from(forecastAccuracyTracking)
+      .where(eq(forecastAccuracyTracking.companyId, companyId));
     
-    return result[0];
+    const basic = basicResult[0];
+    const enhanced = enhancedResult[0];
+    
+    return {
+      ...basic,
+      trackingSignal: enhanced?.avgTrackingSignal ?? null,
+      theilsU: enhanced?.avgTheilsU ?? null,
+      directionalAccuracy: enhanced?.avgDirectionalAccuracy ?? null,
+      confidenceHitRate: enhanced?.avgConfidenceHitRate ?? null
+    };
   }
 
   async getForecastAccuracyByPeriod(companyId: string) {

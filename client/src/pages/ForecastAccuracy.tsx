@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { TrendingUp, TrendingDown, Target, BarChart3, AlertCircle } from "lucide-react";
+import { TrendingUp, TrendingDown, Target, BarChart3, AlertCircle, Activity, CheckCircle2, Compass, Gauge, ArrowUpRight } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { InfoTooltip } from "@/components/InfoTooltip";
 
@@ -14,6 +14,13 @@ interface ForecastMetrics {
   predictionsWithActuals: number;
   avgPredicted: number | null;
   avgActual: number | null;
+  // Enhanced metrics
+  trackingSignal: number | null;
+  theilsU: number | null;
+  directionalAccuracy: number | null;
+  confidenceHitRate: number | null;
+  mae: number | null;
+  rmse: number | null;
 }
 
 interface PeriodAccuracy {
@@ -243,6 +250,193 @@ export default function ForecastAccuracy() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Enhanced Metrics Section */}
+      <Card data-testid="card-enhanced-metrics">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="h-5 w-5" />
+            Advanced Accuracy Metrics
+          </CardTitle>
+          <CardDescription>
+            Industry-standard forecasting quality indicators beyond MAPE
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {/* Tracking Signal */}
+            <div className="p-4 rounded-lg bg-muted/50 space-y-2" data-testid="metric-tracking-signal">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <Compass className="h-4 w-4" />
+                Tracking Signal
+                <InfoTooltip term="tracking-signal" />
+              </div>
+              {metricsLoading ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                <>
+                  <div className={`text-2xl font-bold ${
+                    metrics?.trackingSignal === null || metrics?.trackingSignal === undefined ? 'text-muted-foreground' :
+                    Math.abs(metrics.trackingSignal) <= 4 ? 'text-green-600 dark:text-green-400' :
+                    Math.abs(metrics.trackingSignal) <= 6 ? 'text-yellow-600 dark:text-yellow-400' :
+                    'text-red-600 dark:text-red-400'
+                  }`} data-testid="text-tracking-signal">
+                    {metrics?.trackingSignal !== null && metrics?.trackingSignal !== undefined 
+                      ? metrics.trackingSignal.toFixed(2) 
+                      : 'N/A'}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Target: -4 to +4 (detects drift)
+                  </p>
+                  {metrics?.trackingSignal !== null && metrics?.trackingSignal !== undefined && (
+                    <Badge 
+                      variant={Math.abs(metrics.trackingSignal) <= 4 ? "secondary" : "destructive"}
+                      className="mt-1"
+                    >
+                      {Math.abs(metrics.trackingSignal) <= 4 ? "Normal" : "Drift Detected"}
+                    </Badge>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Theil's U */}
+            <div className="p-4 rounded-lg bg-muted/50 space-y-2" data-testid="metric-theils-u">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <Gauge className="h-4 w-4" />
+                Theil's U Statistic
+                <InfoTooltip term="theils-u" />
+              </div>
+              {metricsLoading ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                <>
+                  <div className={`text-2xl font-bold ${
+                    metrics?.theilsU === null || metrics?.theilsU === undefined ? 'text-muted-foreground' :
+                    metrics.theilsU < 0.8 ? 'text-green-600 dark:text-green-400' :
+                    metrics.theilsU < 1.0 ? 'text-yellow-600 dark:text-yellow-400' :
+                    'text-red-600 dark:text-red-400'
+                  }`} data-testid="text-theils-u">
+                    {metrics?.theilsU !== null && metrics?.theilsU !== undefined 
+                      ? metrics.theilsU.toFixed(3) 
+                      : 'N/A'}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    &lt;1.0 = Better than naive forecast
+                  </p>
+                  {metrics?.theilsU !== null && metrics?.theilsU !== undefined && (
+                    <Badge 
+                      variant={metrics.theilsU < 1.0 ? "secondary" : "destructive"}
+                      className="mt-1"
+                    >
+                      {metrics.theilsU < 0.8 ? "Excellent" : 
+                       metrics.theilsU < 1.0 ? "Good" : "Below Naive"}
+                    </Badge>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Directional Accuracy */}
+            <div className="p-4 rounded-lg bg-muted/50 space-y-2" data-testid="metric-directional-accuracy">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <ArrowUpRight className="h-4 w-4" />
+                Directional Accuracy
+              </div>
+              {metricsLoading ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                <>
+                  <div className={`text-2xl font-bold ${
+                    metrics?.directionalAccuracy === null || metrics?.directionalAccuracy === undefined ? 'text-muted-foreground' :
+                    metrics.directionalAccuracy >= 70 ? 'text-green-600 dark:text-green-400' :
+                    metrics.directionalAccuracy >= 50 ? 'text-yellow-600 dark:text-yellow-400' :
+                    'text-red-600 dark:text-red-400'
+                  }`} data-testid="text-directional-accuracy">
+                    {metrics?.directionalAccuracy !== null && metrics?.directionalAccuracy !== undefined 
+                      ? `${metrics.directionalAccuracy.toFixed(1)}%` 
+                      : 'N/A'}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Correct up/down predictions
+                  </p>
+                  {metrics?.directionalAccuracy !== null && metrics?.directionalAccuracy !== undefined && (
+                    <Badge 
+                      variant={metrics.directionalAccuracy >= 50 ? "secondary" : "destructive"}
+                      className="mt-1"
+                    >
+                      {metrics.directionalAccuracy >= 70 ? "Strong" : 
+                       metrics.directionalAccuracy >= 50 ? "Moderate" : "Weak"}
+                    </Badge>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Confidence Hit Rate */}
+            <div className="p-4 rounded-lg bg-muted/50 space-y-2" data-testid="metric-confidence-hit-rate">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <CheckCircle2 className="h-4 w-4" />
+                Confidence Hit Rate
+              </div>
+              {metricsLoading ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                <>
+                  <div className={`text-2xl font-bold ${
+                    metrics?.confidenceHitRate === null || metrics?.confidenceHitRate === undefined ? 'text-muted-foreground' :
+                    metrics.confidenceHitRate >= 80 ? 'text-green-600 dark:text-green-400' :
+                    metrics.confidenceHitRate >= 60 ? 'text-yellow-600 dark:text-yellow-400' :
+                    'text-red-600 dark:text-red-400'
+                  }`} data-testid="text-confidence-hit-rate">
+                    {metrics?.confidenceHitRate !== null && metrics?.confidenceHitRate !== undefined 
+                      ? `${metrics.confidenceHitRate.toFixed(1)}%` 
+                      : 'N/A'}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Actuals within confidence bounds
+                  </p>
+                  {metrics?.confidenceHitRate !== null && metrics?.confidenceHitRate !== undefined && (
+                    <Badge 
+                      variant={metrics.confidenceHitRate >= 60 ? "secondary" : "destructive"}
+                      className="mt-1"
+                    >
+                      {metrics.confidenceHitRate >= 80 ? "Reliable" : 
+                       metrics.confidenceHitRate >= 60 ? "Acceptable" : "Needs Review"}
+                    </Badge>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* MAE and RMSE supplementary metrics */}
+          <div className="grid gap-4 md:grid-cols-2 mt-4">
+            <div className="flex items-center justify-between p-3 rounded-lg border">
+              <div>
+                <p className="text-sm font-medium">Mean Absolute Error (MAE)</p>
+                <p className="text-xs text-muted-foreground">Average absolute deviation in units</p>
+              </div>
+              <div className="text-lg font-bold" data-testid="text-mae">
+                {metrics?.mae !== null && metrics?.mae !== undefined 
+                  ? formatNumber(metrics.mae) 
+                  : 'N/A'}
+              </div>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg border">
+              <div>
+                <p className="text-sm font-medium">Root Mean Square Error (RMSE)</p>
+                <p className="text-xs text-muted-foreground">Penalizes large errors more heavily</p>
+              </div>
+              <div className="text-lg font-bold" data-testid="text-rmse">
+                {metrics?.rmse !== null && metrics?.rmse !== undefined 
+                  ? formatNumber(metrics.rmse) 
+                  : 'N/A'}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card data-testid="card-accuracy-by-period">

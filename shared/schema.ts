@@ -956,6 +956,13 @@ export const forecastAccuracyTracking = pgTable("forecast_accuracy_tracking", {
   rmse: real("rmse"), // Root Mean Square Error
   predictionsEvaluated: integer("predictions_evaluated").notNull(), // Number of predictions used
   
+  // Enhanced accuracy metrics (new)
+  bias: real("bias"), // Average signed error - positive = over-forecasting, negative = under-forecasting
+  trackingSignal: real("tracking_signal"), // Cumulative error / MAD - detects persistent drift (target: -4 to +4)
+  theilsU: real("theils_u"), // Comparison to naive forecast (< 1 means better than naive)
+  directionalAccuracy: real("directional_accuracy"), // % of correct direction predictions (up/down)
+  confidenceHitRate: real("confidence_hit_rate"), // % of actuals within predicted confidence bounds
+  
   // Trend indicators
   mapeTrend: text("map_trend"), // "improving", "degrading", "stable"
   trendChangePercent: real("trend_change_percent"), // % change from previous measurement

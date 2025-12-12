@@ -58,6 +58,22 @@ const tooltipDefinitions: Record<string, { title: string; description: string }>
   confidenceInterval: {
     title: "Confidence Interval",
     description: "The range where actual demand is likely to fall. A wider range means more uncertainty; a narrower range means higher confidence."
+  },
+  "tracking-signal": {
+    title: "Tracking Signal",
+    description: "Measures persistent forecast drift over time. Values between -4 and +4 are normal. Values outside this range indicate the forecast is consistently biased and may need recalibration."
+  },
+  "theils-u": {
+    title: "Theil's U Statistic",
+    description: "Compares forecast accuracy to a naive forecast (using the previous value as the prediction). Values below 1.0 mean your forecast beats the naive approach; values above 1.0 mean it underperforms."
+  },
+  "directional-accuracy": {
+    title: "Directional Accuracy",
+    description: "The percentage of times the forecast correctly predicted whether demand would go up or down. 70%+ is strong, 50-70% is moderate."
+  },
+  "confidence-hit-rate": {
+    title: "Confidence Hit Rate",
+    description: "The percentage of actual values that fell within the predicted confidence bounds. 80%+ indicates reliable uncertainty estimates."
   }
 };
 
