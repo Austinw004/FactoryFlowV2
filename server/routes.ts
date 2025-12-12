@@ -1152,7 +1152,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get SKU demand history
-      const demandHistory = await storage.getDemandHistoryBySku(skuId);
+      const demandHistory = await storage.getDemandHistory(skuId);
       
       // Get economic snapshots to tag demand by regime
       const snapshots = await storage.getEconomicSnapshotHistory(user.companyId, 365);
@@ -1224,7 +1224,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get all SKUs for company
-      const skus = await storage.getSkusByCompany(user.companyId);
+      const skus = await storage.getSkus(user.companyId);
       
       if (skus.length === 0) {
         return res.json({
@@ -1250,7 +1250,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let totalDataPoints = 0;
       
       for (const sku of skus) {
-        const demandHistory = await storage.getDemandHistoryBySku(sku.id);
+        const demandHistory = await storage.getDemandHistory(sku.id);
         testData[sku.id] = demandHistory.map(h => {
           const dateKey = new Date(h.createdAt).toISOString().split('T')[0];
           return {
