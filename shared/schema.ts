@@ -144,6 +144,19 @@ export const companies = pgTable("companies", {
   dataRetentionPolicy: text("data_retention_policy").default("standard"), // "minimal", "standard", "extended", "permanent"
   anonymizeOldData: integer("anonymize_old_data").default(0), // Auto-anonymize data older than retention period
   exportDataFormat: text("export_data_format").default("json"), // "json", "csv", "excel"
+  // Integration Settings - Slack
+  slackWebhookUrl: text("slack_webhook_url"),
+  slackDefaultChannel: text("slack_default_channel").default("#prescient-alerts"),
+  slackEnabled: integer("slack_enabled").default(0),
+  // Integration Settings - Twilio
+  twilioAccountSid: text("twilio_account_sid"),
+  twilioAuthToken: text("twilio_auth_token"),
+  twilioPhoneNumber: text("twilio_phone_number"),
+  twilioEnabled: integer("twilio_enabled").default(0),
+  // Integration Settings - HubSpot
+  hubspotAccessToken: text("hubspot_access_token"),
+  hubspotRefreshToken: text("hubspot_refresh_token"),
+  hubspotEnabled: integer("hubspot_enabled").default(0),
   // Company Branding
   logoUrl: text("logo_url"),
   primaryColor: text("primary_color").default("#3b82f6"), // Hex color for branding
