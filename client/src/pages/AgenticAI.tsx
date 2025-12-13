@@ -955,9 +955,6 @@ export default function AgenticAI() {
                               <Sparkles className="h-8 w-8 text-purple-500" />
                             </div>
                             <h3 className="font-semibold text-xl mb-2">Hi! I'm your AI Assistant</h3>
-                            <p className="text-muted-foreground text-sm max-w-md mx-auto">
-                              Ask me anything in plain English. I understand your business context and can help with procurement, forecasting, risks, and strategy.
-                            </p>
                           </div>
                           
                           <div className="max-w-lg mx-auto mb-6">
@@ -980,39 +977,6 @@ export default function AgenticAI() {
                               ))}
                             </div>
                           </div>
-
-                          <div className="grid grid-cols-2 gap-3 max-w-lg mx-auto">
-                            {quickActionCategories.map((cat, catIdx) => {
-                              const CategoryIcon = cat.icon;
-                              return (
-                                <div key={catIdx} className={`rounded-lg p-3 ${cat.bgColor} border border-transparent`}>
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <CategoryIcon className={`h-4 w-4 ${cat.color}`} />
-                                    <span className={`text-sm font-medium ${cat.color}`}>{cat.category}</span>
-                                  </div>
-                                  <div className="space-y-1">
-                                    {cat.questions.slice(0, 2).map((q, qIdx) => (
-                                      <button
-                                        key={qIdx}
-                                        className="w-full text-left text-xs py-1.5 px-2 rounded hover:bg-background/50 transition-colors"
-                                        onClick={() => {
-                                          setChatInput(q.full);
-                                          handleSendChat(q.full);
-                                        }}
-                                        data-testid={`button-cat-${catIdx}-q-${qIdx}`}
-                                      >
-                                        {q.short}
-                                      </button>
-                                    ))}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                          
-                          <p className="text-center text-xs text-muted-foreground mt-6">
-                            Or just type your question below - I'll understand!
-                          </p>
                         </div>
                       ) : (
                         chatMessages.map((msg) => (
