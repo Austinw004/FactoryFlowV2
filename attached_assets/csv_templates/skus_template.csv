@@ -1,0 +1,6 @@
+name,code,category,unitCost,leadTimeDays,safetyStock,reorderPoint
+Widget A,SKU-001,Electronics,25.50,14,100,150
+Widget B,SKU-002,Electronics,45.00,21,75,100
+Assembly Kit,SKU-003,Kits,120.00,30,25,40
+Component X,SKU-004,Components,8.75,7,200,300
+Premium Unit,SKU-005,Premium,250.00,45,10,20

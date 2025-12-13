@@ -1,0 +1,11 @@
+name,code,unit,onHand,inbound
+Aluminum Sheet,MAT-001,kg,500,200
+Steel Rod,MAT-002,units,1000,500
+Copper Wire,MAT-003,meters,2500,1000
+Plastic Housing,MAT-004,units,800,400
+Circuit Board,MAT-005,units,300,150
+Fasteners Pack,MAT-006,units,5000,2000
+Rubber Gasket,MAT-007,units,1200,600
+Glass Panel,MAT-008,units,150,100
+Battery Cell,MAT-009,units,400,200
+Adhesive,MAT-010,liters,50,25
