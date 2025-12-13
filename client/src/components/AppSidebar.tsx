@@ -94,10 +94,12 @@ const bottomMenuItems = [
 export function AppSidebar() {
   const [location] = useLocation();
 
-  const strategyRoutes = ["/", "/strategy", "/digital-twin", "/strategic-analysis", "/scenario-simulation", "/ma-intelligence", "/peer-benchmarking"];
+  const agenticRoutes = ["/", "/agentic-ai"];
+  const strategyRoutes = ["/strategy", "/digital-twin", "/strategic-analysis", "/scenario-simulation", "/ma-intelligence", "/peer-benchmarking"];
   const dashboardRoutes = ["/dashboard", "/roi-dashboard", "/reports"];
   
   const isActive = (url: string) => {
+    if (url === "/agentic-ai") return agenticRoutes.includes(location) || location.startsWith("/agentic-ai");
     if (url === "/strategy") return strategyRoutes.includes(location) || location.startsWith("/strategy");
     if (url === "/dashboard") return dashboardRoutes.includes(location) || location.startsWith("/dashboard");
     return location.startsWith(url);
