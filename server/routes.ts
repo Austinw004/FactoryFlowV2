@@ -535,7 +535,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/onboarding/company', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { name, industry, companySize } = req.body;
+      const { name, industry, companySize, location } = req.body;
       
       if (!name?.trim()) {
         return res.status(400).json({ error: "Company name is required" });
@@ -553,6 +553,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           name: name.trim(),
           industry: industry || null,
           companySize: companySize || null,
+          location: location || null,
         });
         console.log(`[Onboarding] Updated company ${user.companyId} for user ${userId}`);
         
@@ -567,6 +568,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           name: name.trim(),
           industry: industry || null,
           companySize: companySize || null,
+          location: location || null,
         });
         
         // Initialize default roles for the new company

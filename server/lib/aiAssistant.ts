@@ -51,6 +51,7 @@ export interface ProactiveAlert {
 }
 
 export interface PlatformContext {
+  location?: string;
   industry?: {
     name: string;
     relevantCommodities: string[];
@@ -714,10 +715,14 @@ class AIAssistantService {
         console.log("[AI Assistant] External variables unavailable, continuing without");
       }
 
-      // Fetch company industry for personalized context
+      // Fetch company industry and location for personalized context
       let industryContext = undefined;
+      let companyLocation: string | undefined = undefined;
       try {
         const company = await storage.getCompany(companyId);
+        if (company?.location) {
+          companyLocation = company.location;
+        }
         if (company?.industry) {
           const config = getIndustryConfig(company.industry);
           industryContext = {
@@ -731,10 +736,11 @@ class AIAssistantService {
           };
         }
       } catch (e) {
-        console.log("[AI Assistant] Could not fetch company industry");
+        console.log("[AI Assistant] Could not fetch company industry/location");
       }
 
       const context: PlatformContext = {
+        location: companyLocation,
         industry: industryContext,
         regime: {
           fdr,
@@ -1271,6 +1277,14 @@ EXTERNAL VARIABLES (Extended FDR Intelligence):
   - Trending: ${extVars.socialTrends.trendingTopics.slice(0, 3).join(', ') || 'None'}
 - FDR Adjustment: ${extVars.fdrAdjustment > 0 ? '+' : ''}${extVars.fdrAdjustment.toFixed(3)} → Adjusted FDR: ${extVars.adjustedFdr.toFixed(2)}` : '';
 
+    // Location-specific context
+    const locationSection = context.location ? `
+
+COMPANY LOCATION:
+- Headquarters: ${context.location}
+- Consider regional factors: local regulations, proximity to ports/suppliers, regional economic conditions, time zones for global operations, local labor markets, and regional supply chain risks.
+- Tailor recommendations to account for geographic factors affecting logistics, sourcing, and market access.` : '';
+
     // Industry-specific context
     const industrySection = context.industry ? `
 
@@ -1324,7 +1338,7 @@ You excel at answering NATURAL LANGUAGE QUERIES about supply chain data. Executi
 - "Where should we focus to reduce costs this quarter?"
 - "What economic headwinds should we prepare for?"
 
-CURRENT PLATFORM STATE:${industrySection}
+CURRENT PLATFORM STATE:${locationSection}${industrySection}
 
 ECONOMIC CONTEXT:
 - Regime: ${context.regime.regime} (FDR: ${context.regime.fdr.toFixed(2)})

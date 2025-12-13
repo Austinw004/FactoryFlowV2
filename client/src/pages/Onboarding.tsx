@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Building2, Users, Rocket, Check, X, Loader2, Mail, UserPlus } from "lucide-react";
+import { Building2, Users, Rocket, Check, X, Loader2, Mail, UserPlus, MapPin } from "lucide-react";
 
 const INDUSTRIES = [
   "Aerospace & Defense",
@@ -49,6 +49,7 @@ export default function Onboarding() {
   const [companyName, setCompanyName] = useState("");
   const [industry, setIndustry] = useState("");
   const [companySize, setCompanySize] = useState("");
+  const [location, setLocation] = useState("");
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [newMemberEmail, setNewMemberEmail] = useState("");
   const [newMemberRole, setNewMemberRole] = useState("viewer");
@@ -59,7 +60,7 @@ export default function Onboarding() {
   });
 
   const setupCompanyMutation = useMutation({
-    mutationFn: async (data: { name: string; industry: string; companySize: string }) => {
+    mutationFn: async (data: { name: string; industry: string; companySize: string; location: string }) => {
       return apiRequest("POST", "/api/onboarding/company", data);
     },
     onSuccess: () => {
@@ -140,6 +141,7 @@ export default function Onboarding() {
       name: companyName,
       industry,
       companySize,
+      location,
     });
   };
 
@@ -218,6 +220,25 @@ export default function Onboarding() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="location">
+                  <span className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4" />
+                    Headquarters Location
+                  </span>
+                </Label>
+                <Input
+                  id="location"
+                  data-testid="input-location"
+                  placeholder="e.g., Detroit, Michigan, USA"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                />
+                <p className="text-sm text-muted-foreground">
+                  This helps us tailor supply chain recommendations to your region
+                </p>
               </div>
 
               <Separator />
