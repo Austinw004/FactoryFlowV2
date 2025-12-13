@@ -13947,6 +13947,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==========================================
+  // INTEGRATION ROUTES - Slack, Twilio, HubSpot
+  // ==========================================
+  
+  // Get integration status for the company
+  app.get("/api/integrations/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const company = await storage.getCompany(user.companyId);
+      if (!company) {
+        return res.status(404).json({ error: "Company not found" });
+      }
+      
+      res.json({
+        slack: {
+          enabled: company.slackEnabled === 1,
+          configured: !!company.slackWebhookUrl,
+          channel: company.slackDefaultChannel || "#prescient-alerts",
+        },
+        twilio: {
+          enabled: company.twilioEnabled === 1,
+          configured: !!(company.twilioAccountSid && company.twilioAuthToken && company.twilioPhoneNumber),
+        },
+        hubspot: {
+          enabled: company.hubspotEnabled === 1,
+          configured: !!company.hubspotAccessToken,
+        },
+      });
+    } catch (error: any) {
+      console.error("Error getting integration status:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Configure Slack integration
+  app.post("/api/integrations/slack/configure", isAuthenticated, async (req: any, res) => {
+    try {
+      const { webhookUrl, defaultChannel, enabled } = req.body;
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      // Validate webhook URL format
+      if (webhookUrl && !webhookUrl.startsWith("https://hooks.slack.com/")) {
+        return res.status(400).json({ error: "Invalid Slack webhook URL format" });
+      }
+      
+      await storage.updateCompany(user.companyId, {
+        slackWebhookUrl: webhookUrl || null,
+        slackDefaultChannel: defaultChannel || "#prescient-alerts",
+        slackEnabled: enabled ? 1 : 0,
+      });
+      
+      res.json({ success: true, message: "Slack integration configured" });
+    } catch (error: any) {
+      console.error("Error configuring Slack:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Test Slack connection
+  app.post("/api/integrations/slack/test", isAuthenticated, async (req: any, res) => {
+    try {
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const company = await storage.getCompany(user.companyId);
+      if (!company?.slackWebhookUrl) {
+        return res.status(400).json({ error: "Slack webhook URL not configured" });
+      }
+      
+      // Import and use Slack service
+      const { slackService } = await import("./lib/slackService");
+      slackService.configure(company.slackWebhookUrl, company.slackDefaultChannel || undefined);
+      
+      const result = await slackService.testConnection();
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error testing Slack:", error);
+      res.status(500).json({ success: false, message: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   
   setupWebSocket(httpServer);
