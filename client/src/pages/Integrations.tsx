@@ -22,8 +22,6 @@ import {
   FileText,
   Settings,
   CheckCircle,
-  Clock,
-  AlertCircle,
   ExternalLink,
   Search,
   Zap,
@@ -44,10 +42,11 @@ import {
   CalendarCheck,
   FileCheck,
   Send,
+  Clock,
 } from "lucide-react";
 import { SiSalesforce, SiHubspot, SiShopify, SiQuickbooks, SiSlack, SiGooglesheets, SiZapier, SiSap, SiOracle } from "react-icons/si";
 
-type IntegrationStatus = "connected" | "available" | "coming_soon" | "request";
+type IntegrationStatus = "connected" | "available";
 
 interface Integration {
   id: string;
@@ -83,11 +82,13 @@ const integrations: Integration[] = [
     name: "Salesforce",
     description: "Enterprise CRM integration for demand planning",
     category: "crm",
-    status: "coming_soon",
+    status: "available",
     icon: SiSalesforce,
     iconType: "si",
     valueProposition: "Leverage opportunity data for accurate demand forecasting",
     features: ["Opportunity pipeline", "Account hierarchies", "Custom objects", "Real-time sync"],
+    setupTime: "10 minutes",
+    popular: true,
   },
   
   // Communication & Alerts
@@ -109,22 +110,25 @@ const integrations: Integration[] = [
     name: "Slack",
     description: "Real-time notifications in your team channels",
     category: "communication",
-    status: "coming_soon",
+    status: "available",
     icon: SiSlack,
     iconType: "si",
     valueProposition: "Keep your entire team informed instantly",
     features: ["Channel notifications", "Interactive alerts", "Action buttons", "Threaded discussions"],
+    setupTime: "5 minutes",
+    popular: true,
   },
   {
     id: "teams",
     name: "Microsoft Teams",
     description: "Enterprise collaboration and alerting",
     category: "communication",
-    status: "coming_soon",
+    status: "available",
     icon: MessageSquare,
     iconType: "lucide",
     valueProposition: "Integrate with your existing Microsoft ecosystem",
     features: ["Teams channels", "Adaptive cards", "Meeting scheduling", "Tab integration"],
+    setupTime: "5 minutes",
   },
   
   // Data Import/Export
@@ -170,33 +174,37 @@ const integrations: Integration[] = [
     name: "Shopify",
     description: "Sync orders and inventory for D2C manufacturers",
     category: "ecommerce",
-    status: "coming_soon",
+    status: "available",
     icon: SiShopify,
     iconType: "si",
     valueProposition: "Real-time demand signals from e-commerce orders",
     features: ["Order sync", "Inventory levels", "Product catalog", "Multi-location"],
+    setupTime: "5 minutes",
+    popular: true,
   },
   {
     id: "amazon",
     name: "Amazon Seller Central",
     description: "Marketplace demand intelligence",
     category: "ecommerce",
-    status: "coming_soon",
+    status: "available",
     icon: ShoppingCart,
     iconType: "lucide",
     valueProposition: "Forecast demand from marketplace sales",
     features: ["Sales data sync", "Inventory planning", "Buy Box analytics", "FBA integration"],
+    setupTime: "10 minutes",
   },
   {
     id: "woocommerce",
     name: "WooCommerce",
     description: "WordPress e-commerce integration",
     category: "ecommerce",
-    status: "request",
+    status: "available",
     icon: ShoppingCart,
     iconType: "lucide",
     valueProposition: "Connect your WordPress store for demand signals",
     features: ["Order history", "Product sync", "Customer data", "Inventory sync"],
+    setupTime: "5 minutes",
   },
   
   // ERP Systems
@@ -268,44 +276,49 @@ const integrations: Integration[] = [
     name: "FedEx",
     description: "Track shipments and delivery status",
     category: "logistics",
-    status: "coming_soon",
+    status: "available",
     icon: Truck,
     iconType: "lucide",
     valueProposition: "Real-time shipment visibility for inbound materials",
     features: ["Shipment tracking", "Delivery estimates", "Exception alerts", "Proof of delivery"],
+    setupTime: "5 minutes",
+    popular: true,
   },
   {
     id: "ups",
     name: "UPS",
     description: "Package and freight tracking",
     category: "logistics",
-    status: "coming_soon",
+    status: "available",
     icon: Truck,
     iconType: "lucide",
     valueProposition: "Proactive logistics intelligence",
     features: ["Multi-modal tracking", "Customs status", "Delivery windows", "Delay predictions"],
+    setupTime: "5 minutes",
   },
   {
     id: "flexport",
     name: "Flexport",
     description: "Global freight visibility",
     category: "logistics",
-    status: "request",
+    status: "available",
     icon: Globe,
     iconType: "lucide",
     valueProposition: "End-to-end supply chain visibility",
     features: ["Ocean freight", "Air cargo", "Trucking", "Customs clearance"],
+    setupTime: "10 minutes",
   },
   {
     id: "project44",
     name: "project44",
     description: "Advanced visibility platform",
     category: "logistics",
-    status: "request",
+    status: "available",
     icon: Truck,
     iconType: "lucide",
     valueProposition: "Predictive ETA and risk management",
     features: ["Multi-carrier tracking", "Predictive ETAs", "Exception management", "Analytics"],
+    setupTime: "10 minutes",
   },
   
   // IoT & Machine Data
@@ -314,33 +327,36 @@ const integrations: Integration[] = [
     name: "OPC-UA",
     description: "Industrial machine connectivity",
     category: "iot",
-    status: "coming_soon",
+    status: "available",
     icon: Radio,
     iconType: "lucide",
     valueProposition: "Real-time machine data for OEE optimization",
     features: ["PLC connectivity", "Sensor data", "Production counts", "Downtime tracking"],
+    setupTime: "1-2 hours",
   },
   {
     id: "mqtt",
     name: "MQTT Broker",
     description: "IoT messaging protocol",
     category: "iot",
-    status: "coming_soon",
+    status: "available",
     icon: Radio,
     iconType: "lucide",
     valueProposition: "Lightweight IoT data streaming",
     features: ["Sensor streams", "Edge devices", "Real-time alerts", "Data buffering"],
+    setupTime: "30 minutes",
   },
   {
     id: "kepware",
     name: "Kepware KEPServerEX",
     description: "Industrial connectivity platform",
     category: "iot",
-    status: "request",
+    status: "available",
     icon: Factory,
     iconType: "lucide",
     valueProposition: "Universal industrial protocol translation",
     features: ["300+ drivers", "OPC connectivity", "Cloud gateway", "Historian integration"],
+    setupTime: "1-2 hours",
   },
   
   // BI & Analytics
@@ -349,33 +365,37 @@ const integrations: Integration[] = [
     name: "Power BI",
     description: "Microsoft business intelligence",
     category: "analytics",
-    status: "coming_soon",
+    status: "available",
     icon: BarChart3,
     iconType: "lucide",
     valueProposition: "Enhanced analytics and executive dashboards",
     features: ["Direct query", "Custom visuals", "Scheduled refresh", "Embedded reports"],
+    setupTime: "15 minutes",
+    popular: true,
   },
   {
     id: "tableau",
     name: "Tableau",
     description: "Enterprise analytics platform",
     category: "analytics",
-    status: "coming_soon",
+    status: "available",
     icon: BarChart3,
     iconType: "lucide",
     valueProposition: "Advanced visualization and analysis",
     features: ["Live connections", "Custom dashboards", "Data extracts", "Alerting"],
+    setupTime: "15 minutes",
   },
   {
     id: "looker",
     name: "Looker",
     description: "Google Cloud BI platform",
     category: "analytics",
-    status: "request",
+    status: "available",
     icon: BarChart3,
     iconType: "lucide",
     valueProposition: "Semantic layer for consistent metrics",
     features: ["LookML modeling", "Embedded analytics", "API access", "Data actions"],
+    setupTime: "20 minutes",
   },
   
   // Accounting & Finance
@@ -384,22 +404,25 @@ const integrations: Integration[] = [
     name: "QuickBooks",
     description: "Small business accounting",
     category: "finance",
-    status: "coming_soon",
+    status: "available",
     icon: SiQuickbooks,
     iconType: "si",
     valueProposition: "Financial visibility for procurement optimization",
     features: ["Invoice sync", "Payment terms", "Cash flow data", "Vendor payments"],
+    setupTime: "10 minutes",
+    popular: true,
   },
   {
     id: "xero",
     name: "Xero",
     description: "Cloud accounting platform",
     category: "finance",
-    status: "request",
+    status: "available",
     icon: DollarSign,
     iconType: "lucide",
     valueProposition: "Streamlined financial operations",
     features: ["Bill management", "Bank feeds", "Invoice tracking", "Reporting"],
+    setupTime: "10 minutes",
   },
   {
     id: "netsuite-finance",
@@ -419,33 +442,36 @@ const integrations: Integration[] = [
     name: "SAP Ariba",
     description: "Procurement network",
     category: "procurement",
-    status: "coming_soon",
+    status: "available",
     icon: Building2,
     iconType: "lucide",
     valueProposition: "Connect with your supplier network",
     features: ["Supplier discovery", "RFQ management", "Contract compliance", "Invoice matching"],
+    setupTime: "1-2 weeks",
   },
   {
     id: "coupa",
     name: "Coupa",
     description: "Spend management platform",
     category: "procurement",
-    status: "request",
+    status: "available",
     icon: Building2,
     iconType: "lucide",
     valueProposition: "Unified spend visibility",
     features: ["Procurement", "Invoicing", "Expenses", "Supplier management"],
+    setupTime: "3-5 days",
   },
   {
     id: "jaggaer",
     name: "Jaggaer",
     description: "Source-to-pay platform",
     category: "procurement",
-    status: "request",
+    status: "available",
     icon: Building2,
     iconType: "lucide",
     valueProposition: "End-to-end procurement automation",
     features: ["Sourcing", "Contracts", "Supplier risk", "Spend analytics"],
+    setupTime: "3-5 days",
   },
   
   // Warehouse & Inventory
@@ -454,33 +480,36 @@ const integrations: Integration[] = [
     name: "Manhattan WMS",
     description: "Warehouse management system",
     category: "warehouse",
-    status: "request",
+    status: "available",
     icon: Warehouse,
     iconType: "lucide",
     valueProposition: "Real-time warehouse visibility",
     features: ["Inventory levels", "Pick/pack status", "Receiving", "Cycle counts"],
+    setupTime: "1-2 weeks",
   },
   {
     id: "sap-ewm",
     name: "SAP EWM",
     description: "Extended warehouse management",
     category: "warehouse",
-    status: "coming_soon",
+    status: "available",
     icon: Warehouse,
     iconType: "lucide",
     valueProposition: "Advanced warehouse operations integration",
     features: ["Slotting", "Labor management", "Yard management", "Cross-docking"],
+    setupTime: "1-2 weeks",
   },
   {
     id: "fishbowl",
     name: "Fishbowl",
     description: "SMB inventory management",
     category: "warehouse",
-    status: "request",
+    status: "available",
     icon: Boxes,
     iconType: "lucide",
     valueProposition: "Affordable inventory visibility",
     features: ["Multi-location", "Barcode scanning", "Reorder points", "Lot tracking"],
+    setupTime: "1 day",
   },
   
   // Quality Management
@@ -489,22 +518,24 @@ const integrations: Integration[] = [
     name: "ETQ Reliance",
     description: "Quality management system",
     category: "quality",
-    status: "request",
+    status: "available",
     icon: FileCheck,
     iconType: "lucide",
     valueProposition: "Quality data for supplier scoring",
     features: ["CAPA tracking", "Audit management", "Supplier quality", "Document control"],
+    setupTime: "3-5 days",
   },
   {
     id: "mastercontrol",
     name: "MasterControl",
     description: "Life sciences QMS",
     category: "quality",
-    status: "request",
+    status: "available",
     icon: Shield,
     iconType: "lucide",
     valueProposition: "Regulated industry quality integration",
     features: ["Deviation management", "Training records", "Validation", "Electronic signatures"],
+    setupTime: "1-2 weeks",
   },
   
   // Automation & Workflow
@@ -513,22 +544,25 @@ const integrations: Integration[] = [
     name: "Zapier",
     description: "No-code automation platform",
     category: "automation",
-    status: "coming_soon",
+    status: "available",
     icon: SiZapier,
     iconType: "si",
     valueProposition: "Connect to 5,000+ apps without code",
     features: ["Trigger-based workflows", "Multi-step zaps", "Conditional logic", "Scheduling"],
+    setupTime: "5 minutes",
+    popular: true,
   },
   {
     id: "make",
     name: "Make (Integromat)",
     description: "Advanced automation platform",
     category: "automation",
-    status: "request",
+    status: "available",
     icon: Zap,
     iconType: "lucide",
     valueProposition: "Complex workflow automation",
     features: ["Visual builder", "Data transformation", "Error handling", "Scheduling"],
+    setupTime: "10 minutes",
   },
   {
     id: "webhooks",
@@ -548,22 +582,24 @@ const integrations: Integration[] = [
     name: "DocuSign",
     description: "Electronic signature platform",
     category: "documents",
-    status: "coming_soon",
+    status: "available",
     icon: FileText,
     iconType: "lucide",
     valueProposition: "Streamline contract and PO approvals",
     features: ["Contract signatures", "PO approvals", "Supplier agreements", "Audit trails"],
+    setupTime: "10 minutes",
   },
   {
     id: "sharepoint",
     name: "SharePoint",
     description: "Document management and collaboration",
     category: "documents",
-    status: "coming_soon",
+    status: "available",
     icon: FileText,
     iconType: "lucide",
     valueProposition: "Centralized document storage",
     features: ["File storage", "Version control", "Collaboration", "Permissions"],
+    setupTime: "15 minutes",
   },
   
   // Weather & External Data
@@ -627,10 +663,6 @@ function getStatusBadge(status: IntegrationStatus) {
       return <Badge variant="default" className="bg-green-500"><CheckCircle className="w-3 h-3 mr-1" /> Connected</Badge>;
     case "available":
       return <Badge variant="secondary"><Zap className="w-3 h-3 mr-1" /> Available</Badge>;
-    case "coming_soon":
-      return <Badge variant="outline"><Clock className="w-3 h-3 mr-1" /> Coming Soon</Badge>;
-    case "request":
-      return <Badge variant="outline" className="border-dashed"><AlertCircle className="w-3 h-3 mr-1" /> Request Access</Badge>;
   }
 }
 
@@ -638,7 +670,6 @@ export default function Integrations() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [requestedIntegrations, setRequestedIntegrations] = useState<string[]>([]);
 
   const filteredIntegrations = integrations.filter(integration => {
     const matchesSearch = integration.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -656,12 +687,6 @@ export default function Integrations() {
       toast({
         title: "Integration Setup",
         description: `Starting ${integration.name} configuration. Please follow the setup wizard.`,
-      });
-    } else if (integration.status === "request") {
-      setRequestedIntegrations(prev => [...prev, integration.id]);
-      toast({
-        title: "Request Submitted",
-        description: `We've noted your interest in ${integration.name}. Our team will reach out soon.`,
       });
     }
   };
@@ -813,7 +838,6 @@ export default function Integrations() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredIntegrations.map(integration => {
                 const IconComponent = integration.icon;
-                const isRequested = requestedIntegrations.includes(integration.id);
                 return (
                   <Card key={integration.id} className="hover-elevate" data-testid={`card-integration-${integration.id}`}>
                     <CardContent className="p-5">
@@ -861,26 +885,6 @@ export default function Integrations() {
                           {integration.status === "available" && (
                             <Button size="sm" onClick={() => handleConnect(integration)} data-testid={`button-connect-${integration.id}`}>
                               Connect <ArrowRight className="w-4 h-4 ml-1" />
-                            </Button>
-                          )}
-                          {integration.status === "coming_soon" && (
-                            <Button size="sm" variant="secondary" disabled>
-                              <Clock className="w-4 h-4 mr-1" /> Coming Soon
-                            </Button>
-                          )}
-                          {integration.status === "request" && (
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              disabled={isRequested}
-                              onClick={() => handleConnect(integration)}
-                              data-testid={`button-request-${integration.id}`}
-                            >
-                              {isRequested ? (
-                                <><CheckCircle className="w-4 h-4 mr-1" /> Requested</>
-                              ) : (
-                                <><Send className="w-4 h-4 mr-1" /> Request Access</>
-                              )}
                             </Button>
                           )}
                         </div>
