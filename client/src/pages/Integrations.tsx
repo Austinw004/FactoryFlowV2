@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { CSVImportExportDialog } from "@/components/CSVImportExportDialog";
 import {
   Building2,
   MessageSquare,
@@ -147,14 +148,14 @@ const integrations: Integration[] = [
   },
   {
     id: "csv-import",
-    name: "CSV/Excel Import",
-    description: "Bulk upload data from spreadsheets",
+    name: "CSV Import",
+    description: "Bulk upload data from CSV spreadsheets",
     category: "data",
     status: "connected",
     icon: FileSpreadsheet,
     iconType: "lucide",
     valueProposition: "Quick data migration from existing systems",
-    features: ["Drag-and-drop upload", "Column mapping", "Validation preview", "Error handling"],
+    features: ["Drag-and-drop upload", "Data preview", "Validation", "Error handling"],
   },
   {
     id: "api-access",
@@ -672,6 +673,7 @@ export default function Integrations() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [csvDialogOpen, setCsvDialogOpen] = useState(false);
 
   const filteredIntegrations = integrations.filter(integration => {
     const matchesSearch = integration.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -885,7 +887,21 @@ export default function Integrations() {
                         )}
                         <div className="ml-auto">
                           {integration.status === "connected" && (
-                            <Button size="sm" variant="outline" data-testid={`button-settings-${integration.id}`}>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={() => {
+                                if (integration.id === "csv-import") {
+                                  setCsvDialogOpen(true);
+                                } else {
+                                  toast({
+                                    title: `${integration.name} Settings`,
+                                    description: "Integration settings panel coming soon.",
+                                  });
+                                }
+                              }}
+                              data-testid={`button-settings-${integration.id}`}
+                            >
                               <Settings className="w-4 h-4 mr-1" /> Settings
                             </Button>
                           )}
@@ -934,6 +950,8 @@ export default function Integrations() {
           </CardContent>
         </Card>
       </div>
+
+      <CSVImportExportDialog open={csvDialogOpen} onOpenChange={setCsvDialogOpen} />
     </div>
   );
 }
