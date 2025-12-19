@@ -1073,6 +1073,17 @@ export class DbStorage implements IStorage {
     // Onboarding & Feature Flags
     if (updates.onboardingCompleted !== undefined) updateData.onboardingCompleted = updates.onboardingCompleted;
     if (updates.showOnboardingHints !== undefined) updateData.showOnboardingHints = updates.showOnboardingHints;
+    // Slack Integration
+    if (updates.slackWebhookUrl !== undefined) updateData.slackWebhookUrl = updates.slackWebhookUrl;
+    if (updates.slackDefaultChannel !== undefined) updateData.slackDefaultChannel = updates.slackDefaultChannel;
+    if (updates.slackEnabled !== undefined) updateData.slackEnabled = updates.slackEnabled;
+    // Twilio Integration
+    if (updates.twilioEnabled !== undefined) updateData.twilioEnabled = updates.twilioEnabled;
+    if (updates.twilioAlertPhone !== undefined) updateData.twilioAlertPhone = updates.twilioAlertPhone;
+    // HubSpot Integration
+    if (updates.hubspotAccessToken !== undefined) updateData.hubspotAccessToken = updates.hubspotAccessToken;
+    if (updates.hubspotRefreshToken !== undefined) updateData.hubspotRefreshToken = updates.hubspotRefreshToken;
+    if (updates.hubspotEnabled !== undefined) updateData.hubspotEnabled = updates.hubspotEnabled;
 
     const [updated] = await db.update(companies)
       .set(updateData)
