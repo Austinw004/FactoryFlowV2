@@ -153,6 +153,7 @@ export const companies = pgTable("companies", {
   twilioAuthToken: text("twilio_auth_token"),
   twilioPhoneNumber: text("twilio_phone_number"),
   twilioEnabled: integer("twilio_enabled").default(0),
+  twilioAlertPhone: text("twilio_alert_phone"),
   // Integration Settings - HubSpot
   hubspotAccessToken: text("hubspot_access_token"),
   hubspotRefreshToken: text("hubspot_refresh_token"),

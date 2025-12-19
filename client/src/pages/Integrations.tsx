@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { CSVImportExportDialog } from "@/components/CSVImportExportDialog";
 import { SlackConfigDialog } from "@/components/SlackConfigDialog";
+import { TwilioConfigDialog } from "@/components/TwilioConfigDialog";
 import {
   Building2,
   MessageSquare,
@@ -99,7 +100,7 @@ const integrations: Integration[] = [
     name: "Twilio SMS",
     description: "Send critical alerts via SMS to key stakeholders",
     category: "communication",
-    status: "coming_soon",
+    status: "available",
     icon: Phone,
     iconType: "lucide",
     valueProposition: "Never miss critical supply chain alerts",
@@ -676,6 +677,7 @@ export default function Integrations() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [csvDialogOpen, setCsvDialogOpen] = useState(false);
   const [slackDialogOpen, setSlackDialogOpen] = useState(false);
+  const [twilioDialogOpen, setTwilioDialogOpen] = useState(false);
 
   const filteredIntegrations = integrations.filter(integration => {
     const matchesSearch = integration.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -691,6 +693,8 @@ export default function Integrations() {
   const handleConnect = (integration: Integration) => {
     if (integration.id === "slack") {
       setSlackDialogOpen(true);
+    } else if (integration.id === "twilio") {
+      setTwilioDialogOpen(true);
     } else if (integration.status === "available") {
       toast({
         title: "Integration Setup",
@@ -959,6 +963,7 @@ export default function Integrations() {
 
       <CSVImportExportDialog open={csvDialogOpen} onOpenChange={setCsvDialogOpen} />
       <SlackConfigDialog open={slackDialogOpen} onOpenChange={setSlackDialogOpen} />
+      <TwilioConfigDialog open={twilioDialogOpen} onOpenChange={setTwilioDialogOpen} />
     </div>
   );
 }

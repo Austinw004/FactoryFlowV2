@@ -13965,6 +13965,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Company not found" });
       }
       
+      // Check Twilio credentials from environment variables
+      const twilioConfigured = !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER);
+      
       res.json({
         slack: {
           enabled: company.slackEnabled === 1,
@@ -13973,7 +13976,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         twilio: {
           enabled: company.twilioEnabled === 1,
-          configured: !!(company.twilioAccountSid && company.twilioAuthToken && company.twilioPhoneNumber),
+          configured: twilioConfigured,
+          fromNumber: twilioConfigured ? process.env.TWILIO_PHONE_NUMBER?.slice(-4) : null,
         },
         hubspot: {
           enabled: company.hubspotEnabled === 1,
@@ -14036,6 +14040,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(result);
     } catch (error: any) {
       console.error("Error testing Slack:", error);
+      res.status(500).json({ success: false, message: error.message });
+    }
+  });
+
+  // Configure Twilio integration
+  app.post("/api/integrations/twilio/configure", isAuthenticated, async (req: any, res) => {
+    try {
+      const { enabled } = req.body;
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      // Twilio credentials come from environment variables (secrets)
+      // We only store enabled flag per company
+      await storage.updateCompany(user.companyId, {
+        twilioEnabled: enabled ? 1 : 0,
+      });
+      
+      res.json({ success: true, message: "Twilio integration configured" });
+    } catch (error: any) {
+      console.error("Error configuring Twilio:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Test Twilio connection
+  app.post("/api/integrations/twilio/test", isAuthenticated, async (req: any, res) => {
+    try {
+      const { phoneNumber } = req.body;
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      if (!phoneNumber) {
+        return res.status(400).json({ success: false, message: "Phone number required" });
+      }
+      
+      // Import and use Twilio service (credentials from env vars)
+      const { twilioService } = await import("./lib/twilioService");
+      
+      if (!twilioService.isConfigured()) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Twilio not configured. Please add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER to secrets." 
+        });
+      }
+      
+      const result = await twilioService.testConnection(phoneNumber);
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error testing Twilio:", error);
+      res.status(500).json({ success: false, message: error.message });
+    }
+  });
+
+  // Send SMS alert (internal use)
+  app.post("/api/integrations/twilio/send", isAuthenticated, async (req: any, res) => {
+    try {
+      const { phoneNumber, alertType, title, message, actionRequired } = req.body;
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const company = await storage.getCompany(user.companyId);
+      if (company?.twilioEnabled !== 1) {
+        return res.status(400).json({ success: false, message: "Twilio alerts not enabled" });
+      }
+      
+      const { twilioService } = await import("./lib/twilioService");
+      
+      if (!twilioService.isConfigured()) {
+        return res.status(400).json({ success: false, message: "Twilio not configured" });
+      }
+      
+      if (!phoneNumber) {
+        return res.status(400).json({ success: false, message: "Phone number required" });
+      }
+      
+      const result = await twilioService.sendAlert(
+        phoneNumber,
+        alertType || 'urgent',
+        title,
+        message,
+        actionRequired
+      );
+      
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error sending Twilio SMS:", error);
       res.status(500).json({ success: false, message: error.message });
     }
   });
