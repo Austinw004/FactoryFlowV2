@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -7,11 +7,18 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { CheckCircle, Loader2, AlertCircle, ExternalLink } from "lucide-react";
+import { CheckCircle, Loader2, ExternalLink } from "lucide-react";
 
 interface SlackConfigDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+}
+
+interface SlackConfig {
+  webhookUrl: string;
+  defaultChannel: string;
+  enabled: boolean;
+  configured: boolean;
 }
 
 interface IntegrationStatus {
@@ -19,6 +26,7 @@ interface IntegrationStatus {
     enabled: boolean;
     configured: boolean;
     channel: string;
+    webhookUrl?: string;
   };
   twilio: {
     enabled: boolean;
@@ -35,18 +43,31 @@ export function SlackConfigDialog({ open, onOpenChange }: SlackConfigDialogProps
   const [webhookUrl, setWebhookUrl] = useState("");
   const [defaultChannel, setDefaultChannel] = useState("#prescient-alerts");
   const [enabled, setEnabled] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  const { data: status } = useQuery<IntegrationStatus>({
+  const { data: status, isLoading } = useQuery<IntegrationStatus>({
     queryKey: ["/api/integrations/status"],
     enabled: open,
   });
 
+  useEffect(() => {
+    if (status && open && !isInitialized) {
+      setDefaultChannel(status.slack.channel || "#prescient-alerts");
+      setEnabled(status.slack.enabled);
+      setIsInitialized(true);
+    }
+  }, [status, open, isInitialized]);
+
+  useEffect(() => {
+    if (!open) {
+      setIsInitialized(false);
+    }
+  }, [open]);
+
   const configureMutation = useMutation({
     mutationFn: async (data: { webhookUrl: string; defaultChannel: string; enabled: boolean }) => {
-      return apiRequest("/api/integrations/slack/configure", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      const res = await apiRequest("POST", "/api/integrations/slack/configure", data);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/integrations/status"] });
@@ -54,8 +75,9 @@ export function SlackConfigDialog({ open, onOpenChange }: SlackConfigDialogProps
         title: "Slack Configured",
         description: "Your Slack integration has been saved.",
       });
+      onOpenChange(false);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Configuration Failed",
         description: error.message || "Could not save Slack configuration.",
@@ -66,11 +88,10 @@ export function SlackConfigDialog({ open, onOpenChange }: SlackConfigDialogProps
 
   const testMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("/api/integrations/slack/test", {
-        method: "POST",
-      });
+      const res = await apiRequest("POST", "/api/integrations/slack/test");
+      return res.json();
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data: { success: boolean; message?: string }) => {
       if (data.success) {
         toast({
           title: "Connection Successful",
@@ -84,7 +105,7 @@ export function SlackConfigDialog({ open, onOpenChange }: SlackConfigDialogProps
         });
       }
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Test Failed",
         description: error.message || "Could not test Slack connection.",
@@ -94,20 +115,35 @@ export function SlackConfigDialog({ open, onOpenChange }: SlackConfigDialogProps
   });
 
   const handleSave = () => {
-    configureMutation.mutate({ webhookUrl, defaultChannel, enabled });
+    if (!webhookUrl && !status?.slack.configured) {
+      toast({
+        title: "Missing Webhook URL",
+        description: "Please enter a Slack webhook URL.",
+        variant: "destructive",
+      });
+      return;
+    }
+    configureMutation.mutate({ 
+      webhookUrl: webhookUrl || "", 
+      defaultChannel, 
+      enabled 
+    });
   };
 
   const handleTest = () => {
     if (!status?.slack.configured && !webhookUrl) {
       toast({
         title: "No Webhook URL",
-        description: "Please enter a Slack webhook URL first.",
+        description: "Please save a Slack webhook URL first.",
         variant: "destructive",
       });
       return;
     }
     testMutation.mutate();
   };
+
+  const canSave = webhookUrl || status?.slack.configured;
+  const canTest = status?.slack.configured;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -125,61 +161,69 @@ export function SlackConfigDialog({ open, onOpenChange }: SlackConfigDialogProps
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="webhook-url">Webhook URL</Label>
-            <Input
-              id="webhook-url"
-              data-testid="input-slack-webhook"
-              placeholder="https://hooks.slack.com/services/..."
-              value={webhookUrl}
-              onChange={(e) => setWebhookUrl(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              Get your webhook URL from{" "}
-              <a
-                href="https://api.slack.com/messaging/webhooks"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline inline-flex items-center gap-1"
-              >
-                Slack App Settings
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="default-channel">Default Channel</Label>
-            <Input
-              id="default-channel"
-              data-testid="input-slack-channel"
-              placeholder="#prescient-alerts"
-              value={defaultChannel}
-              onChange={(e) => setDefaultChannel(e.target.value)}
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Enable Slack Notifications</Label>
-              <p className="text-xs text-muted-foreground">
-                Turn on/off Slack alerts without removing configuration
-              </p>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
             </div>
-            <Switch
-              data-testid="switch-slack-enabled"
-              checked={enabled}
-              onCheckedChange={setEnabled}
-            />
-          </div>
-
-          {status?.slack.configured && (
-            <div className="rounded-md bg-green-500/10 p-3 text-sm">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-green-500" />
-                <span>Slack is connected to {status.slack.channel}</span>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="webhook-url">Webhook URL</Label>
+                <Input
+                  id="webhook-url"
+                  data-testid="input-slack-webhook"
+                  placeholder={status?.slack.configured ? "Enter new URL to update (current is saved)" : "https://hooks.slack.com/services/..."}
+                  value={webhookUrl}
+                  onChange={(e) => setWebhookUrl(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Get your webhook URL from{" "}
+                  <a
+                    href="https://api.slack.com/messaging/webhooks"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline inline-flex items-center gap-1"
+                  >
+                    Slack App Settings
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </p>
               </div>
-            </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="default-channel">Default Channel</Label>
+                <Input
+                  id="default-channel"
+                  data-testid="input-slack-channel"
+                  placeholder="#prescient-alerts"
+                  value={defaultChannel}
+                  onChange={(e) => setDefaultChannel(e.target.value)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Enable Slack Notifications</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Turn on/off Slack alerts without removing configuration
+                  </p>
+                </div>
+                <Switch
+                  data-testid="switch-slack-enabled"
+                  checked={enabled}
+                  onCheckedChange={setEnabled}
+                />
+              </div>
+
+              {status?.slack.configured && (
+                <div className="rounded-md bg-green-500/10 p-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <span>Slack is connected to {status.slack.channel}</span>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -187,7 +231,7 @@ export function SlackConfigDialog({ open, onOpenChange }: SlackConfigDialogProps
           <Button
             variant="outline"
             onClick={handleTest}
-            disabled={testMutation.isPending || (!status?.slack.configured && !webhookUrl)}
+            disabled={testMutation.isPending || !canTest}
             data-testid="button-test-slack"
           >
             {testMutation.isPending ? (
@@ -201,7 +245,7 @@ export function SlackConfigDialog({ open, onOpenChange }: SlackConfigDialogProps
           </Button>
           <Button
             onClick={handleSave}
-            disabled={configureMutation.isPending || !webhookUrl}
+            disabled={configureMutation.isPending || !canSave}
             data-testid="button-save-slack"
           >
             {configureMutation.isPending ? (

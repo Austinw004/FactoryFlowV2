@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { CSVImportExportDialog } from "@/components/CSVImportExportDialog";
+import { SlackConfigDialog } from "@/components/SlackConfigDialog";
 import {
   Building2,
   MessageSquare,
@@ -111,7 +112,7 @@ const integrations: Integration[] = [
     name: "Slack",
     description: "Real-time notifications in your team channels",
     category: "communication",
-    status: "coming_soon",
+    status: "available",
     icon: SiSlack,
     iconType: "si",
     valueProposition: "Keep your entire team informed instantly",
@@ -674,6 +675,7 @@ export default function Integrations() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [csvDialogOpen, setCsvDialogOpen] = useState(false);
+  const [slackDialogOpen, setSlackDialogOpen] = useState(false);
 
   const filteredIntegrations = integrations.filter(integration => {
     const matchesSearch = integration.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -687,7 +689,9 @@ export default function Integrations() {
   const availableCount = integrations.filter(i => i.status === "available").length;
 
   const handleConnect = (integration: Integration) => {
-    if (integration.status === "available") {
+    if (integration.id === "slack") {
+      setSlackDialogOpen(true);
+    } else if (integration.status === "available") {
       toast({
         title: "Integration Setup",
         description: `Starting ${integration.name} configuration. Please follow the setup wizard.`,
@@ -893,6 +897,8 @@ export default function Integrations() {
                               onClick={() => {
                                 if (integration.id === "csv-import") {
                                   setCsvDialogOpen(true);
+                                } else if (integration.id === "slack") {
+                                  setSlackDialogOpen(true);
                                 } else {
                                   toast({
                                     title: `${integration.name} Settings`,
@@ -952,6 +958,7 @@ export default function Integrations() {
       </div>
 
       <CSVImportExportDialog open={csvDialogOpen} onOpenChange={setCsvDialogOpen} />
+      <SlackConfigDialog open={slackDialogOpen} onOpenChange={setSlackDialogOpen} />
     </div>
   );
 }
