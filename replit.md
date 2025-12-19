@@ -2,7 +2,7 @@
 
 ## Overview
 
-Prescient Labs is a manufacturing intelligence platform designed to optimize procurement, production, and supply chain management. It provides foresight through demand forecasting, material allocation, and proactive operational adjustments, aiming to save customers 15-30% on procurement costs. The platform operates on a performance-based pricing model, taking a tiered percentage of verified procurement savings.
+Prescient Labs is a manufacturing intelligence platform designed to optimize procurement, production, and supply chain management. It provides foresight through demand forecasting, material allocation, and proactive operational adjustments. The platform operates on a performance-based pricing model, taking a tiered percentage of verified procurement savings.
 
 Key capabilities include:
 - SKU demand forecasting

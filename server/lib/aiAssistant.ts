@@ -388,7 +388,7 @@ function generateFallbackResponse(messages: Array<{ role: string; content: strin
   }
   
   if (lowerMessage.includes("opportunities") || lowerMessage.includes("where can we save") || lowerMessage.includes("cost reduction")) {
-    return `**Current Opportunities:**\n\n**1. Procurement Timing (Estimated 15-30% savings)**\nThe economic regime analysis identifies counter-cyclical buying opportunities. Check Strategic Analysis for current timing signals.\n\n**2. Commodity Buying Signals**\nFutures curve analysis shows which commodities to buy now vs. wait. Natural gas and copper currently show favorable signals.\n\n**3. Supplier Optimization**\nPeer Benchmarking compares your material costs to industry averages - identifying where you might be overpaying.\n\n**4. Forecast Accuracy Improvements**\nBetter forecasts mean less safety stock and fewer expedited orders. The automated retraining keeps accuracy high.\n\nWant me to elaborate on any of these?`;
+    return `**Current Opportunities:**\n\n**1. Procurement Timing Optimization**\nThe economic regime analysis identifies counter-cyclical buying opportunities. Check Strategic Analysis for current timing signals.\n\n**2. Commodity Buying Signals**\nFutures curve analysis shows which commodities to buy now vs. wait. Natural gas and copper currently show favorable signals.\n\n**3. Supplier Optimization**\nPeer Benchmarking compares your material costs to industry averages - identifying where you might be overpaying.\n\n**4. Forecast Accuracy Improvements**\nBetter forecasts mean less safety stock and fewer expedited orders. The automated retraining keeps accuracy high.\n\nWant me to elaborate on any of these?`;
   }
   
   if (lowerMessage.includes("supply chain health") || lowerMessage.includes("how's our supply chain")) {
@@ -396,7 +396,7 @@ function generateFallbackResponse(messages: Array<{ role: string; content: strin
   }
   
   if (lowerMessage.includes("best timing") || lowerMessage.includes("when should i buy") || lowerMessage.includes("optimal timing")) {
-    return `**Procurement Timing Guidance:**\n\nOur economic regime analysis provides data-driven timing signals:\n\n**Current Signal:** Check the Strategic Analysis page for real-time recommendations\n\n**General Principles:**\n- **In Expansion phases:** Lock in prices and secure capacity before shortages\n- **In Contraction phases:** Defer non-critical purchases, negotiate better terms\n- **Counter-cyclical buying:** Buy when others aren't - typically 15-30% savings\n\n**Commodity-Specific Signals:**\nFutures curves indicate:\n- Backwardation (buy signal) - near-term prices higher than long-term\n- Contango (wait signal) - prices expected to fall\n\nCheck the Data Feeds tab for current commodity signals.`;
+    return `**Procurement Timing Guidance:**\n\nOur economic regime analysis provides data-driven timing signals:\n\n**Current Signal:** Check the Strategic Analysis page for real-time recommendations\n\n**General Principles:**\n- **In Expansion phases:** Lock in prices and secure capacity before shortages\n- **In Contraction phases:** Defer non-critical purchases, negotiate better terms\n- **Counter-cyclical buying:** Buy when others aren't for potential cost advantages\n\n**Commodity-Specific Signals:**\nFutures curves indicate:\n- Backwardation (buy signal) - near-term prices higher than long-term\n- Contango (wait signal) - prices expected to fall\n\nCheck the Data Feeds tab for current commodity signals.`;
   }
   
   if (lowerMessage.includes("how accurate") || lowerMessage.includes("forecast accuracy")) {
@@ -416,7 +416,7 @@ function generateFallbackResponse(messages: Array<{ role: string; content: strin
   }
   
   if (lowerMessage.includes("budget") || lowerMessage.includes("next quarter") || lowerMessage.includes("planning")) {
-    return `**Budget Planning Guidance:**\n\n**Key Inputs from Platform:**\n1. **Material Cost Trends** - Commodity forecasts for cost assumptions\n2. **Supplier Risk** - Factor into contingency planning\n3. **Forecast Accuracy** - Set realistic demand assumptions\n4. **Economic Regime** - Adjust strategy based on cycle position\n\n**Recommendations:**\n- Use Scenario Simulation to model different conditions\n- Check Peer Benchmarking for cost targets\n- Review ROI Dashboard for savings trends\n\n**Counter-Cyclical Opportunity:**\nBudget for strategic inventory builds during market weakness - this typically saves 15-30% vs reactive buying.\n\nNeed specific projections for any category?`;
+    return `**Budget Planning Guidance:**\n\n**Key Inputs from Platform:**\n1. **Material Cost Trends** - Commodity forecasts for cost assumptions\n2. **Supplier Risk** - Factor into contingency planning\n3. **Forecast Accuracy** - Set realistic demand assumptions\n4. **Economic Regime** - Adjust strategy based on cycle position\n\n**Recommendations:**\n- Use Scenario Simulation to model different conditions\n- Check Peer Benchmarking for cost targets\n- Review ROI Dashboard for savings trends\n\n**Counter-Cyclical Opportunity:**\nBudget for strategic inventory builds during market weakness for potential cost advantages vs reactive buying.\n\nNeed specific projections for any category?`;
   }
   
   // Proprietary formula protection - CRITICAL
@@ -444,11 +444,11 @@ function generateFallbackResponse(messages: Array<{ role: string; content: strin
   }
 
   if (lowerMessage.includes("competitive") || lowerMessage.includes("market share") || lowerMessage.includes("benchmark")) {
-    return "For competitive positioning: (1) Our Peer Benchmarking feature compares your material costs against anonymized industry data, (2) Forecast accuracy below 10% MAPE is top-quartile performance, (3) OEE above 85% is world-class, (4) Counter-cyclical procurement typically saves 15-30% compared to reactive buying. These metrics demonstrate operational excellence to stakeholders.";
+    return "For competitive positioning: (1) Our Peer Benchmarking feature compares your material costs against anonymized industry data, (2) Forecast accuracy below 10% MAPE is top-quartile performance, (3) OEE above 85% is world-class, (4) Counter-cyclical procurement can provide cost advantages compared to reactive buying. These metrics demonstrate operational excellence to stakeholders.";
   }
 
   if (lowerMessage.includes("roi") || lowerMessage.includes("return on investment") || lowerMessage.includes("savings")) {
-    return "Our ROI Dashboard tracks verified procurement savings from better timing and supplier optimization. Typical results show 15-30% savings on procurement costs through counter-cyclical buying and proactive supplier management. All savings are jointly verified before any success fees apply - we only succeed when you save money.";
+    return "Our ROI Dashboard tracks verified procurement savings from better timing and supplier optimization. Results vary based on your specific situation - all savings are jointly verified before any success fees apply. We only succeed when you save money.";
   }
 
   if (lowerMessage.includes("recession") || lowerMessage.includes("downturn") || lowerMessage.includes("economic outlook")) {

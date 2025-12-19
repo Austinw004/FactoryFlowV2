@@ -53,7 +53,7 @@ export class RoiCalculationService {
 
   /**
    * Calculate procurement savings from regime-based timing
-   * Counter-cyclical procurement can save 15-30% on material costs
+   * Counter-cyclical procurement can provide cost advantages on material costs
    */
   async calculateProcurementSavings(companyId: string): Promise<ProcurementSavingsBreakdown> {
     const result: ProcurementSavingsBreakdown = {
