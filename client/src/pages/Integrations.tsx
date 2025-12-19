@@ -10,6 +10,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { CSVImportExportDialog } from "@/components/CSVImportExportDialog";
 import { SlackConfigDialog } from "@/components/SlackConfigDialog";
 import { TwilioConfigDialog } from "@/components/TwilioConfigDialog";
+import { HubSpotConfigDialog } from "@/components/HubSpotConfigDialog";
 import {
   Building2,
   MessageSquare,
@@ -72,7 +73,7 @@ const integrations: Integration[] = [
     name: "HubSpot",
     description: "Sync sales pipeline data to improve demand forecasting",
     category: "crm",
-    status: "coming_soon",
+    status: "available",
     icon: SiHubspot,
     iconType: "si",
     valueProposition: "Convert sales opportunities into demand signals",
@@ -678,6 +679,7 @@ export default function Integrations() {
   const [csvDialogOpen, setCsvDialogOpen] = useState(false);
   const [slackDialogOpen, setSlackDialogOpen] = useState(false);
   const [twilioDialogOpen, setTwilioDialogOpen] = useState(false);
+  const [hubspotDialogOpen, setHubspotDialogOpen] = useState(false);
 
   const filteredIntegrations = integrations.filter(integration => {
     const matchesSearch = integration.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -695,6 +697,8 @@ export default function Integrations() {
       setSlackDialogOpen(true);
     } else if (integration.id === "twilio") {
       setTwilioDialogOpen(true);
+    } else if (integration.id === "hubspot") {
+      setHubspotDialogOpen(true);
     } else if (integration.status === "available") {
       toast({
         title: "Integration Setup",
@@ -964,6 +968,7 @@ export default function Integrations() {
       <CSVImportExportDialog open={csvDialogOpen} onOpenChange={setCsvDialogOpen} />
       <SlackConfigDialog open={slackDialogOpen} onOpenChange={setSlackDialogOpen} />
       <TwilioConfigDialog open={twilioDialogOpen} onOpenChange={setTwilioDialogOpen} />
+      <HubSpotConfigDialog open={hubspotDialogOpen} onOpenChange={setHubspotDialogOpen} />
     </div>
   );
 }

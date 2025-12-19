@@ -2,39 +2,23 @@
 
 ## Overview
 
-Prescient Labs gives manufacturers the foresight to make smarter decisions - from predicting demand and timing purchases to optimizing production and protecting supply chains. The platform typically saves customers 15-30% on procurement costs through intelligent timing and proactive operations.
+Prescient Labs is a manufacturing intelligence platform designed to optimize procurement, production, and supply chain management. It provides foresight through demand forecasting, material allocation, and proactive operational adjustments, aiming to save customers 15-30% on procurement costs. The platform operates on a performance-based pricing model, taking a tiered percentage of verified procurement savings.
 
-### Commercial Status
-- **Brand**: Prescient Labs
-- **Tagline**: "See Ahead. Act First. Dominate."
-- **Pricing Model**: 100% Performance-Based / ROI-Based (Dec 2025)
-  - Zero upfront fees, zero monthly subscriptions
-  - Tiered success fees based on verified procurement savings:
-    - 25% of first $250K in savings
-    - 20% of savings from $250K-$500K
-    - 15% of savings above $500K
-  - Example: $400K annual savings = $92,500 fee (customer keeps $307,500)
-- **Savings Verification**: Joint sign-off on baseline, monthly tracking, quarterly settlements, independent audit rights
-- **Subscription**: Stripe-based payment processing for success fees
-- **Proprietary IP**: Economic models and formulas are kept private from public-facing pages
-
-### Core Capabilities
-- SKU demand forecasting with automated retraining
-- Prioritized material allocation optimization
+Key capabilities include:
+- SKU demand forecasting
+- Prioritized material allocation
 - Counter-cyclical procurement timing
 - Budget and inventory optimization
-- Comprehensive machinery lifecycle management
-- Real-time pricing for 110+ tradeable commodities
+- Machinery lifecycle management
+- Real-time pricing for over 110 commodities
 - Master materials catalog
 
-### Enterprise Features
-- Multi-tier Supply Chain Network Intelligence with risk scoring
+Enterprise features extend to:
+- Multi-tier Supply Chain Network Intelligence
 - Automated Purchase Order Execution
-- Industry Data Consortium for peer benchmarking
-- M&A Intelligence
-- Regulatory compliance tracking
-- Real-time production KPI dashboards with OEE tracking
-- Automated bottleneck detection
+- Industry Data Consortium for benchmarking
+- M&A and regulatory compliance tracking
+- Real-time production KPI dashboards with automated bottleneck detection
 
 ## User Preferences
 
@@ -44,178 +28,43 @@ Preferred communication style: Simple, everyday language.
 
 ### UI/UX Decisions
 
-The frontend is built with React and TypeScript, using `shadcn/ui` on Radix UI, following Material Design principles with a Linear-inspired minimalist aesthetic. Tailwind CSS is used for styling. The design is dashboard-centric, featuring KPI cards, data tables, charts, regime status widgets, and policy signals panels.
+The frontend utilizes React and TypeScript, styled with `shadcn/ui` on Radix UI, following Material Design principles with a minimalist aesthetic. Tailwind CSS is used for styling. The interface is dashboard-centric, featuring KPI cards, data tables, charts, regime status widgets, and policy signals panels.
 
 ### Technical Implementations
 
-The system is a multi-tenant application ensuring data isolation per company. Core features include:
-- **Dual-circuit FDR model**: Determines economic regimes and policy signals.
-- **Demand Forecasting**: Regime-aware, multi-horizon forecasting with automated retraining and real-time MAPE tracking, including degradation alerts and automatic recalibration.
-- **Allocation Engine**: Constraint-based optimization for material allocation.
-- **Real-time Commodity Pricing**: Integration for over 110 commodities.
-- **Master Materials Catalog**: Centralized management of materials and supplier pricing.
-- **Production KPIs**: OEE calculation, cycle time analysis, and automated bottleneck detection.
-- **Automated RFQ Generation**: Intelligent system that monitors inventory levels and economic regime signals to automatically generate Request for Quotations (RFQs), saving significant procurement manager time.
-- **Peer Benchmarking System**: Anonymized cost-sharing platform for comparing material costs with industry peers, offering competitive intelligence and identifying savings.
-- **Demand Signal Repository**: Centralized hub for multi-source demand signals with analytics and confidence scoring.
-- **ROI Dashboard**: Visualizes procurement savings and forecast accuracy improvements.
-- **ERP Integration Templates**: Pre-built integration templates for top ERPs (SAP S/4HANA, Oracle NetSuite, Microsoft Dynamics 365, Sage X3, Infor CloudSuite).
-- **Prescriptive Action Playbooks**: Regime-specific action playbooks for economic changes, covering scenarios like Bubble Territory Response and Healthy Expansion Optimization.
-- **Scenario Simulation**: What-if economic modeling for simulating different conditions and calculating impacts on procurement, inventory, and budget.
-- **Supplier Risk Scoring**: FDR-based supplier risk assessment incorporating financial health, geographic risk, and regime impact.
-- **Collaborative S&OP Workflows**: Full-featured Sales & Operations Planning module with meeting management, demand/supply reconciliation, and approval workflows.
-- **Real-Time Digital Twin**: Enterprise-grade supply chain digital twin with live state snapshots, AI-powered natural language queries, what-if simulations, and real-time alerts.
-- **Multi-Tier Supplier Mapping**: Enterprise-grade supply chain visibility with network graph visualization, dependency analysis, regional risk assessment, and sub-tier alerts.
-- **Geopolitical & Event Monitoring**: Real-time news scanning for supply chain events (port closures, trade disputes, natural disasters, regulatory changes, supplier distress) with FDR-aware impact analysis and regime-specific recommendations.
-- **AI Assistant**: Conversational AI interface with four core capabilities:
-  1. **Chat Interface**: Natural language queries about forecasts, risks, market timing, and procurement strategies
-  2. **Proactive Alerts**: Automatic notifications for regime changes, critical events, forecast degradation, and inventory issues
-  3. **Action Automation**: Quick actions to trigger simulations, generate RFQs, and navigate to relevant features
-  4. **Context-Aware Insights**: Real-time insights based on economic regime, supply chain events, and inventory levels
-  - Uses Replit AI Integrations (OpenAI) with graceful fallback responses
-  - **Fully Conversational**: Maintains conversation context across messages for natural follow-up questions
-    - Tracks discussed topics (commodities, suppliers, forecasting, procurement, operations)
-    - Remembers mentioned entities (specific commodities, SKUs, suppliers)
-    - Handles follow-up patterns like "give me your top 5", "tell me more", "why?"
-    - Works even in fallback mode when OpenAI is not configured
+The system is a multi-tenant application with data isolation per company. Core technical features include:
+- **Economic Regime Intelligence**: A "Dual-circuit FDR model" determines economic regimes and provides procurement timing signals and regime transition predictions.
+- **Demand Forecasting**: Regime-aware, multi-horizon forecasting with automated retraining and real-time MAPE tracking.
+- **Optimization Engines**: Constraint-based material allocation and budget optimization.
+- **Real-time Data**: Integration for real-time commodity pricing and production KPIs (OEE, cycle time analysis).
+- **Automated Processes**: Automated RFQ generation based on inventory and economic signals, and automated bottleneck detection.
+- **Supply Chain Visibility**: Multi-tier supplier mapping with network graph visualization and geopolitical/event monitoring for real-time risk assessment.
+- **Decision Support**: Prescriptive action playbooks, scenario simulation for economic modeling, and supplier risk scoring.
+- **Collaboration**: Collaborative S&OP workflows.
+- **Digital Twin**: Enterprise-grade supply chain digital twin with live snapshots and AI-powered natural language queries.
+- **AI Assistant**: A conversational AI interface providing chat, proactive alerts, action automation, and context-aware insights, utilizing Replit AI Integrations (OpenAI) with graceful fallback. It maintains conversation context and handles follow-up questions.
+- **Peer Benchmarking System**: Anonymized cost-sharing for competitive intelligence.
+- **Demand Signal Repository**: Centralized hub for multi-source demand signals with analytics.
+- **ROI Dashboard**: Visualizes procurement savings and forecast accuracy.
+- **ERP Integration Templates**: Pre-built templates for major ERPs.
+- **Onboarding Wizard**: A 3-step wizard for new users covering company setup, team invitations, and platform launch.
 
 ### System Design Choices
 
-The frontend uses React with TypeScript and Vite, with `wouter` for routing and TanStack Query for server state management. The backend is an Express.js application with TypeScript, providing RESTful APIs. Drizzle ORM with Neon serverless PostgreSQL is used for the database, featuring a multi-tenant schema with `companyId` for data isolation. Authentication is handled via Replit Auth (OpenID Connect) with Express sessions. The system employs background polling services for continuous data updates and WebSockets for live UI updates, including daily automated forecast retraining, real-time forecast accuracy tracking, automated RFQ generation, and peer benchmarking aggregation services.
-
-## Recent Changes (Nov 2025)
-
-### Authentication & RBAC Flow Fixes
-- **RBAC initialization**: Permissions are seeded at server boot via `initializePermissions()` before any routes are registered
-- **Auto-company creation**: `/api/auth/user` automatically creates a company for new users and initializes default roles
-- **Role assignment**: New users are automatically assigned the Admin role for their company
-
-### Dashboard Loading Improvements
-- API queries (skus, allocations, regime) now wait for user authentication to complete
-- Prevents race conditions where queries fired before company was created
-- Empty state properly renders the CreateSKUDialog for new users
-- Default route changed from Digital Twin to Dashboard so new users see "Get Started" onboarding
-
-### Sample Data Seeding Fix (Dec 2025)
-- Fixed server-side cache invalidation after seeding using `globalCache.invalidate()`
-- Added frontend cache invalidation with `refetchType: 'all'` for immediate UI updates
-- Cache keys invalidated: skus, materials, suppliers, allocations for the company
-- "Load Sample Data" button now properly populates dashboard with 3 SKUs and materials
-
-### Thesis-Aligned Regime Intelligence (Dec 2025)
-Enhanced FDR model with thesis-aligned improvements that reinforce economic regime understanding:
-
-**New Capabilities:**
-- **FDR Velocity & Acceleration Tracking**: Monitors rate of change in FDR to predict regime transitions before they happen
-- **Regime Transition Prediction**: Calculates probability and estimated time to next regime change based on FDR trajectory
-- **Regime Duration Modeling**: Tracks typical regime durations (e.g., Asset-Led Growth: ~270 days) with confidence decay as regimes extend beyond typical duration
-- **Dynamic Confidence Scoring**: Confidence based on FDR stability within regime, regime maturity, transition risk, and data quality
-- **Data-Driven Regime Factors**: Forecasting factors learned from historical accuracy rather than static values
-- **Procurement Timing Signals**: Actionable recommendations (BUY_NOW, LOCK_PRICES, DEFER, COUNTER_CYCLICAL_OPPORTUNITY) based on regime and FDR trends
-
-**New API Endpoints:**
-- `GET /api/economics/regime-intelligence`: Comprehensive FDR analysis with all intelligence data
-- `GET /api/economics/procurement-signal`: Direct procurement timing recommendation
-
-**Enhanced Existing Endpoint:**
-- `GET /api/economics/regime` now includes `intelligence` object with fdrTrend, transitionPrediction, regimeDuration, confidence, and procurementSignal
-
-**Key Files:**
-- `server/lib/regimeIntelligence.ts`: Core regime intelligence module (company-scoped instances)
-- `server/lib/economics.ts`: Enhanced with intelligence integration
-- `server/lib/forecasting.ts`: Uses optimized regime factors with confidence-adjusted bounds
-- `server/storage.ts`: Added `getEconomicSnapshotHistory()` for loading historical FDR data
-
-**Multi-Tenancy Architecture:**
-- `RegimeIntelligence.forCompany(companyId)` returns company-scoped instances
-- Historical FDR data loaded from company's economic snapshots via `storage.getEconomicSnapshotHistory()`
-- API endpoints initialize intelligence from stored snapshots before serving requests
-- Each company's regime analysis is isolated and derived from their specific data
-
-### New User Onboarding Flow (3-Step Wizard)
-New users are guided through a comprehensive onboarding wizard:
-
-**Step 1 - Company Setup:**
-- User enters company name (required)
-- Optional: Select industry (Electronics, Automotive, etc.)
-- Optional: Select company size
-- POST `/api/onboarding/company` creates/updates company
-
-**Step 2 - Team Invitations:**
-- Add team members by email
-- Assign roles (Admin, Manager, Viewer)
-- Can be skipped if working solo
-- POST `/api/onboarding/invite-team` processes invitations
-
-**Step 3 - Platform Launch:**
-- Welcome message and platform overview
-- POST `/api/onboarding/complete` marks onboarding done
-- Redirects to main dashboard
-
-**Technical Implementation:**
-- `users.onboarding_complete` flag (integer: 0/1) tracks completion status
-- `useAuth` hook includes `needsOnboarding` state
-- `App.tsx` routes users without completed onboarding to `/onboarding`
-- After completion, users see full dashboard with sidebar navigation
+The frontend is built with React, TypeScript, and Vite, using `wouter` for routing and TanStack Query for server state management. The backend is an Express.js application with TypeScript, providing RESTful APIs. Drizzle ORM with Neon serverless PostgreSQL is used for multi-tenant database management, enforcing data isolation via `companyId`. Authentication is handled via Replit Auth (OpenID Connect) with Express sessions. The system employs background polling services for data updates and WebSockets for live UI updates, including daily automated forecast retraining, real-time forecast accuracy tracking, automated RFQ generation, and peer benchmarking aggregation services.
 
 ## External Dependencies
 
-### Third-Party Services
-
 -   **Database**: Neon Serverless PostgreSQL
 -   **Authentication**: Replit Auth (OpenID Connect)
--   **Economic Data APIs**: FRED, Alpha Vantage, DBnomics, World Bank API, IMF Data API, OECD Stats API, Trading Economics, News API
--   **Commodity Pricing API**: Metals.Dev
--   **Internal Economic Fallback**: `https://api.factoryofthefuture.ai/economic-indicators`
-
-### Key NPM Packages
-
--   **Frontend**: `react`, `wouter`, `@tanstack/react-query`, `tailwindcss`, `recharts`, `@radix-ui/*`, `class-variance-authority`, `cmdk`, `lucide-react`
--   **Backend**: `express`, `drizzle-orm`, `drizzle-zod`, `zod`, `passport`, `openid-client`, `axios`
--   **Database & Sessions**: `@neondatabase/serverless`, `connect-pg-simple`, `ws`
-
-## Pending Integrations (Dec 2025)
-
-The following integrations need to be set up before publishing:
-
-### Email Service (for team invitations)
-- **Status**: Configured ✓ (Dec 2025)
-- **Provider**: SendPulse (15,000 emails/month free tier)
-- **Keys**: SENDPULSE_API_USER_ID, SENDPULSE_API_SECRET configured as secrets
-- **Implementation**: `server/lib/emailService.ts` with team invitation templates
-
-### Stripe (for payments)
-- **Status**: Connected ✓ (Dec 2025)
-- **Keys**: STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY configured as secrets
-- **Webhook**: Auto-configured at /api/stripe/webhook
-
-### Legal Pages Added (Dec 2025)
-- Terms of Service: `/terms`
-- Privacy Policy: `/privacy`
-- Both linked from landing page footer
-
-### Dashboard Enhancements (Dec 2025)
-- **PDF Export**: Dashboard now has "Export PDF" button that generates a downloadable PDF report with:
-  - Economic regime status and FDR score
-  - KPI summary (SKUs, fill rate, action items)
-  - Recent allocations table
-  - Recommended actions from policy signals
-  - Implementation: `client/src/lib/pdfExport.ts` using jsPDF
-- **Activity Feed**: Real-time activity timeline at bottom of Dashboard showing user actions and system events
-  - Component: `client/src/components/ActivityFeed.tsx`
-  - Backend: `activity_logs` table with storage methods
-
-### Notification Settings (Dec 2025)
-- **Dedicated Page**: `/notification-settings` for granular notification control
-  - In-app notification toggles (regime changes, forecast alerts, low stock, budget, system)
-  - Email notification toggles with digest frequency options
-  - Quiet hours configuration
-  - Implementation: `client/src/pages/NotificationSettings.tsx`
-- **Link from Configuration**: Configuration -> Alerts tab now has link to full notification settings
-- **Database**: `user_notification_preferences` table stores per-user settings
-
-### Contextual Help Tooltips
-- **InfoTooltip Component**: Reusable tooltip explaining platform-specific terms
-  - Terms: FDR, Regime, MAPE, Market Signal, Allocation
-  - Used across Dashboard, Forecasting, Procurement, ForecastAccuracy pages
-  - Implementation: `client/src/components/InfoTooltip.tsx`
+-   **Economic Data APIs**: FRED, Alpha Vantage, DBnomics, World Bank API, IMF Data API, OECD Stats API, Trading Economics, News API, Metals.Dev, and an internal economic fallback API (`https://api.factoryofthefuture.ai/economic-indicators`).
+-   **Email Service**: SendPulse (for team invitations).
+-   **Payment Processing**: Stripe.
+-   **Communication & CRM**:
+    -   Slack (for alerts and notifications).
+    -   Twilio (for critical SMS alerts).
+    -   HubSpot CRM (for contact/company sync and demand signals).
+-   **NPM Packages (Key Examples)**:
+    -   **Frontend**: `react`, `wouter`, `@tanstack/react-query`, `tailwindcss`, `recharts`, `@radix-ui/*`, `class-variance-authority`, `cmdk`, `lucide-react`.
+    -   **Backend**: `express`, `drizzle-orm`, `drizzle-zod`, `zod`, `passport`, `openid-client`, `axios`.
+    -   **Database & Sessions**: `@neondatabase/serverless`, `connect-pg-simple`, `ws`.

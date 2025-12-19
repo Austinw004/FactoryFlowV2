@@ -14099,6 +14099,145 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Configure HubSpot integration
+  app.post("/api/integrations/hubspot/configure", isAuthenticated, async (req: any, res) => {
+    try {
+      const { accessToken, enabled } = req.body;
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const updates: any = {
+        hubspotEnabled: enabled ? 1 : 0,
+      };
+      
+      if (accessToken) {
+        updates.hubspotAccessToken = accessToken;
+      }
+      
+      await storage.updateCompany(user.companyId, updates);
+      
+      res.json({ success: true, message: "HubSpot integration configured" });
+    } catch (error: any) {
+      console.error("Error configuring HubSpot:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Test HubSpot connection
+  app.post("/api/integrations/hubspot/test", isAuthenticated, async (req: any, res) => {
+    try {
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const company = await storage.getCompany(user.companyId);
+      if (!company?.hubspotAccessToken) {
+        return res.status(400).json({ success: false, message: "HubSpot access token not configured" });
+      }
+      
+      const { hubspotService } = await import("./lib/hubspotService");
+      hubspotService.configure(company.hubspotAccessToken);
+      
+      const result = await hubspotService.testConnection();
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error testing HubSpot:", error);
+      res.status(500).json({ success: false, message: error.message });
+    }
+  });
+  
+  // Get HubSpot contacts
+  app.get("/api/integrations/hubspot/contacts", isAuthenticated, async (req: any, res) => {
+    try {
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const company = await storage.getCompany(user.companyId);
+      if (!company?.hubspotAccessToken || company.hubspotEnabled !== 1) {
+        return res.status(400).json({ error: "HubSpot not configured or enabled" });
+      }
+      
+      const { hubspotService } = await import("./lib/hubspotService");
+      hubspotService.configure(company.hubspotAccessToken);
+      
+      const contacts = await hubspotService.getContacts();
+      res.json({ contacts });
+    } catch (error: any) {
+      console.error("Error fetching HubSpot contacts:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Get HubSpot deals (for demand signal integration)
+  app.get("/api/integrations/hubspot/deals", isAuthenticated, async (req: any, res) => {
+    try {
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const company = await storage.getCompany(user.companyId);
+      if (!company?.hubspotAccessToken || company.hubspotEnabled !== 1) {
+        return res.status(400).json({ error: "HubSpot not configured or enabled" });
+      }
+      
+      const { hubspotService } = await import("./lib/hubspotService");
+      hubspotService.configure(company.hubspotAccessToken);
+      
+      const deals = await hubspotService.getDeals();
+      res.json({ deals });
+    } catch (error: any) {
+      console.error("Error fetching HubSpot deals:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Sync supplier to HubSpot
+  app.post("/api/integrations/hubspot/sync-supplier", isAuthenticated, async (req: any, res) => {
+    try {
+      const { supplierId } = req.body;
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const company = await storage.getCompany(user.companyId);
+      if (!company?.hubspotAccessToken || company.hubspotEnabled !== 1) {
+        return res.status(400).json({ error: "HubSpot not configured or enabled" });
+      }
+      
+      const supplier = await storage.getSupplier(supplierId);
+      if (!supplier || supplier.companyId !== user.companyId) {
+        return res.status(404).json({ error: "Supplier not found" });
+      }
+      
+      const { hubspotService } = await import("./lib/hubspotService");
+      hubspotService.configure(company.hubspotAccessToken);
+      
+      const result = await hubspotService.syncSupplierToHubSpot({
+        name: supplier.name,
+        email: supplier.email || undefined,
+        phone: supplier.phone || undefined,
+        category: supplier.category || undefined,
+      });
+      
+      res.json({ success: true, ...result });
+    } catch (error: any) {
+      console.error("Error syncing supplier to HubSpot:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Send SMS alert (internal use)
   app.post("/api/integrations/twilio/send", isAuthenticated, async (req: any, res) => {
     try {
