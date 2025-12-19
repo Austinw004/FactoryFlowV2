@@ -23,6 +23,7 @@ interface CommodityPrice {
 
 export default function Forecasting() {
   const [isAllCommoditiesOpen, setIsAllCommoditiesOpen] = useState(false);
+  const [, navigate] = useLocation();
 
   const { data: skus, isLoading: isLoadingSkus } = useQuery<Sku[]>({
     queryKey: ["/api/skus"],
@@ -65,8 +66,6 @@ export default function Forecasting() {
       </div>
     );
   }
-
-  const [, navigate] = useLocation();
 
   if (!skus || skus.length === 0) {
     return (
