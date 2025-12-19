@@ -42,7 +42,8 @@ The system is a multi-tenant application with data isolation per company. Core t
 - **Decision Support**: Prescriptive action playbooks, scenario simulation for economic modeling, and supplier risk scoring.
 - **Collaboration**: Collaborative S&OP workflows.
 - **Digital Twin**: Enterprise-grade supply chain digital twin with live snapshots and AI-powered natural language queries.
-- **AI Assistant**: A conversational AI interface providing chat, proactive alerts, action automation, and context-aware insights, utilizing Replit AI Integrations (OpenAI) with graceful fallback. It maintains conversation context and handles follow-up questions.
+- **AI Assistant**: A conversational AI interface providing chat, proactive alerts, action automation, and context-aware insights, utilizing Replit AI Integrations (OpenAI) with graceful fallback. It maintains conversation context and handles follow-up questions. Now enhanced with cross-module smart insights for proactive suggestions.
+- **Smart Insights Service**: A cross-module intelligence layer that aggregates data from regime analysis, inventory, suppliers, commodities, and RFQs to generate prioritized insights and compound risk alerts. Surfaces patterns that single data sources miss (e.g., low stock + at-risk supplier = compound risk alert).
 - **Peer Benchmarking System**: Anonymized cost-sharing for competitive intelligence.
 - **Demand Signal Repository**: Centralized hub for multi-source demand signals with analytics.
 - **ROI Dashboard**: Visualizes procurement savings and forecast accuracy.
