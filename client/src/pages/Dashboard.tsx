@@ -15,6 +15,7 @@ import { RegimeActionCards } from "@/components/RegimeActionCards";
 import { IndustryInsightsPanel, IndustryBanner } from "@/components/IndustryInsightsPanel";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import { ActivityFeed } from "@/components/ActivityFeed";
+import { SmartInsightsCompact } from "@/components/SmartInsightsPanel";
 import { generateDashboardPDF } from "@/lib/pdfExport";
 import { TrendingUp, DollarSign, Package, AlertCircle, Plus, Upload, GitCompare, Loader2, Globe, Radio, Package2, Building2, Box, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -455,11 +456,17 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2">
-          <IndustryInsightsPanel maxItems={4} />
+          <SmartInsightsCompact />
         </div>
         <div className="space-y-4">
           <QuickWinsWidget />
           <MaterialsAtRiskWidget />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2">
+          <IndustryInsightsPanel maxItems={4} />
         </div>
       </div>
 

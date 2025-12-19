@@ -7,6 +7,7 @@ import { calculateOEE, detectBottlenecks } from "./productionKPIs";
 import { fetchExternalVariables } from "./externalAPIs";
 import { getAISystemPromptEnhancements } from "./industryPersonalization";
 import { getIndustryConfig } from "@shared/industryConfig";
+import { smartInsightsService } from "./smartInsights";
 
 const newsMonitoringService = new NewsMonitoringService(storage);
 
@@ -186,6 +187,21 @@ export interface PlatformContext {
     };
     fdrAdjustment: number;
     adjustedFdr: number;
+  };
+  smartInsights?: {
+    activeInsights: number;
+    highPriorityInsights: number;
+    topInsights: Array<{
+      type: string;
+      title: string;
+      priority: string;
+    }>;
+    crossReferencedAlerts: Array<{
+      severity: string;
+      title: string;
+      category: string;
+      suggestedAction?: string;
+    }>;
   };
 }
 
@@ -739,6 +755,32 @@ class AIAssistantService {
         console.log("[AI Assistant] Could not fetch company industry/location");
       }
 
+      // Fetch smart cross-referenced insights for enhanced context
+      let smartInsightsContext = undefined;
+      try {
+        const [insights, alerts] = await Promise.all([
+          smartInsightsService.generateInsights(companyId),
+          smartInsightsService.generateCrossReferencedAlerts(companyId)
+        ]);
+        smartInsightsContext = {
+          activeInsights: insights.length,
+          highPriorityInsights: insights.filter(i => i.priority === 'high').length,
+          topInsights: insights.slice(0, 3).map(i => ({
+            type: i.type,
+            title: i.title,
+            priority: i.priority
+          })),
+          crossReferencedAlerts: alerts.slice(0, 3).map(a => ({
+            severity: a.severity,
+            title: a.title,
+            category: a.category,
+            suggestedAction: a.suggestedAction
+          }))
+        };
+      } catch (e) {
+        console.log("[AI Assistant] Could not fetch smart insights");
+      }
+
       const context: PlatformContext = {
         location: companyLocation,
         industry: industryContext,
@@ -786,7 +828,8 @@ class AIAssistantService {
         },
         production: productionContext,
         sop: sopContext,
-        externalVariables: externalVarsContext
+        externalVariables: externalVarsContext,
+        smartInsights: smartInsightsContext
       };
 
       this.contextCache.set(companyId, { context, timestamp: Date.now() });
@@ -1367,7 +1410,13 @@ PRODUCTION PERFORMANCE:${productionDetails || '\n  - No recent production data'}
 
 S&OP WORKFLOWS:${sopDetails}${actionItemInfo}${criticalGapInfo}
 - Upcoming meetings: ${context.sop.upcomingMeetings}
-
+${context.smartInsights ? `
+CROSS-REFERENCED SMART INSIGHTS:
+- Active insights: ${context.smartInsights.activeInsights} (${context.smartInsights.highPriorityInsights} high priority)
+${context.smartInsights.topInsights.length > 0 ? `- Top insights:\n${context.smartInsights.topInsights.map(i => `  * [${i.priority.toUpperCase()}] ${i.title} (${i.type})`).join('\n')}` : ''}
+${context.smartInsights.crossReferencedAlerts.length > 0 ? `- Cross-referenced alerts:\n${context.smartInsights.crossReferencedAlerts.map(a => `  * [${a.severity.toUpperCase()}] ${a.title}: ${a.suggestedAction || 'Review recommended'}`).join('\n')}` : ''}
+These insights combine data from multiple platform modules (regime, inventory, suppliers, forecasts) to surface patterns that single data sources miss. Proactively mention relevant insights when they relate to user questions.
+` : ''}
 REGIME-SPECIFIC GUIDANCE:
 ${this.getRegimeGuidance(context.regime.regime)}
 

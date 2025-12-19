@@ -10,6 +10,7 @@ import { initializePermissions, initializeDefaultRoles } from "./lib/rbac";
 import { logAudit } from "./lib/auditLogger";
 import { globalCache } from "./lib/caching";
 import { DualCircuitEconomics } from "./lib/economics";
+import { smartInsightsService } from "./lib/smartInsights";
 import { DemandForecaster } from "./lib/forecasting";
 import { EnhancedDemandForecaster, LeadIndicatorService, type DemandDataPoint } from "./lib/enhancedForecasting";
 import { getCompanyRegimeIntelligence } from "./lib/regimeIntelligence";
@@ -890,6 +891,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error saving notification preferences:", error);
       res.status(500).json({ error: "Failed to save notification preferences" });
+    }
+  });
+
+  // Smart Insights - Cross-referenced intelligence from all platform modules
+  app.get("/api/smart-insights", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no associated company" });
+      }
+      
+      const insights = await smartInsightsService.generateInsights(user.companyId);
+      res.json({ insights });
+    } catch (error: any) {
+      console.error("Error generating smart insights:", error);
+      res.status(500).json({ error: "Failed to generate insights" });
+    }
+  });
+
+  app.get("/api/smart-insights/alerts", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no associated company" });
+      }
+      
+      const alerts = await smartInsightsService.generateCrossReferencedAlerts(user.companyId);
+      res.json({ alerts });
+    } catch (error: any) {
+      console.error("Error generating smart alerts:", error);
+      res.status(500).json({ error: "Failed to generate alerts" });
     }
   });
 
