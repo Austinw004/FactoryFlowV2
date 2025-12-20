@@ -6607,7 +6607,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PO Rules CRUD
   app.get("/api/po-rules", isAuthenticated, async (req: any, res) => {
     try {
-      const rules = await storage.getPoRules(req.user.companyId);
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+      const rules = await storage.getPoRules(user.companyId);
       res.json(rules);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -6628,9 +6632,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/po-rules", isAuthenticated, async (req: any, res) => {
     try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
       const validatedData = insertPoRuleSchema.parse({
         ...req.body,
-        companyId: req.user.companyId,
+        companyId: user.companyId,
       });
       const rule = await storage.createPoRule(validatedData);
       res.status(201).json(rule);
@@ -6663,8 +6671,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Evaluate PO rules for a material/context
   app.post("/api/po-rules/evaluate", isAuthenticated, async (req: any, res) => {
     try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
       const context: POGenerationContext = req.body;
-      const recommendations = await poEngine.evaluateRules(context, req.user.companyId);
+      const recommendations = await poEngine.evaluateRules(context, user.companyId);
       res.json(recommendations);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -6674,7 +6686,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Workflow Steps
   app.get("/api/po-workflows", isAuthenticated, async (req: any, res) => {
     try {
-      const steps = await storage.getPoWorkflowSteps(req.user.companyId);
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+      const steps = await storage.getPoWorkflowSteps(user.companyId);
       res.json(steps);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -6692,9 +6708,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/po-workflows", isAuthenticated, async (req: any, res) => {
     try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
       const validatedData = insertPoWorkflowStepSchema.parse({
         ...req.body,
-        companyId: req.user.companyId,
+        companyId: user.companyId,
       });
       const step = await storage.createPoWorkflowStep(validatedData);
       res.status(201).json(step);
@@ -6706,12 +6726,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Generate approval workflow for a PO
   app.post("/api/purchase-orders/workflow/generate", isAuthenticated, async (req: any, res) => {
     try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
       const { poValue, materialId, supplierId } = req.body;
       const workflow = await poEngine.generateApprovalWorkflow(
         poValue,
         materialId,
         supplierId,
-        req.user.companyId
+        user.companyId
       );
       res.json(workflow);
     } catch (error: any) {
@@ -6731,7 +6755,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/approvals/my-approvals", isAuthenticated, async (req: any, res) => {
     try {
-      const approvals = await storage.getPoApprovalsByApprover(req.user.id);
+      const userId = req.user.claims.sub;
+      const approvals = await storage.getPoApprovalsByApprover(userId);
       res.json(approvals);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -6740,9 +6765,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/po-approvals", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const validatedData = insertPoApprovalSchema.parse({
         ...req.body,
-        approverId: req.user.id,
+        approverId: userId,
       });
       const approval = await storage.createPoApproval(validatedData);
       res.status(201).json(approval);
@@ -6754,7 +6780,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Negotiation Playbooks CRUD
   app.get("/api/negotiation-playbooks", isAuthenticated, async (req: any, res) => {
     try {
-      const playbooks = await storage.getNegotiationPlaybooks(req.user.companyId);
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+      const playbooks = await storage.getNegotiationPlaybooks(user.companyId);
       res.json(playbooks);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -6775,8 +6805,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/negotiation-playbooks/regime/:regime", isAuthenticated, async (req: any, res) => {
     try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
       const playbooks = await storage.getNegotiationPlaybooksByRegime(
-        req.user.companyId,
+        user.companyId,
         req.params.regime
       );
       res.json(playbooks);
@@ -6787,9 +6821,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/negotiation-playbooks", isAuthenticated, async (req: any, res) => {
     try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
       const validatedData = insertNegotiationPlaybookSchema.parse({
         ...req.body,
-        companyId: req.user.companyId,
+        companyId: user.companyId,
       });
       const playbook = await storage.createNegotiationPlaybook(validatedData);
       res.status(201).json(playbook);
@@ -6813,8 +6851,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get recommended playbook based on FDR/regime
   app.post("/api/negotiation-playbooks/recommend", isAuthenticated, async (req: any, res) => {
     try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
       const { fdr, regime } = req.body;
-      const playbook = await poEngine.getRecommendedPlaybook(fdr, regime, req.user.companyId);
+      const playbook = await poEngine.getRecommendedPlaybook(fdr, regime, user.companyId);
       res.json(playbook);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -6824,7 +6866,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ERP Connections CRUD
   app.get("/api/erp-connections", isAuthenticated, async (req: any, res) => {
     try {
-      const connections = await storage.getErpConnections(req.user.companyId);
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+      const connections = await storage.getErpConnections(user.companyId);
       res.json(connections);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -6845,9 +6891,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/erp-connections", isAuthenticated, async (req: any, res) => {
     try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
       const validatedData = insertErpConnectionSchema.parse({
         ...req.body,
-        companyId: req.user.companyId,
+        companyId: user.companyId,
       });
       const connection = await storage.createErpConnection(validatedData);
       res.status(201).json(connection);
@@ -6931,7 +6981,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get ERP integration status
   app.get("/api/erp/status", isAuthenticated, async (req: any, res) => {
     try {
-      const status = await poEngine.getERPStatus(req.user.companyId);
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+      const status = await poEngine.getERPStatus(user.companyId);
       res.json(status);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -6957,8 +7011,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/consortium/contributions", isAuthenticated, async (req: any, res) => {
     try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
       // Anonymize company ID
-      const anonymousId = consortiumEngine.anonymizeCompanyData(req.user.companyId, req.body);
+      const anonymousId = consortiumEngine.anonymizeCompanyData(user.companyId, req.body);
       
       const validatedData = insertConsortiumContributionSchema.parse({
         ...req.body,
@@ -7032,7 +7090,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // M&A targets
   app.get("/api/ma/targets", isAuthenticated, async (req: any, res) => {
     try {
-      const targets = await storage.getMaTargets(req.user.companyId);
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+      const targets = await storage.getMaTargets(user.companyId);
       res.json(targets);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -7041,8 +7103,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/ma/targets/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
       const target = await storage.getMaTarget(req.params.id);
-      if (!target || target.companyId !== req.user.companyId) {
+      if (!target || target.companyId !== user.companyId) {
         return res.status(404).json({ error: "Target not found" });
       }
       res.json(target);
@@ -7053,9 +7119,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/ma/targets", isAuthenticated, async (req: any, res) => {
     try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
       const validatedData = insertMaTargetSchema.parse({
         ...req.body,
-        companyId: req.user.companyId,
+        companyId: user.companyId,
       });
       
       const target = await storage.createMaTarget(validatedData);
@@ -7067,8 +7137,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/ma/targets/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
       const existing = await storage.getMaTarget(req.params.id);
-      if (!existing || existing.companyId !== req.user.companyId) {
+      if (!existing || existing.companyId !== user.companyId) {
         return res.status(404).json({ error: "Target not found" });
       }
 
@@ -7082,7 +7156,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // M&A recommendations
   app.get("/api/ma/recommendations", isAuthenticated, async (req: any, res) => {
     try {
-      const recommendations = await storage.getMaRecommendations(req.user.companyId);
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+      const recommendations = await storage.getMaRecommendations(user.companyId);
       res.json(recommendations);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -13032,7 +13110,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get current user's subscription status
   app.get("/api/stripe/subscription", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await stripeService.getUser(req.user.id);
+      const userId = req.user.claims.sub;
+      const user = await stripeService.getUser(userId);
       
       if (!user?.stripeSubscriptionId) {
         return res.json({ 
@@ -13071,7 +13150,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid or inactive price" });
       }
 
-      const user = await stripeService.getUser(req.user.id);
+      const userId = req.user.claims.sub;
+      const user = await stripeService.getUser(userId);
       
       // Check if user already has an active subscription
       if (user.subscriptionStatus === 'active' || user.subscriptionStatus === 'trialing') {
@@ -13116,7 +13196,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create customer portal session for managing subscription
   app.post("/api/stripe/portal", isAuthenticated, async (req: any, res) => {
     try {
-      const user = await stripeService.getUser(req.user.id);
+      const userId = req.user.claims.sub;
+      const user = await stripeService.getUser(userId);
       
       if (!user?.stripeCustomerId) {
         return res.status(400).json({ error: "No active subscription found" });
@@ -13766,7 +13847,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/agentic/actions/:actionId/approve", isAuthenticated, async (req: any, res) => {
     try {
       const { actionId } = req.params;
-      const userId = req.user.id;
+      const userId = req.user.claims.sub;
 
       res.json({
         success: true,
@@ -13787,7 +13868,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { actionId } = req.params;
       const { reason } = req.body;
-      const userId = req.user.id;
+      const userId = req.user.claims.sub;
 
       res.json({
         success: true,
