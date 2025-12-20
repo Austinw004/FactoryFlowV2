@@ -13140,6 +13140,218 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AGENTIC AI ROUTES - Autonomous Actions & Intelligent Automation
   // ============================================================================
 
+  // In-memory storage for agents and guardrails (per company, persists for server session)
+  const companyAgents: Map<string, any[]> = new Map();
+  const companyGuardrails: Map<string, any[]> = new Map();
+
+  // Initialize default agents for a company
+  function getDefaultAgents(companyId: string) {
+    return [
+      {
+        id: "agent_procurement",
+        companyId,
+        name: "Procurement Agent",
+        description: "Automates purchase orders, supplier selection, and order timing based on economic signals",
+        agentType: "procurement",
+        avatar: "shopping-cart",
+        capabilities: ["create_po", "generate_rfq", "supplier_selection", "order_timing", "price_negotiation"],
+        maxAutonomyLevel: "auto_draft",
+        isEnabled: 1,
+        priority: 90,
+        learningEnabled: 1,
+        confidenceThreshold: 0.8,
+        dailyActionLimit: 50,
+        dailyValueLimit: 100000,
+        activeHoursStart: "08:00",
+        activeHoursEnd: "18:00",
+        activeDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
+        timezone: "America/New_York",
+        actionsToday: Math.floor(Math.random() * 20) + 5,
+        valueToday: Math.floor(Math.random() * 50000) + 10000,
+        successRate: 94 + Math.floor(Math.random() * 5),
+      },
+      {
+        id: "agent_inventory",
+        companyId,
+        name: "Inventory Agent",
+        description: "Manages inventory levels, rebalancing across locations, and safety stock optimization",
+        agentType: "inventory",
+        avatar: "boxes",
+        capabilities: ["rebalance_inventory", "adjust_safety_stock", "stockout_prevention", "excess_detection", "location_optimization"],
+        maxAutonomyLevel: "auto_execute",
+        isEnabled: 1,
+        priority: 85,
+        learningEnabled: 1,
+        confidenceThreshold: 0.75,
+        dailyActionLimit: 100,
+        dailyValueLimit: null,
+        activeHoursStart: "00:00",
+        activeHoursEnd: "23:59",
+        activeDays: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
+        timezone: "America/New_York",
+        actionsToday: Math.floor(Math.random() * 30) + 10,
+        valueToday: 0,
+        successRate: 98 + Math.floor(Math.random() * 2),
+      },
+      {
+        id: "agent_forecasting",
+        companyId,
+        name: "Forecasting Agent",
+        description: "Generates demand forecasts, monitors accuracy degradation, and triggers retraining",
+        agentType: "forecasting",
+        avatar: "trending-up",
+        capabilities: ["generate_forecast", "monitor_accuracy", "trigger_retraining", "demand_sensing", "regime_aware_adjustment"],
+        maxAutonomyLevel: "full_autonomous",
+        isEnabled: 1,
+        priority: 95,
+        learningEnabled: 1,
+        confidenceThreshold: 0.85,
+        dailyActionLimit: 200,
+        dailyValueLimit: null,
+        activeHoursStart: "00:00",
+        activeHoursEnd: "23:59",
+        activeDays: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
+        timezone: "America/New_York",
+        actionsToday: Math.floor(Math.random() * 50) + 20,
+        valueToday: 0,
+        successRate: 96 + Math.floor(Math.random() * 3),
+      },
+      {
+        id: "agent_supplier",
+        companyId,
+        name: "Supplier Risk Agent",
+        description: "Monitors supplier health, assesses risks, and recommends diversification strategies",
+        agentType: "supplier",
+        avatar: "users",
+        capabilities: ["risk_assessment", "supplier_scoring", "diversification_analysis", "event_monitoring", "alert_generation"],
+        maxAutonomyLevel: "suggest",
+        isEnabled: 1,
+        priority: 80,
+        learningEnabled: 1,
+        confidenceThreshold: 0.7,
+        dailyActionLimit: 50,
+        dailyValueLimit: null,
+        activeHoursStart: "06:00",
+        activeHoursEnd: "20:00",
+        activeDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
+        timezone: "America/New_York",
+        actionsToday: Math.floor(Math.random() * 15) + 5,
+        valueToday: 0,
+        successRate: 90 + Math.floor(Math.random() * 8),
+      },
+      {
+        id: "agent_production",
+        companyId,
+        name: "Production Agent",
+        description: "Optimizes production scheduling, monitors bottlenecks, and adjusts capacity utilization",
+        agentType: "production",
+        avatar: "factory",
+        capabilities: ["schedule_optimization", "bottleneck_detection", "capacity_planning", "maintenance_alerts", "oee_monitoring"],
+        maxAutonomyLevel: "auto_draft",
+        isEnabled: 1,
+        priority: 85,
+        learningEnabled: 1,
+        confidenceThreshold: 0.78,
+        dailyActionLimit: 75,
+        dailyValueLimit: null,
+        activeHoursStart: "00:00",
+        activeHoursEnd: "23:59",
+        activeDays: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"],
+        timezone: "America/New_York",
+        actionsToday: Math.floor(Math.random() * 25) + 10,
+        valueToday: 0,
+        successRate: 92 + Math.floor(Math.random() * 6),
+      },
+    ];
+  }
+
+  // Initialize default guardrails for a company
+  function getDefaultGuardrails(companyId: string) {
+    return [
+      {
+        id: "guard_spending",
+        companyId,
+        name: "Daily Spending Limit",
+        description: "Prevents AI from authorizing more than $100,000 in purchases per day",
+        guardrailType: "spending_limit",
+        conditions: { period: "daily", limit: 100000, currency: "USD" },
+        appliesToAgents: ["all"],
+        appliesToActionTypes: ["create_po", "generate_rfq"],
+        enforcementLevel: "hard",
+        onViolation: "block",
+        notifyOnViolation: ["cfo", "procurement_director"],
+        isEnabled: 1,
+        priority: 100,
+        violationCount: 3,
+        lastViolationAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        id: "guard_hours",
+        companyId,
+        name: "Business Hours Only",
+        description: "High-value actions (>$10,000) only during business hours",
+        guardrailType: "time_restriction",
+        conditions: {
+          minValue: 10000,
+          allowedHours: ["08:00-18:00"],
+          allowedDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
+          timezone: "America/New_York",
+        },
+        appliesToAgents: ["agent_procurement"],
+        appliesToActionTypes: ["create_po"],
+        enforcementLevel: "hard",
+        onViolation: "block",
+        notifyOnViolation: [],
+        isEnabled: 1,
+        priority: 90,
+        violationCount: 0,
+        lastViolationAt: null,
+      },
+      {
+        id: "guard_regime",
+        companyId,
+        name: "Regime-Based Caution",
+        description: "Extra approval required during volatile economic regimes",
+        guardrailType: "regime_restriction",
+        conditions: {
+          cautionRegimes: ["BUBBLE", "IMBALANCED_DEFICIT"],
+          requiresExtraApproval: true,
+          reduceAutonomy: true,
+        },
+        appliesToAgents: ["all"],
+        appliesToActionTypes: ["all"],
+        enforcementLevel: "escalate",
+        onViolation: "require_approval",
+        notifyOnViolation: ["finance_director", "coo"],
+        isEnabled: 1,
+        priority: 95,
+        violationCount: 5,
+        lastViolationAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        id: "guard_supplier",
+        companyId,
+        name: "Approved Suppliers Only",
+        description: "AI can only create POs with pre-approved, rated suppliers",
+        guardrailType: "supplier_restriction",
+        conditions: {
+          onlyApproved: true,
+          minRating: 4.0,
+          excludeHighRisk: true,
+        },
+        appliesToAgents: ["agent_procurement"],
+        appliesToActionTypes: ["create_po", "generate_rfq"],
+        enforcementLevel: "hard",
+        onViolation: "block",
+        notifyOnViolation: ["procurement_manager"],
+        isEnabled: 1,
+        priority: 85,
+        violationCount: 1,
+        lastViolationAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+    ];
+  }
+
   // Get all AI agents for company
   app.get("/api/agentic/agents", isAuthenticated, async (req: any, res) => {
     try {
@@ -13150,128 +13362,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Company ID required" });
       }
 
-      // Return default agents with simulated real-time stats
-      const agents = [
-        {
-          id: "agent_procurement",
-          companyId,
-          name: "Procurement Agent",
-          description: "Automates purchase orders, supplier selection, and order timing based on economic signals",
-          agentType: "procurement",
-          avatar: "shopping-cart",
-          capabilities: ["create_po", "generate_rfq", "supplier_selection", "order_timing", "price_negotiation"],
-          maxAutonomyLevel: "auto_draft",
-          isEnabled: 1,
-          priority: 90,
-          learningEnabled: 1,
-          confidenceThreshold: 0.8,
-          dailyActionLimit: 50,
-          dailyValueLimit: 100000,
-          activeHoursStart: "08:00",
-          activeHoursEnd: "18:00",
-          activeDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
-          timezone: "America/New_York",
-          actionsToday: Math.floor(Math.random() * 20) + 5,
-          valueToday: Math.floor(Math.random() * 50000) + 10000,
-          successRate: 94 + Math.floor(Math.random() * 5),
-        },
-        {
-          id: "agent_inventory",
-          companyId,
-          name: "Inventory Agent",
-          description: "Manages inventory levels, rebalancing across locations, and safety stock optimization",
-          agentType: "inventory",
-          avatar: "boxes",
-          capabilities: ["rebalance_inventory", "adjust_safety_stock", "stockout_prevention", "excess_detection", "location_optimization"],
-          maxAutonomyLevel: "auto_execute",
-          isEnabled: 1,
-          priority: 85,
-          learningEnabled: 1,
-          confidenceThreshold: 0.75,
-          dailyActionLimit: 100,
-          dailyValueLimit: null,
-          activeHoursStart: "00:00",
-          activeHoursEnd: "23:59",
-          activeDays: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
-          timezone: "America/New_York",
-          actionsToday: Math.floor(Math.random() * 40) + 15,
-          valueToday: 0,
-          successRate: 97 + Math.floor(Math.random() * 3),
-        },
-        {
-          id: "agent_forecasting",
-          companyId,
-          name: "Forecasting Agent",
-          description: "Continuously monitors forecast accuracy and triggers retraining when needed",
-          agentType: "forecasting",
-          avatar: "trending-up",
-          capabilities: ["trigger_retraining", "forecast_adjustment", "demand_signal_processing", "accuracy_monitoring", "anomaly_detection"],
-          maxAutonomyLevel: "full_autonomous",
-          isEnabled: 1,
-          priority: 95,
-          learningEnabled: 1,
-          confidenceThreshold: 0.7,
-          dailyActionLimit: 200,
-          dailyValueLimit: null,
-          activeHoursStart: "00:00",
-          activeHoursEnd: "23:59",
-          activeDays: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
-          timezone: "America/New_York",
-          actionsToday: Math.floor(Math.random() * 60) + 30,
-          valueToday: 0,
-          successRate: 99,
-        },
-        {
-          id: "agent_supplier",
-          companyId,
-          name: "Supplier Risk Agent",
-          description: "Monitors supplier risk, performance, and automatically escalates issues",
-          agentType: "supplier",
-          avatar: "building",
-          capabilities: ["risk_monitoring", "performance_tracking", "escalation", "alternative_sourcing", "contract_alerts"],
-          maxAutonomyLevel: "suggest",
-          isEnabled: 1,
-          priority: 80,
-          learningEnabled: 1,
-          confidenceThreshold: 0.85,
-          dailyActionLimit: 30,
-          dailyValueLimit: 50000,
-          activeHoursStart: "06:00",
-          activeHoursEnd: "20:00",
-          activeDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
-          timezone: "America/New_York",
-          actionsToday: Math.floor(Math.random() * 10) + 2,
-          valueToday: Math.floor(Math.random() * 20000) + 5000,
-          successRate: 88 + Math.floor(Math.random() * 8),
-        },
-        {
-          id: "agent_production",
-          companyId,
-          name: "Production Agent",
-          description: "Optimizes production scheduling, monitors bottlenecks, and adjusts capacity utilization",
-          agentType: "production",
-          avatar: "factory",
-          capabilities: ["schedule_optimization", "bottleneck_detection", "capacity_planning", "maintenance_alerts", "oee_monitoring"],
-          maxAutonomyLevel: "auto_draft",
-          isEnabled: 1,
-          priority: 85,
-          learningEnabled: 1,
-          confidenceThreshold: 0.78,
-          dailyActionLimit: 75,
-          dailyValueLimit: null,
-          activeHoursStart: "00:00",
-          activeHoursEnd: "23:59",
-          activeDays: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"],
-          timezone: "America/New_York",
-          actionsToday: Math.floor(Math.random() * 25) + 10,
-          valueToday: 0,
-          successRate: 92 + Math.floor(Math.random() * 6),
-        },
-      ];
+      // Initialize agents for this company if not exists
+      if (!companyAgents.has(companyId)) {
+        companyAgents.set(companyId, getDefaultAgents(companyId));
+      }
 
+      const agents = companyAgents.get(companyId) || [];
       res.json(agents);
     } catch (error: any) {
       console.error("Error fetching AI agents:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create new AI agent
+  app.post("/api/agentic/agents", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      const companyId = user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ error: "Company ID required" });
+      }
+      
+      const { name, description, agentType, maxAutonomyLevel, confidenceThreshold, dailyActionLimit } = req.body;
+      
+      if (!name) {
+        return res.status(400).json({ error: "Agent name is required" });
+      }
+      
+      // Initialize agents for this company if not exists
+      if (!companyAgents.has(companyId)) {
+        companyAgents.set(companyId, getDefaultAgents(companyId));
+      }
+      
+      // Create new agent and add to in-memory storage
+      const newAgent = {
+        id: `agent_${Date.now()}`,
+        companyId,
+        name,
+        description: description || "",
+        agentType: agentType || "procurement",
+        avatar: agentType || "bot",
+        capabilities: [],
+        maxAutonomyLevel: maxAutonomyLevel || "auto_draft",
+        isEnabled: 1,
+        priority: 50,
+        learningEnabled: 1,
+        confidenceThreshold: confidenceThreshold || 0.8,
+        dailyActionLimit: dailyActionLimit || 50,
+        dailyValueLimit: null,
+        activeHoursStart: "08:00",
+        activeHoursEnd: "18:00",
+        activeDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
+        timezone: "America/New_York",
+        actionsToday: 0,
+        valueToday: 0,
+        successRate: 100,
+        createdAt: new Date().toISOString(),
+      };
+      
+      // Add to in-memory storage
+      const agents = companyAgents.get(companyId) || [];
+      agents.push(newAgent);
+      companyAgents.set(companyId, agents);
+      
+      res.json({ 
+        success: true, 
+        agent: newAgent,
+        message: "Agent created successfully" 
+      });
+    } catch (error: any) {
+      console.error("Error creating AI agent:", error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -13648,113 +13810,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(userId);
       const companyId = user?.companyId || "default";
 
-      const guardrails = [
-        {
-          id: "guard_spending",
-          companyId,
-          name: "Daily Spending Limit",
-          description: "Prevents AI from authorizing more than $100,000 in purchases per day",
-          guardrailType: "spending_limit",
-          conditions: { period: "daily", limit: 100000, currency: "USD" },
-          appliesToAgents: ["all"],
-          appliesToActionTypes: ["create_po", "generate_rfq"],
-          enforcementLevel: "hard",
-          onViolation: "block",
-          notifyOnViolation: ["finance_director"],
-          isEnabled: 1,
-          priority: 100,
-          violationCount: 3,
-          lastViolationAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-        },
-        {
-          id: "guard_hours",
-          companyId,
-          name: "Business Hours Only",
-          description: "High-value actions (>$10,000) only during business hours",
-          guardrailType: "time_restriction",
-          conditions: {
-            minValue: 10000,
-            allowedHours: ["08:00-18:00"],
-            allowedDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
-            timezone: "America/New_York",
-          },
-          appliesToAgents: ["agent_procurement"],
-          appliesToActionTypes: ["create_po"],
-          enforcementLevel: "hard",
-          onViolation: "block",
-          notifyOnViolation: [],
-          isEnabled: 1,
-          priority: 90,
-          violationCount: 0,
-          lastViolationAt: null,
-        },
-        {
-          id: "guard_regime",
-          companyId,
-          name: "Regime-Based Caution",
-          description: "Extra approval required during volatile economic regimes",
-          guardrailType: "regime_restriction",
-          conditions: {
-            cautionRegimes: ["BUBBLE", "IMBALANCED_DEFICIT"],
-            requiresExtraApproval: true,
-            reduceAutonomy: true,
-          },
-          appliesToAgents: ["all"],
-          appliesToActionTypes: ["all"],
-          enforcementLevel: "escalate",
-          onViolation: "require_approval",
-          notifyOnViolation: ["finance_director", "coo"],
-          isEnabled: 1,
-          priority: 95,
-          violationCount: 5,
-          lastViolationAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        },
-        {
-          id: "guard_supplier",
-          companyId,
-          name: "Approved Suppliers Only",
-          description: "AI can only create POs with pre-approved, rated suppliers",
-          guardrailType: "supplier_restriction",
-          conditions: {
-            onlyApproved: true,
-            minRating: 4.0,
-            excludeHighRisk: true,
-          },
-          appliesToAgents: ["agent_procurement"],
-          appliesToActionTypes: ["create_po", "generate_rfq"],
-          enforcementLevel: "hard",
-          onViolation: "block",
-          notifyOnViolation: ["procurement_manager"],
-          isEnabled: 1,
-          priority: 85,
-          violationCount: 1,
-          lastViolationAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-        },
-        {
-          id: "guard_quantity",
-          companyId,
-          name: "Maximum Order Quantity",
-          description: "Prevents ordering more than 3x the economic order quantity",
-          guardrailType: "quantity_limit",
-          conditions: {
-            maxMultiplier: 3.0,
-            baseMetric: "economic_order_quantity",
-          },
-          appliesToAgents: ["agent_procurement"],
-          appliesToActionTypes: ["create_po"],
-          enforcementLevel: "soft",
-          onViolation: "warn",
-          notifyOnViolation: ["procurement_manager"],
-          isEnabled: 1,
-          priority: 70,
-          violationCount: 8,
-          lastViolationAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-        },
-      ];
+      // Initialize guardrails for this company if not exists
+      if (!companyGuardrails.has(companyId)) {
+        companyGuardrails.set(companyId, getDefaultGuardrails(companyId));
+      }
 
+      const guardrails = companyGuardrails.get(companyId) || [];
       res.json(guardrails);
     } catch (error: any) {
       console.error("Error fetching guardrails:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update guardrail settings
+  app.patch("/api/agentic/guardrails/:guardrailId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      const companyId = user?.companyId || "default";
+      const { guardrailId } = req.params;
+      const updates = req.body;
+      
+      // Initialize guardrails for this company if not exists
+      if (!companyGuardrails.has(companyId)) {
+        companyGuardrails.set(companyId, getDefaultGuardrails(companyId));
+      }
+      
+      // Update the guardrail in memory
+      const guardrails = companyGuardrails.get(companyId) || [];
+      const index = guardrails.findIndex((g: any) => g.id === guardrailId);
+      
+      if (index !== -1) {
+        guardrails[index] = { ...guardrails[index], ...updates };
+        companyGuardrails.set(companyId, guardrails);
+      }
+      
+      res.json({ 
+        success: true, 
+        guardrailId, 
+        guardrail: index !== -1 ? guardrails[index] : null,
+        message: "Guardrail settings updated successfully" 
+      });
+    } catch (error: any) {
+      console.error("Error updating guardrail:", error);
       res.status(500).json({ error: error.message });
     }
   });

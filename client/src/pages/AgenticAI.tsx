@@ -301,6 +301,27 @@ export default function AgenticAI() {
   const [selectedRule, setSelectedRule] = useState<AutomationRule | null>(null);
   const [showRuleBuilder, setShowRuleBuilder] = useState(false);
   const [showAgentConfig, setShowAgentConfig] = useState(false);
+  const [selectedGuardrail, setSelectedGuardrail] = useState<Guardrail | null>(null);
+  const [showGuardrailEditor, setShowGuardrailEditor] = useState(false);
+  
+  // New agent form state
+  const [newAgentForm, setNewAgentForm] = useState({
+    name: "",
+    description: "",
+    agentType: "procurement",
+    maxAutonomyLevel: "auto_draft",
+    confidenceThreshold: 0.8,
+    dailyActionLimit: 50,
+  });
+  
+  // Guardrail edit form state
+  const [guardrailForm, setGuardrailForm] = useState({
+    name: "",
+    description: "",
+    guardrailType: "spending_limit",
+    enforcementLevel: "soft",
+    conditions: {} as any,
+  });
   
   const [chatInput, setChatInput] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -417,6 +438,46 @@ export default function AgenticAI() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/agentic/actions/pending"] });
       toast({ title: "Action rejected", description: "The action has been rejected." });
+    },
+  });
+  
+  const createAgentMutation = useMutation({
+    mutationFn: async (agentData: typeof newAgentForm) => {
+      const res = await apiRequest("POST", "/api/agentic/agents", agentData);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/agentic/agents"] });
+      setShowAgentConfig(false);
+      setNewAgentForm({ name: "", description: "", agentType: "procurement", maxAutonomyLevel: "auto_draft", confidenceThreshold: 0.8, dailyActionLimit: 50 });
+      toast({ title: "Agent created", description: "New AI agent has been created successfully." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to create agent", variant: "destructive" });
+    },
+  });
+  
+  const toggleGuardrailMutation = useMutation({
+    mutationFn: async ({ guardrailId, enabled }: { guardrailId: string; enabled: boolean }) => {
+      const res = await apiRequest("PATCH", `/api/agentic/guardrails/${guardrailId}`, { isEnabled: enabled ? 1 : 0 });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/agentic/guardrails"] });
+      toast({ title: "Guardrail updated", description: "Guardrail status has been changed." });
+    },
+  });
+  
+  const updateGuardrailMutation = useMutation({
+    mutationFn: async ({ guardrailId, data }: { guardrailId: string; data: typeof guardrailForm }) => {
+      const res = await apiRequest("PATCH", `/api/agentic/guardrails/${guardrailId}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/agentic/guardrails"] });
+      setShowGuardrailEditor(false);
+      setSelectedGuardrail(null);
+      toast({ title: "Guardrail updated", description: "Guardrail settings have been saved." });
     },
   });
 
@@ -1517,7 +1578,13 @@ export default function AgenticAI() {
                         <CardDescription className="mt-1">{guard.description}</CardDescription>
                       </div>
                     </div>
-                    <Switch checked={guard.isEnabled === 1} data-testid={`switch-guardrail-${guard.id}`} />
+                    <div className="flex items-center gap-2">
+                      <Switch 
+                        checked={guard.isEnabled === 1} 
+                        onCheckedChange={(checked) => toggleGuardrailMutation.mutate({ guardrailId: guard.id, enabled: checked })}
+                        data-testid={`switch-guardrail-${guard.id}`} 
+                      />
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -1541,6 +1608,28 @@ export default function AgenticAI() {
                     )}
                   </div>
                 </CardContent>
+                <CardFooter className="pt-0">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full"
+                    onClick={() => {
+                      setSelectedGuardrail(guard);
+                      setGuardrailForm({
+                        name: guard.name,
+                        description: guard.description || "",
+                        guardrailType: guard.guardrailType,
+                        enforcementLevel: guard.enforcementLevel,
+                        conditions: guard.conditions || {},
+                      });
+                      setShowGuardrailEditor(true);
+                    }}
+                    data-testid={`button-edit-guardrail-${guard.id}`}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Guardrail
+                  </Button>
+                </CardFooter>
               </Card>
             ))}
           </div>
@@ -2385,6 +2474,251 @@ export default function AgenticAI() {
             <Button data-testid="button-save-rule">
               <CheckCircle className="h-4 w-4 mr-2" />
               Create Rule
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Agent Dialog */}
+      <Dialog open={showAgentConfig} onOpenChange={setShowAgentConfig}>
+        <DialogContent className="max-w-lg" data-testid="dialog-new-agent">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Bot className="h-5 w-5 text-primary" />
+              Create New AI Agent
+            </DialogTitle>
+            <DialogDescription>
+              Configure a new autonomous AI agent to help manage your operations.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="agent-name">Agent Name</Label>
+              <Input
+                id="agent-name"
+                placeholder="e.g., Custom Procurement Agent"
+                value={newAgentForm.name}
+                onChange={(e) => setNewAgentForm(prev => ({ ...prev, name: e.target.value }))}
+                data-testid="input-agent-name"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="agent-description">Description</Label>
+              <Textarea
+                id="agent-description"
+                placeholder="Describe what this agent will do..."
+                value={newAgentForm.description}
+                onChange={(e) => setNewAgentForm(prev => ({ ...prev, description: e.target.value }))}
+                data-testid="input-agent-description"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="agent-type">Agent Type</Label>
+              <Select 
+                value={newAgentForm.agentType} 
+                onValueChange={(v) => setNewAgentForm(prev => ({ ...prev, agentType: v }))}
+              >
+                <SelectTrigger id="agent-type" data-testid="select-agent-type">
+                  <SelectValue placeholder="Select agent type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="procurement">Procurement</SelectItem>
+                  <SelectItem value="inventory">Inventory Management</SelectItem>
+                  <SelectItem value="forecasting">Demand Forecasting</SelectItem>
+                  <SelectItem value="supplier">Supplier Management</SelectItem>
+                  <SelectItem value="production">Production Optimization</SelectItem>
+                  <SelectItem value="analytics">Analytics & Reporting</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="autonomy-level">Maximum Autonomy Level</Label>
+              <Select 
+                value={newAgentForm.maxAutonomyLevel} 
+                onValueChange={(v) => setNewAgentForm(prev => ({ ...prev, maxAutonomyLevel: v }))}
+              >
+                <SelectTrigger id="autonomy-level" data-testid="select-max-autonomy">
+                  <SelectValue placeholder="Select autonomy level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="suggest">Suggest Only - Agent provides recommendations</SelectItem>
+                  <SelectItem value="auto_draft">Auto-Draft - Creates drafts for approval</SelectItem>
+                  <SelectItem value="auto_execute">Auto-Execute - Takes action autonomously</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="confidence">Confidence Threshold</Label>
+                <Input
+                  id="confidence"
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={newAgentForm.confidenceThreshold}
+                  onChange={(e) => setNewAgentForm(prev => ({ ...prev, confidenceThreshold: parseFloat(e.target.value) }))}
+                  data-testid="input-confidence"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="daily-limit">Daily Action Limit</Label>
+                <Input
+                  id="daily-limit"
+                  type="number"
+                  min="1"
+                  value={newAgentForm.dailyActionLimit}
+                  onChange={(e) => setNewAgentForm(prev => ({ ...prev, dailyActionLimit: parseInt(e.target.value) }))}
+                  data-testid="input-daily-limit"
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAgentConfig(false)}>Cancel</Button>
+            <Button 
+              onClick={() => createAgentMutation.mutate(newAgentForm)}
+              disabled={createAgentMutation.isPending || !newAgentForm.name}
+              data-testid="button-create-agent"
+            >
+              {createAgentMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4 mr-2" />
+              )}
+              Create Agent
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Guardrail Editor Dialog */}
+      <Dialog open={showGuardrailEditor} onOpenChange={setShowGuardrailEditor}>
+        <DialogContent className="max-w-lg" data-testid="dialog-edit-guardrail">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-primary" />
+              Edit Guardrail
+            </DialogTitle>
+            <DialogDescription>
+              Modify the safety constraints for AI agent actions.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="guardrail-name">Guardrail Name</Label>
+              <Input
+                id="guardrail-name"
+                value={guardrailForm.name}
+                onChange={(e) => setGuardrailForm(prev => ({ ...prev, name: e.target.value }))}
+                data-testid="input-guardrail-name"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="guardrail-description">Description</Label>
+              <Textarea
+                id="guardrail-description"
+                value={guardrailForm.description}
+                onChange={(e) => setGuardrailForm(prev => ({ ...prev, description: e.target.value }))}
+                data-testid="input-guardrail-description"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="guardrail-type">Guardrail Type</Label>
+              <Select 
+                value={guardrailForm.guardrailType} 
+                onValueChange={(v) => setGuardrailForm(prev => ({ ...prev, guardrailType: v }))}
+              >
+                <SelectTrigger id="guardrail-type" data-testid="select-guardrail-type">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="spending_limit">Spending Limit</SelectItem>
+                  <SelectItem value="time_restriction">Time Restriction</SelectItem>
+                  <SelectItem value="regime_restriction">Regime Restriction</SelectItem>
+                  <SelectItem value="supplier_restriction">Supplier Restriction</SelectItem>
+                  <SelectItem value="quantity_limit">Quantity Limit</SelectItem>
+                  <SelectItem value="approval_requirement">Approval Requirement</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="enforcement-level">Enforcement Level</Label>
+              <Select 
+                value={guardrailForm.enforcementLevel} 
+                onValueChange={(v) => setGuardrailForm(prev => ({ ...prev, enforcementLevel: v }))}
+              >
+                <SelectTrigger id="enforcement-level" data-testid="select-enforcement-level">
+                  <SelectValue placeholder="Select enforcement" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="soft">Soft - Warns but allows action</SelectItem>
+                  <SelectItem value="hard">Hard - Blocks action completely</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {guardrailForm.guardrailType === "spending_limit" && (
+              <div className="space-y-2">
+                <Label htmlFor="spending-limit">Daily Spending Limit ($)</Label>
+                <Input
+                  id="spending-limit"
+                  type="number"
+                  min="0"
+                  value={guardrailForm.conditions?.limit || 0}
+                  onChange={(e) => setGuardrailForm(prev => ({ 
+                    ...prev, 
+                    conditions: { ...prev.conditions, limit: parseInt(e.target.value), period: "daily", currency: "USD" }
+                  }))}
+                  data-testid="input-spending-limit"
+                />
+              </div>
+            )}
+
+            {guardrailForm.guardrailType === "quantity_limit" && (
+              <div className="space-y-2">
+                <Label htmlFor="quantity-limit">Maximum Quantity per Order</Label>
+                <Input
+                  id="quantity-limit"
+                  type="number"
+                  min="0"
+                  value={guardrailForm.conditions?.maxQuantity || 0}
+                  onChange={(e) => setGuardrailForm(prev => ({ 
+                    ...prev, 
+                    conditions: { ...prev.conditions, maxQuantity: parseInt(e.target.value) }
+                  }))}
+                  data-testid="input-quantity-limit"
+                />
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowGuardrailEditor(false)}>Cancel</Button>
+            <Button 
+              onClick={() => selectedGuardrail && updateGuardrailMutation.mutate({ 
+                guardrailId: selectedGuardrail.id, 
+                data: guardrailForm 
+              })}
+              disabled={updateGuardrailMutation.isPending || !guardrailForm.name}
+              data-testid="button-save-guardrail"
+            >
+              {updateGuardrailMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
