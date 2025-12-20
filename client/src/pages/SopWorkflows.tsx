@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
+import { formatRegimeName } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -258,7 +259,7 @@ function DashboardCards({ dashboard }: { dashboard: SopDashboard }) {
           <div className="flex items-center gap-2">
             <div className={`h-3 w-3 rounded-full ${REGIME_COLORS[dashboard.regime.current] || 'bg-gray-600'}`} />
             <span className="text-sm font-medium" data-testid="text-current-regime">
-              {dashboard.regime.current.replace(/_/g, ' ')}
+              {formatRegimeName(dashboard.regime.current)}
             </span>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
@@ -474,7 +475,7 @@ function MeetingCard({ meeting, onStart, onEnd }: {
             <Activity className="h-4 w-4 text-muted-foreground" />
             <span className="text-muted-foreground">Regime:</span>
             <Badge variant="outline" className="font-mono text-xs">
-              {meeting.regimeAtMeeting.replace(/_/g, ' ')}
+              {formatRegimeName(meeting.regimeAtMeeting)}
             </Badge>
           </div>
         )}
@@ -688,7 +689,7 @@ function ReconciliationItemCard({ item }: { item: SopReconciliationItem }) {
           <div className="flex items-center gap-2 text-sm">
             <Activity className="h-4 w-4 text-muted-foreground" />
             <Badge variant="outline" className="font-mono text-xs">
-              {item.regime.replace(/_/g, ' ')}
+              {formatRegimeName(item.regime)}
             </Badge>
           </div>
         )}

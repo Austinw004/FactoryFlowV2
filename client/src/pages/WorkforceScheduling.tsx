@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { formatRegimeName } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -427,7 +428,7 @@ export default function WorkforceScheduling() {
             <CardTitle className="flex items-center gap-2 text-lg">
               <Lightbulb className="h-5 w-5 text-blue-500" />
               Regime-Aware Staffing Insights
-              <Badge variant="outline">{staffingRecommendations.regime}</Badge>
+              <Badge variant="outline">{formatRegimeName(staffingRecommendations.regime)}</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>

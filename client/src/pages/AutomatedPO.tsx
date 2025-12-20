@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { formatRegimeName } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -301,7 +302,7 @@ export default function AutomatedPO() {
                       {rule.regime && (
                         <div>
                           <span className="text-muted-foreground">Regime:</span>
-                          <span className="ml-2 font-medium">{rule.regime}</span>
+                          <span className="ml-2 font-medium">{formatRegimeName(rule.regime)}</span>
                         </div>
                       )}
                       {rule.inventoryMin !== null && (
@@ -378,7 +379,7 @@ export default function AutomatedPO() {
                           </CardTitle>
                           {playbook.regime && (
                             <Badge variant="outline" data-testid={`badge-playbook-regime-${playbook.id}`}>
-                              {playbook.regime}
+                              {formatRegimeName(playbook.regime)}
                             </Badge>
                           )}
                           {playbook.strategy && (

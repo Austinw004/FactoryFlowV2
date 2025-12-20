@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { formatRegimeName } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -115,7 +116,7 @@ export default function Reports() {
               <div>
                 <div className="text-sm text-muted-foreground">Regime Type</div>
                 <div className="text-lg font-semibold" data-testid="text-regime-type">
-                  {regime.regime || "Unknown"}
+                  {formatRegimeName(regime.regime) || "Unknown"}
                 </div>
               </div>
               <div>

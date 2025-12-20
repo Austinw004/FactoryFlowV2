@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { formatRegimeName } from "@/lib/utils";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -893,7 +894,7 @@ export default function AgenticAI() {
           <div className="flex items-center gap-3">
             <Badge variant="outline" className="px-3 py-1">
               <Activity className="h-3 w-3 mr-1" />
-              Current Regime: <span className="font-bold ml-1">{currentRegime}</span>
+              Current Regime: <span className="font-bold ml-1">{formatRegimeName(currentRegime)}</span>
             </Badge>
             <Button variant="outline" onClick={() => setShowAgentConfig(true)} data-testid="button-new-agent">
               <Plus className="h-4 w-4 mr-2" />
@@ -1191,7 +1192,7 @@ export default function AgenticAI() {
                 <CardContent className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Economic Regime</span>
-                    <Badge variant="outline">{currentRegime}</Badge>
+                    <Badge variant="outline">{formatRegimeName(currentRegime)}</Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Active Agents</span>

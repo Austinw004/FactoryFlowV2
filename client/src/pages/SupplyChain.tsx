@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { formatRegimeName } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -838,7 +839,7 @@ export default function SupplyChain() {
                           {alert.regime && (
                             <div>
                               <span className="text-muted-foreground">Regime:</span>
-                              <span className="ml-2 font-medium" data-testid={`text-regime-${alert.id}`}>{alert.regime}</span>
+                              <span className="ml-2 font-medium" data-testid={`text-regime-${alert.id}`}>{formatRegimeName(alert.regime)}</span>
                             </div>
                           )}
                           {alert.riskScore && (

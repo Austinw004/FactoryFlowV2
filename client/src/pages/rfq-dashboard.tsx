@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, type QueryClient } from "@tanstack/react-query";
+import { formatRegimeName } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -275,7 +276,7 @@ export default function RfqDashboard() {
                       <TableCell data-testid={`cell-signal-${opp.materialId}`}>
                         {getPolicySignalBadge(opp.policySignal)}
                         <div className="text-xs text-muted-foreground mt-1">
-                          {opp.regime} (FDR: {opp.fdr.toFixed(2)})
+                          {formatRegimeName(opp.regime)} (FDR: {opp.fdr.toFixed(2)})
                         </div>
                       </TableCell>
                       <TableCell data-testid={`cell-priority-${opp.materialId}`}>

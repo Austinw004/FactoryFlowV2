@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { formatRegimeName } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -118,7 +119,7 @@ export default function Forecasting() {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Regime Type:</span>
                 <span className="font-semibold" data-testid="text-regime-type">
-                  {regime.regime || "Unknown"}
+                  {formatRegimeName(regime.regime) || "Unknown"}
                 </span>
               </div>
               <div className="flex items-center justify-between">

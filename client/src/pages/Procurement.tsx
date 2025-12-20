@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { formatRegimeName } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -318,7 +319,7 @@ export default function Procurement() {
             </div>
             <div className="text-sm text-muted-foreground">
               Current FDR: <span className="font-semibold">{regime?.fdr?.toFixed(2) || "0.00"}</span> | 
-              Regime: <span className="font-semibold">{regime?.regime || "Unknown"}</span>
+              Regime: <span className="font-semibold">{formatRegimeName(regime?.regime || "") || "Unknown"}</span>
             </div>
           </CardContent>
         </Card>

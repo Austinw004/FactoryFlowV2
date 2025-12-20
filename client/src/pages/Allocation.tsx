@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { formatRegimeName } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -482,7 +483,7 @@ function AllocationCard({ allocation }: { allocation: Allocation }) {
         <div className="flex justify-between items-center">
           <span className="text-sm text-muted-foreground">Regime:</span>
           <span className="text-sm" data-testid={`text-regime-${allocation.id}`}>
-            {allocation.regime || "Unknown"}
+            {formatRegimeName(allocation.regime || "") || "Unknown"}
           </span>
         </div>
       </CardContent>
