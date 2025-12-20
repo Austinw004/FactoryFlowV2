@@ -307,10 +307,10 @@ function handleFollowUpQuestion(message: string, context: ConversationContext): 
       
       for (let i = 0; i < count; i++) {
         const c = topCommodities[i];
-        response += `**${i + 1}. ${c.name}** - ${c.signal}\n   ${c.reason}\n\n`;
+        response += `${i + 1}. ${c.name} - ${c.signal}\n   ${c.reason}\n\n`;
       }
       
-      response += "*Note: These signals are derived from futures curve analysis, inventory levels, and demand trends. Always verify against your specific procurement needs and consult the Procurement Hub for detailed timing.*";
+      response += "Note: These signals are derived from futures curve analysis, inventory levels, and demand trends. Always verify against your specific procurement needs and consult the Procurement Hub for detailed timing.";
       
       return response;
     }
@@ -331,7 +331,7 @@ function handleFollowUpQuestion(message: string, context: ConversationContext): 
   
   if (context.discussedTopics.includes("forecasting")) {
     if (lowerMessage.includes("more") || lowerMessage.includes("detail") || lowerMessage.includes("which")) {
-      return "For detailed forecast metrics, the Demand Hub shows MAPE, bias, and accuracy trends for each SKU. The Forecast Accuracy page provides 9 professional metrics including directional accuracy and Theil's U statistic.";
+      return "For detailed forecast metrics, the Demand Hub shows accuracy trends for each SKU. The Forecast Accuracy page provides professional metrics to help you understand prediction quality. Visit Demand Hub > Forecast Accuracy for the full breakdown.";
     }
   }
   
@@ -396,43 +396,43 @@ function generateFallbackResponse(messages: Array<{ role: string; content: strin
   
   // Executive-friendly conversational starters
   if (lowerMessage.includes("focus on today") || lowerMessage.includes("what should i focus") || lowerMessage.includes("what needs my attention")) {
-    return `Here's what needs your attention today:\n\n**Priority Actions:**\n1. **Check Pending Approvals** - Review any autonomous agent actions awaiting your approval in the Pending Actions tab\n2. **Monitor Low Stock Items** - The Demand Hub shows SKUs at risk of stockout\n3. **Review Market Timing** - Current economic conditions suggest checking procurement opportunities\n\n**Quick Wins:**\n- Check the Procurement Hub for automated RFQ recommendations\n- Review supplier risk scores in Supply Chain\n- Look at forecast accuracy trends in Demand Hub\n\nWould you like me to dive deeper into any of these areas?`;
+    return `Here's what needs your attention today:\n\nPriority Actions:\n1. Check Pending Approvals - Review any autonomous agent actions awaiting your approval in the Pending Actions tab\n2. Monitor Low Stock Items - The Demand Hub shows SKUs at risk of stockout\n3. Review Market Timing - Current economic conditions suggest checking procurement opportunities\n\nQuick Wins:\n- Check the Procurement Hub for automated RFQ recommendations\n- Review supplier risk scores in Supply Chain\n- Look at forecast accuracy trends in Demand Hub\n\nWould you like me to dive deeper into any of these areas?`;
   }
   
   if (lowerMessage.includes("executive summary") || lowerMessage.includes("overview") || lowerMessage.includes("how are we doing")) {
-    return `**Executive Summary**\n\n**Operations Health:** Your platform is actively monitoring your supply chain with real-time data feeds and automated analysis.\n\n**Key Metrics to Watch:**\n- Forecast Accuracy: Check Demand Hub for MAPE trends\n- Supplier Risk: View scores in Supply Chain section\n- Production: OEE metrics in Operations\n\n**Current Recommendations:**\n- The economic regime indicator suggests timing opportunities for procurement\n- Automated agents are monitoring inventory levels and generating RFQs when needed\n- Forecast accuracy is being continuously tracked with automated retraining\n\nWould you like details on any specific area?`;
+    return `Executive Summary\n\nOperations Health: Your platform is actively monitoring your supply chain with real-time data feeds and automated analysis.\n\nKey Areas to Watch:\n- Forecast Accuracy: Check Demand Hub for trends\n- Supplier Risk: View scores in Supply Chain section\n- Production: OEE metrics in Operations\n\nCurrent Recommendations:\n- The economic regime indicator suggests timing opportunities for procurement\n- Automated agents are monitoring inventory levels and generating RFQs when needed\n- Forecast accuracy is being continuously tracked with automated retraining\n\nWould you like details on any specific area?`;
   }
   
   if (lowerMessage.includes("opportunities") || lowerMessage.includes("where can we save") || lowerMessage.includes("cost reduction")) {
-    return `**Current Opportunities:**\n\n**1. Procurement Timing Optimization**\nThe economic regime analysis identifies counter-cyclical buying opportunities. Check Strategic Analysis for current timing signals.\n\n**2. Commodity Buying Signals**\nFutures curve analysis shows which commodities to buy now vs. wait. Natural gas and copper currently show favorable signals.\n\n**3. Supplier Optimization**\nPeer Benchmarking compares your material costs to industry averages - identifying where you might be overpaying.\n\n**4. Forecast Accuracy Improvements**\nBetter forecasts mean less safety stock and fewer expedited orders. The automated retraining keeps accuracy high.\n\nWant me to elaborate on any of these?`;
+    return `Current Opportunities:\n\n1. Procurement Timing Optimization\nThe economic regime analysis identifies counter-cyclical buying opportunities. Check Strategic Analysis for current timing signals.\n\n2. Commodity Buying Signals\nFutures curve analysis shows which commodities to buy now vs. wait. Natural gas and copper currently show favorable signals.\n\n3. Supplier Optimization\nPeer Benchmarking compares your material costs to industry averages - identifying where you might be overpaying.\n\n4. Forecast Accuracy Improvements\nBetter forecasts mean less safety stock and fewer expedited orders. The automated retraining keeps accuracy high.\n\nWant me to elaborate on any of these?`;
   }
   
   if (lowerMessage.includes("supply chain health") || lowerMessage.includes("how's our supply chain")) {
-    return `**Supply Chain Health Check:**\n\n**Risk Indicators:**\n- Supplier geographic concentration tracked in Multi-Tier Mapping\n- Single-source materials flagged automatically\n- Geopolitical events monitored in Event Monitoring\n\n**Performance Metrics:**\n- Forecast accuracy trends in Demand Hub\n- Fill rates and stockout risks tracked\n- Supplier delivery performance scored\n\n**Active Monitoring:**\n- Economic regime changes\n- Commodity price movements\n- News events affecting supply chain\n\nCheck the Digital Twin for a real-time visualization of your entire supply chain. Any specific concerns?`;
+    return `Supply Chain Health Check:\n\nRisk Indicators:\n- Supplier geographic concentration tracked in Multi-Tier Mapping\n- Single-source materials flagged automatically\n- Geopolitical events monitored in Event Monitoring\n\nPerformance:\n- Forecast accuracy trends in Demand Hub\n- Fill rates and stockout risks tracked\n- Supplier delivery performance scored\n\nActive Monitoring:\n- Economic regime changes\n- Commodity price movements\n- News events affecting supply chain\n\nCheck the Digital Twin for a real-time visualization of your entire supply chain. Any specific concerns?`;
   }
   
   if (lowerMessage.includes("best timing") || lowerMessage.includes("when should i buy") || lowerMessage.includes("optimal timing")) {
-    return `**Procurement Timing Guidance:**\n\nOur economic regime analysis provides data-driven timing signals:\n\n**Current Signal:** Check the Strategic Analysis page for real-time recommendations\n\n**General Principles:**\n- **In Expansion phases:** Lock in prices and secure capacity before shortages\n- **In Contraction phases:** Defer non-critical purchases, negotiate better terms\n- **Counter-cyclical buying:** Buy when others aren't for potential cost advantages\n\n**Commodity-Specific Signals:**\nFutures curves indicate:\n- Backwardation (buy signal) - near-term prices higher than long-term\n- Contango (wait signal) - prices expected to fall\n\nCheck the Data Feeds tab for current commodity signals.`;
+    return `Procurement Timing Guidance:\n\nOur economic regime analysis provides data-driven timing signals:\n\nCurrent Signal: Check the Strategic Analysis page for real-time recommendations\n\nGeneral Principles:\n- In Expansion phases: Lock in prices and secure capacity before shortages\n- In Contraction phases: Defer non-critical purchases, negotiate better terms\n- Counter-cyclical buying: Buy when others aren't for potential cost advantages\n\nCommodity-Specific Signals:\nFutures curves indicate:\n- Backwardation (buy signal) - near-term prices higher than long-term\n- Contango (wait signal) - prices expected to fall\n\nCheck the Data Feeds tab for current commodity signals.`;
   }
   
   if (lowerMessage.includes("how accurate") || lowerMessage.includes("forecast accuracy")) {
-    return `**Forecast Accuracy Status:**\n\nOur system tracks 9 professional metrics:\n\n**Key Metrics:**\n- **MAPE** (Mean Absolute Percentage Error) - Lower is better, <10% is excellent\n- **Bias** - Shows if we consistently over/under predict\n- **Directional Accuracy** - How often we get the trend right\n\n**Performance:**\n- Automated retraining runs daily to maintain accuracy\n- Degradation alerts notify you if accuracy drops\n- Best-in-class performance: 6.79% MAPE vs industry 15-25%\n\nVisit the Demand Hub > Forecast Accuracy for detailed metrics by SKU.`;
+    return `Forecast Accuracy Status:\n\nOur system tracks professional metrics to ensure high-quality predictions.\n\nPerformance:\n- Automated retraining runs daily to maintain accuracy\n- Degradation alerts notify you if accuracy drops\n- Best-in-class performance compared to industry averages\n\nVisit the Demand Hub > Forecast Accuracy for detailed metrics by SKU.`;
   }
   
   if (lowerMessage.includes("production status") || lowerMessage.includes("bottleneck")) {
-    return `**Production Status Overview:**\n\n**Key Metrics in Operations:**\n- **OEE** (Overall Equipment Effectiveness) - Target >85% for world-class\n- **Availability** - Uptime vs planned time\n- **Performance** - Actual vs theoretical output\n- **Quality** - Good units vs total produced\n\n**Bottleneck Detection:**\nThe system automatically identifies constraints limiting throughput. Check Operations > Production > Insights for current bottleneck analysis.\n\n**Maintenance:**\nMachinery tab shows equipment due for maintenance and sensor alerts.\n\nWant details on a specific production line or machine?`;
+    return `Production Status Overview:\n\nKey Metrics in Operations:\n- OEE (Overall Equipment Effectiveness) - Target above 85% for world-class\n- Availability - Uptime vs planned time\n- Performance - Actual vs theoretical output\n- Quality - Good units vs total produced\n\nBottleneck Detection:\nThe system automatically identifies constraints limiting throughput. Check Operations > Production > Insights for current bottleneck analysis.\n\nMaintenance:\nMachinery tab shows equipment due for maintenance and sensor alerts.\n\nWant details on a specific production line or machine?`;
   }
   
   if (lowerMessage.includes("market outlook") || lowerMessage.includes("economic regime") || lowerMessage.includes("what does it mean")) {
-    return `**Market Outlook & Economic Regime:**\n\nOur proprietary FDR (Financial Decoupling Ratio) model identifies economic regimes:\n\n**Regime Types:**\n- **Healthy Expansion** - Growth aligned, normal operations\n- **Asset-Led Growth** - Financial assets leading, watch for overheating\n- **Real Economy Lead** - Fundamentals strong, good for strategic investment\n- **Contraction** - Tighten operations, defer non-critical spending\n\n**What This Means for You:**\nEach regime has a playbook of recommended actions covering:\n- Procurement timing and strategy\n- Inventory positioning\n- Supplier relationship management\n- Cash flow optimization\n\nCheck Strategic Analysis for current regime and recommended actions.`;
+    return `Market Outlook & Economic Regime:\n\nOur proprietary FDR (Financial Decoupling Ratio) model identifies economic regimes:\n\nRegime Types:\n- Healthy Expansion - Growth aligned, normal operations\n- Asset-Led Growth - Financial assets leading, watch for overheating\n- Real Economy Lead - Fundamentals strong, good for strategic investment\n- Contraction - Tighten operations, defer non-critical spending\n\nWhat This Means for You:\nEach regime has a playbook of recommended actions covering:\n- Procurement timing and strategy\n- Inventory positioning\n- Supplier relationship management\n- Cash flow optimization\n\nCheck Strategic Analysis for current regime and recommended actions.`;
   }
   
   if (lowerMessage.includes("supplier recommendation") || lowerMessage.includes("which supplier") || lowerMessage.includes("strengthen relationship")) {
-    return `**Supplier Recommendations:**\n\n**Evaluation Criteria:**\n- Financial health scores\n- Delivery performance history\n- Geographic risk exposure\n- Regime impact sensitivity\n\n**Priority Actions:**\n1. **Strengthen relationships** with high-performing, financially stable suppliers\n2. **Diversify** away from high-risk regions\n3. **Dual-source** critical materials to reduce concentration risk\n\n**Tools Available:**\n- Supply Chain > Multi-Tier Mapping for network visualization\n- Supplier Risk Scoring for health assessments\n- Peer Benchmarking for cost comparisons\n\nWould you like me to focus on a specific supplier or material category?`;
+    return `Supplier Recommendations:\n\nEvaluation Criteria:\n- Financial health scores\n- Delivery performance history\n- Geographic risk exposure\n- Regime impact sensitivity\n\nPriority Actions:\n1. Strengthen relationships with high-performing, financially stable suppliers\n2. Diversify away from high-risk regions\n3. Dual-source critical materials to reduce concentration risk\n\nTools Available:\n- Supply Chain > Multi-Tier Mapping for network visualization\n- Supplier Risk Scoring for health assessments\n- Peer Benchmarking for cost comparisons\n\nWould you like me to focus on a specific supplier or material category?`;
   }
   
   if (lowerMessage.includes("budget") || lowerMessage.includes("next quarter") || lowerMessage.includes("planning")) {
-    return `**Budget Planning Guidance:**\n\n**Key Inputs from Platform:**\n1. **Material Cost Trends** - Commodity forecasts for cost assumptions\n2. **Supplier Risk** - Factor into contingency planning\n3. **Forecast Accuracy** - Set realistic demand assumptions\n4. **Economic Regime** - Adjust strategy based on cycle position\n\n**Recommendations:**\n- Use Scenario Simulation to model different conditions\n- Check Peer Benchmarking for cost targets\n- Review ROI Dashboard for savings trends\n\n**Counter-Cyclical Opportunity:**\nBudget for strategic inventory builds during market weakness for potential cost advantages vs reactive buying.\n\nNeed specific projections for any category?`;
+    return `Budget Planning Guidance:\n\nKey Inputs from Platform:\n1. Material Cost Trends - Commodity forecasts for cost assumptions\n2. Supplier Risk - Factor into contingency planning\n3. Forecast Accuracy - Set realistic demand assumptions\n4. Economic Regime - Adjust strategy based on cycle position\n\nRecommendations:\n- Use Scenario Simulation to model different conditions\n- Check Peer Benchmarking for cost targets\n- Review ROI Dashboard for savings trends\n\nCounter-Cyclical Opportunity:\nBudget for strategic inventory builds during market weakness for potential cost advantages vs reactive buying.\n\nNeed specific projections for any category?`;
   }
   
   // Proprietary formula protection - CRITICAL
@@ -460,7 +460,7 @@ function generateFallbackResponse(messages: Array<{ role: string; content: strin
   }
 
   if (lowerMessage.includes("competitive") || lowerMessage.includes("market share") || lowerMessage.includes("benchmark")) {
-    return "For competitive positioning: (1) Our Peer Benchmarking feature compares your material costs against anonymized industry data, (2) Forecast accuracy below 10% MAPE is top-quartile performance, (3) OEE above 85% is world-class, (4) Counter-cyclical procurement can provide cost advantages compared to reactive buying. These metrics demonstrate operational excellence to stakeholders.";
+    return "For competitive positioning: (1) Our Peer Benchmarking feature compares your material costs against anonymized industry data, (2) Strong forecast accuracy indicates top-quartile performance, (3) High OEE demonstrates world-class operations, (4) Counter-cyclical procurement can provide cost advantages compared to reactive buying. These capabilities demonstrate operational excellence to stakeholders.";
   }
 
   if (lowerMessage.includes("roi") || lowerMessage.includes("return on investment") || lowerMessage.includes("savings")) {
@@ -1371,6 +1371,17 @@ EXECUTIVE-LEVEL COMMUNICATION STYLE:
 - Connect operational insights to financial outcomes
 - Provide clear, decisive recommendations rather than options paralysis
 - Acknowledge uncertainty when present, but still provide actionable guidance
+
+RESPONSE FORMATTING RULES (CRITICAL):
+- NEVER use markdown formatting in responses (no **, ##, ####, or other markdown syntax)
+- Use plain text only - format with newlines and colons for structure
+- Write responses as clean, readable prose without special formatting characters
+
+INTERNAL METRICS POLICY (CRITICAL):
+- NEVER mention MAPE, accuracy percentages, or other internal metrics in responses unless the user EXPLICITLY asks for them
+- Instead of "MAPE is 8.5%", say "forecast accuracy is strong" or "predictions are performing well"
+- Only reveal specific numerical metrics (MAPE values, accuracy percentages, model statistics) when the user directly asks questions like "what is the MAPE" or "show me the accuracy numbers"
+- Focus on actionable business insights and recommendations, not the technical metrics behind them
 
 You excel at answering NATURAL LANGUAGE QUERIES about supply chain data. Executives may ask questions like:
 - "What's our biggest supply chain exposure right now?"
