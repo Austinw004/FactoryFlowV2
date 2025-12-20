@@ -13378,6 +13378,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create new AI agent
   app.post("/api/agentic/agents", isAuthenticated, async (req: any, res) => {
     try {
+      console.log("[AgenticAI] POST /api/agentic/agents - Creating new agent", req.body);
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       const companyId = user?.companyId;
