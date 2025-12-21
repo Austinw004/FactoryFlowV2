@@ -5265,3 +5265,107 @@ export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;
 export const insertUserNotificationPreferencesSchema = createInsertSchema(userNotificationPreferences).omit({ id: true, createdAt: true, updatedAt: true });
 export type UserNotificationPreferences = typeof userNotificationPreferences.$inferSelect;
 export type InsertUserNotificationPreferences = z.infer<typeof insertUserNotificationPreferencesSchema>;
+
+// ================================
+// WEBHOOK INTEGRATIONS
+// ================================
+
+// Webhook Integrations - For middleware platforms (MuleSoft, Boomi, Zapier, etc.)
+export const webhookIntegrations = pgTable("webhook_integrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  
+  // Integration identity
+  name: text("name").notNull(), // "MuleSoft Production", "Zapier Integration"
+  description: text("description"),
+  platform: text("platform").notNull(), // "mulesoft", "boomi", "zapier", "make", "workato", "custom"
+  
+  // Inbound webhook (data coming INTO Prescient Labs)
+  inboundEnabled: integer("inbound_enabled").default(1),
+  inboundEndpoint: text("inbound_endpoint"), // Generated unique endpoint: /api/webhooks/inbound/{id}
+  inboundSecret: text("inbound_secret"), // HMAC secret for validating incoming webhooks
+  inboundDataTypes: text("inbound_data_types").array(), // ["inventory", "purchase_orders", "sales_orders", "production"]
+  
+  // Outbound webhook (data going OUT from Prescient Labs)
+  outboundEnabled: integer("outbound_enabled").default(0),
+  outboundUrl: text("outbound_url"), // URL to send data to
+  outboundSecret: text("outbound_secret"), // Secret for signing outbound payloads
+  outboundEvents: text("outbound_events").array(), // ["regime_change", "forecast_complete", "rfq_generated", "low_stock", "price_alert"]
+  outboundHeaders: jsonb("outbound_headers"), // Custom headers to include { "X-API-Key": "..." }
+  
+  // Authentication
+  authMethod: text("auth_method").default("hmac"), // "hmac", "api_key", "oauth2", "basic", "none"
+  authConfig: jsonb("auth_config"), // Auth-specific config
+  
+  // Rate limiting & batching
+  rateLimitPerMinute: integer("rate_limit_per_minute").default(60),
+  batchingEnabled: integer("batching_enabled").default(0),
+  batchSize: integer("batch_size").default(100),
+  batchIntervalMinutes: integer("batch_interval_minutes").default(5),
+  
+  // Status
+  status: text("status").notNull().default("active"), // "active", "paused", "error", "pending_setup"
+  lastInboundAt: timestamp("last_inbound_at"),
+  lastOutboundAt: timestamp("last_outbound_at"),
+  lastError: text("last_error"),
+  errorCount: integer("error_count").default(0),
+  
+  // Field mappings for data transformation
+  fieldMappings: jsonb("field_mappings"), // Maps external fields to Prescient Labs schema
+  transformScript: text("transform_script"), // Optional JS transform for complex mappings
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("webhook_integrations_company_idx").on(table.companyId),
+  index("webhook_integrations_status_idx").on(table.status),
+  index("webhook_integrations_platform_idx").on(table.platform),
+]);
+
+// Webhook Event Logs - Track all webhook activity
+export const webhookEventLogs = pgTable("webhook_event_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  integrationId: varchar("integration_id").notNull().references(() => webhookIntegrations.id, { onDelete: "cascade" }),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  
+  // Event details
+  direction: text("direction").notNull(), // "inbound", "outbound"
+  eventType: text("event_type").notNull(), // "inventory_sync", "po_created", "regime_change", etc.
+  
+  // Request/Response data
+  requestMethod: text("request_method"), // "POST", "PUT", etc.
+  requestUrl: text("request_url"),
+  requestHeaders: jsonb("request_headers"),
+  requestBody: jsonb("request_body"),
+  
+  responseStatus: integer("response_status"),
+  responseBody: jsonb("response_body"),
+  
+  // Processing
+  processingStatus: text("processing_status").notNull().default("pending"), // "pending", "processing", "success", "failed", "retrying"
+  processingError: text("processing_error"),
+  retryCount: integer("retry_count").default(0),
+  nextRetryAt: timestamp("next_retry_at"),
+  
+  // Metrics
+  durationMs: integer("duration_ms"),
+  recordsProcessed: integer("records_processed").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  processedAt: timestamp("processed_at"),
+}, (table) => [
+  index("webhook_event_logs_integration_idx").on(table.integrationId),
+  index("webhook_event_logs_company_idx").on(table.companyId),
+  index("webhook_event_logs_status_idx").on(table.processingStatus),
+  index("webhook_event_logs_created_idx").on(table.createdAt),
+]);
+
+// Webhook Schemas
+export const insertWebhookIntegrationSchema = createInsertSchema(webhookIntegrations).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertWebhookEventLogSchema = createInsertSchema(webhookEventLogs).omit({ id: true, createdAt: true });
+
+// Webhook Types
+export type WebhookIntegration = typeof webhookIntegrations.$inferSelect;
+export type InsertWebhookIntegration = z.infer<typeof insertWebhookIntegrationSchema>;
+export type WebhookEventLog = typeof webhookEventLogs.$inferSelect;
+export type InsertWebhookEventLog = z.infer<typeof insertWebhookEventLogSchema>;
