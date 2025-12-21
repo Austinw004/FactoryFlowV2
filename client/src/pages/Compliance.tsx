@@ -71,7 +71,7 @@ export default function Compliance() {
   const [trainingType, setTrainingType] = useState("");
 
   // Fetch compliance documents
-  const { data: documents = [], isLoading: docsLoading } = useQuery({
+  const { data: documents = [], isLoading: docsLoading } = useQuery<any[]>({
     queryKey: ["/api/compliance/documents"],
   });
 
@@ -81,12 +81,17 @@ export default function Compliance() {
   });
 
   // Fetch current regime
-  const { data: regime } = useQuery({
+  const { data: regime } = useQuery<{ fdr: number; regime: string }>({
     queryKey: ["/api/economics/regime"],
   });
 
   // Fetch compliance score
-  const { data: complianceScore, isLoading: scoreLoading, refetch: refetchScore } = useQuery({
+  const { data: complianceScore, isLoading: scoreLoading, refetch: refetchScore } = useQuery<{
+    score: number;
+    breakdown: { documentation: number; audits: number; training: number; findings: number };
+    alerts: { expiringDocs: number; overdueAudits: number; criticalFindings: number };
+    expiringDocuments: any[];
+  }>({
     queryKey: ["/api/compliance/score"],
   });
 
@@ -96,7 +101,7 @@ export default function Compliance() {
   });
 
   // Fetch calendar events
-  const { data: calendarEvents = [], isLoading: calendarLoading } = useQuery({
+  const { data: calendarEvents = [], isLoading: calendarLoading } = useQuery<any[]>({
     queryKey: ["/api/compliance/calendar"],
   });
 
@@ -113,10 +118,7 @@ export default function Compliance() {
   // Create document mutation
   const createDocMutation = useMutation({
     mutationFn: async (data: any) => 
-      apiRequest("/api/compliance/documents", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
+      apiRequest("POST", "/api/compliance/documents", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/compliance/documents"] });
       queryClient.invalidateQueries({ queryKey: ["/api/compliance/score"] });
@@ -131,10 +133,7 @@ export default function Compliance() {
   // Create audit mutation
   const createAuditMutation = useMutation({
     mutationFn: async (data: any) => 
-      apiRequest("/api/compliance/audits", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
+      apiRequest("POST", "/api/compliance/audits", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/compliance/audits"] });
       queryClient.invalidateQueries({ queryKey: ["/api/compliance/score"] });
@@ -149,10 +148,7 @@ export default function Compliance() {
   // Create finding mutation
   const createFindingMutation = useMutation({
     mutationFn: async (data: any) => 
-      apiRequest("/api/compliance/findings", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
+      apiRequest("POST", "/api/compliance/findings", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/compliance/findings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/compliance/score"] });
@@ -167,10 +163,7 @@ export default function Compliance() {
   // Create training record mutation
   const createTrainingMutation = useMutation({
     mutationFn: async (data: any) => 
-      apiRequest("/api/compliance/training", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
+      apiRequest("POST", "/api/compliance/training", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/compliance/training"] });
       queryClient.invalidateQueries({ queryKey: ["/api/compliance/score"] });
@@ -185,7 +178,7 @@ export default function Compliance() {
   // Seed calendar defaults
   const seedCalendarMutation = useMutation({
     mutationFn: async () => 
-      apiRequest("/api/compliance/calendar/seed-defaults", { method: "POST" }),
+      apiRequest("POST", "/api/compliance/calendar/seed-defaults"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/compliance/calendar"] });
       toast({ title: "Manufacturing compliance deadlines added" });
@@ -198,7 +191,7 @@ export default function Compliance() {
   // Seed checklist templates
   const seedChecklistsMutation = useMutation({
     mutationFn: async () => 
-      apiRequest("/api/compliance/checklists/seed-system", { method: "POST" }),
+      apiRequest("POST", "/api/compliance/checklists/seed-system"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/compliance/checklists"] });
       toast({ title: "Audit checklist templates added" });

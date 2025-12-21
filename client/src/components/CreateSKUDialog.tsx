@@ -55,7 +55,8 @@ export function CreateSKUDialog({ open, onOpenChange }: CreateSKUDialogProps) {
         priority: parseFloat(priority) || 1.0,
       };
       
-      const sku = await apiRequest('POST', '/api/skus', skuData);
+      const skuResponse = await apiRequest('POST', '/api/skus', skuData);
+      const sku = await skuResponse.json();
       
       // Create BOM items
       if (bomItems.length > 0) {

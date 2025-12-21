@@ -48,7 +48,8 @@ export function CreateSupplierDialog({ open, onOpenChange }: CreateSupplierDialo
         contactEmail: contactEmail.trim() || undefined,
       };
       
-      const supplier = await apiRequest('POST', '/api/suppliers', supplierData);
+      const supplierResponse = await apiRequest('POST', '/api/suppliers', supplierData);
+      const supplier = await supplierResponse.json();
       
       // Create material pricing links
       if (linkMaterials && materialPricings.length > 0) {
