@@ -404,7 +404,7 @@ export default function AgenticAI() {
   });
 
   const { data: economicData } = useQuery({
-    queryKey: ["/api/economic-indicators"],
+    queryKey: ["/api/economics/regime"],
   });
 
   const currentRegime = (economicData as any)?.regime || "UNKNOWN";

@@ -42,8 +42,8 @@ export default function ScenarioPlanning() {
   const { toast } = useToast();
   const [result, setResult] = useState<ScenarioResult | null>(null);
 
-  const { data: economicData } = useQuery({
-    queryKey: ["/api/economic-indicators"],
+  const { data: economicData } = useQuery<any>({
+    queryKey: ["/api/economics/regime"],
   });
 
   const currentFDR = economicData?.fdr || 1.0;

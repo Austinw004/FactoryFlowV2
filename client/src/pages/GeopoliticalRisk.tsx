@@ -32,11 +32,11 @@ export default function GeopoliticalRisk() {
   const { toast } = useToast();
   const [assessment, setAssessment] = useState<RiskAssessment | null>(null);
 
-  const { data: economicData } = useQuery({
-    queryKey: ["/api/economic-indicators"],
+  const { data: economicData } = useQuery<{ fdr?: number }>({
+    queryKey: ["/api/economics/regime"],
   });
 
-  const currentFDR = economicData?.fdr || 1.0;
+  const currentFDR = (economicData as any)?.fdr || 1.0;
 
   const assessMutation = useMutation({
     mutationFn: async (data: any) => {

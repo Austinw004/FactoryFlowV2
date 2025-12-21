@@ -112,8 +112,8 @@ export default function EventMonitoring() {
   const [severityFilter, setSeverityFilter] = useState<string>('all');
   const [selectedAlert, setSelectedAlert] = useState<NewsAlert | null>(null);
 
-  const { data: economicData } = useQuery<{ fdr?: number }>({
-    queryKey: ["/api/economic-indicators"],
+  const { data: economicData } = useQuery<any>({
+    queryKey: ["/api/economics/regime"],
   });
 
   const currentFDR = economicData?.fdr || 1.0;

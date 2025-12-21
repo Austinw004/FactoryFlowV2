@@ -106,7 +106,7 @@ export default function StrategicAnalysis() {
   const [compareBookmarks, setCompareBookmarks] = useState<ScenarioBookmark[]>([]);
 
   const { data: economicData } = useQuery<any>({
-    queryKey: ["/api/economic-indicators"],
+    queryKey: ["/api/economics/regime"],
   });
 
   const { data: storedBacktestResults } = useQuery({
@@ -124,7 +124,7 @@ export default function StrategicAnalysis() {
     },
     onSuccess: (data: ScenarioResult) => {
       setScenarioResult(data);
-      queryClient.invalidateQueries({ queryKey: ["/api/economic-indicators"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/economics/regime"] });
       toast({
         title: "Scenario Analysis Complete",
         description: `${data.scenarioName} analyzed with ${data.confidence}% confidence`,
@@ -146,7 +146,7 @@ export default function StrategicAnalysis() {
     },
     onSuccess: (data: RiskAssessment) => {
       setGeoAssessment(data);
-      queryClient.invalidateQueries({ queryKey: ["/api/economic-indicators"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/economics/regime"] });
       toast({
         title: "Geopolitical Assessment Complete",
         description: `${data.region} event analyzed with ${data.confidence}% confidence`,
@@ -354,7 +354,7 @@ export default function StrategicAnalysis() {
         queryClient.invalidateQueries({ queryKey: ['/api/backtest/results'] });
       }
 
-      queryClient.invalidateQueries({ queryKey: ["/api/economic-indicators"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/economics/regime"] });
 
       const analysesRun = [
         includeEconomic && "Economic Scenario",
