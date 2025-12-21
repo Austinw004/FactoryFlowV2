@@ -377,9 +377,6 @@ export default function AgenticAI() {
   };
   
   useEffect(() => {
-    if (chatMessages.length > 0 && chatMessages.length > prevMessageCountRef.current) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
     prevMessageCountRef.current = chatMessages.length;
   }, [chatMessages]);
 
