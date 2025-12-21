@@ -9,6 +9,16 @@ import { getAISystemPromptEnhancements } from "./industryPersonalization";
 import { getIndustryConfig } from "@shared/industryConfig";
 import { smartInsightsService } from "./smartInsights";
 
+// Format regime names from SCREAMING_SNAKE_CASE to Title Case
+function formatRegimeName(regime: string): string {
+  if (!regime) return "Unknown";
+  return regime
+    .toLowerCase()
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
 const newsMonitoringService = new NewsMonitoringService(storage);
 
 export interface AIMessage {
@@ -1395,7 +1405,7 @@ You excel at answering NATURAL LANGUAGE QUERIES about supply chain data. Executi
 CURRENT PLATFORM STATE:${locationSection}${industrySection}
 
 ECONOMIC CONTEXT:
-- Regime: ${context.regime.regime} (FDR: ${context.regime.fdr.toFixed(2)})
+- Regime: ${formatRegimeName(context.regime.regime)} (FDR: ${context.regime.fdr.toFixed(2)})
 - Market Signal: ${context.regime.signal.toUpperCase()}
 - Confidence: ${(context.regime.confidence * 100).toFixed(0)}%${externalVarsSection}
 
@@ -1429,7 +1439,7 @@ ${context.smartInsights.crossReferencedAlerts.length > 0 ? `- Cross-referenced a
 These insights combine data from multiple platform modules (regime, inventory, suppliers, forecasts) to surface patterns that single data sources miss. Proactively mention relevant insights when they relate to user questions.
 ` : ''}
 REGIME-SPECIFIC GUIDANCE:
-${this.getRegimeGuidance(context.regime.regime)}
+${this.getRegimeGuidance(formatRegimeName(context.regime.regime))}
 
 YOUR MANUFACTURING EXPERTISE:
 
