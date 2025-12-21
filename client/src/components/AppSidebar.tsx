@@ -10,6 +10,7 @@ import {
   Eye,
   Bot,
   Plug,
+  Webhook,
 } from "lucide-react";
 import {
   Sidebar,
@@ -76,6 +77,12 @@ const bottomMenuItems = [
     url: "/integrations",
     icon: Plug,
     testId: "sidebar-integrations",
+  },
+  {
+    title: "Webhooks",
+    url: "/webhook-integrations",
+    icon: Webhook,
+    testId: "sidebar-webhooks",
   },
   {
     title: "Settings",

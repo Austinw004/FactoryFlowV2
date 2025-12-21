@@ -10475,7 +10475,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/webhooks/integrations", isAuthenticated, rateLimiters.api, async (req: any, res) => {
     try {
       const user = req.user as any;
-      const integrations = webhookService.getMiddlewareIntegrationsForCompany(user.companyId);
+      const companyId = user.companyId || user.id || 'default';
+      const integrations = webhookService.getMiddlewareIntegrationsForCompany(companyId);
       res.json(integrations);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -10499,6 +10500,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/webhooks/integrations", isAuthenticated, rateLimiters.api, async (req: any, res) => {
     try {
       const user = req.user as any;
+      const companyId = user.companyId || user.id || 'default';
       const { 
         name, 
         platform, 
@@ -10517,7 +10519,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const config = {
         id: integrationId,
-        companyId: user.companyId,
+        companyId: companyId,
         name: name || `${platform} Integration`,
         platform: platform || 'custom',
         inboundEnabled: inboundEnabled ?? true,

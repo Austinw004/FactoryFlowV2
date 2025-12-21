@@ -37,6 +37,7 @@ import SecurityFaq from "@/pages/SecurityFaq";
 import NotificationSettings from "@/pages/NotificationSettings";
 import ShopFloorMode from "@/pages/ShopFloorMode";
 import Integrations from "@/pages/Integrations";
+import WebhookIntegrations from "@/pages/WebhookIntegrations";
 
 // Dashboard Hub routes
 const DashboardOverviewRoute = () => <DashboardHub initialTab="overview" />;
@@ -184,6 +185,7 @@ function Router() {
       <Route path="/api-docs" component={ApiDocumentation} />
       <Route path="/platform-analytics" component={PlatformAnalytics} />
       <Route path="/integrations" component={Integrations} />
+      <Route path="/webhook-integrations" component={WebhookIntegrations} />
       
       {/* Agentic AI route */}
       <Route path="/agentic-ai" component={AgenticAI} />
