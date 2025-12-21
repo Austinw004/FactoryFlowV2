@@ -10468,6 +10468,236 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ============================================================================
+  // ENHANCED ERP SYNC & WEBHOOK MIDDLEWARE INTEGRATIONS
+  // ============================================================================
+
+  // Get all middleware webhook integrations for company
+  app.get("/api/webhooks/integrations", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const user = req.user as any;
+      const integrations = webhookService.getMiddlewareIntegrationsForCompany(user.companyId);
+      res.json(integrations);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get single middleware integration
+  app.get("/api/webhooks/integrations/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const integration = webhookService.getMiddlewareIntegration(req.params.id);
+      if (!integration) {
+        return res.status(404).json({ error: "Integration not found" });
+      }
+      res.json(integration);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create new middleware webhook integration
+  app.post("/api/webhooks/integrations", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const user = req.user as any;
+      const { 
+        name, 
+        platform, 
+        inboundEnabled, 
+        inboundDataTypes,
+        outboundEnabled, 
+        outboundUrl, 
+        outboundEvents,
+        outboundHeaders,
+        fieldMappings 
+      } = req.body;
+
+      const integrationId = `webhook_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+      const inboundSecret = (await import('./lib/webhookService')).generateWebhookSecret();
+      const inboundEndpoint = (await import('./lib/webhookService')).generateInboundEndpoint(integrationId);
+
+      const config = {
+        id: integrationId,
+        companyId: user.companyId,
+        name: name || `${platform} Integration`,
+        platform: platform || 'custom',
+        inboundEnabled: inboundEnabled ?? true,
+        inboundEndpoint,
+        inboundSecret,
+        inboundDataTypes: inboundDataTypes || ['inventory', 'purchase_orders', 'sales_orders'],
+        outboundEnabled: outboundEnabled ?? false,
+        outboundUrl: outboundUrl || null,
+        outboundSecret: outboundEnabled ? (await import('./lib/webhookService')).generateWebhookSecret() : null,
+        outboundEvents: outboundEvents || [],
+        outboundHeaders: outboundHeaders || {},
+        status: 'pending_setup' as const,
+        fieldMappings: fieldMappings || {},
+      };
+
+      webhookService.registerMiddlewareIntegration(config);
+      res.status(201).json(config);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update middleware webhook integration
+  app.patch("/api/webhooks/integrations/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const existing = webhookService.getMiddlewareIntegration(req.params.id);
+      if (!existing) {
+        return res.status(404).json({ error: "Integration not found" });
+      }
+
+      const updated = { ...existing, ...req.body };
+      webhookService.registerMiddlewareIntegration(updated);
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete middleware webhook integration
+  app.delete("/api/webhooks/integrations/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      webhookService.removeMiddlewareIntegration(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Inbound webhook receiver endpoint (public - uses signature verification)
+  app.post("/api/webhooks/inbound/:integrationId", async (req, res) => {
+    try {
+      const { integrationId } = req.params;
+      const signature = req.headers['x-webhook-signature'] as string | undefined;
+      const eventType = req.headers['x-webhook-event'] as string || req.body.eventType || 'unknown';
+
+      const result = await webhookService.processInboundMiddlewareWebhook(
+        integrationId,
+        eventType,
+        req.body.data || req.body,
+        signature
+      );
+
+      if (result.success) {
+        res.json(result);
+      } else {
+        res.status(400).json(result);
+      }
+    } catch (error: any) {
+      console.error('[Webhook Inbound] Error:', error.message);
+      res.status(500).json({ success: false, message: 'Internal error processing webhook' });
+    }
+  });
+
+  // Get webhook platforms available
+  app.get("/api/webhooks/platforms", isAuthenticated, rateLimiters.api, async (_req, res) => {
+    try {
+      const { WEBHOOK_PLATFORMS, WEBHOOK_EVENTS } = await import('./lib/webhookService');
+      res.json({ platforms: WEBHOOK_PLATFORMS, events: WEBHOOK_EVENTS });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Test ERP sync with specific system (SAP/Oracle)
+  app.post("/api/erp/sync/test", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const { erpType, config, dataType } = req.body;
+      const { createErpClient, syncErpData } = await import('./lib/erpIntegrations');
+
+      const client = createErpClient(erpType, config);
+      if (!client) {
+        return res.status(400).json({ error: `ERP type ${erpType} not supported` });
+      }
+
+      // Test connection first
+      const connectionTest = await client.testConnection();
+      if (!connectionTest.success) {
+        return res.status(400).json({ 
+          success: false, 
+          message: connectionTest.message,
+          details: connectionTest.details 
+        });
+      }
+
+      // If dataType specified, try sync
+      if (dataType) {
+        const syncResult = await syncErpData(client, erpType, dataType);
+        return res.json({
+          success: true,
+          connection: connectionTest,
+          sync: syncResult,
+        });
+      }
+
+      res.json({ success: true, connection: connectionTest });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Trigger full ERP data sync
+  app.post("/api/erp/sync/:connectionId", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const connection = await storage.getErpConnection(req.params.connectionId);
+      if (!connection) {
+        return res.status(404).json({ error: "Connection not found" });
+      }
+
+      const { dataTypes, fullSync } = req.body;
+      const { createErpClient, syncErpData } = await import('./lib/erpIntegrations');
+
+      const erpType = connection.erpSystem === 'SAP S/4HANA' ? 'sap_s4hana' 
+                    : connection.erpSystem === 'Oracle ERP Cloud' ? 'oracle_erp'
+                    : null;
+
+      if (!erpType) {
+        return res.status(400).json({ error: `ERP system ${connection.erpSystem} not yet supported for sync` });
+      }
+
+      const config = {
+        baseUrl: connection.apiEndpoint,
+        authMethod: connection.authMethod as any,
+        ...connection.credentials,
+      };
+
+      const client = createErpClient(erpType, config);
+      if (!client) {
+        return res.status(500).json({ error: "Failed to create ERP client" });
+      }
+
+      const syncTypes = dataTypes || ['inventory', 'purchase_orders', 'materials', 'suppliers'];
+      const results: Record<string, any> = {};
+
+      for (const dataType of syncTypes) {
+        results[dataType] = await syncErpData(client, erpType, dataType, { fullSync });
+      }
+
+      // Log sync
+      await storage.createErpSyncLog({
+        connectionId: req.params.connectionId,
+        syncType: fullSync ? 'full' : 'incremental',
+        status: Object.values(results).every((r: any) => r.success) ? 'success' : 'partial',
+        recordsProcessed: Object.values(results).reduce((sum: number, r: any) => sum + (r.recordsProcessed || 0), 0),
+        duration: Object.values(results).reduce((sum: number, r: any) => sum + (r.duration || 0), 0),
+        details: results,
+      });
+
+      // Update connection last sync time
+      await storage.updateErpConnection(req.params.connectionId, {
+        lastSyncAt: new Date(),
+        status: 'connected',
+      });
+
+      res.json({ success: true, results });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============================================================================
   // PRESCRIPTIVE ACTION PLAYBOOKS
   // ============================================================================
 
