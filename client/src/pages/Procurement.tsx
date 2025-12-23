@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { formatRegimeName } from "@/lib/utils";
@@ -6,6 +7,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   ShoppingCart, 
   AlertCircle, 
@@ -21,6 +26,9 @@ import {
   BarChart2,
   Plus,
   FileText,
+  Building2,
+  Mail,
+  Scale,
 } from "lucide-react";
 import type { Supplier, Material } from "@shared/schema";
 import { InfoTooltip } from "@/components/InfoTooltip";
@@ -30,6 +38,42 @@ import { useToast } from "@/hooks/use-toast";
 export default function Procurement() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+
+  // Dialog visibility states
+  const [showAddSupplierDialog, setShowAddSupplierDialog] = useState(false);
+  const [showAddMaterialDialog, setShowAddMaterialDialog] = useState(false);
+
+  // Supplier form state (matches schema: name, contactEmail)
+  const [supplierForm, setSupplierForm] = useState({
+    name: "",
+    contactEmail: "",
+  });
+
+  // Material form state (matches schema: name, code, unit, onHand, inbound)
+  const [materialForm, setMaterialForm] = useState({
+    name: "",
+    code: "",
+    unit: "units",
+    onHand: "0",
+    inbound: "0",
+  });
+
+  const resetSupplierForm = () => {
+    setSupplierForm({
+      name: "",
+      contactEmail: "",
+    });
+  };
+
+  const resetMaterialForm = () => {
+    setMaterialForm({
+      name: "",
+      code: "",
+      unit: "units",
+      onHand: "0",
+      inbound: "0",
+    });
+  };
 
   const { data: suppliers, isLoading: isLoadingSuppliers } = useQuery<Supplier[]>({
     queryKey: ["/api/suppliers"],
@@ -41,6 +85,57 @@ export default function Procurement() {
 
   const { data: regime } = useQuery<{ regime: string; fdr: number }>({
     queryKey: ["/api/economics/regime"],
+  });
+
+  // Create supplier mutation
+  const createSupplierMutation = useMutation({
+    mutationFn: async (data: typeof supplierForm) => {
+      const res = await apiRequest("POST", "/api/suppliers", {
+        name: data.name,
+        contactEmail: data.contactEmail || null,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Supplier added", description: "Your new supplier has been added to your network." });
+      queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
+      setShowAddSupplierDialog(false);
+      resetSupplierForm();
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to add supplier", 
+        description: error.message || "Could not add the supplier.",
+        variant: "destructive" 
+      });
+    },
+  });
+
+  // Create material mutation
+  const createMaterialMutation = useMutation({
+    mutationFn: async (data: typeof materialForm) => {
+      const res = await apiRequest("POST", "/api/materials", {
+        name: data.name,
+        code: data.code,
+        unit: data.unit,
+        onHand: parseFloat(data.onHand) || 0,
+        inbound: parseFloat(data.inbound) || 0,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Material added", description: "Your new material has been added to inventory." });
+      queryClient.invalidateQueries({ queryKey: ["/api/materials"] });
+      setShowAddMaterialDialog(false);
+      resetMaterialForm();
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to add material", 
+        description: error.message || "Could not add the material.",
+        variant: "destructive" 
+      });
+    },
   });
 
   const generateRfqMutation = useMutation({
@@ -335,7 +430,7 @@ export default function Procurement() {
               <p className="text-sm text-muted-foreground text-center max-w-md mb-4">
                 Add your suppliers to track orders, monitor risk, and generate RFQs automatically.
               </p>
-              <Button onClick={() => navigate("/configuration")} data-testid="button-add-suppliers">
+              <Button onClick={() => setShowAddSupplierDialog(true)} data-testid="button-add-suppliers">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Your First Supplier
               </Button>
@@ -370,7 +465,7 @@ export default function Procurement() {
               <p className="text-sm text-muted-foreground text-center max-w-md mb-4">
                 Add the raw materials you purchase to track inventory, get low-stock alerts, and optimize ordering.
               </p>
-              <Button onClick={() => navigate("/configuration")} data-testid="button-add-materials">
+              <Button onClick={() => setShowAddMaterialDialog(true)} data-testid="button-add-materials">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Your First Material
               </Button>
@@ -431,6 +526,174 @@ export default function Procurement() {
           </div>
         )}
       </div>
+
+      {/* Add Supplier Dialog */}
+      <Dialog open={showAddSupplierDialog} onOpenChange={setShowAddSupplierDialog}>
+        <DialogContent className="sm:max-w-[425px]" data-testid="dialog-add-supplier">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              Add New Supplier
+            </DialogTitle>
+            <DialogDescription>
+              Enter the supplier details below. This information will be used for purchase orders and communications.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="supplier-name">Supplier Name *</Label>
+              <Input
+                id="supplier-name"
+                placeholder="e.g., Acme Industrial Supply"
+                value={supplierForm.name}
+                onChange={(e) => setSupplierForm({ ...supplierForm, name: e.target.value })}
+                data-testid="input-supplier-name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="supplier-email" className="flex items-center gap-1">
+                <Mail className="h-3 w-3" />
+                Contact Email
+              </Label>
+              <Input
+                id="supplier-email"
+                type="email"
+                placeholder="contact@supplier.com"
+                value={supplierForm.contactEmail}
+                onChange={(e) => setSupplierForm({ ...supplierForm, contactEmail: e.target.value })}
+                data-testid="input-supplier-email"
+              />
+              <p className="text-xs text-muted-foreground">Used for RFQ requests and order communications</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => { setShowAddSupplierDialog(false); resetSupplierForm(); }}
+              data-testid="button-cancel-supplier"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => createSupplierMutation.mutate(supplierForm)}
+              disabled={supplierForm.name.trim() === "" || createSupplierMutation.isPending}
+              data-testid="button-save-supplier"
+            >
+              {createSupplierMutation.isPending ? "Adding..." : "Add Supplier"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Material Dialog */}
+      <Dialog open={showAddMaterialDialog} onOpenChange={setShowAddMaterialDialog}>
+        <DialogContent className="sm:max-w-[450px]" data-testid="dialog-add-material">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Add New Material
+            </DialogTitle>
+            <DialogDescription>
+              Enter the material details below. This will be tracked in your inventory for procurement management.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="material-name">Material Name *</Label>
+                <Input
+                  id="material-name"
+                  placeholder="e.g., Aluminum Sheet"
+                  value={materialForm.name}
+                  onChange={(e) => setMaterialForm({ ...materialForm, name: e.target.value })}
+                  data-testid="input-material-name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="material-code">Material Code *</Label>
+                <Input
+                  id="material-code"
+                  placeholder="e.g., ALU-001"
+                  value={materialForm.code}
+                  onChange={(e) => setMaterialForm({ ...materialForm, code: e.target.value })}
+                  data-testid="input-material-code"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="material-unit" className="flex items-center gap-1">
+                <Scale className="h-3 w-3" />
+                Unit of Measure *
+              </Label>
+              <Select
+                value={materialForm.unit}
+                onValueChange={(value) => setMaterialForm({ ...materialForm, unit: value })}
+              >
+                <SelectTrigger data-testid="select-material-unit">
+                  <SelectValue placeholder="Select unit" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="units">Units</SelectItem>
+                  <SelectItem value="kg">Kilograms (kg)</SelectItem>
+                  <SelectItem value="lbs">Pounds (lbs)</SelectItem>
+                  <SelectItem value="liters">Liters</SelectItem>
+                  <SelectItem value="gallons">Gallons</SelectItem>
+                  <SelectItem value="meters">Meters</SelectItem>
+                  <SelectItem value="feet">Feet</SelectItem>
+                  <SelectItem value="sheets">Sheets</SelectItem>
+                  <SelectItem value="rolls">Rolls</SelectItem>
+                  <SelectItem value="boxes">Boxes</SelectItem>
+                  <SelectItem value="pallets">Pallets</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="material-on-hand">Current Stock</Label>
+                <Input
+                  id="material-on-hand"
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  value={materialForm.onHand}
+                  onChange={(e) => setMaterialForm({ ...materialForm, onHand: e.target.value })}
+                  data-testid="input-material-on-hand"
+                />
+                <p className="text-xs text-muted-foreground">Quantity currently on hand</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="material-inbound">Inbound Orders</Label>
+                <Input
+                  id="material-inbound"
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  value={materialForm.inbound}
+                  onChange={(e) => setMaterialForm({ ...materialForm, inbound: e.target.value })}
+                  data-testid="input-material-inbound"
+                />
+                <p className="text-xs text-muted-foreground">Quantity currently on order</p>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => { setShowAddMaterialDialog(false); resetMaterialForm(); }}
+              data-testid="button-cancel-material"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => createMaterialMutation.mutate(materialForm)}
+              disabled={materialForm.name.trim() === "" || materialForm.code.trim() === "" || createMaterialMutation.isPending}
+              data-testid="button-save-material"
+            >
+              {createMaterialMutation.isPending ? "Adding..." : "Add Material"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
