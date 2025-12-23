@@ -417,6 +417,47 @@ export default function AgenticAI() {
     },
   });
 
+  // Helper function to update selectedAgent state
+  const updateSelectedAgent = (updates: Partial<AiAgent>) => {
+    if (selectedAgent) {
+      setSelectedAgent({ ...selectedAgent, ...updates });
+    }
+  };
+
+  // Toggle active day helper
+  const toggleActiveDay = (day: string) => {
+    if (!selectedAgent) return;
+    const newActiveDays = selectedAgent.activeDays.includes(day)
+      ? selectedAgent.activeDays.filter(d => d !== day)
+      : [...selectedAgent.activeDays, day];
+    updateSelectedAgent({ activeDays: newActiveDays });
+  };
+
+  // Save agent configuration mutation
+  const saveAgentConfigMutation = useMutation({
+    mutationFn: async (agent: AiAgent) => {
+      const res = await apiRequest("PATCH", `/api/agentic/agents/${agent.id}`, {
+        maxAutonomyLevel: agent.maxAutonomyLevel,
+        confidenceThreshold: agent.confidenceThreshold,
+        dailyActionLimit: agent.dailyActionLimit,
+        dailyValueLimit: agent.dailyValueLimit,
+        activeHoursStart: agent.activeHoursStart,
+        activeHoursEnd: agent.activeHoursEnd,
+        activeDays: agent.activeDays,
+        learningEnabled: agent.learningEnabled,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/agentic/agents"] });
+      setSelectedAgent(null);
+      toast({ title: "Agent saved", description: "Agent configuration has been saved successfully." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to save agent configuration", variant: "destructive" });
+    },
+  });
+
   const approveActionMutation = useMutation({
     mutationFn: async (actionId: string) => {
       const res = await apiRequest("POST", `/api/agentic/actions/${actionId}/approve`);
@@ -476,6 +517,9 @@ export default function AgenticAI() {
       setShowGuardrailEditor(false);
       setSelectedGuardrail(null);
       toast({ title: "Guardrail updated", description: "Guardrail settings have been saved." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to update guardrail", variant: "destructive" });
     },
   });
 
@@ -2199,6 +2243,8 @@ export default function AgenticAI() {
                   {Object.entries(autonomyLevelLabels).map(([key, info]) => (
                     <div
                       key={key}
+                      onClick={() => updateSelectedAgent({ maxAutonomyLevel: key })}
+                      data-testid={`autonomy-level-${key}`}
                       className={`p-3 border rounded-lg cursor-pointer hover-elevate ${
                         selectedAgent.maxAutonomyLevel === key ? "border-primary bg-primary/5" : ""
                       }`}
@@ -2224,10 +2270,12 @@ export default function AgenticAI() {
                     min={50}
                     step={5}
                     className="w-full"
+                    onValueChange={(value) => updateSelectedAgent({ confidenceThreshold: value[0] / 100 })}
+                    data-testid="slider-confidence-threshold"
                   />
                   <div className="flex justify-between text-xs text-muted-foreground">
                     <span>50% (More actions)</span>
-                    <span className="font-medium">{selectedAgent.confidenceThreshold * 100}%</span>
+                    <span className="font-medium">{Math.round(selectedAgent.confidenceThreshold * 100)}%</span>
                     <span>100% (Fewer, safer actions)</span>
                   </div>
                 </div>
@@ -2238,11 +2286,22 @@ export default function AgenticAI() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Daily Action Limit</Label>
-                  <Input type="number" value={selectedAgent.dailyActionLimit} />
+                  <Input 
+                    type="number" 
+                    value={selectedAgent.dailyActionLimit} 
+                    onChange={(e) => updateSelectedAgent({ dailyActionLimit: parseInt(e.target.value) || 0 })}
+                    data-testid="input-daily-action-limit"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Daily Value Limit ($)</Label>
-                  <Input type="number" value={selectedAgent.dailyValueLimit || ""} placeholder="No limit" />
+                  <Input 
+                    type="number" 
+                    value={selectedAgent.dailyValueLimit || ""} 
+                    placeholder="No limit"
+                    onChange={(e) => updateSelectedAgent({ dailyValueLimit: e.target.value ? parseInt(e.target.value) : null })}
+                    data-testid="input-daily-value-limit"
+                  />
                 </div>
               </div>
 
@@ -2253,11 +2312,21 @@ export default function AgenticAI() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Start Time</Label>
-                    <Input type="time" value={selectedAgent.activeHoursStart} />
+                    <Input 
+                      type="time" 
+                      value={selectedAgent.activeHoursStart}
+                      onChange={(e) => updateSelectedAgent({ activeHoursStart: e.target.value })}
+                      data-testid="input-active-hours-start"
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>End Time</Label>
-                    <Input type="time" value={selectedAgent.activeHoursEnd} />
+                    <Input 
+                      type="time" 
+                      value={selectedAgent.activeHoursEnd}
+                      onChange={(e) => updateSelectedAgent({ activeHoursEnd: e.target.value })}
+                      data-testid="input-active-hours-end"
+                    />
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -2268,6 +2337,8 @@ export default function AgenticAI() {
                         key={day}
                         variant={selectedAgent.activeDays.includes(day) ? "default" : "outline"}
                         className="cursor-pointer"
+                        onClick={() => toggleActiveDay(day)}
+                        data-testid={`badge-day-${day}`}
                       >
                         {day.charAt(0).toUpperCase() + day.slice(1, 3)}
                       </Badge>
@@ -2284,15 +2355,25 @@ export default function AgenticAI() {
                     <h4 className="font-medium">Learning Enabled</h4>
                     <p className="text-sm text-muted-foreground">Allow agent to learn from feedback</p>
                   </div>
-                  <Switch checked={selectedAgent.learningEnabled === 1} />
+                  <Switch 
+                    checked={selectedAgent.learningEnabled === 1}
+                    onCheckedChange={(checked) => updateSelectedAgent({ learningEnabled: checked ? 1 : 0 })}
+                    data-testid="switch-learning-enabled"
+                  />
                 </div>
               </div>
             </div>
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setSelectedAgent(null)}>Cancel</Button>
-            <Button>Save Changes</Button>
+            <Button variant="outline" onClick={() => setSelectedAgent(null)} data-testid="button-cancel-agent-config">Cancel</Button>
+            <Button 
+              onClick={() => selectedAgent && saveAgentConfigMutation.mutate(selectedAgent)}
+              disabled={saveAgentConfigMutation.isPending}
+              data-testid="button-save-agent-config"
+            >
+              {saveAgentConfigMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -2708,7 +2789,7 @@ export default function AgenticAI() {
                 guardrailId: selectedGuardrail.id, 
                 data: guardrailForm 
               })}
-              disabled={updateGuardrailMutation.isPending || !guardrailForm.name}
+              disabled={updateGuardrailMutation.isPending || guardrailForm.name.trim() === ""}
               data-testid="button-save-guardrail"
             >
               {updateGuardrailMutation.isPending ? (

@@ -13757,9 +13757,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { agentId } = req.params;
       const updates = req.body;
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      const companyId = user?.companyId || userId;
       
-      // In production, this would update the database
-      // For now, we acknowledge the update
+      // Update the agent in the in-memory storage
+      const agents = companyAgents.get(companyId) || [];
+      const agentIndex = agents.findIndex((a: any) => a.id === agentId);
+      
+      if (agentIndex !== -1) {
+        // Update the agent with the new values
+        agents[agentIndex] = { ...agents[agentIndex], ...updates };
+        companyAgents.set(companyId, agents);
+      }
+      
       res.json({ 
         success: true, 
         agentId, 
