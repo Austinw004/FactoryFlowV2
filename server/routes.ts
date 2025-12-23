@@ -6863,6 +6863,142 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AI Agents CRUD
+  app.get("/api/ai-agents", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+      const agents = await storage.getAiAgents(user.companyId);
+      res.json(agents);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/ai-agents/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const agent = await storage.getAiAgent(req.params.id);
+      if (!agent) {
+        return res.status(404).json({ error: "AI agent not found" });
+      }
+      res.json(agent);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/ai-agents", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+      const agent = await storage.createAiAgent({
+        ...req.body,
+        companyId: user.companyId,
+      });
+      res.status(201).json(agent);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/ai-agents/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const agent = await storage.updateAiAgent(req.params.id, req.body);
+      if (!agent) {
+        return res.status(404).json({ error: "AI agent not found" });
+      }
+      res.json(agent);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/ai-agents/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.deleteAiAgent(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // AI Automation Rules CRUD
+  app.get("/api/ai-automation-rules", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+      const rules = await storage.getAiAutomationRules(user.companyId);
+      res.json(rules);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/ai-automation-rules/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const rule = await storage.getAiAutomationRule(req.params.id);
+      if (!rule) {
+        return res.status(404).json({ error: "Automation rule not found" });
+      }
+      res.json(rule);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/ai-automation-rules/agent/:agentId", isAuthenticated, async (req: any, res) => {
+    try {
+      const rules = await storage.getAiAutomationRulesByAgent(req.params.agentId);
+      res.json(rules);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/ai-automation-rules", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+      const rule = await storage.createAiAutomationRule({
+        ...req.body,
+        companyId: user.companyId,
+        createdBy: user.id,
+      });
+      res.status(201).json(rule);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/ai-automation-rules/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const rule = await storage.updateAiAutomationRule(req.params.id, req.body);
+      if (!rule) {
+        return res.status(404).json({ error: "Automation rule not found" });
+      }
+      res.json(rule);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/ai-automation-rules/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.deleteAiAutomationRule(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ERP Connections CRUD
   app.get("/api/erp-connections", isAuthenticated, async (req: any, res) => {
     try {

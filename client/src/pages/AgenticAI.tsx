@@ -324,6 +324,41 @@ export default function AgenticAI() {
     conditions: {} as any,
   });
   
+  // Rule Builder form state
+  const [ruleForm, setRuleForm] = useState({
+    name: "",
+    description: "",
+    agentId: "",
+    category: "procurement",
+    triggerType: "threshold",
+    triggerMetric: "inventory_level",
+    triggerOperator: "<",
+    triggerValue: "",
+    actionType: "create_po",
+    autonomyLevel: "suggest",
+    maxExecutionsPerDay: 10,
+    requiresApproval: true,
+    approvalTimeout: 24,
+  });
+
+  const resetRuleForm = () => {
+    setRuleForm({
+      name: "",
+      description: "",
+      agentId: "",
+      category: "procurement",
+      triggerType: "threshold",
+      triggerMetric: "inventory_level",
+      triggerOperator: "<",
+      triggerValue: "",
+      actionType: "create_po",
+      autonomyLevel: "suggest",
+      maxExecutionsPerDay: 10,
+      requiresApproval: true,
+      approvalTimeout: 24,
+    });
+  };
+  
   const [chatInput, setChatInput] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [conversationId] = useState(`agentic_${Date.now()}`);
@@ -567,6 +602,46 @@ export default function AgenticAI() {
       toast({ 
         title: "Action failed", 
         description: error.message || "Failed to execute the action.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const createRuleMutation = useMutation({
+    mutationFn: async (ruleData: typeof ruleForm) => {
+      const res = await apiRequest("POST", "/api/agentic/rules", {
+        name: ruleData.name,
+        description: ruleData.description,
+        agentId: ruleData.agentId || null,
+        category: ruleData.category,
+        triggerType: ruleData.triggerType,
+        triggerConditions: {
+          type: ruleData.triggerType,
+          metric: ruleData.triggerMetric,
+          operator: ruleData.triggerOperator,
+          value: parseFloat(ruleData.triggerValue) || 0
+        },
+        actionType: ruleData.actionType,
+        actionConfig: { type: ruleData.actionType },
+        autonomyLevel: ruleData.autonomyLevel,
+        requiresApproval: ruleData.requiresApproval ? 1 : 0,
+        approvalTimeout: ruleData.approvalTimeout,
+        maxExecutionsPerDay: ruleData.maxExecutionsPerDay,
+        isEnabled: 1,
+        priority: 50
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Rule created", description: "Your automation rule has been saved and is now active." });
+      queryClient.invalidateQueries({ queryKey: ["/api/agentic/rules"] });
+      setShowRuleBuilder(false);
+      resetRuleForm();
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to create rule", 
+        description: error.message || "Could not create the automation rule.",
         variant: "destructive"
       });
     }
@@ -2224,7 +2299,24 @@ export default function AgenticAI() {
                 <Button 
                   variant="outline" 
                   className="h-auto py-4 flex-col gap-2" 
-                  onClick={() => toast({ title: "Export started", description: "Your settings are being prepared for download." })}
+                  onClick={() => {
+                    const exportData = {
+                      settings: userSettings,
+                      agents: displayAgents.map(a => ({ id: a.id, name: a.name, isEnabled: a.isEnabled, maxAutonomyLevel: a.maxAutonomyLevel, confidenceThreshold: a.confidenceThreshold })),
+                      exportedAt: new Date().toISOString(),
+                      version: "1.0"
+                    };
+                    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `agentic-settings-${new Date().toISOString().split("T")[0]}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    toast({ title: "Settings exported", description: "Your settings have been downloaded." });
+                  }}
                   data-testid="button-export-settings"
                 >
                   <Settings className="h-5 w-5" />
@@ -2234,7 +2326,28 @@ export default function AgenticAI() {
                 <Button 
                   variant="outline" 
                   className="h-auto py-4 flex-col gap-2" 
-                  onClick={() => toast({ title: "Export started", description: "Your data is being prepared as CSV." })}
+                  onClick={() => {
+                    const headers = ["Agent Name", "Type", "Status", "Autonomy Level", "Confidence Threshold", "Priority"];
+                    const rows = displayAgents.map(a => [
+                      a.name, 
+                      a.agentType, 
+                      a.isEnabled === 1 ? "Active" : "Inactive",
+                      a.maxAutonomyLevel,
+                      a.confidenceThreshold,
+                      a.priority
+                    ]);
+                    const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+                    const blob = new Blob([csv], { type: "text/csv" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `agentic-data-${new Date().toISOString().split("T")[0]}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    toast({ title: "Data exported", description: "Your agent data has been downloaded as CSV." });
+                  }}
                   data-testid="button-export-data"
                 >
                   <FileText className="h-5 w-5" />
@@ -2244,7 +2357,28 @@ export default function AgenticAI() {
                 <Button 
                   variant="outline" 
                   className="h-auto py-4 flex-col gap-2" 
-                  onClick={() => toast({ title: "Import ready", description: "Select a settings backup file to restore." })}
+                  onClick={() => {
+                    const input = document.createElement("input");
+                    input.type = "file";
+                    input.accept = ".json";
+                    input.onchange = async (e) => {
+                      const file = (e.target as HTMLInputElement).files?.[0];
+                      if (!file) return;
+                      try {
+                        const text = await file.text();
+                        const data = JSON.parse(text);
+                        if (data.settings) {
+                          setUserSettings(prev => ({ ...prev, ...data.settings }));
+                          toast({ title: "Settings imported", description: "Your preferences have been restored from the backup." });
+                        } else {
+                          toast({ title: "Invalid file", description: "The selected file is not a valid settings backup.", variant: "destructive" });
+                        }
+                      } catch {
+                        toast({ title: "Import failed", description: "Could not read the settings file.", variant: "destructive" });
+                      }
+                    };
+                    input.click();
+                  }}
                   data-testid="button-import-settings"
                 >
                   <RefreshCw className="h-5 w-5" />
@@ -2412,7 +2546,7 @@ export default function AgenticAI() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showRuleBuilder} onOpenChange={setShowRuleBuilder}>
+      <Dialog open={showRuleBuilder} onOpenChange={(open) => { setShowRuleBuilder(open); if (!open) resetRuleForm(); }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -2428,11 +2562,20 @@ export default function AgenticAI() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Rule Name</Label>
-                <Input placeholder="e.g., Low Stock Auto-Reorder" data-testid="input-rule-name" />
+                <Input 
+                  placeholder="e.g., Low Stock Auto-Reorder" 
+                  value={ruleForm.name}
+                  onChange={(e) => setRuleForm(prev => ({ ...prev, name: e.target.value }))}
+                  data-testid="input-rule-name" 
+                />
               </div>
               <div className="space-y-2">
                 <Label>Assign to Agent</Label>
-                <Select data-testid="select-rule-agent">
+                <Select 
+                  value={ruleForm.agentId}
+                  onValueChange={(value) => setRuleForm(prev => ({ ...prev, agentId: value }))}
+                  data-testid="select-rule-agent"
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select agent" />
                   </SelectTrigger>
@@ -2447,7 +2590,12 @@ export default function AgenticAI() {
 
             <div className="space-y-2">
               <Label>Description</Label>
-              <Textarea placeholder="Describe what this rule does..." data-testid="input-rule-description" />
+              <Textarea 
+                placeholder="Describe what this rule does..." 
+                value={ruleForm.description}
+                onChange={(e) => setRuleForm(prev => ({ ...prev, description: e.target.value }))}
+                data-testid="input-rule-description" 
+              />
             </div>
 
             <Separator />
@@ -2460,7 +2608,11 @@ export default function AgenticAI() {
               <div className="space-y-3">
                 <div className="space-y-2">
                   <Label>Trigger Type</Label>
-                  <Select data-testid="select-trigger-type">
+                  <Select 
+                    value={ruleForm.triggerType}
+                    onValueChange={(value) => setRuleForm(prev => ({ ...prev, triggerType: value }))}
+                    data-testid="select-trigger-type"
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select trigger type" />
                     </SelectTrigger>
@@ -2480,7 +2632,10 @@ export default function AgenticAI() {
                   <div className="grid grid-cols-3 gap-3">
                     <div className="space-y-2">
                       <Label className="text-xs">Metric</Label>
-                      <Select>
+                      <Select
+                        value={ruleForm.triggerMetric}
+                        onValueChange={(value) => setRuleForm(prev => ({ ...prev, triggerMetric: value }))}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Select metric" />
                         </SelectTrigger>
@@ -2495,7 +2650,10 @@ export default function AgenticAI() {
                     </div>
                     <div className="space-y-2">
                       <Label className="text-xs">Operator</Label>
-                      <Select>
+                      <Select
+                        value={ruleForm.triggerOperator}
+                        onValueChange={(value) => setRuleForm(prev => ({ ...prev, triggerOperator: value }))}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Select" />
                         </SelectTrigger>
@@ -2510,7 +2668,12 @@ export default function AgenticAI() {
                     </div>
                     <div className="space-y-2">
                       <Label className="text-xs">Value</Label>
-                      <Input type="number" placeholder="Enter value" />
+                      <Input 
+                        type="number" 
+                        placeholder="Enter value" 
+                        value={ruleForm.triggerValue}
+                        onChange={(e) => setRuleForm(prev => ({ ...prev, triggerValue: e.target.value }))}
+                      />
                     </div>
                   </div>
                 </Card>
@@ -2526,7 +2689,11 @@ export default function AgenticAI() {
               </h4>
               <div className="space-y-2">
                 <Label>Action Type</Label>
-                <Select data-testid="select-action-type">
+                <Select 
+                  value={ruleForm.actionType}
+                  onValueChange={(value) => setRuleForm(prev => ({ ...prev, actionType: value }))}
+                  data-testid="select-action-type"
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select action" />
                   </SelectTrigger>
@@ -2553,7 +2720,11 @@ export default function AgenticAI() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Autonomy Level</Label>
-                  <Select data-testid="select-autonomy-level">
+                  <Select 
+                    value={ruleForm.autonomyLevel}
+                    onValueChange={(value) => setRuleForm(prev => ({ ...prev, autonomyLevel: value }))}
+                    data-testid="select-autonomy-level"
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select level" />
                     </SelectTrigger>
@@ -2566,17 +2737,30 @@ export default function AgenticAI() {
                 </div>
                 <div className="space-y-2">
                   <Label>Max Executions/Day</Label>
-                  <Input type="number" defaultValue={10} />
+                  <Input 
+                    type="number" 
+                    value={ruleForm.maxExecutionsPerDay}
+                    onChange={(e) => setRuleForm(prev => ({ ...prev, maxExecutionsPerDay: parseInt(e.target.value) || 10 }))}
+                  />
                 </div>
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
-                  <Switch id="requires-approval" defaultChecked />
+                  <Switch 
+                    id="requires-approval" 
+                    checked={ruleForm.requiresApproval}
+                    onCheckedChange={(checked) => setRuleForm(prev => ({ ...prev, requiresApproval: checked }))}
+                  />
                   <Label htmlFor="requires-approval">Requires Approval</Label>
                 </div>
                 <div className="flex-1 space-y-2">
                   <Label>Approval Timeout (hours)</Label>
-                  <Input type="number" defaultValue={24} className="w-24" />
+                  <Input 
+                    type="number" 
+                    value={ruleForm.approvalTimeout}
+                    onChange={(e) => setRuleForm(prev => ({ ...prev, approvalTimeout: parseInt(e.target.value) || 24 }))}
+                    className="w-24" 
+                  />
                 </div>
               </div>
             </div>
@@ -2585,14 +2769,21 @@ export default function AgenticAI() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowRuleBuilder(false)}>Cancel</Button>
             <Button 
-              onClick={() => {
-                toast({ title: "Rule Builder", description: "Advanced rule creation coming soon. For now, use the AI chat to request automation setup." });
-                setShowRuleBuilder(false);
-              }}
+              onClick={() => createRuleMutation.mutate(ruleForm)}
+              disabled={createRuleMutation.isPending || ruleForm.name.trim() === ""}
               data-testid="button-save-rule"
             >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Create Rule
+              {createRuleMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Create Rule
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

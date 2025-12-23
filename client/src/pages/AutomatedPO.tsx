@@ -6,14 +6,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Plus, CheckCircle, XCircle, Settings, TrendingUp, 
-  AlertCircle, Clock, Zap, Link as LinkIcon, PlayCircle 
+  AlertCircle, Clock, Zap, Link as LinkIcon, PlayCircle, Loader2
 } from "lucide-react";
 import type { 
   PoRule, NegotiationPlaybook, ErpConnection
@@ -36,6 +39,44 @@ export default function AutomatedPO() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("rules");
+  const [showRuleDialog, setShowRuleDialog] = useState(false);
+  const [showPlaybookDialog, setShowPlaybookDialog] = useState(false);
+  const [showErpDialog, setShowErpDialog] = useState(false);
+
+  const [ruleForm, setRuleForm] = useState({
+    name: "",
+    description: "",
+    priority: 50,
+    triggerType: "inventory_low",
+    fdrRange: { min: 0, max: 5 },
+    regimeFilter: "",
+    minQuantity: 0,
+    maxQuantity: 0,
+    approvalRequired: true
+  });
+
+  const [playbookForm, setPlaybookForm] = useState({
+    name: "",
+    description: "",
+    triggerRegime: "",
+    fdrMin: 0,
+    fdrMax: 5,
+    strategy: "conservative",
+    discountTarget: 5,
+    paymentTermsDays: 30
+  });
+
+  const [erpForm, setErpForm] = useState({
+    name: "",
+    erpType: "sap_s4hana",
+    environment: "production",
+    connectionUrl: "",
+    authType: "oauth2"
+  });
+
+  const resetRuleForm = () => setRuleForm({ name: "", description: "", priority: 50, triggerType: "inventory_low", fdrRange: { min: 0, max: 5 }, regimeFilter: "", minQuantity: 0, maxQuantity: 0, approvalRequired: true });
+  const resetPlaybookForm = () => setPlaybookForm({ name: "", description: "", triggerRegime: "", fdrMin: 0, fdrMax: 5, strategy: "conservative", discountTarget: 5, paymentTermsDays: 30 });
+  const resetErpForm = () => setErpForm({ name: "", erpType: "sap_s4hana", environment: "production", connectionUrl: "", authType: "oauth2" });
 
   // Fetch PO Rules
   const { data: rules = [], isLoading: rulesLoading } = useQuery<PoRule[]>({
@@ -83,6 +124,78 @@ export default function AutomatedPO() {
     onError: (error: Error) => {
       toast({ title: "Error deleting rule", description: error.message, variant: "destructive" });
     },
+  });
+
+  // Create PO Rule
+  const createRuleMutation = useMutation({
+    mutationFn: async (data: typeof ruleForm) => {
+      return await apiRequest("POST", "/api/po-rules", {
+        name: data.name,
+        description: data.description,
+        priority: data.priority,
+        triggerType: data.triggerType,
+        fdrRange: data.fdrRange,
+        regimeFilter: data.regimeFilter || null,
+        conditions: { minQuantity: data.minQuantity, maxQuantity: data.maxQuantity },
+        approvalRequired: data.approvalRequired ? 1 : 0,
+        enabled: 1
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/po-rules"] });
+      toast({ title: "Rule created", description: "Your PO automation rule is now active." });
+      setShowRuleDialog(false);
+      resetRuleForm();
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error creating rule", description: error.message, variant: "destructive" });
+    }
+  });
+
+  // Create Negotiation Playbook
+  const createPlaybookMutation = useMutation({
+    mutationFn: async (data: typeof playbookForm) => {
+      return await apiRequest("POST", "/api/negotiation-playbooks", {
+        name: data.name,
+        description: data.description,
+        triggerRegime: data.triggerRegime || null,
+        fdrRange: { min: data.fdrMin, max: data.fdrMax },
+        strategies: [{ type: data.strategy, discountTarget: data.discountTarget, paymentTermsDays: data.paymentTermsDays }],
+        enabled: 1
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/negotiation-playbooks"] });
+      toast({ title: "Playbook created", description: "Your negotiation playbook is now ready." });
+      setShowPlaybookDialog(false);
+      resetPlaybookForm();
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error creating playbook", description: error.message, variant: "destructive" });
+    }
+  });
+
+  // Create ERP Connection
+  const createErpConnectionMutation = useMutation({
+    mutationFn: async (data: typeof erpForm) => {
+      return await apiRequest("POST", "/api/erp-connections", {
+        name: data.name,
+        erpType: data.erpType,
+        environment: data.environment,
+        connectionConfig: { url: data.connectionUrl, authType: data.authType },
+        status: "pending",
+        enabled: 1
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/erp-connections"] });
+      toast({ title: "Connection created", description: "Your ERP connection has been configured. It will be verified automatically." });
+      setShowErpDialog(false);
+      resetErpForm();
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error creating connection", description: error.message, variant: "destructive" });
+    }
   });
 
   const enabledRules = rules.filter(r => r.enabled === 1);
@@ -209,7 +322,7 @@ export default function AutomatedPO() {
               </p>
             </div>
             <Button 
-              onClick={() => toast({ title: "Create Rule", description: "Rule creation wizard coming soon. For now, rules can be configured in the Agentic AI section." })}
+              onClick={() => setShowRuleDialog(true)}
               data-testid="button-create-rule"
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -230,7 +343,7 @@ export default function AutomatedPO() {
                   Create your first rule to automate purchase order generation based on inventory levels, FDR thresholds, and economic regimes.
                 </p>
                 <Button 
-                  onClick={() => toast({ title: "Create Rule", description: "Rule creation wizard coming soon. For now, rules can be configured in the Agentic AI section." })}
+                  onClick={() => setShowRuleDialog(true)}
                   data-testid="button-create-first-rule"
                 >
                   <Plus className="h-4 w-4 mr-2" />
@@ -349,7 +462,7 @@ export default function AutomatedPO() {
               </p>
             </div>
             <Button 
-              onClick={() => toast({ title: "Create Playbook", description: "Playbook creation wizard coming soon. Playbooks help optimize negotiation strategies." })}
+              onClick={() => setShowPlaybookDialog(true)}
               data-testid="button-create-playbook"
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -370,7 +483,7 @@ export default function AutomatedPO() {
                   Create negotiation playbooks tailored to different economic regimes and FDR ranges.
                 </p>
                 <Button 
-                  onClick={() => toast({ title: "Create Playbook", description: "Playbook creation wizard coming soon. Playbooks help optimize negotiation strategies." })}
+                  onClick={() => setShowPlaybookDialog(true)}
                   data-testid="button-create-first-playbook"
                 >
                   <Plus className="h-4 w-4 mr-2" />
@@ -452,7 +565,7 @@ export default function AutomatedPO() {
               </p>
             </div>
             <Button 
-              onClick={() => toast({ title: "Add ERP Connection", description: "ERP integration setup coming soon. Connect to SAP, Oracle, or Dynamics." })}
+              onClick={() => setShowErpDialog(true)}
               data-testid="button-create-erp-connection"
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -575,7 +688,7 @@ export default function AutomatedPO() {
                   Connect to your ERP system to enable automatic PO creation and synchronization.
                 </p>
                 <Button 
-                  onClick={() => toast({ title: "Add ERP Connection", description: "ERP integration setup coming soon. Connect to SAP, Oracle, or Dynamics." })}
+                  onClick={() => setShowErpDialog(true)}
                   data-testid="button-create-first-erp-connection"
                 >
                   <Plus className="h-4 w-4 mr-2" />
@@ -639,6 +752,330 @@ export default function AutomatedPO() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Create Rule Dialog */}
+      <Dialog open={showRuleDialog} onOpenChange={(open) => { setShowRuleDialog(open); if (!open) resetRuleForm(); }}>
+        <DialogContent className="max-w-lg" data-testid="dialog-create-rule">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5" />
+              Create PO Automation Rule
+            </DialogTitle>
+            <DialogDescription>
+              Configure automated purchase order generation based on inventory and economic conditions
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Rule Name</Label>
+              <Input 
+                placeholder="e.g., Low Stock Auto-Reorder"
+                value={ruleForm.name}
+                onChange={(e) => setRuleForm(prev => ({ ...prev, name: e.target.value }))}
+                data-testid="input-rule-name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea 
+                placeholder="Describe what this rule does..."
+                value={ruleForm.description}
+                onChange={(e) => setRuleForm(prev => ({ ...prev, description: e.target.value }))}
+                data-testid="input-rule-description"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Trigger Type</Label>
+                <Select 
+                  value={ruleForm.triggerType}
+                  onValueChange={(value) => setRuleForm(prev => ({ ...prev, triggerType: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="inventory_low">Inventory Low</SelectItem>
+                    <SelectItem value="forecast_demand">Forecast Demand</SelectItem>
+                    <SelectItem value="fdr_threshold">FDR Threshold</SelectItem>
+                    <SelectItem value="regime_change">Regime Change</SelectItem>
+                    <SelectItem value="scheduled">Scheduled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Priority</Label>
+                <Input 
+                  type="number" 
+                  min={1} 
+                  max={100}
+                  value={ruleForm.priority}
+                  onChange={(e) => setRuleForm(prev => ({ ...prev, priority: parseInt(e.target.value) || 50 }))}
+                />
+              </div>
+            </div>
+            <Separator />
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Requires Approval</Label>
+                <p className="text-xs text-muted-foreground">POs will wait for manual approval</p>
+              </div>
+              <Switch 
+                checked={ruleForm.approvalRequired}
+                onCheckedChange={(checked) => setRuleForm(prev => ({ ...prev, approvalRequired: checked }))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRuleDialog(false)}>Cancel</Button>
+            <Button 
+              onClick={() => createRuleMutation.mutate(ruleForm)}
+              disabled={createRuleMutation.isPending || ruleForm.name.trim() === ""}
+              data-testid="button-save-rule"
+            >
+              {createRuleMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Create Rule
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Playbook Dialog */}
+      <Dialog open={showPlaybookDialog} onOpenChange={(open) => { setShowPlaybookDialog(open); if (!open) resetPlaybookForm(); }}>
+        <DialogContent className="max-w-lg" data-testid="dialog-create-playbook">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Create Negotiation Playbook
+            </DialogTitle>
+            <DialogDescription>
+              Configure regime-aware negotiation strategies for better procurement outcomes
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Playbook Name</Label>
+              <Input 
+                placeholder="e.g., Recession Negotiation Tactics"
+                value={playbookForm.name}
+                onChange={(e) => setPlaybookForm(prev => ({ ...prev, name: e.target.value }))}
+                data-testid="input-playbook-name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea 
+                placeholder="Describe this playbook's approach..."
+                value={playbookForm.description}
+                onChange={(e) => setPlaybookForm(prev => ({ ...prev, description: e.target.value }))}
+                data-testid="input-playbook-description"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Trigger Regime</Label>
+                <Select 
+                  value={playbookForm.triggerRegime}
+                  onValueChange={(value) => setPlaybookForm(prev => ({ ...prev, triggerRegime: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select regime" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="healthy_expansion">Healthy Expansion</SelectItem>
+                    <SelectItem value="asset_led_growth">Asset Led Growth</SelectItem>
+                    <SelectItem value="imbalanced_excess">Imbalanced Excess</SelectItem>
+                    <SelectItem value="debt_correction">Debt Correction</SelectItem>
+                    <SelectItem value="healthy_deleveraging">Healthy Deleveraging</SelectItem>
+                    <SelectItem value="unhealthy_deflation">Unhealthy Deflation</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Strategy</Label>
+                <Select 
+                  value={playbookForm.strategy}
+                  onValueChange={(value) => setPlaybookForm(prev => ({ ...prev, strategy: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="conservative">Conservative</SelectItem>
+                    <SelectItem value="aggressive">Aggressive</SelectItem>
+                    <SelectItem value="balanced">Balanced</SelectItem>
+                    <SelectItem value="opportunistic">Opportunistic</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Target Discount (%)</Label>
+                <Input 
+                  type="number" 
+                  min={0} 
+                  max={50}
+                  value={playbookForm.discountTarget}
+                  onChange={(e) => setPlaybookForm(prev => ({ ...prev, discountTarget: parseInt(e.target.value) || 5 }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Payment Terms (Days)</Label>
+                <Input 
+                  type="number" 
+                  min={0} 
+                  max={120}
+                  value={playbookForm.paymentTermsDays}
+                  onChange={(e) => setPlaybookForm(prev => ({ ...prev, paymentTermsDays: parseInt(e.target.value) || 30 }))}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPlaybookDialog(false)}>Cancel</Button>
+            <Button 
+              onClick={() => createPlaybookMutation.mutate(playbookForm)}
+              disabled={createPlaybookMutation.isPending || playbookForm.name.trim() === ""}
+              data-testid="button-save-playbook"
+            >
+              {createPlaybookMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Create Playbook
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add ERP Connection Dialog */}
+      <Dialog open={showErpDialog} onOpenChange={(open) => { setShowErpDialog(open); if (!open) resetErpForm(); }}>
+        <DialogContent className="max-w-lg" data-testid="dialog-create-erp-connection">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <LinkIcon className="h-5 w-5" />
+              Add ERP Connection
+            </DialogTitle>
+            <DialogDescription>
+              Connect to your enterprise resource planning system for automated PO synchronization
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Connection Name</Label>
+              <Input 
+                placeholder="e.g., Production SAP Instance"
+                value={erpForm.name}
+                onChange={(e) => setErpForm(prev => ({ ...prev, name: e.target.value }))}
+                data-testid="input-erp-name"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>ERP System</Label>
+                <Select 
+                  value={erpForm.erpType}
+                  onValueChange={(value) => setErpForm(prev => ({ ...prev, erpType: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sap_s4hana">SAP S/4HANA</SelectItem>
+                    <SelectItem value="sap_ecc">SAP ECC</SelectItem>
+                    <SelectItem value="oracle_erp_cloud">Oracle ERP Cloud</SelectItem>
+                    <SelectItem value="oracle_ebs">Oracle E-Business Suite</SelectItem>
+                    <SelectItem value="dynamics_365">Microsoft Dynamics 365</SelectItem>
+                    <SelectItem value="netsuite">NetSuite</SelectItem>
+                    <SelectItem value="infor">Infor</SelectItem>
+                    <SelectItem value="custom">Custom/Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Environment</Label>
+                <Select 
+                  value={erpForm.environment}
+                  onValueChange={(value) => setErpForm(prev => ({ ...prev, environment: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="production">Production</SelectItem>
+                    <SelectItem value="staging">Staging</SelectItem>
+                    <SelectItem value="development">Development</SelectItem>
+                    <SelectItem value="sandbox">Sandbox</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Connection URL</Label>
+              <Input 
+                placeholder="https://your-erp-instance.example.com/api"
+                value={erpForm.connectionUrl}
+                onChange={(e) => setErpForm(prev => ({ ...prev, connectionUrl: e.target.value }))}
+                data-testid="input-erp-url"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Authentication Method</Label>
+              <Select 
+                value={erpForm.authType}
+                onValueChange={(value) => setErpForm(prev => ({ ...prev, authType: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="oauth2">OAuth 2.0</SelectItem>
+                  <SelectItem value="api_key">API Key</SelectItem>
+                  <SelectItem value="basic">Basic Auth</SelectItem>
+                  <SelectItem value="saml">SAML</SelectItem>
+                  <SelectItem value="certificate">Client Certificate</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowErpDialog(false)}>Cancel</Button>
+            <Button 
+              onClick={() => createErpConnectionMutation.mutate(erpForm)}
+              disabled={createErpConnectionMutation.isPending || erpForm.name.trim() === ""}
+              data-testid="button-save-erp-connection"
+            >
+              {createErpConnectionMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Connecting...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Add Connection
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

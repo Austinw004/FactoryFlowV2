@@ -123,7 +123,9 @@ import type {
   UserNotificationPreferences, InsertUserNotificationPreferences,
   EmployeeSkillCertification, InsertEmployeeSkillCertification,
   WeeklySchedule, InsertWeeklySchedule,
-  ShiftAssignment, InsertShiftAssignment
+  ShiftAssignment, InsertShiftAssignment,
+  AiAutomationRule, InsertAiAutomationRule,
+  AiAgent, InsertAiAgent
 } from "@shared/schema";
 import { 
   users, companies, companyLocations, skus, materials, boms, suppliers, supplierMaterials,
@@ -162,7 +164,8 @@ import {
   digitalTwinSimulations, digitalTwinAlerts, digitalTwinMetrics,
   supplierTiers, supplierRelationships, supplierRegionRisks, supplierTierAlerts,
   activityLogs, userNotificationPreferences,
-  employeeSkillCertifications, weeklySchedules, shiftAssignments
+  employeeSkillCertifications, weeklySchedules, shiftAssignments,
+  aiAutomationRules, aiAgents
 } from "@shared/schema";
 
 export interface IStorage {
@@ -632,6 +635,21 @@ export interface IStorage {
   createErpConnection(connection: InsertErpConnection): Promise<ErpConnection>;
   updateErpConnection(id: string, connection: Partial<InsertErpConnection>): Promise<ErpConnection | undefined>;
   deleteErpConnection(id: string): Promise<void>;
+  
+  // AI Agents
+  getAiAgents(companyId: string): Promise<AiAgent[]>;
+  getAiAgent(id: string): Promise<AiAgent | undefined>;
+  createAiAgent(agent: InsertAiAgent): Promise<AiAgent>;
+  updateAiAgent(id: string, agent: Partial<InsertAiAgent>): Promise<AiAgent | undefined>;
+  deleteAiAgent(id: string): Promise<void>;
+  
+  // AI Automation Rules
+  getAiAutomationRules(companyId: string): Promise<AiAutomationRule[]>;
+  getAiAutomationRule(id: string): Promise<AiAutomationRule | undefined>;
+  getAiAutomationRulesByAgent(agentId: string): Promise<AiAutomationRule[]>;
+  createAiAutomationRule(rule: InsertAiAutomationRule): Promise<AiAutomationRule>;
+  updateAiAutomationRule(id: string, rule: Partial<InsertAiAutomationRule>): Promise<AiAutomationRule | undefined>;
+  deleteAiAutomationRule(id: string): Promise<void>;
   
   // Industry Data Consortium
   getConsortiumContributions(filters?: { industrySector?: string; region?: string; regime?: string }): Promise<ConsortiumContribution[]>;
@@ -2922,6 +2940,64 @@ export class DbStorage implements IStorage {
 
   async deleteErpConnection(id: string): Promise<void> {
     await db.delete(erpConnections).where(eq(erpConnections.id, id));
+  }
+
+  // AI Agents
+  async getAiAgents(companyId: string): Promise<AiAgent[]> {
+    return await db.select().from(aiAgents).where(eq(aiAgents.companyId, companyId));
+  }
+
+  async getAiAgent(id: string): Promise<AiAgent | undefined> {
+    const [agent] = await db.select().from(aiAgents).where(eq(aiAgents.id, id));
+    return agent;
+  }
+
+  async createAiAgent(agent: InsertAiAgent): Promise<AiAgent> {
+    const [created] = await db.insert(aiAgents).values(agent).returning();
+    return created;
+  }
+
+  async updateAiAgent(id: string, agentUpdate: Partial<InsertAiAgent>): Promise<AiAgent | undefined> {
+    const [agent] = await db.update(aiAgents)
+      .set({ ...agentUpdate, updatedAt: new Date() })
+      .where(eq(aiAgents.id, id))
+      .returning();
+    return agent;
+  }
+
+  async deleteAiAgent(id: string): Promise<void> {
+    await db.delete(aiAgents).where(eq(aiAgents.id, id));
+  }
+
+  // AI Automation Rules
+  async getAiAutomationRules(companyId: string): Promise<AiAutomationRule[]> {
+    return await db.select().from(aiAutomationRules).where(eq(aiAutomationRules.companyId, companyId));
+  }
+
+  async getAiAutomationRule(id: string): Promise<AiAutomationRule | undefined> {
+    const [rule] = await db.select().from(aiAutomationRules).where(eq(aiAutomationRules.id, id));
+    return rule;
+  }
+
+  async getAiAutomationRulesByAgent(agentId: string): Promise<AiAutomationRule[]> {
+    return await db.select().from(aiAutomationRules).where(eq(aiAutomationRules.agentId, agentId));
+  }
+
+  async createAiAutomationRule(rule: InsertAiAutomationRule): Promise<AiAutomationRule> {
+    const [created] = await db.insert(aiAutomationRules).values(rule).returning();
+    return created;
+  }
+
+  async updateAiAutomationRule(id: string, ruleUpdate: Partial<InsertAiAutomationRule>): Promise<AiAutomationRule | undefined> {
+    const [rule] = await db.update(aiAutomationRules)
+      .set({ ...ruleUpdate, updatedAt: new Date() })
+      .where(eq(aiAutomationRules.id, id))
+      .returning();
+    return rule;
+  }
+
+  async deleteAiAutomationRule(id: string): Promise<void> {
+    await db.delete(aiAutomationRules).where(eq(aiAutomationRules.id, id));
   }
 
   // Industry Data Consortium
