@@ -208,7 +208,10 @@ export default function AutomatedPO() {
                 Configure smart PO generation rules with FDR triggers and approval thresholds
               </p>
             </div>
-            <Button data-testid="button-create-rule">
+            <Button 
+              onClick={() => toast({ title: "Create Rule", description: "Rule creation wizard coming soon. For now, rules can be configured in the Agentic AI section." })}
+              data-testid="button-create-rule"
+            >
               <Plus className="h-4 w-4 mr-2" />
               Create Rule
             </Button>
@@ -226,7 +229,10 @@ export default function AutomatedPO() {
                 <p className="text-sm text-muted-foreground mb-4 text-center max-w-md">
                   Create your first rule to automate purchase order generation based on inventory levels, FDR thresholds, and economic regimes.
                 </p>
-                <Button data-testid="button-create-first-rule">
+                <Button 
+                  onClick={() => toast({ title: "Create Rule", description: "Rule creation wizard coming soon. For now, rules can be configured in the Agentic AI section." })}
+                  data-testid="button-create-first-rule"
+                >
                   <Plus className="h-4 w-4 mr-2" />
                   Create First Rule
                 </Button>
@@ -342,7 +348,10 @@ export default function AutomatedPO() {
                 Regime-aware negotiation strategies and script templates
               </p>
             </div>
-            <Button data-testid="button-create-playbook">
+            <Button 
+              onClick={() => toast({ title: "Create Playbook", description: "Playbook creation wizard coming soon. Playbooks help optimize negotiation strategies." })}
+              data-testid="button-create-playbook"
+            >
               <Plus className="h-4 w-4 mr-2" />
               Create Playbook
             </Button>
@@ -360,7 +369,10 @@ export default function AutomatedPO() {
                 <p className="text-sm text-muted-foreground mb-4 text-center max-w-md">
                   Create negotiation playbooks tailored to different economic regimes and FDR ranges.
                 </p>
-                <Button data-testid="button-create-first-playbook">
+                <Button 
+                  onClick={() => toast({ title: "Create Playbook", description: "Playbook creation wizard coming soon. Playbooks help optimize negotiation strategies." })}
+                  data-testid="button-create-first-playbook"
+                >
                   <Plus className="h-4 w-4 mr-2" />
                   Create First Playbook
                 </Button>
@@ -439,7 +451,10 @@ export default function AutomatedPO() {
                 Connect to SAP, Oracle, Dynamics, or other ERP systems
               </p>
             </div>
-            <Button data-testid="button-create-erp-connection">
+            <Button 
+              onClick={() => toast({ title: "Add ERP Connection", description: "ERP integration setup coming soon. Connect to SAP, Oracle, or Dynamics." })}
+              data-testid="button-create-erp-connection"
+            >
               <Plus className="h-4 w-4 mr-2" />
               Add Connection
             </Button>
@@ -559,7 +574,10 @@ export default function AutomatedPO() {
                 <p className="text-sm text-muted-foreground mb-4 text-center max-w-md">
                   Connect to your ERP system to enable automatic PO creation and synchronization.
                 </p>
-                <Button data-testid="button-create-first-erp-connection">
+                <Button 
+                  onClick={() => toast({ title: "Add ERP Connection", description: "ERP integration setup coming soon. Connect to SAP, Oracle, or Dynamics." })}
+                  data-testid="button-create-first-erp-connection"
+                >
                   <Plus className="h-4 w-4 mr-2" />
                   Add First Connection
                 </Button>

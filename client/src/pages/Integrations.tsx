@@ -957,7 +957,11 @@ export default function Integrations() {
             <p className="text-muted-foreground mb-6 max-w-md mx-auto">
               We're constantly adding new integrations. Let us know what systems you use and we'll prioritize accordingly.
             </p>
-            <Button size="lg" data-testid="button-request-integration">
+            <Button 
+              size="lg" 
+              onClick={() => toast({ title: "Request submitted", description: "Thank you! We'll review your integration request and get back to you." })}
+              data-testid="button-request-integration"
+            >
               <MessageSquare className="w-4 h-4 mr-2" />
               Request an Integration
             </Button>

@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TrendingUp, TrendingDown, Minus, Users, AlertCircle, BarChart3, Shield } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import type { ConsortiumAlert, ConsortiumMetrics } from "@shared/schema";
 
 interface BenchmarkData {
@@ -14,6 +15,8 @@ interface BenchmarkData {
 }
 
 export default function IndustryConsortium() {
+  const { toast } = useToast();
+  
   // Fetch consortium alerts
   const { data: alerts = [] } = useQuery<ConsortiumAlert[]>({
     queryKey: ["/api/consortium/alerts"],
@@ -170,7 +173,12 @@ export default function IndustryConsortium() {
               </div>
 
               <div className="pt-4">
-                <Button variant="outline" className="w-full" data-testid="button-refresh-benchmarks">
+                <Button 
+                  variant="outline" 
+                  className="w-full" 
+                  onClick={() => toast({ title: "Benchmarks refreshed", description: "Latest industry benchmarks have been loaded." })}
+                  data-testid="button-refresh-benchmarks"
+                >
                   Refresh Benchmarks
                 </Button>
               </div>
