@@ -215,6 +215,7 @@ export interface IStorage {
   getSuppliers(companyId: string): Promise<Supplier[]>;
   getSupplier(id: string): Promise<Supplier | undefined>;
   createSupplier(supplier: InsertSupplier): Promise<Supplier>;
+  deleteSupplier(id: string): Promise<void>;
   
   // Supplier Materials
   getSupplierMaterials(supplierId: string): Promise<SupplierMaterial[]>;
@@ -1232,6 +1233,10 @@ export class DbStorage implements IStorage {
   async createSupplier(insertSupplier: InsertSupplier): Promise<Supplier> {
     const [supplier] = await db.insert(suppliers).values(insertSupplier).returning();
     return supplier;
+  }
+
+  async deleteSupplier(id: string): Promise<void> {
+    await db.delete(suppliers).where(eq(suppliers.id, id));
   }
 
   async getSupplierMaterials(supplierId: string): Promise<SupplierMaterial[]> {

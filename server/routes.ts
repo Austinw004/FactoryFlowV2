@@ -2243,6 +2243,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/suppliers/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      const supplier = await storage.getSupplier(req.params.id);
+      if (!supplier || supplier.companyId !== user.companyId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      await storage.deleteSupplier(req.params.id);
+      globalCache.invalidate(`masterData:suppliers:${user.companyId}`);
+      await logAudit({ action: "delete", entityType: "supplier", entityId: req.params.id, changes: { deleted: true }, req });
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Supplier Materials
   app.get("/api/supplier-materials/:supplierId", isAuthenticated, async (req: any, res) => {
     try {
