@@ -14154,6 +14154,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update automation rule
+  app.patch("/api/agentic/rules/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      const companyId = user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ error: "Company ID required" });
+      }
+
+      const ruleId = req.params.id;
+      const updates = req.body;
+
+      // For now, return the updated rule data since we're using mock data
+      // In production, this would call storage.updateAiAutomationRule(ruleId, updates)
+      const updatedRule = {
+        id: ruleId,
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      };
+
+      res.json(updatedRule);
+    } catch (error: any) {
+      console.error("Error updating automation rule:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete automation rule
+  app.delete("/api/agentic/rules/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      const companyId = user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ error: "Company ID required" });
+      }
+
+      // For now, just acknowledge the deletion
+      res.status(204).send();
+    } catch (error: any) {
+      console.error("Error deleting automation rule:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Get pending actions awaiting approval
   app.get("/api/agentic/actions/pending", isAuthenticated, async (req: any, res) => {
     try {

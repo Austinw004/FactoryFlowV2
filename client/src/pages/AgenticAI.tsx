@@ -113,6 +113,10 @@ interface AutomationRule {
   actionConfig: any;
   autonomyLevel: string;
   requiresApproval: number;
+  approvalTimeout?: number;
+  maxExecutionsPerDay?: number;
+  maxValuePerExecution?: number;
+  cooldownMinutes?: number;
   isEnabled: number;
   priority: number;
   executionCount: number;
@@ -646,6 +650,32 @@ export default function AgenticAI() {
       });
     }
   });
+
+  const updateRuleMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<AutomationRule> }) => {
+      const res = await apiRequest("PATCH", `/api/agentic/rules/${id}`, updates);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Rule updated", description: "Your automation rule has been updated." });
+      queryClient.invalidateQueries({ queryKey: ["/api/agentic/rules"] });
+      setSelectedRule(null);
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to update rule", 
+        description: error.message || "Could not update the automation rule.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleToggleRule = (rule: AutomationRule, enabled: boolean) => {
+    updateRuleMutation.mutate({ 
+      id: rule.id, 
+      updates: { isEnabled: enabled ? 1 : 0 } 
+    });
+  };
 
   const handleSendChat = (directMessage?: string) => {
     const messageToSend = directMessage || chatInput.trim();
@@ -1502,7 +1532,12 @@ export default function AgenticAI() {
                       </div>
                       
                       <div className="flex items-center gap-2">
-                        <Switch checked={rule.isEnabled === 1} data-testid={`switch-rule-${rule.id}`} />
+                        <Switch 
+                          checked={rule.isEnabled === 1} 
+                          onCheckedChange={(checked) => handleToggleRule(rule, checked)}
+                          disabled={updateRuleMutation.isPending}
+                          data-testid={`switch-rule-${rule.id}`} 
+                        />
                         <Button variant="ghost" size="icon" onClick={() => setSelectedRule(rule)} data-testid={`button-edit-rule-${rule.id}`}>
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -2784,6 +2819,151 @@ export default function AgenticAI() {
                   Create Rule
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Rule Dialog */}
+      <Dialog open={!!selectedRule} onOpenChange={(open) => !open && setSelectedRule(null)}>
+        <DialogContent className="max-w-lg" data-testid="dialog-edit-rule">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="h-5 w-5 text-primary" />
+              Edit Automation Rule
+            </DialogTitle>
+            <DialogDescription>
+              Update the settings for this automation rule.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedRule && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Rule Name</Label>
+                <p className="text-sm font-medium">{selectedRule.name}</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <p className="text-sm text-muted-foreground">{selectedRule.description || "No description"}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Trigger Type</Label>
+                  <Badge variant="outline">{triggerTypeLabels[selectedRule.triggerType] || selectedRule.triggerType}</Badge>
+                </div>
+                <div className="space-y-2">
+                  <Label>Action Type</Label>
+                  <Badge variant="outline">{actionTypeLabels[selectedRule.actionType]?.label || selectedRule.actionType}</Badge>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                <div>
+                  <Label>Enabled</Label>
+                  <p className="text-xs text-muted-foreground">Toggle to enable or disable this rule</p>
+                </div>
+                <Switch 
+                  checked={selectedRule.isEnabled === 1}
+                  onCheckedChange={(checked) => {
+                    handleToggleRule(selectedRule, checked);
+                  }}
+                  disabled={updateRuleMutation.isPending}
+                  data-testid="switch-edit-rule-enabled"
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                <div>
+                  <Label>Requires Approval</Label>
+                  <p className="text-xs text-muted-foreground">Actions must be approved before execution</p>
+                </div>
+                <Switch 
+                  checked={selectedRule.requiresApproval === 1}
+                  onCheckedChange={(checked) => {
+                    updateRuleMutation.mutate({
+                      id: selectedRule.id,
+                      updates: { requiresApproval: checked ? 1 : 0 }
+                    });
+                  }}
+                  disabled={updateRuleMutation.isPending}
+                  data-testid="switch-edit-rule-approval"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Autonomy Level</Label>
+                <Select 
+                  value={selectedRule.autonomyLevel || "suggest"}
+                  onValueChange={(value) => {
+                    updateRuleMutation.mutate({
+                      id: selectedRule.id,
+                      updates: { autonomyLevel: value }
+                    });
+                  }}
+                  disabled={updateRuleMutation.isPending}
+                >
+                  <SelectTrigger data-testid="select-edit-autonomy">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="suggest">Suggest Only</SelectItem>
+                    <SelectItem value="auto_draft">Auto-Draft</SelectItem>
+                    <SelectItem value="auto_execute">Auto-Execute</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Max Executions/Day</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={selectedRule.maxExecutionsPerDay || 10}
+                    onChange={(e) => {
+                      updateRuleMutation.mutate({
+                        id: selectedRule.id,
+                        updates: { maxExecutionsPerDay: parseInt(e.target.value) || 10 }
+                      });
+                    }}
+                    disabled={updateRuleMutation.isPending}
+                    data-testid="input-edit-max-executions"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Priority (1-100)</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={selectedRule.priority || 50}
+                    onChange={(e) => {
+                      updateRuleMutation.mutate({
+                        id: selectedRule.id,
+                        updates: { priority: parseInt(e.target.value) || 50 }
+                      });
+                    }}
+                    disabled={updateRuleMutation.isPending}
+                    data-testid="input-edit-priority"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 border-t text-xs text-muted-foreground">
+                <div className="flex justify-between">
+                  <span>Executions: {selectedRule.executionCount || 0}</span>
+                  <span>Success Rate: {selectedRule.successRate ? `${selectedRule.successRate}%` : "N/A"}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedRule(null)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
