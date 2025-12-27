@@ -309,6 +309,15 @@ export default function AgenticAI() {
   const [selectedGuardrail, setSelectedGuardrail] = useState<Guardrail | null>(null);
   const [showGuardrailEditor, setShowGuardrailEditor] = useState(false);
   
+  // Edit rule form state - synced with selectedRule
+  const [editRuleForm, setEditRuleForm] = useState({
+    isEnabled: 0,
+    requiresApproval: 0,
+    autonomyLevel: "suggest",
+    maxExecutionsPerDay: 10,
+    priority: 50,
+  });
+  
   // New agent form state
   const [newAgentForm, setNewAgentForm] = useState({
     name: "",
@@ -418,6 +427,19 @@ export default function AgenticAI() {
   useEffect(() => {
     prevMessageCountRef.current = chatMessages.length;
   }, [chatMessages]);
+
+  // Sync editRuleForm when selectedRule changes
+  useEffect(() => {
+    if (selectedRule) {
+      setEditRuleForm({
+        isEnabled: selectedRule.isEnabled,
+        requiresApproval: selectedRule.requiresApproval,
+        autonomyLevel: selectedRule.autonomyLevel || "suggest",
+        maxExecutionsPerDay: selectedRule.maxExecutionsPerDay || 10,
+        priority: selectedRule.priority || 50,
+      });
+    }
+  }, [selectedRule]);
 
   const { data: stats } = useQuery<AgenticStats>({
     queryKey: ["/api/agentic/stats"],
@@ -2866,9 +2888,9 @@ export default function AgenticAI() {
                   <p className="text-xs text-muted-foreground">Toggle to enable or disable this rule</p>
                 </div>
                 <Switch 
-                  checked={selectedRule.isEnabled === 1}
+                  checked={editRuleForm.isEnabled === 1}
                   onCheckedChange={(checked) => {
-                    handleToggleRule(selectedRule, checked);
+                    setEditRuleForm(prev => ({ ...prev, isEnabled: checked ? 1 : 0 }));
                   }}
                   disabled={updateRuleMutation.isPending}
                   data-testid="switch-edit-rule-enabled"
@@ -2881,12 +2903,9 @@ export default function AgenticAI() {
                   <p className="text-xs text-muted-foreground">Actions must be approved before execution</p>
                 </div>
                 <Switch 
-                  checked={selectedRule.requiresApproval === 1}
+                  checked={editRuleForm.requiresApproval === 1}
                   onCheckedChange={(checked) => {
-                    updateRuleMutation.mutate({
-                      id: selectedRule.id,
-                      updates: { requiresApproval: checked ? 1 : 0 }
-                    });
+                    setEditRuleForm(prev => ({ ...prev, requiresApproval: checked ? 1 : 0 }));
                   }}
                   disabled={updateRuleMutation.isPending}
                   data-testid="switch-edit-rule-approval"
@@ -2896,12 +2915,9 @@ export default function AgenticAI() {
               <div className="space-y-2">
                 <Label>Autonomy Level</Label>
                 <Select 
-                  value={selectedRule.autonomyLevel || "suggest"}
+                  value={editRuleForm.autonomyLevel}
                   onValueChange={(value) => {
-                    updateRuleMutation.mutate({
-                      id: selectedRule.id,
-                      updates: { autonomyLevel: value }
-                    });
+                    setEditRuleForm(prev => ({ ...prev, autonomyLevel: value }));
                   }}
                   disabled={updateRuleMutation.isPending}
                 >
@@ -2922,12 +2938,9 @@ export default function AgenticAI() {
                   <Input
                     type="number"
                     min="1"
-                    value={selectedRule.maxExecutionsPerDay || 10}
+                    value={editRuleForm.maxExecutionsPerDay}
                     onChange={(e) => {
-                      updateRuleMutation.mutate({
-                        id: selectedRule.id,
-                        updates: { maxExecutionsPerDay: parseInt(e.target.value) || 10 }
-                      });
+                      setEditRuleForm(prev => ({ ...prev, maxExecutionsPerDay: parseInt(e.target.value) || 10 }));
                     }}
                     disabled={updateRuleMutation.isPending}
                     data-testid="input-edit-max-executions"
@@ -2939,12 +2952,9 @@ export default function AgenticAI() {
                     type="number"
                     min="1"
                     max="100"
-                    value={selectedRule.priority || 50}
+                    value={editRuleForm.priority}
                     onChange={(e) => {
-                      updateRuleMutation.mutate({
-                        id: selectedRule.id,
-                        updates: { priority: parseInt(e.target.value) || 50 }
-                      });
+                      setEditRuleForm(prev => ({ ...prev, priority: parseInt(e.target.value) || 50 }));
                     }}
                     disabled={updateRuleMutation.isPending}
                     data-testid="input-edit-priority"
@@ -2963,7 +2973,31 @@ export default function AgenticAI() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setSelectedRule(null)}>
-              Close
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                if (selectedRule) {
+                  updateRuleMutation.mutate({
+                    id: selectedRule.id,
+                    updates: editRuleForm
+                  });
+                }
+              }}
+              disabled={updateRuleMutation.isPending}
+              data-testid="button-save-rule-changes"
+            >
+              {updateRuleMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Changes
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -13609,8 +13609,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AGENTIC AI ROUTES - Autonomous Actions & Intelligent Automation
   // ============================================================================
 
-  // In-memory storage for agents and guardrails (per company, persists for server session)
+  // In-memory storage for agents, rules, and guardrails (per company, persists for server session)
   const companyAgents: Map<string, any[]> = new Map();
+  const companyRules: Map<string, any[]> = new Map();
   const companyGuardrails: Map<string, any[]> = new Map();
 
   // Initialize default agents for a company
@@ -13730,6 +13731,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
         actionsToday: Math.floor(Math.random() * 25) + 10,
         valueToday: 0,
         successRate: 92 + Math.floor(Math.random() * 6),
+      },
+    ];
+  }
+
+  // Initialize default rules for a company
+  function getDefaultRules(companyId: string) {
+    return [
+      {
+        id: "rule_low_stock_po",
+        companyId,
+        agentId: "agent_procurement",
+        name: "Low Stock Auto-PO",
+        description: "Automatically creates purchase orders when inventory falls below reorder point",
+        category: "procurement",
+        triggerType: "threshold",
+        triggerConditions: { metric: "inventory_level", operator: "<", valueType: "reorder_point" },
+        actionType: "create_po",
+        actionConfig: { quantity: "economic_order_quantity", supplier: "preferred", urgency: "normal" },
+        autonomyLevel: "auto_draft",
+        requiresApproval: 1,
+        approvalTimeout: 24,
+        maxExecutionsPerDay: 20,
+        maxValuePerExecution: 25000,
+        cooldownMinutes: 30,
+        isEnabled: 1,
+        priority: 90,
+        executionCount: 234,
+        lastExecutedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+        successRate: 96,
+        avgSavings: 1250,
+      },
+      {
+        id: "rule_regime_safety",
+        companyId,
+        agentId: "agent_inventory",
+        name: "Regime-Based Safety Stock",
+        description: "Adjusts safety stock levels based on economic regime changes",
+        category: "inventory",
+        triggerType: "regime_change",
+        triggerConditions: { fromRegime: "any", monitorAllRegimes: true },
+        actionType: "adjust_safety_stock",
+        actionConfig: { regimeMultipliers: { BUBBLE: 1.5, IMBALANCED_EXCESS: 1.3, HEALTHY: 1.0, IMBALANCED_DEFICIT: 0.8, DEPRESSED: 0.7 } },
+        autonomyLevel: "auto_execute",
+        requiresApproval: 0,
+        approvalTimeout: 0,
+        maxExecutionsPerDay: 5,
+        maxValuePerExecution: null,
+        cooldownMinutes: 240,
+        isEnabled: 1,
+        priority: 95,
+        executionCount: 18,
+        lastExecutedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+        successRate: 100,
+        avgSavings: 8500,
+      },
+      {
+        id: "rule_rebalance",
+        companyId,
+        agentId: "agent_inventory",
+        name: "Weekly Inventory Rebalance",
+        description: "Automatically rebalances inventory across locations every Monday",
+        category: "inventory",
+        triggerType: "schedule",
+        triggerConditions: { cron: "0 6 * * MON", timezone: "America/New_York" },
+        actionType: "rebalance_inventory",
+        actionConfig: { strategy: "demand_weighted", minimizeTransportCost: true },
+        autonomyLevel: "auto_draft",
+        requiresApproval: 1,
+        approvalTimeout: 8,
+        maxExecutionsPerDay: 1,
+        maxValuePerExecution: null,
+        cooldownMinutes: 1440,
+        isEnabled: 1,
+        priority: 70,
+        executionCount: 52,
+        lastExecutedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+        successRate: 92,
+        avgSavings: 3200,
+      },
+      {
+        id: "rule_price_spike",
+        companyId,
+        agentId: "agent_procurement",
+        name: "Price Spike Response",
+        description: "Pauses orders and alerts when commodity prices spike unexpectedly",
+        category: "procurement",
+        triggerType: "event",
+        triggerConditions: { eventType: "price_spike", threshold: 0.15, lookbackHours: 24 },
+        actionType: "pause_orders",
+        actionConfig: { duration: "until_review", notifyRoles: ["procurement_manager", "finance_director"] },
+        autonomyLevel: "auto_execute",
+        requiresApproval: 0,
+        approvalTimeout: 0,
+        maxExecutionsPerDay: 5,
+        maxValuePerExecution: null,
+        cooldownMinutes: 60,
+        isEnabled: 1,
+        priority: 100,
+        executionCount: 7,
+        lastExecutedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+        successRate: 100,
+        avgSavings: 25000,
       },
     ];
   }
@@ -13949,179 +14052,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Company ID required" });
       }
 
-      const rules = [
-        {
-          id: "rule_low_stock_po",
-          companyId,
-          agentId: "agent_procurement",
-          name: "Low Stock Auto-PO",
-          description: "Automatically creates purchase orders when inventory falls below reorder point",
-          category: "procurement",
-          triggerType: "threshold",
-          triggerConditions: { metric: "inventory_level", operator: "<", valueType: "reorder_point" },
-          actionType: "create_po",
-          actionConfig: { quantity: "economic_order_quantity", supplier: "preferred", urgency: "normal" },
-          autonomyLevel: "auto_draft",
-          requiresApproval: 1,
-          approverRoles: ["procurement_manager"],
-          approvalTimeout: 24,
-          maxExecutionsPerDay: 20,
-          maxValuePerExecution: 25000,
-          cooldownMinutes: 30,
-          regimeOverrides: {
-            "BUBBLE": { enabled: false, reason: "Pause procurement during bubble conditions" },
-            "IMBALANCED_EXCESS": { adjustmentMultiplier: 0.7 },
-          },
-          isEnabled: 1,
-          priority: 90,
-          executionCount: 234,
-          lastExecutedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          successRate: 96,
-          avgSavings: 1250,
-        },
-        {
-          id: "rule_regime_safety",
-          companyId,
-          agentId: "agent_inventory",
-          name: "Regime-Based Safety Stock",
-          description: "Adjusts safety stock levels based on economic regime changes",
-          category: "inventory",
-          triggerType: "regime_change",
-          triggerConditions: { fromRegime: "any", monitorAllRegimes: true },
-          actionType: "adjust_safety_stock",
-          actionConfig: {
-            regimeMultipliers: {
-              BUBBLE: 1.5,
-              IMBALANCED_EXCESS: 1.3,
-              HEALTHY: 1.0,
-              IMBALANCED_DEFICIT: 0.8,
-              DEPRESSED: 0.7,
-            },
-          },
-          autonomyLevel: "auto_execute",
-          requiresApproval: 0,
-          approverRoles: [],
-          approvalTimeout: 0,
-          maxExecutionsPerDay: 5,
-          maxValuePerExecution: null,
-          cooldownMinutes: 240,
-          isEnabled: 1,
-          priority: 95,
-          executionCount: 18,
-          lastExecutedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-          successRate: 100,
-          avgSavings: 8500,
-        },
-        {
-          id: "rule_rebalance",
-          companyId,
-          agentId: "agent_inventory",
-          name: "Weekly Inventory Rebalance",
-          description: "Automatically rebalances inventory across locations every Monday",
-          category: "inventory",
-          triggerType: "schedule",
-          triggerConditions: { cron: "0 6 * * MON", timezone: "America/New_York" },
-          actionType: "rebalance_inventory",
-          actionConfig: { strategy: "demand_weighted", minimizeTransportCost: true },
-          autonomyLevel: "auto_draft",
-          requiresApproval: 1,
-          approverRoles: ["inventory_manager", "operations_manager"],
-          approvalTimeout: 8,
-          maxExecutionsPerDay: 1,
-          maxValuePerExecution: null,
-          cooldownMinutes: 1440,
-          isEnabled: 1,
-          priority: 70,
-          executionCount: 52,
-          lastExecutedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          successRate: 92,
-          avgSavings: 3200,
-        },
-        {
-          id: "rule_price_spike",
-          companyId,
-          agentId: "agent_procurement",
-          name: "Price Spike Response",
-          description: "Pauses orders and alerts when commodity prices spike unexpectedly",
-          category: "procurement",
-          triggerType: "event",
-          triggerConditions: { eventType: "price_spike", threshold: 0.15, lookbackHours: 24 },
-          actionType: "pause_orders",
-          actionConfig: { duration: "until_review", notifyRoles: ["procurement_manager", "finance_director"] },
-          autonomyLevel: "auto_execute",
-          requiresApproval: 0,
-          approverRoles: [],
-          approvalTimeout: 0,
-          maxExecutionsPerDay: 5,
-          maxValuePerExecution: null,
-          cooldownMinutes: 60,
-          isEnabled: 1,
-          priority: 100,
-          executionCount: 7,
-          lastExecutedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-          successRate: 100,
-          avgSavings: 25000,
-        },
-        {
-          id: "rule_forecast_accuracy",
-          companyId,
-          agentId: "agent_forecasting",
-          name: "Forecast Degradation Alert",
-          description: "Triggers model retraining when MAPE exceeds threshold",
-          category: "forecasting",
-          triggerType: "threshold",
-          triggerConditions: { metric: "forecast_mape", operator: ">", value: 15 },
-          actionType: "send_alert",
-          actionConfig: {
-            channels: ["in_app", "email"],
-            priority: "high",
-            suggestAction: "retrain_model",
-          },
-          autonomyLevel: "full_autonomous",
-          requiresApproval: 0,
-          approverRoles: [],
-          approvalTimeout: 0,
-          maxExecutionsPerDay: 10,
-          maxValuePerExecution: null,
-          cooldownMinutes: 60,
-          isEnabled: 1,
-          priority: 85,
-          executionCount: 12,
-          lastExecutedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-          successRate: 100,
-          avgSavings: 0,
-        },
-        {
-          id: "rule_supplier_risk",
-          companyId,
-          agentId: "agent_supplier",
-          name: "Supplier Risk Escalation",
-          description: "Automatically escalates high-risk supplier situations",
-          category: "supplier",
-          triggerType: "threshold",
-          triggerConditions: { metric: "supplier_risk_score", operator: ">", value: 75 },
-          actionType: "escalate",
-          actionConfig: {
-            escalateTo: ["procurement_manager", "supply_chain_director"],
-            suggestActions: ["find_alternative", "increase_safety_stock", "expedite_orders"],
-          },
-          autonomyLevel: "suggest",
-          requiresApproval: 0,
-          approverRoles: [],
-          approvalTimeout: 0,
-          maxExecutionsPerDay: 20,
-          maxValuePerExecution: null,
-          cooldownMinutes: 15,
-          isEnabled: 1,
-          priority: 95,
-          executionCount: 23,
-          lastExecutedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-          successRate: 95,
-          avgSavings: 15000,
-        },
-      ];
+      // Initialize with default rules if not exists (lazy initialization)
+      if (!companyRules.has(companyId)) {
+        companyRules.set(companyId, getDefaultRules(companyId));
+      }
 
-      res.json(rules);
+      res.json(companyRules.get(companyId) || []);
     } catch (error: any) {
       console.error("Error fetching automation rules:", error);
       res.status(500).json({ error: error.message });
@@ -14134,6 +14070,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       const companyId = user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ error: "Company ID required" });
+      }
+      
       const ruleData = req.body;
 
       const newRule = {
@@ -14146,6 +14086,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         avgSavings: null,
         createdAt: new Date().toISOString(),
       };
+
+      // Add to in-memory storage
+      if (!companyRules.has(companyId)) {
+        companyRules.set(companyId, getDefaultRules(companyId));
+      }
+      const rules = companyRules.get(companyId) || [];
+      rules.push(newRule);
+      companyRules.set(companyId, rules);
 
       res.json(newRule);
     } catch (error: any) {
@@ -14167,13 +14115,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const ruleId = req.params.id;
       const updates = req.body;
 
-      // For now, return the updated rule data since we're using mock data
-      // In production, this would call storage.updateAiAutomationRule(ruleId, updates)
-      const updatedRule = {
-        id: ruleId,
-        ...updates,
-        updatedAt: new Date().toISOString(),
-      };
+      // Validate and sanitize numeric fields
+      const sanitizedUpdates: Record<string, any> = { ...updates };
+      if (sanitizedUpdates.isEnabled !== undefined) {
+        sanitizedUpdates.isEnabled = sanitizedUpdates.isEnabled ? 1 : 0;
+      }
+      if (sanitizedUpdates.requiresApproval !== undefined) {
+        sanitizedUpdates.requiresApproval = sanitizedUpdates.requiresApproval ? 1 : 0;
+      }
+      if (sanitizedUpdates.maxExecutionsPerDay !== undefined) {
+        sanitizedUpdates.maxExecutionsPerDay = Math.max(1, parseInt(sanitizedUpdates.maxExecutionsPerDay) || 10);
+      }
+      if (sanitizedUpdates.priority !== undefined) {
+        sanitizedUpdates.priority = Math.min(100, Math.max(1, parseInt(sanitizedUpdates.priority) || 50));
+      }
+
+      // Initialize rules if not exists
+      if (!companyRules.has(companyId)) {
+        companyRules.set(companyId, getDefaultRules(companyId));
+      }
+      
+      // Find and update the rule in the in-memory cache
+      const rules = companyRules.get(companyId) || [];
+      const ruleIndex = rules.findIndex((r: any) => r.id === ruleId);
+      
+      if (ruleIndex === -1) {
+        return res.status(404).json({ error: "Rule not found" });
+      }
+      
+      // Merge updates with existing rule
+      const updatedRule = { ...rules[ruleIndex], ...sanitizedUpdates };
+      rules[ruleIndex] = updatedRule;
+      companyRules.set(companyId, rules);
 
       res.json(updatedRule);
     } catch (error: any) {
@@ -14192,7 +14165,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Company ID required" });
       }
 
-      // For now, just acknowledge the deletion
+      // Initialize rules if not exists
+      if (!companyRules.has(companyId)) {
+        companyRules.set(companyId, getDefaultRules(companyId));
+      }
+      
+      // Remove the rule from in-memory cache
+      const rules = companyRules.get(companyId) || [];
+      const filteredRules = rules.filter((r: any) => r.id !== req.params.id);
+      companyRules.set(companyId, filteredRules);
+
       res.status(204).send();
     } catch (error: any) {
       console.error("Error deleting automation rule:", error);
