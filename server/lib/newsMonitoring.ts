@@ -484,11 +484,11 @@ export class NewsMonitoringService {
       const publishedAt = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000);
 
       const sources = [
-        { name: 'Reuters', url: 'https://www.reuters.com/business/supply-chain/' },
-        { name: 'Bloomberg', url: 'https://www.bloomberg.com/supply-chain' },
-        { name: 'WSJ', url: 'https://www.wsj.com/news/logistics' },
-        { name: 'Financial Times', url: 'https://www.ft.com/supply-chains' },
-        { name: 'AP News', url: 'https://apnews.com/hub/supply-chain' }
+        { name: 'Reuters', url: 'https://www.reuters.com/business/' },
+        { name: 'Bloomberg', url: 'https://www.bloomberg.com/markets' },
+        { name: 'WSJ', url: 'https://www.wsj.com/' },
+        { name: 'Financial Times', url: 'https://www.ft.com/' },
+        { name: 'AP News', url: 'https://apnews.com/' }
       ];
       const selectedSource = sources[Math.floor(Math.random() * sources.length)];
       
