@@ -29,7 +29,10 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
-  Layers
+  Layers,
+  Upload,
+  FileSpreadsheet,
+  Download
 } from "lucide-react";
 
 interface DemandSignalSource {
@@ -151,6 +154,9 @@ export default function DemandSignalRepository() {
     region: "",
     sourceId: "",
   });
+  const [showFileUploadDialog, setShowFileUploadDialog] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadSignalType, setUploadSignalType] = useState("order");
 
   const { data: analytics, isLoading: analyticsLoading } = useQuery<Analytics>({
     queryKey: ["/api/demand-signals/analytics"],
@@ -230,6 +236,46 @@ export default function DemandSignalRepository() {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
+
+  const fileUploadMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      const res = await fetch("/api/demand-signals/import", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Upload failed");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/demand-signals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/demand-signals/analytics"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/demand-signals/sources"] });
+      setShowFileUploadDialog(false);
+      setUploadFile(null);
+      toast({ 
+        title: "Import successful", 
+        description: `Imported ${data.imported} demand signals from file.` 
+      });
+    },
+    onError: (error: any) => {
+      toast({ title: "Import failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleFileUpload = () => {
+    if (!uploadFile) {
+      toast({ title: "No file selected", description: "Please select a CSV file to upload.", variant: "destructive" });
+      return;
+    }
+    const formData = new FormData();
+    formData.append("file", uploadFile);
+    formData.append("signalType", uploadSignalType);
+    fileUploadMutation.mutate(formData);
+  };
 
   const handleCreateSource = () => {
     if (!newSource.name) {
@@ -511,6 +557,86 @@ export default function DemandSignalRepository() {
                   data-testid="button-submit-signal"
                 >
                   {createSignalMutation.isPending ? "Recording..." : "Record Signal"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={showFileUploadDialog} onOpenChange={setShowFileUploadDialog}>
+            <DialogTrigger asChild>
+              <Button variant="outline" data-testid="button-import-file">
+                <Upload className="h-4 w-4 mr-2" />
+                Import File
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Import Demand Signals from File</DialogTitle>
+                <DialogDescription>
+                  Upload a CSV file to bulk import demand signals. The file should have columns: quantity, channel, region, confidence (optional).
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="upload-signal-type">Signal Type for Imported Records</Label>
+                  <Select
+                    value={uploadSignalType}
+                    onValueChange={setUploadSignalType}
+                  >
+                    <SelectTrigger data-testid="select-upload-signal-type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SIGNAL_TYPES.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="file-upload">Select CSV File</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="file-upload"
+                      type="file"
+                      accept=".csv"
+                      data-testid="input-file-upload"
+                      onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                      className="flex-1"
+                    />
+                  </div>
+                  {uploadFile && (
+                    <p className="text-sm text-muted-foreground">
+                      Selected: {uploadFile.name} ({(uploadFile.size / 1024).toFixed(1)} KB)
+                    </p>
+                  )}
+                </div>
+                <div className="rounded-md bg-muted p-3">
+                  <div className="flex items-start gap-2">
+                    <FileSpreadsheet className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                    <div className="text-sm">
+                      <p className="font-medium">CSV Format Requirements:</p>
+                      <ul className="list-disc list-inside text-muted-foreground mt-1 space-y-0.5">
+                        <li>Required columns: <code className="text-xs bg-background px-1 rounded">quantity</code></li>
+                        <li>Optional columns: <code className="text-xs bg-background px-1 rounded">channel</code>, <code className="text-xs bg-background px-1 rounded">region</code>, <code className="text-xs bg-background px-1 rounded">confidence</code>, <code className="text-xs bg-background px-1 rounded">sku_name</code></li>
+                        <li>First row should be headers</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => { setShowFileUploadDialog(false); setUploadFile(null); }}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleFileUpload} 
+                  disabled={fileUploadMutation.isPending || !uploadFile}
+                  data-testid="button-submit-upload"
+                >
+                  {fileUploadMutation.isPending ? "Importing..." : "Import Signals"}
                 </Button>
               </DialogFooter>
             </DialogContent>

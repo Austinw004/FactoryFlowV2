@@ -9809,6 +9809,137 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // File upload for bulk import of demand signals
+  const demandSignalUpload = multer({ storage: multer.memoryStorage() });
+  app.post("/api/demand-signals/import", isAuthenticated, demandSignalUpload.single('file'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+      
+      const signalType = req.body.signalType || "order";
+      const fileContent = req.file.buffer.toString('utf8');
+      const lines = fileContent.split('\n').filter((line: string) => line.trim());
+      
+      if (lines.length < 2) {
+        return res.status(400).json({ error: "File must have a header row and at least one data row" });
+      }
+      
+      // Parse header
+      const header = lines[0].split(',').map((h: string) => h.trim().toLowerCase().replace(/"/g, ''));
+      const quantityIdx = header.indexOf('quantity');
+      
+      if (quantityIdx === -1) {
+        return res.status(400).json({ error: "CSV must have a 'quantity' column" });
+      }
+      
+      const channelIdx = header.indexOf('channel');
+      const regionIdx = header.indexOf('region');
+      const confidenceIdx = header.indexOf('confidence');
+      const skuNameIdx = header.indexOf('sku_name');
+      
+      const { insertDemandSignalSchema } = await import("@shared/schema");
+      const createdSignals = [];
+      const errors = [];
+      
+      // Get SKUs for matching by name
+      const skus = await storage.getSkus(user.companyId);
+      const skuMap = new Map(skus.map((s: any) => [s.name.toLowerCase(), s.id]));
+      
+      // Create a file upload source if not exists
+      let sourceId: string | null = null;
+      const existingSources = await storage.getDemandSignalSources(user.companyId);
+      const fileSource = existingSources.find((s: any) => s.sourceType === 'file_upload' && s.name === 'CSV Import');
+      if (fileSource) {
+        sourceId = fileSource.id;
+      } else {
+        const newSource = await storage.createDemandSignalSource({
+          companyId: user.companyId,
+          name: 'CSV Import',
+          sourceType: 'file_upload',
+          description: 'Signals imported from CSV files',
+          isActive: true,
+        });
+        sourceId = newSource.id;
+      }
+      
+      // Parse data rows
+      for (let i = 1; i < lines.length; i++) {
+        try {
+          const values = lines[i].split(',').map((v: string) => v.trim().replace(/"/g, ''));
+          const quantity = parseFloat(values[quantityIdx]);
+          
+          if (isNaN(quantity)) {
+            errors.push({ row: i + 1, error: "Invalid quantity" });
+            continue;
+          }
+          
+          const signalBody: any = {
+            companyId: user.companyId,
+            signalType,
+            quantity,
+            signalDate: new Date(),
+            sourceId,
+          };
+          
+          if (channelIdx !== -1 && values[channelIdx]) {
+            signalBody.channel = values[channelIdx];
+          }
+          if (regionIdx !== -1 && values[regionIdx]) {
+            signalBody.region = values[regionIdx];
+          }
+          if (confidenceIdx !== -1 && values[confidenceIdx]) {
+            const confidence = parseFloat(values[confidenceIdx]);
+            if (!isNaN(confidence)) {
+              signalBody.confidence = confidence;
+            }
+          }
+          if (skuNameIdx !== -1 && values[skuNameIdx]) {
+            const skuId = skuMap.get(values[skuNameIdx].toLowerCase());
+            if (skuId) {
+              signalBody.skuId = skuId;
+            }
+          }
+          
+          const signalData = insertDemandSignalSchema.parse(signalBody);
+          const signal = await storage.createDemandSignal(signalData);
+          createdSignals.push(signal);
+        } catch (e: any) {
+          errors.push({ row: i + 1, error: e.message });
+        }
+      }
+      
+      if (createdSignals.length > 0) {
+        await logAudit({
+          action: "import",
+          entityType: "demand_signal",
+          entityId: user.companyId,
+          changes: { 
+            imported: createdSignals.length, 
+            errors: errors.length, 
+            filename: req.file.originalname,
+            signalType 
+          },
+          req,
+        });
+      }
+      
+      res.status(201).json({ 
+        imported: createdSignals.length, 
+        errors,
+        sourceId 
+      });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
   app.patch("/api/demand-signals/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
