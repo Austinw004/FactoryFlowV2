@@ -298,7 +298,8 @@ export default function Dashboard() {
           </Button>
           <Separator orientation="vertical" className="h-8" />
           <Button 
-            variant="outline" 
+            variant="outline"
+            size="sm"
             onClick={() => setLocation('/data-import')}
             data-testid="button-import-data"
           >
@@ -306,7 +307,8 @@ export default function Dashboard() {
             Import Data
           </Button>
           <Button 
-            variant="outline" 
+            variant="outline"
+            size="sm"
             onClick={() => setLocation('/forecasting')}
             data-testid="button-run-scenario"
           >
@@ -314,6 +316,7 @@ export default function Dashboard() {
             Run Forecast
           </Button>
           <Button 
+            size="sm"
             onClick={() => setLocation('/allocation')}
             data-testid="button-new-allocation"
           >
@@ -323,6 +326,7 @@ export default function Dashboard() {
           <Separator orientation="vertical" className="h-8" />
           <Button 
             variant="outline"
+            size="sm"
             onClick={() => {
               const success = generateDashboardPDF({
                 companyName: user?.firstName ? `${user.firstName}'s Company` : 'Prescient Labs',
