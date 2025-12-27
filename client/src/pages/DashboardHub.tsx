@@ -23,18 +23,24 @@ export default function DashboardHub({ initialTab = "overview" }: DashboardHubPr
   return (
     <div className="h-full flex flex-col">
       <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="px-6 pt-4">
+        <div className="px-6 pt-4 pb-0">
+          <h1 className="text-2xl font-bold" data-testid="heading-dashboard-hub">
+            Dashboard
+          </h1>
+          <p className="text-sm text-muted-foreground mb-3">
+            Manufacturing control center with performance insights and reporting
+          </p>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="h-10">
+            <TabsList className="h-auto p-1 bg-muted/50">
               {tabs.map((tab) => (
                 <TabsTrigger 
                   key={tab.id} 
                   value={tab.id}
-                  className="gap-2"
+                  className="flex items-center gap-2 px-4 py-2 data-[state=active]:bg-background"
                   data-testid={`tab-${tab.id}`}
                 >
                   <tab.icon className="h-4 w-4" />
-                  {tab.label}
+                  <span className="hidden sm:inline">{tab.label}</span>
                 </TabsTrigger>
               ))}
             </TabsList>
