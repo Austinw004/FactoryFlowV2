@@ -394,7 +394,7 @@ export function AIAssistant() {
         
         <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
           {agenticMode && (
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col min-h-0">
               <TabsList className="grid grid-cols-3 m-2 mb-0">
                 <TabsTrigger value="chat" className="text-xs" data-testid="ai-assistant-tab-chat">
                   <MessageSquare className="h-3 w-3 mr-1" />
@@ -420,8 +420,8 @@ export function AIAssistant() {
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="chat" className="flex-1 flex flex-col m-0 overflow-hidden">
-                <ScrollArea className="flex-1 p-4">
+              <TabsContent value="chat" className="flex-1 flex flex-col m-0 overflow-hidden min-h-0">
+                <ScrollArea className="flex-1 min-h-0 p-4">
                   {messages.length === 0 ? (
                     <div className="space-y-4">
                       <div className="text-center py-4">
@@ -737,8 +737,8 @@ export function AIAssistant() {
           )}
           
           {!agenticMode && (
-            <>
-              <ScrollArea className="flex-1 p-4">
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <ScrollArea className="flex-1 min-h-0 p-4">
                 {messages.length === 0 ? (
                   <div className="space-y-4">
                     <div className="text-center py-6">
@@ -865,7 +865,7 @@ export function AIAssistant() {
                   </Button>
                 </div>
               </div>
-            </>
+            </div>
           )}
         </CardContent>
       </Card>
