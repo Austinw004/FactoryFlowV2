@@ -24,7 +24,8 @@ import {
   BookOpen,
   Activity
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { useLocation } from "wouter";
 
 interface ActionPlaybook {
   id: string;
@@ -251,7 +252,13 @@ function PlaybookCard({ playbook }: { playbook: ActionPlaybook }) {
   );
 }
 
-function CurrentRegimeCard({ regime }: { regime: any }) {
+interface CurrentRegimeCardProps {
+  regime: any;
+  onViewPlaybook: () => void;
+  onScenarioAnalysis: () => void;
+}
+
+function CurrentRegimeCard({ regime, onViewPlaybook, onScenarioAnalysis }: CurrentRegimeCardProps) {
   const regimeType = regime?.regime || "UNKNOWN";
   const regimeColor = REGIME_COLORS[regimeType] || "bg-gray-600";
   const regimeLabel = REGIME_LABELS[regimeType] || regimeType;
@@ -296,12 +303,22 @@ function CurrentRegimeCard({ regime }: { regime: any }) {
       </CardHeader>
       <CardContent>
         <p className="text-sm text-muted-foreground mb-4">{recommendation}</p>
-        <div className="flex gap-2">
-          <Button variant="default" size="sm" data-testid="button-view-playbook">
+        <div className="flex flex-wrap gap-2">
+          <Button 
+            variant="default" 
+            size="sm" 
+            data-testid="button-view-playbook"
+            onClick={onViewPlaybook}
+          >
             <BookOpen className="h-4 w-4 mr-2" />
             View Recommended Playbook
           </Button>
-          <Button variant="outline" size="sm" data-testid="button-run-scenario">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            data-testid="button-run-scenario"
+            onClick={onScenarioAnalysis}
+          >
             Run Scenario Analysis
           </Button>
         </div>
@@ -355,6 +372,8 @@ function LoadingSkeleton() {
 
 export default function ActionPlaybooks() {
   const [activeTab, setActiveTab] = useState<string>("all");
+  const [, setLocation] = useLocation();
+  const playbooksSectionRef = useRef<HTMLDivElement>(null);
   
   const { data: playbooks, isLoading: playbooksLoading } = useQuery<ActionPlaybook[]>({
     queryKey: ["/api/playbooks"],
@@ -364,6 +383,14 @@ export default function ActionPlaybooks() {
     queryKey: ["/api/economics/regime"],
   });
   
+  const handleViewPlaybook = () => {
+    playbooksSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+  
+  const handleScenarioAnalysis = () => {
+    setLocation('/strategy/scenario-simulation');
+  };
+  
   if (playbooksLoading) {
     return <LoadingSkeleton />;
   }
@@ -372,12 +399,12 @@ export default function ActionPlaybooks() {
   const inactivePlaybooks = playbooks?.filter(p => !p.isActive) || [];
   
   const currentRegime = (regime as any)?.regime || "UNKNOWN";
-  const relevantPlaybooks = activePlaybooks.filter(p => p.triggerRegime === currentRegime);
+  const relevantPlaybooks = activePlaybooks.filter(p => (p.toRegime || p.fromRegime) === currentRegime);
   
   const regimeGroups = activePlaybooks.reduce((acc, playbook) => {
-    const regime = playbook.triggerRegime;
-    if (!acc[regime]) acc[regime] = [];
-    acc[regime].push(playbook);
+    const targetRegime = playbook.toRegime || playbook.fromRegime || "UNKNOWN";
+    if (!acc[targetRegime]) acc[targetRegime] = [];
+    acc[targetRegime].push(playbook);
     return acc;
   }, {} as Record<string, ActionPlaybook[]>);
   
@@ -397,7 +424,11 @@ export default function ActionPlaybooks() {
         </Badge>
       </div>
       
-      <CurrentRegimeCard regime={regime} />
+      <CurrentRegimeCard 
+        regime={regime} 
+        onViewPlaybook={handleViewPlaybook}
+        onScenarioAnalysis={handleScenarioAnalysis}
+      />
       
       {relevantPlaybooks.length > 0 && (
         <div className="space-y-4">
@@ -413,42 +444,44 @@ export default function ActionPlaybooks() {
         </div>
       )}
       
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="all">All Playbooks</TabsTrigger>
-          {Object.keys(regimeGroups).map((regime) => (
-            <TabsTrigger key={regime} value={regime}>
-              {REGIME_LABELS[regime] || regime} ({regimeGroups[regime].length})
-            </TabsTrigger>
-          ))}
-        </TabsList>
-        
-        <TabsContent value="all" className="space-y-4 mt-4">
-          {activePlaybooks.length > 0 ? (
-            activePlaybooks.map((playbook) => (
-              <PlaybookCard key={playbook.id} playbook={playbook} />
-            ))
-          ) : (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No Playbooks Available</h3>
-                <p className="text-muted-foreground">
-                  Action playbooks will be created based on your economic regime patterns.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-        
-        {Object.entries(regimeGroups).map(([regime, groupPlaybooks]) => (
-          <TabsContent key={regime} value={regime} className="space-y-4 mt-4">
-            {groupPlaybooks.map((playbook) => (
-              <PlaybookCard key={playbook.id} playbook={playbook} />
+      <div ref={playbooksSectionRef}>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="all">All Playbooks</TabsTrigger>
+            {Object.keys(regimeGroups).map((regime) => (
+              <TabsTrigger key={regime} value={regime}>
+                {REGIME_LABELS[regime] || regime} ({regimeGroups[regime].length})
+              </TabsTrigger>
             ))}
+          </TabsList>
+          
+          <TabsContent value="all" className="space-y-4 mt-4">
+            {activePlaybooks.length > 0 ? (
+              activePlaybooks.map((playbook) => (
+                <PlaybookCard key={playbook.id} playbook={playbook} />
+              ))
+            ) : (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No Playbooks Available</h3>
+                  <p className="text-muted-foreground">
+                    Action playbooks will be created based on your economic regime patterns.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
-        ))}
-      </Tabs>
+          
+          {Object.entries(regimeGroups).map(([regime, groupPlaybooks]) => (
+            <TabsContent key={regime} value={regime} className="space-y-4 mt-4">
+              {groupPlaybooks.map((playbook) => (
+                <PlaybookCard key={playbook.id} playbook={playbook} />
+              ))}
+            </TabsContent>
+          ))}
+        </Tabs>
+      </div>
       
       {inactivePlaybooks.length > 0 && (
         <Accordion type="single" collapsible className="w-full">
