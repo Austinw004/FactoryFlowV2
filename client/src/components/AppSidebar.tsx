@@ -32,6 +32,12 @@ import { useUnifiedData } from "@/contexts/UnifiedDataContext";
 
 const mainMenuItems = [
   {
+    title: "Dashboard",
+    url: "/dashboard",
+    icon: LayoutDashboard,
+    testId: "sidebar-dashboard",
+  },
+  {
     title: "Agentic AI",
     url: "/agentic-ai",
     icon: Bot,
@@ -42,12 +48,6 @@ const mainMenuItems = [
     url: "/strategy",
     icon: Lightbulb,
     testId: "sidebar-strategy",
-  },
-  {
-    title: "Dashboard",
-    url: "/dashboard",
-    icon: LayoutDashboard,
-    testId: "sidebar-dashboard",
   },
   {
     title: "Demand & Forecasting",
