@@ -13609,10 +13609,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AGENTIC AI ROUTES - Autonomous Actions & Intelligent Automation
   // ============================================================================
 
-  // In-memory storage for agents, rules, and guardrails (per company, persists for server session)
+  // In-memory storage for agents, rules, guardrails, and actions (per company, persists for server session)
   const companyAgents: Map<string, any[]> = new Map();
   const companyRules: Map<string, any[]> = new Map();
   const companyGuardrails: Map<string, any[]> = new Map();
+  const companyPendingActions: Map<string, any[]> = new Map();
+  const companyActionHistory: Map<string, any[]> = new Map();
 
   // Initialize default agents for a company
   function getDefaultAgents(companyId: string) {
@@ -13924,6 +13926,214 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ];
   }
 
+  // Initialize default pending actions for a company
+  function getDefaultPendingActions(companyId: string, regime: string = "HEALTHY_EXPANSION", fdr: number = 1.0) {
+    return [
+      {
+        id: `action_pending_1`,
+        companyId,
+        agentId: "agent_procurement",
+        agentName: "Procurement Agent",
+        ruleId: "rule_low_stock_po",
+        ruleName: "Low Stock Auto-PO",
+        actionType: "create_po",
+        actionPayload: {
+          materialId: "MAT-2847",
+          materialName: "Steel Alloy Grade 304",
+          quantity: 5000,
+          unit: "kg",
+          supplierId: "SUP-125",
+          supplierName: "Global Steel Corp",
+          estimatedCost: 47500,
+          deliveryDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+          currentStock: 1200,
+          reorderPoint: 2000,
+          economicOrderQty: 5000,
+        },
+        status: "awaiting_approval",
+        estimatedImpact: {
+          costSavings: 2400,
+          stockoutRiskReduction: 0.85,
+          confidence: 0.92,
+          reasoning: "Current price is 5% below 30-day average. Ordering now saves $2,400 vs. projected prices.",
+        },
+        economicRegime: regime,
+        fdrValue: fdr,
+        approvalDeadline: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
+        createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        id: `action_pending_2`,
+        companyId,
+        agentId: "agent_inventory",
+        agentName: "Inventory Agent",
+        ruleId: "rule_rebalance",
+        ruleName: "Weekly Inventory Rebalance",
+        actionType: "rebalance_inventory",
+        actionPayload: {
+          transfers: [
+            { from: "Warehouse A (East)", to: "Warehouse C (West)", material: "Aluminum Sheets 6061", quantity: 200, unit: "sheets" },
+            { from: "Warehouse B (Central)", to: "Warehouse A (East)", material: "Copper Wire 12AWG", quantity: 150, unit: "spools" },
+            { from: "Warehouse C (West)", to: "Warehouse B (Central)", material: "Plastic Resin ABS", quantity: 500, unit: "kg" },
+          ],
+          totalTransfers: 3,
+          estimatedTransportCost: 1850,
+          balanceImprovement: "32%",
+        },
+        status: "awaiting_approval",
+        estimatedImpact: {
+          costSavings: 4200,
+          efficiencyGain: 0.15,
+          confidence: 0.88,
+          reasoning: "Demand patterns show West region surge. Rebalancing prevents $4,200 in expedited shipping costs.",
+        },
+        economicRegime: regime,
+        fdrValue: fdr,
+        approvalDeadline: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
+        createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+      },
+    ];
+  }
+
+  // Execute action based on type - returns execution result
+  async function executeAction(action: any, approvedBy: string): Promise<{ success: boolean; result: any; error?: string }> {
+    const now = new Date().toISOString();
+    
+    try {
+      switch (action.actionType) {
+        case "create_po": {
+          // Simulate creating a purchase order
+          const poNumber = `PO-${Date.now().toString().slice(-8)}`;
+          const payload = action.actionPayload;
+          
+          // In a real system, this would create an actual PO in the ERP
+          return {
+            success: true,
+            result: {
+              poNumber,
+              status: "created",
+              materialId: payload.materialId,
+              materialName: payload.materialName,
+              quantity: payload.quantity,
+              unit: payload.unit,
+              supplierId: payload.supplierId,
+              supplierName: payload.supplierName,
+              totalCost: payload.estimatedCost,
+              expectedDelivery: payload.deliveryDate,
+              createdAt: now,
+              createdBy: "AI Agent",
+              approvedBy,
+              message: `Purchase order ${poNumber} created for ${payload.quantity} ${payload.unit} of ${payload.materialName} from ${payload.supplierName}`,
+            },
+          };
+        }
+        
+        case "rebalance_inventory": {
+          // Simulate inventory rebalancing
+          const payload = action.actionPayload;
+          const transferId = `TRF-${Date.now().toString().slice(-8)}`;
+          
+          return {
+            success: true,
+            result: {
+              transferId,
+              status: "initiated",
+              transfers: payload.transfers.map((t: any, i: number) => ({
+                ...t,
+                transferNumber: `${transferId}-${i + 1}`,
+                status: "scheduled",
+                estimatedArrival: new Date(Date.now() + (i + 1) * 24 * 60 * 60 * 1000).toISOString(),
+              })),
+              totalTransfers: payload.totalTransfers,
+              estimatedTransportCost: payload.estimatedTransportCost,
+              balanceImprovement: payload.balanceImprovement,
+              initiatedAt: now,
+              approvedBy,
+              message: `Inventory rebalancing initiated with ${payload.totalTransfers} transfers. Expected ${payload.balanceImprovement} improvement in stock distribution.`,
+            },
+          };
+        }
+        
+        case "adjust_safety_stock": {
+          // Simulate adjusting safety stock levels
+          return {
+            success: true,
+            result: {
+              status: "applied",
+              adjustments: action.actionPayload?.regimeMultipliers || {},
+              effectiveFrom: now,
+              approvedBy,
+              message: "Safety stock levels adjusted based on current economic regime.",
+            },
+          };
+        }
+        
+        case "pause_orders": {
+          // Simulate pausing orders
+          return {
+            success: true,
+            result: {
+              status: "orders_paused",
+              pausedAt: now,
+              resumeCondition: action.actionPayload?.duration || "until_review",
+              notifiedRoles: action.actionPayload?.notifyRoles || [],
+              approvedBy,
+              message: "All pending orders have been paused. Notifications sent to relevant stakeholders.",
+            },
+          };
+        }
+        
+        case "send_alert": {
+          // Simulate sending an alert
+          return {
+            success: true,
+            result: {
+              status: "alert_sent",
+              channels: action.actionPayload?.channels || ["in_app"],
+              priority: action.actionPayload?.priority || "normal",
+              sentAt: now,
+              approvedBy,
+              message: "Alert sent successfully to all configured channels.",
+            },
+          };
+        }
+        
+        case "escalate": {
+          // Simulate escalation
+          return {
+            success: true,
+            result: {
+              status: "escalated",
+              escalatedTo: action.actionPayload?.escalateTo || [],
+              suggestedActions: action.actionPayload?.suggestActions || [],
+              escalatedAt: now,
+              approvedBy,
+              message: "Issue escalated to appropriate stakeholders with recommended actions.",
+            },
+          };
+        }
+        
+        default:
+          return {
+            success: true,
+            result: {
+              status: "executed",
+              actionType: action.actionType,
+              executedAt: now,
+              approvedBy,
+              message: `Action of type '${action.actionType}' executed successfully.`,
+            },
+          };
+      }
+    } catch (error: any) {
+      return {
+        success: false,
+        result: null,
+        error: error.message || "Unknown error during action execution",
+      };
+    }
+  }
+
   // Get all AI agents for company
   app.get("/api/agentic/agents", isAuthenticated, async (req: any, res) => {
     try {
@@ -14194,75 +14404,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get current economic data for context
       await economics.fetch();
-      const currentRegime = economics.regime;
-      const currentFdr = economics.fdr;
+      const currentRegime = economics.regime || "HEALTHY_EXPANSION";
+      const currentFdr = economics.fdr || 1.0;
 
-      const pendingActions = [
-        {
-          id: `action_${Date.now()}_1`,
-          companyId,
-          agentId: "agent_procurement",
-          agentName: "Procurement Agent",
-          ruleId: "rule_low_stock_po",
-          ruleName: "Low Stock Auto-PO",
-          actionType: "create_po",
-          actionPayload: {
-            materialId: "MAT-2847",
-            materialName: "Steel Alloy Grade 304",
-            quantity: 5000,
-            unit: "kg",
-            supplierId: "SUP-125",
-            supplierName: "Global Steel Corp",
-            estimatedCost: 47500,
-            deliveryDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-            currentStock: 1200,
-            reorderPoint: 2000,
-            economicOrderQty: 5000,
-          },
-          status: "awaiting_approval",
-          estimatedImpact: {
-            costSavings: 2400,
-            stockoutRiskReduction: 0.85,
-            confidence: 0.92,
-            reasoning: "Current price is 5% below 30-day average. Ordering now saves $2,400 vs. projected prices.",
-          },
-          economicRegime: currentRegime || "HEALTHY_EXPANSION",
-          fdrValue: currentFdr || 1.0,
-          approvalDeadline: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
-          createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-        },
-        {
-          id: `action_${Date.now()}_2`,
-          companyId,
-          agentId: "agent_inventory",
-          agentName: "Inventory Agent",
-          ruleId: "rule_rebalance",
-          ruleName: "Weekly Inventory Rebalance",
-          actionType: "rebalance_inventory",
-          actionPayload: {
-            transfers: [
-              { from: "Warehouse A (East)", to: "Warehouse C (West)", material: "Aluminum Sheets 6061", quantity: 200, unit: "sheets" },
-              { from: "Warehouse B (Central)", to: "Warehouse A (East)", material: "Copper Wire 12AWG", quantity: 150, unit: "spools" },
-              { from: "Warehouse C (West)", to: "Warehouse B (Central)", material: "Plastic Resin ABS", quantity: 500, unit: "kg" },
-            ],
-            totalTransfers: 3,
-            estimatedTransportCost: 1850,
-            balanceImprovement: "32%",
-          },
-          status: "awaiting_approval",
-          estimatedImpact: {
-            costSavings: 4200,
-            efficiencyGain: 0.15,
-            confidence: 0.88,
-            reasoning: "Demand patterns show West region surge. Rebalancing prevents $4,200 in expedited shipping costs.",
-          },
-          economicRegime: currentRegime || "HEALTHY_EXPANSION",
-          fdrValue: currentFdr || 1.0,
-          approvalDeadline: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
-          createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-        },
-      ];
+      // Initialize pending actions if not exists
+      if (!companyPendingActions.has(companyId)) {
+        companyPendingActions.set(companyId, getDefaultPendingActions(companyId, currentRegime, currentFdr));
+      }
 
+      const pendingActions = companyPendingActions.get(companyId) || [];
       res.json(pendingActions);
     } catch (error: any) {
       console.error("Error fetching pending actions:", error);
@@ -14270,19 +14420,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Approve an action
+  // Approve an action - executes the action and moves to history
   app.post("/api/agentic/actions/:actionId/approve", isAuthenticated, async (req: any, res) => {
     try {
       const { actionId } = req.params;
       const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      const companyId = user?.companyId;
+      
+      if (!companyId) {
+        return res.status(400).json({ error: "Company ID required" });
+      }
+
+      // Get current economic data for context
+      await economics.fetch();
+      const currentRegime = economics.regime || "HEALTHY_EXPANSION";
+      const currentFdr = economics.fdr || 1.0;
+
+      // Initialize if not exists
+      if (!companyPendingActions.has(companyId)) {
+        companyPendingActions.set(companyId, getDefaultPendingActions(companyId, currentRegime, currentFdr));
+      }
+      if (!companyActionHistory.has(companyId)) {
+        companyActionHistory.set(companyId, []);
+      }
+
+      // Find the action
+      const pendingActions = companyPendingActions.get(companyId) || [];
+      const actionIndex = pendingActions.findIndex((a: any) => a.id === actionId);
+      
+      if (actionIndex === -1) {
+        return res.status(404).json({ error: "Action not found" });
+      }
+
+      const action = pendingActions[actionIndex];
+      const now = new Date().toISOString();
+
+      // Execute the action
+      const executionResult = await executeAction(action, userId);
+
+      // Update action status and move to history
+      const completedAction = {
+        ...action,
+        status: executionResult.success ? "executed" : "execution_failed",
+        approvedBy: userId,
+        approvedAt: now,
+        executedAt: now,
+        executionResult: executionResult.result,
+        executionError: executionResult.error || null,
+      };
+
+      // Remove from pending
+      pendingActions.splice(actionIndex, 1);
+      companyPendingActions.set(companyId, pendingActions);
+
+      // Add to history
+      const history = companyActionHistory.get(companyId) || [];
+      history.unshift(completedAction);
+      companyActionHistory.set(companyId, history);
 
       res.json({
-        success: true,
+        success: executionResult.success,
         actionId,
-        status: "approved",
+        status: completedAction.status,
         approvedBy: userId,
-        approvedAt: new Date().toISOString(),
-        message: "Action approved and queued for execution",
+        approvedAt: now,
+        executedAt: now,
+        executionResult: executionResult.result,
+        message: executionResult.success 
+          ? executionResult.result?.message || "Action executed successfully"
+          : `Execution failed: ${executionResult.error}`,
       });
     } catch (error: any) {
       console.error("Error approving action:", error);
@@ -14290,20 +14497,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Reject an action
+  // Reject an action - moves to history with rejected status
   app.post("/api/agentic/actions/:actionId/reject", isAuthenticated, async (req: any, res) => {
     try {
       const { actionId } = req.params;
       const { reason } = req.body;
       const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      const companyId = user?.companyId;
+      
+      if (!companyId) {
+        return res.status(400).json({ error: "Company ID required" });
+      }
+
+      // Get current economic data for context
+      await economics.fetch();
+      const currentRegime = economics.regime || "HEALTHY_EXPANSION";
+      const currentFdr = economics.fdr || 1.0;
+
+      // Initialize if not exists
+      if (!companyPendingActions.has(companyId)) {
+        companyPendingActions.set(companyId, getDefaultPendingActions(companyId, currentRegime, currentFdr));
+      }
+      if (!companyActionHistory.has(companyId)) {
+        companyActionHistory.set(companyId, []);
+      }
+
+      // Find the action
+      const pendingActions = companyPendingActions.get(companyId) || [];
+      const actionIndex = pendingActions.findIndex((a: any) => a.id === actionId);
+      
+      if (actionIndex === -1) {
+        return res.status(404).json({ error: "Action not found" });
+      }
+
+      const action = pendingActions[actionIndex];
+      const now = new Date().toISOString();
+
+      // Update action status and move to history
+      const rejectedAction = {
+        ...action,
+        status: "rejected",
+        rejectedBy: userId,
+        rejectedAt: now,
+        rejectionReason: reason || "No reason provided",
+      };
+
+      // Remove from pending
+      pendingActions.splice(actionIndex, 1);
+      companyPendingActions.set(companyId, pendingActions);
+
+      // Add to history
+      const history = companyActionHistory.get(companyId) || [];
+      history.unshift(rejectedAction);
+      companyActionHistory.set(companyId, history);
 
       res.json({
         success: true,
         actionId,
         status: "rejected",
         rejectedBy: userId,
-        rejectedAt: new Date().toISOString(),
-        rejectionReason: reason,
+        rejectedAt: now,
+        rejectionReason: reason || "No reason provided",
         message: "Action rejected",
       });
     } catch (error: any) {
@@ -14370,17 +14625,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get agentic stats summary
   app.get("/api/agentic/stats", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      const companyId = user?.companyId || "default";
+
+      // Get actual counts from in-memory stores
+      const agents = companyAgents.get(companyId) || [];
+      const rules = companyRules.get(companyId) || [];
+      const pendingActions = companyPendingActions.get(companyId) || [];
+      const actionHistory = companyActionHistory.get(companyId) || [];
+      
+      // Count completed actions today
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const completedToday = actionHistory.filter((a: any) => 
+        a.status === "executed" && new Date(a.executedAt) >= today
+      ).length;
+      
+      // Calculate total savings from executed actions
+      const totalSavings = actionHistory
+        .filter((a: any) => a.status === "executed")
+        .reduce((sum: number, a: any) => sum + (a.estimatedImpact?.costSavings || 0), 0);
+
       const stats = {
-        totalAgents: 5,
-        activeAgents: 5,
-        totalRules: 6,
-        activeRules: 6,
-        pendingActions: 2,
-        completedToday: 85 + Math.floor(Math.random() * 20),
-        totalSavings: 127500 + Math.floor(Math.random() * 10000),
+        totalAgents: agents.length || 5,
+        activeAgents: agents.filter((a: any) => a.isEnabled).length || 5,
+        totalRules: rules.length || 6,
+        activeRules: rules.filter((r: any) => r.isEnabled).length || 6,
+        pendingActions: pendingActions.length,
+        completedToday: completedToday + 85 + Math.floor(Math.random() * 20),
+        totalSavings: totalSavings + 127500 + Math.floor(Math.random() * 10000),
         avgSuccessRate: 95.2,
-        actionsLast24h: 142,
-        actionsLast7d: 847,
+        actionsLast24h: actionHistory.length + 142,
+        actionsLast7d: actionHistory.length + 847,
         topPerformingAgent: "Forecasting Agent",
         recentAlerts: 3,
       };
@@ -14398,11 +14675,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       const companyId = user?.companyId || "default";
-      const { limit = 50, status, agentId, actionType } = req.query;
+      const { limit = 50 } = req.query;
 
-      // Generate sample action history
-      const history = [];
-      const statuses = ["completed", "rejected", "failed"];
+      // Get actual history from in-memory store
+      const actualHistory = companyActionHistory.get(companyId) || [];
+      
+      // Generate sample historical actions to show baseline activity
+      const sampleHistory = [];
+      const statuses = ["executed", "rejected"];
       const actionTypes = ["create_po", "adjust_safety_stock", "rebalance_inventory", "send_alert"];
       const agents = [
         { id: "agent_procurement", name: "Procurement Agent" },
@@ -14411,13 +14691,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { id: "agent_supplier", name: "Supplier Risk Agent" },
       ];
 
-      for (let i = 0; i < Math.min(Number(limit), 50); i++) {
+      // Only generate sample history to fill up to limit if actual history is short
+      const samplesToGenerate = Math.max(0, Math.min(Number(limit) - actualHistory.length, 20));
+      
+      for (let i = 0; i < samplesToGenerate; i++) {
         const randomAgent = agents[Math.floor(Math.random() * agents.length)];
-        const randomStatus = statuses[Math.floor(Math.random() * 10) < 8 ? 0 : Math.floor(Math.random() * statuses.length)];
+        const randomStatus = statuses[Math.floor(Math.random() * 10) < 8 ? 0 : 1];
         const randomAction = actionTypes[Math.floor(Math.random() * actionTypes.length)];
-        const daysAgo = Math.floor(Math.random() * 30);
+        const daysAgo = Math.floor(Math.random() * 30) + 1;
 
-        history.push({
+        sampleHistory.push({
           id: `action_hist_${i}`,
           companyId,
           agentId: randomAgent.id,
@@ -14428,17 +14711,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
             costSavings: Math.floor(Math.random() * 5000) + 500,
             confidence: 0.75 + Math.random() * 0.2,
           },
-          actualImpact: randomStatus === "completed" ? {
+          executionResult: randomStatus === "executed" ? {
+            status: "success",
+            message: `${randomAction.replace(/_/g, " ")} completed successfully`,
+          } : null,
+          actualImpact: randomStatus === "executed" ? {
             costSavings: Math.floor(Math.random() * 6000) + 400,
             verified: true,
           } : null,
-          executedAt: randomStatus === "completed" ? new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString() : null,
+          executedAt: randomStatus === "executed" ? new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString() : null,
+          rejectedAt: randomStatus === "rejected" ? new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString() : null,
+          rejectionReason: randomStatus === "rejected" ? "User declined action" : null,
           createdAt: new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000 - 2 * 60 * 60 * 1000).toISOString(),
-          feedbackRating: randomStatus === "completed" ? Math.floor(Math.random() * 2) + 4 : null,
         });
       }
 
-      res.json(history);
+      // Combine actual history (most recent first) with sample history
+      const combinedHistory = [...actualHistory, ...sampleHistory].slice(0, Number(limit));
+      
+      res.json(combinedHistory);
     } catch (error: any) {
       console.error("Error fetching action history:", error);
       res.status(500).json({ error: error.message });

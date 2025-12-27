@@ -524,9 +524,30 @@ export default function AgenticAI() {
       const res = await apiRequest("POST", `/api/agentic/actions/${actionId}/approve`);
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/agentic/actions/pending"] });
-      toast({ title: "Action approved", description: "The action has been approved and queued for execution." });
+      queryClient.invalidateQueries({ queryKey: ["/api/agentic/actions/history"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/agentic/stats"] });
+      
+      if (data.success) {
+        toast({ 
+          title: "Action Executed Successfully", 
+          description: data.message || "The action has been approved and executed.",
+        });
+      } else {
+        toast({ 
+          title: "Execution Failed", 
+          description: data.message || "The action was approved but execution failed.",
+          variant: "destructive",
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to approve action.",
+        variant: "destructive",
+      });
     },
   });
 
@@ -537,7 +558,16 @@ export default function AgenticAI() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/agentic/actions/pending"] });
-      toast({ title: "Action rejected", description: "The action has been rejected." });
+      queryClient.invalidateQueries({ queryKey: ["/api/agentic/actions/history"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/agentic/stats"] });
+      toast({ title: "Action Rejected", description: "The action has been rejected and moved to history." });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to reject action.",
+        variant: "destructive",
+      });
     },
   });
   
