@@ -96,8 +96,7 @@ export default function Machinery() {
   const totalValue = machinery.reduce((sum, m) => sum + (m.currentValue || m.purchaseCost), 0);
 
   return (
-    <div className="h-full overflow-auto">
-      <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-6 space-y-6 pb-12">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold" data-testid="text-machinery-title">Machinery Management</h1>
@@ -198,7 +197,6 @@ export default function Machinery() {
             </Dialog>
           </>
         )}
-      </div>
     </div>
   );
 }
