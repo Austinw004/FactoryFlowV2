@@ -106,9 +106,9 @@ export function AppSidebar() {
   const [location] = useLocation();
   const { inventory, suppliers, commodities, isLoading } = useUnifiedData();
 
-  const agenticRoutes = ["/", "/agentic-ai"];
+  const agenticRoutes = ["/agentic-ai"];
   const strategyRoutes = ["/strategy", "/digital-twin", "/strategic-analysis", "/scenario-simulation", "/ma-intelligence", "/peer-benchmarking"];
-  const dashboardRoutes = ["/dashboard", "/roi-dashboard", "/reports"];
+  const dashboardRoutes = ["/", "/dashboard", "/roi-dashboard", "/reports"];
   
   const isActive = (url: string) => {
     if (url === "/agentic-ai") return agenticRoutes.includes(location) || location.startsWith("/agentic-ai");

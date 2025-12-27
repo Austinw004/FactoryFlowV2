@@ -118,8 +118,8 @@ function Router() {
 
   return (
     <Switch>
-      {/* Main hub routes - AI Assistant is default landing for authenticated users */}
-      <Route path="/" component={AgenticAI} />
+      {/* Main hub routes - Dashboard is default landing for authenticated users */}
+      <Route path="/" component={DashboardOverviewRoute} />
       <Route path="/dashboard" component={DashboardOverviewRoute} />
       <Route path="/demand" component={DemandPlanningRoute} />
       <Route path="/supply-chain" component={SupplyChainInventoryRoute} />
