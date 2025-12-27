@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { formatRegimeName } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -404,16 +405,16 @@ export default function StrategicAnalysis() {
           </div>
           <div>
             <p className="text-muted-foreground text-xs mb-1">Economic Regime</p>
-            <Badge variant="secondary" data-testid="badge-current-regime">{currentRegime}</Badge>
+            <Badge variant="secondary" data-testid="badge-current-regime">{formatRegimeName(currentRegime)}</Badge>
           </div>
           <div>
-            <p className="text-muted-foreground text-xs mb-1">Asset Circuit (Mₐ × Vₐ)</p>
+            <p className="text-muted-foreground text-xs mb-1">Asset Circuit</p>
             <p className="font-semibold" data-testid="metric-asset-circuit">
               {currentFDR > 1.5 ? 'Elevated' : currentFDR < 0.9 ? 'Compressed' : 'Balanced'}
             </p>
           </div>
           <div>
-            <p className="text-muted-foreground text-xs mb-1">Real Circuit (Mᵣ × Vᵣ)</p>
+            <p className="text-muted-foreground text-xs mb-1">Real Circuit</p>
             <p className="font-semibold" data-testid="metric-real-circuit">
               {currentFDR > 1.5 ? 'Lagging' : currentFDR < 0.9 ? 'Leading' : 'Balanced'}
             </p>
@@ -733,9 +734,9 @@ export default function StrategicAnalysis() {
             <div className="bg-primary/5 border border-primary/20 rounded-md p-4">
               <p className="text-sm font-medium text-primary mb-2">Research Validation Methodology</p>
               <div className="space-y-1 text-sm text-muted-foreground">
-                <p>• <strong>Asset Circuit (Mₐ × Vₐ):</strong> Money flowing into financial assets (stocks, real estate)</p>
-                <p>• <strong>Real Circuit (Mᵣ × Vᵣ):</strong> Money flowing into productive GDP transactions</p>
-                <p>• <strong>FDR = (Mₐ × Vₐ) / (Mᵣ × Vᵣ):</strong> Financial Decoupling Ratio predicting regime shifts</p>
+                <p>• <strong>Asset Circuit:</strong> Money flowing into financial assets (stocks, real estate)</p>
+                <p>• <strong>Real Circuit:</strong> Money flowing into productive GDP transactions</p>
+                <p>• <strong>FDR:</strong> Financial Decoupling Ratio predicting regime shifts</p>
                 <p>• <strong>Historical Testing:</strong> Simulates predictions at past time points, compares to actual outcomes</p>
               </div>
             </div>
@@ -854,7 +855,7 @@ export default function StrategicAnalysis() {
                   <p className="text-2xl font-bold" data-testid="result-new-fdr">
                     {scenarioResult.newFDR.toFixed(2)}
                   </p>
-                  <p className="text-xs text-muted-foreground">{scenarioResult.newRegime}</p>
+                  <p className="text-xs text-muted-foreground">{formatRegimeName(scenarioResult.newRegime)}</p>
                 </CardContent>
               </Card>
 
