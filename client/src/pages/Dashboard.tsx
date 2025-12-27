@@ -316,6 +316,7 @@ export default function Dashboard() {
             Run Forecast
           </Button>
           <Button 
+            variant="outline"
             size="sm"
             onClick={() => setLocation('/allocation')}
             data-testid="button-new-allocation"
