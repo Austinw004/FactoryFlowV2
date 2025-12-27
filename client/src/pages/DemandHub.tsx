@@ -2,6 +2,7 @@ import { useState, useEffect, lazy } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TrendingUp, Target, BarChart3, Radio, Clipboard } from "lucide-react";
 import { SafeTabContent } from "@/components/HubErrorBoundary";
+import { SmartInsightsCompact } from "@/components/SmartInsightsPanel";
 
 const Forecasting = lazy(() => import("./Forecasting"));
 const ForecastAccuracy = lazy(() => import("./ForecastAccuracy"));
@@ -57,6 +58,9 @@ export default function DemandHub({ initialTab = "planning" }: DemandHubProps) {
       </div>
       
       <div className="flex-1 overflow-auto">
+        <div className="px-6 pt-4">
+          <SmartInsightsCompact />
+        </div>
         {tabs.map((tab) => (
           activeTab === tab.id && (
             <SafeTabContent key={tab.id} tabName={tab.label}>

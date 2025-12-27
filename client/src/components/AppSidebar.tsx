@@ -11,6 +11,7 @@ import {
   Bot,
   Plug,
   Webhook,
+  AlertTriangle,
 } from "lucide-react";
 import {
   Sidebar,
@@ -23,8 +24,11 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Link, useLocation } from "wouter";
 import { SidebarTour } from "@/components/GuidedTour";
+import { useUnifiedData } from "@/contexts/UnifiedDataContext";
 
 const mainMenuItems = [
   {
@@ -100,6 +104,7 @@ const bottomMenuItems = [
 
 export function AppSidebar() {
   const [location] = useLocation();
+  const { inventory, suppliers, commodities, isLoading } = useUnifiedData();
 
   const agenticRoutes = ["/", "/agentic-ai"];
   const strategyRoutes = ["/strategy", "/digital-twin", "/strategic-analysis", "/scenario-simulation", "/ma-intelligence", "/peer-benchmarking"];
@@ -110,6 +115,53 @@ export function AppSidebar() {
     if (url === "/strategy") return strategyRoutes.includes(location) || location.startsWith("/strategy");
     if (url === "/dashboard") return dashboardRoutes.includes(location) || location.startsWith("/dashboard");
     return location.startsWith(url);
+  };
+
+  const getAlertBadge = (url: string) => {
+    if (isLoading) return null;
+    
+    if (url === "/supply-chain") {
+      const alerts = inventory.lowStockCount + suppliers.atRiskCount;
+      if (alerts > 0) {
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge 
+                variant="destructive" 
+                className="ml-auto h-5 min-w-5 px-1.5 text-[10px]"
+                data-testid="badge-supply-chain-alerts"
+              >
+                {alerts > 9 ? "9+" : alerts}
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="text-xs">
+              {inventory.lowStockCount > 0 && <div>{inventory.lowStockCount} low stock items</div>}
+              {suppliers.atRiskCount > 0 && <div>{suppliers.atRiskCount} at-risk suppliers</div>}
+            </TooltipContent>
+          </Tooltip>
+        );
+      }
+    }
+    
+    if (url === "/procurement" && commodities.rising > 2) {
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge 
+              className="ml-auto h-5 min-w-5 px-1.5 text-[10px] bg-yellow-500 text-yellow-950"
+              data-testid="badge-procurement-commodities"
+            >
+              {commodities.rising}
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="text-xs">
+            {commodities.rising} commodities with rising prices
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+    
+    return null;
   };
 
   return (
@@ -140,7 +192,8 @@ export function AppSidebar() {
                   >
                     <Link href={item.url}>
                       <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
+                      <span className="flex-1">{item.title}</span>
+                      {getAlertBadge(item.url)}
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

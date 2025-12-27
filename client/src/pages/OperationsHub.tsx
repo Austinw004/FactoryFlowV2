@@ -5,6 +5,7 @@ import { Wrench, Activity, Radio, Users, Shield, Factory } from "lucide-react";
 import { SafeTabContent } from "@/components/HubErrorBoundary";
 import { OperationsCommandCenter } from "@/components/OperationsCommandCenter";
 import { RegimeOperationsPlaybook } from "@/components/RegimeOperationsPlaybook";
+import { SmartInsightsCompact } from "@/components/SmartInsightsPanel";
 import { Link } from "wouter";
 
 const Machinery = lazy(() => import("./Machinery"));
@@ -83,6 +84,7 @@ export default function OperationsHub({ initialTab = "machinery" }: OperationsHu
       
       <div className="flex-1 overflow-auto">
         <div className="p-6 space-y-6">
+          <SmartInsightsCompact />
           <OperationsCommandCenter />
           
           {showPlaybook && (

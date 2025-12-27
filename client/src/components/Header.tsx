@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ThemeToggle } from "./ThemeToggle";
+import { LiveAnalysisIndicator } from "./LiveAnalysisIndicator";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Bell, User, CreditCard, Settings, LogOut, Sparkles } from "lucide-react";
@@ -33,8 +34,9 @@ export function Header() {
 
   return (
     <header className="flex items-center justify-between p-4 border-b bg-background">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-4">
         <SidebarTrigger data-testid="button-sidebar-toggle" />
+        <LiveAnalysisIndicator />
       </div>
       
       <div className="flex items-center gap-2">

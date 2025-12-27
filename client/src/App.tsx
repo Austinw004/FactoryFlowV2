@@ -9,6 +9,7 @@ import { Header } from "@/components/Header";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 import { GuidedTour } from "@/components/GuidedTour";
+import { UnifiedDataProvider } from "@/contexts/UnifiedDataContext";
 import NotFound from "@/pages/not-found";
 import LandingPage from "@/pages/LandingPage";
 import DashboardHub from "@/pages/DashboardHub";
@@ -228,7 +229,9 @@ function App() {
     <GlobalErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <AppLayout />
+          <UnifiedDataProvider>
+            <AppLayout />
+          </UnifiedDataProvider>
           <Toaster />
         </TooltipProvider>
       </QueryClientProvider>
