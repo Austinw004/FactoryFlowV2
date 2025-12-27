@@ -366,23 +366,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Onboarding Checklist - Always show if not all steps complete (based on real-time status) */}
-      {!onboardingLoading && !isFullyCompleted && (
-        <OnboardingChecklist 
-          steps={steps}
-          onDismiss={undefined}
-          showDismissButton={false}
-        />
-      )}
-      {/* Show dismissible checklist when all steps complete but not yet dismissed */}
-      {!onboardingLoading && isFullyCompleted && companySettings && !companySettings.onboardingCompleted && (
-        <OnboardingChecklist 
-          steps={steps}
-          onDismiss={() => completeOnboardingMutation.mutate()}
-          showDismissButton={true}
-        />
-      )}
-
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
           icon={TrendingUp}
