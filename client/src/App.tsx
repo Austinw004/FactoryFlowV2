@@ -39,6 +39,7 @@ import NotificationSettings from "@/pages/NotificationSettings";
 import ShopFloorMode from "@/pages/ShopFloorMode";
 import Integrations from "@/pages/Integrations";
 import WebhookIntegrations from "@/pages/WebhookIntegrations";
+import Allocation from "@/pages/Allocation";
 
 // Dashboard Hub routes
 const DashboardOverviewRoute = () => <DashboardHub initialTab="overview" />;
@@ -141,7 +142,7 @@ function Router() {
       <Route path="/multi-horizon-forecasts" component={DemandHorizonsRoute} />
       <Route path="/demand-signal-repository" component={DemandSignalsRoute} />
       <Route path="/sop-workspace" component={DemandSopRoute} />
-      <Route path="/allocation" component={DemandPlanningRoute} />
+      <Route path="/allocation" component={Allocation} />
 
       {/* Procurement routes */}
       <Route path="/automated-po" component={ProcurementAutoPoRoute} />

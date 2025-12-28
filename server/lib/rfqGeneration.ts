@@ -159,11 +159,16 @@ export class RfqGenerationService {
       .orderBy(desc(economicSnapshots.timestamp))
       .limit(1);
 
-    if (!latestSnapshot.length) {
-      throw new Error("No economic snapshot found. Cannot determine regime context.");
+    // Use default regime if no economic snapshot exists
+    let regime = "healthy_expansion";
+    let fdr = 1.0;
+    
+    if (latestSnapshot.length) {
+      regime = latestSnapshot[0].regime;
+      fdr = latestSnapshot[0].fdr;
     }
-
-    const { regime, fdr } = latestSnapshot[0];
+    // If no snapshot, we continue with defaults - this allows RFQ generation
+    // to work even before economic data is available
     const policySignal = this.getPolicySignal(regime, fdr);
 
     // Get all materials with their current inventory
