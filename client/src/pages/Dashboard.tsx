@@ -300,7 +300,7 @@ export default function Dashboard() {
           <Button 
             variant="outline"
             size="sm"
-            onClick={() => setLocation('/data-import')}
+            onClick={() => setLocation('/demand-signal-repository')}
             data-testid="button-import-data"
           >
             <Upload className="h-4 w-4 mr-2" />
