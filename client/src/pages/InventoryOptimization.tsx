@@ -26,34 +26,71 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 
+interface OptimizationItem {
+  id: string;
+  materialId: string;
+  forecastAccuracy: number;
+  currentStock: number;
+  safetyStock: number;
+  reorderPoint: number;
+  economicOrderQty: number;
+}
+
+interface PredictionItem {
+  id: string;
+  materialId: string;
+  predictedDemand: number;
+  confidence: number;
+  horizon: string;
+}
+
+interface RecommendationItem {
+  id: string;
+  materialId: string;
+  type: string;
+  priority: string;
+  status: string;
+  estimatedSavings: number;
+  description: string;
+}
+
+interface MaterialItem {
+  id: string;
+  name: string;
+  code: string;
+}
+
+interface RegimeData {
+  regime: string;
+  fdr: number;
+}
+
 export default function InventoryOptimization() {
   const { toast } = useToast();
 
-  const { data: optimizations = [], isLoading: optLoading } = useQuery({
+  const { data: optimizations = [], isLoading: optLoading } = useQuery<OptimizationItem[]>({
     queryKey: ["/api/inventory-optimization/analysis"],
   });
 
-  const { data: predictions = [], isLoading: predLoading } = useQuery({
+  const { data: predictions = [], isLoading: predLoading } = useQuery<PredictionItem[]>({
     queryKey: ["/api/inventory-optimization/predictions"],
   });
 
-  const { data: recommendations = [], isLoading: recsLoading } = useQuery({
+  const { data: recommendations = [], isLoading: recsLoading } = useQuery<RecommendationItem[]>({
     queryKey: ["/api/inventory-optimization/recommendations"],
   });
 
-  const { data: materials = [] } = useQuery({
+  const { data: materials = [] } = useQuery<MaterialItem[]>({
     queryKey: ["/api/materials"],
   });
 
-  const { data: regime } = useQuery({
+  const { data: regime } = useQuery<RegimeData>({
     queryKey: ["/api/economics/regime"],
   });
 
   const acceptRecommendationMutation = useMutation({
     mutationFn: async (recId: string) => 
-      apiRequest(`/api/inventory-optimization/recommendations/${recId}/accept`, {
-        method: "PATCH",
-      }),
+      apiRequest("PATCH", `/api/inventory-optimization/recommendations/${recId}/accept`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/inventory-optimization/recommendations"] });
       toast({ title: "Recommendation accepted" });
@@ -62,9 +99,7 @@ export default function InventoryOptimization() {
 
   const rejectRecommendationMutation = useMutation({
     mutationFn: async (recId: string) => 
-      apiRequest(`/api/inventory-optimization/recommendations/${recId}/reject`, {
-        method: "PATCH",
-      }),
+      apiRequest("PATCH", `/api/inventory-optimization/recommendations/${recId}/reject`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/inventory-optimization/recommendations"] });
       toast({ title: "Recommendation rejected" });
@@ -83,13 +118,13 @@ export default function InventoryOptimization() {
   };
 
   const getPriorityBadge = (priority: string) => {
-    const config = {
-      critical: { variant: "destructive" as const, label: "Critical" },
-      high: { variant: "destructive" as const, label: "High", className: "bg-orange-600" },
-      medium: { variant: "default" as const, label: "Medium", className: "bg-yellow-600" },
-      low: { variant: "secondary" as const, label: "Low" },
+    const config: Record<string, { variant: "destructive" | "default" | "secondary"; label: string; className?: string }> = {
+      critical: { variant: "destructive", label: "Critical" },
+      high: { variant: "destructive", label: "High", className: "bg-orange-600" },
+      medium: { variant: "default", label: "Medium", className: "bg-yellow-600" },
+      low: { variant: "secondary", label: "Low" },
     };
-    const c = config[priority as keyof typeof config] || config.medium;
+    const c = config[priority] || config.medium;
     return <Badge variant={c.variant} className={c.className}>{c.label}</Badge>;
   };
 
