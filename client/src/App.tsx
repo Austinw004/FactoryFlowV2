@@ -26,6 +26,7 @@ import Billing from "@/pages/Billing";
 import CommodityForecasts from "@/pages/CommodityForecasts";
 import ApiDocumentation from "@/pages/ApiDocumentation";
 import PlatformAnalytics from "@/pages/PlatformAnalytics";
+import PlatformOwnerAnalytics from "@/pages/PlatformOwnerAnalytics";
 import AgenticAI from "@/pages/AgenticAI";
 import { useAuth } from "@/hooks/useAuth";
 import Onboarding from "@/pages/Onboarding";
@@ -186,6 +187,7 @@ function Router() {
       {/* Developer & Integration routes */}
       <Route path="/api-docs" component={ApiDocumentation} />
       <Route path="/platform-analytics" component={PlatformAnalytics} />
+      <Route path="/platform-owner-analytics" component={PlatformOwnerAnalytics} />
       <Route path="/integrations" component={Integrations} />
       <Route path="/webhook-integrations" component={WebhookIntegrations} />
       
