@@ -16,8 +16,12 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Plus, CheckCircle, XCircle, Settings, TrendingUp, 
-  AlertCircle, Clock, Zap, Link as LinkIcon, PlayCircle, Loader2
+  AlertCircle, Clock, Zap, Link as LinkIcon, PlayCircle, Loader2,
+  Package, BarChart3, Activity, Calendar, ArrowRight, ArrowLeft,
+  Sparkles, ShieldCheck, Info
 } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { 
   PoRule, NegotiationPlaybook, ErpConnection
 } from "@shared/schema";
@@ -42,6 +46,7 @@ export default function AutomatedPO() {
   const [showRuleDialog, setShowRuleDialog] = useState(false);
   const [showPlaybookDialog, setShowPlaybookDialog] = useState(false);
   const [showErpDialog, setShowErpDialog] = useState(false);
+  const [ruleWizardStep, setRuleWizardStep] = useState(1);
 
   const [ruleForm, setRuleForm] = useState({
     name: "",
@@ -50,10 +55,82 @@ export default function AutomatedPO() {
     triggerType: "inventory_low",
     fdrRange: { min: 0, max: 5 },
     regimeFilter: "",
-    minQuantity: 0,
-    maxQuantity: 0,
-    approvalRequired: true
+    minQuantity: 100,
+    maxQuantity: 10000,
+    approvalRequired: true,
+    useTemplate: ""
   });
+
+  const ruleTemplates = [
+    {
+      id: "low_stock_reorder",
+      name: "Low Stock Auto-Reorder",
+      description: "Automatically create POs when inventory falls below reorder point",
+      icon: Package,
+      triggerType: "inventory_low",
+      priority: 80,
+      approvalRequired: false,
+      color: "text-orange-600 bg-orange-100 dark:bg-orange-900/30"
+    },
+    {
+      id: "forecast_driven",
+      name: "Forecast-Driven Ordering",
+      description: "Order based on demand forecasts to stay ahead of requirements",
+      icon: BarChart3,
+      triggerType: "forecast_demand",
+      priority: 70,
+      approvalRequired: true,
+      color: "text-blue-600 bg-blue-100 dark:bg-blue-900/30"
+    },
+    {
+      id: "regime_opportunistic",
+      name: "Regime-Opportunistic Buying",
+      description: "Trigger bulk purchases during favorable economic conditions",
+      icon: Activity,
+      triggerType: "fdr_threshold",
+      priority: 60,
+      approvalRequired: true,
+      color: "text-green-600 bg-green-100 dark:bg-green-900/30"
+    },
+    {
+      id: "scheduled_replenishment",
+      name: "Scheduled Replenishment",
+      description: "Create recurring POs on a fixed schedule",
+      icon: Calendar,
+      triggerType: "scheduled",
+      priority: 50,
+      approvalRequired: false,
+      color: "text-purple-600 bg-purple-100 dark:bg-purple-900/30"
+    }
+  ];
+
+  const triggerTypeInfo: Record<string, { label: string; description: string; icon: typeof Package }> = {
+    inventory_low: { 
+      label: "Inventory Low", 
+      description: "Triggers when stock falls below the reorder point",
+      icon: Package
+    },
+    forecast_demand: { 
+      label: "Forecast Demand", 
+      description: "Triggers based on predicted future demand",
+      icon: BarChart3
+    },
+    fdr_threshold: { 
+      label: "FDR Threshold", 
+      description: "Triggers when economic indicator crosses a threshold",
+      icon: Activity
+    },
+    regime_change: { 
+      label: "Regime Change", 
+      description: "Triggers when economic regime transitions",
+      icon: TrendingUp
+    },
+    scheduled: { 
+      label: "Scheduled", 
+      description: "Triggers on a recurring schedule",
+      icon: Calendar
+    }
+  };
 
   const [playbookForm, setPlaybookForm] = useState({
     name: "",
