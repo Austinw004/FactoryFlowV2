@@ -112,28 +112,28 @@ export default function LandingPage() {
 
   const plans = [
     {
-      name: "Starter",
-      price: "$299",
-      period: "/month",
-      description: "For growing manufacturers",
-      features: ["Up to 100 SKUs", "5 Users", "Core forecasting", "Email support", "Monthly market reports"],
+      name: "Accelerate",
+      price: "6%",
+      period: " of verified savings",
+      description: "Starting your optimization journey",
+      features: ["Up to 100 SKUs", "AI-powered forecasting", "Economic regime signals", "Supplier risk scoring", "40-60% less than competitors"],
       icon: Zap,
     },
     {
-      name: "Professional",
-      price: "$799",
-      period: "/month",
-      description: "For established operations",
-      features: ["Up to 1,000 SKUs", "25 Users", "Advanced forecasting", "Priority support", "Real-time signals", "ERP integration", "Supplier risk scoring"],
+      name: "Transform",
+      price: "4%",
+      period: " of verified savings",
+      description: "Scale your procurement savings",
+      features: ["Up to 500 SKUs", "Advanced simulations", "Multi-tier supplier mapping", "Automated RFQs", "Real-time commodities", "50-67% less than competitors"],
       highlighted: true,
       icon: Rocket,
     },
     {
-      name: "Enterprise",
-      price: "Custom",
-      period: "",
-      description: "For large-scale operations",
-      features: ["Unlimited SKUs", "Unlimited Users", "Custom integrations", "Dedicated support", "On-premise option", "SLA guarantee", "Digital twin"],
+      name: "Strategic",
+      price: "2%",
+      period: " of verified savings",
+      description: "Enterprise-grade optimization",
+      features: ["Unlimited SKUs", "Supply chain digital twin", "M&A intelligence", "Custom ERP integrations", "Dedicated success manager", "60-75% less than competitors"],
       icon: Building2,
     },
   ];
@@ -498,8 +498,11 @@ export default function LandingPage() {
       <section id="pricing" className="py-20 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold mb-4">Simple, Transparent Pricing</h2>
-            <p className="text-lg text-muted-foreground">Start with a 14-day free trial. No credit card required.</p>
+            <Badge variant="secondary" className="mb-4">Performance-Based Pricing</Badge>
+            <h2 className="text-3xl font-bold mb-4">Pay Only for What We Save You</h2>
+            <p className="text-lg text-muted-foreground">
+              We succeed when you succeed. Start with a 30-day free pilot.
+            </p>
           </div>
           
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
@@ -537,8 +540,8 @@ export default function LandingPage() {
                   asChild
                   data-testid={`button-select-${plan.name.toLowerCase()}`}
                 >
-                  <a href={plan.name === "Enterprise" ? "mailto:sales@prescientlabs.ai" : "/api/login"}>
-                    {plan.name === "Enterprise" ? "Contact Sales" : "Start Free Trial"}
+                  <a href={plan.name === "Strategic" ? "mailto:sales@prescientlabs.ai" : "/api/login"}>
+                    {plan.name === "Strategic" ? "Contact Sales" : "Start Free Pilot"}
                   </a>
                 </Button>
               </Card>
@@ -547,7 +550,7 @@ export default function LandingPage() {
           
           <div className="mt-12 text-center">
             <Button variant="ghost" onClick={() => setLocation("/pricing")} className="text-primary">
-              Compare all features in detail
+              See competitor comparison & calculator
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>

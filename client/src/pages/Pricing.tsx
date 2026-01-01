@@ -1,156 +1,124 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Check, Zap, Building2, Rocket, Loader2, Crown, ArrowRight, Shield, Clock, Users, Sparkles } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
+import { 
+  Check, Zap, Building2, Rocket, Crown, ArrowRight, Shield,
+  TrendingDown, DollarSign, Calculator, Target, Award, CheckCircle2,
+  BarChart3, Scale, Handshake, Percent
+} from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
-interface Price {
-  id: string;
-  unit_amount: number;
-  currency: string;
-  recurring: { interval: string } | null;
-  active: boolean;
-  metadata: any;
-}
+const savingsBasedTiers = [
+  {
+    id: "accelerate",
+    name: "Accelerate",
+    description: "Perfect for companies starting their optimization journey",
+    percentageRate: 6,
+    minimumSavings: 50000,
+    platformFee: 0,
+    icon: Zap,
+    color: "text-blue-500",
+    bgColor: "bg-blue-100 dark:bg-blue-900/30",
+    features: [
+      "AI-powered demand forecasting",
+      "Economic regime monitoring",
+      "Basic supplier risk scoring",
+      "Counter-cyclical procurement signals",
+      "Up to 100 SKUs",
+      "Up to 25 suppliers",
+      "Email support"
+    ],
+    competitorRate: "10-15%",
+    yourSavings: "40-60% less than competitors"
+  },
+  {
+    id: "transform",
+    name: "Transform",
+    description: "For growing manufacturers ready to scale their savings",
+    percentageRate: 4,
+    minimumSavings: 250000,
+    platformFee: 0,
+    icon: Rocket,
+    color: "text-purple-500",
+    bgColor: "bg-purple-100 dark:bg-purple-900/30",
+    popular: true,
+    features: [
+      "Everything in Accelerate, plus:",
+      "Advanced scenario simulations",
+      "Multi-tier supplier mapping",
+      "Automated RFQ generation",
+      "Real-time commodity tracking",
+      "Up to 500 SKUs",
+      "Up to 100 suppliers",
+      "Priority support + onboarding"
+    ],
+    competitorRate: "8-12%",
+    yourSavings: "50-67% less than competitors"
+  },
+  {
+    id: "strategic",
+    name: "Strategic Alliance",
+    description: "Enterprise-grade for maximum procurement optimization",
+    percentageRate: 2,
+    minimumSavings: 1000000,
+    platformFee: 2000,
+    icon: Building2,
+    color: "text-amber-500",
+    bgColor: "bg-amber-100 dark:bg-amber-900/30",
+    features: [
+      "Everything in Transform, plus:",
+      "Supply chain digital twin",
+      "M&A intelligence & due diligence",
+      "Industry consortium benchmarking",
+      "Custom integrations (ERP/MRP)",
+      "Unlimited SKUs & suppliers",
+      "Dedicated success manager",
+      "Quarterly business reviews"
+    ],
+    competitorRate: "5-8%",
+    yourSavings: "60-75% less than competitors"
+  }
+];
 
-interface Product {
-  id: string;
-  name: string;
-  description: string;
-  active: boolean;
-  metadata: {
-    tier: string;
-    order: string;
-    features: string;
-    popular?: string;
-    maxSkus?: string;
-    maxSuppliers?: string;
-    maxUsers?: string;
-  };
-  prices: Price[];
-}
-
-const tierIcons: Record<string, typeof Zap> = {
-  starter: Zap,
-  professional: Rocket,
-  enterprise: Building2,
-};
-
-const tierColors: Record<string, string> = {
-  starter: "text-blue-500",
-  professional: "text-purple-500",
-  enterprise: "text-amber-500",
-};
+const competitorComparison = [
+  { name: "Coupa", savingsShare: "8-15%", platformFee: "$50K+/yr", approach: "Savings share + platform fee" },
+  { name: "SAP Ariba", savingsShare: "5-10%", platformFee: "$100K+/yr", approach: "Per-supplier + transaction fees" },
+  { name: "Jaggaer", savingsShare: "6-12%", platformFee: "$40K+/yr", approach: "Module-based + savings share" },
+  { name: "Fairmarkit", savingsShare: "10-15%", platformFee: "Included", approach: "Pure savings share" },
+  { name: "Prescient Labs", savingsShare: "2-6%", platformFee: "$0-2K/mo", approach: "Low savings share, no hidden fees", highlight: true }
+];
 
 export default function Pricing() {
   const [, setLocation] = useLocation();
-  const [isYearly, setIsYearly] = useState(false);
-  const { toast } = useToast();
-  const { isAuthenticated } = useAuth();
+  const [estimatedSavings, setEstimatedSavings] = useState(500000);
 
-  const { data: productsData, isLoading } = useQuery<{ products: Product[] }>({
-    queryKey: ["/api/stripe/products"],
-  });
-
-  const { data: subscriptionData } = useQuery<{
-    subscription: any;
-    status: string;
-    tier: string | null;
-    trialEndsAt: string | null;
-  }>({
-    queryKey: ["/api/stripe/subscription"],
-    enabled: isAuthenticated,
-  });
-
-  const checkoutMutation = useMutation({
-    mutationFn: async ({ priceId, withTrial }: { priceId: string; withTrial: boolean }) => {
-      const response = await apiRequest("POST", "/api/stripe/checkout", { priceId, withTrial });
-      return response.json();
-    },
-    onSuccess: (data) => {
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to start checkout",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const products = productsData?.products || [];
-
-  // Sort by order metadata
-  const sortedProducts = [...products].sort((a, b) => {
-    const orderA = parseInt(a.metadata?.order || "999");
-    const orderB = parseInt(b.metadata?.order || "999");
-    return orderA - orderB;
-  });
-
-  const handleSubscribe = (product: Product) => {
-    if (!isAuthenticated) {
-      window.location.href = "/api/login";
-      return;
-    }
-
-    const price = product.prices.find(
-      (p) => p.recurring?.interval === (isYearly ? "year" : "month")
-    );
-
-    if (!price) {
-      toast({
-        title: "Error",
-        description: "Price not available",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    checkoutMutation.mutate({ priceId: price.id, withTrial: true });
+  const calculateYourCost = (tier: typeof savingsBasedTiers[0], savings: number) => {
+    const savingsShare = savings * (tier.percentageRate / 100);
+    const platformFee = tier.platformFee * 12;
+    return savingsShare + platformFee;
   };
 
-  const formatPrice = (amount: number | null, interval?: string) => {
-    if (!amount) return "Custom";
-    const price = amount / 100;
-    const monthlyEquivalent = interval === "year" ? Math.round(price / 12) : price;
-    return `$${monthlyEquivalent}`;
+  const calculateCompetitorCost = (savings: number, minRate: number, maxRate: number, platformFee: number) => {
+    const avgRate = (minRate + maxRate) / 2;
+    return savings * (avgRate / 100) + platformFee;
   };
 
-  const getFeatures = (product: Product): string[] => {
-    try {
-      if (product.metadata?.features) {
-        return JSON.parse(product.metadata.features);
-      }
-    } catch {
-      // Fallback features
-    }
-    return [
-      "Core platform access",
-      "Economic regime monitoring",
-      "Basic demand forecasting",
-      "Email support",
-    ];
+  const getRecommendedTier = (savings: number) => {
+    if (savings >= 1000000) return "strategic";
+    if (savings >= 250000) return "transform";
+    return "accelerate";
   };
 
-  const currentTier = subscriptionData?.tier;
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount);
+  };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+  const handleGetStarted = (tierId: string) => {
+    window.location.href = "/api/login";
+  };
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -158,55 +126,120 @@ export default function Pricing() {
         {/* Header */}
         <div className="text-center mb-12">
           <Badge className="mb-4" variant="secondary">
-            <Sparkles className="h-3 w-3 mr-1" />
-            Simple, Transparent Pricing
+            <TrendingDown className="h-3 w-3 mr-1" />
+            Performance-Based Pricing
           </Badge>
           <h1 className="text-4xl font-bold mb-4" data-testid="text-pricing-title">
-            Choose the Right Plan for Your Manufacturing
+            Pay Only for What We Save You
           </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-            Start with a 14-day free trial. No credit card required to start exploring.
-            Upgrade, downgrade, or cancel anytime.
+          <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
+            We succeed when you succeed. Our pricing is tied directly to your verified procurement savings,
+            with rates <strong className="text-foreground">40-75% lower than competitors</strong>.
           </p>
 
-          {/* Billing Toggle */}
-          <div className="flex items-center justify-center gap-4">
-            <Label htmlFor="billing-toggle" className={!isYearly ? "font-semibold" : "text-muted-foreground"}>
-              Monthly
-            </Label>
-            <Switch
-              id="billing-toggle"
-              checked={isYearly}
-              onCheckedChange={setIsYearly}
-              data-testid="switch-billing-toggle"
-            />
-            <Label htmlFor="billing-toggle" className={isYearly ? "font-semibold" : "text-muted-foreground"}>
-              Yearly
-              <Badge variant="secondary" className="ml-2 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
-                Save 20%
-              </Badge>
-            </Label>
+          {/* Value Proposition Cards */}
+          <div className="grid md:grid-cols-3 gap-4 max-w-4xl mx-auto mb-8">
+            <div className="p-4 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
+              <DollarSign className="h-6 w-6 text-green-600 mx-auto mb-2" />
+              <div className="font-semibold text-green-700 dark:text-green-400">No Upfront Costs</div>
+              <p className="text-sm text-muted-foreground">Start free, pay only when you see real savings</p>
+            </div>
+            <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+              <Percent className="h-6 w-6 text-blue-600 mx-auto mb-2" />
+              <div className="font-semibold text-blue-700 dark:text-blue-400">2-6% Savings Share</div>
+              <p className="text-sm text-muted-foreground">Industry-low rates vs 8-15% competitors</p>
+            </div>
+            <div className="p-4 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800">
+              <Scale className="h-6 w-6 text-purple-600 mx-auto mb-2" />
+              <div className="font-semibold text-purple-700 dark:text-purple-400">Verified Savings</div>
+              <p className="text-sm text-muted-foreground">Transparent methodology, no hidden fees</p>
+            </div>
           </div>
         </div>
 
-        {/* Pricing Cards */}
+        {/* Savings Calculator */}
+        <Card className="mb-12 border-2 border-primary/20" data-testid="card-savings-calculator">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calculator className="h-5 w-5 text-primary" />
+              Savings Calculator
+            </CardTitle>
+            <CardDescription>
+              Estimate your costs based on projected annual procurement savings
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="font-medium">Estimated Annual Savings</label>
+                  <span className="text-2xl font-bold text-primary">{formatCurrency(estimatedSavings)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="50000"
+                  max="5000000"
+                  step="50000"
+                  value={estimatedSavings}
+                  onChange={(e) => setEstimatedSavings(parseInt(e.target.value))}
+                  className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                  data-testid="slider-savings-estimate"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                  <span>$50K</span>
+                  <span>$5M+</span>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-4">
+                {savingsBasedTiers.map((tier) => {
+                  const yourCost = calculateYourCost(tier, estimatedSavings);
+                  const competitorCost = calculateCompetitorCost(estimatedSavings, 8, 12, 50000);
+                  const youSave = competitorCost - yourCost;
+                  const isRecommended = getRecommendedTier(estimatedSavings) === tier.id;
+
+                  return (
+                    <div 
+                      key={tier.id}
+                      className={`p-4 rounded-lg border ${isRecommended ? "border-primary bg-primary/5" : "border-muted"}`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-semibold">{tier.name}</span>
+                        {isRecommended && <Badge variant="secondary">Recommended</Badge>}
+                      </div>
+                      <div className="text-sm text-muted-foreground mb-1">
+                        {tier.percentageRate}% of savings {tier.platformFee > 0 ? `+ ${formatCurrency(tier.platformFee)}/mo` : ""}
+                      </div>
+                      <div className="text-xl font-bold text-primary">
+                        {formatCurrency(yourCost)}/year
+                      </div>
+                      <div className="text-xs text-green-600 dark:text-green-400 mt-1">
+                        Save {formatCurrency(youSave)} vs competitors
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Pricing Tiers */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-center mb-2">Choose Your Plan</h2>
+          <p className="text-center text-muted-foreground mb-8">All plans include a 30-day free pilot. No credit card required.</p>
+        </div>
+
         <div className="grid md:grid-cols-3 gap-6 mb-16">
-          {sortedProducts.map((product) => {
-            const Icon = tierIcons[product.metadata?.tier] || Zap;
-            const colorClass = tierColors[product.metadata?.tier] || "text-primary";
-            const isPopular = product.metadata?.popular === "true";
-            const isEnterprise = product.metadata?.tier === "enterprise";
-            const price = product.prices.find(
-              (p) => p.recurring?.interval === (isYearly ? "year" : "month")
-            );
-            const features = getFeatures(product);
-            const isCurrentPlan = currentTier === product.metadata?.tier;
+          {savingsBasedTiers.map((tier) => {
+            const Icon = tier.icon;
+            const isPopular = tier.popular;
 
             return (
               <Card
-                key={product.id}
+                key={tier.id}
                 className={`relative flex flex-col ${isPopular ? "border-primary shadow-lg scale-105" : ""}`}
-                data-testid={`card-plan-${product.metadata?.tier}`}
+                data-testid={`card-plan-${tier.id}`}
               >
                 {isPopular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
@@ -218,57 +251,49 @@ export default function Pricing() {
                 )}
 
                 <CardHeader className="text-center pb-4">
-                  <div className={`w-12 h-12 mx-auto mb-4 rounded-xl bg-muted flex items-center justify-center ${colorClass}`}>
+                  <div className={`w-12 h-12 mx-auto mb-4 rounded-xl ${tier.bgColor} flex items-center justify-center ${tier.color}`}>
                     <Icon className="h-6 w-6" />
                   </div>
-                  <CardTitle className="text-2xl">{product.name}</CardTitle>
+                  <CardTitle className="text-2xl">{tier.name}</CardTitle>
                   <CardDescription className="min-h-[48px]">
-                    {product.description}
+                    {tier.description}
                   </CardDescription>
                 </CardHeader>
 
                 <CardContent className="flex-1">
                   <div className="text-center mb-6">
                     <div className="flex items-baseline justify-center gap-1">
-                      <span className="text-4xl font-bold">
-                        {isEnterprise ? "Custom" : formatPrice(price?.unit_amount || null, price?.recurring?.interval)}
-                      </span>
-                      {!isEnterprise && price?.unit_amount && (
-                        <span className="text-muted-foreground">/month</span>
-                      )}
+                      <span className="text-4xl font-bold">{tier.percentageRate}%</span>
+                      <span className="text-muted-foreground">of verified savings</span>
                     </div>
-                    {isEnterprise ? (
+                    {tier.platformFee > 0 && (
                       <p className="text-sm text-muted-foreground mt-1">
-                        Tailored pricing for your organization
+                        + {formatCurrency(tier.platformFee)}/month platform fee
                       </p>
-                    ) : isYearly && price?.unit_amount ? (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Billed annually (${(price.unit_amount / 100).toLocaleString()}/year)
-                      </p>
-                    ) : null}
+                    )}
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Min. {formatCurrency(tier.minimumSavings)} annual savings to qualify
+                    </p>
                   </div>
 
-                  {/* Limits */}
-                  <div className="grid grid-cols-3 gap-2 mb-6 text-center">
-                    <div className="p-2 bg-muted rounded-lg">
-                      <div className="text-sm font-semibold">{product.metadata?.maxSkus || "∞"}</div>
-                      <div className="text-xs text-muted-foreground">SKUs</div>
+                  {/* Competitor Comparison */}
+                  <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 mb-4">
+                    <div className="flex items-center gap-2 text-sm">
+                      <TrendingDown className="h-4 w-4 text-green-600" />
+                      <span className="text-green-700 dark:text-green-400 font-medium">
+                        {tier.yourSavings}
+                      </span>
                     </div>
-                    <div className="p-2 bg-muted rounded-lg">
-                      <div className="text-sm font-semibold">{product.metadata?.maxSuppliers || "∞"}</div>
-                      <div className="text-xs text-muted-foreground">Suppliers</div>
-                    </div>
-                    <div className="p-2 bg-muted rounded-lg">
-                      <div className="text-sm font-semibold">{product.metadata?.maxUsers || "∞"}</div>
-                      <div className="text-xs text-muted-foreground">Users</div>
-                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Competitors charge {tier.competitorRate} for similar services
+                    </p>
                   </div>
 
                   {/* Features */}
-                  <ul className="space-y-3">
-                    {features.map((feature, index) => (
-                      <li key={index} className="flex items-start gap-3">
-                        <Check className="h-5 w-5 text-green-500 shrink-0 mt-0.5" />
+                  <ul className="space-y-2">
+                    {tier.features.map((feature, index) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <Check className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
                         <span className="text-sm">{feature}</span>
                       </li>
                     ))}
@@ -276,40 +301,124 @@ export default function Pricing() {
                 </CardContent>
 
                 <CardFooter className="pt-4">
-                  {isCurrentPlan ? (
-                    <Button className="w-full" variant="secondary" disabled>
-                      Current Plan
-                    </Button>
-                  ) : isEnterprise ? (
-                    <Button
-                      className="w-full"
-                      variant="outline"
-                      onClick={() => window.location.href = "mailto:sales@prescientlabs.ai"}
-                      data-testid={`button-subscribe-${product.metadata?.tier}`}
-                    >
-                      Contact Sales
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </Button>
-                  ) : (
-                    <Button
-                      className="w-full"
-                      variant={isPopular ? "default" : "outline"}
-                      onClick={() => handleSubscribe(product)}
-                      disabled={checkoutMutation.isPending}
-                      data-testid={`button-subscribe-${product.metadata?.tier}`}
-                    >
-                      {checkoutMutation.isPending ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      ) : null}
-                      Start Free Trial
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </Button>
-                  )}
+                  <Button
+                    className="w-full"
+                    variant={isPopular ? "default" : "outline"}
+                    onClick={() => handleGetStarted(tier.id)}
+                    data-testid={`button-subscribe-${tier.id}`}
+                  >
+                    Start Free Pilot
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
                 </CardFooter>
               </Card>
             );
           })}
         </div>
+
+        {/* Competitor Comparison Table */}
+        <Card className="mb-16" data-testid="card-competitor-comparison">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-primary" />
+              How We Compare
+            </CardTitle>
+            <CardDescription>
+              See how Prescient Labs stacks up against traditional procurement platforms
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-3 px-4 font-medium">Platform</th>
+                    <th className="text-left py-3 px-4 font-medium">Savings Share</th>
+                    <th className="text-left py-3 px-4 font-medium">Platform Fee</th>
+                    <th className="text-left py-3 px-4 font-medium">Approach</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {competitorComparison.map((competitor, index) => (
+                    <tr 
+                      key={competitor.name} 
+                      className={`border-b ${competitor.highlight ? "bg-primary/5" : ""}`}
+                    >
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          {competitor.highlight && <Award className="h-4 w-4 text-primary" />}
+                          <span className={competitor.highlight ? "font-bold text-primary" : ""}>
+                            {competitor.name}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <Badge variant={competitor.highlight ? "default" : "secondary"}>
+                          {competitor.savingsShare}
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-4 text-sm">{competitor.platformFee}</td>
+                      <td className="py-3 px-4 text-sm text-muted-foreground">{competitor.approach}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* How Savings Verification Works */}
+        <Card className="mb-16" data-testid="card-savings-verification">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-primary" />
+              How Savings Verification Works
+            </CardTitle>
+            <CardDescription>
+              Transparent, auditable methodology for calculating your procurement savings
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-4 gap-6">
+              <div className="text-center">
+                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                  <span className="text-xl font-bold text-blue-600">1</span>
+                </div>
+                <h4 className="font-semibold mb-2">Baseline Capture</h4>
+                <p className="text-sm text-muted-foreground">
+                  We establish your historical procurement costs and supplier pricing
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                  <span className="text-xl font-bold text-purple-600">2</span>
+                </div>
+                <h4 className="font-semibold mb-2">Optimization Actions</h4>
+                <p className="text-sm text-muted-foreground">
+                  Our platform identifies and helps execute savings opportunities
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                  <span className="text-xl font-bold text-green-600">3</span>
+                </div>
+                <h4 className="font-semibold mb-2">Savings Calculation</h4>
+                <p className="text-sm text-muted-foreground">
+                  Compare actual costs against baseline to calculate verified savings
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                  <span className="text-xl font-bold text-amber-600">4</span>
+                </div>
+                <h4 className="font-semibold mb-2">Quarterly Billing</h4>
+                <p className="text-sm text-muted-foreground">
+                  Pay your savings share quarterly with full audit trail
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Trust Indicators */}
         <div className="grid md:grid-cols-3 gap-8 mb-16">
@@ -324,20 +433,20 @@ export default function Pricing() {
           </div>
           <div className="text-center">
             <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-green-100 dark:bg-green-900 flex items-center justify-center">
-              <Clock className="h-6 w-6 text-green-600 dark:text-green-400" />
+              <Handshake className="h-6 w-6 text-green-600 dark:text-green-400" />
             </div>
-            <h3 className="font-semibold mb-2">14-Day Free Trial</h3>
+            <h3 className="font-semibold mb-2">30-Day Free Pilot</h3>
             <p className="text-sm text-muted-foreground">
-              Full access to all features, no credit card required
+              Full platform access, see real savings before you pay
             </p>
           </div>
           <div className="text-center">
             <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
-              <Users className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+              <Target className="h-6 w-6 text-purple-600 dark:text-purple-400" />
             </div>
-            <h3 className="font-semibold mb-2">Dedicated Support</h3>
+            <h3 className="font-semibold mb-2">Aligned Incentives</h3>
             <p className="text-sm text-muted-foreground">
-              Enterprise plans include dedicated account manager
+              We only win when you save money - our success is tied to yours
             </p>
           </div>
         </div>
@@ -347,21 +456,33 @@ export default function Pricing() {
           <CardContent className="py-8">
             <div className="flex flex-col md:flex-row items-center justify-between gap-6">
               <div>
-                <h3 className="text-2xl font-bold mb-2">Need a Custom Solution?</h3>
+                <h3 className="text-2xl font-bold mb-2">Ready to Start Saving?</h3>
                 <p className="text-slate-300">
-                  Contact our sales team for custom pricing, on-premise deployment, and dedicated support.
+                  Join manufacturers who have saved millions in procurement costs. 
+                  Start your 30-day free pilot today.
                 </p>
               </div>
-              <Button
-                size="lg"
-                variant="secondary"
-                className="shrink-0"
-                onClick={() => window.location.href = "mailto:sales@prescientlabs.ai"}
-                data-testid="button-contact-sales"
-              >
-                Contact Sales
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
+              <div className="flex gap-3">
+                <Button
+                  size="lg"
+                  variant="secondary"
+                  className="shrink-0"
+                  onClick={() => handleGetStarted("transform")}
+                  data-testid="button-start-pilot"
+                >
+                  Start Free Pilot
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="shrink-0 border-white/30 text-white hover:bg-white/10"
+                  onClick={() => window.location.href = "mailto:sales@prescientlabs.ai"}
+                  data-testid="button-contact-sales"
+                >
+                  Contact Sales
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
