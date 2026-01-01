@@ -227,7 +227,7 @@ export default function LandingPage() {
           </div>
           
           {/* Hero image below text content */}
-          <div className="relative max-w-5xl mx-auto mb-12">
+          <div className="relative max-w-5xl mx-auto mb-14">
             {/* Marketing-style presentation with gradient background */}
             <div className="absolute -inset-4 bg-gradient-to-br from-primary/30 via-primary/10 to-transparent rounded-3xl blur-2xl" />
             <div className="relative">
@@ -357,7 +357,7 @@ export default function LandingPage() {
               </div>
             )}
             
-            <div className="mt-6 text-center">
+            <div className="mt-4 text-center">
               <Button variant="ghost" onClick={() => setLocation("/pricing")} className="text-primary text-sm">
                 See full pricing details & savings calculator
                 <ArrowRight className="ml-1 h-3 w-3" />
@@ -368,7 +368,7 @@ export default function LandingPage() {
       </section>
 
       {/* Core Capabilities */}
-      <section id="capabilities" className="py-16">
+      <section id="capabilities" className="pt-14 pb-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <Badge className="mb-3">Core Capabilities</Badge>
