@@ -1,10 +1,13 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   TrendingUp, Boxes, ShoppingCart, BarChart3, ArrowRight, Check, Factory, 
   Shield, Clock, DollarSign, Zap, Building2, Rocket, LineChart, Truck,
-  Eye, Brain, Gauge, Network, AlertTriangle, Sparkles, Target, Layers
+  Eye, Brain, Gauge, Network, AlertTriangle, Sparkles, Target, Layers,
+  CreditCard, Percent
 } from "lucide-react";
 import heroImage from "@assets/Screenshot_2025-12-06_at_2.06.49_pm_1765051647586.png";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -13,6 +16,7 @@ import { useLocation } from "wouter";
 
 export default function LandingPage() {
   const [, setLocation] = useLocation();
+  const [pricingModel, setPricingModel] = useState<"subscription" | "performance">("performance");
 
   const coreCapabilities = [
     {
@@ -110,7 +114,35 @@ export default function LandingPage() {
     },
   ];
 
-  const plans = [
+  const subscriptionPlans = [
+    {
+      name: "Starter",
+      price: "$299",
+      period: "/month",
+      description: "Essential tools for small manufacturers",
+      features: ["Up to 50 SKUs", "AI-powered forecasting", "Economic regime signals", "Basic supplier scoring", "Email support"],
+      icon: Zap,
+    },
+    {
+      name: "Professional",
+      price: "$799",
+      period: "/month",
+      description: "Advanced capabilities for growth",
+      features: ["Up to 250 SKUs", "Advanced simulations", "Multi-tier supplier mapping", "Automated RFQs", "Priority support"],
+      highlighted: true,
+      icon: Rocket,
+    },
+    {
+      name: "Enterprise",
+      price: "$1,999",
+      period: "/month",
+      description: "Full platform for large manufacturers",
+      features: ["Unlimited SKUs", "Supply chain digital twin", "M&A intelligence", "Custom integrations", "Dedicated manager"],
+      icon: Building2,
+    },
+  ];
+
+  const performancePlans = [
     {
       name: "Accelerate",
       price: "6%",
@@ -129,9 +161,9 @@ export default function LandingPage() {
       icon: Rocket,
     },
     {
-      name: "Strategic",
+      name: "Strategic Alliance",
       price: "2%",
-      period: " of verified savings",
+      period: " + $2K/mo",
       description: "Enterprise-grade optimization",
       features: ["Unlimited SKUs", "Supply chain digital twin", "M&A intelligence", "Custom ERP integrations", "Dedicated success manager", "60-75% less than competitors"],
       icon: Building2,
@@ -497,60 +529,123 @@ export default function LandingPage() {
       {/* Pricing Section */}
       <section id="pricing" className="py-20 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <Badge variant="secondary" className="mb-4">Performance-Based Pricing</Badge>
-            <h2 className="text-3xl font-bold mb-4">Pay Only for What We Save You</h2>
-            <p className="text-lg text-muted-foreground">
-              We succeed when you succeed. Start with a 30-day free pilot.
+          <div className="text-center mb-12">
+            <Badge variant="secondary" className="mb-4">Flexible Pricing</Badge>
+            <h2 className="text-3xl font-bold mb-4">Choose What Works for You</h2>
+            <p className="text-lg text-muted-foreground mb-8">
+              Fixed monthly rates or performance-based pricing tied to your verified savings.
             </p>
+            
+            {/* Pricing Model Toggle */}
+            <Tabs value={pricingModel} onValueChange={(v) => setPricingModel(v as "subscription" | "performance")} className="w-full max-w-md mx-auto">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="subscription" className="flex items-center gap-2" data-testid="tab-landing-subscription">
+                  <CreditCard className="h-4 w-4" />
+                  Fixed Subscription
+                </TabsTrigger>
+                <TabsTrigger value="performance" className="flex items-center gap-2" data-testid="tab-landing-performance">
+                  <Percent className="h-4 w-4" />
+                  Performance-Based
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
           
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {plans.map((plan, idx) => (
-              <Card 
-                key={idx} 
-                className={`p-6 flex flex-col ${plan.highlighted ? 'border-primary shadow-lg ring-2 ring-primary/20' : ''}`}
-                data-testid={`card-plan-${plan.name.toLowerCase()}`}
-              >
-                {plan.highlighted && (
-                  <Badge className="mb-4 self-start">Most Popular</Badge>
-                )}
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-                    <plan.icon className="h-5 w-5 text-primary" />
-                  </div>
-                  <h3 className="text-2xl font-bold">{plan.name}</h3>
-                </div>
-                <p className="text-sm text-muted-foreground mb-4">{plan.description}</p>
-                <div className="mb-6">
-                  <span className="text-4xl font-bold">{plan.price}</span>
-                  <span className="text-muted-foreground">{plan.period}</span>
-                </div>
-                <ul className="space-y-3 mb-6 flex-1">
-                  {plan.features.map((feature, featureIdx) => (
-                    <li key={featureIdx} className="flex items-center gap-2 text-sm">
-                      <Check className="h-4 w-4 text-primary shrink-0" />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-                <Button 
-                  className="w-full" 
-                  variant={plan.highlighted ? "default" : "outline"}
-                  asChild
-                  data-testid={`button-select-${plan.name.toLowerCase()}`}
+          {/* Subscription Plans */}
+          {pricingModel === "subscription" && (
+            <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+              {subscriptionPlans.map((plan, idx) => (
+                <Card 
+                  key={idx} 
+                  className={`p-6 flex flex-col ${plan.highlighted ? 'border-primary shadow-lg ring-2 ring-primary/20' : ''}`}
+                  data-testid={`card-plan-${plan.name.toLowerCase()}`}
                 >
-                  <a href={plan.name === "Strategic" ? "mailto:sales@prescientlabs.ai" : "/api/login"}>
-                    {plan.name === "Strategic" ? "Contact Sales" : "Start Free Pilot"}
-                  </a>
-                </Button>
-              </Card>
-            ))}
-          </div>
+                  {plan.highlighted && (
+                    <Badge className="mb-4 self-start">Most Popular</Badge>
+                  )}
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+                      <plan.icon className="h-5 w-5 text-primary" />
+                    </div>
+                    <h3 className="text-2xl font-bold">{plan.name}</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-4">{plan.description}</p>
+                  <div className="mb-6">
+                    <span className="text-4xl font-bold">{plan.price}</span>
+                    <span className="text-muted-foreground">{plan.period}</span>
+                  </div>
+                  <ul className="space-y-3 mb-6 flex-1">
+                    {plan.features.map((feature, featureIdx) => (
+                      <li key={featureIdx} className="flex items-center gap-2 text-sm">
+                        <Check className="h-4 w-4 text-primary shrink-0" />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                  <Button 
+                    className="w-full" 
+                    variant={plan.highlighted ? "default" : "outline"}
+                    asChild
+                    data-testid={`button-select-${plan.name.toLowerCase()}`}
+                  >
+                    <a href={plan.name === "Enterprise" ? "mailto:sales@prescientlabs.ai" : "/api/login"}>
+                      {plan.name === "Enterprise" ? "Contact Sales" : "Start 14-Day Free Trial"}
+                    </a>
+                  </Button>
+                </Card>
+              ))}
+            </div>
+          )}
+          
+          {/* Performance-Based Plans */}
+          {pricingModel === "performance" && (
+            <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+              {performancePlans.map((plan, idx) => (
+                <Card 
+                  key={idx} 
+                  className={`p-6 flex flex-col ${plan.highlighted ? 'border-primary shadow-lg ring-2 ring-primary/20' : ''}`}
+                  data-testid={`card-plan-${plan.name.toLowerCase()}`}
+                >
+                  {plan.highlighted && (
+                    <Badge className="mb-4 self-start">Most Popular</Badge>
+                  )}
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+                      <plan.icon className="h-5 w-5 text-primary" />
+                    </div>
+                    <h3 className="text-2xl font-bold">{plan.name}</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-4">{plan.description}</p>
+                  <div className="mb-6">
+                    <span className="text-4xl font-bold">{plan.price}</span>
+                    <span className="text-muted-foreground">{plan.period}</span>
+                  </div>
+                  <ul className="space-y-3 mb-6 flex-1">
+                    {plan.features.map((feature, featureIdx) => (
+                      <li key={featureIdx} className="flex items-center gap-2 text-sm">
+                        <Check className="h-4 w-4 text-primary shrink-0" />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                  <Button 
+                    className="w-full" 
+                    variant={plan.highlighted ? "default" : "outline"}
+                    asChild
+                    data-testid={`button-select-${plan.name.toLowerCase().replace(" ", "-")}`}
+                  >
+                    <a href={plan.name === "Strategic Alliance" ? "mailto:sales@prescientlabs.ai" : "/api/login"}>
+                      {plan.name === "Strategic Alliance" ? "Contact Sales" : "Start Free Pilot"}
+                    </a>
+                  </Button>
+                </Card>
+              ))}
+            </div>
+          )}
           
           <div className="mt-12 text-center">
             <Button variant="ghost" onClick={() => setLocation("/pricing")} className="text-primary">
-              See competitor comparison & calculator
+              See full pricing details & savings calculator
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
