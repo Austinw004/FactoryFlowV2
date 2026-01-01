@@ -104,9 +104,9 @@ export function IndustryInsightsPanel({ maxItems = 4, showHeader = true }: Indus
                 size="sm"
                 onClick={() => {
                   if (action.action === "setup-watchlist") {
-                    setLocation("/commodities");
+                    setLocation("/commodity-forecasts");
                   } else if (action.action === "view-regime") {
-                    setLocation("/economics");
+                    setLocation("/strategic-analysis");
                   }
                 }}
                 data-testid={`button-action-${action.id}`}

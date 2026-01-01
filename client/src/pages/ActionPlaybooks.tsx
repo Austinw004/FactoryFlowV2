@@ -388,7 +388,7 @@ export default function ActionPlaybooks() {
   };
   
   const handleScenarioAnalysis = () => {
-    setLocation('/strategy/scenario-simulation');
+    setLocation('/scenario-simulation');
   };
   
   if (playbooksLoading) {
