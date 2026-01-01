@@ -12,8 +12,6 @@ import {
   Plug,
   Webhook,
   AlertTriangle,
-  Database,
-  Shield,
 } from "lucide-react";
 import {
   Sidebar,
@@ -31,7 +29,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Link, useLocation } from "wouter";
 import { SidebarTour } from "@/components/GuidedTour";
 import { useUnifiedData } from "@/contexts/UnifiedDataContext";
-import { useQuery } from "@tanstack/react-query";
 
 const mainMenuItems = [
   {
@@ -108,11 +105,6 @@ const bottomMenuItems = [
 export function AppSidebar() {
   const [location] = useLocation();
   const { inventory, suppliers, commodities, isLoading } = useUnifiedData();
-  
-  const { data: platformAccess } = useQuery<{ isPlatformAdmin: boolean }>({
-    queryKey: ["/api/platform/check-access"],
-    retry: false,
-  });
 
   const agenticRoutes = ["/agentic-ai"];
   const strategyRoutes = ["/strategy", "/digital-twin", "/strategic-analysis", "/scenario-simulation", "/ma-intelligence", "/peer-benchmarking"];
@@ -214,24 +206,6 @@ export function AppSidebar() {
       <SidebarFooter className="border-t p-2">
         <SidebarMenu>
           <SidebarTour />
-          {platformAccess?.isPlatformAdmin && (
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={location === "/platform-owner-analytics"}
-                data-testid="sidebar-platform-owner-analytics"
-                className="bg-purple-100 dark:bg-purple-900/30 border border-purple-300 dark:border-purple-700"
-              >
-                <Link href="/platform-owner-analytics">
-                  <Database className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                  <span className="text-purple-700 dark:text-purple-300 flex items-center gap-1">
-                    Owner Analytics
-                    <Shield className="h-3 w-3" />
-                  </span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          )}
           {bottomMenuItems.map((item) => (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton

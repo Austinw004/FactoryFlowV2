@@ -110,7 +110,7 @@ function Router() {
     );
   }
 
-  const bypassOnboardingRoutes = ["/platform-owner-analytics"];
+  const bypassOnboardingRoutes = ["/internal/poa"];
   const shouldBypassOnboarding = bypassOnboardingRoutes.includes(location);
 
   if (needsOnboarding && !shouldBypassOnboarding) {
@@ -191,7 +191,7 @@ function Router() {
       {/* Developer & Integration routes */}
       <Route path="/api-docs" component={ApiDocumentation} />
       <Route path="/platform-analytics" component={PlatformAnalytics} />
-      <Route path="/platform-owner-analytics" component={PlatformOwnerAnalytics} />
+      <Route path="/internal/poa" component={PlatformOwnerAnalytics} />
       <Route path="/integrations" component={Integrations} />
       <Route path="/webhook-integrations" component={WebhookIntegrations} />
       
