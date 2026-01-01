@@ -151,7 +151,32 @@ export default function AutomatedPO() {
     authType: "oauth2"
   });
 
-  const resetRuleForm = () => setRuleForm({ name: "", description: "", priority: 50, triggerType: "inventory_low", fdrRange: { min: 0, max: 5 }, regimeFilter: "", minQuantity: 0, maxQuantity: 0, approvalRequired: true });
+  const resetRuleForm = () => {
+    setRuleForm({ name: "", description: "", priority: 50, triggerType: "inventory_low", fdrRange: { min: 0, max: 5 }, regimeFilter: "", minQuantity: 100, maxQuantity: 10000, approvalRequired: true, useTemplate: "" });
+    setRuleWizardStep(1);
+  };
+
+  const applyTemplate = (templateId: string) => {
+    const template = ruleTemplates.find(t => t.id === templateId);
+    if (template) {
+      setRuleForm(prev => ({
+        ...prev,
+        name: template.name,
+        description: template.description,
+        triggerType: template.triggerType,
+        priority: template.priority,
+        approvalRequired: template.approvalRequired,
+        useTemplate: templateId
+      }));
+      setRuleWizardStep(2);
+    }
+  };
+
+  const canProceedToNextStep = () => {
+    if (ruleWizardStep === 1) return true;
+    if (ruleWizardStep === 2) return ruleForm.name.trim() !== "" && ruleForm.triggerType !== "";
+    return true;
+  };
   const resetPlaybookForm = () => setPlaybookForm({ name: "", description: "", triggerRegime: "", fdrMin: 0, fdrMax: 5, strategy: "conservative", discountTarget: 5, paymentTermsDays: 30 });
   const resetErpForm = () => setErpForm({ name: "", erpType: "sap_s4hana", environment: "production", connectionUrl: "", authType: "oauth2" });
 
