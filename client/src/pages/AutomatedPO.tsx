@@ -855,98 +855,303 @@ export default function AutomatedPO() {
         </TabsContent>
       </Tabs>
 
-      {/* Create Rule Dialog */}
+      {/* Create Rule Dialog - Multi-step Wizard */}
       <Dialog open={showRuleDialog} onOpenChange={(open) => { setShowRuleDialog(open); if (!open) resetRuleForm(); }}>
-        <DialogContent className="max-w-lg" data-testid="dialog-create-rule">
+        <DialogContent className="max-w-2xl" data-testid="dialog-create-rule">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Zap className="h-5 w-5" />
+              <Sparkles className="h-5 w-5 text-primary" />
               Create PO Automation Rule
             </DialogTitle>
             <DialogDescription>
-              Configure automated purchase order generation based on inventory and economic conditions
+              Set up intelligent purchasing automation in 3 easy steps
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Rule Name</Label>
-              <Input 
-                placeholder="e.g., Low Stock Auto-Reorder"
-                value={ruleForm.name}
-                onChange={(e) => setRuleForm(prev => ({ ...prev, name: e.target.value }))}
-                data-testid="input-rule-name"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Textarea 
-                placeholder="Describe what this rule does..."
-                value={ruleForm.description}
-                onChange={(e) => setRuleForm(prev => ({ ...prev, description: e.target.value }))}
-                data-testid="input-rule-description"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Trigger Type</Label>
-                <Select 
-                  value={ruleForm.triggerType}
-                  onValueChange={(value) => setRuleForm(prev => ({ ...prev, triggerType: value }))}
+
+          {/* Progress Indicator */}
+          <div className="flex items-center justify-center gap-2 py-2">
+            {[1, 2, 3].map((step) => (
+              <div key={step} className="flex items-center gap-2">
+                <div 
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
+                    ruleWizardStep === step 
+                      ? "bg-primary text-primary-foreground" 
+                      : ruleWizardStep > step 
+                        ? "bg-green-600 text-white" 
+                        : "bg-muted text-muted-foreground"
+                  }`}
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="inventory_low">Inventory Low</SelectItem>
-                    <SelectItem value="forecast_demand">Forecast Demand</SelectItem>
-                    <SelectItem value="fdr_threshold">FDR Threshold</SelectItem>
-                    <SelectItem value="regime_change">Regime Change</SelectItem>
-                    <SelectItem value="scheduled">Scheduled</SelectItem>
-                  </SelectContent>
-                </Select>
+                  {ruleWizardStep > step ? <CheckCircle className="h-4 w-4" /> : step}
+                </div>
+                <span className={`text-sm hidden sm:inline ${ruleWizardStep === step ? "font-medium" : "text-muted-foreground"}`}>
+                  {step === 1 ? "Choose Template" : step === 2 ? "Configure Rule" : "Review & Create"}
+                </span>
+                {step < 3 && <ArrowRight className="h-4 w-4 text-muted-foreground mx-2" />}
               </div>
-              <div className="space-y-2">
-                <Label>Priority</Label>
-                <Input 
-                  type="number" 
-                  min={1} 
-                  max={100}
-                  value={ruleForm.priority}
-                  onChange={(e) => setRuleForm(prev => ({ ...prev, priority: parseInt(e.target.value) || 50 }))}
+            ))}
+          </div>
+
+          <Separator />
+
+          {/* Step 1: Choose Template */}
+          {ruleWizardStep === 1 && (
+            <div className="space-y-4">
+              <div className="text-center space-y-2">
+                <h3 className="font-semibold">Start with a template or create from scratch</h3>
+                <p className="text-sm text-muted-foreground">Templates provide pre-configured settings to get you started quickly</p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {ruleTemplates.map((template) => {
+                  const IconComponent = template.icon;
+                  return (
+                    <Card 
+                      key={template.id}
+                      className={`cursor-pointer transition-all hover-elevate ${ruleForm.useTemplate === template.id ? "ring-2 ring-primary" : ""}`}
+                      onClick={() => applyTemplate(template.id)}
+                      data-testid={`template-${template.id}`}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                          <div className={`p-2 rounded-lg ${template.color}`}>
+                            <IconComponent className="h-5 w-5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-sm">{template.name}</h4>
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{template.description}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+
+              <div className="text-center">
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setRuleWizardStep(2)}
+                  className="text-muted-foreground"
+                >
+                  Skip templates, create from scratch
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Configure Rule */}
+          {ruleWizardStep === 2 && (
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2 sm:col-span-2">
+                  <Label className="flex items-center gap-2">
+                    Rule Name
+                    <Badge variant="outline" className="text-xs">Required</Badge>
+                  </Label>
+                  <Input 
+                    placeholder="e.g., Low Stock Auto-Reorder"
+                    value={ruleForm.name}
+                    onChange={(e) => setRuleForm(prev => ({ ...prev, name: e.target.value }))}
+                    data-testid="input-rule-name"
+                    className="text-base"
+                  />
+                </div>
+
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Description (optional)</Label>
+                  <Textarea 
+                    placeholder="Describe what this rule does and when it should trigger..."
+                    value={ruleForm.description}
+                    onChange={(e) => setRuleForm(prev => ({ ...prev, description: e.target.value }))}
+                    data-testid="input-rule-description"
+                    rows={2}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="flex items-center gap-2">
+                  What should trigger this rule?
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="h-4 w-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>Select the condition that will automatically generate a purchase order</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {Object.entries(triggerTypeInfo).map(([key, info]) => {
+                    const IconComponent = info.icon;
+                    return (
+                      <Card 
+                        key={key}
+                        className={`cursor-pointer transition-all p-3 ${ruleForm.triggerType === key ? "ring-2 ring-primary bg-primary/5" : "hover:bg-muted/50"}`}
+                        onClick={() => setRuleForm(prev => ({ ...prev, triggerType: key }))}
+                        data-testid={`trigger-${key}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <IconComponent className={`h-4 w-4 ${ruleForm.triggerType === key ? "text-primary" : "text-muted-foreground"}`} />
+                          <div>
+                            <p className="text-sm font-medium">{info.label}</p>
+                            <p className="text-xs text-muted-foreground">{info.description}</p>
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <Label className="flex items-center gap-2">
+                    Priority Level
+                    <Badge variant="secondary" className="text-xs">{ruleForm.priority}</Badge>
+                  </Label>
+                  <Slider 
+                    value={[ruleForm.priority]} 
+                    onValueChange={(value) => setRuleForm(prev => ({ ...prev, priority: value[0] }))}
+                    min={1}
+                    max={100}
+                    step={1}
+                    className="py-2"
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Low priority</span>
+                    <span>High priority</span>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="flex items-center gap-2">
+                    Order Quantity Range
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Input 
+                      type="number" 
+                      placeholder="Min"
+                      value={ruleForm.minQuantity}
+                      onChange={(e) => setRuleForm(prev => ({ ...prev, minQuantity: parseInt(e.target.value) || 0 }))}
+                      className="w-24"
+                    />
+                    <span className="text-muted-foreground">to</span>
+                    <Input 
+                      type="number" 
+                      placeholder="Max"
+                      value={ruleForm.maxQuantity}
+                      onChange={(e) => setRuleForm(prev => ({ ...prev, maxQuantity: parseInt(e.target.value) || 0 }))}
+                      className="w-24"
+                    />
+                    <span className="text-sm text-muted-foreground">units</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Review & Create */}
+          {ruleWizardStep === 3 && (
+            <div className="space-y-4">
+              <div className="text-center space-y-2">
+                <ShieldCheck className="h-12 w-12 mx-auto text-green-600" />
+                <h3 className="font-semibold">Review Your Rule</h3>
+                <p className="text-sm text-muted-foreground">Confirm the settings before activating</p>
+              </div>
+
+              <Card className="bg-muted/30">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Rule Name</span>
+                    <span className="font-medium">{ruleForm.name || "Untitled Rule"}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Trigger</span>
+                    <Badge variant="outline">{triggerTypeInfo[ruleForm.triggerType]?.label || ruleForm.triggerType}</Badge>
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Priority</span>
+                    <span className="font-medium">{ruleForm.priority}/100</span>
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Quantity Range</span>
+                    <span className="font-medium">{ruleForm.minQuantity.toLocaleString()} - {ruleForm.maxQuantity.toLocaleString()} units</span>
+                  </div>
+                  {ruleForm.description && (
+                    <>
+                      <Separator />
+                      <div>
+                        <span className="text-sm text-muted-foreground">Description</span>
+                        <p className="text-sm mt-1">{ruleForm.description}</p>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+
+              <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
+                <div>
+                  <Label className="font-medium">Require Manual Approval</Label>
+                  <p className="text-xs text-muted-foreground">When enabled, POs wait for your approval before execution</p>
+                </div>
+                <Switch 
+                  checked={ruleForm.approvalRequired}
+                  onCheckedChange={(checked) => setRuleForm(prev => ({ ...prev, approvalRequired: checked }))}
                 />
               </div>
             </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>Requires Approval</Label>
-                <p className="text-xs text-muted-foreground">POs will wait for manual approval</p>
-              </div>
-              <Switch 
-                checked={ruleForm.approvalRequired}
-                onCheckedChange={(checked) => setRuleForm(prev => ({ ...prev, approvalRequired: checked }))}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRuleDialog(false)}>Cancel</Button>
-            <Button 
-              onClick={() => createRuleMutation.mutate(ruleForm)}
-              disabled={createRuleMutation.isPending || ruleForm.name.trim() === ""}
-              data-testid="button-save-rule"
-            >
-              {createRuleMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Create Rule
-                </>
-              )}
+          )}
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            {ruleWizardStep > 1 && (
+              <Button 
+                variant="ghost" 
+                onClick={() => setRuleWizardStep(prev => prev - 1)}
+                className="order-2 sm:order-1"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+            )}
+            <div className="flex-1" />
+            <Button variant="outline" onClick={() => setShowRuleDialog(false)} className="order-3 sm:order-2">
+              Cancel
             </Button>
+            {ruleWizardStep < 3 ? (
+              <Button 
+                onClick={() => setRuleWizardStep(prev => prev + 1)}
+                disabled={!canProceedToNextStep()}
+                className="order-1 sm:order-3"
+                data-testid="button-next-step"
+              >
+                Next Step
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            ) : (
+              <Button 
+                onClick={() => createRuleMutation.mutate(ruleForm)}
+                disabled={createRuleMutation.isPending || ruleForm.name.trim() === ""}
+                className="order-1 sm:order-3"
+                data-testid="button-save-rule"
+              >
+                {createRuleMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Create Rule
+                  </>
+                )}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
