@@ -92,13 +92,6 @@ export default function LandingPage() {
     },
   ];
 
-  const platformStats = [
-    { stat: "110+", label: "Commodity prices tracked" },
-    { stat: "4", label: "Economic regimes detected" },
-    { stat: "Multi-horizon", label: "Demand forecasting" },
-    { stat: "Real-time", label: "Market intelligence" },
-  ];
-
   const differentiators = [
     {
       title: "Proactive, Not Reactive",
@@ -230,128 +223,11 @@ export default function LandingPage() {
                 See How It Works
               </Button>
             </div>
-            <p className="text-sm text-muted-foreground mb-8">No credit card required. Full platform access.</p>
-            
-            {/* Pricing Options in Hero */}
-            <div id="pricing" className="w-full max-w-5xl mx-auto">
-              <Tabs value={pricingModel} onValueChange={(v) => setPricingModel(v as "subscription" | "performance")} className="w-full">
-                <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8">
-                  <TabsTrigger value="subscription" className="flex items-center gap-2" data-testid="tab-hero-subscription">
-                    <CreditCard className="h-4 w-4" />
-                    Fixed Subscription
-                  </TabsTrigger>
-                  <TabsTrigger value="performance" className="flex items-center gap-2" data-testid="tab-hero-performance">
-                    <Percent className="h-4 w-4" />
-                    Performance-Based
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-              
-              {/* Subscription Plans */}
-              {pricingModel === "subscription" && (
-                <div className="grid md:grid-cols-3 gap-6">
-                  {subscriptionPlans.map((plan, idx) => (
-                    <Card 
-                      key={idx} 
-                      className={`p-5 flex flex-col text-left ${plan.highlighted ? 'border-primary shadow-lg ring-2 ring-primary/20' : ''}`}
-                      data-testid={`card-hero-plan-${plan.name.toLowerCase()}`}
-                    >
-                      {plan.highlighted && (
-                        <Badge className="mb-3 self-start">Most Popular</Badge>
-                      )}
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
-                          <plan.icon className="h-4 w-4 text-primary" />
-                        </div>
-                        <h3 className="text-xl font-bold">{plan.name}</h3>
-                      </div>
-                      <p className="text-xs text-muted-foreground mb-3">{plan.description}</p>
-                      <div className="mb-4">
-                        <span className="text-3xl font-bold">{plan.price}</span>
-                        <span className="text-muted-foreground text-sm">{plan.period}</span>
-                      </div>
-                      <ul className="space-y-2 mb-4 flex-1">
-                        {plan.features.slice(0, 4).map((feature, featureIdx) => (
-                          <li key={featureIdx} className="flex items-center gap-2 text-xs">
-                            <Check className="h-3 w-3 text-primary shrink-0" />
-                            {feature}
-                          </li>
-                        ))}
-                      </ul>
-                      <Button 
-                        className="w-full" 
-                        size="sm"
-                        variant={plan.highlighted ? "default" : "outline"}
-                        asChild
-                        data-testid={`button-hero-select-${plan.name.toLowerCase()}`}
-                      >
-                        <a href={plan.name === "Enterprise" ? "mailto:sales@prescientlabs.ai" : "/api/login"}>
-                          {plan.name === "Enterprise" ? "Contact Sales" : "Start Free Trial"}
-                        </a>
-                      </Button>
-                    </Card>
-                  ))}
-                </div>
-              )}
-              
-              {/* Performance-Based Plans */}
-              {pricingModel === "performance" && (
-                <div className="grid md:grid-cols-3 gap-6">
-                  {performancePlans.map((plan, idx) => (
-                    <Card 
-                      key={idx} 
-                      className={`p-5 flex flex-col text-left ${plan.highlighted ? 'border-primary shadow-lg ring-2 ring-primary/20' : ''}`}
-                      data-testid={`card-hero-plan-${plan.name.toLowerCase().replace(" ", "-")}`}
-                    >
-                      {plan.highlighted && (
-                        <Badge className="mb-3 self-start">Most Popular</Badge>
-                      )}
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
-                          <plan.icon className="h-4 w-4 text-primary" />
-                        </div>
-                        <h3 className="text-xl font-bold">{plan.name}</h3>
-                      </div>
-                      <p className="text-xs text-muted-foreground mb-3">{plan.description}</p>
-                      <div className="mb-4">
-                        <span className="text-3xl font-bold">{plan.price}</span>
-                        <span className="text-muted-foreground text-sm">{plan.period}</span>
-                      </div>
-                      <ul className="space-y-2 mb-4 flex-1">
-                        {plan.features.slice(0, 4).map((feature, featureIdx) => (
-                          <li key={featureIdx} className="flex items-center gap-2 text-xs">
-                            <Check className="h-3 w-3 text-primary shrink-0" />
-                            {feature}
-                          </li>
-                        ))}
-                      </ul>
-                      <Button 
-                        className="w-full" 
-                        size="sm"
-                        variant={plan.highlighted ? "default" : "outline"}
-                        asChild
-                        data-testid={`button-hero-select-${plan.name.toLowerCase().replace(" ", "-")}`}
-                      >
-                        <a href={plan.name === "Strategic Alliance" ? "mailto:sales@prescientlabs.ai" : "/api/login"}>
-                          {plan.name === "Strategic Alliance" ? "Contact Sales" : "Start Free Pilot"}
-                        </a>
-                      </Button>
-                    </Card>
-                  ))}
-                </div>
-              )}
-              
-              <div className="mt-6 text-center">
-                <Button variant="link" onClick={() => setLocation("/pricing")} className="text-primary text-sm">
-                  See full pricing details & savings calculator
-                  <ArrowRight className="ml-1 h-3 w-3" />
-                </Button>
-              </div>
-            </div>
+            <p className="text-sm text-muted-foreground">No credit card required. Full platform access.</p>
           </div>
           
           {/* Hero image below text content */}
-          <div className="relative max-w-5xl mx-auto">
+          <div className="relative max-w-5xl mx-auto mb-16">
             {/* Marketing-style presentation with gradient background */}
             <div className="absolute -inset-4 bg-gradient-to-br from-primary/30 via-primary/10 to-transparent rounded-3xl blur-2xl" />
             <div className="relative">
@@ -371,19 +247,122 @@ export default function LandingPage() {
               </div>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Stats Section */}
-      <section className="py-16 border-y bg-muted/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {platformStats.map((stat, idx) => (
-              <div key={idx} className="text-center">
-                <div className="text-3xl sm:text-4xl font-bold text-primary mb-2">{stat.stat}</div>
-                <div className="text-sm text-muted-foreground">{stat.label}</div>
+          
+          {/* Pricing Options below Hero Image */}
+          <div id="pricing" className="w-full max-w-5xl mx-auto text-center">
+            <Tabs value={pricingModel} onValueChange={(v) => setPricingModel(v as "subscription" | "performance")} className="w-full">
+              <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8">
+                <TabsTrigger value="subscription" className="flex items-center gap-2" data-testid="tab-hero-subscription">
+                  <CreditCard className="h-4 w-4" />
+                  Fixed Subscription
+                </TabsTrigger>
+                <TabsTrigger value="performance" className="flex items-center gap-2" data-testid="tab-hero-performance">
+                  <Percent className="h-4 w-4" />
+                  Performance-Based
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            
+            {/* Subscription Plans */}
+            {pricingModel === "subscription" && (
+              <div className="grid md:grid-cols-3 gap-6">
+                {subscriptionPlans.map((plan, idx) => (
+                  <Card 
+                    key={idx} 
+                    className={`p-5 flex flex-col text-left ${plan.highlighted ? 'border-primary shadow-lg ring-2 ring-primary/20' : ''}`}
+                    data-testid={`card-hero-plan-${plan.name.toLowerCase()}`}
+                  >
+                    {plan.highlighted && (
+                      <Badge className="mb-3 self-start">Most Popular</Badge>
+                    )}
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
+                        <plan.icon className="h-4 w-4 text-primary" />
+                      </div>
+                      <h3 className="text-xl font-bold">{plan.name}</h3>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-3">{plan.description}</p>
+                    <div className="mb-4">
+                      <span className="text-3xl font-bold">{plan.price}</span>
+                      <span className="text-muted-foreground text-sm">{plan.period}</span>
+                    </div>
+                    <ul className="space-y-2 mb-4 flex-1">
+                      {plan.features.slice(0, 4).map((feature, featureIdx) => (
+                        <li key={featureIdx} className="flex items-center gap-2 text-xs">
+                          <Check className="h-3 w-3 text-primary shrink-0" />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                    <Button 
+                      className="w-full" 
+                      size="sm"
+                      variant={plan.highlighted ? "default" : "outline"}
+                      asChild
+                      data-testid={`button-hero-select-${plan.name.toLowerCase()}`}
+                    >
+                      <a href={plan.name === "Enterprise" ? "mailto:sales@prescientlabs.ai" : "/api/login"}>
+                        {plan.name === "Enterprise" ? "Contact Sales" : "Start Free Trial"}
+                      </a>
+                    </Button>
+                  </Card>
+                ))}
               </div>
-            ))}
+            )}
+            
+            {/* Performance-Based Plans */}
+            {pricingModel === "performance" && (
+              <div className="grid md:grid-cols-3 gap-6">
+                {performancePlans.map((plan, idx) => (
+                  <Card 
+                    key={idx} 
+                    className={`p-5 flex flex-col text-left ${plan.highlighted ? 'border-primary shadow-lg ring-2 ring-primary/20' : ''}`}
+                    data-testid={`card-hero-plan-${plan.name.toLowerCase().replace(" ", "-")}`}
+                  >
+                    {plan.highlighted && (
+                      <Badge className="mb-3 self-start">Most Popular</Badge>
+                    )}
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
+                        <plan.icon className="h-4 w-4 text-primary" />
+                      </div>
+                      <h3 className="text-xl font-bold">{plan.name}</h3>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-3">{plan.description}</p>
+                    <div className="mb-4">
+                      <span className="text-3xl font-bold">{plan.price}</span>
+                      <span className="text-muted-foreground text-sm">{plan.period}</span>
+                    </div>
+                    <ul className="space-y-2 mb-4 flex-1">
+                      {plan.features.slice(0, 4).map((feature, featureIdx) => (
+                        <li key={featureIdx} className="flex items-center gap-2 text-xs">
+                          <Check className="h-3 w-3 text-primary shrink-0" />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                    <Button 
+                      className="w-full" 
+                      size="sm"
+                      variant={plan.highlighted ? "default" : "outline"}
+                      asChild
+                      data-testid={`button-hero-select-${plan.name.toLowerCase().replace(" ", "-")}`}
+                    >
+                      <a href={plan.name === "Strategic Alliance" ? "mailto:sales@prescientlabs.ai" : "/api/login"}>
+                        {plan.name === "Strategic Alliance" ? "Contact Sales" : "Start Free Pilot"}
+                      </a>
+                    </Button>
+                  </Card>
+                ))}
+              </div>
+            )}
+            
+            <div className="mt-6 text-center">
+              <Button variant="ghost" onClick={() => setLocation("/pricing")} className="text-primary text-sm">
+                See full pricing details & savings calculator
+                <ArrowRight className="ml-1 h-3 w-3" />
+              </Button>
+            </div>
           </div>
         </div>
       </section>
