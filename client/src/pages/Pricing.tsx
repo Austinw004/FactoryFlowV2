@@ -300,7 +300,7 @@ export default function Pricing() {
                         onClick={() => handleGetStarted(tier.id)}
                         data-testid={`button-subscribe-${tier.id}`}
                       >
-                        Start 14-Day Free Trial
+                        Start 30-Day Free Trial
                         <ArrowRight className="h-4 w-4 ml-2" />
                       </Button>
                     </CardFooter>

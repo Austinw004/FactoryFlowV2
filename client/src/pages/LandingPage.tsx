@@ -222,7 +222,7 @@ export default function LandingPage() {
             <div className="flex flex-wrap gap-4 justify-center">
               <Button size="lg" asChild data-testid="button-start-free-trial">
                 <a href="/api/login">
-                  Start 14-Day Free Trial
+                  Start 30-Day Free Trial
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </a>
               </Button>
@@ -230,7 +230,124 @@ export default function LandingPage() {
                 See How It Works
               </Button>
             </div>
-            <p className="text-sm text-muted-foreground">No credit card required. Full platform access.</p>
+            <p className="text-sm text-muted-foreground mb-8">No credit card required. Full platform access.</p>
+            
+            {/* Pricing Options in Hero */}
+            <div id="pricing" className="w-full max-w-5xl mx-auto">
+              <Tabs value={pricingModel} onValueChange={(v) => setPricingModel(v as "subscription" | "performance")} className="w-full">
+                <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8">
+                  <TabsTrigger value="subscription" className="flex items-center gap-2" data-testid="tab-hero-subscription">
+                    <CreditCard className="h-4 w-4" />
+                    Fixed Subscription
+                  </TabsTrigger>
+                  <TabsTrigger value="performance" className="flex items-center gap-2" data-testid="tab-hero-performance">
+                    <Percent className="h-4 w-4" />
+                    Performance-Based
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+              
+              {/* Subscription Plans */}
+              {pricingModel === "subscription" && (
+                <div className="grid md:grid-cols-3 gap-6">
+                  {subscriptionPlans.map((plan, idx) => (
+                    <Card 
+                      key={idx} 
+                      className={`p-5 flex flex-col text-left ${plan.highlighted ? 'border-primary shadow-lg ring-2 ring-primary/20' : ''}`}
+                      data-testid={`card-hero-plan-${plan.name.toLowerCase()}`}
+                    >
+                      {plan.highlighted && (
+                        <Badge className="mb-3 self-start">Most Popular</Badge>
+                      )}
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
+                          <plan.icon className="h-4 w-4 text-primary" />
+                        </div>
+                        <h3 className="text-xl font-bold">{plan.name}</h3>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-3">{plan.description}</p>
+                      <div className="mb-4">
+                        <span className="text-3xl font-bold">{plan.price}</span>
+                        <span className="text-muted-foreground text-sm">{plan.period}</span>
+                      </div>
+                      <ul className="space-y-2 mb-4 flex-1">
+                        {plan.features.slice(0, 4).map((feature, featureIdx) => (
+                          <li key={featureIdx} className="flex items-center gap-2 text-xs">
+                            <Check className="h-3 w-3 text-primary shrink-0" />
+                            {feature}
+                          </li>
+                        ))}
+                      </ul>
+                      <Button 
+                        className="w-full" 
+                        size="sm"
+                        variant={plan.highlighted ? "default" : "outline"}
+                        asChild
+                        data-testid={`button-hero-select-${plan.name.toLowerCase()}`}
+                      >
+                        <a href={plan.name === "Enterprise" ? "mailto:sales@prescientlabs.ai" : "/api/login"}>
+                          {plan.name === "Enterprise" ? "Contact Sales" : "Start Free Trial"}
+                        </a>
+                      </Button>
+                    </Card>
+                  ))}
+                </div>
+              )}
+              
+              {/* Performance-Based Plans */}
+              {pricingModel === "performance" && (
+                <div className="grid md:grid-cols-3 gap-6">
+                  {performancePlans.map((plan, idx) => (
+                    <Card 
+                      key={idx} 
+                      className={`p-5 flex flex-col text-left ${plan.highlighted ? 'border-primary shadow-lg ring-2 ring-primary/20' : ''}`}
+                      data-testid={`card-hero-plan-${plan.name.toLowerCase().replace(" ", "-")}`}
+                    >
+                      {plan.highlighted && (
+                        <Badge className="mb-3 self-start">Most Popular</Badge>
+                      )}
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
+                          <plan.icon className="h-4 w-4 text-primary" />
+                        </div>
+                        <h3 className="text-xl font-bold">{plan.name}</h3>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-3">{plan.description}</p>
+                      <div className="mb-4">
+                        <span className="text-3xl font-bold">{plan.price}</span>
+                        <span className="text-muted-foreground text-sm">{plan.period}</span>
+                      </div>
+                      <ul className="space-y-2 mb-4 flex-1">
+                        {plan.features.slice(0, 4).map((feature, featureIdx) => (
+                          <li key={featureIdx} className="flex items-center gap-2 text-xs">
+                            <Check className="h-3 w-3 text-primary shrink-0" />
+                            {feature}
+                          </li>
+                        ))}
+                      </ul>
+                      <Button 
+                        className="w-full" 
+                        size="sm"
+                        variant={plan.highlighted ? "default" : "outline"}
+                        asChild
+                        data-testid={`button-hero-select-${plan.name.toLowerCase().replace(" ", "-")}`}
+                      >
+                        <a href={plan.name === "Strategic Alliance" ? "mailto:sales@prescientlabs.ai" : "/api/login"}>
+                          {plan.name === "Strategic Alliance" ? "Contact Sales" : "Start Free Pilot"}
+                        </a>
+                      </Button>
+                    </Card>
+                  ))}
+                </div>
+              )}
+              
+              <div className="mt-6 text-center">
+                <Button variant="link" onClick={() => setLocation("/pricing")} className="text-primary text-sm">
+                  See full pricing details & savings calculator
+                  <ArrowRight className="ml-1 h-3 w-3" />
+                </Button>
+              </div>
+            </div>
           </div>
           
           {/* Hero image below text content */}
@@ -523,132 +640,6 @@ export default function LandingPage() {
           <p className="text-center text-xs text-muted-foreground mt-6">
             Pre-built integration templates available. Custom integrations supported.
           </p>
-        </div>
-      </section>
-
-      {/* Pricing Section */}
-      <section id="pricing" className="py-20 bg-muted/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <Badge variant="secondary" className="mb-4">Flexible Pricing</Badge>
-            <h2 className="text-3xl font-bold mb-4">Choose What Works for You</h2>
-            <p className="text-lg text-muted-foreground mb-8">
-              Fixed monthly rates or performance-based pricing tied to your verified savings.
-            </p>
-            
-            {/* Pricing Model Toggle */}
-            <Tabs value={pricingModel} onValueChange={(v) => setPricingModel(v as "subscription" | "performance")} className="w-full max-w-md mx-auto">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="subscription" className="flex items-center gap-2" data-testid="tab-landing-subscription">
-                  <CreditCard className="h-4 w-4" />
-                  Fixed Subscription
-                </TabsTrigger>
-                <TabsTrigger value="performance" className="flex items-center gap-2" data-testid="tab-landing-performance">
-                  <Percent className="h-4 w-4" />
-                  Performance-Based
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-          
-          {/* Subscription Plans */}
-          {pricingModel === "subscription" && (
-            <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-              {subscriptionPlans.map((plan, idx) => (
-                <Card 
-                  key={idx} 
-                  className={`p-6 flex flex-col ${plan.highlighted ? 'border-primary shadow-lg ring-2 ring-primary/20' : ''}`}
-                  data-testid={`card-plan-${plan.name.toLowerCase()}`}
-                >
-                  {plan.highlighted && (
-                    <Badge className="mb-4 self-start">Most Popular</Badge>
-                  )}
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-                      <plan.icon className="h-5 w-5 text-primary" />
-                    </div>
-                    <h3 className="text-2xl font-bold">{plan.name}</h3>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-4">{plan.description}</p>
-                  <div className="mb-6">
-                    <span className="text-4xl font-bold">{plan.price}</span>
-                    <span className="text-muted-foreground">{plan.period}</span>
-                  </div>
-                  <ul className="space-y-3 mb-6 flex-1">
-                    {plan.features.map((feature, featureIdx) => (
-                      <li key={featureIdx} className="flex items-center gap-2 text-sm">
-                        <Check className="h-4 w-4 text-primary shrink-0" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                  <Button 
-                    className="w-full" 
-                    variant={plan.highlighted ? "default" : "outline"}
-                    asChild
-                    data-testid={`button-select-${plan.name.toLowerCase()}`}
-                  >
-                    <a href={plan.name === "Enterprise" ? "mailto:sales@prescientlabs.ai" : "/api/login"}>
-                      {plan.name === "Enterprise" ? "Contact Sales" : "Start 14-Day Free Trial"}
-                    </a>
-                  </Button>
-                </Card>
-              ))}
-            </div>
-          )}
-          
-          {/* Performance-Based Plans */}
-          {pricingModel === "performance" && (
-            <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-              {performancePlans.map((plan, idx) => (
-                <Card 
-                  key={idx} 
-                  className={`p-6 flex flex-col ${plan.highlighted ? 'border-primary shadow-lg ring-2 ring-primary/20' : ''}`}
-                  data-testid={`card-plan-${plan.name.toLowerCase()}`}
-                >
-                  {plan.highlighted && (
-                    <Badge className="mb-4 self-start">Most Popular</Badge>
-                  )}
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-                      <plan.icon className="h-5 w-5 text-primary" />
-                    </div>
-                    <h3 className="text-2xl font-bold">{plan.name}</h3>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-4">{plan.description}</p>
-                  <div className="mb-6">
-                    <span className="text-4xl font-bold">{plan.price}</span>
-                    <span className="text-muted-foreground">{plan.period}</span>
-                  </div>
-                  <ul className="space-y-3 mb-6 flex-1">
-                    {plan.features.map((feature, featureIdx) => (
-                      <li key={featureIdx} className="flex items-center gap-2 text-sm">
-                        <Check className="h-4 w-4 text-primary shrink-0" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                  <Button 
-                    className="w-full" 
-                    variant={plan.highlighted ? "default" : "outline"}
-                    asChild
-                    data-testid={`button-select-${plan.name.toLowerCase().replace(" ", "-")}`}
-                  >
-                    <a href={plan.name === "Strategic Alliance" ? "mailto:sales@prescientlabs.ai" : "/api/login"}>
-                      {plan.name === "Strategic Alliance" ? "Contact Sales" : "Start Free Pilot"}
-                    </a>
-                  </Button>
-                </Card>
-              ))}
-            </div>
-          )}
-          
-          <div className="mt-12 text-center">
-            <Button variant="ghost" onClick={() => setLocation("/pricing")} className="text-primary">
-              See full pricing details & savings calculator
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
         </div>
       </section>
 
