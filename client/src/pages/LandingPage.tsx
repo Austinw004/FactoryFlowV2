@@ -199,11 +199,11 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden py-20 sm:py-32">
+      <section className="relative overflow-hidden py-16 sm:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Text content centered */}
-          <div className="max-w-3xl mx-auto text-center space-y-8 mb-16">
-            <Badge className="mb-4">Manufacturing Intelligence Platform</Badge>
+          <div className="max-w-3xl mx-auto text-center space-y-6 mb-12">
+            <Badge className="mb-2">Manufacturing Intelligence Platform</Badge>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight">
               See Ahead. <span className="text-primary">Act First.</span> Dominate.
             </h1>
@@ -212,7 +212,7 @@ export default function LandingPage() {
               from predicting demand and timing purchases to optimizing production and protecting supply chains.
               Stop reacting to the market. Start anticipating it.
             </p>
-            <div className="flex flex-wrap gap-4 justify-center">
+            <div className="flex flex-wrap gap-4 justify-center pt-2">
               <Button size="lg" asChild data-testid="button-start-free-trial">
                 <a href="/api/login">
                   Start 30-Day Free Trial
@@ -227,7 +227,7 @@ export default function LandingPage() {
           </div>
           
           {/* Hero image below text content */}
-          <div className="relative max-w-5xl mx-auto mb-16">
+          <div className="relative max-w-5xl mx-auto mb-12">
             {/* Marketing-style presentation with gradient background */}
             <div className="absolute -inset-4 bg-gradient-to-br from-primary/30 via-primary/10 to-transparent rounded-3xl blur-2xl" />
             <div className="relative">
@@ -251,7 +251,7 @@ export default function LandingPage() {
           {/* Pricing Options below Hero Image */}
           <div id="pricing" className="w-full max-w-5xl mx-auto text-center">
             <Tabs value={pricingModel} onValueChange={(v) => setPricingModel(v as "subscription" | "performance")} className="w-full">
-              <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8">
+              <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-6">
                 <TabsTrigger value="subscription" className="flex items-center gap-2" data-testid="tab-hero-subscription">
                   <CreditCard className="h-4 w-4" />
                   Fixed Subscription
@@ -368,19 +368,19 @@ export default function LandingPage() {
       </section>
 
       {/* Core Capabilities */}
-      <section id="capabilities" className="py-20">
+      <section id="capabilities" className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <Badge className="mb-4">Core Capabilities</Badge>
-            <h2 className="text-3xl font-bold mb-4">Intelligence Across Your Entire Operation</h2>
+          <div className="text-center mb-12">
+            <Badge className="mb-3">Core Capabilities</Badge>
+            <h2 className="text-3xl font-bold mb-3">Intelligence Across Your Entire Operation</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Four interconnected pillars that transform how you plan, procure, produce, and protect your manufacturing business
             </p>
           </div>
           
-          <div className="grid md:grid-cols-2 gap-8">
+          <div className="grid md:grid-cols-2 gap-6">
             {coreCapabilities.map((capability, idx) => (
-              <Card key={idx} className="p-8 hover-elevate" data-testid={`card-capability-${idx}`}>
+              <Card key={idx} className="p-6 hover-elevate" data-testid={`card-capability-${idx}`}>
                 <div className="flex items-start gap-6">
                   <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                     <capability.icon className="h-8 w-8 text-primary" />
@@ -408,19 +408,19 @@ export default function LandingPage() {
       </section>
 
       {/* Differentiators */}
-      <section className="py-20 bg-muted/30">
+      <section className="py-16 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mx-auto text-center mb-16">
-            <h2 className="text-3xl font-bold mb-4">Why Manufacturers Choose Prescient</h2>
+          <div className="max-w-3xl mx-auto text-center mb-12">
+            <h2 className="text-3xl font-bold mb-3">Why Manufacturers Choose Prescient</h2>
             <p className="text-lg text-muted-foreground">
               It's not just another dashboard. It's a fundamentally different approach to manufacturing intelligence.
             </p>
           </div>
           
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-6">
             {differentiators.map((diff, idx) => (
               <div key={idx} className="text-center">
-                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-primary/10 flex items-center justify-center">
                   <Sparkles className="h-6 w-6 text-primary" />
                 </div>
                 <h3 className="text-lg font-semibold mb-2">{diff.title}</h3>
@@ -432,11 +432,11 @@ export default function LandingPage() {
       </section>
 
       {/* Platform Modules */}
-      <section id="platform" className="py-20">
+      <section id="platform" className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <Badge className="mb-4">Complete Platform</Badge>
-            <h2 className="text-3xl font-bold mb-4">Everything You Need, Connected</h2>
+          <div className="text-center mb-12">
+            <Badge className="mb-3">Complete Platform</Badge>
+            <h2 className="text-3xl font-bold mb-3">Everything You Need, Connected</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Six integrated modules that share data and insights, giving you unprecedented visibility and control
             </p>
@@ -457,7 +457,7 @@ export default function LandingPage() {
             ))}
           </div>
 
-          <div className="mt-12 text-center">
+          <div className="mt-10 text-center">
             <Button variant="outline" onClick={() => setLocation("/how-it-works")}>
               Explore All Features
               <ArrowRight className="ml-2 h-4 w-4" />
@@ -467,17 +467,17 @@ export default function LandingPage() {
       </section>
 
       {/* Problem/Solution Section */}
-      <section className="py-20 bg-muted/30">
+      <section className="py-16 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mx-auto text-center mb-16">
-            <h2 className="text-3xl font-bold mb-4">The Intelligence Gap</h2>
+          <div className="max-w-3xl mx-auto text-center mb-12">
+            <h2 className="text-3xl font-bold mb-3">The Intelligence Gap</h2>
             <p className="text-lg text-muted-foreground">
               Most manufacturers operate with fragmented data, reactive decisions, and limited visibility. 
               Prescient closes that gap.
             </p>
           </div>
           
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             <Card className="p-6 border-destructive/30 bg-destructive/5">
               <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-destructive/20 flex items-center justify-center">
@@ -536,9 +536,9 @@ export default function LandingPage() {
       </section>
 
       {/* Trust Indicators */}
-      <section className="py-16 border-t">
+      <section className="py-14 border-t">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-6">
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900 flex items-center justify-center shrink-0">
                 <Shield className="h-6 w-6 text-blue-600 dark:text-blue-400" />
@@ -577,9 +577,9 @@ export default function LandingPage() {
       </section>
 
       {/* Integration Partners */}
-      <section className="py-12 bg-muted/30">
+      <section className="py-10 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8">
+          <div className="text-center mb-6">
             <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
               Connects With Your Existing Systems
             </p>
@@ -623,10 +623,10 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-muted/30">
+      <section className="py-16 bg-muted/30">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold mb-4">Ready to See What's Coming?</h2>
-          <p className="text-xl text-muted-foreground mb-8">
+          <h2 className="text-3xl font-bold mb-3">Ready to See What's Coming?</h2>
+          <p className="text-xl text-muted-foreground mb-6">
             Join the manufacturers who've stopped guessing and started knowing.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
@@ -646,11 +646,11 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t py-12">
+      <footer className="border-t py-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             <div>
-              <h4 className="font-semibold mb-4">Platform</h4>
+              <h4 className="font-semibold mb-3">Platform</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><a href="#capabilities" className="hover:text-foreground">Capabilities</a></li>
                 <li><a href="#platform" className="hover:text-foreground">Modules</a></li>
@@ -659,7 +659,7 @@ export default function LandingPage() {
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Sales</h4>
+              <h4 className="font-semibold mb-3">Sales</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><a href="/pilot-program" className="hover:text-foreground" data-testid="link-pilot">Pilot Program</a></li>
                 <li><a href="/roi-calculator" className="hover:text-foreground" data-testid="link-roi">ROI Calculator</a></li>
@@ -667,7 +667,7 @@ export default function LandingPage() {
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Resources</h4>
+              <h4 className="font-semibold mb-3">Resources</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><a href="/how-it-works" className="hover:text-foreground">How It Works</a></li>
                 <li><a href="/security" className="hover:text-foreground" data-testid="link-security-faq">Security FAQ</a></li>
@@ -675,7 +675,7 @@ export default function LandingPage() {
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Legal</h4>
+              <h4 className="font-semibold mb-3">Legal</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><a href="/privacy" className="hover:text-foreground" data-testid="link-privacy">Privacy Policy</a></li>
                 <li><a href="/terms" className="hover:text-foreground" data-testid="link-terms">Terms of Service</a></li>
@@ -683,7 +683,7 @@ export default function LandingPage() {
               </ul>
             </div>
           </div>
-          <div className="mt-12 pt-8 border-t flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="mt-10 pt-6 border-t flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 bg-primary rounded flex items-center justify-center">
                 <Eye className="h-4 w-4 text-primary-foreground" />
