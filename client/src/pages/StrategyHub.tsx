@@ -2,7 +2,6 @@ import { useState, useEffect, lazy } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Layers, Target, FlaskConical, Building2, Users, Globe } from "lucide-react";
 import { SafeTabContent } from "@/components/HubErrorBoundary";
-import { SmartInsightsCompact } from "@/components/SmartInsightsPanel";
 
 const DigitalTwin = lazy(() => import("./DigitalTwin"));
 const StrategicAnalysis = lazy(() => import("./StrategicAnalysis"));
@@ -60,9 +59,6 @@ export default function StrategyHub({ initialTab = "digital-twin" }: StrategyHub
       </div>
       
       <div className="flex-1 overflow-auto">
-        <div className="px-6 pt-4">
-          <SmartInsightsCompact />
-        </div>
         {tabs.map((tab) => (
           activeTab === tab.id && (
             <SafeTabContent key={tab.id} tabName={tab.label}>

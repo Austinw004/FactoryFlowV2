@@ -43,7 +43,17 @@ import {
   ThermometerSun,
   Ship,
   MessageSquare,
+  ShieldCheck,
+  Target,
+  Lightbulb,
+  ArrowRight,
+  Gauge,
+  CircleAlert,
+  TrendingUpIcon,
+  ChevronRight,
+  Brain,
 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import {
   LineChart,
   Line,
@@ -229,6 +239,46 @@ export default function DigitalTwin() {
   });
   const [selectedSimulation, setSelectedSimulation] = useState<Simulation | null>(null);
 
+  // Quick scenario templates for one-click execution
+  const quickScenarios = [
+    {
+      id: "supplier_delay",
+      name: "Top Supplier Delayed",
+      description: "What if your primary supplier is delayed 2 weeks?",
+      icon: Truck,
+      color: "text-orange-600 bg-orange-100 dark:bg-orange-900/30",
+      type: "supply_disruption",
+      params: { supplyDisruption: { delayDays: 14, supplierTier: "primary" } }
+    },
+    {
+      id: "demand_surge",
+      name: "Demand Surge +30%",
+      description: "What if demand increases 30% next quarter?",
+      icon: TrendingUp,
+      color: "text-green-600 bg-green-100 dark:bg-green-900/30",
+      type: "demand_shock",
+      params: { demandChange: { percentage: 30 } }
+    },
+    {
+      id: "commodity_spike",
+      name: "Commodity Price +20%",
+      description: "What if raw material prices spike 20%?",
+      icon: DollarSign,
+      color: "text-red-600 bg-red-100 dark:bg-red-900/30",
+      type: "price_change",
+      params: { priceChange: { priceChangePercent: 20 } }
+    },
+    {
+      id: "recession",
+      name: "Economic Downturn",
+      description: "What if the economy enters recession?",
+      icon: TrendingDown,
+      color: "text-purple-600 bg-purple-100 dark:bg-purple-900/30",
+      type: "regime_shift",
+      params: { regimeShift: { targetRegime: "IMBALANCED_EXCESS" } }
+    }
+  ];
+
   const { data: dashboard, isLoading: dashboardLoading } = useQuery<DashboardData>({
     queryKey: ["/api/digital-twin/dashboard"],
     refetchInterval: 30000,
@@ -326,6 +376,161 @@ export default function DigitalTwin() {
     });
   };
 
+  // One-click quick scenario execution
+  const runQuickScenario = (scenario: typeof quickScenarios[0]) => {
+    // Immediate feedback
+    toast({
+      title: "Starting Scenario",
+      description: `Creating "${scenario.name}" simulation...`,
+    });
+    
+    createSimulationMutation.mutate({
+      name: scenario.name,
+      description: scenario.description,
+      simulationType: scenario.type,
+      scenarioParams: scenario.params,
+      horizonDays: 90,
+    }, {
+      onSuccess: (data: any) => {
+        // Immediately run the created simulation
+        if (data?.id) {
+          runSimulationMutation.mutate(data.id);
+        }
+        toast({
+          title: "Scenario Running",
+          description: `"${scenario.name}" simulation is now running.`,
+        });
+        // Switch to simulations tab to show progress
+        setActiveTab("simulations");
+      },
+      onError: () => {
+        toast({
+          title: "Error",
+          description: "Failed to start the scenario. Please try again.",
+          variant: "destructive",
+        });
+      }
+    });
+  };
+
+  // Calculate supply chain health score (0-100)
+  const calculateHealthScore = () => {
+    if (!dashboard) return { score: 0, factors: [] };
+    
+    const factors = [];
+    let totalScore = 0;
+    let maxScore = 0;
+
+    // OEE factor (max 25 points)
+    const oeeScore = Math.min(25, (dashboard.state?.oee || 0) * 0.25);
+    factors.push({ name: "Production Efficiency", score: oeeScore, max: 25, detail: `${(dashboard.state?.oee || 0).toFixed(1)}% OEE` });
+    totalScore += oeeScore;
+    maxScore += 25;
+
+    // Inventory health (max 25 points) - based on having materials in stock
+    const inventoryScore = dashboard.state?.activeMaterials > 0 ? 20 : 5;
+    factors.push({ name: "Inventory Health", score: inventoryScore, max: 25, detail: `${dashboard.state?.activeMaterials || 0} materials tracked` });
+    totalScore += inventoryScore;
+    maxScore += 25;
+
+    // Supplier network (max 25 points)
+    const supplierScore = Math.min(25, (dashboard.state?.activeSuppliers || 0) * 3);
+    factors.push({ name: "Supplier Network", score: supplierScore, max: 25, detail: `${dashboard.state?.activeSuppliers || 0} active suppliers` });
+    totalScore += supplierScore;
+    maxScore += 25;
+
+    // Alert factor (max 25 points) - fewer alerts = higher score
+    const alertPenalty = Math.min(25, (dashboard.alerts?.critical || 0) * 5 + (dashboard.alerts?.total || 0) * 2);
+    const alertScore = Math.max(0, 25 - alertPenalty);
+    factors.push({ name: "Risk Status", score: alertScore, max: 25, detail: `${dashboard.alerts?.total || 0} active alerts` });
+    totalScore += alertScore;
+    maxScore += 25;
+
+    return {
+      score: Math.round((totalScore / maxScore) * 100),
+      factors
+    };
+  };
+
+  const healthData = calculateHealthScore();
+
+  // Generate AI recommendations based on current state
+  const generateRecommendations = () => {
+    const recs = [];
+    
+    if (dashboard?.state?.oee && dashboard.state.oee < 75) {
+      recs.push({
+        id: "oee_low",
+        type: "warning",
+        title: "OEE Below Target",
+        description: `Production efficiency at ${dashboard.state.oee.toFixed(1)}%. Consider investigating bottlenecks.`,
+        action: "View Production KPIs",
+        link: "/production-kpis"
+      });
+    }
+    
+    if (dashboard?.alerts?.critical && dashboard.alerts.critical > 0) {
+      recs.push({
+        id: "critical_alerts",
+        type: "critical",
+        title: `${dashboard.alerts.critical} Critical Alerts`,
+        description: "Immediate attention required for supply chain issues.",
+        action: "View Alerts",
+        link: null,
+        tab: "alerts"
+      });
+    }
+
+    if (dashboard?.regime?.current === "IMBALANCED_EXCESS") {
+      recs.push({
+        id: "regime_risk",
+        type: "warning",
+        title: "High-Risk Economic Regime",
+        description: "Consider defensive positioning and stockpiling critical materials.",
+        action: "Run Recession Scenario",
+        scenarioId: "recession"
+      });
+    }
+
+    if (dashboard?.regime?.fdr && dashboard.regime.fdr > 1.5) {
+      recs.push({
+        id: "fdr_high",
+        type: "info",
+        title: "Elevated FDR Ratio",
+        description: "Financial-to-real divergence suggests counter-cyclical buying opportunity.",
+        action: "View Strategic Analysis",
+        link: "/strategic-analysis"
+      });
+    }
+
+    if (dashboard?.state?.activeSuppliers && dashboard.state.activeSuppliers < 3) {
+      recs.push({
+        id: "supplier_concentration",
+        type: "warning",
+        title: "Supplier Concentration Risk",
+        description: "Limited supplier base increases disruption risk. Consider diversifying.",
+        action: "View Suppliers",
+        link: "/supplier-risk"
+      });
+    }
+
+    // Add a positive recommendation if things are good
+    if (recs.length === 0) {
+      recs.push({
+        id: "all_good",
+        type: "success",
+        title: "Supply Chain Healthy",
+        description: "No immediate issues detected. Consider running a scenario to stress-test.",
+        action: "Run Quick Scenario",
+        scenarioId: "demand_surge"
+      });
+    }
+
+    return recs;
+  };
+
+  const recommendations = generateRecommendations();
+
   const buildScenarioParams = (type: string) => {
     switch (type) {
       case "demand_shock":
@@ -413,159 +618,218 @@ export default function DigitalTwin() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6 mt-6">
-          <div className="grid gap-4 md:grid-cols-4">
-            <Card data-testid="card-inventory-value">
-              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Inventory Value</CardTitle>
-                <Package className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold" data-testid="text-inventory-value">
-                  {formatCurrency(dashboard?.state?.inventoryValue || 0)}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {(dashboard?.state?.inventoryUnits || 0).toLocaleString()} units
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card data-testid="card-production-oee">
-              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Production OEE</CardTitle>
-                <Factory className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold" data-testid="text-oee">
-                  {(dashboard?.state?.oee || 0).toFixed(1)}%
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {dashboard?.state?.activeMachinery || 0} active machines
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card data-testid="card-supply-network">
-              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Supply Network</CardTitle>
-                <Truck className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold" data-testid="text-suppliers">
-                  {dashboard?.state?.activeSuppliers || 0}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Active suppliers
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card data-testid="card-fdr">
-              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">FDR Ratio</CardTitle>
-                <BarChart3 className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold" data-testid="text-fdr">
-                  {(dashboard?.regime?.fdr || 1.0).toFixed(2)}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Financial-to-Real Divergence
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5" />
-                  Quick Insights
-                </CardTitle>
-                <CardDescription>AI-generated observations from your digital twin</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <Alert>
-                    <Package className="h-4 w-4" />
-                    <AlertDescription>
-                      <strong>{dashboard?.state?.activeMaterials || 0}</strong> materials tracked across{" "}
-                      <strong>{dashboard?.state?.activeSkus || 0}</strong> SKUs
-                    </AlertDescription>
-                  </Alert>
-                  <Alert>
-                    <Factory className="h-4 w-4" />
-                    <AlertDescription>
-                      Production efficiency at <strong>{(dashboard?.state?.oee || 0).toFixed(1)}%</strong> OEE
-                    </AlertDescription>
-                  </Alert>
-                  <Alert>
-                    <Activity className="h-4 w-4" />
-                    <AlertDescription>
-                      Economic regime: <strong>{REGIME_LABELS[dashboard?.regime?.current || "UNKNOWN"]}</strong>
-                    </AlertDescription>
-                  </Alert>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5" />
-                  Alert Summary
-                </CardTitle>
-                <CardDescription>Active alerts by category</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {dashboard?.alerts && (
-                  <div className="space-y-3">
-                    {Object.entries(dashboard.alerts.byCategory).map(([category, count]) => (
-                      <div key={category} className="flex items-center justify-between">
-                        <span className="capitalize text-sm">{category}</span>
-                        <Badge variant={count > 0 ? "secondary" : "outline"}>{count}</Badge>
-                      </div>
-                    ))}
-                    <div className="pt-2 border-t">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">Total Active</span>
-                        <Badge variant={dashboard.alerts.total > 0 ? "destructive" : "secondary"}>
-                          {dashboard.alerts.total}
-                        </Badge>
-                      </div>
+          {/* Supply Chain Health Score - Hero Section */}
+          <Card className="border-2 border-primary/20 bg-gradient-to-r from-primary/5 to-transparent" data-testid="card-health-score">
+            <CardContent className="pt-6">
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+                <div className="flex items-center gap-4">
+                  <div className={`relative h-24 w-24 rounded-full flex items-center justify-center ${
+                    healthData.score >= 80 ? "bg-green-100 dark:bg-green-900/30" :
+                    healthData.score >= 60 ? "bg-yellow-100 dark:bg-yellow-900/30" :
+                    "bg-red-100 dark:bg-red-900/30"
+                  }`}>
+                    <Gauge className={`h-10 w-10 ${
+                      healthData.score >= 80 ? "text-green-600" :
+                      healthData.score >= 60 ? "text-yellow-600" :
+                      "text-red-600"
+                    }`} />
+                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-background px-2 rounded-full border">
+                      <span className="text-lg font-bold">{healthData.score}</span>
                     </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>System State Summary</CardTitle>
-              <CardDescription>
-                Last updated: {dashboard?.lastUpdated ? format(new Date(dashboard.lastUpdated), "PPpp") : "Never"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart data={[
-                    { subject: "Inventory", value: Math.min(100, (dashboard?.state?.activeMaterials || 0) / 2) },
-                    { subject: "Production", value: dashboard?.state?.oee || 0 },
-                    { subject: "Suppliers", value: Math.min(100, (dashboard?.state?.activeSuppliers || 0) * 10) },
-                    { subject: "SKUs", value: Math.min(100, (dashboard?.state?.activeSkus || 0) / 2) },
-                    { subject: "Machines", value: Math.min(100, (dashboard?.state?.activeMachinery || 0) * 10) },
-                  ]}>
-                    <PolarGrid />
-                    <PolarAngleAxis dataKey="subject" />
-                    <PolarRadiusAxis domain={[0, 100]} />
-                    <Radar dataKey="value" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.5} />
-                  </RadarChart>
-                </ResponsiveContainer>
+                  <div>
+                    <h2 className="text-2xl font-bold" data-testid="text-health-score">Supply Chain Health</h2>
+                    <p className="text-muted-foreground">
+                      {healthData.score >= 80 ? "Excellent - Operating optimally" :
+                       healthData.score >= 60 ? "Good - Minor issues detected" :
+                       "Needs Attention - Review recommendations"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {healthData.factors.map((factor, i) => (
+                    <div key={i} className="p-3 rounded-lg bg-background border">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-medium text-muted-foreground">{factor.name}</span>
+                        <span className="text-xs font-bold">{Math.round((factor.score / factor.max) * 100)}%</span>
+                      </div>
+                      <Progress value={(factor.score / factor.max) * 100} className="h-1.5" />
+                      <p className="text-xs text-muted-foreground mt-1">{factor.detail}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </CardContent>
           </Card>
+
+          {/* Quick Scenarios - One-Click Actions */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-primary" />
+                  Quick Scenarios
+                </h3>
+                <p className="text-sm text-muted-foreground">One-click stress tests for your supply chain</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setActiveTab("simulations")}>
+                View All Simulations
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+            <div className="grid gap-3 md:grid-cols-4">
+              {quickScenarios.map((scenario) => {
+                const IconComponent = scenario.icon;
+                return (
+                  <Card 
+                    key={scenario.id}
+                    className="cursor-pointer transition-all hover-elevate group"
+                    onClick={() => runQuickScenario(scenario)}
+                    data-testid={`quick-scenario-${scenario.id}`}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div className={`p-2 rounded-lg ${scenario.color}`}>
+                          <IconComponent className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-sm group-hover:text-primary transition-colors">{scenario.name}</h4>
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{scenario.description}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-end mt-3 text-xs text-muted-foreground group-hover:text-primary transition-colors">
+                        <Play className="h-3 w-3 mr-1" />
+                        Run Now
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Two Column Layout: AI Recommendations + KPIs */}
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* AI Recommendations Panel */}
+            <Card data-testid="card-ai-recommendations">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Brain className="h-5 w-5 text-primary" />
+                  AI Recommendations
+                </CardTitle>
+                <CardDescription>Proactive insights based on your supply chain state</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {recommendations.map((rec: any) => (
+                    <div 
+                      key={rec.id}
+                      className={`p-3 rounded-lg border-l-4 ${
+                        rec.type === "critical" ? "border-l-red-500 bg-red-50 dark:bg-red-950/30" :
+                        rec.type === "warning" ? "border-l-yellow-500 bg-yellow-50 dark:bg-yellow-950/30" :
+                        rec.type === "success" ? "border-l-green-500 bg-green-50 dark:bg-green-950/30" :
+                        "border-l-blue-500 bg-blue-50 dark:bg-blue-950/30"
+                      }`}
+                      data-testid={`recommendation-${rec.id}`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-2">
+                          {rec.type === "critical" ? <CircleAlert className="h-4 w-4 text-red-600 mt-0.5" /> :
+                           rec.type === "warning" ? <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" /> :
+                           rec.type === "success" ? <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5" /> :
+                           <Lightbulb className="h-4 w-4 text-blue-600 mt-0.5" />}
+                          <div>
+                            <p className="font-medium text-sm">{rec.title}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">{rec.description}</p>
+                          </div>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          className="shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (rec.tab) {
+                              setActiveTab(rec.tab);
+                            } else if (rec.scenarioId) {
+                              const scenario = quickScenarios.find(s => s.id === rec.scenarioId);
+                              if (scenario) runQuickScenario(scenario);
+                            } else if (rec.link) {
+                              window.location.href = rec.link;
+                            }
+                          }}
+                        >
+                          {rec.action}
+                          <ArrowRight className="h-3 w-3 ml-1" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Key Metrics Grid */}
+            <div className="grid gap-4 grid-cols-2">
+              <Card data-testid="card-inventory-value">
+                <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Inventory Value</CardTitle>
+                  <Package className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid="text-inventory-value">
+                    {formatCurrency(dashboard?.state?.inventoryValue || 0)}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {(dashboard?.state?.inventoryUnits || 0).toLocaleString()} units
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card data-testid="card-production-oee">
+                <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Production OEE</CardTitle>
+                  <Factory className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid="text-oee">
+                    {(dashboard?.state?.oee || 0).toFixed(1)}%
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {dashboard?.state?.activeMachinery || 0} active machines
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card data-testid="card-supply-network">
+                <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Supply Network</CardTitle>
+                  <Truck className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid="text-suppliers">
+                    {dashboard?.state?.activeSuppliers || 0}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Active suppliers</p>
+                </CardContent>
+              </Card>
+
+              <Card data-testid="card-fdr">
+                <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">FDR Ratio</CardTitle>
+                  <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid="text-fdr">
+                    {(dashboard?.regime?.fdr || 1.0).toFixed(2)}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Financial-to-Real Divergence
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="simulations" className="space-y-6 mt-6">
