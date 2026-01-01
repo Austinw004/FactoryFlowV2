@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -83,6 +83,7 @@ const StrategyBenchmarkingRoute = () => <StrategyHub initialTab="benchmarking" /
 
 function Router() {
   const { isAuthenticated, isLoading, needsOnboarding } = useAuth();
+  const [location] = useLocation();
 
   if (isLoading) {
     return (
@@ -109,7 +110,10 @@ function Router() {
     );
   }
 
-  if (needsOnboarding) {
+  const bypassOnboardingRoutes = ["/platform-owner-analytics"];
+  const shouldBypassOnboarding = bypassOnboardingRoutes.includes(location);
+
+  if (needsOnboarding && !shouldBypassOnboarding) {
     return (
       <Switch>
         <Route path="/onboarding" component={Onboarding} />
