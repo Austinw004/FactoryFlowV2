@@ -5369,3 +5369,173 @@ export type WebhookIntegration = typeof webhookIntegrations.$inferSelect;
 export type InsertWebhookIntegration = z.infer<typeof insertWebhookIntegrationSchema>;
 export type WebhookEventLog = typeof webhookEventLogs.$inferSelect;
 export type InsertWebhookEventLog = z.infer<typeof insertWebhookEventLogSchema>;
+
+// ============================================
+// PLATFORM ANALYTICS - Owner-Only Access
+// ============================================
+
+// Platform Admins - Users who can access platform-level analytics (NOT company users)
+export const platformAdmins = pgTable("platform_admins", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  email: text("email").notNull().unique(),
+  role: text("role").notNull().default("analyst"), // "owner", "analyst", "viewer"
+  accessLevel: text("access_level").notNull().default("read"), // "read", "write", "admin"
+  isActive: integer("is_active").default(1),
+  lastAccessAt: timestamp("last_access_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdBy: varchar("created_by"),
+}, (table) => [
+  index("platform_admins_user_idx").on(table.userId),
+  index("platform_admins_email_idx").on(table.email),
+]);
+
+// Platform Analytics Snapshots - Aggregated cross-tenant data (anonymized)
+export const platformAnalyticsSnapshots = pgTable("platform_analytics_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  snapshotDate: timestamp("snapshot_date").notNull(),
+  snapshotType: text("snapshot_type").notNull(), // "daily", "weekly", "monthly"
+  
+  // Platform-wide metrics (aggregated, anonymized)
+  totalCompanies: integer("total_companies").default(0),
+  activeCompanies: integer("active_companies").default(0), // Active in last 30 days
+  totalUsers: integer("total_users").default(0),
+  activeUsers: integer("active_users").default(0),
+  
+  // Feature usage metrics
+  totalRfqsGenerated: integer("total_rfqs_generated").default(0),
+  totalAllocationsRun: integer("total_allocations_run").default(0),
+  totalForecastsGenerated: integer("total_forecasts_generated").default(0),
+  totalSuppliersTracked: integer("total_suppliers_tracked").default(0),
+  totalMaterialsManaged: integer("total_materials_managed").default(0),
+  
+  // Financial metrics (aggregated, anonymized)
+  totalProcurementVolume: real("total_procurement_volume").default(0),
+  totalSavingsReported: real("total_savings_reported").default(0),
+  avgSavingsPercentage: real("avg_savings_percentage").default(0),
+  
+  // Industry distribution (JSON)
+  industryBreakdown: jsonb("industry_breakdown"), // { "manufacturing": 45, "automotive": 20, ... }
+  companySizeBreakdown: jsonb("company_size_breakdown"), // { "small": 30, "medium": 50, ... }
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("platform_snapshots_date_idx").on(table.snapshotDate),
+  index("platform_snapshots_type_idx").on(table.snapshotType),
+]);
+
+// Platform Material Trends - Aggregated material demand patterns
+export const platformMaterialTrends = pgTable("platform_material_trends", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  trendDate: timestamp("trend_date").notNull(),
+  
+  // Material category (aggregated, not specific to any company)
+  materialCategory: text("material_category").notNull(), // "steel", "aluminum", "copper", etc.
+  
+  // Demand metrics (percentile-based for anonymity)
+  demandGrowthPercentile: real("demand_growth_percentile"), // 0-100
+  priceChangePercentile: real("price_change_percentile"),
+  companiesTracking: integer("companies_tracking").default(0), // How many companies track this
+  
+  // Trend indicators
+  trendDirection: text("trend_direction"), // "up", "down", "stable"
+  volatilityScore: real("volatility_score"), // 0-10
+  supplyRiskScore: real("supply_risk_score"), // 0-10
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("platform_material_trends_date_idx").on(table.trendDate),
+  index("platform_material_trends_category_idx").on(table.materialCategory),
+]);
+
+// Platform Supplier Intelligence - Aggregated supplier performance
+export const platformSupplierIntelligence = pgTable("platform_supplier_intelligence", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  analysisDate: timestamp("analysis_date").notNull(),
+  
+  // Supplier category (aggregated)
+  supplierRegion: text("supplier_region"), // "North America", "Asia Pacific", etc.
+  supplierCategory: text("supplier_category"), // "raw materials", "components", etc.
+  
+  // Performance metrics (anonymized averages)
+  avgLeadTimeDays: real("avg_lead_time_days"),
+  avgOnTimeDeliveryRate: real("avg_on_time_delivery_rate"),
+  avgQualityScore: real("avg_quality_score"),
+  avgPriceCompetitiveness: real("avg_price_competitiveness"),
+  
+  // Risk metrics
+  avgRiskScore: real("avg_risk_score"),
+  suppliersAtRisk: integer("suppliers_at_risk").default(0),
+  
+  // Count metrics
+  totalSuppliersInCategory: integer("total_suppliers_in_category").default(0),
+  companiesUsingCategory: integer("companies_using_category").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("platform_supplier_intel_date_idx").on(table.analysisDate),
+  index("platform_supplier_intel_region_idx").on(table.supplierRegion),
+]);
+
+// Platform Behavioral Analytics - User behavior patterns
+export const platformBehavioralAnalytics = pgTable("platform_behavioral_analytics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  analysisDate: timestamp("analysis_date").notNull(),
+  
+  // Feature engagement
+  featureName: text("feature_name").notNull(), // "forecasting", "rfq_generation", "ai_assistant", etc.
+  usageCount: integer("usage_count").default(0),
+  uniqueCompaniesUsing: integer("unique_companies_using").default(0),
+  avgSessionDuration: real("avg_session_duration"), // minutes
+  
+  // Conversion & Retention
+  conversionRate: real("conversion_rate"), // Feature trial to regular use
+  retentionRate: real("retention_rate"), // 30-day retention
+  
+  // Time patterns
+  peakUsageHour: integer("peak_usage_hour"), // 0-23
+  peakUsageDay: text("peak_usage_day"), // "monday", "tuesday", etc.
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("platform_behavior_date_idx").on(table.analysisDate),
+  index("platform_behavior_feature_idx").on(table.featureName),
+]);
+
+// Platform Analytics Access Logs - Audit trail for platform data access
+export const platformAnalyticsAccessLogs = pgTable("platform_analytics_access_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  adminId: varchar("admin_id").notNull().references(() => platformAdmins.id, { onDelete: "cascade" }),
+  
+  // Access details
+  endpoint: text("endpoint").notNull(),
+  action: text("action").notNull(), // "view", "export", "query"
+  queryParams: jsonb("query_params"),
+  
+  // Response metadata
+  recordsReturned: integer("records_returned").default(0),
+  responseTimeMs: integer("response_time_ms"),
+  
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("platform_access_logs_admin_idx").on(table.adminId),
+  index("platform_access_logs_date_idx").on(table.createdAt),
+]);
+
+// Platform Admin Schemas
+export const insertPlatformAdminSchema = createInsertSchema(platformAdmins).omit({ id: true, createdAt: true });
+export const insertPlatformAnalyticsSnapshotSchema = createInsertSchema(platformAnalyticsSnapshots).omit({ id: true, createdAt: true });
+export const insertPlatformMaterialTrendSchema = createInsertSchema(platformMaterialTrends).omit({ id: true, createdAt: true });
+export const insertPlatformSupplierIntelligenceSchema = createInsertSchema(platformSupplierIntelligence).omit({ id: true, createdAt: true });
+export const insertPlatformBehavioralAnalyticsSchema = createInsertSchema(platformBehavioralAnalytics).omit({ id: true, createdAt: true });
+
+// Platform Admin Types
+export type PlatformAdmin = typeof platformAdmins.$inferSelect;
+export type InsertPlatformAdmin = z.infer<typeof insertPlatformAdminSchema>;
+export type PlatformAnalyticsSnapshot = typeof platformAnalyticsSnapshots.$inferSelect;
+export type PlatformMaterialTrend = typeof platformMaterialTrends.$inferSelect;
+export type PlatformSupplierIntelligence = typeof platformSupplierIntelligence.$inferSelect;
+export type PlatformBehavioralAnalytics = typeof platformBehavioralAnalytics.$inferSelect;
