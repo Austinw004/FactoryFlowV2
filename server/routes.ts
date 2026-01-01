@@ -6,6 +6,7 @@ import { sql, eq } from "drizzle-orm";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { attachRbacUser, requirePermission } from "./middleware/rbac";
 import rbacRoutes from "./routes/rbac";
+import platformAnalyticsRoutes from "./routes/platformAnalytics";
 import { initializePermissions, initializeDefaultRoles } from "./lib/rbac";
 import { logAudit } from "./lib/auditLogger";
 import { globalCache } from "./lib/caching";
@@ -448,6 +449,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // RBAC routes (roles, permissions, user role assignments)
   app.use('/api/rbac', rbacRoutes);
+
+  // Platform Analytics routes (owner-only, not visible to customers)
+  app.use('/api/platform', platformAnalyticsRoutes);
 
   // Health check endpoint for monitoring
   app.get('/api/health', async (req, res) => {
