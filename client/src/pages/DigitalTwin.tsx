@@ -646,19 +646,17 @@ export default function DigitalTwin() {
                        healthData.score >= 60 ? "Good - Minor issues detected" :
                        "Needs Attention - Review recommendations"}
                     </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-muted-foreground">Industry avg: 62</span>
-                      <span className="text-xs">
-                        {healthData.score >= 62 ? (
-                          <Badge variant="outline" className="text-green-600 border-green-300 text-xs py-0">
-                            +{healthData.score - 62} above avg
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-amber-600 border-amber-300 text-xs py-0">
-                            {healthData.score - 62} below avg
-                          </Badge>
-                        )}
-                      </span>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-xs text-muted-foreground">vs. industry avg (62):</span>
+                      {healthData.score >= 62 ? (
+                        <Badge variant="secondary" className="text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-xs font-medium">
+                          +{healthData.score - 62} pts
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-xs font-medium">
+                          {healthData.score - 62} pts
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </div>

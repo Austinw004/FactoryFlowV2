@@ -169,33 +169,38 @@ export default function Configuration() {
             Configure your company profile, budget, and preferences
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 border rounded-md p-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleUndo}
+              disabled={!canUndo}
+              data-testid="button-undo-config"
+              title="Undo last change"
+              className="h-8 w-8"
+            >
+              <Undo2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleRedo}
+              disabled={!canRedo}
+              data-testid="button-redo-config"
+              title="Redo change"
+              className="h-8 w-8"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+          </div>
           <Button
             variant="outline"
-            size="icon"
-            onClick={handleUndo}
-            disabled={!canUndo}
-            data-testid="button-undo-config"
-            title="Undo last change"
-          >
-            <Undo2 className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleRedo}
-            disabled={!canRedo}
-            data-testid="button-redo-config"
-            title="Redo change"
-          >
-            <RotateCcw className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
+            size="sm"
             onClick={handleResetToSaved}
             data-testid="button-reset-config"
           >
-            Reset to Saved
+            Reset
           </Button>
           <Button
             onClick={handleSave}
@@ -203,7 +208,7 @@ export default function Configuration() {
             data-testid="button-save-settings"
           >
             <Save className="h-4 w-4 mr-2" />
-            Save All Changes
+            Save Changes
           </Button>
         </div>
       </div>

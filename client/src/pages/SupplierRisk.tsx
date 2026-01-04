@@ -291,8 +291,14 @@ function SupplierRiskRow({
               />
             </div>
           </TooltipTrigger>
-          <TooltipContent>
-            <p className="text-xs">Low: 0-24 | Medium: 25-49 | High: 50-74 | Critical: 75+</p>
+          <TooltipContent className="p-3">
+            <p className="text-xs font-medium mb-1">Risk Score Thresholds</p>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+              <span className="text-green-600">Low:</span><span>0-24</span>
+              <span className="text-yellow-600">Medium:</span><span>25-49</span>
+              <span className="text-orange-600">High:</span><span>50-74</span>
+              <span className="text-red-600">Critical:</span><span>75+</span>
+            </div>
           </TooltipContent>
         </ShadcnTooltip>
       </TableCell>

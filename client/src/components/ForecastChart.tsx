@@ -125,8 +125,8 @@ export function ForecastChart({ data, title, lastUpdated, confidenceLevel = 85 }
           />
         </ComposedChart>
       </ResponsiveContainer>
-      <p className="text-xs text-muted-foreground mt-2 text-center">
-        Shaded area shows {confidenceLevel}% confidence interval for forecast predictions
+      <p className="text-xs text-muted-foreground mt-3 text-center opacity-70">
+        Shaded area represents {confidenceLevel}% confidence interval
       </p>
     </Card>
   );
