@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip as ShadcnTooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Table,
   TableBody,
@@ -280,13 +281,20 @@ function SupplierRiskRow({
         </Badge>
       </TableCell>
       <TableCell className={getRiskColor(snapshot.adjustedScore)}>
-        <div className="flex items-center gap-2">
-          <span className="font-semibold">{snapshot.adjustedScore.toFixed(0)}</span>
-          <Progress 
-            value={snapshot.adjustedScore} 
-            className="w-16 h-2"
-          />
-        </div>
+        <ShadcnTooltip>
+          <TooltipTrigger asChild>
+            <div className="flex items-center gap-2 cursor-help">
+              <span className="font-semibold">{snapshot.adjustedScore.toFixed(0)}</span>
+              <Progress 
+                value={snapshot.adjustedScore} 
+                className="w-16 h-2"
+              />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="text-xs">Low: 0-24 | Medium: 25-49 | High: 50-74 | Critical: 75+</p>
+          </TooltipContent>
+        </ShadcnTooltip>
       </TableCell>
       <TableCell className="text-muted-foreground">
         {snapshot.regime ? REGIME_OPTIONS.find(r => r.value === snapshot.regime)?.label || snapshot.regime : 'N/A'}

@@ -8,11 +8,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, AlertCircle, Package, Building2, Zap, DollarSign, Bell, Save, Mail, Plug, Shield, Bot, Palette, Globe, Users, FileText, MapPin } from "lucide-react";
+import { Settings, AlertCircle, Package, Building2, Zap, DollarSign, Bell, Save, Mail, Plug, Shield, Bot, Palette, Globe, Users, FileText, MapPin, Undo2, RotateCcw } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "wouter";
 import { ChevronRight } from "lucide-react";
 import type { Company, User, Role } from "@shared/schema";
@@ -21,6 +21,8 @@ import { LocationsManagement } from "@/components/LocationsManagement";
 export default function Configuration() {
   const { toast } = useToast();
   const [formData, setFormData] = useState<Partial<Company>>({});
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const historyRef = useRef<Partial<Company>[]>([]);
 
   const { data: company, isLoading } = useQuery<Company>({
     queryKey: ["/api/company/settings"],
@@ -29,8 +31,49 @@ export default function Configuration() {
   useEffect(() => {
     if (company) {
       setFormData(company);
+      historyRef.current = [company];
+      setHistoryIndex(0);
     }
   }, [company]);
+
+  const canUndo = historyIndex > 0;
+  const canRedo = historyIndex < historyRef.current.length - 1;
+
+  const handleUndo = useCallback(() => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      setFormData({ ...historyRef.current[newIndex] });
+      toast({
+        title: "Changes Reverted",
+        description: "Reverted to previous configuration state",
+      });
+    }
+  }, [historyIndex, toast]);
+
+  const handleRedo = useCallback(() => {
+    if (historyIndex < historyRef.current.length - 1) {
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      setFormData({ ...historyRef.current[newIndex] });
+      toast({
+        title: "Changes Restored",
+        description: "Restored configuration changes",
+      });
+    }
+  }, [historyIndex, toast]);
+
+  const handleResetToSaved = useCallback(() => {
+    if (company) {
+      setFormData({ ...company });
+      historyRef.current = [company];
+      setHistoryIndex(0);
+      toast({
+        title: "Reset Complete",
+        description: "Configuration reset to last saved state",
+      });
+    }
+  }, [company, toast]);
 
   const updateMutation = useMutation({
     mutationFn: (updates: Partial<Company>) =>
@@ -86,9 +129,21 @@ export default function Configuration() {
     updateMutation.mutate(sanitizedData);
   };
 
-  const handleChange = (field: keyof Company, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
+  const handleChange = useCallback((field: keyof Company, value: any) => {
+    setFormData((prev) => {
+      const newData = { ...prev, [field]: value };
+      setHistoryIndex((currentIndex) => {
+        const trimmedHistory = historyRef.current.slice(0, currentIndex + 1);
+        trimmedHistory.push({ ...newData });
+        if (trimmedHistory.length > 20) {
+          trimmedHistory.shift();
+        }
+        historyRef.current = trimmedHistory;
+        return trimmedHistory.length - 1;
+      });
+      return newData;
+    });
+  }, []);
 
   if (isLoading) {
     return (
@@ -114,14 +169,43 @@ export default function Configuration() {
             Configure your company profile, budget, and preferences
           </p>
         </div>
-        <Button
-          onClick={handleSave}
-          disabled={updateMutation.isPending}
-          data-testid="button-save-settings"
-        >
-          <Save className="h-4 w-4 mr-2" />
-          Save All Changes
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleUndo}
+            disabled={!canUndo}
+            data-testid="button-undo-config"
+            title="Undo last change"
+          >
+            <Undo2 className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleRedo}
+            disabled={!canRedo}
+            data-testid="button-redo-config"
+            title="Redo change"
+          >
+            <RotateCcw className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleResetToSaved}
+            data-testid="button-reset-config"
+          >
+            Reset to Saved
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={updateMutation.isPending}
+            data-testid="button-save-settings"
+          >
+            <Save className="h-4 w-4 mr-2" />
+            Save All Changes
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="company" orientation="vertical" className="flex gap-6" data-testid="tabs-settings">

@@ -12,8 +12,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip as ShadcnTooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { formatCurrencyCompact, getRiskLevel, getFriendlyRegimeName, getRelativeTime } from "@/lib/utils";
 import { format } from "date-fns";
 import {
   Activity,
@@ -644,6 +646,20 @@ export default function DigitalTwin() {
                        healthData.score >= 60 ? "Good - Minor issues detected" :
                        "Needs Attention - Review recommendations"}
                     </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-muted-foreground">Industry avg: 62</span>
+                      <span className="text-xs">
+                        {healthData.score >= 62 ? (
+                          <Badge variant="outline" className="text-green-600 border-green-300 text-xs py-0">
+                            +{healthData.score - 62} above avg
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-amber-600 border-amber-300 text-xs py-0">
+                            {healthData.score - 62} below avg
+                          </Badge>
+                        )}
+                      </span>
+                    </div>
                   </div>
                 </div>
                 <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -896,9 +912,19 @@ export default function DigitalTwin() {
                           </div>
                           <div className="flex items-center justify-between text-sm">
                             <span>Risk Score</span>
-                            <Badge variant={sim.riskScore > 70 ? "destructive" : sim.riskScore > 40 ? "secondary" : "outline"}>
-                              {sim.riskScore}/100
-                            </Badge>
+                            <ShadcnTooltip>
+                              <TooltipTrigger asChild>
+                                <Badge 
+                                  variant={sim.riskScore > 70 ? "destructive" : sim.riskScore > 40 ? "secondary" : "outline"}
+                                  className="cursor-help"
+                                >
+                                  {sim.riskScore}/100 ({getRiskLevel(sim.riskScore).label})
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="text-xs">Low: 0-29 | Moderate: 30-69 | High: 70+</p>
+                              </TooltipContent>
+                            </ShadcnTooltip>
                           </div>
                           {sim.keyFindings?.slice(0, 2).map((finding, i) => (
                             <Alert key={i} className="py-2">
@@ -1341,6 +1367,9 @@ export default function DigitalTwin() {
                       <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                       <p className="text-2xl font-bold">{selectedSimulation.riskScore || 0}</p>
                       <p className="text-sm text-muted-foreground">Risk Score</p>
+                      <Badge className={`mt-1 ${getRiskLevel(selectedSimulation.riskScore || 0).bgColor} ${getRiskLevel(selectedSimulation.riskScore || 0).color}`}>
+                        {getRiskLevel(selectedSimulation.riskScore || 0).label}
+                      </Badge>
                     </div>
                   </CardContent>
                 </Card>

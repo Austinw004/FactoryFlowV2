@@ -1,14 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { formatRegimeName } from "@/lib/utils";
+import { formatRegimeName, getFriendlyRegimeName, getRelativeTime } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { TrendingUp, TrendingDown, AlertCircle, DollarSign, ChevronDown, ChevronUp, Plus, BarChart3 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { TrendingUp, TrendingDown, AlertCircle, DollarSign, ChevronDown, ChevronUp, Plus, BarChart3, Clock } from "lucide-react";
 import type { Sku, DemandHistory } from "@shared/schema";
 import { InfoTooltip } from "@/components/InfoTooltip";
 
@@ -105,39 +106,52 @@ export default function Forecasting() {
         </p>
       </div>
 
-      {regime && (
-        <Card data-testid="card-regime-context">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              Current Economic Regime
-              <InfoTooltip term="regime" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Regime Type:</span>
-                <span className="font-semibold" data-testid="text-regime-type">
-                  {formatRegimeName(regime.regime) || "Unknown"}
-                </span>
+      {regime && (() => {
+        const regimeInfo = getFriendlyRegimeName(regime.regime);
+        return (
+          <Card data-testid="card-regime-context">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5" />
+                Current Market Conditions
+                <InfoTooltip term="regime" />
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Status:</span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant="outline" className="cursor-help" data-testid="text-regime-type">
+                        {regimeInfo.friendly}
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="font-medium">{regimeInfo.technical}</p>
+                      {regimeInfo.description && (
+                        <p className="text-xs text-muted-foreground mt-1">{regimeInfo.description}</p>
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground flex items-center gap-1">
+                    Economic Health Index
+                    <InfoTooltip term="fdr" />
+                  </span>
+                  <span className="font-semibold" data-testid="text-fdr-score">
+                    {regime.fdr?.toFixed(1) || "0.0"}
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-3 pt-3 border-t">
+                  Forecasts are automatically adjusted based on current market conditions to improve accuracy.
+                </p>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground flex items-center gap-1">
-                  FDR Score
-                  <InfoTooltip term="fdr" />
-                </span>
-                <span className="font-semibold" data-testid="text-fdr-score">
-                  {regime.fdr?.toFixed(2) || "0.00"}
-                </span>
-              </div>
-              <p className="text-sm text-muted-foreground mt-4">
-                Forecasts are automatically adjusted based on the current economic regime to improve accuracy.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       <Card data-testid="card-commodity-prices" className="border-primary/20">
         <CardHeader>
@@ -145,7 +159,13 @@ export default function Forecasting() {
             <DollarSign className="h-5 w-5 text-primary" />
             Real-time Material Pricing
           </CardTitle>
-          <CardDescription>Updates every 5 minutes - Critical for demand planning and cost forecasting</CardDescription>
+          <CardDescription className="flex items-center justify-between">
+            <span>Critical for demand planning and cost forecasting</span>
+            <span className="flex items-center gap-1 text-xs">
+              <Clock className="h-3 w-3" />
+              Updates every 5 minutes
+            </span>
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {isLoadingPrices ? (
