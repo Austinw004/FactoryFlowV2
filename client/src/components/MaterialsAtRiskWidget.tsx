@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Package, TrendingDown } from "lucide-react";
+import { useLocation } from "wouter";
 import type { Material } from "@shared/schema";
 
 interface MaterialRisk {
@@ -14,6 +15,7 @@ interface MaterialRisk {
 }
 
 export function MaterialsAtRiskWidget() {
+  const [, setLocation] = useLocation();
   const { data: materials = [], isLoading } = useQuery<Material[]>({
     queryKey: ['/api/materials'],
   });
@@ -164,6 +166,7 @@ export function MaterialsAtRiskWidget() {
                   variant="outline"
                   size="sm"
                   className="flex-1 text-xs"
+                  onClick={() => setLocation(`/rfq-generation?materialId=${item.material.id}`)}
                   data-testid={`button-procure-${item.material.id}`}
                 >
                   <TrendingDown className="h-3 w-3 mr-1" />
