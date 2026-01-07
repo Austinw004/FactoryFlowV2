@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { DollarSign, TrendingDown, Clock, ArrowRight, Zap, AlertTriangle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useLocation } from "wouter";
 
 interface QuickWin {
   id: string;
@@ -16,6 +17,7 @@ interface QuickWin {
 }
 
 export function QuickWinsWidget() {
+  const [, setLocation] = useLocation();
   const { data: regime } = useQuery<{ regime: string; fdr: number; signals?: any; intelligence?: any }>({
     queryKey: ["/api/economics/regime"],
   });
@@ -27,6 +29,25 @@ export function QuickWinsWidget() {
   const { data: allocations = [] } = useQuery<any[]>({
     queryKey: ["/api/allocations"],
   });
+
+  const handleQuickWinClick = (win: QuickWin) => {
+    switch (win.type) {
+      case "timing":
+        setLocation("/rfq-generation");
+        break;
+      case "stockout_risk":
+        setLocation("/inventory");
+        break;
+      case "consolidation":
+        setLocation("/multi-tier-mapping");
+        break;
+      case "negotiation":
+        setLocation("/multi-tier-mapping");
+        break;
+      default:
+        setLocation("/procurement");
+    }
+  };
 
   const generateQuickWins = (): QuickWin[] => {
     const wins: QuickWin[] = [];
@@ -179,6 +200,7 @@ export function QuickWinsWidget() {
             <div
               key={win.id}
               className="p-3 rounded-lg border hover-elevate cursor-pointer transition-colors"
+              onClick={() => handleQuickWinClick(win)}
               data-testid={`quick-win-${win.id}`}
             >
               <div className="flex items-start gap-3">
@@ -197,7 +219,15 @@ export function QuickWinsWidget() {
                     <span className="text-xs font-medium text-green-600">
                       ~${win.estimatedSavings.toLocaleString()} savings
                     </span>
-                    <Button variant="ghost" size="sm" className="h-6 text-xs gap-1 px-2">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-6 text-xs gap-1 px-2"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleQuickWinClick(win);
+                      }}
+                    >
                       {win.actionLabel}
                       <ArrowRight className="h-3 w-3" />
                     </Button>
