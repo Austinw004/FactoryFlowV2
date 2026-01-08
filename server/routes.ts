@@ -7642,12 +7642,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let filteredAlerts = enrichedAlerts;
       
+      // Apply severity filter first (before any slicing)
+      if (severity && severity !== 'all') {
+        filteredAlerts = filteredAlerts.filter(a => a.severity === severity);
+      }
+      
       if (category && category !== 'all') {
         filteredAlerts = filteredAlerts.filter(a => a.category === category);
       } else {
         // When showing "all" categories, return only the top 6 most relevant
         // Sort by company relevance score (highest first), then by severity
-        filteredAlerts = [...enrichedAlerts]
+        filteredAlerts = [...filteredAlerts]
           .sort((a, b) => {
             // First by company relevance score
             if (b.companyRelevanceScore !== a.companyRelevanceScore) {
@@ -7658,10 +7663,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return severityOrder[a.severity] - severityOrder[b.severity];
           })
           .slice(0, 6);
-      }
-      
-      if (severity && severity !== 'all') {
-        filteredAlerts = filteredAlerts.filter(a => a.severity === severity);
       }
       
       res.json({
