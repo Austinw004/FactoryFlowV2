@@ -462,6 +462,54 @@ export class NewsMonitoringService {
         severity: 'high',
         regions: ['United States'],
         commodities: ['Automotive Parts']
+      },
+      {
+        title: "Major Logistics Hub Faces Extended Delays Due to System Outage",
+        description: "Critical distribution center experiences IT infrastructure failure, causing ripple effects across regional supply networks. Recovery expected within 5-7 days.",
+        category: 'supply_chain_disruption',
+        severity: 'high',
+        regions: ['United States', 'Europe'],
+        commodities: ['Electronics', 'Automotive Parts', 'Chemicals']
+      },
+      {
+        title: "Freight Carrier Network Disruption Impacts Cross-Border Trade",
+        description: "Multiple trucking companies report driver shortages and equipment constraints, creating bottlenecks at major border crossings and ports.",
+        category: 'supply_chain_disruption',
+        severity: 'medium',
+        regions: ['United States', 'Latin America'],
+        commodities: ['Automotive Parts', 'Textiles']
+      },
+      {
+        title: "Dockworkers Strike at Major European Ports Enters Second Week",
+        description: "Labor negotiations stall as port workers demand wage increases and improved working conditions. Container handling capacity reduced by 60%.",
+        category: 'labor_strike',
+        severity: 'critical',
+        regions: ['Europe'],
+        commodities: ['Steel', 'Aluminum', 'Chemicals', 'Electronics']
+      },
+      {
+        title: "Auto Workers Union Announces Work Stoppage at Multiple Plants",
+        description: "Major automaker faces production disruption as union workers walk out over contract dispute. Industry analysts warn of parts shortage ripple effects.",
+        category: 'labor_strike',
+        severity: 'high',
+        regions: ['United States'],
+        commodities: ['Automotive Parts', 'Steel']
+      },
+      {
+        title: "Currency Crisis in Emerging Markets Impacts Procurement Costs",
+        description: "Sharp devaluation in multiple emerging market currencies driving up import costs for raw materials. Manufacturers reassessing supplier contracts.",
+        category: 'economic_crisis',
+        severity: 'high',
+        regions: ['Latin America', 'Asia Pacific'],
+        commodities: ['Rare Earths', 'Textiles', 'Chemicals']
+      },
+      {
+        title: "Global Inflation Surge Forces Supply Chain Cost Restructuring",
+        description: "Rising inflation across major economies pushing manufacturers to renegotiate long-term supply agreements. Transportation and energy costs up 25% year-over-year.",
+        category: 'economic_crisis',
+        severity: 'medium',
+        regions: ['Global', 'Europe', 'United States'],
+        commodities: ['Steel', 'Aluminum', 'Oil & Gas', 'Chemicals']
       }
     ];
 
