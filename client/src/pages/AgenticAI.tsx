@@ -74,6 +74,8 @@ import {
   Moon,
   Type,
   Save,
+  Minimize2,
+  Maximize2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -375,6 +377,7 @@ export default function AgenticAI() {
   const [chatInput, setChatInput] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [conversationId] = useState(`agentic_${Date.now()}`);
+  const [isChatMinimized, setIsChatMinimized] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const prevMessageCountRef = useRef(0);
@@ -1186,26 +1189,44 @@ export default function AgenticAI() {
         <TabsContent value="chat" className="space-y-4">
           <div className="grid lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
-              <Card className="h-[600px] flex flex-col">
+              <Card className={`flex flex-col transition-all duration-300 ${isChatMinimized ? 'h-[72px]' : 'h-[600px]'}`}>
                 <CardHeader className="border-b pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-purple-500/20">
-                      <Bot className="h-5 w-5 text-purple-500" />
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-purple-500/20">
+                        <Bot className="h-5 w-5 text-purple-500" />
+                      </div>
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          Agentic AI Chat
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                            Autonomous
+                          </Badge>
+                        </CardTitle>
+                        {!isChatMinimized && (
+                          <CardDescription>
+                            Ask questions or request autonomous actions
+                          </CardDescription>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        Agentic AI Chat
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                          Autonomous
-                        </Badge>
-                      </CardTitle>
-                      <CardDescription>
-                        Ask questions or request autonomous actions
-                      </CardDescription>
-                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setIsChatMinimized(!isChatMinimized)}
+                      data-testid="button-toggle-chat"
+                      title={isChatMinimized ? "Expand chat" : "Minimize chat"}
+                    >
+                      {isChatMinimized ? (
+                        <Maximize2 className="h-4 w-4" />
+                      ) : (
+                        <Minimize2 className="h-4 w-4" />
+                      )}
+                    </Button>
                   </div>
                 </CardHeader>
-                <CardContent className="flex-1 flex flex-col p-0">
+                {!isChatMinimized && (
+                <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
                   <ScrollArea className="flex-1 p-4">
                     <div className="space-y-4">
                       {chatMessages.length === 0 ? (
@@ -1250,14 +1271,14 @@ export default function AgenticAI() {
                               </div>
                             )}
                             <div
-                              className={`max-w-[80%] rounded-lg p-3 ${
+                              className={`max-w-[80%] rounded-lg p-3 overflow-hidden ${
                                 msg.role === "user"
                                   ? "bg-primary text-primary-foreground"
                                   : "bg-muted"
                               }`}
                               data-testid={`chat-message-${msg.id}`}
                             >
-                              <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                              <p className="text-sm whitespace-pre-wrap break-words" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{msg.content}</p>
                               
                               {msg.suggestedActions && msg.suggestedActions.length > 0 && (
                                 <div className="mt-3 pt-3 border-t border-foreground/10 space-y-2">
@@ -1340,6 +1361,7 @@ export default function AgenticAI() {
                     </div>
                   </div>
                 </CardContent>
+                )}
               </Card>
             </div>
 
