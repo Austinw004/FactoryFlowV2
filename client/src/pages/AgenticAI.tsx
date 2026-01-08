@@ -431,6 +431,13 @@ export default function AgenticAI() {
     prevMessageCountRef.current = chatMessages.length;
   }, [chatMessages]);
 
+  // Auto-scroll to bottom when new messages are added
+  useEffect(() => {
+    if (chatMessages.length > 0 && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [chatMessages]);
+
   // Sync editRuleForm when selectedRule changes
   useEffect(() => {
     if (selectedRule) {
