@@ -1226,9 +1226,9 @@ export default function AgenticAI() {
                   </div>
                 </CardHeader>
                 {!isChatMinimized && (
-                <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
-                  <ScrollArea className="flex-1 p-4">
-                    <div className="space-y-4">
+                <CardContent className="flex-1 flex flex-col p-0 min-h-0 overflow-hidden">
+                  <ScrollArea className="flex-1 p-4 w-full">
+                    <div className="space-y-4 w-full max-w-full overflow-hidden">
                       {chatMessages.length === 0 ? (
                         <div className="py-8 px-4">
                           <div className="text-center mb-8">
@@ -1263,7 +1263,7 @@ export default function AgenticAI() {
                         chatMessages.map((msg) => (
                           <div
                             key={msg.id}
-                            className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                            className={`flex gap-3 w-full overflow-hidden ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                           >
                             {msg.role === "assistant" && (
                               <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
@@ -1271,14 +1271,14 @@ export default function AgenticAI() {
                               </div>
                             )}
                             <div
-                              className={`max-w-[80%] rounded-lg p-3 overflow-hidden ${
+                              className={`max-w-[75%] min-w-0 rounded-lg p-3 overflow-hidden ${
                                 msg.role === "user"
                                   ? "bg-primary text-primary-foreground"
                                   : "bg-muted"
                               }`}
                               data-testid={`chat-message-${msg.id}`}
                             >
-                              <p className="text-sm whitespace-pre-wrap break-words" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{msg.content}</p>
+                              <p className="text-sm whitespace-pre-wrap break-all" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word', hyphens: 'auto' }}>{msg.content}</p>
                               
                               {msg.suggestedActions && msg.suggestedActions.length > 0 && (
                                 <div className="mt-3 pt-3 border-t border-foreground/10 space-y-2">
