@@ -40,7 +40,7 @@ import { stripeService } from "./stripeService";
 import { getStripePublishableKey } from "./stripeClient";
 import multer from "multer";
 import { z } from "zod";
-import { sendTeamInvitation } from "./lib/emailService";
+import { sendTeamInvitation, sendMeetingInvitation } from "./lib/emailService";
 import { preconfigurePlatformForIndustry } from "./lib/industryPersonalization";
 import { getIndustryConfig } from "@shared/industryConfig";
 import {
@@ -12464,15 +12464,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get current regime context
       const latestSnapshot = await storage.getLatestEconomicSnapshot(user.companyId);
+      const company = await storage.getCompany(user.companyId);
       
-      // Parse date strings to Date objects (datetime-local sends strings)
-      const scheduledStart = req.body.scheduledStart ? new Date(req.body.scheduledStart) : undefined;
-      const scheduledEnd = req.body.scheduledEnd ? new Date(req.body.scheduledEnd) : undefined;
+      // Extract invite options from request
+      const { 
+        attendees, 
+        sendEmailInvites, 
+        sendInAppAlerts, 
+        externalEmails,
+        meetingDate,
+        meetingTime,
+        meetingType,
+        title,
+        agenda,
+        keyDecisions,
+        nextMeetingDate
+      } = req.body;
+      
+      // Parse date strings to Date objects with validation
+      let parsedMeetingDate: Date;
+      if (meetingDate && typeof meetingDate === 'string' && meetingDate.trim()) {
+        parsedMeetingDate = new Date(meetingDate);
+        // Check if date is valid
+        if (isNaN(parsedMeetingDate.getTime())) {
+          parsedMeetingDate = new Date(); // Default to now if invalid
+        }
+      } else {
+        parsedMeetingDate = new Date();
+      }
+      
+      // Combine meeting date with time if provided
+      if (meetingTime && typeof meetingTime === 'string' && meetingTime.trim()) {
+        const [hours, minutes] = meetingTime.split(':').map(Number);
+        parsedMeetingDate.setHours(hours || 9, minutes || 0, 0, 0);
+      } else {
+        // Default to 9 AM if no time provided
+        parsedMeetingDate.setHours(9, 0, 0, 0);
+      }
+      
+      // Validate scheduledStart
+      let scheduledStart: Date;
+      if (req.body.scheduledStart) {
+        scheduledStart = new Date(req.body.scheduledStart);
+        if (isNaN(scheduledStart.getTime())) {
+          scheduledStart = parsedMeetingDate;
+        }
+      } else {
+        scheduledStart = parsedMeetingDate;
+      }
+      // Default meeting duration is 1 hour
+      const defaultEndTime = new Date(scheduledStart.getTime() + 60 * 60 * 1000);
+      const scheduledEnd = req.body.scheduledEnd ? new Date(req.body.scheduledEnd) : defaultEndTime;
       const planningHorizonStart = req.body.planningHorizonStart ? new Date(req.body.planningHorizonStart) : undefined;
       const planningHorizonEnd = req.body.planningHorizonEnd ? new Date(req.body.planningHorizonEnd) : undefined;
       
+      // Generate a title if not provided
+      const meetingLabels: Record<string, string> = {
+        'monthly_sop': 'Monthly S&OP',
+        'demand_review': 'Demand Review',
+        'supply_review': 'Supply Review',
+        'financial_review': 'Financial Review',
+        'executive_review': 'Executive Review',
+      };
+      const defaultTitle = meetingLabels[meetingType || 'monthly_sop'] || 'S&OP Meeting';
+      
+      // Create the meeting record
       const validatedData = insertSopMeetingSchema.parse({
-        ...req.body,
+        title: title || defaultTitle,
+        meetingType: meetingType || 'monthly_sop',
         scheduledStart,
         scheduledEnd,
         planningHorizonStart,
@@ -12481,11 +12540,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
         organizerId: userId,
         regimeAtMeeting: latestSnapshot?.regime,
         fdrAtMeeting: latestSnapshot?.fdr,
+        agenda: agenda ? [{ text: agenda }] : [],
+        notes: keyDecisions || null,
       });
       
       const meeting = await storage.createSopMeeting(validatedData);
+      
+      // Send email invitations if requested
+      const organizerName = user.firstName && user.lastName 
+        ? `${user.firstName} ${user.lastName}` 
+        : user.email || 'Team Member';
+      const companyName = company?.name || 'Company';
+      const formattedDate = parsedMeetingDate.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+      
+      const allAttendeeNames = attendees?.map((a: any) => a.name) || [];
+      
+      if (sendEmailInvites) {
+        const emailPromises: Promise<any>[] = [];
+        
+        // Send to internal attendees
+        if (attendees && Array.isArray(attendees)) {
+          for (const attendee of attendees) {
+            if (attendee.email) {
+              emailPromises.push(
+                sendMeetingInvitation({
+                  recipientEmail: attendee.email,
+                  recipientName: attendee.name || '',
+                  meetingTitle: title || '',
+                  meetingType: meetingType || 'monthly_sop',
+                  meetingDate: formattedDate,
+                  meetingTime: meetingTime || '',
+                  organizer: organizerName,
+                  companyName,
+                  agenda: agenda || undefined,
+                  attendees: allAttendeeNames
+                })
+              );
+            }
+          }
+        }
+        
+        // Send to external emails
+        if (externalEmails && Array.isArray(externalEmails)) {
+          for (const email of externalEmails) {
+            emailPromises.push(
+              sendMeetingInvitation({
+                recipientEmail: email,
+                recipientName: email.split('@')[0],
+                meetingTitle: title || '',
+                meetingType: meetingType || 'monthly_sop',
+                meetingDate: formattedDate,
+                meetingTime: meetingTime || '',
+                organizer: organizerName,
+                companyName,
+                agenda: agenda || undefined,
+                attendees: allAttendeeNames
+              })
+            );
+          }
+        }
+        
+        // Send emails in parallel (don't wait for completion)
+        if (emailPromises.length > 0) {
+          Promise.allSettled(emailPromises).then(results => {
+            const sent = results.filter(r => r.status === 'fulfilled').length;
+            console.log(`[S&OP] Sent ${sent}/${emailPromises.length} meeting invitations`);
+          });
+        }
+      }
+      
+      // Handle in-app alerts (log for now - can be extended with notification system)
+      if (sendInAppAlerts && attendees && Array.isArray(attendees)) {
+        const attendeeCount = attendees.length;
+        console.log(`[S&OP] In-app alerts queued for ${attendeeCount} attendees for meeting ${meeting.id}`);
+        // Future enhancement: Store notifications in a notifications table
+        // and deliver via WebSocket for real-time alerts
+      }
+      
       res.status(201).json(meeting);
     } catch (error: any) {
+      console.error('[S&OP] Meeting creation error:', error);
       res.status(400).json({ error: error.message });
     }
   });

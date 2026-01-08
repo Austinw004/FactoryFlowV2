@@ -17,20 +17,41 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   insertSopScenarioSchema,
   insertSopGapAnalysisSchema,
-  insertSopMeetingNotesSchema,
   insertSopActionItemSchema,
   type SopScenario,
   type SopGapAnalysis,
-  type SopMeetingNotes,
+  type SopMeeting,
   type SopActionItem,
   type InsertSopScenario,
   type InsertSopGapAnalysis,
-  type InsertSopMeetingNotes,
   type InsertSopActionItem,
 } from "@shared/schema";
-import { Plus, Calendar, TrendingUp, FileText, CheckCircle2, AlertCircle, Clock, Users } from "lucide-react";
+import { Plus, Calendar, TrendingUp, FileText, CheckCircle2, AlertCircle, Clock, Users, Mail, Bell, X, UserPlus } from "lucide-react";
 import { format } from "date-fns";
 import { z } from "zod";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+interface TeamMember {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+}
+
+// Helper function to safely format dates
+function safeFormatDate(dateValue: Date | string | null | undefined, formatString: string, fallback: string = "TBD"): string {
+  if (!dateValue) return fallback;
+  try {
+    const date = typeof dateValue === 'string' ? new Date(dateValue) : dateValue;
+    if (isNaN(date.getTime())) return fallback;
+    return format(date, formatString);
+  } catch {
+    return fallback;
+  }
+}
 
 // Create scenario form schema - omit server-injected fields first
 const createScenarioFormSchema = insertSopScenarioSchema
@@ -53,21 +74,29 @@ const createGapFormSchema = insertSopGapAnalysisSchema
     gapPercentage: z.coerce.number().optional(),
   });
 
-// Create meeting notes form schema - omit server-injected fields
-const createMeetingFormSchema = insertSopMeetingNotesSchema
-  .omit({ companyId: true, createdBy: true })
-  .extend({
-    meetingDate: z.string(),
-    nextMeetingDate: z.string().optional(),
-  });
+// Create meeting form schema - uses fields from the database schema plus UI-specific fields
+const createMeetingFormSchema = z.object({
+  meetingDate: z.string(),
+  meetingTime: z.string().optional(),
+  meetingType: z.string().default("monthly_sop"),
+  title: z.string().optional(),
+  agenda: z.string().optional(),
+  keyDecisions: z.string().optional(),
+  nextMeetingDate: z.string().optional(),
+});
 
-// Create action item form schema - omit server-injected fields
-const createActionFormSchema = insertSopActionItemSchema
-  .omit({ companyId: true, createdBy: true, completedAt: true, completedBy: true })
-  .extend({
-    dueDate: z.string(),
-    progress: z.coerce.number().min(0).max(100).optional(),
-  });
+// Create action item form schema - use explicit fields for UI
+const createActionFormSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+  category: z.string().default("process_improvement"),
+  priority: z.string().default("medium"),
+  status: z.string().default("open"),
+  dueDate: z.string(),
+  assignedTo: z.string().optional(),
+  progress: z.coerce.number().min(0).max(100).optional(),
+  expectedImpact: z.string().optional(),
+});
 
 export default function SopWorkspace() {
   const [activeTab, setActiveTab] = useState("scenarios");
@@ -76,6 +105,18 @@ export default function SopWorkspace() {
   const [meetingDialogOpen, setMeetingDialogOpen] = useState(false);
   const [actionDialogOpen, setActionDialogOpen] = useState(false);
   const { toast } = useToast();
+  
+  // Meeting invite state
+  const [selectedAttendees, setSelectedAttendees] = useState<string[]>([]);
+  const [externalEmails, setExternalEmails] = useState<string[]>([]);
+  const [newExternalEmail, setNewExternalEmail] = useState("");
+  const [sendEmailInvites, setSendEmailInvites] = useState(true);
+  const [sendInAppAlerts, setSendInAppAlerts] = useState(true);
+
+  // Fetch team members for attendees selection
+  const { data: teamMembers } = useQuery<TeamMember[]>({
+    queryKey: ["/api/users"],
+  });
 
   // Fetch all S&OP data
   const { data: scenarios, isLoading: scenariosLoading } = useQuery<SopScenario[]>({
@@ -86,7 +127,7 @@ export default function SopWorkspace() {
     queryKey: ["/api/sop/gap-analysis"],
   });
 
-  const { data: meetings, isLoading: meetingsLoading } = useQuery<SopMeetingNotes[]>({
+  const { data: meetings, isLoading: meetingsLoading } = useQuery<SopMeeting[]>({
     queryKey: ["/api/sop/meetings"],
   });
 
@@ -126,9 +167,45 @@ export default function SopWorkspace() {
     resolver: zodResolver(createMeetingFormSchema),
     defaultValues: {
       meetingDate: format(new Date(), "yyyy-MM-dd"),
+      meetingTime: "09:00",
       meetingType: "monthly_sop",
+      title: "",
+      agenda: "",
     },
   });
+  
+  // Helper to add external email
+  const addExternalEmail = () => {
+    const email = newExternalEmail.trim();
+    if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && !externalEmails.includes(email)) {
+      setExternalEmails([...externalEmails, email]);
+      setNewExternalEmail("");
+    }
+  };
+  
+  // Helper to remove external email
+  const removeExternalEmail = (email: string) => {
+    setExternalEmails(externalEmails.filter(e => e !== email));
+  };
+  
+  // Toggle team member selection
+  const toggleAttendee = (userId: string) => {
+    if (selectedAttendees.includes(userId)) {
+      setSelectedAttendees(selectedAttendees.filter(id => id !== userId));
+    } else {
+      setSelectedAttendees([...selectedAttendees, userId]);
+    }
+  };
+  
+  // Reset meeting form and state
+  const resetMeetingForm = () => {
+    meetingForm.reset();
+    setSelectedAttendees([]);
+    setExternalEmails([]);
+    setNewExternalEmail("");
+    setSendEmailInvites(true);
+    setSendInAppAlerts(true);
+  };
 
   // Create action item form
   const actionForm = useForm<z.infer<typeof createActionFormSchema>>({
@@ -152,11 +229,7 @@ export default function SopWorkspace() {
         endDate: new Date(data.endDate),
         nextReviewDate: data.nextReviewDate ? new Date(data.nextReviewDate) : undefined,
       };
-      return await apiRequest("/api/sop/scenarios", {
-        method: "POST",
-        body: JSON.stringify(payload),
-        headers: { "Content-Type": "application/json" },
-      });
+      return await apiRequest("POST", "/api/sop/scenarios", payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/sop/scenarios"] });
@@ -177,11 +250,7 @@ export default function SopWorkspace() {
         periodStart: new Date(data.periodStart),
         periodEnd: new Date(data.periodEnd),
       };
-      return await apiRequest("/api/sop/gap-analysis", {
-        method: "POST",
-        body: JSON.stringify(payload),
-        headers: { "Content-Type": "application/json" },
-      });
+      return await apiRequest("POST", "/api/sop/gap-analysis", payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/sop/gap-analysis"] });
@@ -197,25 +266,43 @@ export default function SopWorkspace() {
   // Create meeting notes mutation
   const createMeetingMutation = useMutation({
     mutationFn: async (data: z.infer<typeof createMeetingFormSchema>) => {
+      // Build attendees array from selected team members
+      const attendeesData = selectedAttendees.map(userId => {
+        const member = teamMembers?.find(m => m.id === userId);
+        return member ? {
+          userId: member.id,
+          name: `${member.firstName} ${member.lastName}`,
+          email: member.email,
+          role: member.role
+        } : null;
+      }).filter(Boolean);
+      
       const payload = {
         ...data,
         meetingDate: new Date(data.meetingDate),
         nextMeetingDate: data.nextMeetingDate ? new Date(data.nextMeetingDate) : undefined,
+        attendees: attendeesData,
+        // Include invite options
+        sendEmailInvites,
+        sendInAppAlerts,
+        externalEmails,
       };
-      return await apiRequest("/api/sop/meetings", {
-        method: "POST",
-        body: JSON.stringify(payload),
-        headers: { "Content-Type": "application/json" },
-      });
+      return await apiRequest("POST", "/api/sop/meetings", payload);
     },
-    onSuccess: () => {
+    onSuccess: (response: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/sop/meetings"] });
-      toast({ title: "Meeting notes created successfully" });
+      const invitesSent = sendEmailInvites && (selectedAttendees.length > 0 || externalEmails.length > 0);
+      toast({ 
+        title: "Meeting scheduled successfully",
+        description: invitesSent 
+          ? `Invitations sent to ${selectedAttendees.length + externalEmails.length} attendees` 
+          : undefined
+      });
       setMeetingDialogOpen(false);
-      meetingForm.reset();
+      resetMeetingForm();
     },
     onError: (error: Error) => {
-      toast({ title: "Failed to create meeting notes", description: error.message, variant: "destructive" });
+      toast({ title: "Failed to create meeting", description: error.message, variant: "destructive" });
     },
   });
 
@@ -226,11 +313,7 @@ export default function SopWorkspace() {
         ...data,
         dueDate: new Date(data.dueDate),
       };
-      return await apiRequest("/api/sop/action-items", {
-        method: "POST",
-        body: JSON.stringify(payload),
-        headers: { "Content-Type": "application/json" },
-      });
+      return await apiRequest("POST", "/api/sop/action-items", payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/sop/action-items"] });
@@ -246,9 +329,7 @@ export default function SopWorkspace() {
   // Approve scenario mutation
   const approveScenarioMutation = useMutation({
     mutationFn: async (scenarioId: string) => {
-      return await apiRequest(`/api/sop/scenarios/${scenarioId}/approve`, {
-        method: "POST",
-      });
+      return await apiRequest("POST", `/api/sop/scenarios/${scenarioId}/approve`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/sop/scenarios"] });
@@ -262,9 +343,7 @@ export default function SopWorkspace() {
   // Complete action item mutation
   const completeActionMutation = useMutation({
     mutationFn: async (actionId: string) => {
-      return await apiRequest(`/api/sop/action-items/${actionId}/complete`, {
-        method: "POST",
-      });
+      return await apiRequest("POST", `/api/sop/action-items/${actionId}/complete`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/sop/action-items"] });
@@ -819,81 +898,319 @@ export default function SopWorkspace() {
                     New Meeting
                   </Button>
                 </DialogTrigger>
-                <DialogContent data-testid="dialog-create-meeting">
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-create-meeting">
                   <DialogHeader>
-                    <DialogTitle>Create Meeting Notes</DialogTitle>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Calendar className="h-5 w-5 text-primary" />
+                      Schedule S&OP Meeting
+                    </DialogTitle>
                     <DialogDescription>
-                      Document your S&OP meeting with key decisions and follow-up actions
+                      Create a meeting, invite team members, and send notifications
                     </DialogDescription>
                   </DialogHeader>
                   <Form {...meetingForm}>
-                    <form onSubmit={meetingForm.handleSubmit((data) => createMeetingMutation.mutate(data))} className="space-y-4">
-                      <FormField
-                        control={meetingForm.control}
-                        name="meetingDate"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Meeting Date</FormLabel>
-                            <FormControl>
-                              <Input type="date" {...field} data-testid="input-meeting-date" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={meetingForm.control}
-                        name="meetingType"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Meeting Type</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <form onSubmit={meetingForm.handleSubmit((data) => createMeetingMutation.mutate(data))} className="space-y-6">
+                      
+                      {/* Meeting Details Section */}
+                      <div className="space-y-4">
+                        <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Meeting Details</h4>
+                        
+                        <FormField
+                          control={meetingForm.control}
+                          name="title"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Meeting Title</FormLabel>
                               <FormControl>
-                                <SelectTrigger data-testid="select-meeting-type">
-                                  <SelectValue placeholder="Select type" />
-                                </SelectTrigger>
+                                <Input placeholder="e.g., Q1 S&OP Planning Session" {...field} value={field.value || ""} data-testid="input-meeting-title" />
                               </FormControl>
-                              <SelectContent>
-                                <SelectItem value="monthly_sop">Monthly S&OP</SelectItem>
-                                <SelectItem value="demand_review">Demand Review</SelectItem>
-                                <SelectItem value="supply_review">Supply Review</SelectItem>
-                                <SelectItem value="financial_review">Financial Review</SelectItem>
-                                <SelectItem value="executive_review">Executive Review</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={meetingForm.control}
-                        name="keyDecisions"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Key Decisions</FormLabel>
-                            <FormControl>
-                              <Textarea placeholder="Key decisions made during the meeting..." {...field} value={field.value || ""} data-testid="textarea-meeting-decisions" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={meetingForm.control}
-                        name="nextMeetingDate"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Next Meeting Date (optional)</FormLabel>
-                            <FormControl>
-                              <Input type="date" {...field} value={field.value || ""} data-testid="input-next-meeting-date" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <Button type="submit" disabled={createMeetingMutation.isPending} data-testid="button-submit-meeting">
-                        {createMeetingMutation.isPending ? "Creating..." : "Create Meeting Notes"}
-                      </Button>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={meetingForm.control}
+                            name="meetingDate"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Date</FormLabel>
+                                <FormControl>
+                                  <Input type="date" {...field} data-testid="input-meeting-date" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={meetingForm.control}
+                            name="meetingTime"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Time</FormLabel>
+                                <FormControl>
+                                  <Input type="time" {...field} value={field.value || ""} data-testid="input-meeting-time" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        
+                        <FormField
+                          control={meetingForm.control}
+                          name="meetingType"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Meeting Type</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-meeting-type">
+                                    <SelectValue placeholder="Select type" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="monthly_sop">Monthly S&OP</SelectItem>
+                                  <SelectItem value="demand_review">Demand Review</SelectItem>
+                                  <SelectItem value="supply_review">Supply Review</SelectItem>
+                                  <SelectItem value="financial_review">Financial Review</SelectItem>
+                                  <SelectItem value="executive_review">Executive Review</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={meetingForm.control}
+                          name="agenda"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Agenda (optional)</FormLabel>
+                              <FormControl>
+                                <Textarea 
+                                  placeholder="1. Review demand forecast&#10;2. Supply capacity update&#10;3. Inventory position&#10;4. Action items review" 
+                                  {...field} 
+                                  value={field.value || ""} 
+                                  className="min-h-[80px]"
+                                  data-testid="textarea-meeting-agenda" 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <Separator />
+                      
+                      {/* Attendees Section */}
+                      <div className="space-y-4">
+                        <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                          <Users className="h-4 w-4" />
+                          Attendees
+                        </h4>
+                        
+                        {/* Team Members */}
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Team Members</label>
+                          {teamMembers && teamMembers.length > 0 ? (
+                            <ScrollArea className="h-[120px] rounded-md border p-2">
+                              <div className="space-y-2">
+                                {teamMembers.map((member) => (
+                                  <div 
+                                    key={member.id} 
+                                    className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer"
+                                    onClick={() => toggleAttendee(member.id)}
+                                    data-testid={`checkbox-attendee-${member.id}`}
+                                  >
+                                    <Checkbox 
+                                      checked={selectedAttendees.includes(member.id)}
+                                      onCheckedChange={() => toggleAttendee(member.id)}
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium truncate">{member.firstName} {member.lastName}</p>
+                                      <p className="text-xs text-muted-foreground truncate">{member.email}</p>
+                                    </div>
+                                    <Badge variant="outline" className="text-xs shrink-0">{member.role}</Badge>
+                                  </div>
+                                ))}
+                              </div>
+                            </ScrollArea>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">No team members found. Invite people to your company first.</p>
+                          )}
+                          {selectedAttendees.length > 0 && (
+                            <p className="text-xs text-muted-foreground">{selectedAttendees.length} team member(s) selected</p>
+                          )}
+                        </div>
+                        
+                        {/* External Email Invites */}
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium flex items-center gap-2">
+                            <UserPlus className="h-4 w-4" />
+                            Invite External Guests
+                          </label>
+                          <div className="flex gap-2">
+                            <Input
+                              type="email"
+                              placeholder="guest@example.com"
+                              value={newExternalEmail}
+                              onChange={(e) => setNewExternalEmail(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  addExternalEmail();
+                                }
+                              }}
+                              data-testid="input-external-email"
+                            />
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              onClick={addExternalEmail}
+                              data-testid="button-add-external-email"
+                            >
+                              Add
+                            </Button>
+                          </div>
+                          {externalEmails.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {externalEmails.map((email) => (
+                                <Badge key={email} variant="secondary" className="flex items-center gap-1">
+                                  <Mail className="h-3 w-3" />
+                                  {email}
+                                  <button
+                                    type="button"
+                                    onClick={() => removeExternalEmail(email)}
+                                    className="ml-1 hover:text-destructive"
+                                    data-testid={`button-remove-email-${email}`}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <Separator />
+                      
+                      {/* Notification Options */}
+                      <div className="space-y-4">
+                        <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                          <Bell className="h-4 w-4" />
+                          Notifications
+                        </h4>
+                        
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between p-3 rounded-lg border">
+                            <div className="flex items-center gap-3">
+                              <Mail className="h-5 w-5 text-muted-foreground" />
+                              <div>
+                                <p className="text-sm font-medium">Email Invitations</p>
+                                <p className="text-xs text-muted-foreground">Send calendar invite via email to all attendees</p>
+                              </div>
+                            </div>
+                            <Checkbox
+                              checked={sendEmailInvites}
+                              onCheckedChange={(checked) => setSendEmailInvites(checked as boolean)}
+                              data-testid="checkbox-send-email"
+                            />
+                          </div>
+                          
+                          <div className="flex items-center justify-between p-3 rounded-lg border">
+                            <div className="flex items-center gap-3">
+                              <Bell className="h-5 w-5 text-muted-foreground" />
+                              <div>
+                                <p className="text-sm font-medium">In-App Alerts</p>
+                                <p className="text-xs text-muted-foreground">Notify team members within the platform</p>
+                              </div>
+                            </div>
+                            <Checkbox
+                              checked={sendInAppAlerts}
+                              onCheckedChange={(checked) => setSendInAppAlerts(checked as boolean)}
+                              data-testid="checkbox-send-alert"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <Separator />
+                      
+                      {/* Additional Info */}
+                      <div className="space-y-4">
+                        <FormField
+                          control={meetingForm.control}
+                          name="keyDecisions"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Pre-Meeting Notes (optional)</FormLabel>
+                              <FormControl>
+                                <Textarea 
+                                  placeholder="Any notes or context for attendees..." 
+                                  {...field} 
+                                  value={field.value || ""} 
+                                  data-testid="textarea-meeting-notes" 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={meetingForm.control}
+                          name="nextMeetingDate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Schedule Recurring Meeting (optional)</FormLabel>
+                              <FormControl>
+                                <Input type="date" {...field} value={field.value || ""} data-testid="input-next-meeting-date" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      {/* Summary */}
+                      {(selectedAttendees.length > 0 || externalEmails.length > 0) && (
+                        <div className="bg-muted/50 rounded-lg p-3">
+                          <p className="text-sm">
+                            <span className="font-medium">Ready to send:</span>{" "}
+                            {selectedAttendees.length + externalEmails.length} invitation(s)
+                            {sendEmailInvites && " via email"}
+                            {sendEmailInvites && sendInAppAlerts && " and"}
+                            {sendInAppAlerts && " as in-app alerts"}
+                          </p>
+                        </div>
+                      )}
+                      
+                      <div className="flex gap-3 pt-2">
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          className="flex-1"
+                          onClick={() => {
+                            setMeetingDialogOpen(false);
+                            resetMeetingForm();
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button 
+                          type="submit" 
+                          className="flex-1"
+                          disabled={createMeetingMutation.isPending} 
+                          data-testid="button-submit-meeting"
+                        >
+                          {createMeetingMutation.isPending ? "Scheduling..." : "Schedule Meeting"}
+                        </Button>
+                      </div>
                     </form>
                   </Form>
                 </DialogContent>
@@ -919,28 +1236,42 @@ export default function SopWorkspace() {
                           <div className="flex items-center justify-between">
                             <div className="space-y-1">
                               <CardTitle className="text-lg" data-testid={`text-meeting-date-${meeting.id}`}>
-                                {format(new Date(meeting.meetingDate), "MMMM d, yyyy")}
+                                {meeting.title || safeFormatDate(meeting.scheduledStart, "MMMM d, yyyy", "S&OP Meeting")}
                               </CardTitle>
                               <div className="flex items-center gap-2 flex-wrap">
                                 <Badge variant="outline" data-testid={`badge-meeting-type-${meeting.id}`}>
                                   {meeting.meetingType}
                                 </Badge>
-                                {meeting.nextMeetingDate && (
-                                  <span className="text-sm text-muted-foreground" data-testid={`text-meeting-next-${meeting.id}`}>
-                                    <Calendar className="inline w-3 h-3 mr-1" />
-                                    Next: {format(new Date(meeting.nextMeetingDate), "MMM d, yyyy")}
+                                {meeting.scheduledStart && (
+                                  <span className="text-sm text-muted-foreground" data-testid={`text-meeting-start-${meeting.id}`}>
+                                    <Clock className="inline w-3 h-3 mr-1" />
+                                    {safeFormatDate(meeting.scheduledStart, "MMM d, yyyy 'at' h:mm a")}
                                   </span>
                                 )}
                               </div>
                             </div>
                           </div>
                         </CardHeader>
-                        {meeting.keyDecisions && (
+                        {(meeting.notes || meeting.decisions) && (
                           <CardContent>
-                            <h4 className="text-sm font-semibold mb-2">Key Decisions:</h4>
-                            <p className="text-sm text-muted-foreground whitespace-pre-wrap" data-testid={`text-meeting-decisions-${meeting.id}`}>
-                              {meeting.keyDecisions}
-                            </p>
+                            {meeting.notes && (
+                              <>
+                                <h4 className="text-sm font-semibold mb-2">Notes:</h4>
+                                <p className="text-sm text-muted-foreground whitespace-pre-wrap mb-3" data-testid={`text-meeting-notes-${meeting.id}`}>
+                                  {meeting.notes}
+                                </p>
+                              </>
+                            )}
+                            {meeting.decisions && Array.isArray(meeting.decisions) && meeting.decisions.length > 0 && (
+                              <>
+                                <h4 className="text-sm font-semibold mb-2">Decisions:</h4>
+                                <ul className="text-sm text-muted-foreground list-disc list-inside" data-testid={`text-meeting-decisions-${meeting.id}`}>
+                                  {meeting.decisions.map((d: any, i: number) => (
+                                    <li key={i}>{d.decision || d.text || JSON.stringify(d)}</li>
+                                  ))}
+                                </ul>
+                              </>
+                            )}
                           </CardContent>
                         )}
                       </Card>
