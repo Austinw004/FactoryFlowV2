@@ -16,9 +16,9 @@ const subscriptionTiers = [
     id: "starter",
     name: "Starter",
     description: "Essential tools for small manufacturers",
-    price: 299,
+    price: 799,
     period: "/month",
-    annualPrice: 249,
+    annualPrice: 649,
     icon: Zap,
     color: "text-blue-500",
     bgColor: "bg-blue-100 dark:bg-blue-900/30",
@@ -36,9 +36,9 @@ const subscriptionTiers = [
     id: "professional",
     name: "Professional",
     description: "Advanced capabilities for growing operations",
-    price: 799,
+    price: 1999,
     period: "/month",
-    annualPrice: 649,
+    annualPrice: 1649,
     icon: Rocket,
     color: "text-purple-500",
     bgColor: "bg-purple-100 dark:bg-purple-900/30",
@@ -58,9 +58,10 @@ const subscriptionTiers = [
     id: "enterprise",
     name: "Enterprise",
     description: "Full platform access for large manufacturers",
-    price: 1999,
-    period: "/month",
-    annualPrice: 1649,
+    price: null,
+    period: "",
+    annualPrice: null,
+    contactSales: true,
     icon: Building2,
     color: "text-amber-500",
     bgColor: "bg-amber-100 dark:bg-amber-900/30",
@@ -271,14 +272,22 @@ export default function Pricing() {
 
                     <CardContent className="flex-1">
                       <div className="text-center mb-6">
-                        <div className="flex items-baseline justify-center gap-1">
-                          <span className="text-4xl font-bold">${displayPrice}</span>
-                          <span className="text-muted-foreground">/month</span>
-                        </div>
-                        {billingPeriod === "annual" && (
-                          <p className="text-sm text-green-600 dark:text-green-400 mt-1">
-                            Save ${(tier.price - tier.annualPrice) * 12}/year
-                          </p>
+                        {tier.contactSales ? (
+                          <div className="flex items-baseline justify-center gap-1">
+                            <span className="text-3xl font-bold">Contact Sales</span>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex items-baseline justify-center gap-1">
+                              <span className="text-4xl font-bold">${displayPrice?.toLocaleString()}</span>
+                              <span className="text-muted-foreground">/month</span>
+                            </div>
+                            {billingPeriod === "annual" && tier.price && tier.annualPrice && (
+                              <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+                                Save ${((tier.price - tier.annualPrice) * 12).toLocaleString()}/year
+                              </p>
+                            )}
+                          </>
                         )}
                       </div>
 
@@ -300,7 +309,7 @@ export default function Pricing() {
                         onClick={() => handleGetStarted(tier.id)}
                         data-testid={`button-subscribe-${tier.id}`}
                       >
-                        Start 30-Day Free Trial
+                        {tier.contactSales ? "Contact Sales" : "Start 30-Day Free Trial"}
                         <ArrowRight className="h-4 w-4 ml-2" />
                       </Button>
                     </CardFooter>
