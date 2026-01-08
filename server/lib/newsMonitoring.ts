@@ -925,47 +925,25 @@ export class NewsMonitoringService {
       const daysAgo = Math.floor(Math.random() * 3);
       const publishedAt = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000);
 
-      // Generate article-specific URL slug from the title
-      const articleSlug = event.title
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, '')
-        .replace(/\s+/g, '-')
-        .substring(0, 60);
-      
-      const dateStr = publishedAt.toISOString().split('T')[0].replace(/-/g, '/');
-      
+      // Simulated alerts don't have real article URLs
+      // Use '#' to indicate no external link is available
       const sources = [
-        { name: 'Reuters', baseUrl: 'https://www.reuters.com/business/supply-chain/', pathFormat: 'article' },
-        { name: 'Bloomberg', baseUrl: 'https://www.bloomberg.com/news/articles/', pathFormat: 'date-slug' },
-        { name: 'WSJ', baseUrl: 'https://www.wsj.com/articles/', pathFormat: 'slug' },
-        { name: 'Financial Times', baseUrl: 'https://www.ft.com/content/', pathFormat: 'uuid' },
-        { name: 'AP News', baseUrl: 'https://apnews.com/article/', pathFormat: 'slug' }
+        'Industry Analysis',
+        'Supply Chain Intelligence',
+        'Market Research',
+        'Risk Assessment',
+        'Economic Monitor'
       ];
       const selectedSource = sources[Math.floor(Math.random() * sources.length)];
       
-      // Generate source-specific article URL
-      let articleUrl: string;
-      switch (selectedSource.pathFormat) {
-        case 'date-slug':
-          articleUrl = `${selectedSource.baseUrl}${dateStr}/${articleSlug}`;
-          break;
-        case 'uuid':
-          // Generate a UUID-like string from title hash
-          const hash = event.title.split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0);
-          articleUrl = `${selectedSource.baseUrl}${Math.abs(hash).toString(16).padStart(8, '0')}-${Date.now().toString(16)}`;
-          break;
-        case 'article':
-          articleUrl = `${selectedSource.baseUrl}${articleSlug}-${dateStr.replace(/\//g, '-')}`;
-          break;
-        default:
-          articleUrl = `${selectedSource.baseUrl}${articleSlug}`;
-      }
+      // For simulated alerts, we don't have real external URLs
+      const articleUrl = '#';
       
       alerts.push({
         id: this.generateId(event.title, publishedAt.toISOString()),
         title: event.title,
         description: event.description,
-        source: selectedSource.name,
+        source: selectedSource,
         sourceUrl: articleUrl,
         publishedAt,
         category: event.category,
