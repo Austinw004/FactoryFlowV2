@@ -379,6 +379,7 @@ export default function AgenticAI() {
   const [conversationId] = useState(`agentic_${Date.now()}`);
   const [isChatMinimized, setIsChatMinimized] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const prevMessageCountRef = useRef(0);
   
@@ -431,10 +432,13 @@ export default function AgenticAI() {
     prevMessageCountRef.current = chatMessages.length;
   }, [chatMessages]);
 
-  // Auto-scroll to bottom when new messages are added
+  // Auto-scroll chat container to bottom when new messages are added
   useEffect(() => {
-    if (chatMessages.length > 0 && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    if (chatMessages.length > 0 && chatScrollRef.current) {
+      chatScrollRef.current.scrollTo({
+        top: chatScrollRef.current.scrollHeight,
+        behavior: "smooth"
+      });
     }
   }, [chatMessages]);
 
@@ -1234,7 +1238,7 @@ export default function AgenticAI() {
                 </CardHeader>
                 {!isChatMinimized && (
                 <CardContent className="flex-1 flex flex-col p-0 min-h-0 overflow-hidden">
-                  <ScrollArea className="flex-1 p-4 w-full">
+                  <div ref={chatScrollRef} className="flex-1 p-4 w-full overflow-y-auto">
                     <div className="space-y-4 w-full max-w-full overflow-hidden">
                       {chatMessages.length === 0 ? (
                         <div className="py-8 px-4">
@@ -1340,7 +1344,7 @@ export default function AgenticAI() {
                       )}
                       <div ref={messagesEndRef} />
                     </div>
-                  </ScrollArea>
+                  </div>
                   <div className="border-t p-4">
                     <div className="flex gap-2">
                       <Textarea
