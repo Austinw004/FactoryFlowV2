@@ -145,19 +145,26 @@ export class NewsMonitoringService {
 
     const cacheKey = `news_${new Date().toISOString().split('T')[0]}`;
     const timeSinceLastFetch = Date.now() - this.lastFetch.getTime();
+    const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
     
-    if (this.cache.has(cacheKey) && timeSinceLastFetch < 15 * 60 * 1000) {
+    if (this.cache.has(cacheKey) && timeSinceLastFetch < TWELVE_HOURS_MS) {
       return this.cache.get(cacheKey)!;
     }
 
     const alerts: NewsAlert[] = [];
     const queries = [
-      'supply chain disruption',
-      'trade war tariff',
-      'port closure shipping',
-      'factory shutdown manufacturing',
-      'semiconductor shortage',
-      'geopolitical trade sanctions'
+      'supply chain disruption manufacturing',
+      'trade war tariff import export',
+      'port closure shipping container',
+      'factory shutdown production halt',
+      'semiconductor chip shortage',
+      'geopolitical sanctions trade',
+      'natural disaster supply chain hurricane earthquake',
+      'labor strike workers union factory',
+      'economic crisis inflation recession manufacturing',
+      'regulatory change compliance import export',
+      'supplier bankruptcy insolvency',
+      'commodity shortage raw materials steel aluminum'
     ];
 
     try {
@@ -399,6 +406,7 @@ export class NewsMonitoringService {
       regions: string[];
       commodities: string[];
     }> = [
+      // PORT CLOSURE - 6 articles
       {
         title: "Major Port Congestion at Shanghai Impacts Global Shipping",
         description: "Container backlog at Shanghai port reaches critical levels, with delays expected to extend 2-3 weeks for eastbound cargo. Shipping companies warn of rate increases.",
@@ -408,6 +416,48 @@ export class NewsMonitoringService {
         commodities: ['Electronics', 'Automotive Parts']
       },
       {
+        title: "Los Angeles Port Operations Suspended Due to Labor Negotiations",
+        description: "West Coast port operations halted as contract talks between terminal operators and longshoremen reach impasse. Cargo vessels diverting to alternative ports.",
+        category: 'port_closure',
+        severity: 'critical',
+        regions: ['United States'],
+        commodities: ['Electronics', 'Automotive Parts', 'Textiles']
+      },
+      {
+        title: "Rotterdam Port Faces Capacity Constraints Amid Infrastructure Upgrade",
+        description: "Europe's largest port implements partial closures for terminal modernization, reducing container throughput by 30% for next 6 weeks.",
+        category: 'port_closure',
+        severity: 'medium',
+        regions: ['Europe'],
+        commodities: ['Chemicals', 'Steel', 'Oil & Gas']
+      },
+      {
+        title: "Singapore Maritime Hub Reports Record Delays",
+        description: "Transshipment hub experiences unprecedented congestion with average vessel wait times exceeding 5 days. Regional supply chains feeling the strain.",
+        category: 'port_closure',
+        severity: 'high',
+        regions: ['Asia Pacific'],
+        commodities: ['Electronics', 'Semiconductors']
+      },
+      {
+        title: "Hamburg Port Workers Vote for Industrial Action",
+        description: "German port workers authorize strike action over automation concerns, potentially disrupting Northern European trade routes for major manufacturers.",
+        category: 'port_closure',
+        severity: 'medium',
+        regions: ['Europe'],
+        commodities: ['Steel', 'Automotive Parts', 'Chemicals']
+      },
+      {
+        title: "Suez Canal Blockage Causes Global Shipping Delays",
+        description: "Container vessel grounding in Suez Canal creates backlog of 300+ ships, with ripple effects expected across global supply chains for weeks.",
+        category: 'port_closure',
+        severity: 'critical',
+        regions: ['Middle East', 'Europe', 'Asia Pacific'],
+        commodities: ['Oil & Gas', 'Electronics', 'Automotive Parts']
+      },
+
+      // TRADE DISPUTE - 6 articles
+      {
         title: "New US-China Trade Restrictions Target Semiconductor Industry",
         description: "Latest export controls expand restrictions on advanced chip manufacturing equipment, affecting major technology suppliers in the region.",
         category: 'trade_dispute',
@@ -416,13 +466,47 @@ export class NewsMonitoringService {
         commodities: ['Semiconductors', 'Electronics']
       },
       {
-        title: "European Chemical Suppliers Face Energy Cost Pressures",
-        description: "Rising natural gas prices force several major European chemical manufacturers to reduce production capacity by 15-20%.",
-        category: 'supplier_distress',
+        title: "EU Imposes Anti-Dumping Tariffs on Steel Imports",
+        description: "European Commission announces 25% tariffs on steel imports from multiple countries, citing unfair pricing practices. Manufacturers brace for cost increases.",
+        category: 'trade_dispute',
+        severity: 'high',
+        regions: ['Europe', 'Asia Pacific'],
+        commodities: ['Steel', 'Aluminum']
+      },
+      {
+        title: "Mexico-Canada Trade Tensions Escalate Over Auto Parts",
+        description: "New tariff threats on automotive components create uncertainty for North American supply chains. Industry groups call for immediate negotiations.",
+        category: 'trade_dispute',
+        severity: 'medium',
+        regions: ['United States', 'Latin America'],
+        commodities: ['Automotive Parts', 'Steel']
+      },
+      {
+        title: "India Raises Import Duties on Electronic Components",
+        description: "Government announces increased tariffs on imported electronics to boost domestic manufacturing. Foreign suppliers reassessing market strategy.",
+        category: 'trade_dispute',
+        severity: 'medium',
+        regions: ['India', 'Asia Pacific'],
+        commodities: ['Electronics', 'Semiconductors']
+      },
+      {
+        title: "Japan-Korea Trade Restrictions Continue to Impact Tech Supply",
+        description: "Ongoing export controls on critical materials between Asian nations continue to disrupt semiconductor and display manufacturing supply chains.",
+        category: 'trade_dispute',
+        severity: 'high',
+        regions: ['Asia Pacific'],
+        commodities: ['Semiconductors', 'Rare Earths', 'Chemicals']
+      },
+      {
+        title: "UK-EU Post-Brexit Trade Friction Increases Customs Delays",
+        description: "New border checks and paperwork requirements causing 2-3 day delays for goods crossing the English Channel, affecting just-in-time manufacturing.",
+        category: 'trade_dispute',
         severity: 'medium',
         regions: ['Europe'],
-        commodities: ['Chemicals']
+        commodities: ['Automotive Parts', 'Chemicals', 'Textiles']
       },
+
+      // NATURAL DISASTER - 6 articles
       {
         title: "Typhoon Disrupts Manufacturing in Southeast Asia",
         description: "Category 4 typhoon impacts Vietnam and Philippines manufacturing zones, with automotive and electronics production suspended temporarily.",
@@ -432,6 +516,48 @@ export class NewsMonitoringService {
         commodities: ['Electronics', 'Automotive Parts', 'Textiles']
       },
       {
+        title: "California Wildfires Force Semiconductor Facility Evacuation",
+        description: "Major chip fabrication plant evacuated as wildfires approach industrial zone. Production timeline uncertain as fire containment efforts continue.",
+        category: 'natural_disaster',
+        severity: 'critical',
+        regions: ['United States'],
+        commodities: ['Semiconductors', 'Electronics']
+      },
+      {
+        title: "Flooding in Central Europe Disrupts Chemical Production",
+        description: "Record rainfall causes widespread flooding along Rhine industrial corridor, forcing chemical plants to halt operations and threatening supply contracts.",
+        category: 'natural_disaster',
+        severity: 'high',
+        regions: ['Europe'],
+        commodities: ['Chemicals', 'Automotive Parts']
+      },
+      {
+        title: "Earthquake Damages Japanese Auto Parts Facilities",
+        description: "Magnitude 6.8 earthquake strikes industrial region, causing structural damage to multiple tier-1 automotive suppliers. Full assessment underway.",
+        category: 'natural_disaster',
+        severity: 'critical',
+        regions: ['Asia Pacific'],
+        commodities: ['Automotive Parts', 'Electronics', 'Steel']
+      },
+      {
+        title: "Drought Conditions Impact Taiwanese Semiconductor Water Supply",
+        description: "Severe drought restricts water allocation to chip manufacturers, potentially forcing production cuts at major fabrication facilities.",
+        category: 'natural_disaster',
+        severity: 'high',
+        regions: ['Asia Pacific'],
+        commodities: ['Semiconductors', 'Electronics']
+      },
+      {
+        title: "Hurricane Season Threatens Gulf Coast Petrochemical Hub",
+        description: "Early-season tropical activity prompts precautionary shutdowns at Texas and Louisiana refineries and chemical plants, affecting downstream supply.",
+        category: 'natural_disaster',
+        severity: 'medium',
+        regions: ['United States'],
+        commodities: ['Oil & Gas', 'Chemicals']
+      },
+
+      // REGULATORY CHANGE - 6 articles
+      {
         title: "EU Announces New Sustainability Regulations for Imports",
         description: "New carbon border adjustment mechanism to affect steel and aluminum imports starting next quarter, requiring additional compliance documentation.",
         category: 'regulatory_change',
@@ -440,20 +566,54 @@ export class NewsMonitoringService {
         commodities: ['Steel', 'Aluminum']
       },
       {
-        title: "Rare Earth Supply Concerns Amid Export Restrictions",
-        description: "Growing concerns over rare earth element availability as major producing nations signal potential export limitations for strategic materials.",
-        category: 'commodity_shortage',
+        title: "FDA Tightens Quality Requirements for Pharmaceutical Ingredients",
+        description: "New regulations require enhanced documentation and testing for active pharmaceutical ingredients, affecting import timelines from major producing nations.",
+        category: 'regulatory_change',
         severity: 'high',
-        regions: ['China', 'Global'],
-        commodities: ['Rare Earths', 'Electronics']
+        regions: ['United States', 'India'],
+        commodities: ['Chemicals']
       },
       {
-        title: "Middle East Tensions Impact Oil Shipping Routes",
-        description: "Shipping companies reroute vessels around Red Sea following regional security concerns, adding 10-14 days to Europe-Asia transit times.",
-        category: 'geopolitical_tension',
+        title: "China Implements New Rare Earth Export Licensing Requirements",
+        description: "Revised export controls require additional permits for rare earth materials, creating uncertainty for global electronics and EV manufacturers.",
+        category: 'regulatory_change',
         severity: 'critical',
-        regions: ['Middle East', 'Europe', 'Asia Pacific'],
-        commodities: ['Oil & Gas', 'Chemicals']
+        regions: ['China', 'Global'],
+        commodities: ['Rare Earths', 'Electronics', 'Automotive Parts']
+      },
+      {
+        title: "California Proposes Stricter Battery Recycling Mandates",
+        description: "New state regulations would require full supply chain traceability for EV batteries, impacting procurement strategies for automakers.",
+        category: 'regulatory_change',
+        severity: 'medium',
+        regions: ['United States'],
+        commodities: ['Automotive Parts', 'Rare Earths']
+      },
+      {
+        title: "UK Introduces Post-Brexit Chemical Registration System",
+        description: "New UK REACH regulations require separate chemical registration from EU system, adding compliance burden for manufacturers serving both markets.",
+        category: 'regulatory_change',
+        severity: 'medium',
+        regions: ['Europe'],
+        commodities: ['Chemicals']
+      },
+      {
+        title: "Japan Strengthens Semiconductor Export Controls",
+        description: "Government expands list of controlled semiconductor manufacturing equipment, aligning with international export restriction frameworks.",
+        category: 'regulatory_change',
+        severity: 'high',
+        regions: ['Asia Pacific'],
+        commodities: ['Semiconductors', 'Electronics']
+      },
+
+      // SUPPLIER DISTRESS - 6 articles
+      {
+        title: "European Chemical Suppliers Face Energy Cost Pressures",
+        description: "Rising natural gas prices force several major European chemical manufacturers to reduce production capacity by 15-20%.",
+        category: 'supplier_distress',
+        severity: 'medium',
+        regions: ['Europe'],
+        commodities: ['Chemicals']
       },
       {
         title: "Automotive Supplier Files for Bankruptcy Protection",
@@ -463,6 +623,90 @@ export class NewsMonitoringService {
         regions: ['United States'],
         commodities: ['Automotive Parts']
       },
+      {
+        title: "Steel Producer Suspends Operations Amid Financial Troubles",
+        description: "Mid-sized steel manufacturer halts production citing liquidity issues, leaving customers scrambling for alternative supply sources.",
+        category: 'supplier_distress',
+        severity: 'high',
+        regions: ['Europe'],
+        commodities: ['Steel', 'Automotive Parts']
+      },
+      {
+        title: "Electronics Contract Manufacturer Reports Credit Downgrade",
+        description: "Major EMS provider faces credit rating reduction, raising concerns about production continuity for multiple OEM customers.",
+        category: 'supplier_distress',
+        severity: 'medium',
+        regions: ['Asia Pacific'],
+        commodities: ['Electronics', 'Semiconductors']
+      },
+      {
+        title: "Textile Supplier Network Faces Collapse in Southeast Asia",
+        description: "Multiple garment manufacturers in Bangladesh report financial distress following order cancellations, threatening apparel supply chains.",
+        category: 'supplier_distress',
+        severity: 'high',
+        regions: ['Asia Pacific'],
+        commodities: ['Textiles']
+      },
+      {
+        title: "Aluminum Smelter Announces Permanent Closure",
+        description: "European aluminum producer closes operations citing uncompetitive energy costs, removing significant capacity from regional supply base.",
+        category: 'supplier_distress',
+        severity: 'critical',
+        regions: ['Europe'],
+        commodities: ['Aluminum']
+      },
+
+      // COMMODITY SHORTAGE - 6 articles
+      {
+        title: "Rare Earth Supply Concerns Amid Export Restrictions",
+        description: "Growing concerns over rare earth element availability as major producing nations signal potential export limitations for strategic materials.",
+        category: 'commodity_shortage',
+        severity: 'high',
+        regions: ['China', 'Global'],
+        commodities: ['Rare Earths', 'Electronics']
+      },
+      {
+        title: "Global Copper Inventory Reaches Critical Low",
+        description: "Exchange warehouse stocks hit decade lows as demand outpaces mining output. Prices surge 15% in recent trading sessions.",
+        category: 'commodity_shortage',
+        severity: 'critical',
+        regions: ['Global'],
+        commodities: ['Copper']
+      },
+      {
+        title: "Lithium Supply Tightens Amid EV Battery Demand Surge",
+        description: "Battery-grade lithium carbonate faces severe shortage as electric vehicle production ramps faster than mining capacity expansion.",
+        category: 'commodity_shortage',
+        severity: 'high',
+        regions: ['Global', 'Latin America'],
+        commodities: ['Rare Earths', 'Automotive Parts']
+      },
+      {
+        title: "Specialty Steel Alloys Face Extended Lead Times",
+        description: "High-grade steel alloys for aerospace and automotive applications now require 16-20 week lead times, up from historical 8-10 weeks.",
+        category: 'commodity_shortage',
+        severity: 'medium',
+        regions: ['Global'],
+        commodities: ['Steel', 'Automotive Parts']
+      },
+      {
+        title: "Semiconductor-Grade Neon Gas Supply Disrupted",
+        description: "Critical noble gas used in chip manufacturing faces supply constraints following production disruptions in Eastern Europe.",
+        category: 'commodity_shortage',
+        severity: 'critical',
+        regions: ['Europe', 'Global'],
+        commodities: ['Semiconductors', 'Chemicals']
+      },
+      {
+        title: "Natural Rubber Prices Spike on Supply Shortage",
+        description: "Southeast Asian rubber production impacted by weather and disease, driving prices to multi-year highs for tire and industrial manufacturers.",
+        category: 'commodity_shortage',
+        severity: 'medium',
+        regions: ['Asia Pacific', 'Global'],
+        commodities: ['Automotive Parts', 'Textiles']
+      },
+
+      // SUPPLY CHAIN DISRUPTION - 6 articles
       {
         title: "Major Logistics Hub Faces Extended Delays Due to System Outage",
         description: "Critical distribution center experiences IT infrastructure failure, causing ripple effects across regional supply networks. Recovery expected within 5-7 days.",
@@ -480,6 +724,40 @@ export class NewsMonitoringService {
         commodities: ['Automotive Parts', 'Textiles']
       },
       {
+        title: "Air Cargo Capacity Crisis Hits Time-Sensitive Shipments",
+        description: "Reduction in passenger airline belly cargo capacity creates severe shortage for expedited freight, driving air cargo rates to record highs.",
+        category: 'supply_chain_disruption',
+        severity: 'high',
+        regions: ['Global'],
+        commodities: ['Electronics', 'Semiconductors', 'Chemicals']
+      },
+      {
+        title: "Rail Network Disruption Impacts Intermodal Freight Movement",
+        description: "Major railroad operator reports service delays following equipment failures, affecting container movement from ports to inland distribution centers.",
+        category: 'supply_chain_disruption',
+        severity: 'medium',
+        regions: ['United States'],
+        commodities: ['Steel', 'Automotive Parts', 'Chemicals']
+      },
+      {
+        title: "Warehouse Automation Failure Halts Major Distribution Center",
+        description: "Robotics system malfunction at key fulfillment center causes multi-day shutdown, delaying thousands of customer orders.",
+        category: 'supply_chain_disruption',
+        severity: 'high',
+        regions: ['Europe'],
+        commodities: ['Electronics', 'Textiles']
+      },
+      {
+        title: "Container Shortage Continues to Plague Global Trade",
+        description: "Imbalance in container repositioning leaves Asian exporters facing 4-6 week waits for equipment, extending delivery timelines globally.",
+        category: 'supply_chain_disruption',
+        severity: 'critical',
+        regions: ['Asia Pacific', 'Global'],
+        commodities: ['Electronics', 'Textiles', 'Automotive Parts']
+      },
+
+      // LABOR STRIKE - 6 articles
+      {
         title: "Dockworkers Strike at Major European Ports Enters Second Week",
         description: "Labor negotiations stall as port workers demand wage increases and improved working conditions. Container handling capacity reduced by 60%.",
         category: 'labor_strike',
@@ -496,6 +774,90 @@ export class NewsMonitoringService {
         commodities: ['Automotive Parts', 'Steel']
       },
       {
+        title: "Mining Workers Strike Threatens Copper Production",
+        description: "Labor action at major copper mines in Chile and Peru threatens to remove significant production capacity from global market.",
+        category: 'labor_strike',
+        severity: 'critical',
+        regions: ['Latin America'],
+        commodities: ['Copper', 'Rare Earths']
+      },
+      {
+        title: "Refinery Workers Vote for Industrial Action Over Safety Concerns",
+        description: "Unionized refinery workers authorize strike at multiple Gulf Coast facilities, potentially impacting petroleum product supply.",
+        category: 'labor_strike',
+        severity: 'high',
+        regions: ['United States'],
+        commodities: ['Oil & Gas', 'Chemicals']
+      },
+      {
+        title: "Air Traffic Controllers Work-to-Rule Action Delays Cargo Flights",
+        description: "European air traffic controllers implement work slowdown, causing significant delays and cancellations for time-sensitive freight.",
+        category: 'labor_strike',
+        severity: 'medium',
+        regions: ['Europe'],
+        commodities: ['Electronics', 'Semiconductors']
+      },
+      {
+        title: "Truckers Association Announces Highway Blockade Protest",
+        description: "Transport workers in multiple countries coordinate protest action over fuel costs and working conditions, threatening freight movement.",
+        category: 'labor_strike',
+        severity: 'high',
+        regions: ['Europe', 'Latin America'],
+        commodities: ['Steel', 'Automotive Parts', 'Textiles']
+      },
+
+      // GEOPOLITICAL TENSION - 6 articles
+      {
+        title: "Middle East Tensions Impact Oil Shipping Routes",
+        description: "Shipping companies reroute vessels around Red Sea following regional security concerns, adding 10-14 days to Europe-Asia transit times.",
+        category: 'geopolitical_tension',
+        severity: 'critical',
+        regions: ['Middle East', 'Europe', 'Asia Pacific'],
+        commodities: ['Oil & Gas', 'Chemicals']
+      },
+      {
+        title: "Taiwan Strait Tensions Raise Supply Chain Continuity Concerns",
+        description: "Increased military activity in Taiwan Strait prompts manufacturers to evaluate contingency plans for semiconductor supply disruption.",
+        category: 'geopolitical_tension',
+        severity: 'critical',
+        regions: ['Asia Pacific', 'Global'],
+        commodities: ['Semiconductors', 'Electronics']
+      },
+      {
+        title: "Sanctions Expansion Impacts Russian Raw Material Exports",
+        description: "New international sanctions targeting Russian commodities create supply uncertainty for palladium, titanium, and fertilizer materials.",
+        category: 'geopolitical_tension',
+        severity: 'high',
+        regions: ['Europe', 'Global'],
+        commodities: ['Rare Earths', 'Steel', 'Chemicals']
+      },
+      {
+        title: "Border Disputes Disrupt Central Asian Trade Corridors",
+        description: "Political tensions between neighboring states close key land trade routes, forcing cargo rerouting through longer alternative paths.",
+        category: 'geopolitical_tension',
+        severity: 'medium',
+        regions: ['Asia Pacific'],
+        commodities: ['Textiles', 'Rare Earths']
+      },
+      {
+        title: "South China Sea Incidents Raise Maritime Insurance Costs",
+        description: "Increased risk premiums for vessels transiting contested waters add to shipping costs for Asia-Pacific trade routes.",
+        category: 'geopolitical_tension',
+        severity: 'medium',
+        regions: ['Asia Pacific'],
+        commodities: ['Electronics', 'Oil & Gas']
+      },
+      {
+        title: "African Political Instability Threatens Mining Operations",
+        description: "Civil unrest in mineral-rich regions prompts evacuation of expatriate staff and suspension of critical mining activities.",
+        category: 'geopolitical_tension',
+        severity: 'high',
+        regions: ['Africa'],
+        commodities: ['Rare Earths', 'Copper']
+      },
+
+      // ECONOMIC CRISIS - 6 articles
+      {
         title: "Currency Crisis in Emerging Markets Impacts Procurement Costs",
         description: "Sharp devaluation in multiple emerging market currencies driving up import costs for raw materials. Manufacturers reassessing supplier contracts.",
         category: 'economic_crisis',
@@ -510,6 +872,38 @@ export class NewsMonitoringService {
         severity: 'medium',
         regions: ['Global', 'Europe', 'United States'],
         commodities: ['Steel', 'Aluminum', 'Oil & Gas', 'Chemicals']
+      },
+      {
+        title: "Central Bank Rate Hikes Squeeze Manufacturing Credit Access",
+        description: "Aggressive monetary tightening restricts working capital availability for manufacturers, forcing inventory reduction and delayed expansion plans.",
+        category: 'economic_crisis',
+        severity: 'high',
+        regions: ['Global', 'United States', 'Europe'],
+        commodities: ['Steel', 'Automotive Parts', 'Electronics']
+      },
+      {
+        title: "Energy Price Volatility Forces European Factory Curtailments",
+        description: "Extreme electricity and gas price swings make production planning impossible for energy-intensive industries. Temporary shutdowns becoming common.",
+        category: 'economic_crisis',
+        severity: 'critical',
+        regions: ['Europe'],
+        commodities: ['Steel', 'Aluminum', 'Chemicals']
+      },
+      {
+        title: "Banking Sector Stress Impacts Trade Finance Availability",
+        description: "Financial institution difficulties restrict letters of credit and trade financing, delaying international procurement transactions.",
+        category: 'economic_crisis',
+        severity: 'high',
+        regions: ['Global'],
+        commodities: ['Electronics', 'Steel', 'Textiles']
+      },
+      {
+        title: "Demand Destruction Signals as Consumer Spending Contracts",
+        description: "Economic slowdown reduces end-consumer demand, creating inventory buildup across supply chains and prompting order cancellations.",
+        category: 'economic_crisis',
+        severity: 'medium',
+        regions: ['United States', 'Europe'],
+        commodities: ['Electronics', 'Textiles', 'Automotive Parts']
       }
     ];
 

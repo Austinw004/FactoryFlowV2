@@ -7644,6 +7644,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (category && category !== 'all') {
         filteredAlerts = filteredAlerts.filter(a => a.category === category);
+      } else {
+        // When showing "all" categories, return only the top 6 most relevant
+        // Sort by company relevance score (highest first), then by severity
+        filteredAlerts = [...enrichedAlerts]
+          .sort((a, b) => {
+            // First by company relevance score
+            if (b.companyRelevanceScore !== a.companyRelevanceScore) {
+              return b.companyRelevanceScore - a.companyRelevanceScore;
+            }
+            // Then by severity
+            const severityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+            return severityOrder[a.severity] - severityOrder[b.severity];
+          })
+          .slice(0, 6);
       }
       
       if (severity && severity !== 'all') {
