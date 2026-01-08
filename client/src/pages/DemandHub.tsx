@@ -11,18 +11,18 @@ const DemandSignalRepository = lazy(() => import("./DemandSignalRepository"));
 const SopWorkspace = lazy(() => import("./SopWorkspace"));
 
 const tabs = [
+  { id: "sop", label: "S&OP", icon: Clipboard, Component: SopWorkspace },
   { id: "planning", label: "Demand Planning", icon: TrendingUp, Component: Forecasting },
   { id: "accuracy", label: "Accuracy", icon: Target, Component: ForecastAccuracy },
   { id: "horizons", label: "Multi-Horizon", icon: BarChart3, Component: MultiHorizonForecasts },
   { id: "signals", label: "Demand Signals", icon: Radio, Component: DemandSignalRepository },
-  { id: "sop", label: "S&OP", icon: Clipboard, Component: SopWorkspace },
 ];
 
 interface DemandHubProps {
   initialTab?: string;
 }
 
-export default function DemandHub({ initialTab = "planning" }: DemandHubProps) {
+export default function DemandHub({ initialTab = "sop" }: DemandHubProps) {
   const [activeTab, setActiveTab] = useState(initialTab);
   
   useEffect(() => {
