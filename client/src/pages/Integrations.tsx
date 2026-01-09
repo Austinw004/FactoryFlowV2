@@ -11,6 +11,10 @@ import { CSVImportExportDialog } from "@/components/CSVImportExportDialog";
 import { SlackConfigDialog } from "@/components/SlackConfigDialog";
 import { TwilioConfigDialog } from "@/components/TwilioConfigDialog";
 import { HubSpotConfigDialog } from "@/components/HubSpotConfigDialog";
+import { EmailConfigDialog } from "@/components/EmailConfigDialog";
+import { ZapierWebhookDialog } from "@/components/ZapierWebhookDialog";
+import { PowerBIConnectorDialog } from "@/components/PowerBIConnectorDialog";
+import { GoogleSheetsDialog } from "@/components/GoogleSheetsDialog";
 import {
   Building2,
   MessageSquare,
@@ -97,6 +101,19 @@ const integrations: Integration[] = [
   
   // Communication & Alerts
   {
+    id: "email-notifications",
+    name: "Email Notifications",
+    description: "Receive platform notifications and alerts via email",
+    category: "communication",
+    status: "available",
+    icon: Mail,
+    iconType: "lucide",
+    valueProposition: "Stay informed with automated email alerts",
+    features: ["Meeting invitations", "Critical alerts", "Weekly summaries", "Regime change notifications"],
+    setupTime: "2 minutes",
+    popular: true,
+  },
+  {
     id: "twilio",
     name: "Twilio SMS",
     description: "Send critical alerts via SMS to key stakeholders",
@@ -141,7 +158,7 @@ const integrations: Integration[] = [
     name: "Google Sheets",
     description: "Import and export data via spreadsheets",
     category: "data",
-    status: "coming_soon",
+    status: "available",
     icon: SiGooglesheets,
     iconType: "si",
     valueProposition: "Easy data onboarding and reporting",
@@ -369,7 +386,7 @@ const integrations: Integration[] = [
     name: "Power BI",
     description: "Microsoft business intelligence",
     category: "analytics",
-    status: "coming_soon",
+    status: "available",
     icon: BarChart3,
     iconType: "lucide",
     valueProposition: "Enhanced analytics and executive dashboards",
@@ -382,7 +399,7 @@ const integrations: Integration[] = [
     name: "Tableau",
     description: "Enterprise analytics platform",
     category: "analytics",
-    status: "coming_soon",
+    status: "available",
     icon: BarChart3,
     iconType: "lucide",
     valueProposition: "Advanced visualization and analysis",
@@ -548,7 +565,7 @@ const integrations: Integration[] = [
     name: "Zapier",
     description: "No-code automation platform",
     category: "automation",
-    status: "coming_soon",
+    status: "available",
     icon: SiZapier,
     iconType: "si",
     valueProposition: "Connect to 5,000+ apps without code",
@@ -561,7 +578,7 @@ const integrations: Integration[] = [
     name: "Make (Integromat)",
     description: "Advanced automation platform",
     category: "automation",
-    status: "coming_soon",
+    status: "available",
     icon: Zap,
     iconType: "lucide",
     valueProposition: "Complex workflow automation",
@@ -680,6 +697,10 @@ export default function Integrations() {
   const [slackDialogOpen, setSlackDialogOpen] = useState(false);
   const [twilioDialogOpen, setTwilioDialogOpen] = useState(false);
   const [hubspotDialogOpen, setHubspotDialogOpen] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [zapierDialogOpen, setZapierDialogOpen] = useState(false);
+  const [powerbiDialogOpen, setPowerbiDialogOpen] = useState(false);
+  const [googleSheetsDialogOpen, setGoogleSheetsDialogOpen] = useState(false);
 
   const filteredIntegrations = integrations.filter(integration => {
     const matchesSearch = integration.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -699,10 +720,41 @@ export default function Integrations() {
       setTwilioDialogOpen(true);
     } else if (integration.id === "hubspot") {
       setHubspotDialogOpen(true);
+    } else if (integration.id === "email-notifications") {
+      setEmailDialogOpen(true);
+    } else if (integration.id === "zapier") {
+      setZapierDialogOpen(true);
+    } else if (integration.id === "google-sheets") {
+      setGoogleSheetsDialogOpen(true);
+    } else if (integration.id === "powerbi") {
+      setPowerbiDialogOpen(true);
+    } else if (integration.id === "tableau") {
+      setPowerbiDialogOpen(true);
     } else if (integration.status === "available") {
       toast({
         title: "Integration Setup",
         description: `Starting ${integration.name} configuration. Please follow the setup wizard.`,
+      });
+    }
+  };
+
+  const handleSettings = (integration: Integration) => {
+    if (integration.id === "csv-import") {
+      setCsvDialogOpen(true);
+    } else if (integration.id === "slack") {
+      setSlackDialogOpen(true);
+    } else if (integration.id === "api-access") {
+      toast({ title: "API Documentation", description: "Opening API documentation..." });
+    } else if (integration.id === "webhooks") {
+      setZapierDialogOpen(true);
+    } else if (integration.id === "weather" || integration.id === "news-monitoring" || integration.id === "commodity-feeds") {
+      toast({ title: `${integration.name} Settings`, description: "External data feeds are automatically configured." });
+    } else if (integration.id === "email-notifications") {
+      setEmailDialogOpen(true);
+    } else {
+      toast({
+        title: `${integration.name} Settings`,
+        description: "Integration settings panel coming soon.",
       });
     }
   };
@@ -902,18 +954,7 @@ export default function Integrations() {
                             <Button 
                               size="sm" 
                               variant="outline" 
-                              onClick={() => {
-                                if (integration.id === "csv-import") {
-                                  setCsvDialogOpen(true);
-                                } else if (integration.id === "slack") {
-                                  setSlackDialogOpen(true);
-                                } else {
-                                  toast({
-                                    title: `${integration.name} Settings`,
-                                    description: "Integration settings panel coming soon.",
-                                  });
-                                }
-                              }}
+                              onClick={() => handleSettings(integration)}
                               data-testid={`button-settings-${integration.id}`}
                             >
                               <Settings className="w-4 h-4 mr-1" /> Settings
@@ -973,6 +1014,10 @@ export default function Integrations() {
       <SlackConfigDialog open={slackDialogOpen} onOpenChange={setSlackDialogOpen} />
       <TwilioConfigDialog open={twilioDialogOpen} onOpenChange={setTwilioDialogOpen} />
       <HubSpotConfigDialog open={hubspotDialogOpen} onOpenChange={setHubspotDialogOpen} />
+      <EmailConfigDialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen} />
+      <ZapierWebhookDialog open={zapierDialogOpen} onOpenChange={setZapierDialogOpen} />
+      <PowerBIConnectorDialog open={powerbiDialogOpen} onOpenChange={setPowerbiDialogOpen} />
+      <GoogleSheetsDialog open={googleSheetsDialogOpen} onOpenChange={setGoogleSheetsDialogOpen} />
     </div>
   );
 }

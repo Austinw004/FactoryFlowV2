@@ -15192,6 +15192,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check Twilio credentials from environment variables
       const twilioConfigured = !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER);
       
+      // Check SendPulse credentials for email
+      const emailConfigured = !!(process.env.SENDPULSE_API_USER_ID && process.env.SENDPULSE_API_SECRET);
+      
       res.json({
         slack: {
           enabled: company.slackEnabled === 1,
@@ -15206,6 +15209,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hubspot: {
           enabled: company.hubspotEnabled === 1,
           configured: !!company.hubspotAccessToken,
+        },
+        email: {
+          enabled: company.emailForwardingEnabled === 1,
+          configured: emailConfigured,
         },
       });
     } catch (error: any) {
@@ -15498,6 +15505,140 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(result);
     } catch (error: any) {
       console.error("Error sending Twilio SMS:", error);
+      res.status(500).json({ success: false, message: error.message });
+    }
+  });
+
+  // ==========================================
+  // EMAIL INTEGRATION ROUTES
+  // ==========================================
+  
+  const emailConfigureSchema = z.object({
+    enabled: z.boolean(),
+  });
+
+  const emailTestSchema = z.object({
+    email: z.string().email("Valid email address required"),
+  });
+  
+  // Configure email integration
+  app.post("/api/integrations/email/configure", isAuthenticated, async (req: any, res) => {
+    try {
+      const parseResult = emailConfigureSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ error: parseResult.error.errors[0].message });
+      }
+      const { enabled } = parseResult.data;
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      await storage.updateCompany(user.companyId, {
+        emailForwardingEnabled: enabled ? 1 : 0,
+      });
+      
+      res.json({ success: true, message: "Email integration configured" });
+    } catch (error: any) {
+      console.error("Error configuring email:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Test email integration
+  app.post("/api/integrations/email/test", isAuthenticated, async (req: any, res) => {
+    try {
+      const parseResult = emailTestSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ success: false, message: parseResult.error.errors[0].message });
+      }
+      const { email } = parseResult.data;
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      // Check if email service is configured
+      if (!process.env.SENDPULSE_API_USER_ID || !process.env.SENDPULSE_API_SECRET) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Email service not configured. SendPulse credentials are required." 
+        });
+      }
+      
+      const { sendEmail } = await import("./lib/emailService");
+      
+      const result = await sendEmail({
+        to: [{ name: user.firstName || "User", email }],
+        subject: "Prescient Labs - Test Email",
+        html: `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+          </head>
+          <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h1 style="color: #0f172a; margin: 0; font-size: 28px;">Prescient Labs</h1>
+              <p style="color: #64748b; margin: 5px 0 0 0; font-size: 14px;">Manufacturing Intelligence Platform</p>
+            </div>
+            
+            <div style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); border-radius: 12px; padding: 30px; color: white; text-align: center; margin-bottom: 30px;">
+              <h2 style="margin: 0 0 10px 0; font-size: 24px;">Email Test Successful</h2>
+              <p style="margin: 0; opacity: 0.9;">Your email notifications are working correctly</p>
+            </div>
+            
+            <p style="font-size: 16px;">Hi ${user.firstName || 'there'},</p>
+            
+            <p style="font-size: 16px;">
+              This is a test email from Prescient Labs. If you're receiving this, your email notifications are configured correctly.
+            </p>
+            
+            <p style="font-size: 16px;">
+              You'll receive emails for:
+            </p>
+            
+            <ul style="font-size: 14px; color: #64748b;">
+              <li>S&OP meeting invitations</li>
+              <li>Critical supply chain alerts</li>
+              <li>Regime change notifications</li>
+              <li>Weekly summary reports</li>
+            </ul>
+            
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+            
+            <p style="font-size: 12px; color: #94a3b8; text-align: center;">
+              &copy; 2025 Prescient Labs. All rights reserved.
+            </p>
+          </body>
+          </html>
+        `,
+        text: `
+Prescient Labs - Test Email
+
+Hi ${user.firstName || 'there'},
+
+This is a test email from Prescient Labs. If you're receiving this, your email notifications are configured correctly.
+
+You'll receive emails for:
+- S&OP meeting invitations
+- Critical supply chain alerts
+- Regime change notifications
+- Weekly summary reports
+
+© 2025 Prescient Labs. All rights reserved.
+        `,
+      });
+      
+      if (result.success) {
+        res.json({ success: true, message: "Test email sent successfully. Check your inbox." });
+      } else {
+        res.json({ success: false, message: result.error || "Failed to send test email" });
+      }
+    } catch (error: any) {
+      console.error("Error testing email:", error);
       res.status(500).json({ success: false, message: error.message });
     }
   });
