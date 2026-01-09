@@ -3294,6 +3294,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Validate that requested quantity is greater than zero
+      if (validationResult.data.requestedQuantity <= 0) {
+        return res.status(400).json({ 
+          error: "Invalid quantity", 
+          details: "Requested quantity must be greater than zero. RFQs with zero or negative quantities cannot be created." 
+        });
+      }
+
       const rfqData = {
         ...validationResult.data,
         companyId: user.companyId,
@@ -9784,6 +9792,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         signalDate: req.body.signalDate ? new Date(req.body.signalDate) : new Date(),
       };
       const signalData = insertDemandSignalSchema.parse(body);
+      
+      // Flag extreme values with low confidence as potential data quality issues
+      const warnings: string[] = [];
+      const quantity = signalData.quantity || 0;
+      const confidence = signalData.confidence || 100;
+      
+      if (quantity > 100000 && confidence < 50) {
+        warnings.push("High quantity with low confidence - this signal may be unreliable and should be verified");
+      }
+      if (quantity < 0) {
+        return res.status(400).json({ error: "Invalid quantity: demand signals cannot have negative quantities" });
+      }
+      
       const signal = await storage.createDemandSignal(signalData);
       
       await logAudit({
@@ -9794,7 +9815,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req,
       });
       
-      res.status(201).json(signal);
+      // Return signal with warnings if any
+      if (warnings.length > 0) {
+        res.status(201).json({ ...signal, warnings });
+      } else {
+        res.status(201).json(signal);
+      }
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }

@@ -375,9 +375,14 @@ export async function regenerateMLPredictions() {
     
     for (const companyId of companies) {
       const materials = await storage.getMaterials(companyId);
+      const skus = await storage.getSkus(companyId);
       
       for (const material of materials.slice(0, 3)) {
         const forecastDays = 7;
+        
+        // Find a related SKU for this material (if any exist)
+        // This links material-based predictions to SKUs for consistency
+        const relatedSku = skus.length > 0 ? skus[Math.floor(Math.random() * skus.length)] : null;
         
         for (let i = 1; i <= forecastDays; i++) {
           const baseValue = 100 + Math.random() * 50;
@@ -390,6 +395,7 @@ export async function regenerateMLPredictions() {
           
           const prediction = await storage.createDemandPrediction({
             materialId: material.id,
+            skuId: relatedSku?.id || null,
             companyId,
             mlModel: ['arima', 'lstm', 'prophet'][Math.floor(Math.random() * 3)] as 'arima' | 'lstm' | 'prophet',
             forecastPeriod: 'weekly',
@@ -407,7 +413,7 @@ export async function regenerateMLPredictions() {
           action: 'create',
           timestamp: new Date().toISOString(),
           companyId,
-          data: { materialId: material.id, predictionsGenerated: forecastDays },
+          data: { materialId: material.id, skuId: relatedSku?.id, predictionsGenerated: forecastDays },
         });
       }
       
