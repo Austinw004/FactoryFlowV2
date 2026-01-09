@@ -48,7 +48,8 @@ The system is a multi-tenant application with data isolation per company. Core t
 - **Demand Signal Repository**: Centralized hub for multi-source demand signals with analytics.
 - **ROI Dashboard**: Visualizes procurement savings and forecast accuracy.
 - **ERP Integration Templates**: Pre-built templates for major ERPs.
-- **Onboarding Wizard**: A 3-step wizard for new users covering company setup, team invitations, and platform launch.
+- **Onboarding Wizard**: A 3-step wizard for new users covering company setup, team invitations, and platform launch. Includes ref-based validation fallback for robust form handling.
+- **Integration Health Monitoring**: Live connectivity health checks (GET /api/integrations/health) for all configured integrations including FRED, Alpha Vantage, Trading Economics, News API, OpenAI, Twilio, SendPulse, and Stripe with latency tracking, status categorization (healthy/degraded/offline/not_configured), and parallel execution.
 
 ### System Design Choices
 

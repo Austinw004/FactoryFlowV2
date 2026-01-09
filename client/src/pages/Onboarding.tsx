@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -46,6 +46,7 @@ export default function Onboarding() {
   const { toast } = useToast();
   const [step, setStep] = useState(1);
   
+  const companyNameRef = useRef<HTMLInputElement>(null);
   const [companyName, setCompanyName] = useState("");
   const [industry, setIndustry] = useState("");
   const [companySize, setCompanySize] = useState("");
@@ -128,8 +129,11 @@ export default function Onboarding() {
     setTeamMembers(teamMembers.filter(m => m.email !== email));
   };
 
-  const handleCompanySubmit = () => {
-    if (!companyName.trim()) {
+  const handleCompanySubmit = useCallback(() => {
+    // Use ref value as fallback for automation scenarios where React state may not update
+    const nameValue = companyName.trim() || companyNameRef.current?.value?.trim() || "";
+    
+    if (!nameValue) {
       toast({
         title: "Company name required",
         description: "Please enter your company name",
@@ -137,13 +141,19 @@ export default function Onboarding() {
       });
       return;
     }
+    
+    // Sync state if we used the ref fallback
+    if (!companyName.trim() && nameValue) {
+      setCompanyName(nameValue);
+    }
+    
     setupCompanyMutation.mutate({
-      name: companyName,
+      name: nameValue,
       industry,
       companySize,
       location,
     });
-  };
+  }, [companyName, industry, companySize, location, toast, setupCompanyMutation]);
 
   const handleTeamSubmit = async () => {
     if (teamMembers.length > 0) {
@@ -186,6 +196,7 @@ export default function Onboarding() {
               <div className="space-y-2">
                 <Label htmlFor="companyName">Company Name *</Label>
                 <Input
+                  ref={companyNameRef}
                   id="companyName"
                   data-testid="input-company-name"
                   placeholder="Acme Manufacturing Co."

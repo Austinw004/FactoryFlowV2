@@ -64,7 +64,7 @@ export function TeamsConfigDialog({ open, onOpenChange }: TeamsConfigDialogProps
   }, [open]);
 
   const configureMutation = useMutation({
-    mutationFn: async (data: { webhookUrl: string; channelName: string; enabled: boolean }) => {
+    mutationFn: async (data: { webhookUrl?: string; channelName: string; enabled: boolean }) => {
       const res = await apiRequest("POST", "/api/integrations/teams/configure", data);
       return res.json();
     },

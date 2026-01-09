@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import axios from "axios";
 import { storage } from "./storage";
 import { db } from "@db";
 import { sql, eq } from "drizzle-orm";
@@ -15273,6 +15274,271 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error("Error getting integration status:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Comprehensive integration health check with live connectivity tests
+  app.get("/api/integrations/health", isAuthenticated, async (req: any, res) => {
+    try {
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const company = await storage.getCompany(user.companyId);
+      if (!company) {
+        return res.status(404).json({ error: "Company not found" });
+      }
+      
+      type HealthStatus = 'healthy' | 'degraded' | 'offline' | 'not_configured';
+      
+      const healthChecks: Array<{
+        integration: string;
+        status: HealthStatus;
+        latencyMs: number;
+        message: string;
+        category: string;
+        lastError?: string;
+      }> = [];
+      
+      // Helper function for timed health checks
+      const checkWithTimeout = async (
+        name: string,
+        category: string,
+        isConfigured: boolean,
+        checkFn: () => Promise<{ success: boolean; message: string; error?: string }>
+      ) => {
+        if (!isConfigured) {
+          healthChecks.push({
+            integration: name,
+            status: 'not_configured',
+            latencyMs: 0,
+            message: `${name} not configured`,
+            category,
+          });
+          return;
+        }
+        
+        const start = Date.now();
+        try {
+          const result = await Promise.race([
+            checkFn(),
+            new Promise<{ success: boolean; message: string; error?: string }>((_, reject) => 
+              setTimeout(() => reject(new Error('Timeout')), 5000)
+            )
+          ]);
+          
+          healthChecks.push({
+            integration: name,
+            status: result.success ? 'healthy' : 'degraded',
+            latencyMs: Date.now() - start,
+            message: result.message,
+            category,
+            lastError: result.error,
+          });
+        } catch (error: any) {
+          healthChecks.push({
+            integration: name,
+            status: 'offline',
+            latencyMs: Date.now() - start,
+            message: `${name} unreachable`,
+            category,
+            lastError: error.message,
+          });
+        }
+      };
+      
+      // Run health checks in parallel for speed
+      await Promise.allSettled([
+        // FRED API - test with a simple series fetch
+        checkWithTimeout('fred_api', 'data', !!process.env.FRED_API_KEY, async () => {
+          const response = await axios.get(
+            `https://api.stlouisfed.org/fred/series?series_id=GDP&api_key=${process.env.FRED_API_KEY}&file_type=json`,
+            { timeout: 4000 }
+          );
+          return { success: response.status === 200, message: 'FRED API responding' };
+        }),
+        
+        // Alpha Vantage - test with quote endpoint  
+        checkWithTimeout('alpha_vantage', 'data', !!process.env.ALPHA_VANTAGE_API_KEY, async () => {
+          const response = await axios.get(
+            `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=IBM&apikey=${process.env.ALPHA_VANTAGE_API_KEY}`,
+            { timeout: 4000 }
+          );
+          const hasData = response.data && !response.data['Error Message'] && !response.data['Note'];
+          return { 
+            success: hasData, 
+            message: hasData ? 'Alpha Vantage responding' : 'Alpha Vantage rate limited',
+            error: response.data?.Note || response.data?.['Error Message']
+          };
+        }),
+        
+        // Trading Economics - test with calendar endpoint
+        checkWithTimeout('trading_economics', 'data', !!process.env.TRADING_ECONOMICS_API_KEY, async () => {
+          const response = await axios.get(
+            `https://api.tradingeconomics.com/calendar?c=${process.env.TRADING_ECONOMICS_API_KEY}`,
+            { timeout: 4000 }
+          );
+          return { success: response.status === 200, message: 'Trading Economics responding' };
+        }),
+        
+        // News API - test with headlines endpoint
+        checkWithTimeout('news_api', 'data', !!process.env.NEWS_API_KEY, async () => {
+          const response = await axios.get(
+            `https://newsapi.org/v2/top-headlines?country=us&apiKey=${process.env.NEWS_API_KEY}&pageSize=1`,
+            { timeout: 4000 }
+          );
+          return { 
+            success: response.data?.status === 'ok', 
+            message: 'News API responding',
+            error: response.data?.message
+          };
+        }),
+        
+        // OpenAI - test with models endpoint (lightweight)
+        checkWithTimeout('openai', 'ai', !!(process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY), async () => {
+          const apiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+          const response = await axios.get(
+            'https://api.openai.com/v1/models',
+            { 
+              headers: { Authorization: `Bearer ${apiKey}` },
+              timeout: 4000 
+            }
+          );
+          return { success: response.status === 200, message: 'OpenAI API responding' };
+        }),
+        
+        // Twilio - test account validation
+        checkWithTimeout('twilio', 'communication', !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN), async () => {
+          const accountSid = process.env.TWILIO_ACCOUNT_SID;
+          const authToken = process.env.TWILIO_AUTH_TOKEN;
+          const response = await axios.get(
+            `https://api.twilio.com/2010-04-01/Accounts/${accountSid}.json`,
+            { 
+              auth: { username: accountSid!, password: authToken! },
+              timeout: 4000 
+            }
+          );
+          return { 
+            success: response.data?.status === 'active', 
+            message: response.data?.status === 'active' ? 'Twilio account active' : 'Twilio account issue',
+            error: response.data?.status !== 'active' ? `Account status: ${response.data?.status}` : undefined
+          };
+        }),
+        
+        // SendPulse - test OAuth token fetch
+        checkWithTimeout('email', 'communication', !!(process.env.SENDPULSE_API_USER_ID && process.env.SENDPULSE_API_SECRET), async () => {
+          const response = await axios.post(
+            'https://api.sendpulse.com/oauth/access_token',
+            {
+              grant_type: 'client_credentials',
+              client_id: process.env.SENDPULSE_API_USER_ID,
+              client_secret: process.env.SENDPULSE_API_SECRET,
+            },
+            { timeout: 4000 }
+          );
+          return { 
+            success: !!response.data?.access_token, 
+            message: response.data?.access_token ? 'SendPulse authenticated' : 'SendPulse auth failed'
+          };
+        }),
+        
+        // Stripe - test account verification
+        checkWithTimeout('stripe', 'payments', !!process.env.STRIPE_SECRET_KEY, async () => {
+          const response = await axios.get(
+            'https://api.stripe.com/v1/balance',
+            { 
+              headers: { Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}` },
+              timeout: 4000 
+            }
+          );
+          return { success: response.status === 200, message: 'Stripe account active' };
+        }),
+      ]);
+      
+      // Add webhook-based integrations (can't easily validate without sending test messages)
+      // These check configuration presence
+      healthChecks.push({
+        integration: 'slack',
+        status: company.slackWebhookUrl ? 'healthy' : 'not_configured',
+        latencyMs: 0,
+        message: company.slackWebhookUrl ? 'Slack webhook configured' : 'Slack webhook not set',
+        category: 'communication',
+      });
+      
+      healthChecks.push({
+        integration: 'teams',
+        status: company.teamsWebhookUrl ? 'healthy' : 'not_configured',
+        latencyMs: 0,
+        message: company.teamsWebhookUrl ? 'Teams webhook configured' : 'Teams webhook not set',
+        category: 'communication',
+      });
+      
+      healthChecks.push({
+        integration: 'hubspot',
+        status: company.hubspotAccessToken ? 'healthy' : 'not_configured',
+        latencyMs: 0,
+        message: company.hubspotAccessToken ? 'HubSpot token configured' : 'HubSpot not configured',
+        category: 'crm',
+      });
+      
+      healthChecks.push({
+        integration: 'shopify',
+        status: company.shopifyDomain ? 'healthy' : 'not_configured',
+        latencyMs: 0,
+        message: company.shopifyDomain ? `Shopify (${company.shopifyDomain}) configured` : 'Shopify not configured',
+        category: 'ecommerce',
+      });
+      
+      // Calculate overall health
+      const healthyCount = healthChecks.filter(h => h.status === 'healthy').length;
+      const degradedCount = healthChecks.filter(h => h.status === 'degraded').length;
+      const offlineCount = healthChecks.filter(h => h.status === 'offline').length;
+      const configuredCount = healthChecks.filter(h => h.status !== 'not_configured').length;
+      const totalCount = healthChecks.length;
+      
+      let overall: 'healthy' | 'degraded' | 'critical' | 'minimal';
+      if (offlineCount > 0) {
+        overall = offlineCount > 2 ? 'critical' : 'degraded';
+      } else if (degradedCount > 0) {
+        overall = 'degraded';
+      } else if (healthyCount === configuredCount && configuredCount > 0) {
+        overall = 'healthy';
+      } else {
+        overall = 'minimal';
+      }
+      
+      // Group by category
+      const byCategory = healthChecks.reduce((acc, check) => {
+        if (!acc[check.category]) acc[check.category] = [];
+        acc[check.category].push(check);
+        return acc;
+      }, {} as Record<string, typeof healthChecks>);
+      
+      // Calculate average latency for responsive services
+      const responsiveChecks = healthChecks.filter(h => h.latencyMs > 0);
+      const avgLatencyMs = responsiveChecks.length > 0 
+        ? Math.round(responsiveChecks.reduce((sum, h) => sum + h.latencyMs, 0) / responsiveChecks.length)
+        : 0;
+      
+      res.json({
+        overall,
+        summary: {
+          healthy: healthyCount,
+          degraded: degradedCount,
+          offline: offlineCount,
+          notConfigured: totalCount - configuredCount,
+          total: totalCount,
+        },
+        avgLatencyMs,
+        byCategory,
+        checks: healthChecks,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("Error checking integration health:", error);
       res.status(500).json({ error: error.message });
     }
   });
