@@ -155,12 +155,16 @@ export class DualCircuitEconomics {
   }
 
   private detectRegime(): void {
-    if (this.fdr > 2.0) {
-      this.regime = "IMBALANCED_EXCESS";
-    } else if (this.fdr > 1.5) {
-      this.regime = "ASSET_LED_GROWTH";
-    } else if (this.fdr < 0.8) {
+    // Use canonical thresholds from fdrOptimization.ts for consistency
+    // Thresholds: HEALTHY_EXPANSION [0, 1.2), ASSET_LED_GROWTH [1.2, 1.8), 
+    //             IMBALANCED_EXCESS [1.8, 2.5), REAL_ECONOMY_LEAD [2.5, 10]
+    // REAL_ECONOMY_LEAD at HIGH FDR = asset markets overshot, counter-cyclical opportunity
+    if (this.fdr >= 2.5) {
       this.regime = "REAL_ECONOMY_LEAD";
+    } else if (this.fdr >= 1.8) {
+      this.regime = "IMBALANCED_EXCESS";
+    } else if (this.fdr >= 1.2) {
+      this.regime = "ASSET_LED_GROWTH";
     } else {
       this.regime = "HEALTHY_EXPANSION";
     }
