@@ -432,6 +432,26 @@ function generateRiskRecommendations(
   return recommendations;
 }
 
+function convertToCSV(data: any[], columns?: string[]): string {
+  if (data.length === 0) return '';
+  
+  const headers = columns || Object.keys(data[0]);
+  const rows = data.map(item => 
+    headers.map(h => {
+      const value = item[h];
+      if (value === null || value === undefined) return '';
+      if (typeof value === 'object') return JSON.stringify(value).replace(/"/g, '""');
+      const str = String(value);
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    }).join(',')
+  );
+  
+  return [headers.join(','), ...rows].join('\n');
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Apply SOC2-lite security hardening
   applySecurityHardening(app);
@@ -15643,6 +15663,311 @@ You'll receive emails for:
     }
   });
 
+  // DATA EXPORT API - For BI Tools (Power BI, Tableau, Google Sheets)
+  app.get("/api/export/datasets", isAuthenticated, async (req: any, res) => {
+    try {
+      const datasets = [
+        { 
+          id: "materials", 
+          name: "Materials Catalog", 
+          description: "Complete materials inventory with costs and suppliers",
+          fields: ["id", "name", "code", "category", "subCategory", "unit", "unitCost", "onHand", "reorderPoint", "leadTime"],
+          recordCount: 0
+        },
+        { 
+          id: "suppliers", 
+          name: "Suppliers", 
+          description: "Supplier directory with contact and performance data",
+          fields: ["id", "name", "code", "country", "city", "contactEmail", "riskScore", "leadTime", "rating"],
+          recordCount: 0
+        },
+        { 
+          id: "inventory", 
+          name: "Inventory Levels", 
+          description: "Current inventory status with reorder recommendations",
+          fields: ["materialId", "materialName", "onHand", "unitCost", "totalValue", "reorderPoint", "needsReorder"],
+          recordCount: 0
+        },
+        { 
+          id: "forecasts", 
+          name: "Demand Forecasts", 
+          description: "Multi-horizon demand predictions by SKU",
+          fields: ["skuId", "skuName", "horizonDays", "predictedDemand", "confidence", "forecastDate"],
+          recordCount: 0
+        },
+        { 
+          id: "commodities", 
+          name: "Commodity Prices", 
+          description: "Current and historical commodity pricing",
+          fields: ["commodity", "currentPrice", "previousPrice", "changePercent", "unit", "source", "lastUpdated"],
+          recordCount: 0
+        },
+        { 
+          id: "rfqs", 
+          name: "RFQs", 
+          description: "Request for quotations with status and responses",
+          fields: ["id", "rfqNumber", "materialId", "quantity", "status", "dueDate", "createdAt"],
+          recordCount: 0
+        },
+        { 
+          id: "purchase_orders", 
+          name: "Purchase Orders", 
+          description: "All purchase orders with line items and status",
+          fields: ["id", "poNumber", "supplier", "totalAmount", "status", "orderDate", "expectedDelivery"],
+          recordCount: 0
+        }
+      ];
+      
+      res.json({ datasets, apiBaseUrl: `/api/export` });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  app.get("/api/export/materials", isAuthenticated, async (req: any, res) => {
+    try {
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const format = (req.query.format as string) || 'json';
+      const materials = await storage.getMaterials(user.companyId);
+      
+      if (format === 'csv') {
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename="materials.csv"');
+        return res.send(convertToCSV(materials));
+      }
+      
+      res.json({ data: materials, count: materials.length, exportedAt: new Date().toISOString() });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  app.get("/api/export/suppliers", isAuthenticated, async (req: any, res) => {
+    try {
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const format = (req.query.format as string) || 'json';
+      const suppliers = await storage.getSuppliers(user.companyId);
+      
+      if (format === 'csv') {
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename="suppliers.csv"');
+        return res.send(convertToCSV(suppliers));
+      }
+      
+      res.json({ data: suppliers, count: suppliers.length, exportedAt: new Date().toISOString() });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  app.get("/api/export/inventory", isAuthenticated, async (req: any, res) => {
+    try {
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const format = (req.query.format as string) || 'json';
+      const materials = await storage.getMaterials(user.companyId);
+      
+      const inventory = materials.map(m => ({
+        materialId: m.id,
+        materialName: m.name,
+        materialCode: m.code,
+        category: m.category,
+        onHand: m.onHand || 0,
+        unitCost: m.unitCost || 0,
+        totalValue: (m.onHand || 0) * (m.unitCost || 0),
+        reorderPoint: m.reorderPoint || 0,
+        needsReorder: (m.onHand || 0) < (m.reorderPoint || 0),
+        unit: m.unit,
+      }));
+      
+      if (format === 'csv') {
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename="inventory.csv"');
+        return res.send(convertToCSV(inventory));
+      }
+      
+      res.json({ data: inventory, count: inventory.length, exportedAt: new Date().toISOString() });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  app.get("/api/export/forecasts", isAuthenticated, async (req: any, res) => {
+    try {
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const format = (req.query.format as string) || 'json';
+      const forecasts = await storage.getMultiHorizonForecasts(user.companyId, {});
+      const skus = await storage.getSkus(user.companyId);
+      
+      const skuMap = new Map(skus.map(s => [s.id, s.name]));
+      
+      const exportData = forecasts.map(f => ({
+        skuId: f.skuId,
+        skuName: skuMap.get(f.skuId || '') || 'Unknown',
+        horizonDays: f.horizonDays,
+        predictedDemand: f.predictedDemand,
+        lowerBound: f.lowerBound,
+        upperBound: f.upperBound,
+        confidence: f.confidenceLevel,
+        regime: f.regime,
+        forecastDate: f.forecastDate,
+        createdAt: f.createdAt,
+      }));
+      
+      if (format === 'csv') {
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename="forecasts.csv"');
+        return res.send(convertToCSV(exportData));
+      }
+      
+      res.json({ data: exportData, count: exportData.length, exportedAt: new Date().toISOString() });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  app.get("/api/export/rfqs", isAuthenticated, async (req: any, res) => {
+    try {
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const format = (req.query.format as string) || 'json';
+      const rfqs = await storage.getRfqs(user.companyId);
+      
+      if (format === 'csv') {
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename="rfqs.csv"');
+        return res.send(convertToCSV(rfqs));
+      }
+      
+      res.json({ data: rfqs, count: rfqs.length, exportedAt: new Date().toISOString() });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  app.get("/api/export/purchase_orders", isAuthenticated, async (req: any, res) => {
+    try {
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const format = (req.query.format as string) || 'json';
+      const purchaseOrders = await storage.getPurchaseOrders(user.companyId);
+      
+      if (format === 'csv') {
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename="purchase_orders.csv"');
+        return res.send(convertToCSV(purchaseOrders));
+      }
+      
+      res.json({ data: purchaseOrders, count: purchaseOrders.length, exportedAt: new Date().toISOString() });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Export commodity prices data
+  app.get("/api/export/commodities", isAuthenticated, async (req: any, res) => {
+    try {
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const format = (req.query.format as string) || 'json';
+      
+      const { fetchAllCommodityPrices } = await import("./lib/commodityPricing");
+      const prices = await fetchAllCommodityPrices();
+      
+      const commodityData = prices.map((p: any) => ({
+        commodity: p.name || p.commodity,
+        currentPrice: p.price || p.currentPrice,
+        previousPrice: p.previousPrice || null,
+        changePercent: p.change24h || p.changePercent || 0,
+        unit: p.unit || 'USD',
+        source: p.source || 'API',
+        lastUpdated: p.lastUpdated || new Date().toISOString(),
+        trend: p.trend || (p.change24h > 0 ? 'up' : p.change24h < 0 ? 'down' : 'stable'),
+      }));
+      
+      if (format === 'csv') {
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename="commodities.csv"');
+        return res.send(convertToCSV(commodityData));
+      }
+      
+      res.json({ data: commodityData, count: commodityData.length, exportedAt: new Date().toISOString() });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  app.post("/api/webhooks/test", isAuthenticated, async (req: any, res) => {
+    try {
+      const { url, event, testData } = req.body;
+      
+      if (!url) {
+        return res.status(400).json({ success: false, message: "Webhook URL is required" });
+      }
+      
+      const payload = {
+        event: event || 'test_event',
+        timestamp: new Date().toISOString(),
+        data: testData || { message: "This is a test webhook from Prescient Labs" },
+        metadata: { source: 'prescient_labs', version: '1.0' }
+      };
+      
+      const axios = (await import('axios')).default;
+      
+      const startTime = Date.now();
+      const response = await axios.post(url, payload, {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Webhook-Event': payload.event,
+          'X-Webhook-Timestamp': payload.timestamp,
+        },
+        timeout: 10000,
+        validateStatus: () => true,
+      });
+      const durationMs = Date.now() - startTime;
+      
+      res.json({
+        success: response.status >= 200 && response.status < 300,
+        statusCode: response.status,
+        durationMs,
+        response: response.data,
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   
   setupWebSocket(httpServer);
@@ -15923,3 +16248,4 @@ async function runDigitalTwinSimulation(companyId: string, simulation: any): Pro
     productionImpact: { capacityUtilization: machinery.filter(m => m.status === "operational").length / (machinery.length || 1) * 100 },
   };
 }
+

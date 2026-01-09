@@ -109,6 +109,7 @@ export function ZapierWebhookDialog({ open, onOpenChange }: ZapierWebhookDialogP
   const { toast } = useToast();
   const [selectedTemplate, setSelectedTemplate] = useState(webhookTemplates[0]);
   const [webhookUrl, setWebhookUrl] = useState("");
+  const [isTesting, setIsTesting] = useState(false);
 
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
   const inboundWebhookUrl = `${baseUrl}/api/webhooks/inbound/zapier`;
@@ -119,6 +120,47 @@ export function ZapierWebhookDialog({ open, onOpenChange }: ZapierWebhookDialogP
       title: "Copied",
       description: `${label} copied to clipboard`,
     });
+  };
+
+  const testWebhook = async () => {
+    if (!webhookUrl) return;
+    
+    setIsTesting(true);
+    try {
+      const response = await fetch("/api/webhooks/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          url: webhookUrl,
+          event: selectedTemplate.event,
+          testData: selectedTemplate.payload.data,
+        }),
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        toast({
+          title: "Webhook Test Successful",
+          description: `Response received in ${result.durationMs}ms with status ${result.statusCode}`,
+        });
+      } else {
+        toast({
+          title: "Webhook Test Failed",
+          description: result.message || `Status: ${result.statusCode}`,
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Test Failed",
+        description: error.message || "Could not reach the webhook URL",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTesting(false);
+    }
   };
 
   return (
@@ -213,10 +255,26 @@ export function ZapierWebhookDialog({ open, onOpenChange }: ZapierWebhookDialogP
               </div>
             )}
 
-            <div className="pt-2">
-              <Button className="w-full" disabled={!webhookUrl} data-testid="button-save-zapier-outbound">
+            <div className="pt-2 flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                disabled={!webhookUrl || isTesting}
+                onClick={testWebhook}
+                data-testid="button-test-zapier-webhook"
+              >
+                {isTesting ? (
+                  <>Testing...</>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Test Webhook
+                  </>
+                )}
+              </Button>
+              <Button className="flex-1" disabled={!webhookUrl} data-testid="button-save-zapier-outbound">
                 <Zap className="w-4 h-4 mr-2" />
-                Save Webhook Configuration
+                Save Configuration
               </Button>
             </div>
           </TabsContent>
