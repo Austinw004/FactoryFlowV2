@@ -158,6 +158,18 @@ export const companies = pgTable("companies", {
   hubspotAccessToken: text("hubspot_access_token"),
   hubspotRefreshToken: text("hubspot_refresh_token"),
   hubspotEnabled: integer("hubspot_enabled").default(0),
+  // Integration Settings - Microsoft Teams
+  teamsWebhookUrl: text("teams_webhook_url"),
+  teamsChannelName: text("teams_channel_name").default("Prescient Alerts"),
+  teamsEnabled: integer("teams_enabled").default(0),
+  // Integration Settings - Shopify
+  shopifyDomain: text("shopify_domain"),
+  shopifyApiKey: text("shopify_api_key"),
+  shopifySecret: text("shopify_secret"),
+  shopifySyncOrders: integer("shopify_sync_orders").default(0),
+  shopifySyncProducts: integer("shopify_sync_products").default(0),
+  shopifySyncInventory: integer("shopify_sync_inventory").default(0),
+  shopifyEnabled: integer("shopify_enabled").default(0),
   // Company Branding
   logoUrl: text("logo_url"),
   primaryColor: text("primary_color").default("#3b82f6"), // Hex color for branding

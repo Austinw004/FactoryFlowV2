@@ -15,6 +15,10 @@ import { EmailConfigDialog } from "@/components/EmailConfigDialog";
 import { ZapierWebhookDialog } from "@/components/ZapierWebhookDialog";
 import { PowerBIConnectorDialog } from "@/components/PowerBIConnectorDialog";
 import { GoogleSheetsDialog } from "@/components/GoogleSheetsDialog";
+import { TeamsConfigDialog } from "@/components/TeamsConfigDialog";
+import { LookerDialog } from "@/components/LookerDialog";
+import { N8nDialog } from "@/components/N8nDialog";
+import { ShopifyDialog } from "@/components/ShopifyDialog";
 import {
   Building2,
   MessageSquare,
@@ -144,12 +148,13 @@ const integrations: Integration[] = [
     name: "Microsoft Teams",
     description: "Enterprise collaboration and alerting",
     category: "communication",
-    status: "coming_soon",
+    status: "available",
     icon: MessageSquare,
     iconType: "lucide",
     valueProposition: "Integrate with your existing Microsoft ecosystem",
-    features: ["Teams channels", "Adaptive cards", "Meeting scheduling", "Tab integration"],
+    features: ["Teams channels", "Adaptive cards", "Webhook notifications", "Real-time alerts"],
     setupTime: "5 minutes",
+    popular: true,
   },
   
   // Data Import/Export
@@ -195,11 +200,11 @@ const integrations: Integration[] = [
     name: "Shopify",
     description: "Sync orders and inventory for D2C manufacturers",
     category: "ecommerce",
-    status: "coming_soon",
+    status: "available",
     icon: SiShopify,
     iconType: "si",
     valueProposition: "Real-time demand signals from e-commerce orders",
-    features: ["Order sync", "Inventory levels", "Product catalog", "Multi-location"],
+    features: ["Order sync", "Inventory levels", "Product catalog", "Webhook integration"],
     setupTime: "5 minutes",
     popular: true,
   },
@@ -411,12 +416,12 @@ const integrations: Integration[] = [
     name: "Looker",
     description: "Google Cloud BI platform",
     category: "analytics",
-    status: "coming_soon",
+    status: "available",
     icon: BarChart3,
     iconType: "lucide",
     valueProposition: "Semantic layer for consistent metrics",
-    features: ["LookML modeling", "Embedded analytics", "API access", "Data actions"],
-    setupTime: "20 minutes",
+    features: ["LookML modeling", "Data Export API", "REST endpoints", "JSON data feeds"],
+    setupTime: "10 minutes",
   },
   
   // Accounting & Finance
@@ -586,6 +591,18 @@ const integrations: Integration[] = [
     setupTime: "10 minutes",
   },
   {
+    id: "n8n",
+    name: "n8n",
+    description: "Open-source workflow automation",
+    category: "automation",
+    status: "available",
+    icon: Zap,
+    iconType: "lucide",
+    valueProposition: "Self-hosted automation for advanced workflows",
+    features: ["Inbound webhooks", "Outbound triggers", "Event subscriptions", "Custom nodes"],
+    setupTime: "10 minutes",
+  },
+  {
     id: "webhooks",
     name: "Custom Webhooks",
     description: "Real-time event notifications",
@@ -701,6 +718,10 @@ export default function Integrations() {
   const [zapierDialogOpen, setZapierDialogOpen] = useState(false);
   const [powerbiDialogOpen, setPowerbiDialogOpen] = useState(false);
   const [googleSheetsDialogOpen, setGoogleSheetsDialogOpen] = useState(false);
+  const [teamsDialogOpen, setTeamsDialogOpen] = useState(false);
+  const [lookerDialogOpen, setLookerDialogOpen] = useState(false);
+  const [n8nDialogOpen, setN8nDialogOpen] = useState(false);
+  const [shopifyDialogOpen, setShopifyDialogOpen] = useState(false);
 
   const filteredIntegrations = integrations.filter(integration => {
     const matchesSearch = integration.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -730,6 +751,16 @@ export default function Integrations() {
       setPowerbiDialogOpen(true);
     } else if (integration.id === "tableau") {
       setPowerbiDialogOpen(true);
+    } else if (integration.id === "teams") {
+      setTeamsDialogOpen(true);
+    } else if (integration.id === "looker") {
+      setLookerDialogOpen(true);
+    } else if (integration.id === "n8n") {
+      setN8nDialogOpen(true);
+    } else if (integration.id === "shopify") {
+      setShopifyDialogOpen(true);
+    } else if (integration.id === "make") {
+      setZapierDialogOpen(true);
     } else if (integration.status === "available") {
       toast({
         title: "Integration Setup",
@@ -1018,6 +1049,10 @@ export default function Integrations() {
       <ZapierWebhookDialog open={zapierDialogOpen} onOpenChange={setZapierDialogOpen} />
       <PowerBIConnectorDialog open={powerbiDialogOpen} onOpenChange={setPowerbiDialogOpen} />
       <GoogleSheetsDialog open={googleSheetsDialogOpen} onOpenChange={setGoogleSheetsDialogOpen} />
+      <TeamsConfigDialog open={teamsDialogOpen} onOpenChange={setTeamsDialogOpen} />
+      <LookerDialog open={lookerDialogOpen} onOpenChange={setLookerDialogOpen} />
+      <N8nDialog open={n8nDialogOpen} onOpenChange={setN8nDialogOpen} />
+      <ShopifyDialog open={shopifyDialogOpen} onOpenChange={setShopifyDialogOpen} />
     </div>
   );
 }
