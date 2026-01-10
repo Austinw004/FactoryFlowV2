@@ -40,6 +40,7 @@ import type { Supplier, Material } from "@shared/schema";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { CreateMaterialDialog } from "@/components/CreateMaterialDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -67,29 +68,10 @@ export default function Procurement() {
     contactEmail: "",
   });
 
-  // Material form state (matches schema: name, code, unit, onHand, inbound)
-  const [materialForm, setMaterialForm] = useState({
-    name: "",
-    code: "",
-    unit: "units",
-    onHand: "0",
-    inbound: "0",
-  });
-
   const resetSupplierForm = () => {
     setSupplierForm({
       name: "",
       contactEmail: "",
-    });
-  };
-
-  const resetMaterialForm = () => {
-    setMaterialForm({
-      name: "",
-      code: "",
-      unit: "units",
-      onHand: "0",
-      inbound: "0",
     });
   };
 
@@ -124,33 +106,6 @@ export default function Procurement() {
       toast({ 
         title: "Failed to add supplier", 
         description: error.message || "Could not add the supplier.",
-        variant: "destructive" 
-      });
-    },
-  });
-
-  // Create material mutation
-  const createMaterialMutation = useMutation({
-    mutationFn: async (data: typeof materialForm) => {
-      const res = await apiRequest("POST", "/api/materials", {
-        name: data.name,
-        code: data.code,
-        unit: data.unit,
-        onHand: parseFloat(data.onHand) || 0,
-        inbound: parseFloat(data.inbound) || 0,
-      });
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({ title: "Material added", description: "Your new material has been added to inventory." });
-      queryClient.invalidateQueries({ queryKey: ["/api/materials"] });
-      setShowAddMaterialDialog(false);
-      resetMaterialForm();
-    },
-    onError: (error: any) => {
-      toast({ 
-        title: "Failed to add material", 
-        description: error.message || "Could not add the material.",
         variant: "destructive" 
       });
     },
@@ -866,115 +821,8 @@ export default function Procurement() {
         </DialogContent>
       </Dialog>
 
-      {/* Add Material Dialog */}
-      <Dialog open={showAddMaterialDialog} onOpenChange={setShowAddMaterialDialog}>
-        <DialogContent className="sm:max-w-[450px]" data-testid="dialog-add-material">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Add New Material
-            </DialogTitle>
-            <DialogDescription>
-              Add a material to track in your inventory. You'll get alerts when stock runs low.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="material-name">Material Name *</Label>
-                <Input
-                  id="material-name"
-                  placeholder="e.g., Aluminum Sheet"
-                  value={materialForm.name}
-                  onChange={(e) => setMaterialForm({ ...materialForm, name: e.target.value })}
-                  data-testid="input-material-name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="material-code">Material Code *</Label>
-                <Input
-                  id="material-code"
-                  placeholder="e.g., ALU-001"
-                  value={materialForm.code}
-                  onChange={(e) => setMaterialForm({ ...materialForm, code: e.target.value })}
-                  data-testid="input-material-code"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="material-unit" className="flex items-center gap-1">
-                <Scale className="h-3 w-3" />
-                Unit of Measure *
-              </Label>
-              <Select
-                value={materialForm.unit}
-                onValueChange={(value) => setMaterialForm({ ...materialForm, unit: value })}
-              >
-                <SelectTrigger data-testid="select-material-unit">
-                  <SelectValue placeholder="Select unit" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="units">Units</SelectItem>
-                  <SelectItem value="kg">Kilograms (kg)</SelectItem>
-                  <SelectItem value="lbs">Pounds (lbs)</SelectItem>
-                  <SelectItem value="liters">Liters</SelectItem>
-                  <SelectItem value="gallons">Gallons</SelectItem>
-                  <SelectItem value="meters">Meters</SelectItem>
-                  <SelectItem value="feet">Feet</SelectItem>
-                  <SelectItem value="sheets">Sheets</SelectItem>
-                  <SelectItem value="rolls">Rolls</SelectItem>
-                  <SelectItem value="boxes">Boxes</SelectItem>
-                  <SelectItem value="pallets">Pallets</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="material-on-hand">Current Stock</Label>
-                <Input
-                  id="material-on-hand"
-                  type="number"
-                  min="0"
-                  placeholder="0"
-                  value={materialForm.onHand}
-                  onChange={(e) => setMaterialForm({ ...materialForm, onHand: e.target.value })}
-                  data-testid="input-material-on-hand"
-                />
-                <p className="text-xs text-muted-foreground">Quantity on hand</p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="material-inbound">Inbound Orders</Label>
-                <Input
-                  id="material-inbound"
-                  type="number"
-                  min="0"
-                  placeholder="0"
-                  value={materialForm.inbound}
-                  onChange={(e) => setMaterialForm({ ...materialForm, inbound: e.target.value })}
-                  data-testid="input-material-inbound"
-                />
-                <p className="text-xs text-muted-foreground">Quantity on order</p>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => { setShowAddMaterialDialog(false); resetMaterialForm(); }}
-              data-testid="button-cancel-material"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => createMaterialMutation.mutate(materialForm)}
-              disabled={materialForm.name.trim() === "" || materialForm.code.trim() === "" || createMaterialMutation.isPending}
-              data-testid="button-save-material"
-            >
-              {createMaterialMutation.isPending ? "Adding..." : "Add Material"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Add Material Dialog - Uses shared component with Browse Commodities feature */}
+      <CreateMaterialDialog open={showAddMaterialDialog} onOpenChange={setShowAddMaterialDialog} />
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteConfirm !== null} onOpenChange={() => setShowDeleteConfirm(null)}>

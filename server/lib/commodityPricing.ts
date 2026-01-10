@@ -13,7 +13,9 @@
  */
 
 export interface CommodityPrice {
-  material: string;
+  code: string;        // Material code (e.g., 'AL-6061')
+  name: string;        // Human-readable name (e.g., 'Aluminum 6061')
+  material: string;    // Legacy alias for code
   price: number;
   unit: string;
   currency: string;
@@ -21,6 +23,158 @@ export interface CommodityPrice {
   change24h?: number;
   changePercent24h?: number;
   source?: string; // API source: 'metals-dev', 'alpha-vantage', 'api-ninjas', 'mock'
+}
+
+/**
+ * Human-readable names for all commodity codes
+ */
+const COMMODITY_NAMES: { [key: string]: string } = {
+  // Base Metals
+  'STEEL-CS': 'Carbon Steel',
+  'STEEL-SS304': 'Stainless Steel 304',
+  'AL-6061': 'Aluminum 6061',
+  'CU-C110': 'Copper C110',
+  'NI-200': 'Nickel 200',
+  'TI-GR5': 'Titanium Grade 5',
+  'ZN-99': 'Zinc 99%',
+  'BRASS-C360': 'Brass C360',
+  'BRONZE-C932': 'Bronze C932',
+  'MG-AZ31': 'Magnesium AZ31',
+  
+  // Plastics & Polymers
+  'PLAST-ABS': 'ABS Plastic',
+  'PLAST-PET': 'PET Plastic',
+  'PLAST-HDPE': 'HDPE Plastic',
+  'PLAST-LDPE': 'LDPE Plastic',
+  'PLAST-PVC': 'PVC Plastic',
+  'PLAST-PC': 'Polycarbonate',
+  'PLAST-NYLON': 'Nylon',
+  'PLAST-PP': 'Polypropylene',
+  'PLAST-PMMA': 'Acrylic (PMMA)',
+  
+  // Specialty High-Performance Polymers
+  'POLY-PEEK': 'PEEK',
+  'POLY-PVDF': 'PVDF',
+  'POLY-PTFE': 'PTFE (Teflon)',
+  'POLY-PI': 'Polyimide',
+  'POLY-PPS': 'PPS',
+  'POLY-PSU': 'Polysulfone',
+  'POLY-PEI': 'PEI (Ultem)',
+  
+  // Precious Metals
+  'PM-AU': 'Gold',
+  'PM-AG': 'Silver',
+  'PM-PT': 'Platinum',
+  'PM-PD': 'Palladium',
+  'PM-RH': 'Rhodium',
+  'PM-IR': 'Iridium',
+  
+  // Rare Earth Metals
+  'RE-ND': 'Neodymium',
+  'RE-DY': 'Dysprosium',
+  'RE-LA': 'Lanthanum',
+  'RE-CE': 'Cerium',
+  'RE-PR': 'Praseodymium',
+  'RE-EU': 'Europium',
+  'RE-TB': 'Terbium',
+  'RE-Y': 'Yttrium',
+  
+  // Specialty Alloys & Superalloys
+  'ALLOY-IN625': 'Inconel 625',
+  'ALLOY-HC276': 'Hastelloy C-276',
+  'ALLOY-M400': 'Monel 400',
+  'ALLOY-WASP': 'Waspaloy',
+  'ALLOY-COCO': 'Cobalt-Chrome',
+  
+  // Semiconductor Materials
+  'SEMI-SI': 'Silicon Wafer',
+  'SEMI-GAAS': 'Gallium Arsenide',
+  'SEMI-GE': 'Germanium',
+  'SEMI-GAN': 'Gallium Nitride',
+  'SEMI-ITO': 'ITO Glass',
+  
+  // Battery & Energy Storage Materials
+  'BATT-LI2CO3': 'Lithium Carbonate',
+  'BATT-LIOH': 'Lithium Hydroxide',
+  'BATT-CO3O4': 'Cobalt Oxide',
+  'BATT-GRAPH': 'Battery Grade Graphite',
+  'BATT-NISO4': 'Nickel Sulfate',
+  'BATT-MNSO4': 'Manganese Sulfate',
+  
+  // Advanced Ceramics
+  'CER-AL2O3': 'Alumina Ceramic',
+  'CER-ZRO2': 'Zirconia Ceramic',
+  'CER-SIC': 'Silicon Carbide',
+  'CER-SI3N4': 'Silicon Nitride',
+  'CER-B4C': 'Boron Carbide',
+  
+  // Industrial Chemicals
+  'CHEM-H2SO4': 'Sulfuric Acid',
+  'CHEM-HCL': 'Hydrochloric Acid',
+  'CHEM-NAOH': 'Sodium Hydroxide',
+  'CHEM-NH3': 'Ammonia',
+  'CHEM-MEOH': 'Methanol',
+  'CHEM-ETOH': 'Ethanol',
+  'CHEM-ACE': 'Acetone',
+  'CHEM-TOL': 'Toluene',
+  
+  // Technology Metals
+  'TECH-IN': 'Indium',
+  'TECH-TE': 'Tellurium',
+  'TECH-SE': 'Selenium',
+  'TECH-BI': 'Bismuth',
+  'TECH-SB': 'Antimony',
+  'TECH-MO': 'Molybdenum',
+  'TECH-W': 'Tungsten',
+  'TECH-V': 'Vanadium',
+  'TECH-TA': 'Tantalum',
+  'TECH-NB': 'Niobium',
+  
+  // Composites
+  'COMP-CF': 'Carbon Fiber',
+  'COMP-FG': 'Fiberglass',
+  'COMP-KEV': 'Kevlar',
+  
+  // Rubber
+  'RUB-NAT': 'Natural Rubber',
+  'RUB-SYN': 'Synthetic Rubber',
+  'RUB-SIL': 'Silicone Rubber',
+  
+  // Textiles
+  'TEXT-COT': 'Cotton',
+  'TEXT-POLY': 'Polyester Fabric',
+  'TEXT-KEV': 'Kevlar Fabric',
+  
+  // Wood & Paper
+  'WOOD-PLY': 'Plywood',
+  'WOOD-MDF': 'MDF Board',
+  'PAPER-CB': 'Cardboard',
+  
+  // Glass & Ceramics
+  'GLASS-STD': 'Standard Glass',
+  'CER-TILE': 'Ceramic Tile',
+  
+  // Chemicals & Adhesives
+  'CHEM-EPOXY': 'Epoxy Resin',
+  'CHEM-PU': 'Polyurethane',
+  'CHEM-SOLV': 'Industrial Solvent',
+  'CHEM-LUB': 'Industrial Lubricant',
+  
+  // Electronics
+  'ELEC-PCB': 'PCB Board',
+  'ELEC-WIRE': 'Copper Wire',
+  'ELEC-CONN': 'Electronic Connectors',
+  
+  // Packaging
+  'PKG-BUBBLE': 'Bubble Wrap',
+  'PKG-FOAM': 'Foam Padding',
+};
+
+/**
+ * Get human-readable name for a commodity code
+ */
+function getCommodityName(code: string): string {
+  return COMMODITY_NAMES[code] || code.replace(/-/g, ' ');
 }
 
 export interface MetalsDevResponse {
@@ -147,7 +301,9 @@ export async function fetchCommodityPrices(
     for (const [materialCode, symbol] of Object.entries(MATERIAL_SYMBOL_MAP)) {
       if (materialCodes.includes(materialCode) && data.rates[symbol]) {
         prices.push({
-          material: materialCode,
+          code: materialCode,
+          name: getCommodityName(materialCode),
+          material: materialCode, // Legacy alias
           price: 1 / data.rates[symbol], // Metals.Dev returns 1/price, need to invert
           unit: getUnitForMaterial(materialCode),
           currency: 'USD',
@@ -318,7 +474,9 @@ function generateMockPrices(materialCodes: string[]): CommodityPrice[] {
     const change24h = basePrice * (Math.random() * 0.06 - 0.03); // +/- 3% daily change
 
     return {
-      material: code,
+      code: code,
+      name: getCommodityName(code),
+      material: code, // Legacy alias
       price: parseFloat(price.toFixed(2)),
       unit: getUnitForMaterial(code),
       currency: 'USD',
