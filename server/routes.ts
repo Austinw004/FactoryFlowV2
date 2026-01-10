@@ -997,7 +997,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get intelligence summary
       const intelligenceSummary = regimeIntel.getIntelligenceSummary();
       
+      // Run comprehensive validation to get full confidence cap
+      // Uses cached results when available for performance
+      const { runComprehensiveStressTest } = await import("./lib/fdrStressTest");
+      const validationCacheKey = `fdr:validation:${user.companyId}`;
+      
+      let validationResult = globalCache.get<Awaited<ReturnType<typeof runComprehensiveStressTest>>>(validationCacheKey);
+      if (!validationResult) {
+        validationResult = await runComprehensiveStressTest();
+        // Cache validation for 5 minutes to avoid recomputation
+        globalCache.set(validationCacheKey, validationResult, 300);
+      }
+      
+      // Apply full confidence cap based on all validation tests
+      const validationConfidenceCap = validationResult.overallConfidenceCap;
+      
       if (snapshot) {
+        // Cap intelligence confidence by validation results
+        const cappedConfidence = {
+          ...intelligenceSummary.confidenceScoring,
+          overall: Math.min(
+            intelligenceSummary.confidenceScoring?.overall || 1.0, 
+            validationConfidenceCap
+          ),
+          validationPassed: validationResult.nullTest.passed && validationResult.thresholdCheck.passed,
+          validationDiagnosis: validationResult.criticalFindings.length > 0 
+            ? validationResult.criticalFindings.join('; ') 
+            : null,
+          confidenceCap: validationConfidenceCap,
+        };
+        
         // Use persisted snapshot data
         const responseData = {
           regime: snapshot.regime,
@@ -1017,7 +1046,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             fdrTrend: intelligenceSummary.fdrAnalysis,
             transitionPrediction: intelligenceSummary.transitionPrediction,
             regimeDuration: intelligenceSummary.regimeDuration,
-            confidence: intelligenceSummary.confidenceScoring,
+            confidence: cappedConfidence,
             procurementSignal: intelligenceSummary.procurementSignal,
           },
         };
@@ -1032,6 +1061,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const companyRegime = regimeIntel.getCurrentRegime();
         const companyFdr = regimeIntel.getCurrentFDR();
         
+        // Cap intelligence confidence by validation results
+        const cappedConfidence = {
+          ...intelligenceSummary.confidenceScoring,
+          overall: Math.min(
+            intelligenceSummary.confidenceScoring?.overall || 1.0, 
+            validationConfidenceCap
+          ),
+          validationPassed: validationResult.nullTest.passed && validationResult.thresholdCheck.passed,
+          validationDiagnosis: validationResult.criticalFindings.length > 0 
+            ? validationResult.criticalFindings.join('; ') 
+            : null,
+          confidenceCap: validationConfidenceCap,
+        };
+        
         res.json({
           regime: companyRegime,
           fdr: companyFdr,
@@ -1043,7 +1086,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             fdrTrend: intelligenceSummary.fdrAnalysis,
             transitionPrediction: intelligenceSummary.transitionPrediction,
             regimeDuration: intelligenceSummary.regimeDuration,
-            confidence: intelligenceSummary.confidenceScoring,
+            confidence: cappedConfidence,
             procurementSignal: intelligenceSummary.procurementSignal,
           },
         });
@@ -1194,6 +1237,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error("Error fetching procurement signal:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // FDR Validation Endpoint - Self-tests and model integrity checks
+  app.get("/api/fdr/validation", isAuthenticated, async (req: any, res) => {
+    try {
+      const { runComprehensiveStressTest, runNullTest } = await import("./lib/fdrStressTest");
+      
+      // Run full stress test suite
+      const stressTestResults = await runComprehensiveStressTest();
+      
+      // Determine overall health
+      const health = stressTestResults.criticalFindings.length === 0 
+        ? (stressTestResults.warnings.length === 0 ? 'HEALTHY' : 'DEGRADED')
+        : 'CRITICAL';
+      
+      res.json({
+        health,
+        overallConfidenceCap: stressTestResults.overallConfidenceCap,
+        nullTest: {
+          passed: stressTestResults.nullTest.passed,
+          diagnosis: stressTestResults.nullTest.diagnosis,
+          confidenceDowngrade: stressTestResults.nullTest.confidenceDowngrade,
+        },
+        thresholdConsistency: {
+          passed: stressTestResults.thresholdCheck.passed,
+          finding: stressTestResults.thresholdCheck.finding,
+        },
+        sensitivityTests: stressTestResults.sensitivityTests.map(t => ({
+          scenario: t.scenario,
+          sensitive: t.sensitive,
+          invariant: t.invariant,
+          fdrChange: t.fdrChange,
+          regimeChange: t.regimeChange,
+        })),
+        lagTests: stressTestResults.lagTests,
+        proxyTests: stressTestResults.proxyTests,
+        criticalFindings: stressTestResults.criticalFindings,
+        warnings: stressTestResults.warnings,
+        recommendations: stressTestResults.recommendations,
+        testTimestamp: stressTestResults.testTimestamp,
+        interpretation: {
+          confidenceStatement: stressTestResults.overallConfidenceCap >= 0.8 
+            ? 'Model signals can be trusted with HIGH confidence'
+            : stressTestResults.overallConfidenceCap >= 0.6
+              ? 'Model signals should be treated with MODERATE confidence'
+              : stressTestResults.overallConfidenceCap >= 0.4
+                ? 'Model signals should be treated with LOW confidence - review critical findings'
+                : 'Model signals are UNRELIABLE - critical faults detected',
+          actionRequired: stressTestResults.criticalFindings.length > 0,
+        }
+      });
+    } catch (error: any) {
+      console.error("Error running FDR validation:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Quick null test only (lightweight validation)
+  app.get("/api/fdr/null-test", isAuthenticated, async (req: any, res) => {
+    try {
+      const { runNullTest } = await import("./lib/fdrStressTest");
+      const result = runNullTest();
+      
+      res.json({
+        passed: result.passed,
+        diagnosis: result.diagnosis,
+        confidenceDowngrade: result.confidenceDowngrade,
+        tests: result.results,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("Error running null test:", error);
       res.status(500).json({ error: error.message });
     }
   });

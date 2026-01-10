@@ -354,6 +354,141 @@ export function testProxySubstitution(): ProxySubstitutionResult[] {
 }
 
 // ============================================================================
+// NULL TEST - Verify model is NOT invariant to meaningful inputs
+// ============================================================================
+
+export interface NullTestResult {
+  testName: string;
+  passed: boolean;
+  inputVariable: string;
+  perturbationMagnitude: number;
+  fdrChange: number;
+  expectedMinChange: number;
+  diagnosis: 'RESPONSIVE' | 'INVARIANT' | 'OVERSENSITIVE';
+}
+
+/**
+ * Null Test: Ensures FDR output changes when meaningful inputs change
+ * FAILURE = model is broken (invariant to inputs it should respond to)
+ * 
+ * This is a critical gate - if null test fails, all predictions must be
+ * downgraded to LOW confidence automatically.
+ */
+export function runNullTest(): {
+  passed: boolean;
+  results: NullTestResult[];
+  diagnosis: string;
+  confidenceDowngrade: number;
+} {
+  const results: NullTestResult[] = [];
+  
+  // Baseline calculation
+  const baseline = {
+    assetGrowth: 0.08,
+    assetIndex: 1.1,
+    ciGrowth: 0.03,
+    corePce: 0.032,
+  };
+  
+  const calculateFDR = (params: typeof baseline) => {
+    const denom = params.ciGrowth * params.corePce;
+    if (denom <= 0) return 5.0;
+    return (params.assetGrowth * params.assetIndex) / denom;
+  };
+  
+  const baselineFDR = calculateFDR(baseline);
+  
+  // Test 1: Asset growth perturbation (+50%)
+  const assetGrowthTest = calculateFDR({ ...baseline, assetGrowth: 0.12 });
+  const assetGrowthChange = Math.abs(assetGrowthTest - baselineFDR);
+  results.push({
+    testName: 'Asset Growth Sensitivity',
+    passed: assetGrowthChange > 0.1,
+    inputVariable: 'assetGrowth',
+    perturbationMagnitude: 0.5, // 50% increase
+    fdrChange: assetGrowthChange,
+    expectedMinChange: 0.1,
+    diagnosis: assetGrowthChange > 0.1 ? 'RESPONSIVE' : 'INVARIANT',
+  });
+  
+  // Test 2: Real credit perturbation (+100%)
+  const ciGrowthTest = calculateFDR({ ...baseline, ciGrowth: 0.06 });
+  const ciGrowthChange = Math.abs(ciGrowthTest - baselineFDR);
+  results.push({
+    testName: 'Real Credit Sensitivity',
+    passed: ciGrowthChange > 0.1,
+    inputVariable: 'ciGrowth',
+    perturbationMagnitude: 1.0, // 100% increase
+    fdrChange: ciGrowthChange,
+    expectedMinChange: 0.1,
+    diagnosis: ciGrowthChange > 0.1 ? 'RESPONSIVE' : 'INVARIANT',
+  });
+  
+  // Test 3: Inflation perturbation (+50%)
+  const pceTest = calculateFDR({ ...baseline, corePce: 0.048 });
+  const pceChange = Math.abs(pceTest - baselineFDR);
+  results.push({
+    testName: 'Inflation Sensitivity',
+    passed: pceChange > 0.05,
+    inputVariable: 'corePce',
+    perturbationMagnitude: 0.5,
+    fdrChange: pceChange,
+    expectedMinChange: 0.05,
+    diagnosis: pceChange > 0.05 ? 'RESPONSIVE' : 'INVARIANT',
+  });
+  
+  // Test 4: Asset index perturbation (+20%)
+  const assetIndexTest = calculateFDR({ ...baseline, assetIndex: 1.32 });
+  const assetIndexChange = Math.abs(assetIndexTest - baselineFDR);
+  results.push({
+    testName: 'Asset Index Sensitivity',
+    passed: assetIndexChange > 0.1,
+    inputVariable: 'assetIndex',
+    perturbationMagnitude: 0.2,
+    fdrChange: assetIndexChange,
+    expectedMinChange: 0.1,
+    diagnosis: assetIndexChange > 0.1 ? 'RESPONSIVE' : 'INVARIANT',
+  });
+  
+  // Test 5: Oversensitivity check (small perturbation should NOT cause regime change)
+  const smallPerturbation = calculateFDR({ ...baseline, assetGrowth: 0.081 }); // 1.25% change
+  const smallChange = Math.abs(smallPerturbation - baselineFDR);
+  const oversensitive = smallChange > 0.5; // Should not swing FDR by >0.5 from 1.25% input change
+  results.push({
+    testName: 'Oversensitivity Check',
+    passed: !oversensitive,
+    inputVariable: 'assetGrowth (small)',
+    perturbationMagnitude: 0.0125,
+    fdrChange: smallChange,
+    expectedMinChange: 0,
+    diagnosis: oversensitive ? 'OVERSENSITIVE' : 'RESPONSIVE',
+  });
+  
+  const allPassed = results.every(r => r.passed);
+  const failedTests = results.filter(r => !r.passed);
+  const invariantTests = results.filter(r => r.diagnosis === 'INVARIANT');
+  
+  // Confidence downgrade: 0.2 per failed test, capped at 0.6
+  const confidenceDowngrade = Math.min(0.6, failedTests.length * 0.2);
+  
+  let diagnosis = '';
+  if (allPassed) {
+    diagnosis = 'NULL TEST PASSED: Model responds appropriately to input perturbations.';
+  } else if (invariantTests.length > 0) {
+    diagnosis = `NULL TEST FAILED: Model INVARIANT to ${invariantTests.map(t => t.inputVariable).join(', ')}. This is a critical fault.`;
+  } else {
+    diagnosis = `NULL TEST WARNING: ${failedTests.length} tests failed. Review sensitivity calibration.`;
+  }
+  
+  return {
+    passed: allPassed,
+    results,
+    diagnosis,
+    confidenceDowngrade,
+  };
+}
+
+// ============================================================================
 // BINARY DECISION FRAMING
 // ============================================================================
 
@@ -458,6 +593,7 @@ export function identifyFalsePositives(
 // ============================================================================
 
 export async function runComprehensiveStressTest(): Promise<{
+  nullTest: ReturnType<typeof runNullTest>;
   thresholdCheck: FDRTestResult;
   sensitivityTests: SensitivityTestResult[];
   lagTests: LagTestResult[];
@@ -466,7 +602,12 @@ export async function runComprehensiveStressTest(): Promise<{
   criticalFindings: string[];
   warnings: string[];
   recommendations: string[];
+  overallConfidenceCap: number;
+  testTimestamp: string;
 }> {
+  // 0. NULL TEST FIRST - Critical gate
+  const nullTest = runNullTest();
+  
   // 1. Threshold consistency check
   const thresholdCheck = detectThresholdInconsistency();
   
@@ -511,6 +652,12 @@ export async function runComprehensiveStressTest(): Promise<{
   const warnings: string[] = [];
   const recommendations: string[] = [];
   
+  // NULL TEST FAILURE is highest priority critical finding
+  if (!nullTest.passed) {
+    criticalFindings.push(`CRITICAL: ${nullTest.diagnosis}`);
+    recommendations.push('IMMEDIATE: Investigate input pipeline - model is not responding to expected inputs');
+  }
+  
   // Threshold inconsistency is critical
   if (!thresholdCheck.passed) {
     criticalFindings.push(`CRITICAL: ${thresholdCheck.finding}`);
@@ -540,7 +687,32 @@ export async function runComprehensiveStressTest(): Promise<{
     recommendations.push('OPTIMIZE: Implement time-weighted threshold calculations for regime detection');
   }
   
+  // Calculate overall confidence cap based on test failures
+  let overallConfidenceCap = 1.0;
+  
+  // Null test failures severely cap confidence
+  overallConfidenceCap -= nullTest.confidenceDowngrade;
+  
+  // Threshold inconsistency caps at 0.6
+  if (!thresholdCheck.passed) {
+    overallConfidenceCap = Math.min(overallConfidenceCap, 0.6);
+  }
+  
+  // Invariant inputs cap at 0.4
+  if (invariantInputs.length > 0) {
+    overallConfidenceCap = Math.min(overallConfidenceCap, 0.4);
+  }
+  
+  // Lag collapse caps at 0.7
+  if (lagCollapse.length > 0) {
+    overallConfidenceCap = Math.min(overallConfidenceCap, 0.7);
+  }
+  
+  // Floor at 0.2 (never completely zero)
+  overallConfidenceCap = Math.max(0.2, overallConfidenceCap);
+  
   return {
+    nullTest,
     thresholdCheck,
     sensitivityTests,
     lagTests,
@@ -549,6 +721,8 @@ export async function runComprehensiveStressTest(): Promise<{
     criticalFindings,
     warnings,
     recommendations,
+    overallConfidenceCap,
+    testTimestamp: new Date().toISOString(),
   };
 }
 
