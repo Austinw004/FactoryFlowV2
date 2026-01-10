@@ -98,8 +98,8 @@ const savingsBasedTiers = [
       "Up to 25 suppliers",
       "Email support"
     ],
-    competitorRate: "10-15%",
-    yourSavings: "40-60% less than competitors"
+    competitorRate: "Varies by provider",
+    yourSavings: "Competitive pricing"
   },
   {
     id: "transform",
@@ -122,8 +122,8 @@ const savingsBasedTiers = [
       "Up to 100 suppliers",
       "Priority support + onboarding"
     ],
-    competitorRate: "8-12%",
-    yourSavings: "50-67% less than competitors"
+    competitorRate: "Varies by provider",
+    yourSavings: "Competitive pricing"
   },
   {
     id: "strategic",
@@ -145,17 +145,17 @@ const savingsBasedTiers = [
       "Dedicated success manager",
       "Quarterly business reviews"
     ],
-    competitorRate: "5-8%",
-    yourSavings: "60-75% less than competitors"
+    competitorRate: "Varies by provider",
+    yourSavings: "Competitive pricing"
   }
 ];
 
 const competitorComparison = [
-  { name: "Coupa", savingsShare: "8-15%", platformFee: "$50K+/yr", approach: "Savings share + platform fee" },
-  { name: "SAP Ariba", savingsShare: "5-10%", platformFee: "$100K+/yr", approach: "Per-supplier + transaction fees" },
-  { name: "Jaggaer", savingsShare: "6-12%", platformFee: "$40K+/yr", approach: "Module-based + savings share" },
-  { name: "Fairmarkit", savingsShare: "10-15%", platformFee: "Included", approach: "Pure savings share" },
-  { name: "Prescient Labs", savingsShare: "2-6%", platformFee: "$0-2K/mo", approach: "Low savings share, no hidden fees", highlight: true }
+  { name: "Prescient Labs", savingsShare: "2-6%", platformFee: "$0-2K/mo", approach: "Low savings share, no hidden fees", highlight: true },
+  { name: "Coupa", savingsShare: "Varies", platformFee: "Contact for pricing", approach: "Savings share + platform fee" },
+  { name: "SAP Ariba", savingsShare: "Varies", platformFee: "Contact for pricing", approach: "Per-supplier + transaction fees" },
+  { name: "Jaggaer", savingsShare: "Varies", platformFee: "Contact for pricing", approach: "Module-based pricing" },
+  { name: "Fairmarkit", savingsShare: "Varies", platformFee: "Contact for pricing", approach: "Savings share model" }
 ];
 
 export default function Pricing() {
@@ -168,11 +168,6 @@ export default function Pricing() {
     const savingsShare = savings * (tier.percentageRate / 100);
     const platformFee = tier.platformFee * 12;
     return savingsShare + platformFee;
-  };
-
-  const calculateCompetitorCost = (savings: number, minRate: number, maxRate: number, platformFee: number) => {
-    const avgRate = (minRate + maxRate) / 2;
-    return savings * (avgRate / 100) + platformFee;
   };
 
   const getRecommendedTier = (savings: number) => {
@@ -333,7 +328,7 @@ export default function Pricing() {
               <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
                 <Percent className="h-6 w-6 text-blue-600 mx-auto mb-2" />
                 <div className="font-semibold text-blue-700 dark:text-blue-400">2-6% Savings Share</div>
-                <p className="text-sm text-muted-foreground">Industry-low rates vs 8-15% competitors</p>
+                <p className="text-sm text-muted-foreground">Transparent, competitive pricing</p>
               </div>
               <div className="p-4 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800">
                 <Scale className="h-6 w-6 text-purple-600 mx-auto mb-2" />
@@ -379,8 +374,6 @@ export default function Pricing() {
                   <div className="grid md:grid-cols-3 gap-4">
                     {savingsBasedTiers.map((tier) => {
                       const yourCost = calculateYourCost(tier, estimatedSavings);
-                      const competitorCost = calculateCompetitorCost(estimatedSavings, 8, 12, 50000);
-                      const youSave = competitorCost - yourCost;
                       const isRecommended = getRecommendedTier(estimatedSavings) === tier.id;
 
                       return (
@@ -398,8 +391,8 @@ export default function Pricing() {
                           <div className="text-xl font-bold text-primary">
                             {formatCurrency(yourCost)}/year
                           </div>
-                          <div className="text-xs text-green-600 dark:text-green-400 mt-1">
-                            Save {formatCurrency(youSave)} vs competitors
+                          <div className="text-xs text-muted-foreground mt-1">
+                            Your estimated annual cost
                           </div>
                         </div>
                       );
@@ -645,7 +638,6 @@ export default function Pricing() {
               <div>
                 <h3 className="text-2xl font-bold mb-2">Ready to Start Saving?</h3>
                 <p className="text-slate-300">
-                  Join manufacturers who have saved millions in procurement costs. 
                   Start your 30-day free pilot today.
                 </p>
               </div>
