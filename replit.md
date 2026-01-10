@@ -49,7 +49,7 @@ The system is a multi-tenant application with data isolation per company. Core t
 - **ROI Dashboard**: Visualizes procurement savings and forecast accuracy.
 - **ERP Integration Templates**: Pre-built templates for major ERPs.
 - **Onboarding Wizard**: A 3-step wizard for new users covering company setup, team invitations, and platform launch. Includes ref-based validation fallback for robust form handling.
-- **Integration Health Monitoring**: Live connectivity health checks (GET /api/integrations/health) for all configured integrations including FRED, Alpha Vantage, Trading Economics, News API, OpenAI, Twilio, SendPulse, and Stripe with latency tracking, status categorization (healthy/degraded/offline/not_configured), and parallel execution.
+- **Integration Health Monitoring**: Live connectivity health checks (GET /api/integrations/health) for all 18 configured integrations across 8 categories (data, ai, communication, payments, crm, ecommerce, productivity, project_management) with latency tracking, status categorization (healthy/degraded/offline/not_configured), and parallel execution.
 
 ### System Design Choices
 
@@ -65,7 +65,17 @@ The frontend is built with React, TypeScript, and Vite, using `wouter` for routi
 -   **Communication & CRM**:
     -   Slack (for alerts and notifications).
     -   Twilio (for critical SMS alerts).
+    -   Microsoft Teams (for alerts and notifications).
     -   HubSpot CRM (for contact/company sync and demand signals).
+    -   Salesforce CRM (alternative CRM integration).
+-   **Productivity & Project Management**:
+    -   Google Sheets (data export/import).
+    -   Google Calendar (S&OP meeting scheduling).
+    -   Notion (knowledge base and documentation).
+    -   Jira (issue tracking and project management).
+    -   Linear (project tracking and issue management).
+-   **E-commerce**:
+    -   Shopify (e-commerce demand signals).
 -   **NPM Packages (Key Examples)**:
     -   **Frontend**: `react`, `wouter`, `@tanstack/react-query`, `tailwindcss`, `recharts`, `@radix-ui/*`, `class-variance-authority`, `cmdk`, `lucide-react`.
     -   **Backend**: `express`, `drizzle-orm`, `drizzle-zod`, `zod`, `passport`, `openid-client`, `axios`.
