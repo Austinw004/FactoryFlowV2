@@ -269,27 +269,28 @@ function generateRecommendation(
   const change30 = forecasts.days30.changePercent;
   const change90 = forecasts.days90.changePercent;
   
+  // Return factual signal data only - no outcome predictions
   if (trend === 'rising') {
     if (change30 > 8) {
-      return 'URGENT: Consider accelerating purchases now before significant price increases';
+      return `Rising trend detected: +${change30.toFixed(1)}% 30-day change, volatility=${volatility}`;
     } else if (change90 > 10) {
-      return 'Lock in forward contracts or increase safety stock within 30 days';
+      return `Rising trend detected: +${change90.toFixed(1)}% 90-day change, volatility=${volatility}`;
     } else {
-      return 'Monitor closely; consider gradual inventory build-up';
+      return `Rising trend detected: moderate rate, volatility=${volatility}`;
     }
   } else if (trend === 'falling') {
     if (change30 < -5) {
-      return 'Delay non-urgent purchases; prices expected to decline short-term';
+      return `Falling trend detected: ${change30.toFixed(1)}% 30-day change, volatility=${volatility}`;
     } else if (volatility === 'high') {
-      return 'Maintain normal purchasing; high volatility may reverse trend';
+      return `Falling trend detected: high volatility, volatility=${volatility}`;
     } else {
-      return 'Opportunity to reduce inventory costs with patient purchasing';
+      return `Falling trend detected: moderate rate, volatility=${volatility}`;
     }
   } else {
     if (volatility === 'high') {
-      return 'Stable trend but high volatility; maintain flexible purchasing strategy';
+      return `Stable trend, high volatility`;
     }
-    return 'Continue standard procurement cadence; no significant price changes expected';
+    return `Stable trend, volatility=${volatility}`;
   }
 }
 

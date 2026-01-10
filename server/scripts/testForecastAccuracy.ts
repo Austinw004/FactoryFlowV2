@@ -299,11 +299,11 @@ async function main() {
     console.log(`  ✅ All enhancements reinforce the FDR thesis\n`);
   }
   
-  console.log('📊 INTERPRETATION:');
-  console.log(`  • MAPE < 5%:  Exceptional accuracy, suitable for critical decisions`);
-  console.log(`  • MAPE < 10%: Very reliable, standard for enterprise forecasting`);
-  console.log(`  • MAPE < 15%: Good accuracy, acceptable for planning purposes`);
-  console.log(`  • MAPE > 20%: Requires model refinement\n`);
+  console.log('📊 MAPE THRESHOLDS:');
+  console.log(`  • MAPE < 5%:  Threshold A`);
+  console.log(`  • MAPE < 10%: Threshold B`);
+  console.log(`  • MAPE < 15%: Threshold C`);
+  console.log(`  • MAPE > 20%: Threshold D\n`);
 
   // Skip comprehensive validation which requires valid company records
   // Focus on the enhanced forecasting results above
@@ -327,23 +327,14 @@ async function main() {
     (results.avgCommodityMAPE + results.avgMachineryMAPE + results.avgWorkforceMAPE) / 3
   ) * 100;
 
-  console.log('🏆 OVERALL PERFORMANCE:');
-  console.log(`  Combined MAPE: ${overallMAPE.toFixed(2)}%`);
-  
-  let rating = '';
-  if (overallMAPE < 5) rating = '🌟 EXCELLENT (Industry Leading)';
-  else if (overallMAPE < 10) rating = '✅ VERY GOOD (Production Ready)';
-  else if (overallMAPE < 15) rating = '👍 GOOD (Competitive)';
-  else if (overallMAPE < 20) rating = '⚠️ FAIR (Needs Improvement)';
-  else rating = '❌ POOR (Requires Calibration)';
-  
-  console.log(`  Rating: ${rating}\n`);
+  console.log('OVERALL PERFORMANCE:');
+  console.log(`  Combined MAPE: ${overallMAPE.toFixed(2)}%\n`);
 
-  console.log('📊 INTERPRETATION:');
-  console.log(`  • MAPE < 5%:  Exceptional accuracy, suitable for critical decisions`);
-  console.log(`  • MAPE < 10%: Very reliable, standard for enterprise forecasting`);
-  console.log(`  • MAPE < 15%: Good accuracy, acceptable for planning purposes`);
-  console.log(`  • MAPE > 20%: Requires model refinement\n`);
+  console.log('📊 MAPE THRESHOLDS:');
+  console.log(`  • MAPE < 5%:  Threshold A`);
+  console.log(`  • MAPE < 10%: Threshold B`);
+  console.log(`  • MAPE < 15%: Threshold C`);
+  console.log(`  • MAPE > 20%: Threshold D\n`);
 
   console.log('🔬 METHODOLOGY:');
   console.log('  • Historical Backtesting: 500 states from 2000-2024');

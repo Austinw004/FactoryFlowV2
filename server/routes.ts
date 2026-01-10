@@ -1279,16 +1279,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         warnings: stressTestResults.warnings,
         recommendations: stressTestResults.recommendations,
         testTimestamp: stressTestResults.testTimestamp,
-        interpretation: {
-          confidenceStatement: stressTestResults.overallConfidenceCap >= 0.8 
-            ? 'Model signals can be trusted with HIGH confidence'
-            : stressTestResults.overallConfidenceCap >= 0.6
-              ? 'Model signals should be treated with MODERATE confidence'
-              : stressTestResults.overallConfidenceCap >= 0.4
-                ? 'Model signals should be treated with LOW confidence - review critical findings'
-                : 'Model signals are UNRELIABLE - critical faults detected',
-          actionRequired: stressTestResults.criticalFindings.length > 0,
-        }
       });
     } catch (error: any) {
       console.error("Error running FDR validation:", error);
