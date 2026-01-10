@@ -15271,6 +15271,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
           configured: !!company.shopifyDomain,
           domain: company.shopifyDomain || null,
         },
+        googleSheets: {
+          enabled: company.googleSheetsEnabled === 1,
+          configured: !!company.googleSheetsSpreadsheetId,
+          spreadsheetId: company.googleSheetsSpreadsheetId || null,
+          autoExport: company.googleSheetsAutoExport === 1,
+        },
+        googleCalendar: {
+          enabled: company.googleCalendarEnabled === 1,
+          configured: !!company.googleCalendarId,
+          calendarId: company.googleCalendarId || null,
+          syncMeetings: company.googleCalendarSyncMeetings === 1,
+        },
+        notion: {
+          enabled: company.notionEnabled === 1,
+          configured: !!company.notionAccessToken,
+          workspaceId: company.notionWorkspaceId || null,
+          databaseId: company.notionDatabaseId || null,
+        },
+        salesforce: {
+          enabled: company.salesforceEnabled === 1,
+          configured: !!company.salesforceAccessToken,
+          instanceUrl: company.salesforceInstanceUrl || null,
+        },
+        jira: {
+          enabled: company.jiraEnabled === 1,
+          configured: !!company.jiraApiToken,
+          domain: company.jiraDomain || null,
+          projectKey: company.jiraProjectKey || null,
+        },
+        linear: {
+          enabled: company.linearEnabled === 1,
+          configured: !!company.linearApiKey,
+          teamId: company.linearTeamId || null,
+        },
       });
     } catch (error: any) {
       console.error("Error getting integration status:", error);
@@ -15490,6 +15524,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         latencyMs: 0,
         message: company.shopifyDomain ? `Shopify (${company.shopifyDomain}) configured` : 'Shopify not configured',
         category: 'ecommerce',
+      });
+      
+      // New integrations
+      healthChecks.push({
+        integration: 'google_sheets',
+        status: company.googleSheetsEnabled === 1 ? 'healthy' : 'not_configured',
+        latencyMs: 0,
+        message: company.googleSheetsEnabled === 1 ? 'Google Sheets enabled' : 'Google Sheets not configured',
+        category: 'productivity',
+      });
+      
+      healthChecks.push({
+        integration: 'google_calendar',
+        status: company.googleCalendarEnabled === 1 ? 'healthy' : 'not_configured',
+        latencyMs: 0,
+        message: company.googleCalendarEnabled === 1 ? 'Google Calendar enabled' : 'Google Calendar not configured',
+        category: 'productivity',
+      });
+      
+      healthChecks.push({
+        integration: 'notion',
+        status: company.notionEnabled === 1 && company.notionAccessToken ? 'healthy' : 'not_configured',
+        latencyMs: 0,
+        message: company.notionEnabled === 1 ? 'Notion connected' : 'Notion not configured',
+        category: 'productivity',
+      });
+      
+      healthChecks.push({
+        integration: 'salesforce',
+        status: company.salesforceEnabled === 1 && company.salesforceAccessToken ? 'healthy' : 'not_configured',
+        latencyMs: 0,
+        message: company.salesforceEnabled === 1 ? 'Salesforce connected' : 'Salesforce not configured',
+        category: 'crm',
+      });
+      
+      healthChecks.push({
+        integration: 'jira',
+        status: company.jiraEnabled === 1 && company.jiraApiToken ? 'healthy' : 'not_configured',
+        latencyMs: 0,
+        message: company.jiraEnabled === 1 ? 'Jira connected' : 'Jira not configured',
+        category: 'project_management',
+      });
+      
+      healthChecks.push({
+        integration: 'linear',
+        status: company.linearEnabled === 1 && company.linearApiKey ? 'healthy' : 'not_configured',
+        latencyMs: 0,
+        message: company.linearEnabled === 1 ? 'Linear connected' : 'Linear not configured',
+        category: 'project_management',
       });
       
       // Calculate overall health
@@ -16170,6 +16253,345 @@ You'll receive emails for:
     } catch (error: any) {
       console.error("Error testing email:", error);
       res.status(500).json({ success: false, message: error.message });
+    }
+  });
+
+  // ==========================================
+  // GOOGLE SHEETS INTEGRATION ROUTES
+  // ==========================================
+  
+  app.post("/api/integrations/google-sheets/configure", isAuthenticated, async (req: any, res) => {
+    try {
+      const { enabled, spreadsheetId, autoExport } = req.body;
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const updates: any = {
+        googleSheetsEnabled: enabled ? 1 : 0,
+      };
+      
+      if (spreadsheetId !== undefined) {
+        updates.googleSheetsSpreadsheetId = spreadsheetId;
+      }
+      if (autoExport !== undefined) {
+        updates.googleSheetsAutoExport = autoExport ? 1 : 0;
+      }
+      
+      await storage.updateCompany(user.companyId, updates);
+      res.json({ success: true, message: "Google Sheets integration configured" });
+    } catch (error: any) {
+      console.error("Error configuring Google Sheets:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // ==========================================
+  // GOOGLE CALENDAR INTEGRATION ROUTES
+  // ==========================================
+  
+  app.post("/api/integrations/google-calendar/configure", isAuthenticated, async (req: any, res) => {
+    try {
+      const { enabled, calendarId, syncMeetings } = req.body;
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const updates: any = {
+        googleCalendarEnabled: enabled ? 1 : 0,
+      };
+      
+      if (calendarId !== undefined) {
+        updates.googleCalendarId = calendarId;
+      }
+      if (syncMeetings !== undefined) {
+        updates.googleCalendarSyncMeetings = syncMeetings ? 1 : 0;
+      }
+      
+      await storage.updateCompany(user.companyId, updates);
+      res.json({ success: true, message: "Google Calendar integration configured" });
+    } catch (error: any) {
+      console.error("Error configuring Google Calendar:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // ==========================================
+  // NOTION INTEGRATION ROUTES
+  // ==========================================
+  
+  app.post("/api/integrations/notion/configure", isAuthenticated, async (req: any, res) => {
+    try {
+      const { enabled, accessToken, workspaceId, databaseId } = req.body;
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const updates: any = {
+        notionEnabled: enabled ? 1 : 0,
+      };
+      
+      if (accessToken !== undefined) {
+        updates.notionAccessToken = accessToken;
+      }
+      if (workspaceId !== undefined) {
+        updates.notionWorkspaceId = workspaceId;
+      }
+      if (databaseId !== undefined) {
+        updates.notionDatabaseId = databaseId;
+      }
+      
+      await storage.updateCompany(user.companyId, updates);
+      res.json({ success: true, message: "Notion integration configured" });
+    } catch (error: any) {
+      console.error("Error configuring Notion:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  app.post("/api/integrations/notion/test", isAuthenticated, async (req: any, res) => {
+    try {
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const company = await storage.getCompany(user.companyId);
+      if (!company?.notionAccessToken) {
+        return res.status(400).json({ success: false, message: "Notion access token not configured" });
+      }
+      
+      // Test Notion API connectivity
+      const response = await axios.get("https://api.notion.com/v1/users/me", {
+        headers: {
+          "Authorization": `Bearer ${company.notionAccessToken}`,
+          "Notion-Version": "2022-06-28",
+        },
+        timeout: 5000,
+      });
+      
+      res.json({ 
+        success: true, 
+        message: "Notion connection successful",
+        user: response.data?.name || "Connected"
+      });
+    } catch (error: any) {
+      console.error("Error testing Notion:", error);
+      res.status(500).json({ success: false, message: error.response?.data?.message || error.message });
+    }
+  });
+  
+  // ==========================================
+  // SALESFORCE INTEGRATION ROUTES
+  // ==========================================
+  
+  app.post("/api/integrations/salesforce/configure", isAuthenticated, async (req: any, res) => {
+    try {
+      const { enabled, accessToken, refreshToken, instanceUrl } = req.body;
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const updates: any = {
+        salesforceEnabled: enabled ? 1 : 0,
+      };
+      
+      if (accessToken !== undefined) {
+        updates.salesforceAccessToken = accessToken;
+      }
+      if (refreshToken !== undefined) {
+        updates.salesforceRefreshToken = refreshToken;
+      }
+      if (instanceUrl !== undefined) {
+        updates.salesforceInstanceUrl = instanceUrl;
+      }
+      
+      await storage.updateCompany(user.companyId, updates);
+      res.json({ success: true, message: "Salesforce integration configured" });
+    } catch (error: any) {
+      console.error("Error configuring Salesforce:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  app.post("/api/integrations/salesforce/test", isAuthenticated, async (req: any, res) => {
+    try {
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const company = await storage.getCompany(user.companyId);
+      if (!company?.salesforceAccessToken || !company?.salesforceInstanceUrl) {
+        return res.status(400).json({ success: false, message: "Salesforce credentials not configured" });
+      }
+      
+      // Test Salesforce API connectivity
+      const response = await axios.get(`${company.salesforceInstanceUrl}/services/data/v58.0/sobjects`, {
+        headers: {
+          "Authorization": `Bearer ${company.salesforceAccessToken}`,
+        },
+        timeout: 5000,
+      });
+      
+      res.json({ 
+        success: true, 
+        message: "Salesforce connection successful",
+        objects: response.data?.sobjects?.length || 0
+      });
+    } catch (error: any) {
+      console.error("Error testing Salesforce:", error);
+      res.status(500).json({ success: false, message: error.response?.data?.message || error.message });
+    }
+  });
+  
+  // ==========================================
+  // JIRA INTEGRATION ROUTES
+  // ==========================================
+  
+  app.post("/api/integrations/jira/configure", isAuthenticated, async (req: any, res) => {
+    try {
+      const { enabled, apiToken, domain, projectKey } = req.body;
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const updates: any = {
+        jiraEnabled: enabled ? 1 : 0,
+      };
+      
+      if (apiToken !== undefined) {
+        updates.jiraApiToken = apiToken;
+      }
+      if (domain !== undefined) {
+        updates.jiraDomain = domain;
+      }
+      if (projectKey !== undefined) {
+        updates.jiraProjectKey = projectKey;
+      }
+      
+      await storage.updateCompany(user.companyId, updates);
+      res.json({ success: true, message: "Jira integration configured" });
+    } catch (error: any) {
+      console.error("Error configuring Jira:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  app.post("/api/integrations/jira/test", isAuthenticated, async (req: any, res) => {
+    try {
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const company = await storage.getCompany(user.companyId);
+      if (!company?.jiraApiToken || !company?.jiraDomain) {
+        return res.status(400).json({ success: false, message: "Jira credentials not configured" });
+      }
+      
+      // Test Jira API connectivity (requires user email from the user record)
+      const userEmail = user.email || req.body?.email;
+      if (!userEmail) {
+        return res.status(400).json({ success: false, message: "User email required for Jira authentication" });
+      }
+      
+      const response = await axios.get(`https://${company.jiraDomain}.atlassian.net/rest/api/3/myself`, {
+        headers: {
+          "Authorization": `Basic ${Buffer.from(`${userEmail}:${company.jiraApiToken}`).toString('base64')}`,
+          "Accept": "application/json",
+        },
+        timeout: 5000,
+      });
+      
+      res.json({ 
+        success: true, 
+        message: "Jira connection successful",
+        user: response.data?.displayName || "Connected"
+      });
+    } catch (error: any) {
+      console.error("Error testing Jira:", error);
+      res.status(500).json({ success: false, message: error.response?.data?.message || error.message });
+    }
+  });
+  
+  // ==========================================
+  // LINEAR INTEGRATION ROUTES
+  // ==========================================
+  
+  app.post("/api/integrations/linear/configure", isAuthenticated, async (req: any, res) => {
+    try {
+      const { enabled, apiKey, teamId } = req.body;
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const updates: any = {
+        linearEnabled: enabled ? 1 : 0,
+      };
+      
+      if (apiKey !== undefined) {
+        updates.linearApiKey = apiKey;
+      }
+      if (teamId !== undefined) {
+        updates.linearTeamId = teamId;
+      }
+      
+      await storage.updateCompany(user.companyId, updates);
+      res.json({ success: true, message: "Linear integration configured" });
+    } catch (error: any) {
+      console.error("Error configuring Linear:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  app.post("/api/integrations/linear/test", isAuthenticated, async (req: any, res) => {
+    try {
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const company = await storage.getCompany(user.companyId);
+      if (!company?.linearApiKey) {
+        return res.status(400).json({ success: false, message: "Linear API key not configured" });
+      }
+      
+      // Test Linear API connectivity
+      const response = await axios.post("https://api.linear.app/graphql", {
+        query: `{ viewer { id name email } }`
+      }, {
+        headers: {
+          "Authorization": company.linearApiKey,
+          "Content-Type": "application/json",
+        },
+        timeout: 5000,
+      });
+      
+      res.json({ 
+        success: true, 
+        message: "Linear connection successful",
+        user: response.data?.data?.viewer?.name || "Connected"
+      });
+    } catch (error: any) {
+      console.error("Error testing Linear:", error);
+      res.status(500).json({ success: false, message: error.response?.data?.errors?.[0]?.message || error.message });
     }
   });
 

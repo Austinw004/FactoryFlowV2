@@ -170,6 +170,33 @@ export const companies = pgTable("companies", {
   shopifySyncProducts: integer("shopify_sync_products").default(0),
   shopifySyncInventory: integer("shopify_sync_inventory").default(0),
   shopifyEnabled: integer("shopify_enabled").default(0),
+  // Integration Settings - Google Sheets
+  googleSheetsEnabled: integer("google_sheets_enabled").default(0),
+  googleSheetsSpreadsheetId: text("google_sheets_spreadsheet_id"),
+  googleSheetsAutoExport: integer("google_sheets_auto_export").default(0),
+  // Integration Settings - Google Calendar  
+  googleCalendarEnabled: integer("google_calendar_enabled").default(0),
+  googleCalendarId: text("google_calendar_id"),
+  googleCalendarSyncMeetings: integer("google_calendar_sync_meetings").default(0),
+  // Integration Settings - Notion
+  notionEnabled: integer("notion_enabled").default(0),
+  notionAccessToken: text("notion_access_token"),
+  notionWorkspaceId: text("notion_workspace_id"),
+  notionDatabaseId: text("notion_database_id"),
+  // Integration Settings - Salesforce
+  salesforceEnabled: integer("salesforce_enabled").default(0),
+  salesforceAccessToken: text("salesforce_access_token"),
+  salesforceRefreshToken: text("salesforce_refresh_token"),
+  salesforceInstanceUrl: text("salesforce_instance_url"),
+  // Integration Settings - Jira
+  jiraEnabled: integer("jira_enabled").default(0),
+  jiraApiToken: text("jira_api_token"),
+  jiraDomain: text("jira_domain"),
+  jiraProjectKey: text("jira_project_key"),
+  // Integration Settings - Linear
+  linearEnabled: integer("linear_enabled").default(0),
+  linearApiKey: text("linear_api_key"),
+  linearTeamId: text("linear_team_id"),
   // Company Branding
   logoUrl: text("logo_url"),
   primaryColor: text("primary_color").default("#3b82f6"), // Hex color for branding
