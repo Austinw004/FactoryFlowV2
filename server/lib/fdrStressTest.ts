@@ -711,7 +711,10 @@ export async function runComprehensiveStressTest(): Promise<{
   // Floor at 0.2 (never completely zero)
   overallConfidenceCap = Math.max(0.2, overallConfidenceCap);
   
-  return {
+  const testTimestamp = new Date().toISOString();
+  
+  // Build preliminary result for classification
+  const preliminaryResult = {
     nullTest,
     thresholdCheck,
     sensitivityTests,
@@ -722,9 +725,488 @@ export async function runComprehensiveStressTest(): Promise<{
     warnings,
     recommendations,
     overallConfidenceCap,
-    testTimestamp: new Date().toISOString(),
+    testTimestamp,
+  };
+  
+  // Classify all failures for internal diagnostics
+  // Purpose: early detection, not defense of the model
+  const classifiedFailures = classifyStressTestFailuresInternal(preliminaryResult);
+  const failureDiagnostics = generateFailureDiagnosticsInternal(classifiedFailures);
+  
+  // Log to internal diagnostics
+  if (classifiedFailures.length > 0) {
+    console.log(`[FDR Diagnostics] ${failureDiagnostics.summary}`);
+  }
+  
+  return {
+    ...preliminaryResult,
+    // Internal diagnostics - exposed for monitoring
+    diagnostics: {
+      classifiedFailures,
+      failureSummary: failureDiagnostics,
+    },
+  };
+}
+
+// Internal classification helpers (defined before export to avoid circular reference)
+function classifyStressTestFailuresInternal(
+  report: {
+    nullTest: ReturnType<typeof runNullTest>;
+    thresholdCheck: FDRTestResult;
+    lagTests: LagTestResult[];
+    proxyTests: ProxySubstitutionResult[];
+    criticalFindings: string[];
+    warnings: string[];
+  }
+): ClassifiedFailure[] {
+  const failures: ClassifiedFailure[] = [];
+  
+  const context = {
+    nullTestPassed: report.nullTest.passed,
+    thresholdPassed: report.thresholdCheck.passed,
+    lagCollapsed: report.lagTests.some(t => t.collapses),
+    proxyDegraded: report.proxyTests.some(t => t.signalDegradation === 'collapse'),
+  };
+  
+  for (const finding of report.criticalFindings) {
+    failures.push(classifyFailureInternal(finding, 'criticalFindings', context));
+  }
+  
+  for (const warning of report.warnings) {
+    failures.push(classifyFailureInternal(warning, 'warnings', context));
+  }
+  
+  return failures;
+}
+
+function classifyFailureInternal(
+  finding: string,
+  source: string,
+  testContext: {
+    nullTestPassed?: boolean;
+    thresholdPassed?: boolean;
+    lagCollapsed?: boolean;
+    proxyDegraded?: boolean;
+  }
+): ClassifiedFailure {
+  const id = `fail-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const timestamp = new Date().toISOString();
+  
+  // THEORY_LEVEL_INCONSISTENCY
+  if (
+    finding.includes('invariant') ||
+    finding.includes('INVARIANT') ||
+    finding.includes('threshold inconsistency') ||
+    finding.includes('contradictory') ||
+    (testContext?.nullTestPassed === false && source === 'criticalFindings')
+  ) {
+    return {
+      id,
+      category: 'THEORY_LEVEL_INCONSISTENCY',
+      source,
+      timestamp,
+      severity: 'CRITICAL',
+      rawFinding: finding,
+      confidenceImpact: 0.4,
+      mitigationAvailable: false,
+    };
+  }
+  
+  // PROXY_FAILURE
+  if (
+    finding.includes('proxy') ||
+    finding.includes('PROXY') ||
+    finding.includes('data unavailable') ||
+    finding.includes('API failure') ||
+    finding.includes('signal collapse') ||
+    (testContext?.proxyDegraded === true && source === 'warnings')
+  ) {
+    return {
+      id,
+      category: 'PROXY_FAILURE',
+      source,
+      timestamp,
+      severity: 'WARNING',
+      rawFinding: finding,
+      confidenceImpact: 0.25,
+      mitigationAvailable: true,
+    };
+  }
+  
+  // TIMING_MISMATCH
+  if (
+    finding.includes('lag') ||
+    finding.includes('LAG') ||
+    finding.includes('lead indicator') ||
+    finding.includes('timing') ||
+    finding.includes('predictive power collapse') ||
+    (testContext?.lagCollapsed === true && source === 'warnings')
+  ) {
+    return {
+      id,
+      category: 'TIMING_MISMATCH',
+      source,
+      timestamp,
+      severity: 'WARNING',
+      rawFinding: finding,
+      confidenceImpact: 0.3,
+      mitigationAvailable: true,
+    };
+  }
+  
+  // POLICY_DISTORTION
+  if (
+    finding.includes('policy') ||
+    finding.includes('intervention') ||
+    finding.includes('regulatory') ||
+    finding.includes('Fed') ||
+    finding.includes('central bank') ||
+    finding.includes('fiscal')
+  ) {
+    return {
+      id,
+      category: 'POLICY_DISTORTION',
+      source,
+      timestamp,
+      severity: 'WARNING',
+      rawFinding: finding,
+      confidenceImpact: 0.35,
+      mitigationAvailable: false,
+    };
+  }
+  
+  // EXECUTION_DISCIPLINE_RISK
+  if (
+    finding.includes('execution') ||
+    finding.includes('implementation') ||
+    finding.includes('cache') ||
+    finding.includes('timeout') ||
+    finding.includes('service')
+  ) {
+    return {
+      id,
+      category: 'EXECUTION_DISCIPLINE_RISK',
+      source,
+      timestamp,
+      severity: 'INFO',
+      rawFinding: finding,
+      confidenceImpact: 0.15,
+      mitigationAvailable: true,
+    };
+  }
+  
+  // Default: THEORY_LEVEL (conservative)
+  console.warn(`[FailureClassification] Unclassified: ${finding.substring(0, 50)}...`);
+  return {
+    id,
+    category: 'THEORY_LEVEL_INCONSISTENCY',
+    source,
+    timestamp,
+    severity: 'CRITICAL',
+    rawFinding: finding,
+    confidenceImpact: 0.4,
+    mitigationAvailable: false,
+  };
+}
+
+function generateFailureDiagnosticsInternal(
+  failures: ClassifiedFailure[]
+): {
+  byCategory: Record<FailureCategory, number>;
+  totalConfidenceImpact: number;
+  mitigableCount: number;
+  criticalCount: number;
+  summary: string;
+} {
+  const byCategory: Record<FailureCategory, number> = {
+    'THEORY_LEVEL_INCONSISTENCY': 0,
+    'PROXY_FAILURE': 0,
+    'TIMING_MISMATCH': 0,
+    'POLICY_DISTORTION': 0,
+    'EXECUTION_DISCIPLINE_RISK': 0,
+  };
+  
+  let totalConfidenceImpact = 0;
+  let mitigableCount = 0;
+  let criticalCount = 0;
+  
+  for (const f of failures) {
+    byCategory[f.category]++;
+    totalConfidenceImpact += f.confidenceImpact;
+    if (f.mitigationAvailable) mitigableCount++;
+    if (f.severity === 'CRITICAL') criticalCount++;
+  }
+  
+  totalConfidenceImpact = Math.min(0.8, totalConfidenceImpact);
+  
+  const categoryCounts = Object.entries(byCategory)
+    .filter(([_, count]) => count > 0)
+    .map(([cat, count]) => `${cat}:${count}`)
+    .join(', ');
+  
+  const summary = failures.length === 0
+    ? 'No classified failures'
+    : `${failures.length} failures [${categoryCounts}] impact=${totalConfidenceImpact.toFixed(2)} mitigable=${mitigableCount} critical=${criticalCount}`;
+  
+  return {
+    byCategory,
+    totalConfidenceImpact,
+    mitigableCount,
+    criticalCount,
+    summary,
   };
 }
 
 // Export for API endpoint
 export type StressTestReport = Awaited<ReturnType<typeof runComprehensiveStressTest>>;
+
+// ============================================================================
+// FAILURE CLASSIFICATION SYSTEM
+// Purpose: Early detection, not defense of the model
+// Categories may not be collapsed - each failure must be explicitly typed
+// ============================================================================
+
+export type FailureCategory = 
+  | 'THEORY_LEVEL_INCONSISTENCY'   // Core FDR model logic produces contradictory outputs
+  | 'PROXY_FAILURE'                 // Input proxy data unreliable or unavailable
+  | 'TIMING_MISMATCH'               // Lag/lead relationship broken or inverted
+  | 'POLICY_DISTORTION'             // External policy intervention invalidates model assumptions
+  | 'EXECUTION_DISCIPLINE_RISK';    // Model output valid but execution path unreliable
+
+export interface ClassifiedFailure {
+  id: string;
+  category: FailureCategory;
+  source: string;              // Which test/check generated this failure
+  timestamp: string;
+  severity: 'CRITICAL' | 'WARNING' | 'INFO';
+  rawFinding: string;          // Original unprocessed finding
+  confidenceImpact: number;    // How much this degrades confidence (0-1)
+  mitigationAvailable: boolean;
+}
+
+/**
+ * Classify a stress test failure into one of five explicit categories.
+ * This function exists for early detection, not model defense.
+ */
+export function classifyFailure(
+  finding: string,
+  source: string,
+  testContext?: {
+    nullTestPassed?: boolean;
+    thresholdPassed?: boolean;
+    lagCollapsed?: boolean;
+    proxyDegraded?: boolean;
+  }
+): ClassifiedFailure {
+  const id = `fail-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const timestamp = new Date().toISOString();
+  
+  // Classification logic - explicit pattern matching
+  // Each category has distinct signatures
+  
+  // THEORY_LEVEL_INCONSISTENCY: Model logic contradictions
+  if (
+    finding.includes('invariant') ||
+    finding.includes('INVARIANT') ||
+    finding.includes('threshold inconsistency') ||
+    finding.includes('contradictory') ||
+    (testContext?.nullTestPassed === false)
+  ) {
+    return {
+      id,
+      category: 'THEORY_LEVEL_INCONSISTENCY',
+      source,
+      timestamp,
+      severity: 'CRITICAL',
+      rawFinding: finding,
+      confidenceImpact: 0.4,
+      mitigationAvailable: false, // Theory failures cannot be mitigated at runtime
+    };
+  }
+  
+  // PROXY_FAILURE: Data source unreliability
+  if (
+    finding.includes('proxy') ||
+    finding.includes('PROXY') ||
+    finding.includes('data unavailable') ||
+    finding.includes('API failure') ||
+    finding.includes('signal collapse') ||
+    (testContext?.proxyDegraded === true)
+  ) {
+    return {
+      id,
+      category: 'PROXY_FAILURE',
+      source,
+      timestamp,
+      severity: 'WARNING',
+      rawFinding: finding,
+      confidenceImpact: 0.25,
+      mitigationAvailable: true, // Can substitute proxies
+    };
+  }
+  
+  // TIMING_MISMATCH: Lag/lead relationships broken
+  if (
+    finding.includes('lag') ||
+    finding.includes('LAG') ||
+    finding.includes('lead indicator') ||
+    finding.includes('timing') ||
+    finding.includes('predictive power collapse') ||
+    (testContext?.lagCollapsed === true)
+  ) {
+    return {
+      id,
+      category: 'TIMING_MISMATCH',
+      source,
+      timestamp,
+      severity: 'WARNING',
+      rawFinding: finding,
+      confidenceImpact: 0.3,
+      mitigationAvailable: true, // Can recalibrate lag parameters
+    };
+  }
+  
+  // POLICY_DISTORTION: External interventions
+  if (
+    finding.includes('policy') ||
+    finding.includes('intervention') ||
+    finding.includes('regulatory') ||
+    finding.includes('Fed') ||
+    finding.includes('central bank') ||
+    finding.includes('fiscal')
+  ) {
+    return {
+      id,
+      category: 'POLICY_DISTORTION',
+      source,
+      timestamp,
+      severity: 'WARNING',
+      rawFinding: finding,
+      confidenceImpact: 0.35,
+      mitigationAvailable: false, // Cannot mitigate external policy
+    };
+  }
+  
+  // EXECUTION_DISCIPLINE_RISK: Valid model, unreliable execution
+  if (
+    finding.includes('execution') ||
+    finding.includes('implementation') ||
+    finding.includes('cache') ||
+    finding.includes('timeout') ||
+    finding.includes('service')
+  ) {
+    return {
+      id,
+      category: 'EXECUTION_DISCIPLINE_RISK',
+      source,
+      timestamp,
+      severity: 'INFO',
+      rawFinding: finding,
+      confidenceImpact: 0.15,
+      mitigationAvailable: true, // Execution issues are fixable
+    };
+  }
+  
+  // Default to theory-level if unclassified (conservative approach)
+  // Unclassified failures are treated as potential theory issues
+  console.warn(`[FailureClassification] Unclassified failure defaulting to THEORY_LEVEL: ${finding}`);
+  return {
+    id,
+    category: 'THEORY_LEVEL_INCONSISTENCY',
+    source,
+    timestamp,
+    severity: 'CRITICAL',
+    rawFinding: finding,
+    confidenceImpact: 0.4,
+    mitigationAvailable: false,
+  };
+}
+
+/**
+ * Classify all failures from a stress test report
+ */
+export function classifyStressTestFailures(
+  report: StressTestReport
+): ClassifiedFailure[] {
+  const failures: ClassifiedFailure[] = [];
+  
+  const context = {
+    nullTestPassed: report.nullTest.passed,
+    thresholdPassed: report.thresholdCheck.passed,
+    lagCollapsed: report.lagTests.some(t => t.collapses),
+    proxyDegraded: report.proxyTests.some(t => t.signalDegradation === 'collapse'),
+  };
+  
+  // Classify critical findings
+  for (const finding of report.criticalFindings) {
+    failures.push(classifyFailure(finding, 'criticalFindings', context));
+  }
+  
+  // Classify warnings
+  for (const warning of report.warnings) {
+    failures.push(classifyFailure(warning, 'warnings', context));
+  }
+  
+  // Log classified failures for diagnostics
+  if (failures.length > 0) {
+    console.log('[FDR Diagnostics] Classified failures:');
+    for (const f of failures) {
+      console.log(`  [${f.category}] ${f.severity}: ${f.rawFinding.substring(0, 80)}...`);
+    }
+  }
+  
+  return failures;
+}
+
+/**
+ * Generate failure summary for internal diagnostics
+ */
+export function generateFailureDiagnostics(
+  failures: ClassifiedFailure[]
+): {
+  byCategory: Record<FailureCategory, number>;
+  totalConfidenceImpact: number;
+  mitigableCount: number;
+  criticalCount: number;
+  summary: string;
+} {
+  const byCategory: Record<FailureCategory, number> = {
+    'THEORY_LEVEL_INCONSISTENCY': 0,
+    'PROXY_FAILURE': 0,
+    'TIMING_MISMATCH': 0,
+    'POLICY_DISTORTION': 0,
+    'EXECUTION_DISCIPLINE_RISK': 0,
+  };
+  
+  let totalConfidenceImpact = 0;
+  let mitigableCount = 0;
+  let criticalCount = 0;
+  
+  for (const f of failures) {
+    byCategory[f.category]++;
+    totalConfidenceImpact += f.confidenceImpact;
+    if (f.mitigationAvailable) mitigableCount++;
+    if (f.severity === 'CRITICAL') criticalCount++;
+  }
+  
+  // Cap total impact at 0.8 (floor of 0.2 confidence)
+  totalConfidenceImpact = Math.min(0.8, totalConfidenceImpact);
+  
+  // Generate summary (factual, no interpretation)
+  const categoryCounts = Object.entries(byCategory)
+    .filter(([_, count]) => count > 0)
+    .map(([cat, count]) => `${cat}:${count}`)
+    .join(', ');
+  
+  const summary = failures.length === 0
+    ? 'No classified failures'
+    : `${failures.length} failures [${categoryCounts}] impact=${totalConfidenceImpact.toFixed(2)} mitigable=${mitigableCount} critical=${criticalCount}`;
+  
+  return {
+    byCategory,
+    totalConfidenceImpact,
+    mitigableCount,
+    criticalCount,
+    summary,
+  };
+}

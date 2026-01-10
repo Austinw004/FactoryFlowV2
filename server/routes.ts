@@ -1279,6 +1279,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         warnings: stressTestResults.warnings,
         recommendations: stressTestResults.recommendations,
         testTimestamp: stressTestResults.testTimestamp,
+        // Internal diagnostics with explicit failure classification
+        // Purpose: early detection, not defense of the model
+        diagnostics: stressTestResults.diagnostics,
       });
     } catch (error: any) {
       console.error("Error running FDR validation:", error);
