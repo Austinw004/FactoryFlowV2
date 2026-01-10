@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
-import { DollarSign, TrendingDown, Clock, ArrowRight, Zap, AlertTriangle } from "lucide-react";
+import { TrendingDown, Clock, ArrowRight, Zap, AlertTriangle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLocation } from "wouter";
 
@@ -11,7 +11,6 @@ interface QuickWin {
   type: "timing" | "negotiation" | "consolidation" | "stockout_risk";
   title: string;
   description: string;
-  estimatedSavings: number;
   urgency: "high" | "medium" | "low";
   actionLabel: string;
 }
@@ -58,9 +57,8 @@ export function QuickWinsWidget() {
       wins.push({
         id: "timing-1",
         type: "timing",
-        title: "Lock in favorable pricing",
-        description: "Current market conditions favor buyers. Consider accelerating planned purchases.",
-        estimatedSavings: 15000,
+        title: "Favorable buying conditions detected",
+        description: "Current market regime favors buyers. Review planned purchases for acceleration opportunities.",
         urgency: "high",
         actionLabel: "Review procurement queue",
       });
@@ -70,9 +68,8 @@ export function QuickWinsWidget() {
       wins.push({
         id: "timing-2",
         type: "timing",
-        title: "Defer non-critical purchases",
-        description: "Market prices are elevated. Consider delaying discretionary orders.",
-        estimatedSavings: 12000,
+        title: "Elevated market prices detected",
+        description: "Current regime suggests caution. Consider deferring non-critical purchases.",
         urgency: "medium",
         actionLabel: "Review pending orders",
       });
@@ -84,8 +81,7 @@ export function QuickWinsWidget() {
         id: "stockout-1",
         type: "stockout_risk",
         title: `${lowStockMaterials.length} materials at low stock`,
-        description: "Proactive reordering can prevent production delays and rush shipping costs.",
-        estimatedSavings: lowStockMaterials.length * 500,
+        description: "Low inventory detected. Review reorder needs to prevent production delays.",
         urgency: "high",
         actionLabel: "View at-risk materials",
       });
@@ -95,9 +91,8 @@ export function QuickWinsWidget() {
       wins.push({
         id: "consolidation-1",
         type: "consolidation",
-        title: "Consolidate supplier orders",
-        description: "Combining orders to fewer suppliers can unlock volume discounts.",
-        estimatedSavings: 8000,
+        title: "Supplier consolidation opportunity",
+        description: "Multiple suppliers detected. Consolidating orders may improve terms.",
         urgency: "low",
         actionLabel: "Analyze suppliers",
       });
@@ -109,9 +104,8 @@ export function QuickWinsWidget() {
         wins.push({
           id: "negotiation-1",
           type: "negotiation",
-          title: "Renegotiate top contracts",
-          description: "Your volume justifies better terms. Target top 3 suppliers for renegotiation.",
-          estimatedSavings: Math.round(latestAllocation.budget * 0.05),
+          title: "Contract review opportunity",
+          description: "Budget size may support renegotiation with key suppliers.",
           urgency: "medium",
           actionLabel: "View supplier terms",
         });
@@ -174,8 +168,6 @@ export function QuickWinsWidget() {
     );
   }
 
-  const totalSavings = quickWins.reduce((sum, win) => sum + win.estimatedSavings, 0);
-
   return (
     <Card data-testid="card-quick-wins">
       <CardHeader>
@@ -185,11 +177,10 @@ export function QuickWinsWidget() {
               <Zap className="h-4 w-4 text-primary" />
               Quick Wins
             </CardTitle>
-            <CardDescription>Top savings opportunities</CardDescription>
+            <CardDescription>Opportunities based on current conditions</CardDescription>
           </div>
-          <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
-            <DollarSign className="h-3 w-3 mr-1" />
-            ${totalSavings.toLocaleString()} estimated
+          <Badge variant="secondary">
+            {quickWins.length} active
           </Badge>
         </div>
       </CardHeader>
@@ -215,10 +206,7 @@ export function QuickWinsWidget() {
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground line-clamp-2">{win.description}</p>
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-xs font-medium text-green-600">
-                      ~${win.estimatedSavings.toLocaleString()} savings
-                    </span>
+                  <div className="flex items-center justify-end mt-2">
                     <Button 
                       variant="ghost" 
                       size="sm" 

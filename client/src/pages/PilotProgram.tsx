@@ -67,24 +67,24 @@ export default function PilotProgram() {
 
   const successMetrics = [
     {
-      metric: "Projected Procurement Savings",
-      target: "$50K - $500K+",
-      description: "Estimated counter-cyclical buying opportunities (varies by spend volume)",
+      metric: "Procurement Savings",
+      target: "Tracked and verified",
+      description: "Savings measured against your 12-month normalized baseline spend",
     },
     {
-      metric: "Projected Accuracy Improvement",
-      target: "15-35% MAPE reduction",
-      description: "Estimated improvement vs. baseline (results vary by data quality)",
+      metric: "Forecast Accuracy",
+      target: "Measured via MAPE",
+      description: "Accuracy tracked with weekly comparison to actual demand",
     },
     {
-      metric: "Target Time to Insight",
-      target: "< 24 hours",
-      description: "Goal for market event to actionable recommendation",
+      metric: "Time to Insight",
+      target: "Platform-dependent",
+      description: "Regime signals and recommendations update as new data arrives",
     },
     {
-      metric: "Target User Adoption",
-      target: "> 80%",
-      description: "Goal for active usage among provisioned users",
+      metric: "User Adoption",
+      target: "Measured",
+      description: "Active usage tracked across provisioned users",
     },
   ];
 
@@ -118,13 +118,13 @@ export default function PilotProgram() {
   const whyPilot = [
     {
       icon: Shield,
-      title: "Zero Financial Risk",
-      description: "No upfront investment required. You only pay when verified savings are realized.",
+      title: "No Upfront Cost",
+      description: "No upfront investment required. Payment is based on verified savings.",
     },
     {
       icon: Target,
       title: "Aligned Incentives",
-      description: "We earn only a percentage of your savings. Our success depends on your success.",
+      description: "We earn only a percentage of verified savings. Payment tied to measurable outcomes.",
     },
     {
       icon: Users,
@@ -133,8 +133,8 @@ export default function PilotProgram() {
     },
     {
       icon: Zap,
-      title: "Fast Time-to-Value",
-      description: "Expect first insights within 2 weeks and savings opportunities within 4 weeks.",
+      title: "Structured Timeline",
+      description: "12-week pilot with defined milestones, deliverables, and verification checkpoints.",
     },
   ];
 

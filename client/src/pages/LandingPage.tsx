@@ -23,17 +23,17 @@ export default function LandingPage() {
       icon: Eye,
       title: "See What's Coming",
       subtitle: "Demand Forecasting",
-      description: "Predict future demand before it materializes. Our system learns your patterns and adjusts for market conditions your competitors don't see.",
+      description: "Generate demand forecasts based on your sales history and current economic indicators. The system continuously retrains on your data.",
       howToUse: "Upload your sales history, add your products, and the platform automatically generates 30/60/90-day forecasts. Review weekly to adjust production schedules.",
-      keyBenefit: "Better demand visibility to reduce overproduction and avoid stockouts",
+      keyBenefit: "Demand visibility to inform production and inventory decisions",
     },
     {
       icon: Brain,
       title: "Know When to Act",
       subtitle: "Market Intelligence",
-      description: "Real-time signals tell you when to buy, hold, or accelerate. Stop reacting to markets - start anticipating them.",
+      description: "Receive buying signals based on economic regime analysis and commodity price trends. Signals update as market conditions change.",
       howToUse: "Check your dashboard daily for the current market signal. Green means buy aggressively, yellow means proceed normally, red means preserve cash and wait.",
-      keyBenefit: "Time purchases strategically to lower material costs",
+      keyBenefit: "Data-driven timing signals for procurement decisions",
     },
     {
       icon: Target,
@@ -94,16 +94,16 @@ export default function LandingPage() {
 
   const differentiators = [
     {
-      title: "Proactive, Not Reactive",
-      description: "While others scramble to respond to market changes, you're already positioned. Our intelligence engine spots opportunities and risks before they're obvious.",
+      title: "Forward-Looking Signals",
+      description: "The platform analyzes economic indicators and market data to generate procurement timing signals before price movements become apparent in spot markets.",
     },
     {
       title: "Unified Operations View",
-      description: "Demand, supply, production, and procurement - all connected. No more siloed spreadsheets or disconnected systems. One platform, one truth.",
+      description: "Demand, supply, production, and procurement data in one platform. Replace disconnected spreadsheets with a single source of operational data.",
     },
     {
-      title: "Continuous Learning",
-      description: "Our models don't just run once. They continuously retrain on your data, improving accuracy over time and adapting to your business rhythms.",
+      title: "Continuous Model Retraining",
+      description: "Forecasting models automatically retrain on your data. Accuracy metrics are tracked and reported so you can evaluate model performance over time.",
     },
   ];
 
@@ -140,16 +140,16 @@ export default function LandingPage() {
       name: "Accelerate",
       price: "6%",
       period: " of verified savings",
-      description: "Starting your optimization journey",
-      features: ["Up to 100 SKUs", "AI-powered forecasting", "Economic regime signals", "Supplier risk scoring", "40-60% less than competitors"],
+      description: "For manufacturers starting with procurement optimization",
+      features: ["Up to 100 SKUs", "AI-powered forecasting", "Economic regime signals", "Supplier risk scoring", "No upfront cost"],
       icon: Zap,
     },
     {
       name: "Transform",
       price: "4%",
       period: " of verified savings",
-      description: "Scale your procurement savings",
-      features: ["Up to 500 SKUs", "Advanced simulations", "Multi-tier supplier mapping", "Automated RFQs", "Real-time commodities", "50-67% less than competitors"],
+      description: "For growing manufacturers scaling operations",
+      features: ["Up to 500 SKUs", "Advanced simulations", "Multi-tier supplier mapping", "Automated RFQs", "Real-time commodities"],
       highlighted: true,
       icon: Rocket,
     },
@@ -157,8 +157,8 @@ export default function LandingPage() {
       name: "Strategic Alliance",
       price: "2%",
       period: " + $2K/mo",
-      description: "Enterprise-grade optimization",
-      features: ["Unlimited SKUs", "Supply chain digital twin", "M&A intelligence", "Custom ERP integrations", "Dedicated success manager", "60-75% less than competitors"],
+      description: "Enterprise-grade platform access",
+      features: ["Unlimited SKUs", "Supply chain digital twin", "M&A intelligence", "Custom ERP integrations", "Dedicated success manager"],
       icon: Building2,
     },
   ];
@@ -205,12 +205,11 @@ export default function LandingPage() {
           <div className="max-w-3xl mx-auto text-center space-y-6 mb-12">
             <Badge className="mb-2">Manufacturing Intelligence Platform</Badge>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight">
-              See Ahead. <span className="text-primary">Act First.</span> Dominate.
+              See Ahead. <span className="text-primary">Act First.</span>
             </h1>
             <p className="text-xl text-muted-foreground">
-              Prescient Labs gives manufacturers the foresight to make smarter decisions - 
-              from predicting demand and timing purchases to optimizing production and protecting supply chains.
-              Stop reacting to the market. Start anticipating it.
+              Prescient Labs provides manufacturing intelligence tools for demand forecasting, 
+              procurement timing, production optimization, and supply chain visibility.
             </p>
             <div className="flex flex-wrap gap-4 justify-center pt-2">
               <Button size="lg" asChild data-testid="button-start-free-trial">
