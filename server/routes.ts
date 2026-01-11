@@ -44,6 +44,12 @@ import { z } from "zod";
 import { sendTeamInvitation, sendMeetingInvitation } from "./lib/emailService";
 import { preconfigurePlatformForIndustry } from "./lib/industryPersonalization";
 import { getIndustryConfig } from "@shared/industryConfig";
+import { observeRegimeSignalExposure, observeUserAction, type RegimeState } from "./lib/behavioralObservation";
+import {
+  behavioralPatternAggregates,
+  behavioralRegimeSnapshots,
+  behavioralAuditTrail,
+} from "@shared/schema";
 import {
   insertCompanySchema,
   insertSkuSchema,
@@ -1054,6 +1060,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Cache with regime-aware TTL
         globalCache.set(cacheKey, responseData, 'economicData');
         
+        // Record behavioral observation (async, non-blocking)
+        // Purpose: observe what signals users see, not influence what they do
+        const regimeState: RegimeState = {
+          fdrValue: Number(snapshot.fdr),
+          regimeType: snapshot.regime,
+          confidenceLevel: cappedConfidence.overall,
+          robustnessScore: cappedConfidence.confidenceCap,
+          nullTestPassed: cappedConfidence.validationPassed,
+          thresholdConsistent: cappedConfidence.validationPassed,
+          confidenceCap: cappedConfidence.confidenceCap,
+        };
+        observeRegimeSignalExposure(
+          user.companyId!,
+          regimeState,
+          "dashboard_view",
+          "regime_change",
+          { regime: snapshot.regime, fdr: snapshot.fdr, signals: responseData.signals }
+        ).catch(err => console.error("[BehavioralObservation] Error recording exposure:", err.message));
+        
         res.json(responseData);
       } else {
         // Fallback to balance sheet calculation if no snapshot exists
@@ -1281,7 +1306,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         testTimestamp: stressTestResults.testTimestamp,
         // Internal diagnostics with explicit failure classification
         // Purpose: early detection, not defense of the model
-        diagnostics: stressTestResults.diagnostics,
+        diagnostics: (stressTestResults as any).diagnostics,
       });
     } catch (error: any) {
       console.error("Error running FDR validation:", error);
@@ -1304,6 +1329,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error("Error running null test:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============================================================================
+  // BEHAVIORAL OBSERVATION API (Internal Diagnostics)
+  // Purpose: Query longitudinal decision behavior data
+  // Constraint: Read-only, anonymized, for early detection not optimization
+  // ============================================================================
+  
+  // Get execution risk patterns by regime type
+  app.get("/api/behavioral/execution-risk", isAuthenticated, async (req: any, res) => {
+    try {
+      const { queryExecutionRiskPatterns } = await import("./lib/behavioralObservation");
+      const regimeType = (req.query.regime as string) || "HEALTHY_EXPANSION";
+      
+      const patterns = await queryExecutionRiskPatterns(regimeType);
+      
+      res.json({
+        regimeType,
+        patterns,
+        purpose: "Diagnostic - distinguishes model failures from organizational behavior",
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("Error querying execution risk patterns:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get behavioral pattern aggregates
+  app.get("/api/behavioral/patterns", isAuthenticated, async (req: any, res) => {
+    try {
+      const patterns = await db
+        .select()
+        .from(behavioralPatternAggregates)
+        .orderBy(sql`created_at DESC`)
+        .limit(20);
+      
+      res.json({
+        patterns,
+        count: patterns.length,
+        purpose: "Anonymized cross-organization behavioral tendencies",
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("Error querying behavioral patterns:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get regime snapshot history (immutable ground truth records)
+  app.get("/api/behavioral/regime-snapshots", isAuthenticated, async (req: any, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+      
+      const snapshots = await db
+        .select()
+        .from(behavioralRegimeSnapshots)
+        .orderBy(sql`snapshot_timestamp DESC`)
+        .limit(limit);
+      
+      res.json({
+        snapshots,
+        count: snapshots.length,
+        purpose: "Immutable regime state records for audit trail",
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("Error querying regime snapshots:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get behavioral audit trail
+  app.get("/api/behavioral/audit-trail", isAuthenticated, async (req: any, res) => {
+    try {
+      const insights = await db
+        .select()
+        .from(behavioralAuditTrail)
+        .orderBy(sql`created_at DESC`)
+        .limit(50);
+      
+      res.json({
+        insights,
+        count: insights.length,
+        purpose: "Traceable insights - every entry links to observed inputs/outputs/actions",
+        constraint: "Insights without clean trace are rejected",
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("Error querying audit trail:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get confidence adjustment factor from behavioral patterns
+  app.get("/api/behavioral/confidence-adjustment", isAuthenticated, async (req: any, res) => {
+    try {
+      const { getConfidenceAdjustmentFromBehavior } = await import("./lib/behavioralObservation");
+      const regimeType = (req.query.regime as string) || "HEALTHY_EXPANSION";
+      
+      const adjustment = await getConfidenceAdjustmentFromBehavior(regimeType);
+      
+      res.json({
+        regimeType,
+        adjustment,
+        boundedLearning: "May adjust confidence, may NOT redefine regimes or optimize outcomes",
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("Error calculating confidence adjustment:", error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -3374,6 +3511,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         notes: `Auto-generated ${successCount} RFQs from ${results.length} opportunities.`,
         req,
       });
+
+      // Record behavioral observation - procurement action
+      // Purpose: observe what users do after seeing regime signals
+      const snapshot = await storage.getLatestEconomicSnapshot(user.companyId);
+      if (snapshot) {
+        const regimeState: RegimeState = {
+          fdrValue: Number(snapshot.fdr),
+          regimeType: snapshot.regime,
+          confidenceLevel: 0.7, // Default if no validation
+          confidenceCap: 0.7,
+        };
+        observeUserAction(
+          user.companyId,
+          regimeState,
+          "follow_signal", // Auto-generate means following system recommendation
+          "procurement",
+          { action: "auto_generate_rfq", generated: successCount, total: results.length }
+        ).catch(err => console.error("[BehavioralObservation] Error recording action:", err.message));
+      }
 
       res.json({
         success: true,

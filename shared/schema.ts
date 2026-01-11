@@ -5578,3 +5578,211 @@ export type PlatformAnalyticsSnapshot = typeof platformAnalyticsSnapshots.$infer
 export type PlatformMaterialTrend = typeof platformMaterialTrends.$inferSelect;
 export type PlatformSupplierIntelligence = typeof platformSupplierIntelligence.$inferSelect;
 export type PlatformBehavioralAnalytics = typeof platformBehavioralAnalytics.$inferSelect;
+
+// ============================================================================
+// BEHAVIORAL OBSERVATION SYSTEM
+// Purpose: Build longitudinal dataset of decision behavior under varying regimes
+// Constraint: Model logic is fixed ground truth; user behavior is the variable
+// This system observes, not influences. No nudging, no optimization for outcomes.
+// ============================================================================
+
+// Regime Snapshot - Immutable record of regime state at observation time
+export const behavioralRegimeSnapshots = pgTable("behavioral_regime_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Regime state (fixed ground truth at observation time)
+  fdrValue: real("fdr_value").notNull(),
+  regimeType: text("regime_type").notNull(), // "expansion", "contraction", "stagflation", "transition"
+  confidenceLevel: real("confidence_level").notNull(),
+  robustnessScore: real("robustness_score"),
+  
+  // Validation state at time of snapshot
+  nullTestPassed: integer("null_test_passed"), // 1 = passed, 0 = failed
+  thresholdConsistent: integer("threshold_consistent"),
+  classifiedFailures: jsonb("classified_failures"), // Array of failure categories
+  confidenceCap: real("confidence_cap"),
+  
+  // Underlying indicators (for audit traceability)
+  m2Growth: real("m2_growth"),
+  fedFundsRate: real("fed_funds_rate"),
+  cpiYoY: real("cpi_yoy"),
+  unemploymentRate: real("unemployment_rate"),
+  
+  // Metadata
+  snapshotTimestamp: timestamp("snapshot_timestamp").defaultNow().notNull(),
+}, (table) => [
+  index("regime_snapshots_timestamp_idx").on(table.snapshotTimestamp),
+  index("regime_snapshots_regime_idx").on(table.regimeType),
+]);
+
+// Signal Exposure Event - Records when user was exposed to a regime signal
+export const behavioralSignalExposures = pgTable("behavioral_signal_exposures", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Anonymized organization identifier (hashed)
+  anonymizedOrgId: varchar("anonymized_org_id").notNull(),
+  
+  // Link to regime state at exposure time
+  regimeSnapshotId: varchar("regime_snapshot_id").references(() => behavioralRegimeSnapshots.id),
+  
+  // Exposure context
+  exposureType: text("exposure_type").notNull(), // "dashboard_view", "api_call", "alert_received", "report_generated"
+  signalCategory: text("signal_category").notNull(), // "regime_change", "confidence_update", "procurement_timing", "risk_alert"
+  
+  // What was shown (not interpreted)
+  signalContent: jsonb("signal_content"), // Raw signal data shown to user
+  
+  // Session context
+  sessionId: varchar("session_id"),
+  exposureTimestamp: timestamp("exposure_timestamp").defaultNow().notNull(),
+  
+  // Time user spent on signal (if measurable)
+  dwellTimeMs: integer("dwell_time_ms"),
+}, (table) => [
+  index("signal_exposures_org_idx").on(table.anonymizedOrgId),
+  index("signal_exposures_timestamp_idx").on(table.exposureTimestamp),
+  index("signal_exposures_regime_idx").on(table.regimeSnapshotId),
+]);
+
+// User Action Event - Records actions taken after signal exposure
+export const behavioralUserActions = pgTable("behavioral_user_actions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Anonymized identifiers
+  anonymizedOrgId: varchar("anonymized_org_id").notNull(),
+  
+  // Link to triggering signal exposure (may be null for unprompted actions)
+  signalExposureId: varchar("signal_exposure_id").references(() => behavioralSignalExposures.id),
+  regimeSnapshotId: varchar("regime_snapshot_id").references(() => behavioralRegimeSnapshots.id),
+  
+  // Action classification
+  actionType: text("action_type").notNull(), // "follow_signal", "ignore_signal", "override_signal", "delay_action", "contradict_signal", "no_action"
+  actionCategory: text("action_category").notNull(), // "procurement", "inventory", "supplier", "budget", "forecast_adjustment"
+  
+  // Time from signal exposure to action
+  latencyMs: integer("latency_ms"),
+  
+  // Action details (factual, not interpreted)
+  actionDetails: jsonb("action_details"), // What the user actually did
+  
+  // Operational context provided by user
+  operationalContext: jsonb("operational_context"), // SKUs, costs, lead times, capacity constraints
+  
+  actionTimestamp: timestamp("action_timestamp").defaultNow().notNull(),
+}, (table) => [
+  index("user_actions_org_idx").on(table.anonymizedOrgId),
+  index("user_actions_exposure_idx").on(table.signalExposureId),
+  index("user_actions_timestamp_idx").on(table.actionTimestamp),
+  index("user_actions_type_idx").on(table.actionType),
+]);
+
+// Signal Override Event - Explicit user decision to contradict system recommendation
+export const behavioralSignalOverrides = pgTable("behavioral_signal_overrides", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  anonymizedOrgId: varchar("anonymized_org_id").notNull(),
+  signalExposureId: varchar("signal_exposure_id").references(() => behavioralSignalExposures.id),
+  regimeSnapshotId: varchar("regime_snapshot_id").references(() => behavioralRegimeSnapshots.id),
+  
+  // What system recommended vs what user did
+  systemRecommendation: jsonb("system_recommendation").notNull(),
+  userDecision: jsonb("user_decision").notNull(),
+  
+  // Override classification (factual, no judgment)
+  overrideType: text("override_type").notNull(), // "timing_change", "quantity_change", "supplier_change", "cancel_action", "proceed_against_signal"
+  
+  // User-provided reason (if captured, optional)
+  userProvidedReason: text("user_provided_reason"),
+  
+  overrideTimestamp: timestamp("override_timestamp").defaultNow().notNull(),
+}, (table) => [
+  index("signal_overrides_org_idx").on(table.anonymizedOrgId),
+  index("signal_overrides_timestamp_idx").on(table.overrideTimestamp),
+]);
+
+// Behavioral Audit Trail - Traces insights back to observations
+export const behavioralAuditTrail = pgTable("behavioral_audit_trail", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // The insight being audited
+  insightType: text("insight_type").notNull(), // "execution_risk_pattern", "confidence_adjustment", "organizational_tendency"
+  insightDescription: text("insight_description").notNull(),
+  
+  // Traceability chain
+  observedInputs: jsonb("observed_inputs").notNull(), // What inputs were observed
+  observedOutputs: jsonb("observed_outputs").notNull(), // What outputs system produced
+  observedActions: jsonb("observed_actions").notNull(), // What actions users took
+  regimeConditions: jsonb("regime_conditions").notNull(), // Regime state during observation
+  
+  // Evidence links
+  signalExposureIds: text("signal_exposure_ids").array(), // References to source observations
+  userActionIds: text("user_action_ids").array(),
+  
+  // Validity
+  evidenceCount: integer("evidence_count").notNull(),
+  confidenceInInsight: real("confidence_in_insight"), // How well-supported is this insight
+  
+  // Reversibility marker
+  isReversible: integer("is_reversible").default(1), // 1 = can be discarded if traced poorly
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at"), // Insights may expire if not re-validated
+}, (table) => [
+  index("audit_trail_type_idx").on(table.insightType),
+  index("audit_trail_created_idx").on(table.createdAt),
+]);
+
+// Aggregated Behavioral Patterns - Anonymized cross-organization patterns
+export const behavioralPatternAggregates = pgTable("behavioral_pattern_aggregates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Pattern identification
+  patternType: text("pattern_type").notNull(), // "early_discipline", "delayed_reaction", "overconfidence", "conservatism", "internal_constraint"
+  regimeType: text("regime_type").notNull(), // Which regime this pattern was observed under
+  
+  // Aggregate metrics (never individual organizations)
+  organizationCount: integer("organization_count").notNull(),
+  observationCount: integer("observation_count").notNull(),
+  
+  // Pattern characteristics
+  avgLatencyToAction: integer("avg_latency_to_action"), // ms
+  followRate: real("follow_rate"), // % that followed signal
+  overrideRate: real("override_rate"), // % that overrode signal
+  ignoreRate: real("ignore_rate"), // % that took no action
+  
+  // Regime context
+  avgFdrAtObservation: real("avg_fdr_at_observation"),
+  avgConfidenceAtObservation: real("avg_confidence_at_observation"),
+  
+  // Time bounds for aggregation
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("pattern_aggregates_type_idx").on(table.patternType),
+  index("pattern_aggregates_regime_idx").on(table.regimeType),
+  index("pattern_aggregates_period_idx").on(table.periodStart),
+]);
+
+// Behavioral Observation Schemas
+export const insertBehavioralRegimeSnapshotSchema = createInsertSchema(behavioralRegimeSnapshots).omit({ id: true });
+export const insertBehavioralSignalExposureSchema = createInsertSchema(behavioralSignalExposures).omit({ id: true });
+export const insertBehavioralUserActionSchema = createInsertSchema(behavioralUserActions).omit({ id: true });
+export const insertBehavioralSignalOverrideSchema = createInsertSchema(behavioralSignalOverrides).omit({ id: true });
+export const insertBehavioralAuditTrailSchema = createInsertSchema(behavioralAuditTrail).omit({ id: true, createdAt: true });
+export const insertBehavioralPatternAggregateSchema = createInsertSchema(behavioralPatternAggregates).omit({ id: true, createdAt: true });
+
+// Behavioral Observation Types
+export type BehavioralRegimeSnapshot = typeof behavioralRegimeSnapshots.$inferSelect;
+export type InsertBehavioralRegimeSnapshot = z.infer<typeof insertBehavioralRegimeSnapshotSchema>;
+export type BehavioralSignalExposure = typeof behavioralSignalExposures.$inferSelect;
+export type InsertBehavioralSignalExposure = z.infer<typeof insertBehavioralSignalExposureSchema>;
+export type BehavioralUserAction = typeof behavioralUserActions.$inferSelect;
+export type InsertBehavioralUserAction = z.infer<typeof insertBehavioralUserActionSchema>;
+export type BehavioralSignalOverride = typeof behavioralSignalOverrides.$inferSelect;
+export type InsertBehavioralSignalOverride = z.infer<typeof insertBehavioralSignalOverrideSchema>;
+export type BehavioralAuditTrail = typeof behavioralAuditTrail.$inferSelect;
+export type InsertBehavioralAuditTrail = z.infer<typeof insertBehavioralAuditTrailSchema>;
+export type BehavioralPatternAggregate = typeof behavioralPatternAggregates.$inferSelect;
+export type InsertBehavioralPatternAggregate = z.infer<typeof insertBehavioralPatternAggregateSchema>;
