@@ -11,7 +11,12 @@
  * Core Thesis: Economic regime understanding → foresight → actionable timing signals
  */
 
-import type { Regime } from "./economics";
+import { 
+  type Regime, 
+  CANONICAL_REGIME_THRESHOLDS, 
+  TYPICAL_REGIME_DURATIONS as CANONICAL_TYPICAL_DURATIONS,
+  classifyRegimeFromFDR 
+} from "./economics";
 
 export interface FDRSnapshot {
   timestamp: Date;
@@ -64,19 +69,9 @@ export interface RegimeConfidence {
   dataQuality: number;
 }
 
-const REGIME_THRESHOLDS: Record<string, { min: number; max: number }> = {
-  HEALTHY_EXPANSION: { min: 0.0, max: 1.2 },
-  ASSET_LED_GROWTH: { min: 1.2, max: 1.8 },
-  IMBALANCED_EXCESS: { min: 1.8, max: 2.5 },
-  REAL_ECONOMY_LEAD: { min: 2.5, max: 10.0 },
-};
+const REGIME_THRESHOLDS = CANONICAL_REGIME_THRESHOLDS;
 
-const TYPICAL_REGIME_DURATIONS: Record<Regime, number> = {
-  HEALTHY_EXPANSION: 540,
-  ASSET_LED_GROWTH: 270,
-  IMBALANCED_EXCESS: 180,
-  REAL_ECONOMY_LEAD: 120,
-};
+const TYPICAL_REGIME_DURATIONS = CANONICAL_TYPICAL_DURATIONS;
 
 const REGIME_PROCUREMENT_GUIDANCE: Record<Regime, { action: ProcurementTimingSignal['action']; baseIntensity: number }> = {
   HEALTHY_EXPANSION: { action: 'BUY_NOW', baseIntensity: 0.6 },

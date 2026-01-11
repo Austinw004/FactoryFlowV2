@@ -12,12 +12,21 @@
  * - Vr proxy: GDP velocity, core PCE
  * - Va proxy: asset price index, S&P 500
  * 
- * THRESHOLDS (Can be optimized):
- * - Regime boundaries: currently {1.2, 1.8, 2.5} vs {0.8, 1.5, 2.0}
+ * THRESHOLDS (CANONICAL - from economics.ts):
+ * - HEALTHY_EXPANSION: FDR 0.0 - 1.2
+ * - ASSET_LED_GROWTH: FDR 1.2 - 1.8
+ * - IMBALANCED_EXCESS: FDR 1.8 - 2.5
+ * - REAL_ECONOMY_LEAD: FDR 2.5+ (HIGH FDR = asset overshoot, counter-cyclical opportunity)
  * 
  * PRESENTATION LAYERS (Can be removed):
  * - Signal labels, intensity scores, procurement guidance
  */
+
+import { 
+  CANONICAL_REGIME_THRESHOLDS, 
+  classifyRegimeFromFDR,
+  type Regime 
+} from "./economics";
 
 export interface FDRTestResult {
   testName: string;
@@ -53,52 +62,46 @@ export interface ProxySubstitutionResult {
 }
 
 // ============================================================================
-// CRITICAL FINDING: THRESHOLD INCONSISTENCY
+// THRESHOLD CONSISTENCY CHECK (Uses canonical thresholds from economics.ts)
 // ============================================================================
 
 export function detectThresholdInconsistency(): FDRTestResult {
-  const economicsThresholds = {
-    IMBALANCED_EXCESS: { min: 2.0 },
-    ASSET_LED_GROWTH: { min: 1.5, max: 2.0 },
-    REAL_ECONOMY_LEAD: { max: 0.8 },
-    HEALTHY_EXPANSION: { min: 0.8, max: 1.5 },
-  };
-
-  const regimeIntelligenceThresholds = {
-    HEALTHY_EXPANSION: { min: 0.0, max: 1.2 },
-    ASSET_LED_GROWTH: { min: 1.2, max: 1.8 },
-    IMBALANCED_EXCESS: { min: 1.8, max: 2.5 },
-    REAL_ECONOMY_LEAD: { min: 2.5, max: 10.0 },
-  };
-
-  const dualCircuitResearchThresholds = {
-    HEALTHY_EXPANSION: { max: 1.2 },
-    ASSET_LED_GROWTH: { min: 1.2, max: 1.8 },
-    IMBALANCED_EXCESS: { min: 1.8, max: 2.5 },
-    REAL_ECONOMY_LEAD: { min: 2.5 },
-  };
-
+  // All thresholds now derive from CANONICAL_REGIME_THRESHOLDS in economics.ts
+  // This function validates that the canonical thresholds are being used correctly
+  
   const discrepancies: string[] = [];
   
-  // Check HEALTHY_EXPANSION boundary
-  if (economicsThresholds.HEALTHY_EXPANSION.max !== regimeIntelligenceThresholds.HEALTHY_EXPANSION.max) {
-    discrepancies.push(`HEALTHY_EXPANSION upper bound: economics.ts uses ${economicsThresholds.HEALTHY_EXPANSION.max}, regimeIntelligence.ts uses ${regimeIntelligenceThresholds.HEALTHY_EXPANSION.max}`);
+  // Validate canonical threshold contiguity (no gaps or overlaps)
+  const regimes: Regime[] = ['HEALTHY_EXPANSION', 'ASSET_LED_GROWTH', 'IMBALANCED_EXCESS', 'REAL_ECONOMY_LEAD'];
+  for (let i = 0; i < regimes.length - 1; i++) {
+    const current = CANONICAL_REGIME_THRESHOLDS[regimes[i]];
+    const next = CANONICAL_REGIME_THRESHOLDS[regimes[i + 1]];
+    if (current.max !== next.min) {
+      discrepancies.push(`Gap or overlap between ${regimes[i]} (max: ${current.max}) and ${regimes[i + 1]} (min: ${next.min})`);
+    }
   }
-
-  // Check REAL_ECONOMY_LEAD interpretation (critical!)
-  discrepancies.push(`REAL_ECONOMY_LEAD: economics.ts triggers at FDR < 0.8 (low), regimeIntelligence.ts triggers at FDR > 2.5 (high) - OPPOSITE LOGIC`);
+  
+  // Validate threshold ordering is monotonically increasing
+  let previousMax = 0;
+  for (const regime of regimes) {
+    const threshold = CANONICAL_REGIME_THRESHOLDS[regime];
+    if (threshold.min < previousMax) {
+      discrepancies.push(`${regime} min (${threshold.min}) is less than previous max (${previousMax})`);
+    }
+    previousMax = threshold.max;
+  }
 
   return {
     testName: 'Threshold Consistency Check',
     passed: discrepancies.length === 0,
-    severity: 'CRITICAL',
+    severity: discrepancies.length > 0 ? 'CRITICAL' : 'INFO',
     finding: discrepancies.length > 0 
-      ? `Found ${discrepancies.length} threshold inconsistencies between modules:\n${discrepancies.join('\n')}`
-      : 'All thresholds consistent across modules',
+      ? `Found ${discrepancies.length} threshold inconsistencies:\n${discrepancies.join('\n')}`
+      : 'All canonical thresholds from economics.ts are valid and contiguous',
     recommendation: discrepancies.length > 0
-      ? 'Consolidate threshold definitions into single source of truth. The REAL_ECONOMY_LEAD discrepancy is particularly critical - opposite triggering logic.'
-      : 'No action needed',
-    data: { economicsThresholds, regimeIntelligenceThresholds, dualCircuitResearchThresholds, discrepancies }
+      ? 'Fix threshold definitions in CANONICAL_REGIME_THRESHOLDS'
+      : 'No action needed - canonical thresholds are properly configured',
+    data: { canonicalThresholds: CANONICAL_REGIME_THRESHOLDS, discrepancies }
   };
 }
 
@@ -126,15 +129,8 @@ export function testInputSensitivity(): SensitivityTestResult[] {
     return denom > 0 ? (params.assetGrowth * params.assetIndex) / denom : 5.0;
   };
   
-  const getRegime = (fdr: number) => {
-    if (fdr > 2.0) return 'IMBALANCED_EXCESS';
-    if (fdr > 1.5) return 'ASSET_LED_GROWTH';
-    if (fdr < 0.8) return 'REAL_ECONOMY_LEAD';
-    return 'HEALTHY_EXPANSION';
-  };
-  
   const baselineFDR = calculateFDR(baseline);
-  const baselineRegime = getRegime(baselineFDR);
+  const baselineRegime = classifyRegimeFromFDR(baselineFDR);
   
   // Scenario 1: Asset credit accelerates, real credit unchanged
   const scenario1 = { ...baseline, assetGrowth: 0.15 }; // 15% margin debt growth
@@ -143,7 +139,7 @@ export function testInputSensitivity(): SensitivityTestResult[] {
     scenario: 'Asset credit accelerates (8%→15%), real credit unchanged',
     inputChange: { variable: 'assetGrowth', from: 0.08, to: 0.15 },
     fdrChange: { from: baselineFDR, to: fdr1 },
-    regimeChange: { from: baselineRegime, to: getRegime(fdr1) },
+    regimeChange: { from: baselineRegime, to: classifyRegimeFromFDR(fdr1) },
     sensitive: Math.abs(fdr1 - baselineFDR) > 0.1,
     invariant: Math.abs(fdr1 - baselineFDR) < 0.01,
   });
@@ -155,7 +151,7 @@ export function testInputSensitivity(): SensitivityTestResult[] {
     scenario: 'Asset prices rise (1.12→1.25), credit slows (8%→2%)',
     inputChange: { variable: 'assetIndex', from: 1.12, to: 1.25 },
     fdrChange: { from: baselineFDR, to: fdr2 },
-    regimeChange: { from: baselineRegime, to: getRegime(fdr2) },
+    regimeChange: { from: baselineRegime, to: classifyRegimeFromFDR(fdr2) },
     sensitive: Math.abs(fdr2 - baselineFDR) > 0.1,
     invariant: Math.abs(fdr2 - baselineFDR) < 0.01,
   });
@@ -167,7 +163,7 @@ export function testInputSensitivity(): SensitivityTestResult[] {
     scenario: 'Real credit expands (3%→6%), asset markets stagnate (8%→1%)',
     inputChange: { variable: 'ciGrowth', from: 0.03, to: 0.06 },
     fdrChange: { from: baselineFDR, to: fdr3 },
-    regimeChange: { from: baselineRegime, to: getRegime(fdr3) },
+    regimeChange: { from: baselineRegime, to: classifyRegimeFromFDR(fdr3) },
     sensitive: Math.abs(fdr3 - baselineFDR) > 0.1,
     invariant: Math.abs(fdr3 - baselineFDR) < 0.01,
   });
@@ -183,7 +179,7 @@ export function testInputSensitivity(): SensitivityTestResult[] {
     scenario: 'Both circuits grow proportionally (+50%)',
     inputChange: { variable: 'both', from: 1.0, to: 1.5 },
     fdrChange: { from: baselineFDR, to: fdr4 },
-    regimeChange: { from: baselineRegime, to: getRegime(fdr4) },
+    regimeChange: { from: baselineRegime, to: classifyRegimeFromFDR(fdr4) },
     sensitive: Math.abs(fdr4 - baselineFDR) > 0.1,
     invariant: Math.abs(fdr4 - baselineFDR) < 0.05,
   });
@@ -604,6 +600,16 @@ export async function runComprehensiveStressTest(): Promise<{
   recommendations: string[];
   overallConfidenceCap: number;
   testTimestamp: string;
+  diagnostics: {
+    classifiedFailures: ClassifiedFailure[];
+    failureSummary: { 
+      byCategory: Record<FailureCategory, number>;
+      totalConfidenceImpact: number;
+      mitigableCount: number;
+      criticalCount: number;
+      summary: string; 
+    };
+  };
 }> {
   // 0. NULL TEST FIRST - Critical gate
   const nullTest = runNullTest();
@@ -630,10 +636,7 @@ export async function runComprehensiveStressTest(): Promise<{
     else if (i < 84) fdr = 0.9 + ((i - 60) / 30); // Recovery
     else fdr = 1.6 + ((i - 84) / 100);            // Post-COVID
     
-    let regime = 'HEALTHY_EXPANSION';
-    if (fdr > 2.0) regime = 'IMBALANCED_EXCESS';
-    else if (fdr > 1.5) regime = 'ASSET_LED_GROWTH';
-    else if (fdr < 0.8) regime = 'REAL_ECONOMY_LEAD';
+    const regime = classifyRegimeFromFDR(fdr);
     
     mockHistoricalData.push({ date, fdr, regime });
   }
