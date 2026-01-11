@@ -109,28 +109,20 @@ export default function LandingPage() {
 
   const subscriptionPlans = [
     {
-      name: "Starter",
-      price: "$299",
-      period: "/month",
-      description: "Essential tools for small manufacturers",
-      features: ["Up to 50 SKUs", "AI-powered forecasting", "Economic regime signals", "Basic supplier scoring", "Email support"],
-      icon: Zap,
-    },
-    {
       name: "Professional",
-      price: "$799",
+      price: "$1,999",
       period: "/month",
-      description: "Advanced capabilities for growth",
-      features: ["Up to 250 SKUs", "Advanced simulations", "Multi-tier supplier mapping", "Automated RFQs", "Priority support"],
+      description: "Complete platform access for growing manufacturers",
+      features: ["Up to 250 SKUs", "AI-powered forecasting", "Economic regime signals", "Advanced simulations", "Priority support"],
       highlighted: true,
       icon: Rocket,
     },
     {
       name: "Enterprise",
-      price: "$1,999",
-      period: "/month",
-      description: "Full platform for large manufacturers",
-      features: ["Unlimited SKUs", "Supply chain digital twin", "M&A intelligence", "Custom integrations", "Dedicated manager"],
+      price: "Contact Sales",
+      period: "",
+      description: "Unlimited scale with dedicated support",
+      features: ["Unlimited SKUs", "Supply chain digital twin", "Custom integrations", "Dedicated manager", "Custom SLAs"],
       icon: Building2,
     },
   ];
@@ -264,7 +256,7 @@ export default function LandingPage() {
             
             {/* Subscription Plans */}
             {pricingModel === "subscription" && (
-              <div className="grid md:grid-cols-3 gap-6">
+              <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
                 {subscriptionPlans.map((plan, idx) => (
                   <Card 
                     key={idx} 
