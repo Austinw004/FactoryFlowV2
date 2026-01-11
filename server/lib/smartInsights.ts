@@ -267,13 +267,14 @@ export class SmartInsightsService {
     const regimeName = regime.regime || 'Unknown';
     const fdr = regime.fdr || 1.0;
     
-    if (regimeName === 'REAL_ECONOMY_LEAD' && fdr < 0.9) {
+    // REAL_ECONOMY_LEAD at high FDR (≥2.5) = asset markets overheated, counter-cyclical opportunity
+    if (regimeName === 'REAL_ECONOMY_LEAD' && fdr >= 2.5) {
       insights.push({
         id: `regime-opportunity-${Date.now()}`,
         type: 'opportunity',
         priority: 'high',
-        title: 'Favorable Procurement Window',
-        description: 'Real economy leading with low FDR suggests good conditions for strategic purchases',
+        title: 'Counter-Cyclical Procurement Window',
+        description: 'Asset markets overheated (high FDR). Favor real economy investments and lock in supplier terms.',
         dataPoints: [
           `FDR Score: ${fdr.toFixed(2)}`,
           `Regime: ${regimeName}`,
@@ -286,7 +287,8 @@ export class SmartInsightsService {
       });
     }
     
-    if (regimeName === 'ASSET_LED_GROWTH' && fdr > 1.5) {
+    // ASSET_LED_GROWTH at FDR 1.2-1.8 indicates assets leading - watch for overheating
+    if (regimeName === 'ASSET_LED_GROWTH' && fdr >= 1.5) {
       insights.push({
         id: `regime-caution-${Date.now()}`,
         type: 'risk',

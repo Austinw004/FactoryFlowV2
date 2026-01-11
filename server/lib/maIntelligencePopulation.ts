@@ -128,10 +128,12 @@ export class MAIntelligencePopulationService {
   }
 
   private getRegimeTimingSignal(regime: string, fdr: number): string {
-    if (regime === "REAL_ECONOMY_LEAD" || fdr < 0.9) return "BUY";
+    // REAL_ECONOMY_LEAD at high FDR (≥2.5) = asset markets overheated, buy real assets
+    if (regime === "REAL_ECONOMY_LEAD" && fdr >= 2.5) return "BUY";
     if (regime === "HEALTHY_EXPANSION") return "OPPORTUNISTIC";
     if (regime === "ASSET_LED_GROWTH") return "CAUTIOUS";
-    if (regime === "IMBALANCED_EXCESS" || fdr > 1.3) return "SELL";
+    // IMBALANCED_EXCESS (FDR 1.8-2.5) = sell/divest
+    if (regime === "IMBALANCED_EXCESS" || fdr >= 1.8) return "SELL";
     return "HOLD";
   }
 
@@ -161,8 +163,9 @@ export class MAIntelligencePopulationService {
         break;
     }
 
-    if (fdr < 0.8) {
-      actions.push("Counter-cyclical opportunity: Aggressive acquisition stance warranted");
+    // Counter-cyclical opportunity when asset markets are severely overheated (FDR ≥ 2.8)
+    if (fdr >= 2.8) {
+      actions.push("Counter-cyclical opportunity: Aggressive acquisition stance warranted - asset valuations extreme");
     }
     if (fdr > 1.2) {
       actions.push("Caution: Elevated FDR suggests overvalued assets - delay acquisitions");

@@ -9,6 +9,7 @@ import { globalCache } from './lib/caching';
 import { createRfqGenerationService } from './lib/rfqGeneration';
 import { createBenchmarkAggregationService } from './lib/benchmarkAggregation';
 import { logAudit } from './lib/auditLogger';
+import { classifyRegimeFromFDR, type Regime } from './lib/regimeConstants';
 
 const rfqGenerationService = createRfqGenerationService(storage);
 const benchmarkAggregationService = createBenchmarkAggregationService(storage);
@@ -23,13 +24,10 @@ const jobs: Map<string, NodeJS.Timeout> = new Map();
 const webhookService = new WebhookService(storage);
 const previousRegimes: Map<string, string> = new Map();
 
-type EconomicRegime = 'HEALTHY_EXPANSION' | 'ASSET_LED_GROWTH' | 'IMBALANCED_EXCESS' | 'REAL_ECONOMY_LEAD';
+type EconomicRegime = Regime;
 
 export function calculateEconomicRegime(fdr: number): EconomicRegime {
-  if (fdr >= 1.5) return 'IMBALANCED_EXCESS';
-  if (fdr >= 1.0) return 'ASSET_LED_GROWTH';
-  if (fdr >= 0.5) return 'HEALTHY_EXPANSION';
-  return 'REAL_ECONOMY_LEAD';
+  return classifyRegimeFromFDR(fdr);
 }
 
 let companyIds: string[] = [];

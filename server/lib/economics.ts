@@ -1,85 +1,17 @@
 import { regimeIntelligence, RegimeIntelligence } from "./regimeIntelligence";
 
-export type Regime = "HEALTHY_EXPANSION" | "ASSET_LED_GROWTH" | "IMBALANCED_EXCESS" | "REAL_ECONOMY_LEAD";
-
-export const REGIME_ORDER: Regime[] = ["HEALTHY_EXPANSION", "ASSET_LED_GROWTH", "IMBALANCED_EXCESS", "REAL_ECONOMY_LEAD"];
-
-export const CANONICAL_REGIME_THRESHOLDS: Record<Regime, { min: number; max: number }> = {
-  HEALTHY_EXPANSION: { min: 0.0, max: 1.2 },
-  ASSET_LED_GROWTH: { min: 1.2, max: 1.8 },
-  IMBALANCED_EXCESS: { min: 1.8, max: 2.5 },
-  REAL_ECONOMY_LEAD: { min: 2.5, max: 10.0 },
-};
-
-export const HYSTERESIS_BAND = 0.15;
-export const MIN_REGIME_DURATION_DAYS = 14;
-export const CONFIRMATION_READINGS = 3;
-
-export const TYPICAL_REGIME_DURATIONS: Record<Regime, number> = {
-  HEALTHY_EXPANSION: 540,
-  ASSET_LED_GROWTH: 270,
-  IMBALANCED_EXCESS: 180,
-  REAL_ECONOMY_LEAD: 120,
-};
-
-export function classifyRegimeFromFDR(fdr: number): Regime {
-  if (fdr >= CANONICAL_REGIME_THRESHOLDS.REAL_ECONOMY_LEAD.min) {
-    return "REAL_ECONOMY_LEAD";
-  } else if (fdr >= CANONICAL_REGIME_THRESHOLDS.IMBALANCED_EXCESS.min) {
-    return "IMBALANCED_EXCESS";
-  } else if (fdr >= CANONICAL_REGIME_THRESHOLDS.ASSET_LED_GROWTH.min) {
-    return "ASSET_LED_GROWTH";
-  } else {
-    return "HEALTHY_EXPANSION";
-  }
-}
-
-export function classifyRegimeWithHysteresis(
-  fdr: number, 
-  currentRegime: Regime
-): { regime: Regime; requiresConfirmation: boolean } {
-  const rawRegime = classifyRegimeFromFDR(fdr);
-  
-  if (rawRegime === currentRegime) {
-    return { regime: currentRegime, requiresConfirmation: false };
-  }
-  
-  const currentThreshold = CANONICAL_REGIME_THRESHOLDS[currentRegime];
-  const isMovingUp = REGIME_ORDER.indexOf(rawRegime) > REGIME_ORDER.indexOf(currentRegime);
-  
-  if (isMovingUp) {
-    const upperBound = currentThreshold.max;
-    if (fdr >= upperBound + HYSTERESIS_BAND) {
-      return { regime: rawRegime, requiresConfirmation: true };
-    }
-  } else {
-    const lowerBound = currentThreshold.min;
-    if (fdr <= lowerBound - HYSTERESIS_BAND) {
-      return { regime: rawRegime, requiresConfirmation: true };
-    }
-  }
-  
-  return { regime: currentRegime, requiresConfirmation: false };
-}
-
-export function validateRegimeClassification(fdr: number, storedRegime: string): {
-  isValid: boolean;
-  canonicalRegime: Regime;
-  storedRegime: string;
-  fdr: number;
-  violation?: string;
-} {
-  const canonicalRegime = classifyRegimeFromFDR(fdr);
-  const isValid = storedRegime === canonicalRegime;
-  
-  return {
-    isValid,
-    canonicalRegime,
-    storedRegime,
-    fdr,
-    violation: isValid ? undefined : `FDR ${fdr.toFixed(4)} should be ${canonicalRegime}, stored as ${storedRegime}`,
-  };
-}
+export {
+  type Regime,
+  REGIME_ORDER,
+  CANONICAL_REGIME_THRESHOLDS,
+  HYSTERESIS_BAND,
+  MIN_REGIME_DURATION_DAYS,
+  CONFIRMATION_READINGS,
+  TYPICAL_REGIME_DURATIONS,
+  classifyRegimeFromFDR,
+  classifyRegimeWithHysteresis,
+  validateRegimeClassification,
+} from "./regimeConstants";
 
 export interface EconomicData {
   manufacturing_pmi: number;
@@ -234,19 +166,13 @@ export class DualCircuitEconomics {
   }
 
   private detectRegime(): void {
-    // Use canonical thresholds from fdrOptimization.ts for consistency
+    // Use canonical classification function from regimeConstants.ts
+    // This ensures consistent regime detection across the entire codebase
     // Thresholds: HEALTHY_EXPANSION [0, 1.2), ASSET_LED_GROWTH [1.2, 1.8), 
     //             IMBALANCED_EXCESS [1.8, 2.5), REAL_ECONOMY_LEAD [2.5, 10]
     // REAL_ECONOMY_LEAD at HIGH FDR = asset markets overshot, counter-cyclical opportunity
-    if (this.fdr >= 2.5) {
-      this.regime = "REAL_ECONOMY_LEAD";
-    } else if (this.fdr >= 1.8) {
-      this.regime = "IMBALANCED_EXCESS";
-    } else if (this.fdr >= 1.2) {
-      this.regime = "ASSET_LED_GROWTH";
-    } else {
-      this.regime = "HEALTHY_EXPANSION";
-    }
+    const { classifyRegimeFromFDR: classify } = require("./regimeConstants");
+    this.regime = classify(this.fdr);
   }
 
   signals(): PolicySignal[] {

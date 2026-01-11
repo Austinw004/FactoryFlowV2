@@ -108,10 +108,12 @@ export class WorkforceAnalyticsService {
   }
 
   private getHiringSignal(regime: string, fdr: number): string {
-    if (regime === "REAL_ECONOMY_LEAD" || fdr < 0.9) return "HIRE_AGGRESSIVELY";
+    // REAL_ECONOMY_LEAD (FDR ≥ 2.5) = asset markets overheated, invest in real capacity
+    if (regime === "REAL_ECONOMY_LEAD" && fdr >= 2.5) return "HIRE_AGGRESSIVELY";
     if (regime === "HEALTHY_EXPANSION") return "HIRE_MODERATELY";
     if (regime === "ASSET_LED_GROWTH") return "MAINTAIN_CURRENT";
-    if (regime === "IMBALANCED_EXCESS" || fdr > 1.3) return "FREEZE_HIRING";
+    // IMBALANCED_EXCESS (FDR 1.8-2.5) = caution, avoid overcommitting
+    if (regime === "IMBALANCED_EXCESS" || fdr >= 1.8) return "FREEZE_HIRING";
     return "EVALUATE";
   }
 
@@ -120,11 +122,12 @@ export class WorkforceAnalyticsService {
 
     switch (regime) {
       case "REAL_ECONOMY_LEAD":
-        recommendations.push("OPPORTUNITY: Real economy growth supports workforce expansion");
-        recommendations.push("Hire skilled workers now before wage inflation");
+        // REAL_ECONOMY_LEAD at high FDR (≥2.5) = asset markets overheated, invest in real capacity
+        recommendations.push("OPPORTUNITY: Asset markets overheated - invest in real economy capacity");
+        recommendations.push("Hire skilled workers now while competitors focus on financial assets");
         recommendations.push("Invest in training programs to build capabilities");
-        if (fdr < 0.8) {
-          recommendations.push("Counter-cyclical hiring opportunity - competitors reducing headcount");
+        if (fdr >= 2.8) {
+          recommendations.push("Counter-cyclical hiring opportunity - asset-focused competitors reducing headcount");
         }
         break;
       case "HEALTHY_EXPANSION":

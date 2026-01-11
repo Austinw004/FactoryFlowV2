@@ -26,7 +26,7 @@ import {
   CANONICAL_REGIME_THRESHOLDS, 
   classifyRegimeFromFDR,
   type Regime 
-} from "./economics";
+} from "./regimeConstants";
 
 export interface FDRTestResult {
   testName: string;

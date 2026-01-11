@@ -241,16 +241,16 @@ export class AlertGenerationService {
         }
       }
 
-      // Counter-cyclical opportunity alert
-      if (current.regime === "REAL_ECONOMY_LEAD" && current.fdr < 0.8) {
+      // Counter-cyclical opportunity alert (REAL_ECONOMY_LEAD at high FDR ≥ 2.5 = asset markets overheated, buy real assets)
+      if (current.regime === "REAL_ECONOMY_LEAD" && current.fdr >= 2.5) {
         try {
           await db.insert(alertTriggers).values({
             companyId,
             alertType: "opportunity",
             alertId: current.id,
             currentValue: current.fdr,
-            thresholdValue: 0.8,
-            message: `Counter-cyclical buying opportunity: FDR ${current.fdr.toFixed(2)} in ${current.regime}`,
+            thresholdValue: 2.5,
+            message: `Counter-cyclical buying opportunity: FDR ${current.fdr.toFixed(2)} in ${current.regime} - asset markets overheated, favor real economy investments`,
             triggeredAt: new Date(),
             acknowledged: 0,
           });

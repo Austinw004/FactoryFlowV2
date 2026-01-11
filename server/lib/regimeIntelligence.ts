@@ -16,7 +16,7 @@ import {
   CANONICAL_REGIME_THRESHOLDS, 
   TYPICAL_REGIME_DURATIONS as CANONICAL_TYPICAL_DURATIONS,
   classifyRegimeFromFDR 
-} from "./economics";
+} from "./regimeConstants";
 
 export interface FDRSnapshot {
   timestamp: Date;
