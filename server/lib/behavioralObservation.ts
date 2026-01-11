@@ -432,8 +432,25 @@ export async function queryExecutionRiskPatterns(regimeType: string): Promise<{
 /**
  * Get confidence adjustment factor based on behavioral patterns.
  * This is bounded learning - adjusts confidence, does not redefine regimes.
+ * 
+ * INTERNAL DIAGNOSTIC ONLY (2026-01-11):
+ * This function MUST NOT be wired into user-facing calculations.
+ * It exists solely for internal diagnostics and pattern surfacing.
+ * Per behavioral mechanism audit, it is properly isolated but must remain so.
+ * 
+ * Bounded output range: -0.1 to +0.05
+ * Minimum observation threshold: 50
  */
-export async function getConfidenceAdjustmentFromBehavior(regimeType: string): Promise<number> {
+export async function getConfidenceAdjustmentFromBehavior(
+  regimeType: string,
+  _internalDiagnosticCall: boolean = true
+): Promise<number> {
+  // Guard: This must only be called for diagnostic purposes
+  // If someone tries to wire this into user-facing logic, this log will alert
+  if (!_internalDiagnosticCall) {
+    console.warn("[BehavioralObservation:BOUNDARY_VIOLATION] getConfidenceAdjustmentFromBehavior called with _internalDiagnosticCall=false - this is a boundary violation");
+  }
+  
   const patterns = await queryExecutionRiskPatterns(regimeType);
   
   if (patterns.observationCount < 50) {

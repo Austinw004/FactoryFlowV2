@@ -478,6 +478,11 @@ export class RegimeIntelligence {
   /**
    * Update regime factor based on prediction accuracy
    * Learn from historical performance
+   * 
+   * QUARANTINE NOTE (2026-01-11): Factor adjustment is currently FROZEN.
+   * Per behavioral mechanism audit, this creates an implicit learning loop
+   * that could compound over time. Counts are tracked but factor remains static.
+   * To enable learning, set ENABLE_REGIME_FACTOR_LEARNING=true in environment.
    */
   updateRegimeFactorFromAccuracy(regime: Regime, predicted: number, actual: number): void {
     const data = this.historicalRegimeAccuracy[regime];
@@ -488,9 +493,19 @@ export class RegimeIntelligence {
       data.correct++;
     }
 
-    if (data.predictions > 10) {
+    // FROZEN: Factor adjustment disabled pending audit review
+    // This prevents implicit learning from compounding
+    const enableLearning = process.env.ENABLE_REGIME_FACTOR_LEARNING === 'true';
+    
+    if (enableLearning && data.predictions > 10) {
+      const oldFactor = data.factor;
       const adjustment = -error * 0.1;
       data.factor = Math.max(0.8, Math.min(1.2, data.factor + adjustment));
+      
+      // Audit trail for factor changes when learning is enabled
+      if (oldFactor !== data.factor) {
+        console.log(`[RegimeIntelligence:AUDIT] Factor changed for ${regime}: ${oldFactor.toFixed(4)} -> ${data.factor.toFixed(4)} (error: ${error.toFixed(4)}, predictions: ${data.predictions})`);
+      }
     }
   }
 
