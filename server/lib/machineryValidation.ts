@@ -109,24 +109,28 @@ export class DualCircuitMachineryModel {
   
   /**
    * Predict replacement need (binary: should replace?)
+   * Using canonical FDR thresholds: HEALTHY_EXPANSION [0, 1.2), ASSET_LED_GROWTH [1.2, 1.8), 
+   * IMBALANCED_EXCESS [1.8, 2.5), REAL_ECONOMY_LEAD [2.5+]
+   * REAL_ECONOMY_LEAD at HIGH FDR = asset markets overheated, counter-cyclical opportunity to invest
    */
   predictReplacementNeed(context: MachineryContext): number {
-    // Dual-circuit logic: In bubbles (high FDR), defer replacement
-    // In real economy lead (low FDR), invest in new equipment
-    
     if (context.machineryAge > 15) {
       // Very old equipment
-      if (context.fdr < 1.3) {
-        return 1; // Replace now - good economic fundamentals
-      } else if (context.fdr > 1.7) {
-        return 0; // Defer - bubble conditions, tight capital
+      if (context.fdr >= 2.5) {
+        return 1; // Counter-cyclical opportunity - invest in real assets
+      } else if (context.fdr >= 1.8) {
+        return 0; // IMBALANCED_EXCESS - defer, preserve capital
+      } else if (context.fdr < 1.2) {
+        return 1; // HEALTHY_EXPANSION - good time for capex
       } else {
-        return context.currentOEE < 60 ? 1 : 0; // Performance-based
+        return context.currentOEE < 60 ? 1 : 0; // Performance-based in ASSET_LED_GROWTH
       }
     } else if (context.machineryAge > 10) {
       // Aging equipment
-      if (context.fdr < 1.2 && context.currentOEE < 70) {
-        return 1; // Invest during real economy lead
+      if (context.fdr >= 2.5 && context.currentOEE < 70) {
+        return 1; // Counter-cyclical investment opportunity
+      } else if (context.fdr < 1.2 && context.currentOEE < 70) {
+        return 1; // HEALTHY_EXPANSION - invest
       } else {
         return 0; // Keep running
       }
@@ -150,16 +154,17 @@ export class DualCircuitMachineryModel {
     const predictedDowntimeHours = this.predictDowntime(context);
     const predictedReplacementNeed = this.predictReplacementNeed(context);
     
-    // Formulate hypothesis based on regime
+    // Formulate hypothesis using canonical FDR thresholds from regimeConstants.ts
+    // HEALTHY_EXPANSION [0, 1.2), ASSET_LED_GROWTH [1.2, 1.8), IMBALANCED_EXCESS [1.8, 2.5), REAL_ECONOMY_LEAD [2.5+]
     let hypothesis = '';
-    if (context.fdr > 1.8) {
+    if (context.fdr >= 2.5) {
+      hypothesis = 'REAL_ECONOMY_LEAD: Counter-cyclical opportunity - invest in equipment, improved OEE expected';
+    } else if (context.fdr >= 1.8) {
       hypothesis = 'IMBALANCED_EXCESS: Predict equipment degradation due to deferred capex/maintenance';
-    } else if (context.fdr > 1.5) {
+    } else if (context.fdr >= 1.2) {
       hypothesis = 'ASSET_LED_GROWTH: Predict rising maintenance costs and declining OEE';
-    } else if (context.fdr < 1.2) {
-      hypothesis = 'REAL_ECONOMY_LEAD: Predict equipment investment, improved OEE, lower long-term costs';
     } else {
-      hypothesis = 'HEALTHY_EXPANSION: Predict stable equipment performance';
+      hypothesis = 'HEALTHY_EXPANSION: Predict stable equipment performance with balanced investment';
     }
     
     return {

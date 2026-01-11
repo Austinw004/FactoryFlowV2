@@ -420,7 +420,8 @@ export function generateBinarySignal(
     };
   }
   
-  if (regime === 'HEALTHY_EXPANSION' && fdr < 0.9 && fdrVelocity >= 0) {
+  // HEALTHY_EXPANSION (FDR < 1.2) with stable or rising FDR - favorable for deployment
+  if (regime === 'HEALTHY_EXPANSION' && fdr < 1.2 && fdrVelocity >= 0) {
     return {
       decision: 'DEPLOY_CAPITAL',
       confidence: Math.min(0.8, confidence.overall),

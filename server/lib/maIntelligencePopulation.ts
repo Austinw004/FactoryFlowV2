@@ -167,8 +167,11 @@ export class MAIntelligencePopulationService {
     if (fdr >= 2.8) {
       actions.push("Counter-cyclical opportunity: Aggressive acquisition stance warranted - asset valuations extreme");
     }
-    if (fdr > 1.2) {
-      actions.push("Caution: Elevated FDR suggests overvalued assets - delay acquisitions");
+    // Canonical threshold: ASSET_LED_GROWTH starts at 1.2, use canonical import if needed
+    if (fdr >= 1.8 && fdr < 2.5) {
+      actions.push("Caution: FDR in IMBALANCED_EXCESS zone - defer acquisitions, preserve cash");
+    } else if (fdr >= 1.2 && fdr < 1.8) {
+      actions.push("Note: FDR in ASSET_LED_GROWTH zone - be selective with acquisitions");
     }
 
     return actions;

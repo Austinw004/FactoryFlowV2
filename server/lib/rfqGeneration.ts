@@ -66,7 +66,7 @@ export class RfqGenerationService {
 
   /**
    * Calculate recommended order quantity using Economic Order Quantity (EOQ) principles
-   * Considers regime context for counter-cyclical procurement
+   * Considers regime context for counter-cyclical procurement using canonical thresholds
    */
   private calculateOrderQuantity(
     currentInventory: number,
@@ -78,35 +78,44 @@ export class RfqGenerationService {
     const targetInventoryDays = 90;
     let baseOrderQty = Math.max(0, targetInventoryDays - currentInventory);
 
-    // Regime adjustments (counter-cyclical procurement)
-    if (regime === "expansionary" && fdr > 1.5) {
-      // High FDR in expansion = financial markets overheated, good time to buy materials
-      baseOrderQty *= 1.5; // Buy 50% more to take advantage of favorable conditions
-    } else if (regime === "contractionary" && fdr < 0.7) {
-      // Low FDR in contraction = materials likely cheap, good buying opportunity
-      baseOrderQty *= 1.3; // Buy 30% more
-    } else if (regime === "transitional") {
-      // Transitional regime = uncertainty, be more conservative
+    // Canonical regime adjustments (using canonical thresholds from regimeConstants.ts)
+    // REAL_ECONOMY_LEAD (FDR >= 2.5) = counter-cyclical opportunity, buy aggressively
+    // IMBALANCED_EXCESS (FDR 1.8-2.5) = caution, reduce buying
+    // ASSET_LED_GROWTH (FDR 1.2-1.8) = watch carefully
+    // HEALTHY_EXPANSION (FDR < 1.2) = normal buying
+    if (regime === "REAL_ECONOMY_LEAD" && fdr >= 2.5) {
+      // High FDR = asset markets overheated, counter-cyclical opportunity
+      baseOrderQty *= 1.5; // Buy 50% more - good time to invest in real assets
+    } else if (regime === "IMBALANCED_EXCESS") {
+      // Asset bubble forming - be cautious
       baseOrderQty *= 0.9; // Buy 10% less
+    } else if (regime === "ASSET_LED_GROWTH") {
+      // Assets leading - maintain normal buying
+      baseOrderQty *= 1.0;
     }
+    // HEALTHY_EXPANSION: no adjustment needed
 
     return Math.ceil(baseOrderQty);
   }
 
   /**
    * Determine procurement policy signal based on dual-circuit FDR model
+   * Uses canonical thresholds from regimeConstants.ts
    */
   private getPolicySignal(regime: string, fdr: number): string {
-    if (regime === "expansionary") {
-      if (fdr > 1.5) return "buy_aggressively"; // Financial overheating, good time for materials
-      if (fdr > 1.0) return "buy_moderately";
-      return "buy_conservatively";
-    } else if (regime === "contractionary") {
-      if (fdr < 0.7) return "buy_aggressively"; // Materials likely undervalued
-      if (fdr < 1.0) return "buy_moderately";
-      return "wait_and_monitor";
+    // Canonical regime-based signals:
+    // REAL_ECONOMY_LEAD (FDR >= 2.5) = counter-cyclical buy opportunity
+    // IMBALANCED_EXCESS (FDR 1.8-2.5) = caution, defer purchases
+    // ASSET_LED_GROWTH (FDR 1.2-1.8) = lock prices
+    // HEALTHY_EXPANSION (FDR < 1.2) = normal buying
+    if (regime === "REAL_ECONOMY_LEAD" && fdr >= 2.5) {
+      return "buy_aggressively"; // Counter-cyclical opportunity
+    } else if (regime === "IMBALANCED_EXCESS") {
+      return "wait_and_monitor"; // Asset bubble forming
+    } else if (regime === "ASSET_LED_GROWTH") {
+      return "buy_conservatively"; // Assets leading, be careful
     } else {
-      return "buy_conservatively"; // Transitional regime = be cautious
+      return "buy_moderately"; // HEALTHY_EXPANSION - normal conditions
     }
   }
 

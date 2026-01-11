@@ -234,14 +234,16 @@ export class DualCircuitWorkforceModel {
     const predictedOvertimeHours = this.predictOvertimeHours(context);
     const predictedLaborProductivity = this.predictLaborProductivity(context);
     
-    // Formulate hypothesis
+    // Formulate hypothesis using canonical FDR thresholds from regimeConstants.ts
+    // HEALTHY_EXPANSION [0, 1.2), ASSET_LED_GROWTH [1.2, 1.8), IMBALANCED_EXCESS [1.8, 2.5), REAL_ECONOMY_LEAD [2.5+]
+    // REAL_ECONOMY_LEAD at HIGH FDR = asset markets overheated, counter-cyclical opportunity
     let hypothesis = '';
-    if (context.fdr > 1.8) {
+    if (context.fdr >= 2.5) {
+      hypothesis = 'REAL_ECONOMY_LEAD: Counter-cyclical opportunity - asset markets overheated, invest in workforce capacity';
+    } else if (context.fdr >= 1.8) {
       hypothesis = 'IMBALANCED_EXCESS: Predict layoffs, wage freezes, unemployment spike, productivity collapse';
-    } else if (context.fdr > 1.5) {
-      hypothesis = 'ASSET_LED_GROWTH: Predict wage stagnation, hiring freeze, rising turnover, forced overtime';
-    } else if (context.fdr < 1.2) {
-      hypothesis = 'REAL_ECONOMY_LEAD: Predict wage growth, hiring surge, falling unemployment, productivity gains';
+    } else if (context.fdr >= 1.2) {
+      hypothesis = 'ASSET_LED_GROWTH: Predict wage stagnation, hiring caution, rising turnover, forced overtime';
     } else {
       hypothesis = 'HEALTHY_EXPANSION: Predict balanced labor market with moderate growth';
     }

@@ -351,7 +351,8 @@ export function calculateFDRFromExternalData(economicData: any): number | null {
 }
 
 /**
- * Determine economic regime from external data
+ * Determine economic regime from external data using canonical thresholds
+ * Uses the single source of truth from regimeConstants.ts
  */
 export function determineEconomicRegimeFromData(economicData: any): string {
   const fdr = calculateFDRFromExternalData(economicData);
@@ -360,17 +361,12 @@ export function determineEconomicRegimeFromData(economicData: any): string {
     return "UNKNOWN";
   }
 
-  // Regime classification based on FDR thresholds (aligned with dual-circuit theory)
-  // FDR = Financial Growth / Real Growth ratio
-  if (fdr >= 1.5) {
-    return "IMBALANCED_EXCESS";
-  } else if (fdr >= 1.0) {
-    return "ASSET_LED_GROWTH";
-  } else if (fdr >= 0.5) {
-    return "HEALTHY_EXPANSION";
-  } else {
-    return "REAL_ECONOMY_LEAD";
-  }
+  // Use canonical classification from regimeConstants.ts
+  // Thresholds: HEALTHY_EXPANSION [0, 1.2), ASSET_LED_GROWTH [1.2, 1.8), 
+  //             IMBALANCED_EXCESS [1.8, 2.5), REAL_ECONOMY_LEAD [2.5, 10]
+  // REAL_ECONOMY_LEAD at HIGH FDR = asset markets overheated, counter-cyclical opportunity
+  const { classifyRegimeFromFDR } = require("./regimeConstants");
+  return classifyRegimeFromFDR(fdr);
 }
 
 /**

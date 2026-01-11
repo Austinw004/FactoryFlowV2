@@ -1206,19 +1206,38 @@ class AIAssistantService {
   }
 
   private getRegimeFromFDR(fdr: number): string {
-    if (fdr >= 1.3) return "Bubble Territory";
-    if (fdr >= 1.1) return "Overheating";
-    if (fdr >= 0.9) return "Healthy Expansion";
-    if (fdr >= 0.7) return "Cooling";
-    return "Contraction";
+    // Use canonical thresholds from regimeConstants.ts
+    // Thresholds: HEALTHY_EXPANSION [0, 1.2), ASSET_LED_GROWTH [1.2, 1.8), 
+    //             IMBALANCED_EXCESS [1.8, 2.5), REAL_ECONOMY_LEAD [2.5, 10]
+    const { classifyRegimeFromFDR } = require("./regimeConstants");
+    const regime = classifyRegimeFromFDR(fdr);
+    
+    // Return human-readable labels matching canonical regimes
+    switch (regime) {
+      case "REAL_ECONOMY_LEAD": return "Counter-Cyclical Opportunity";
+      case "IMBALANCED_EXCESS": return "Imbalanced Excess";
+      case "ASSET_LED_GROWTH": return "Asset-Led Growth";
+      case "HEALTHY_EXPANSION": 
+      default: return "Healthy Expansion";
+    }
   }
 
   private getSignalFromFDR(fdr: number): string {
-    if (fdr >= 1.3) return "sell";
-    if (fdr >= 1.1) return "caution";
-    if (fdr >= 0.9) return "hold";
-    if (fdr >= 0.7) return "accumulate";
-    return "buy";
+    // Canonical signal mapping based on thresholds
+    // REAL_ECONOMY_LEAD (FDR >= 2.5) = buy (counter-cyclical opportunity)
+    // IMBALANCED_EXCESS (FDR >= 1.8) = sell/caution
+    // ASSET_LED_GROWTH (FDR >= 1.2) = hold
+    // HEALTHY_EXPANSION (FDR < 1.2) = accumulate
+    const { classifyRegimeFromFDR } = require("./regimeConstants");
+    const regime = classifyRegimeFromFDR(fdr);
+    
+    switch (regime) {
+      case "REAL_ECONOMY_LEAD": return "buy"; // Counter-cyclical opportunity
+      case "IMBALANCED_EXCESS": return "sell";
+      case "ASSET_LED_GROWTH": return "caution";
+      case "HEALTHY_EXPANSION": 
+      default: return "accumulate";
+    }
   }
 
   async chat(
