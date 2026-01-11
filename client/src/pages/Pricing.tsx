@@ -13,29 +13,9 @@ import { Progress } from "@/components/ui/progress";
 
 const subscriptionTiers = [
   {
-    id: "starter",
-    name: "Starter",
-    description: "Essential tools for small manufacturers",
-    price: 799,
-    period: "/month",
-    annualPrice: 649,
-    icon: Zap,
-    color: "text-blue-500",
-    bgColor: "bg-blue-100 dark:bg-blue-900/30",
-    features: [
-      "AI-powered demand forecasting",
-      "Economic regime monitoring",
-      "Basic supplier risk scoring",
-      "Up to 50 SKUs",
-      "Up to 10 suppliers",
-      "Email support",
-      "Monthly reports"
-    ]
-  },
-  {
     id: "professional",
     name: "Professional",
-    description: "Advanced capabilities for growing operations",
+    description: "Complete platform access for growing manufacturers",
     price: 1999,
     period: "/month",
     annualPrice: 1649,
@@ -44,11 +24,15 @@ const subscriptionTiers = [
     bgColor: "bg-purple-100 dark:bg-purple-900/30",
     popular: true,
     features: [
-      "Everything in Starter, plus:",
+      "AI-powered demand forecasting",
+      "Economic regime monitoring",
       "Counter-cyclical procurement signals",
+      "Supplier risk scoring",
       "Advanced scenario simulations",
       "Multi-tier supplier mapping",
       "Automated RFQ generation",
+      "Real-time commodity tracking (110+)",
+      "M&A intelligence & due diligence",
       "Up to 250 SKUs",
       "Up to 50 suppliers",
       "Priority support + onboarding"
@@ -57,7 +41,7 @@ const subscriptionTiers = [
   {
     id: "enterprise",
     name: "Enterprise",
-    description: "Full platform access for large manufacturers",
+    description: "Unlimited scale with dedicated support",
     price: null,
     period: "",
     annualPrice: null,
@@ -66,14 +50,13 @@ const subscriptionTiers = [
     color: "text-amber-500",
     bgColor: "bg-amber-100 dark:bg-amber-900/30",
     features: [
-      "Everything in Professional, plus:",
-      "Supply chain digital twin",
-      "Real-time commodity tracking (110+)",
-      "M&A intelligence & due diligence",
-      "Custom ERP/MRP integrations",
       "Unlimited SKUs & suppliers",
+      "Supply chain digital twin",
+      "Custom ERP/MRP integrations",
       "Dedicated success manager",
-      "Quarterly business reviews"
+      "Quarterly business reviews",
+      "Custom SLAs",
+      "SSO & advanced security"
     ]
   }
 ];
@@ -92,7 +75,7 @@ const savingsBasedTiers = [
     features: [
       "AI-powered demand forecasting",
       "Economic regime monitoring",
-      "Basic supplier risk scoring",
+      "Supplier risk scoring",
       "Counter-cyclical procurement signals",
       "Up to 100 SKUs",
       "Up to 25 suppliers",
@@ -113,7 +96,6 @@ const savingsBasedTiers = [
     bgColor: "bg-purple-100 dark:bg-purple-900/30",
     popular: true,
     features: [
-      "Everything in Accelerate, plus:",
       "Advanced scenario simulations",
       "Multi-tier supplier mapping",
       "Automated RFQ generation",
@@ -136,14 +118,12 @@ const savingsBasedTiers = [
     color: "text-amber-500",
     bgColor: "bg-amber-100 dark:bg-amber-900/30",
     features: [
-      "Everything in Transform, plus:",
       "Supply chain digital twin",
-      "M&A intelligence & due diligence",
       "Industry consortium benchmarking",
-      "Custom integrations (ERP/MRP)",
       "Unlimited SKUs & suppliers",
       "Dedicated success manager",
-      "Quarterly business reviews"
+      "Quarterly business reviews",
+      "Custom SLAs"
     ],
     competitorRate: "Varies by provider",
     yourSavings: "Competitive pricing"
@@ -234,7 +214,7 @@ export default function Pricing() {
               </span>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6 mb-16">
+            <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto mb-16">
               {subscriptionTiers.map((tier) => {
                 const Icon = tier.icon;
                 const isPopular = tier.popular;
