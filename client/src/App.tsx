@@ -41,6 +41,7 @@ import ShopFloorMode from "@/pages/ShopFloorMode";
 import Integrations from "@/pages/Integrations";
 import WebhookIntegrations from "@/pages/WebhookIntegrations";
 import Allocation from "@/pages/Allocation";
+import EventMonitoring from "@/pages/EventMonitoring";
 
 // Dashboard Hub routes
 const DashboardOverviewRoute = () => <DashboardHub initialTab="overview" />;
@@ -183,6 +184,7 @@ function Router() {
       <Route path="/scenario-simulation" component={StrategyScenariosRoute} />
       <Route path="/ma-intelligence" component={StrategyMaRoute} />
       <Route path="/peer-benchmarking" component={StrategyBenchmarkingRoute} />
+      <Route path="/event-monitoring" component={EventMonitoring} />
 
       {/* Billing & Subscription routes */}
       <Route path="/pricing" component={Pricing} />

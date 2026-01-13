@@ -50,6 +50,12 @@ const mainMenuItems = [
     testId: "sidebar-strategy",
   },
   {
+    title: "Event Monitoring",
+    url: "/event-monitoring",
+    icon: AlertTriangle,
+    testId: "sidebar-event-monitoring",
+  },
+  {
     title: "Demand & Forecasting",
     url: "/demand",
     icon: TrendingUp,
@@ -107,7 +113,7 @@ export function AppSidebar() {
   const { inventory, suppliers, commodities, isLoading } = useUnifiedData();
 
   const agenticRoutes = ["/agentic-ai"];
-  const strategyRoutes = ["/strategy", "/digital-twin", "/strategic-analysis", "/scenario-simulation", "/ma-intelligence", "/peer-benchmarking"];
+  const strategyRoutes = ["/strategy", "/digital-twin", "/strategic-analysis", "/scenario-simulation", "/ma-intelligence", "/peer-benchmarking", "/event-monitoring"];
   const dashboardRoutes = ["/", "/dashboard", "/roi-dashboard", "/reports"];
   
   const isActive = (url: string) => {

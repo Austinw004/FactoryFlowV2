@@ -124,6 +124,13 @@ const COMMODITY_KEYWORDS: Record<string, string[]> = {
   'Textiles': ['textile', 'cotton', 'fabric', 'apparel']
 };
 
+export interface NewsAlertResult {
+  alerts: NewsAlert[];
+  isSimulated: boolean;
+  dataSource: 'newsapi' | 'simulation';
+  simulationWarning?: string;
+}
+
 export class NewsMonitoringService {
   private apiKey: string | undefined;
   private storage: IStorage;
@@ -137,10 +144,46 @@ export class NewsMonitoringService {
     this.riskEngine = new GeopoliticalRiskEngine(storage);
   }
 
-  async fetchSupplyChainNews(currentFDR: number = 1.0): Promise<NewsAlert[]> {
+  async fetchSupplyChainNewsWithMeta(currentFDR: number = 1.0): Promise<NewsAlertResult> {
     if (!this.apiKey) {
-      console.log('News API key not configured, using simulated data');
-      return this.getSimulatedAlerts(currentFDR);
+      console.log('[NewsMonitoring] API key not configured, returning simulated demonstration data');
+      const alerts = await this.getSimulatedAlerts(currentFDR);
+      return {
+        alerts,
+        isSimulated: true,
+        dataSource: 'simulation',
+        simulationWarning: 'These are demonstration scenarios for training purposes. They do not represent real news events. Configure NEWS_API_KEY to receive real supply chain news.'
+      };
+    }
+
+    try {
+      const alerts = await this.fetchRealNews(currentFDR);
+      return {
+        alerts,
+        isSimulated: false,
+        dataSource: 'newsapi'
+      };
+    } catch (error: any) {
+      console.error('[NewsMonitoring] Real news fetch failed, falling back to simulation:', error.message);
+      const alerts = await this.getSimulatedAlerts(currentFDR);
+      return {
+        alerts,
+        isSimulated: true,
+        dataSource: 'simulation',
+        simulationWarning: 'Live news temporarily unavailable. Showing demonstration scenarios for training purposes.'
+      };
+    }
+  }
+
+  // Legacy method for backward compatibility - returns just alerts
+  async fetchSupplyChainNews(currentFDR: number = 1.0): Promise<NewsAlert[]> {
+    const result = await this.fetchSupplyChainNewsWithMeta(currentFDR);
+    return result.alerts;
+  }
+
+  private async fetchRealNews(currentFDR: number): Promise<NewsAlert[]> {
+    if (!this.apiKey) {
+      throw new Error('NEWS_API_KEY not configured');
     }
 
     const cacheKey = `news_${new Date().toISOString().split('T')[0]}`;
@@ -398,6 +441,11 @@ export class NewsMonitoringService {
   }
 
   private async getSimulatedAlerts(currentFDR: number): Promise<NewsAlert[]> {
+    // IMPORTANT: These are SIMULATED scenario examples for demonstration purposes only.
+    // They do NOT represent real news events and should be clearly labeled as such.
+    // When NEWS_API_KEY is configured, real news from verified publishers replaces this data.
+    console.log('[NewsMonitoring] Using SIMULATED demonstration data - NEWS_API_KEY not configured or API unavailable');
+    
     const simulatedEvents: Array<{
       title: string;
       description: string;
@@ -925,23 +973,16 @@ export class NewsMonitoringService {
       const daysAgo = Math.floor(Math.random() * 3);
       const publishedAt = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000);
 
-      // Simulated alerts don't have real article URLs
-      // Use '#' to indicate no external link is available
-      const sources = [
-        'Industry Analysis',
-        'Supply Chain Intelligence',
-        'Market Research',
-        'Risk Assessment',
-        'Economic Monitor'
-      ];
-      const selectedSource = sources[Math.floor(Math.random() * sources.length)];
+      // SIMULATED alerts have NO real article URLs - clearly label as demonstration
+      // Source name must indicate this is NOT real news
+      const selectedSource = '[DEMO] Scenario Simulation';
       
       // For simulated alerts, we don't have real external URLs
-      const articleUrl = '#';
+      const articleUrl = '#simulated';
       
       alerts.push({
         id: this.generateId(event.title, publishedAt.toISOString()),
-        title: event.title,
+        title: `[SCENARIO] ${event.title}`,
         description: event.description,
         source: selectedSource,
         sourceUrl: articleUrl,

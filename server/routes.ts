@@ -7845,7 +7845,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const companyId = req.user?.companyId;
       const currentFDR = parseFloat(req.query.fdr as string) || 1.0;
-      const alerts = await newsMonitoringService.fetchSupplyChainNews(currentFDR);
+      const newsResult = await newsMonitoringService.fetchSupplyChainNewsWithMeta(currentFDR);
+      const alerts = newsResult.alerts;
       
       // Get company context for relevance scoring
       let companyContext: {
@@ -7982,7 +7983,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           { id: 'labor_strike', label: 'Labor Strikes' },
           { id: 'geopolitical_tension', label: 'Geopolitical Tensions' },
           { id: 'economic_crisis', label: 'Economic Crisis' }
-        ]
+        ],
+        // Data source transparency - required for epistemic integrity
+        isSimulated: newsResult.isSimulated,
+        dataSource: newsResult.dataSource,
+        simulationWarning: newsResult.simulationWarning
       });
     } catch (error: any) {
       console.error('News alerts error:', error);
