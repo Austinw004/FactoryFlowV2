@@ -48,6 +48,7 @@ import type {
   ProcurementSchedule, InsertProcurementSchedule,
   AutoPurchaseRecommendation, InsertAutoPurchaseRecommendation,
   EconomicSnapshot, InsertEconomicSnapshot,
+  RegimeState, InsertRegimeState, RegimeTransition, InsertRegimeTransition,
   HistoricalPrediction, InsertHistoricalPrediction,
   PredictionAccuracyMetrics, InsertPredictionAccuracyMetrics,
   ModelComparison, InsertModelComparison,
@@ -141,7 +142,7 @@ import {
   employeePayroll, employeeBenefits, employeeTimeOff, employeePtoBalances,
   employeeDocuments, employeePerformanceReviews, employeeEmergencyContacts,
   purchaseOrders, materialUsageTracking, procurementSchedules, autoPurchaseRecommendations,
-  economicSnapshots, historicalPredictions, predictionAccuracyMetrics,
+  economicSnapshots, regimeState, regimeTransitions, historicalPredictions, predictionAccuracyMetrics,
   modelComparisons, machineryPredictions, workforcePredictions,
   featureToggles, supplierNodes, supplierLinks, supplierHealthMetrics, supplierRiskAlerts,
   poRules, poWorkflowSteps, poApprovals, negotiationPlaybooks, erpConnections,
@@ -544,6 +545,15 @@ export interface IStorage {
   getLatestEconomicSnapshot(companyId: string): Promise<EconomicSnapshot | undefined>;
   getEconomicSnapshotHistory(companyId: string, limit?: number): Promise<EconomicSnapshot[]>;
   createEconomicSnapshot(snapshot: InsertEconomicSnapshot): Promise<EconomicSnapshot>;
+  
+  // Regime State Tracking (Persistence Enforcement)
+  getRegimeState(companyId: string): Promise<RegimeState | undefined>;
+  upsertRegimeState(state: InsertRegimeState): Promise<RegimeState>;
+  updateRegimeState(companyId: string, updates: Partial<InsertRegimeState>): Promise<RegimeState | undefined>;
+  
+  // Regime Transitions Audit Log
+  getRegimeTransitions(companyId: string, limit?: number): Promise<RegimeTransition[]>;
+  createRegimeTransition(transition: InsertRegimeTransition): Promise<RegimeTransition>;
   
   // Research Validation System (Historical Predictions & Backtesting - NOT USER-FACING)
   getHistoricalPredictions(companyId: string): Promise<HistoricalPrediction[]>;
@@ -2530,6 +2540,56 @@ export class DbStorage implements IStorage {
   async createEconomicSnapshot(insertSnapshot: InsertEconomicSnapshot): Promise<EconomicSnapshot> {
     const [snapshot] = await db.insert(economicSnapshots).values(insertSnapshot).returning();
     return snapshot;
+  }
+
+  // Regime State Tracking methods
+  async getRegimeState(companyId: string): Promise<RegimeState | undefined> {
+    const [state] = await db.select()
+      .from(regimeState)
+      .where(eq(regimeState.companyId, companyId));
+    return state;
+  }
+
+  async upsertRegimeState(insertState: InsertRegimeState): Promise<RegimeState> {
+    const [state] = await db.insert(regimeState)
+      .values(insertState)
+      .onConflictDoUpdate({
+        target: regimeState.companyId,
+        set: {
+          confirmedRegime: insertState.confirmedRegime,
+          previousRegime: insertState.previousRegime,
+          tentativeRegime: insertState.tentativeRegime,
+          lastConfirmedAt: insertState.lastConfirmedAt,
+          transitionStartedAt: insertState.transitionStartedAt,
+          confirmationCount: insertState.confirmationCount,
+          lastFdr: insertState.lastFdr,
+          lastUpdatedAt: new Date(),
+        },
+      })
+      .returning();
+    return state;
+  }
+
+  async updateRegimeState(companyId: string, updates: Partial<InsertRegimeState>): Promise<RegimeState | undefined> {
+    const [state] = await db.update(regimeState)
+      .set({ ...updates, lastUpdatedAt: new Date() })
+      .where(eq(regimeState.companyId, companyId))
+      .returning();
+    return state;
+  }
+
+  // Regime Transitions Audit Log methods
+  async getRegimeTransitions(companyId: string, limit: number = 50): Promise<RegimeTransition[]> {
+    return await db.select()
+      .from(regimeTransitions)
+      .where(eq(regimeTransitions.companyId, companyId))
+      .orderBy(sql`${regimeTransitions.triggeredAt} DESC`)
+      .limit(limit);
+  }
+
+  async createRegimeTransition(insertTransition: InsertRegimeTransition): Promise<RegimeTransition> {
+    const [transition] = await db.insert(regimeTransitions).values(insertTransition).returning();
+    return transition;
   }
 
   // Research Validation System methods (Historical Predictions & Backtesting)

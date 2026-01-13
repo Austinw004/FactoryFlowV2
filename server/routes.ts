@@ -1035,7 +1035,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Use persisted snapshot data
         const responseData = {
-          regime: snapshot.regime,
+          regime: snapshot.regime, // Raw classification from FDR value
+          confirmedRegime: snapshot.confirmedRegime || snapshot.regime, // Persistence-filtered regime (with hysteresis/duration/confirmation)
           fdr: snapshot.fdr,
           data: {
             gdpReal: snapshot.gdpReal,
@@ -1046,7 +1047,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
           source: snapshot.source,
           timestamp: snapshot.timestamp,
-          signals: calculateSignalsForRegime(snapshot.regime),
+          signals: calculateSignalsForRegime(snapshot.confirmedRegime || snapshot.regime), // Signals based on confirmed regime
           // Thesis-aligned regime intelligence (company-scoped)
           intelligence: {
             fdrTrend: intelligenceSummary.fdrAnalysis,
@@ -1102,6 +1103,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         res.json({
           regime: companyRegime,
+          confirmedRegime: companyRegime, // Fallback uses same value (no persistence history)
           fdr: companyFdr,
           data: {}, // No legacy balance sheet data in company-specific mode
           source: 'company_intelligence',

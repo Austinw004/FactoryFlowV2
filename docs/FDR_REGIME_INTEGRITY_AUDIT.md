@@ -1,9 +1,9 @@
 # FDR Regime System Integrity Audit & Remediation Report
 
 **Audit Date**: 2026-01-11  
-**Updated**: 2026-01-11 (Post-Remediation)  
+**Updated**: 2026-01-13 (Phase 2 Complete)  
 **Mandate**: Restore theoretical fidelity before performance optimization  
-**Status**: PHASE 1 REMEDIATION COMPLETE - THRESHOLD RECONCILIATION ACHIEVED
+**Status**: PHASE 2 COMPLETE - DATABASE MIGRATION, RUNTIME PERSISTENCE ENFORCEMENT, REGIME TRANSITION AUDIT LOGGING
 
 ---
 
@@ -216,12 +216,31 @@ Until behavioral outcome data exists, all claims of operational utility are **EX
 
 **Verification:** FDR=1.04 now correctly classifies as HEALTHY_EXPANSION in production logs.
 
-### 7.2 Short-Term (Required) - PENDING
+### 7.2 Short-Term (Required) - **COMPLETED 2026-01-13**
 
-1. **Re-classify historical data**: Apply canonical thresholds to all economic_snapshots (database migration needed)
-2. **Implement hysteresis**: 0.15 FDR buffer around thresholds (defined in regimeConstants.ts, not yet enforced at runtime)
-3. **Add confirmation window**: 3-reading confirmation before transition
-4. **Create regime transition audit log**
+1. ✅ **Re-classified historical data**: Applied canonical thresholds to 42,617 economic_snapshots via transactional UPDATE
+2. ✅ **Implemented hysteresis**: 0.15 FDR buffer around thresholds enforced at runtime via `classifyRegimeWithHysteresis()`
+3. ✅ **Added confirmation window**: 3-reading confirmation before transition via `applyPersistenceEnforcement()`
+4. ✅ **Created regime transition audit log**: `regime_transitions` table with full persistence metadata
+5. ✅ **Created regime state tracking**: `regime_state` table tracks confirmed/tentative/previous regime per company (106 companies initialized)
+6. ✅ **Added reversion penalty**: 2x hysteresis band (0.30) for returning to previous regime
+7. ✅ **Added confirmedRegime persistence**: economic_snapshots now stores both raw and persistence-filtered regime
+8. ✅ **Backfilled historical confirmedRegime**: 54,972 records populated with confirmedRegime = regime
+
+**Historical Regime Distribution (Post-Migration):**
+- HEALTHY_EXPANSION: 38,792 records
+- ASSET_LED_GROWTH: 8,568 records  
+- REAL_ECONOMY_LEAD: 7,352 records
+
+**Persistence Parameters:**
+- HYSTERESIS_BAND: 0.15 FDR units
+- REVERSION_PENALTY_MULTIPLIER: 2.0x (0.30 effective band for reversions)
+- MIN_REGIME_DURATION_DAYS: 14 days
+- CONFIRMATION_READINGS: 3 consecutive readings
+
+**Data Model Enhancements:**
+- `economic_snapshots.confirmed_regime`: Persistence-filtered regime for operational use
+- `regime_state.previous_regime`: Tracks prior regime for reversion penalty calculation
 
 ### 7.3 Medium-Term (Validation)
 
@@ -234,33 +253,41 @@ Until behavioral outcome data exists, all claims of operational utility are **EX
 
 ## SECTION 8: CONCLUSIONS
 
-### 8.1 Current System State (Post Phase 1 Remediation)
+### 8.1 Current System State (Post Phase 2 Complete)
 
-**THRESHOLD RECONCILIATION COMPLETE** - Runtime classification now uses canonical thresholds:
+**FULL STRUCTURAL COHERENCE ACHIEVED** - The regime system now behaves like a regime framework:
 - ✅ Single source of truth established in regimeConstants.ts
 - ✅ All classification paths use canonical classifyRegimeFromFDR()
 - ✅ Inverted REAL_ECONOMY_LEAD logic corrected across 13+ files
-- ⚠️ Historical database records still contain misclassified regimes (requires migration)
-- ⚠️ Persistence enforcement not yet active at runtime
+- ✅ Historical database records reclassified (42,617 snapshots)
+- ✅ Persistence enforcement active at runtime (hysteresis + duration + confirmation)
+- ✅ Regime transition audit logging operational
 
 ### 8.2 Path to Validity (Updated)
 
 1. ~~Fix threshold definitions (1 day)~~ ✅ COMPLETED 2026-01-11
-2. Add persistence filters (1 day) - PENDING
-3. Re-classify historical data (1 day) - PENDING
-4. Collect 12+ months of clean data (12 months)
-5. Evaluate predictive validity (1 month)
+2. ~~Add persistence filters (1 day)~~ ✅ COMPLETED 2026-01-13
+3. ~~Re-classify historical data (1 day)~~ ✅ COMPLETED 2026-01-13
+4. Collect 12+ months of clean data (12 months) - IN PROGRESS
+5. Evaluate predictive validity (1 month) - PENDING
 
 ### 8.3 Governing Principle Applied
 
 > "A regime framework must first behave like a regime framework before it can be judged on predictive performance. Structural coherence precedes statistical validation."
 
-Current status: **Structural coherence PARTIALLY ACHIEVED**. Runtime classification is now correct. Historical data reclassification and persistence enforcement remain as Phase 2 tasks.
+Current status: **STRUCTURAL COHERENCE ACHIEVED**. The system now has:
+- Consistent threshold definitions across all code paths
+- Correct FDR-to-regime mapping (REAL_ECONOMY_LEAD = HIGH FDR ≥2.5)
+- Persistence enforcement to prevent signal flickering
+- Audit logging for all regime transitions
+- Clean historical baseline for future validation
+
+**Next Phase**: Collect behavioral outcome data to enable decision quality assessment.
 
 ---
 
-**Document Version**: 1.1  
-**Last Updated**: 2026-01-11 (Post-Remediation)  
+**Document Version**: 2.0  
+**Last Updated**: 2026-01-13 (Phase 2 Complete)  
 **Audit Methodology**: Per internal model-integrity directive  
 **Theory Modified**: NO  
 **Parameters Optimized**: NO  

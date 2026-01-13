@@ -10,6 +10,7 @@ export const CANONICAL_REGIME_THRESHOLDS: Record<Regime, { min: number; max: num
 };
 
 export const HYSTERESIS_BAND = 0.15;
+export const REVERSION_PENALTY_MULTIPLIER = 2.0; // 2x threshold for reverting to previous regime
 export const MIN_REGIME_DURATION_DAYS = 14;
 export const CONFIRMATION_READINGS = 3;
 
@@ -34,30 +35,37 @@ export function classifyRegimeFromFDR(fdr: number): Regime {
 
 export function classifyRegimeWithHysteresis(
   fdr: number, 
-  currentRegime: Regime
-): { regime: Regime; requiresConfirmation: boolean } {
+  currentRegime: Regime,
+  previousRegime?: Regime | null
+): { regime: Regime; requiresConfirmation: boolean; isReversion: boolean } {
   const rawRegime = classifyRegimeFromFDR(fdr);
   
   if (rawRegime === currentRegime) {
-    return { regime: currentRegime, requiresConfirmation: false };
+    return { regime: currentRegime, requiresConfirmation: false, isReversion: false };
   }
   
   const currentThreshold = CANONICAL_REGIME_THRESHOLDS[currentRegime];
   const isMovingUp = REGIME_ORDER.indexOf(rawRegime) > REGIME_ORDER.indexOf(currentRegime);
+  const isReversion = previousRegime ? rawRegime === previousRegime : false;
+  
+  // Apply 2x hysteresis band for reversions to prior regime
+  const effectiveHysteresis = isReversion 
+    ? HYSTERESIS_BAND * REVERSION_PENALTY_MULTIPLIER 
+    : HYSTERESIS_BAND;
   
   if (isMovingUp) {
     const upperBound = currentThreshold.max;
-    if (fdr >= upperBound + HYSTERESIS_BAND) {
-      return { regime: rawRegime, requiresConfirmation: true };
+    if (fdr >= upperBound + effectiveHysteresis) {
+      return { regime: rawRegime, requiresConfirmation: true, isReversion };
     }
   } else {
     const lowerBound = currentThreshold.min;
-    if (fdr <= lowerBound - HYSTERESIS_BAND) {
-      return { regime: rawRegime, requiresConfirmation: true };
+    if (fdr <= lowerBound - effectiveHysteresis) {
+      return { regime: rawRegime, requiresConfirmation: true, isReversion };
     }
   }
   
-  return { regime: currentRegime, requiresConfirmation: false };
+  return { regime: currentRegime, requiresConfirmation: false, isReversion: false };
 }
 
 export function validateRegimeClassification(fdr: number, storedRegime: string): {

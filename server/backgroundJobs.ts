@@ -9,7 +9,13 @@ import { globalCache } from './lib/caching';
 import { createRfqGenerationService } from './lib/rfqGeneration';
 import { createBenchmarkAggregationService } from './lib/benchmarkAggregation';
 import { logAudit } from './lib/auditLogger';
-import { classifyRegimeFromFDR, type Regime } from './lib/regimeConstants';
+import { 
+  classifyRegimeFromFDR, 
+  classifyRegimeWithHysteresis,
+  type Regime,
+  MIN_REGIME_DURATION_DAYS,
+  CONFIRMATION_READINGS 
+} from './lib/regimeConstants';
 
 const rfqGenerationService = createRfqGenerationService(storage);
 const benchmarkAggregationService = createBenchmarkAggregationService(storage);
@@ -28,6 +34,133 @@ type EconomicRegime = Regime;
 
 export function calculateEconomicRegime(fdr: number): EconomicRegime {
   return classifyRegimeFromFDR(fdr);
+}
+
+// Apply persistence enforcement: hysteresis + duration + confirmation + reversion penalty
+async function applyPersistenceEnforcement(
+  companyId: string, 
+  rawFdr: number
+): Promise<{ confirmedRegime: Regime; transitionOccurred: boolean; transitionDetails?: any }> {
+  const rawRegime = classifyRegimeFromFDR(rawFdr);
+  
+  // Get or create regime state for this company
+  let state = await storage.getRegimeState(companyId);
+  
+  if (!state) {
+    // Initialize state for new company
+    await storage.upsertRegimeState({
+      companyId,
+      confirmedRegime: rawRegime,
+      previousRegime: null,
+      tentativeRegime: null,
+      lastConfirmedAt: new Date(),
+      transitionStartedAt: null,
+      confirmationCount: 0,
+      lastFdr: rawFdr,
+    });
+    return { confirmedRegime: rawRegime, transitionOccurred: false };
+  }
+  
+  const currentConfirmed = state.confirmedRegime as Regime;
+  const priorRegime = (state as any).previousRegime as Regime | null;
+  
+  // Apply hysteresis with 2x penalty for reversions to prior regime
+  const { regime: hysteresisResult, requiresConfirmation, isReversion } = 
+    classifyRegimeWithHysteresis(rawFdr, currentConfirmed, priorRegime);
+  
+  // If hysteresis says stay in current regime, reset tentative state
+  if (hysteresisResult === currentConfirmed && !requiresConfirmation) {
+    await storage.updateRegimeState(companyId, {
+      lastFdr: rawFdr,
+      tentativeRegime: null,
+      confirmationCount: 0,
+      transitionStartedAt: null,
+    });
+    return { confirmedRegime: currentConfirmed, transitionOccurred: false };
+  }
+  
+  // Potential transition detected - check duration filter
+  const daysSinceLastConfirm = state.lastConfirmedAt 
+    ? Math.floor((Date.now() - new Date(state.lastConfirmedAt).getTime()) / (1000 * 60 * 60 * 24))
+    : 999;
+  
+  const durationMet = daysSinceLastConfirm >= MIN_REGIME_DURATION_DAYS;
+  
+  if (!durationMet) {
+    // Duration filter not met - track tentative but don't start counting confirmations
+    // Only set transitionStartedAt once when first entering tentative state
+    const shouldSetTransitionStart = !state.transitionStartedAt || state.tentativeRegime !== hysteresisResult;
+    await storage.updateRegimeState(companyId, {
+      lastFdr: rawFdr,
+      tentativeRegime: hysteresisResult,
+      transitionStartedAt: shouldSetTransitionStart ? new Date() : state.transitionStartedAt,
+      confirmationCount: 0, // Don't count confirmations until duration met
+    });
+    return { confirmedRegime: currentConfirmed, transitionOccurred: false };
+  }
+  
+  // Duration met - now check confirmation count
+  // Only accumulate count if tentative regime matches
+  const tentativeMatches = state.tentativeRegime === hysteresisResult;
+  const newConfirmationCount = tentativeMatches ? (state.confirmationCount || 0) + 1 : 1;
+  
+  if (newConfirmationCount < CONFIRMATION_READINGS) {
+    // Need more confirmations - update state
+    await storage.updateRegimeState(companyId, {
+      lastFdr: rawFdr,
+      tentativeRegime: hysteresisResult,
+      transitionStartedAt: state.transitionStartedAt || new Date(),
+      confirmationCount: newConfirmationCount,
+    });
+    return { confirmedRegime: currentConfirmed, transitionOccurred: false };
+  }
+  
+  // All filters passed - confirm transition
+  const transitionNotes = isReversion 
+    ? `Reversion transition confirmed after ${newConfirmationCount} readings over ${daysSinceLastConfirm} days (2x hysteresis applied)`
+    : `Transition confirmed after ${newConfirmationCount} readings over ${daysSinceLastConfirm} days`;
+    
+  const transitionDetails = {
+    previousRegime: currentConfirmed,
+    newRegime: hysteresisResult,
+    fdr: rawFdr,
+    hysteresisApplied: 1,
+    durationFilterApplied: 1,
+    confirmationRequired: 1,
+    confirmationCount: newConfirmationCount,
+    daysInPreviousRegime: daysSinceLastConfirm,
+    isReversion,
+    notes: transitionNotes,
+  };
+  
+  // Update state to new confirmed regime, storing current as previous
+  await storage.upsertRegimeState({
+    companyId,
+    confirmedRegime: hysteresisResult,
+    previousRegime: currentConfirmed, // Track for future reversion penalty
+    tentativeRegime: null,
+    lastConfirmedAt: new Date(),
+    transitionStartedAt: null,
+    confirmationCount: 0,
+    lastFdr: rawFdr,
+  });
+  
+  // Log the transition
+  await storage.createRegimeTransition({
+    companyId,
+    previousRegime: currentConfirmed,
+    newRegime: hysteresisResult,
+    fdr: rawFdr,
+    triggeredAt: new Date(),
+    hysteresisApplied: 1,
+    durationFilterApplied: 1,
+    confirmationRequired: 1,
+    confirmationCount: newConfirmationCount,
+    daysInPreviousRegime: daysSinceLastConfirm,
+    notes: transitionNotes,
+  });
+  
+  return { confirmedRegime: hysteresisResult, transitionOccurred: true, transitionDetails };
 }
 
 let companyIds: string[] = [];
@@ -91,14 +224,17 @@ export async function updateExternalEconomicData() {
       
       if (companies.length > 0) {
         for (const companyId of companies) {
-          const previousRegime = previousRegimes.get(companyId);
+          // Apply persistence enforcement: hysteresis + duration + confirmation
+          const { confirmedRegime, transitionOccurred, transitionDetails } = 
+            await applyPersistenceEnforcement(companyId, clampedFdr);
           
-          // Persist real economic data to database
+          // Persist economic data with both raw and persistence-filtered regime
           await storage.createEconomicSnapshot({
             companyId,
             timestamp: new Date(),
             fdr: clampedFdr,
-            regime,
+            regime, // Raw regime classification from canonical thresholds
+            confirmedRegime, // Persistence-filtered regime (hysteresis + duration + confirmation)
             gdpReal: gdpLatest ? parseFloat(gdpLatest) : null,
             gdpNominal: null, // We're using real GDP from FRED
             sp500Index: sp500Latest ? parseFloat(sp500Latest) : null,
@@ -107,13 +243,14 @@ export async function updateExternalEconomicData() {
             source: 'external'
           });
 
-          if (previousRegime && previousRegime !== regime) {
-            console.log(`[Background] 🚨 REGIME CHANGE detected for company ${companyId}: ${previousRegime} → ${regime} (FDR: ${clampedFdr.toFixed(2)})`);
+          // Only fire regime change notifications when persistence-filtered transition occurs
+          if (transitionOccurred && transitionDetails) {
+            console.log(`[Background] 🚨 REGIME CHANGE (persistence-filtered) for company ${companyId}: ${transitionDetails.previousRegime} → ${confirmedRegime} (FDR: ${clampedFdr.toFixed(2)}, confirmations: ${transitionDetails.confirmationCount})`);
             
-            globalCache.updateRegime(regime);
+            globalCache.updateRegime(confirmedRegime);
             
             // Fire webhook notification
-            webhookService.fireRegimeChange(companyId, previousRegime, regime, clampedFdr)
+            webhookService.fireRegimeChange(companyId, transitionDetails.previousRegime, confirmedRegime, clampedFdr)
               .catch(err => console.error(`Webhook error (regime_change) for company ${companyId}:`, err));
             
             // Broadcast dedicated regime change message via WebSocket
@@ -124,14 +261,17 @@ export async function updateExternalEconomicData() {
               timestamp: new Date().toISOString(),
               companyId,
               data: {
-                from: previousRegime,
-                to: regime,
+                from: transitionDetails.previousRegime,
+                to: confirmedRegime,
                 fdr: clampedFdr,
-                severity: (previousRegime === 'IMBALANCED_EXCESS' || regime === 'IMBALANCED_EXCESS') ? 'high' : 'medium',
+                severity: (transitionDetails.previousRegime === 'IMBALANCED_EXCESS' || confirmedRegime === 'IMBALANCED_EXCESS') ? 'high' : 'medium',
+                persistenceFiltered: true,
+                confirmations: transitionDetails.confirmationCount,
+                daysInPreviousRegime: transitionDetails.daysInPreviousRegime,
               },
             });
           }
-          previousRegimes.set(companyId, regime);
+          previousRegimes.set(companyId, confirmedRegime);
           
           // Invalidate regime-aware cache to ensure fresh data is fetched
           globalCache.invalidate(`economicData:regime:${companyId}`);
@@ -183,12 +323,16 @@ export async function updateExternalEconomicData() {
     
     if (companies.length > 0) {
       for (const companyId of companies) {
-        // Persist fallback data to database
+        // Apply persistence enforcement even for fallback data
+        const { confirmedRegime } = await applyPersistenceEnforcement(companyId, mockFdr);
+        
+        // Persist fallback data with both raw and confirmed regime
         await storage.createEconomicSnapshot({
           companyId,
           timestamp: new Date(),
           fdr: mockFdr,
           regime: mockRegime,
+          confirmedRegime,
           source: 'fallback'
         });
 
@@ -201,6 +345,7 @@ export async function updateExternalEconomicData() {
           data: { 
             fdr: mockFdr.toFixed(2), 
             regime: mockRegime,
+            confirmedRegime,
             source: 'fallback'
           },
         });

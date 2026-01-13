@@ -314,7 +314,8 @@ export const economicSnapshots = pgTable(
       .references(() => companies.id, { onDelete: "cascade" }),
     timestamp: timestamp("timestamp").notNull().defaultNow(),
     fdr: real("fdr").notNull(),
-    regime: text("regime").notNull(),
+    regime: text("regime").notNull(), // Raw regime classification from FDR
+    confirmedRegime: text("confirmed_regime"), // Persistence-filtered regime (after hysteresis/duration/confirmation)
     gdpReal: real("gdp_real"),
     gdpNominal: real("gdp_nominal"),
     sp500Index: real("sp500_index"),
@@ -328,6 +329,53 @@ export const economicSnapshots = pgTable(
       table.companyId,
       table.timestamp,
     ),
+  ],
+);
+
+// Regime State Tracking - Persistence enforcement for regime transitions
+// Tracks confirmed regime, tentative transitions, and confirmation counts per company
+export const regimeState = pgTable(
+  "regime_state",
+  {
+    companyId: varchar("company_id")
+      .primaryKey()
+      .references(() => companies.id, { onDelete: "cascade" }),
+    confirmedRegime: text("confirmed_regime").notNull().default("HEALTHY_EXPANSION"),
+    previousRegime: text("previous_regime"), // Tracks prior regime for 2x reversion penalty
+    tentativeRegime: text("tentative_regime"),
+    lastConfirmedAt: timestamp("last_confirmed_at").notNull().defaultNow(),
+    transitionStartedAt: timestamp("transition_started_at"),
+    confirmationCount: integer("confirmation_count").notNull().default(0),
+    lastFdr: real("last_fdr").notNull().default(1.0),
+    lastUpdatedAt: timestamp("last_updated_at").notNull().defaultNow(),
+  },
+);
+
+// Regime Transitions Audit Log - Records all regime changes with context
+export const regimeTransitions = pgTable(
+  "regime_transitions",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    companyId: varchar("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "cascade" }),
+    previousRegime: text("previous_regime").notNull(),
+    newRegime: text("new_regime").notNull(),
+    fdr: real("fdr").notNull(),
+    triggeredAt: timestamp("triggered_at").notNull().defaultNow(),
+    hysteresisApplied: integer("hysteresis_applied").notNull().default(0),
+    durationFilterApplied: integer("duration_filter_applied").notNull().default(0),
+    confirmationRequired: integer("confirmation_required").notNull().default(0),
+    confirmationCount: integer("confirmation_count").notNull().default(0),
+    daysInPreviousRegime: integer("days_in_previous_regime"),
+    notes: text("notes"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("regime_transitions_company_idx").on(table.companyId),
+    index("regime_transitions_triggered_idx").on(table.triggeredAt),
   ],
 );
 
@@ -3064,6 +3112,21 @@ export type EconomicSnapshot = typeof economicSnapshots.$inferSelect;
 export type InsertEconomicSnapshot = z.infer<
   typeof insertEconomicSnapshotSchema
 >;
+
+// Regime State Tracking
+export const insertRegimeStateSchema = createInsertSchema(regimeState);
+export const updateRegimeStateSchema = insertRegimeStateSchema.partial().required({ companyId: true });
+export type RegimeState = typeof regimeState.$inferSelect;
+export type InsertRegimeState = z.infer<typeof insertRegimeStateSchema>;
+export type UpdateRegimeState = z.infer<typeof updateRegimeStateSchema>;
+
+// Regime Transitions Audit Log
+export const insertRegimeTransitionSchema = createInsertSchema(regimeTransitions).omit({
+  id: true,
+  createdAt: true,
+});
+export type RegimeTransition = typeof regimeTransitions.$inferSelect;
+export type InsertRegimeTransition = z.infer<typeof insertRegimeTransitionSchema>;
 
 // Model Comparison Tracking - Prove Dual-Circuit Superiority over traditional models
 export const modelComparisons = pgTable(
