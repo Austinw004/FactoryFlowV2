@@ -19,6 +19,11 @@ import { TeamsConfigDialog } from "@/components/TeamsConfigDialog";
 import { LookerDialog } from "@/components/LookerDialog";
 import { N8nDialog } from "@/components/N8nDialog";
 import { ShopifyDialog } from "@/components/ShopifyDialog";
+import { SalesforceConfigDialog } from "@/components/SalesforceConfigDialog";
+import { JiraConfigDialog } from "@/components/JiraConfigDialog";
+import { LinearConfigDialog } from "@/components/LinearConfigDialog";
+import { NotionConfigDialog } from "@/components/NotionConfigDialog";
+import { GoogleCalendarConfigDialog } from "@/components/GoogleCalendarConfigDialog";
 import {
   Building2,
   MessageSquare,
@@ -56,7 +61,7 @@ import {
   Send,
   Clock,
 } from "lucide-react";
-import { SiSalesforce, SiHubspot, SiShopify, SiQuickbooks, SiSlack, SiGooglesheets, SiZapier, SiSap, SiOracle } from "react-icons/si";
+import { SiSalesforce, SiHubspot, SiShopify, SiQuickbooks, SiSlack, SiGooglesheets, SiZapier, SiSap, SiOracle, SiJira, SiLinear, SiNotion, SiGooglecalendar } from "react-icons/si";
 
 type IntegrationStatus = "connected" | "available" | "coming_soon";
 
@@ -94,7 +99,7 @@ const integrations: Integration[] = [
     name: "Salesforce",
     description: "Enterprise CRM integration for demand planning",
     category: "crm",
-    status: "coming_soon",
+    status: "available",
     icon: SiSalesforce,
     iconType: "si",
     valueProposition: "Leverage opportunity data for accurate demand forecasting",
@@ -614,6 +619,58 @@ const integrations: Integration[] = [
     features: ["Event subscriptions", "Custom payloads", "Retry logic", "Signature verification"],
   },
   
+  // Productivity & Project Management
+  {
+    id: "jira",
+    name: "Jira",
+    description: "Issue tracking and project management",
+    category: "productivity",
+    status: "available",
+    icon: SiJira,
+    iconType: "si",
+    valueProposition: "Track supply chain issues and procurement tasks",
+    features: ["Issue sync", "Project boards", "Sprint planning", "Workflow automation"],
+    setupTime: "5 minutes",
+    popular: true,
+  },
+  {
+    id: "linear",
+    name: "Linear",
+    description: "Modern project tracking platform",
+    category: "productivity",
+    status: "available",
+    icon: SiLinear,
+    iconType: "si",
+    valueProposition: "Fast issue tracking for agile teams",
+    features: ["Issue management", "Roadmap planning", "Cycle tracking", "GitHub sync"],
+    setupTime: "5 minutes",
+  },
+  {
+    id: "notion",
+    name: "Notion",
+    description: "Knowledge base and documentation",
+    category: "productivity",
+    status: "available",
+    icon: SiNotion,
+    iconType: "si",
+    valueProposition: "Centralized knowledge management",
+    features: ["Database sync", "Documentation", "Team wikis", "Process templates"],
+    setupTime: "5 minutes",
+    popular: true,
+  },
+  {
+    id: "google-calendar",
+    name: "Google Calendar",
+    description: "Calendar and meeting scheduling",
+    category: "productivity",
+    status: "available",
+    icon: SiGooglecalendar,
+    iconType: "si",
+    valueProposition: "Schedule S&OP meetings and planning sessions",
+    features: ["Meeting scheduling", "Event sync", "Reminder integration", "Team calendars"],
+    setupTime: "3 minutes",
+  },
+  
   // Document Management
   {
     id: "docusign",
@@ -691,6 +748,7 @@ const categories = [
   { id: "warehouse", name: "Warehouse", icon: Warehouse },
   { id: "quality", name: "Quality", icon: Shield },
   { id: "automation", name: "Automation", icon: Zap },
+  { id: "productivity", name: "Productivity", icon: CalendarCheck },
   { id: "documents", name: "Documents", icon: FileText },
   { id: "external", name: "External Data", icon: Globe },
 ];
@@ -722,6 +780,11 @@ export default function Integrations() {
   const [lookerDialogOpen, setLookerDialogOpen] = useState(false);
   const [n8nDialogOpen, setN8nDialogOpen] = useState(false);
   const [shopifyDialogOpen, setShopifyDialogOpen] = useState(false);
+  const [salesforceDialogOpen, setSalesforceDialogOpen] = useState(false);
+  const [jiraDialogOpen, setJiraDialogOpen] = useState(false);
+  const [linearDialogOpen, setLinearDialogOpen] = useState(false);
+  const [notionDialogOpen, setNotionDialogOpen] = useState(false);
+  const [googleCalendarDialogOpen, setGoogleCalendarDialogOpen] = useState(false);
 
   const filteredIntegrations = integrations.filter(integration => {
     const matchesSearch = integration.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -761,6 +824,16 @@ export default function Integrations() {
       setShopifyDialogOpen(true);
     } else if (integration.id === "make") {
       setZapierDialogOpen(true);
+    } else if (integration.id === "salesforce") {
+      setSalesforceDialogOpen(true);
+    } else if (integration.id === "jira") {
+      setJiraDialogOpen(true);
+    } else if (integration.id === "linear") {
+      setLinearDialogOpen(true);
+    } else if (integration.id === "notion") {
+      setNotionDialogOpen(true);
+    } else if (integration.id === "google-calendar") {
+      setGoogleCalendarDialogOpen(true);
     } else if (integration.status === "available") {
       toast({
         title: "Integration Setup",
@@ -1053,6 +1126,11 @@ export default function Integrations() {
       <LookerDialog open={lookerDialogOpen} onOpenChange={setLookerDialogOpen} />
       <N8nDialog open={n8nDialogOpen} onOpenChange={setN8nDialogOpen} />
       <ShopifyDialog open={shopifyDialogOpen} onOpenChange={setShopifyDialogOpen} />
+      <SalesforceConfigDialog open={salesforceDialogOpen} onOpenChange={setSalesforceDialogOpen} />
+      <JiraConfigDialog open={jiraDialogOpen} onOpenChange={setJiraDialogOpen} />
+      <LinearConfigDialog open={linearDialogOpen} onOpenChange={setLinearDialogOpen} />
+      <NotionConfigDialog open={notionDialogOpen} onOpenChange={setNotionDialogOpen} />
+      <GoogleCalendarConfigDialog open={googleCalendarDialogOpen} onOpenChange={setGoogleCalendarDialogOpen} />
     </div>
   );
 }
