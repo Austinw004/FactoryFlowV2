@@ -24,6 +24,11 @@ import { JiraConfigDialog } from "@/components/JiraConfigDialog";
 import { LinearConfigDialog } from "@/components/LinearConfigDialog";
 import { NotionConfigDialog } from "@/components/NotionConfigDialog";
 import { GoogleCalendarConfigDialog } from "@/components/GoogleCalendarConfigDialog";
+import { QuickBooksConfigDialog } from "@/components/QuickBooksConfigDialog";
+import { XeroConfigDialog } from "@/components/XeroConfigDialog";
+import { DocuSignConfigDialog } from "@/components/DocuSignConfigDialog";
+import { FedExConfigDialog } from "@/components/FedExConfigDialog";
+import { UPSConfigDialog } from "@/components/UPSConfigDialog";
 import {
   Building2,
   MessageSquare,
@@ -61,7 +66,7 @@ import {
   Send,
   Clock,
 } from "lucide-react";
-import { SiSalesforce, SiHubspot, SiShopify, SiQuickbooks, SiSlack, SiGooglesheets, SiZapier, SiSap, SiOracle, SiJira, SiLinear, SiNotion, SiGooglecalendar } from "react-icons/si";
+import { SiSalesforce, SiHubspot, SiShopify, SiQuickbooks, SiSlack, SiGooglesheets, SiZapier, SiSap, SiOracle, SiJira, SiLinear, SiNotion, SiGooglecalendar, SiXero } from "react-icons/si";
 
 type IntegrationStatus = "connected" | "available" | "coming_soon";
 
@@ -307,7 +312,7 @@ const integrations: Integration[] = [
     name: "FedEx",
     description: "Track shipments and delivery status",
     category: "logistics",
-    status: "coming_soon",
+    status: "available",
     icon: Truck,
     iconType: "lucide",
     valueProposition: "Real-time shipment visibility for inbound materials",
@@ -320,7 +325,7 @@ const integrations: Integration[] = [
     name: "UPS",
     description: "Package and freight tracking",
     category: "logistics",
-    status: "coming_soon",
+    status: "available",
     icon: Truck,
     iconType: "lucide",
     valueProposition: "Proactive logistics intelligence",
@@ -435,7 +440,7 @@ const integrations: Integration[] = [
     name: "QuickBooks",
     description: "Small business accounting",
     category: "finance",
-    status: "coming_soon",
+    status: "available",
     icon: SiQuickbooks,
     iconType: "si",
     valueProposition: "Financial visibility for procurement optimization",
@@ -448,9 +453,9 @@ const integrations: Integration[] = [
     name: "Xero",
     description: "Cloud accounting platform",
     category: "finance",
-    status: "coming_soon",
-    icon: DollarSign,
-    iconType: "lucide",
+    status: "available",
+    icon: SiXero,
+    iconType: "si",
     valueProposition: "Streamlined financial operations",
     features: ["Bill management", "Bank feeds", "Invoice tracking", "Reporting"],
     setupTime: "10 minutes",
@@ -677,7 +682,7 @@ const integrations: Integration[] = [
     name: "DocuSign",
     description: "Electronic signature platform",
     category: "documents",
-    status: "coming_soon",
+    status: "available",
     icon: FileText,
     iconType: "lucide",
     valueProposition: "Streamline contract and PO approvals",
@@ -785,6 +790,11 @@ export default function Integrations() {
   const [linearDialogOpen, setLinearDialogOpen] = useState(false);
   const [notionDialogOpen, setNotionDialogOpen] = useState(false);
   const [googleCalendarDialogOpen, setGoogleCalendarDialogOpen] = useState(false);
+  const [quickbooksDialogOpen, setQuickbooksDialogOpen] = useState(false);
+  const [xeroDialogOpen, setXeroDialogOpen] = useState(false);
+  const [docusignDialogOpen, setDocusignDialogOpen] = useState(false);
+  const [fedexDialogOpen, setFedexDialogOpen] = useState(false);
+  const [upsDialogOpen, setUpsDialogOpen] = useState(false);
 
   const filteredIntegrations = integrations.filter(integration => {
     const matchesSearch = integration.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -834,6 +844,16 @@ export default function Integrations() {
       setNotionDialogOpen(true);
     } else if (integration.id === "google-calendar") {
       setGoogleCalendarDialogOpen(true);
+    } else if (integration.id === "quickbooks") {
+      setQuickbooksDialogOpen(true);
+    } else if (integration.id === "xero") {
+      setXeroDialogOpen(true);
+    } else if (integration.id === "docusign") {
+      setDocusignDialogOpen(true);
+    } else if (integration.id === "fedex") {
+      setFedexDialogOpen(true);
+    } else if (integration.id === "ups") {
+      setUpsDialogOpen(true);
     } else if (integration.status === "available") {
       toast({
         title: "Integration Setup",
@@ -1131,6 +1151,11 @@ export default function Integrations() {
       <LinearConfigDialog open={linearDialogOpen} onOpenChange={setLinearDialogOpen} />
       <NotionConfigDialog open={notionDialogOpen} onOpenChange={setNotionDialogOpen} />
       <GoogleCalendarConfigDialog open={googleCalendarDialogOpen} onOpenChange={setGoogleCalendarDialogOpen} />
+      <QuickBooksConfigDialog open={quickbooksDialogOpen} onOpenChange={setQuickbooksDialogOpen} />
+      <XeroConfigDialog open={xeroDialogOpen} onOpenChange={setXeroDialogOpen} />
+      <DocuSignConfigDialog open={docusignDialogOpen} onOpenChange={setDocusignDialogOpen} />
+      <FedExConfigDialog open={fedexDialogOpen} onOpenChange={setFedexDialogOpen} />
+      <UPSConfigDialog open={upsDialogOpen} onOpenChange={setUpsDialogOpen} />
     </div>
   );
 }
