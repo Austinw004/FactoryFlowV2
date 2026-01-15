@@ -29,6 +29,11 @@ import { XeroConfigDialog } from "@/components/XeroConfigDialog";
 import { DocuSignConfigDialog } from "@/components/DocuSignConfigDialog";
 import { FedExConfigDialog } from "@/components/FedExConfigDialog";
 import { UPSConfigDialog } from "@/components/UPSConfigDialog";
+import { AmazonSellerConfigDialog } from "@/components/AmazonSellerConfigDialog";
+import { WooCommerceConfigDialog } from "@/components/WooCommerceConfigDialog";
+import { SharePointConfigDialog } from "@/components/SharePointConfigDialog";
+import { FlexportConfigDialog } from "@/components/FlexportConfigDialog";
+import { TableauConfigDialog } from "@/components/TableauConfigDialog";
 import {
   Building2,
   MessageSquare,
@@ -223,19 +228,20 @@ const integrations: Integration[] = [
     name: "Amazon Seller Central",
     description: "Marketplace demand intelligence",
     category: "ecommerce",
-    status: "coming_soon",
+    status: "available",
     icon: ShoppingCart,
     iconType: "lucide",
     valueProposition: "Forecast demand from marketplace sales",
     features: ["Sales data sync", "Inventory planning", "Buy Box analytics", "FBA integration"],
     setupTime: "10 minutes",
+    popular: true,
   },
   {
     id: "woocommerce",
     name: "WooCommerce",
     description: "WordPress e-commerce integration",
     category: "ecommerce",
-    status: "coming_soon",
+    status: "available",
     icon: ShoppingCart,
     iconType: "lucide",
     valueProposition: "Connect your WordPress store for demand signals",
@@ -337,12 +343,13 @@ const integrations: Integration[] = [
     name: "Flexport",
     description: "Global freight visibility",
     category: "logistics",
-    status: "coming_soon",
+    status: "available",
     icon: Globe,
     iconType: "lucide",
     valueProposition: "End-to-end supply chain visibility",
     features: ["Ocean freight", "Air cargo", "Trucking", "Customs clearance"],
     setupTime: "10 minutes",
+    popular: true,
   },
   {
     id: "project44",
@@ -694,12 +701,13 @@ const integrations: Integration[] = [
     name: "SharePoint",
     description: "Document management and collaboration",
     category: "documents",
-    status: "coming_soon",
+    status: "available",
     icon: FileText,
     iconType: "lucide",
     valueProposition: "Centralized document storage",
     features: ["File storage", "Version control", "Collaboration", "Permissions"],
     setupTime: "15 minutes",
+    popular: true,
   },
   
   // Weather & External Data
@@ -795,6 +803,11 @@ export default function Integrations() {
   const [docusignDialogOpen, setDocusignDialogOpen] = useState(false);
   const [fedexDialogOpen, setFedexDialogOpen] = useState(false);
   const [upsDialogOpen, setUpsDialogOpen] = useState(false);
+  const [amazonDialogOpen, setAmazonDialogOpen] = useState(false);
+  const [woocommerceDialogOpen, setWoocommerceDialogOpen] = useState(false);
+  const [sharepointDialogOpen, setSharepointDialogOpen] = useState(false);
+  const [flexportDialogOpen, setFlexportDialogOpen] = useState(false);
+  const [tableauDialogOpen, setTableauDialogOpen] = useState(false);
 
   const filteredIntegrations = integrations.filter(integration => {
     const matchesSearch = integration.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -823,7 +836,7 @@ export default function Integrations() {
     } else if (integration.id === "powerbi") {
       setPowerbiDialogOpen(true);
     } else if (integration.id === "tableau") {
-      setPowerbiDialogOpen(true);
+      setTableauDialogOpen(true);
     } else if (integration.id === "teams") {
       setTeamsDialogOpen(true);
     } else if (integration.id === "looker") {
@@ -854,6 +867,14 @@ export default function Integrations() {
       setFedexDialogOpen(true);
     } else if (integration.id === "ups") {
       setUpsDialogOpen(true);
+    } else if (integration.id === "amazon") {
+      setAmazonDialogOpen(true);
+    } else if (integration.id === "woocommerce") {
+      setWoocommerceDialogOpen(true);
+    } else if (integration.id === "sharepoint") {
+      setSharepointDialogOpen(true);
+    } else if (integration.id === "flexport") {
+      setFlexportDialogOpen(true);
     } else if (integration.status === "available") {
       toast({
         title: "Integration Setup",
@@ -1156,6 +1177,11 @@ export default function Integrations() {
       <DocuSignConfigDialog open={docusignDialogOpen} onOpenChange={setDocusignDialogOpen} />
       <FedExConfigDialog open={fedexDialogOpen} onOpenChange={setFedexDialogOpen} />
       <UPSConfigDialog open={upsDialogOpen} onOpenChange={setUpsDialogOpen} />
+      <AmazonSellerConfigDialog open={amazonDialogOpen} onOpenChange={setAmazonDialogOpen} />
+      <WooCommerceConfigDialog open={woocommerceDialogOpen} onOpenChange={setWoocommerceDialogOpen} />
+      <SharePointConfigDialog open={sharepointDialogOpen} onOpenChange={setSharepointDialogOpen} />
+      <FlexportConfigDialog open={flexportDialogOpen} onOpenChange={setFlexportDialogOpen} />
+      <TableauConfigDialog open={tableauDialogOpen} onOpenChange={setTableauDialogOpen} />
     </div>
   );
 }
