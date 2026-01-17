@@ -17210,7 +17210,10 @@ You'll receive emails for:
   
   app.post("/api/integrations/docusign/configure", isAuthenticated, async (req: any, res) => {
     try {
-      const { integrationKey, userId, accountId, rsaPrivateKey, syncOptions } = req.body;
+      const { integrationKey, secretKey, userId, accountId, syncOptions } = req.body;
+      if (!integrationKey || !secretKey || !accountId) {
+        return res.status(400).json({ error: "Missing required fields: integrationKey, secretKey, accountId" });
+      }
       const authUserId = req.user.claims.sub;
       const user = await storage.getUser(authUserId);
       if (!user?.companyId) {
@@ -17244,6 +17247,9 @@ You'll receive emails for:
   app.post("/api/integrations/fedex/configure", isAuthenticated, async (req: any, res) => {
     try {
       const { apiKey, secretKey, accountNumber, meterNumber, syncOptions } = req.body;
+      if (!apiKey || !secretKey || !accountNumber) {
+        return res.status(400).json({ error: "Missing required fields: apiKey, secretKey, accountNumber" });
+      }
       const authUserId = req.user.claims.sub;
       const user = await storage.getUser(authUserId);
       if (!user?.companyId) {
@@ -17277,6 +17283,9 @@ You'll receive emails for:
   app.post("/api/integrations/ups/configure", isAuthenticated, async (req: any, res) => {
     try {
       const { clientId, clientSecret, accountNumber, syncOptions } = req.body;
+      if (!clientId || !clientSecret) {
+        return res.status(400).json({ error: "Missing required fields: clientId, clientSecret" });
+      }
       const authUserId = req.user.claims.sub;
       const user = await storage.getUser(authUserId);
       if (!user?.companyId) {
@@ -17310,6 +17319,9 @@ You'll receive emails for:
   app.post("/api/integrations/quickbooks/configure", isAuthenticated, async (req: any, res) => {
     try {
       const { clientId, clientSecret, realmId, environment, syncOptions } = req.body;
+      if (!clientId || !clientSecret || !realmId) {
+        return res.status(400).json({ error: "Missing required fields: clientId, clientSecret, realmId" });
+      }
       const authUserId = req.user.claims.sub;
       const user = await storage.getUser(authUserId);
       if (!user?.companyId) {
@@ -17343,6 +17355,9 @@ You'll receive emails for:
   app.post("/api/integrations/xero/configure", isAuthenticated, async (req: any, res) => {
     try {
       const { clientId, clientSecret, tenantId, syncOptions } = req.body;
+      if (!clientId || !clientSecret) {
+        return res.status(400).json({ error: "Missing required fields: clientId, clientSecret" });
+      }
       const authUserId = req.user.claims.sub;
       const user = await storage.getUser(authUserId);
       if (!user?.companyId) {
@@ -17376,6 +17391,9 @@ You'll receive emails for:
   app.post("/api/integrations/looker/configure", isAuthenticated, async (req: any, res) => {
     try {
       const { instanceUrl, clientId, clientSecret, syncOptions } = req.body;
+      if (!instanceUrl || !clientId || !clientSecret) {
+        return res.status(400).json({ error: "Missing required fields: instanceUrl, clientId, clientSecret" });
+      }
       const authUserId = req.user.claims.sub;
       const user = await storage.getUser(authUserId);
       if (!user?.companyId) {
