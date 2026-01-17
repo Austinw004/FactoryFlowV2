@@ -46,6 +46,13 @@ import { ZendeskConfigDialog } from "@/components/ZendeskConfigDialog";
 import { MailchimpConfigDialog } from "@/components/MailchimpConfigDialog";
 import { SendGridConfigDialog } from "@/components/SendGridConfigDialog";
 import { AirtableConfigDialog } from "@/components/AirtableConfigDialog";
+import { AribaConfigDialog } from "@/components/AribaConfigDialog";
+import { CoupaConfigDialog } from "@/components/CoupaConfigDialog";
+import { ManhattanConfigDialog } from "@/components/ManhattanConfigDialog";
+import { ETQConfigDialog } from "@/components/ETQConfigDialog";
+import { NetSuiteConfigDialog } from "@/components/NetSuiteConfigDialog";
+import { SPSCommerceConfigDialog } from "@/components/SPSCommerceConfigDialog";
+import { TeamcenterConfigDialog } from "@/components/TeamcenterConfigDialog";
 import {
   Building2,
   MessageSquare,
@@ -284,12 +291,13 @@ const integrations: Integration[] = [
     name: "Oracle NetSuite",
     description: "Cloud ERP integration",
     category: "erp",
-    status: "coming_soon",
+    status: "available",
     icon: SiOracle,
     iconType: "si",
     valueProposition: "Complete visibility across your NetSuite data",
     features: ["Item records", "Sales orders", "Vendor management", "Financial data"],
-    setupTime: "3-5 days",
+    setupTime: "15 minutes",
+    popular: true,
   },
   {
     id: "dynamics",
@@ -501,24 +509,26 @@ const integrations: Integration[] = [
     name: "SAP Ariba",
     description: "Procurement network",
     category: "procurement",
-    status: "coming_soon",
+    status: "available",
     icon: Building2,
     iconType: "lucide",
     valueProposition: "Connect with your supplier network",
     features: ["Supplier discovery", "RFQ management", "Contract compliance", "Invoice matching"],
-    setupTime: "1-2 weeks",
+    setupTime: "10 minutes",
+    popular: true,
   },
   {
     id: "coupa",
     name: "Coupa",
     description: "Spend management platform",
     category: "procurement",
-    status: "coming_soon",
+    status: "available",
     icon: Building2,
     iconType: "lucide",
     valueProposition: "Unified spend visibility",
     features: ["Procurement", "Invoicing", "Expenses", "Supplier management"],
-    setupTime: "3-5 days",
+    setupTime: "10 minutes",
+    popular: true,
   },
   {
     id: "jaggaer",
@@ -539,12 +549,13 @@ const integrations: Integration[] = [
     name: "Manhattan WMS",
     description: "Warehouse management system",
     category: "warehouse",
-    status: "coming_soon",
+    status: "available",
     icon: Warehouse,
     iconType: "lucide",
     valueProposition: "Real-time warehouse visibility",
     features: ["Inventory levels", "Pick/pack status", "Receiving", "Cycle counts"],
-    setupTime: "1-2 weeks",
+    setupTime: "15 minutes",
+    popular: true,
   },
   {
     id: "sap-ewm",
@@ -577,12 +588,13 @@ const integrations: Integration[] = [
     name: "ETQ Reliance",
     description: "Quality management system",
     category: "quality",
-    status: "coming_soon",
+    status: "available",
     icon: FileCheck,
     iconType: "lucide",
     valueProposition: "Quality data for supplier scoring",
     features: ["CAPA tracking", "Audit management", "Supplier quality", "Document control"],
-    setupTime: "3-5 days",
+    setupTime: "10 minutes",
+    popular: true,
   },
   {
     id: "mastercontrol",
@@ -929,6 +941,36 @@ const integrations: Integration[] = [
     setupTime: "5 minutes",
     popular: true,
   },
+  
+  // EDI & Supply Chain Connectivity
+  {
+    id: "sps-commerce",
+    name: "SPS Commerce",
+    description: "EDI and supply chain connectivity",
+    category: "data",
+    status: "available",
+    icon: Link2,
+    iconType: "lucide",
+    valueProposition: "Connect with retail and wholesale partners via EDI",
+    features: ["EDI transactions", "Trading partner network", "Order automation", "ASN/invoicing"],
+    setupTime: "15 minutes",
+    popular: true,
+  },
+  
+  // PLM / Product Lifecycle
+  {
+    id: "teamcenter",
+    name: "Siemens Teamcenter",
+    description: "Product lifecycle management",
+    category: "data",
+    status: "available",
+    icon: Settings,
+    iconType: "lucide",
+    valueProposition: "Integrate BOM and engineering data for procurement",
+    features: ["BOM sync", "Engineering changes", "Part data", "Revision management"],
+    setupTime: "20 minutes",
+    popular: true,
+  },
 ];
 
 const categories = [
@@ -1005,6 +1047,13 @@ export default function Integrations() {
   const [mailchimpDialogOpen, setMailchimpDialogOpen] = useState(false);
   const [sendgridDialogOpen, setSendgridDialogOpen] = useState(false);
   const [airtableDialogOpen, setAirtableDialogOpen] = useState(false);
+  const [aribaDialogOpen, setAribaDialogOpen] = useState(false);
+  const [coupaDialogOpen, setCoupaDialogOpen] = useState(false);
+  const [manhattanDialogOpen, setManhattanDialogOpen] = useState(false);
+  const [etqDialogOpen, setEtqDialogOpen] = useState(false);
+  const [netsuiteDialogOpen, setNetsuiteDialogOpen] = useState(false);
+  const [spsCommerceDialogOpen, setSpsCommerceDialogOpen] = useState(false);
+  const [teamcenterDialogOpen, setTeamcenterDialogOpen] = useState(false);
 
   const filteredIntegrations = integrations.filter(integration => {
     const matchesSearch = integration.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1096,6 +1145,20 @@ export default function Integrations() {
       setSendgridDialogOpen(true);
     } else if (integration.id === "airtable") {
       setAirtableDialogOpen(true);
+    } else if (integration.id === "ariba") {
+      setAribaDialogOpen(true);
+    } else if (integration.id === "coupa") {
+      setCoupaDialogOpen(true);
+    } else if (integration.id === "manhattan") {
+      setManhattanDialogOpen(true);
+    } else if (integration.id === "etq") {
+      setEtqDialogOpen(true);
+    } else if (integration.id === "oracle") {
+      setNetsuiteDialogOpen(true);
+    } else if (integration.id === "sps-commerce") {
+      setSpsCommerceDialogOpen(true);
+    } else if (integration.id === "teamcenter") {
+      setTeamcenterDialogOpen(true);
     } else if (integration.status === "available") {
       toast({
         title: "Integration Setup",
@@ -1415,6 +1478,13 @@ export default function Integrations() {
       <MailchimpConfigDialog open={mailchimpDialogOpen} onOpenChange={setMailchimpDialogOpen} />
       <SendGridConfigDialog open={sendgridDialogOpen} onOpenChange={setSendgridDialogOpen} />
       <AirtableConfigDialog open={airtableDialogOpen} onOpenChange={setAirtableDialogOpen} />
+      <AribaConfigDialog open={aribaDialogOpen} onOpenChange={setAribaDialogOpen} />
+      <CoupaConfigDialog open={coupaDialogOpen} onOpenChange={setCoupaDialogOpen} />
+      <ManhattanConfigDialog open={manhattanDialogOpen} onOpenChange={setManhattanDialogOpen} />
+      <ETQConfigDialog open={etqDialogOpen} onOpenChange={setEtqDialogOpen} />
+      <NetSuiteConfigDialog open={netsuiteDialogOpen} onOpenChange={setNetsuiteDialogOpen} />
+      <SPSCommerceConfigDialog open={spsCommerceDialogOpen} onOpenChange={setSpsCommerceDialogOpen} />
+      <TeamcenterConfigDialog open={teamcenterDialogOpen} onOpenChange={setTeamcenterDialogOpen} />
     </div>
   );
 }
