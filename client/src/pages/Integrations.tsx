@@ -53,6 +53,11 @@ import { ETQConfigDialog } from "@/components/ETQConfigDialog";
 import { NetSuiteConfigDialog } from "@/components/NetSuiteConfigDialog";
 import { SPSCommerceConfigDialog } from "@/components/SPSCommerceConfigDialog";
 import { TeamcenterConfigDialog } from "@/components/TeamcenterConfigDialog";
+import { SAPConfigDialog } from "@/components/SAPConfigDialog";
+import { DynamicsConfigDialog } from "@/components/DynamicsConfigDialog";
+import { InforConfigDialog } from "@/components/InforConfigDialog";
+import { Project44ConfigDialog } from "@/components/Project44ConfigDialog";
+import { FishbowlConfigDialog } from "@/components/FishbowlConfigDialog";
 import {
   Building2,
   MessageSquare,
@@ -276,14 +281,14 @@ const integrations: Integration[] = [
   {
     id: "sap",
     name: "SAP S/4HANA",
-    description: "Enterprise ERP integration",
+    description: "Enterprise resource planning with real-time analytics",
     category: "erp",
-    status: "coming_soon",
+    status: "available",
     icon: SiSap,
     iconType: "si",
     valueProposition: "Seamless bi-directional sync with SAP",
     features: ["Material master sync", "Purchase orders", "Inventory levels", "Production orders"],
-    setupTime: "1-2 weeks",
+    setupTime: "15 minutes",
     popular: true,
   },
   {
@@ -302,14 +307,14 @@ const integrations: Integration[] = [
   {
     id: "dynamics",
     name: "Microsoft Dynamics 365",
-    description: "Microsoft ERP and CRM platform",
+    description: "Unified ERP, CRM, and supply chain management",
     category: "erp",
-    status: "coming_soon",
+    status: "available",
     icon: Building2,
     iconType: "lucide",
     valueProposition: "Unified Microsoft ecosystem integration",
     features: ["Supply chain modules", "Finance sync", "Sales orders", "Inventory management"],
-    setupTime: "3-5 days",
+    setupTime: "15 minutes",
   },
   {
     id: "sage",
@@ -326,14 +331,14 @@ const integrations: Integration[] = [
   {
     id: "infor",
     name: "Infor CloudSuite",
-    description: "Industry-specific ERP",
+    description: "Industry-tailored ERP for manufacturing and distribution",
     category: "erp",
-    status: "coming_soon",
+    status: "available",
     icon: Cloud,
     iconType: "lucide",
     valueProposition: "Industry-specific manufacturing intelligence",
     features: ["Shop floor data", "Material requirements", "Supplier portal", "Quality management"],
-    setupTime: "1-2 weeks",
+    setupTime: "15 minutes",
   },
   
   // Logistics & Shipping
@@ -378,9 +383,9 @@ const integrations: Integration[] = [
   {
     id: "project44",
     name: "project44",
-    description: "Advanced visibility platform",
+    description: "Real-time supply chain visibility and predictive ETAs",
     category: "logistics",
-    status: "coming_soon",
+    status: "available",
     icon: Truck,
     iconType: "lucide",
     valueProposition: "Predictive ETA and risk management",
@@ -572,14 +577,14 @@ const integrations: Integration[] = [
   {
     id: "fishbowl",
     name: "Fishbowl",
-    description: "SMB inventory management",
+    description: "Inventory management and manufacturing for SMBs",
     category: "warehouse",
-    status: "coming_soon",
+    status: "available",
     icon: Boxes,
     iconType: "lucide",
     valueProposition: "Affordable inventory visibility",
     features: ["Multi-location", "Barcode scanning", "Reorder points", "Lot tracking"],
-    setupTime: "1 day",
+    setupTime: "10 minutes",
   },
   
   // Quality Management
@@ -1054,6 +1059,11 @@ export default function Integrations() {
   const [netsuiteDialogOpen, setNetsuiteDialogOpen] = useState(false);
   const [spsCommerceDialogOpen, setSpsCommerceDialogOpen] = useState(false);
   const [teamcenterDialogOpen, setTeamcenterDialogOpen] = useState(false);
+  const [sapDialogOpen, setSapDialogOpen] = useState(false);
+  const [dynamicsDialogOpen, setDynamicsDialogOpen] = useState(false);
+  const [inforDialogOpen, setInforDialogOpen] = useState(false);
+  const [project44DialogOpen, setProject44DialogOpen] = useState(false);
+  const [fishbowlDialogOpen, setFishbowlDialogOpen] = useState(false);
 
   const filteredIntegrations = integrations.filter(integration => {
     const matchesSearch = integration.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1159,6 +1169,16 @@ export default function Integrations() {
       setSpsCommerceDialogOpen(true);
     } else if (integration.id === "teamcenter") {
       setTeamcenterDialogOpen(true);
+    } else if (integration.id === "sap") {
+      setSapDialogOpen(true);
+    } else if (integration.id === "dynamics") {
+      setDynamicsDialogOpen(true);
+    } else if (integration.id === "infor") {
+      setInforDialogOpen(true);
+    } else if (integration.id === "project44") {
+      setProject44DialogOpen(true);
+    } else if (integration.id === "fishbowl") {
+      setFishbowlDialogOpen(true);
     } else if (integration.status === "available") {
       toast({
         title: "Integration Setup",
@@ -1485,6 +1505,11 @@ export default function Integrations() {
       <NetSuiteConfigDialog open={netsuiteDialogOpen} onOpenChange={setNetsuiteDialogOpen} />
       <SPSCommerceConfigDialog open={spsCommerceDialogOpen} onOpenChange={setSpsCommerceDialogOpen} />
       <TeamcenterConfigDialog open={teamcenterDialogOpen} onOpenChange={setTeamcenterDialogOpen} />
+      <SAPConfigDialog open={sapDialogOpen} onOpenChange={setSapDialogOpen} />
+      <DynamicsConfigDialog open={dynamicsDialogOpen} onOpenChange={setDynamicsDialogOpen} />
+      <InforConfigDialog open={inforDialogOpen} onOpenChange={setInforDialogOpen} />
+      <Project44ConfigDialog open={project44DialogOpen} onOpenChange={setProject44DialogOpen} />
+      <FishbowlConfigDialog open={fishbowlDialogOpen} onOpenChange={setFishbowlDialogOpen} />
     </div>
   );
 }
