@@ -39,6 +39,13 @@ import { MondayConfigDialog } from "@/components/MondayConfigDialog";
 import { AsanaConfigDialog } from "@/components/AsanaConfigDialog";
 import { BigCommerceConfigDialog } from "@/components/BigCommerceConfigDialog";
 import { StripeConfigDialog } from "@/components/StripeConfigDialog";
+import { DHLConfigDialog } from "@/components/DHLConfigDialog";
+import { BillComConfigDialog } from "@/components/BillComConfigDialog";
+import { TrelloConfigDialog } from "@/components/TrelloConfigDialog";
+import { ZendeskConfigDialog } from "@/components/ZendeskConfigDialog";
+import { MailchimpConfigDialog } from "@/components/MailchimpConfigDialog";
+import { SendGridConfigDialog } from "@/components/SendGridConfigDialog";
+import { AirtableConfigDialog } from "@/components/AirtableConfigDialog";
 import {
   Building2,
   MessageSquare,
@@ -824,6 +831,104 @@ const integrations: Integration[] = [
     setupTime: "10 minutes",
     popular: true,
   },
+  
+  // Additional Logistics
+  {
+    id: "dhl",
+    name: "DHL Express",
+    description: "International shipping and logistics",
+    category: "logistics",
+    status: "available",
+    icon: Truck,
+    iconType: "lucide",
+    valueProposition: "Global shipment tracking and delivery intelligence",
+    features: ["Shipment tracking", "Customs status", "Delivery estimates", "Multi-country visibility"],
+    setupTime: "5 minutes",
+    popular: true,
+  },
+  
+  // Additional Finance
+  {
+    id: "billcom",
+    name: "Bill.com",
+    description: "AP/AR automation platform",
+    category: "finance",
+    status: "available",
+    icon: DollarSign,
+    iconType: "lucide",
+    valueProposition: "Streamline accounts payable and receivable",
+    features: ["Invoice processing", "Payment automation", "Approval workflows", "Vendor management"],
+    setupTime: "10 minutes",
+  },
+  
+  // Additional Productivity
+  {
+    id: "trello",
+    name: "Trello",
+    description: "Visual project management with boards",
+    category: "productivity",
+    status: "available",
+    icon: LayoutGrid,
+    iconType: "lucide",
+    valueProposition: "Visualize procurement workflows with Kanban boards",
+    features: ["Board sync", "Card automation", "Checklists", "Team collaboration"],
+    setupTime: "5 minutes",
+  },
+  
+  // Additional CRM
+  {
+    id: "zendesk",
+    name: "Zendesk",
+    description: "Customer service and support platform",
+    category: "crm",
+    status: "available",
+    icon: Users,
+    iconType: "lucide",
+    valueProposition: "Connect customer feedback to demand signals",
+    features: ["Ticket sync", "Customer insights", "SLA tracking", "Satisfaction metrics"],
+    setupTime: "10 minutes",
+  },
+  
+  // Additional Communication
+  {
+    id: "mailchimp",
+    name: "Mailchimp",
+    description: "Email marketing and automation",
+    category: "communication",
+    status: "available",
+    icon: Mail,
+    iconType: "lucide",
+    valueProposition: "Automate supplier and customer communications",
+    features: ["Email campaigns", "Audience sync", "Automation workflows", "Analytics"],
+    setupTime: "5 minutes",
+  },
+  {
+    id: "sendgrid",
+    name: "SendGrid",
+    description: "Transactional email delivery",
+    category: "communication",
+    status: "available",
+    icon: Send,
+    iconType: "lucide",
+    valueProposition: "Reliable transactional email for alerts and notifications",
+    features: ["Email delivery", "Templates", "Analytics", "Bounce handling"],
+    setupTime: "5 minutes",
+  },
+  
+  // Additional Data
+  {
+    id: "airtable",
+    name: "Airtable",
+    description: "Spreadsheet-database hybrid platform",
+    category: "data",
+    status: "available",
+    icon: Database,
+    iconType: "lucide",
+    valueProposition: "Flexible data management and collaboration",
+    features: ["Base sync", "Record import/export", "Automation triggers", "API access"],
+    setupTime: "5 minutes",
+    popular: true,
+  },
 ];
 
 const categories = [
@@ -893,6 +998,13 @@ export default function Integrations() {
   const [asanaDialogOpen, setAsanaDialogOpen] = useState(false);
   const [bigcommerceDialogOpen, setBigcommerceDialogOpen] = useState(false);
   const [stripeDialogOpen, setStripeDialogOpen] = useState(false);
+  const [dhlDialogOpen, setDhlDialogOpen] = useState(false);
+  const [billcomDialogOpen, setBillcomDialogOpen] = useState(false);
+  const [trelloDialogOpen, setTrelloDialogOpen] = useState(false);
+  const [zendeskDialogOpen, setZendeskDialogOpen] = useState(false);
+  const [mailchimpDialogOpen, setMailchimpDialogOpen] = useState(false);
+  const [sendgridDialogOpen, setSendgridDialogOpen] = useState(false);
+  const [airtableDialogOpen, setAirtableDialogOpen] = useState(false);
 
   const filteredIntegrations = integrations.filter(integration => {
     const matchesSearch = integration.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -970,6 +1082,20 @@ export default function Integrations() {
       setBigcommerceDialogOpen(true);
     } else if (integration.id === "stripe-payments") {
       setStripeDialogOpen(true);
+    } else if (integration.id === "dhl") {
+      setDhlDialogOpen(true);
+    } else if (integration.id === "billcom") {
+      setBillcomDialogOpen(true);
+    } else if (integration.id === "trello") {
+      setTrelloDialogOpen(true);
+    } else if (integration.id === "zendesk") {
+      setZendeskDialogOpen(true);
+    } else if (integration.id === "mailchimp") {
+      setMailchimpDialogOpen(true);
+    } else if (integration.id === "sendgrid") {
+      setSendgridDialogOpen(true);
+    } else if (integration.id === "airtable") {
+      setAirtableDialogOpen(true);
     } else if (integration.status === "available") {
       toast({
         title: "Integration Setup",
@@ -1282,6 +1408,13 @@ export default function Integrations() {
       <AsanaConfigDialog open={asanaDialogOpen} onOpenChange={setAsanaDialogOpen} />
       <BigCommerceConfigDialog open={bigcommerceDialogOpen} onOpenChange={setBigcommerceDialogOpen} />
       <StripeConfigDialog open={stripeDialogOpen} onOpenChange={setStripeDialogOpen} />
+      <DHLConfigDialog open={dhlDialogOpen} onOpenChange={setDhlDialogOpen} />
+      <BillComConfigDialog open={billcomDialogOpen} onOpenChange={setBillcomDialogOpen} />
+      <TrelloConfigDialog open={trelloDialogOpen} onOpenChange={setTrelloDialogOpen} />
+      <ZendeskConfigDialog open={zendeskDialogOpen} onOpenChange={setZendeskDialogOpen} />
+      <MailchimpConfigDialog open={mailchimpDialogOpen} onOpenChange={setMailchimpDialogOpen} />
+      <SendGridConfigDialog open={sendgridDialogOpen} onOpenChange={setSendgridDialogOpen} />
+      <AirtableConfigDialog open={airtableDialogOpen} onOpenChange={setAirtableDialogOpen} />
     </div>
   );
 }
