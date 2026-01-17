@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Loader2, CheckCircle, ShoppingBag } from "lucide-react";
 
 interface BigCommerceConfigDialogProps {
@@ -79,6 +79,8 @@ export function BigCommerceConfigDialog({ open, onOpenChange }: BigCommerceConfi
         ...config,
         enabled: true,
       });
+      queryClient.invalidateQueries({ queryKey: ["/api/integrations/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/integrations/health"] });
       toast({
         title: "Configuration saved",
         description: "BigCommerce integration has been configured",

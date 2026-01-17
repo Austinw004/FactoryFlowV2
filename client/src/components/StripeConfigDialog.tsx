@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Loader2, CheckCircle, CreditCard } from "lucide-react";
 
 interface StripeConfigDialogProps {
@@ -79,6 +79,8 @@ export function StripeConfigDialog({ open, onOpenChange }: StripeConfigDialogPro
         ...config,
         enabled: true,
       });
+      queryClient.invalidateQueries({ queryKey: ["/api/integrations/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/integrations/health"] });
       toast({
         title: "Configuration saved",
         description: "Stripe integration has been configured",

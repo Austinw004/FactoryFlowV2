@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Loader2, CheckCircle, ListTodo } from "lucide-react";
 
 interface AsanaConfigDialogProps {
@@ -77,6 +77,8 @@ export function AsanaConfigDialog({ open, onOpenChange }: AsanaConfigDialogProps
         ...config,
         enabled: true,
       });
+      queryClient.invalidateQueries({ queryKey: ["/api/integrations/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/integrations/health"] });
       toast({
         title: "Configuration saved",
         description: "Asana integration has been configured",
