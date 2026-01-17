@@ -34,6 +34,11 @@ import { WooCommerceConfigDialog } from "@/components/WooCommerceConfigDialog";
 import { SharePointConfigDialog } from "@/components/SharePointConfigDialog";
 import { FlexportConfigDialog } from "@/components/FlexportConfigDialog";
 import { TableauConfigDialog } from "@/components/TableauConfigDialog";
+import { SnowflakeConfigDialog } from "@/components/SnowflakeConfigDialog";
+import { MondayConfigDialog } from "@/components/MondayConfigDialog";
+import { AsanaConfigDialog } from "@/components/AsanaConfigDialog";
+import { BigCommerceConfigDialog } from "@/components/BigCommerceConfigDialog";
+import { StripeConfigDialog } from "@/components/StripeConfigDialog";
 import {
   Building2,
   MessageSquare,
@@ -70,6 +75,10 @@ import {
   FileCheck,
   Send,
   Clock,
+  LayoutGrid,
+  ListTodo,
+  ShoppingBag,
+  CreditCard,
 } from "lucide-react";
 import { SiSalesforce, SiHubspot, SiShopify, SiQuickbooks, SiSlack, SiGooglesheets, SiZapier, SiSap, SiOracle, SiJira, SiLinear, SiNotion, SiGooglecalendar, SiXero } from "react-icons/si";
 
@@ -744,6 +753,77 @@ const integrations: Integration[] = [
     valueProposition: "Optimal procurement timing",
     features: ["110+ commodities", "Futures curves", "Price alerts", "Historical trends"],
   },
+  
+  // New Data Warehouse & Analytics
+  {
+    id: "snowflake",
+    name: "Snowflake",
+    description: "Cloud data warehouse integration",
+    category: "analytics",
+    status: "available",
+    icon: Database,
+    iconType: "lucide",
+    valueProposition: "Export data to your data warehouse for advanced analytics",
+    features: ["Data export", "Scheduled sync", "Multiple datasets", "SQL access"],
+    setupTime: "15 minutes",
+    popular: true,
+  },
+  
+  // New Productivity Integrations
+  {
+    id: "monday",
+    name: "Monday.com",
+    description: "Work management platform",
+    category: "productivity",
+    status: "available",
+    icon: LayoutGrid,
+    iconType: "lucide",
+    valueProposition: "Track procurement and operations tasks",
+    features: ["Board sync", "Task automation", "Status updates", "Team collaboration"],
+    setupTime: "5 minutes",
+    popular: true,
+  },
+  {
+    id: "asana",
+    name: "Asana",
+    description: "Project and task management",
+    category: "productivity",
+    status: "available",
+    icon: ListTodo,
+    iconType: "lucide",
+    valueProposition: "Manage supply chain projects and tasks",
+    features: ["Project sync", "Task tracking", "Subtasks", "Team assignments"],
+    setupTime: "5 minutes",
+  },
+  
+  // New E-commerce
+  {
+    id: "bigcommerce",
+    name: "BigCommerce",
+    description: "Enterprise e-commerce platform",
+    category: "ecommerce",
+    status: "available",
+    icon: ShoppingBag,
+    iconType: "lucide",
+    valueProposition: "Sync orders and inventory from your BigCommerce store",
+    features: ["Order sync", "Product catalog", "Inventory levels", "Customer data"],
+    setupTime: "10 minutes",
+  },
+  
+  // Payments
+  {
+    id: "stripe-payments",
+    name: "Stripe",
+    description: "Payment processing and reconciliation",
+    category: "finance",
+    status: "available",
+    icon: CreditCard,
+    iconType: "lucide",
+    valueProposition: "Automate payment tracking and supplier reconciliation",
+    features: ["Payment sync", "Invoice tracking", "Subscription management", "Auto-reconciliation"],
+    setupTime: "10 minutes",
+    popular: true,
+  },
 ];
 
 const categories = [
@@ -808,6 +888,11 @@ export default function Integrations() {
   const [sharepointDialogOpen, setSharepointDialogOpen] = useState(false);
   const [flexportDialogOpen, setFlexportDialogOpen] = useState(false);
   const [tableauDialogOpen, setTableauDialogOpen] = useState(false);
+  const [snowflakeDialogOpen, setSnowflakeDialogOpen] = useState(false);
+  const [mondayDialogOpen, setMondayDialogOpen] = useState(false);
+  const [asanaDialogOpen, setAsanaDialogOpen] = useState(false);
+  const [bigcommerceDialogOpen, setBigcommerceDialogOpen] = useState(false);
+  const [stripeDialogOpen, setStripeDialogOpen] = useState(false);
 
   const filteredIntegrations = integrations.filter(integration => {
     const matchesSearch = integration.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -875,6 +960,16 @@ export default function Integrations() {
       setSharepointDialogOpen(true);
     } else if (integration.id === "flexport") {
       setFlexportDialogOpen(true);
+    } else if (integration.id === "snowflake") {
+      setSnowflakeDialogOpen(true);
+    } else if (integration.id === "monday") {
+      setMondayDialogOpen(true);
+    } else if (integration.id === "asana") {
+      setAsanaDialogOpen(true);
+    } else if (integration.id === "bigcommerce") {
+      setBigcommerceDialogOpen(true);
+    } else if (integration.id === "stripe-payments") {
+      setStripeDialogOpen(true);
     } else if (integration.status === "available") {
       toast({
         title: "Integration Setup",
@@ -1182,6 +1277,11 @@ export default function Integrations() {
       <SharePointConfigDialog open={sharepointDialogOpen} onOpenChange={setSharepointDialogOpen} />
       <FlexportConfigDialog open={flexportDialogOpen} onOpenChange={setFlexportDialogOpen} />
       <TableauConfigDialog open={tableauDialogOpen} onOpenChange={setTableauDialogOpen} />
+      <SnowflakeConfigDialog open={snowflakeDialogOpen} onOpenChange={setSnowflakeDialogOpen} />
+      <MondayConfigDialog open={mondayDialogOpen} onOpenChange={setMondayDialogOpen} />
+      <AsanaConfigDialog open={asanaDialogOpen} onOpenChange={setAsanaDialogOpen} />
+      <BigCommerceConfigDialog open={bigcommerceDialogOpen} onOpenChange={setBigcommerceDialogOpen} />
+      <StripeConfigDialog open={stripeDialogOpen} onOpenChange={setStripeDialogOpen} />
     </div>
   );
 }
