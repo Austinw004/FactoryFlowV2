@@ -51,6 +51,7 @@ export function UPSConfigDialog({ open, onOpenChange }: UPSConfigDialogProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/integrations/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/integrations/health"] });
       toast({
         title: "UPS Connected",
         description: "Package tracking and shipping rates are now active.",

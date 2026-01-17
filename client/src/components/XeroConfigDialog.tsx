@@ -51,6 +51,7 @@ export function XeroConfigDialog({ open, onOpenChange }: XeroConfigDialogProps) 
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/integrations/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/integrations/health"] });
       toast({
         title: "Xero Connected",
         description: "Your cloud accounting integration is now active.",

@@ -51,6 +51,7 @@ export function QuickBooksConfigDialog({ open, onOpenChange }: QuickBooksConfigD
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/integrations/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/integrations/health"] });
       toast({
         title: "QuickBooks Connected",
         description: "Your accounting integration is now active. Financial data will sync automatically.",

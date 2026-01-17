@@ -53,6 +53,7 @@ export function FedExConfigDialog({ open, onOpenChange }: FedExConfigDialogProps
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/integrations/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/integrations/health"] });
       toast({
         title: "FedEx Connected",
         description: "Shipment tracking and rate quotes are now active.",

@@ -51,6 +51,7 @@ export function DocuSignConfigDialog({ open, onOpenChange }: DocuSignConfigDialo
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/integrations/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/integrations/health"] });
       toast({
         title: "DocuSign Connected",
         description: "Electronic signature integration is now active.",
