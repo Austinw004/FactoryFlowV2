@@ -16117,6 +16117,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test Shopify connection
+  app.post("/api/integrations/shopify/test", isAuthenticated, async (req: any, res) => {
+    try {
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+
+      const { getShopifyIntegration } = await import("./lib/shopifyIntegration");
+      const integration = await getShopifyIntegration(user.companyId);
+      
+      if (!integration) {
+        return res.json({ success: false, error: "Shopify not configured - missing domain or API key" });
+      }
+
+      const result = await integration.testConnection();
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error testing Shopify:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Sync Shopify data (orders as demand signals, products as materials)
+  app.post("/api/integrations/shopify/sync", isAuthenticated, async (req: any, res) => {
+    try {
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+
+      const { runShopifySync } = await import("./lib/shopifyIntegration");
+      const result = await runShopifySync(user.companyId);
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error syncing Shopify:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // Shopify inbound webhook handler with HMAC verification
   app.post("/api/webhooks/inbound/shopify", async (req, res) => {
     try {
@@ -16811,7 +16853,8 @@ You'll receive emails for:
       res.status(500).json({ error: error.message });
     }
   });
-  
+
+  // Test Jira connection
   app.post("/api/integrations/jira/test", isAuthenticated, async (req: any, res) => {
     try {
       const authUserId = req.user.claims.sub;
@@ -16819,37 +16862,70 @@ You'll receive emails for:
       if (!user?.companyId) {
         return res.status(401).json({ error: "No company associated" });
       }
+
+      const { getJiraIntegration } = await import("./lib/jiraIntegration");
+      const integration = await getJiraIntegration(user.companyId);
       
-      const company = await storage.getCompany(user.companyId);
-      if (!company?.jiraApiToken || !company?.jiraDomain) {
-        return res.status(400).json({ success: false, message: "Jira credentials not configured" });
+      if (!integration) {
+        return res.json({ success: false, error: "Jira not configured - missing domain, email, or API token" });
       }
-      
-      // Test Jira API connectivity (requires user email from the user record)
-      const userEmail = user.email || req.body?.email;
-      if (!userEmail) {
-        return res.status(400).json({ success: false, message: "User email required for Jira authentication" });
-      }
-      
-      const response = await axios.get(`https://${company.jiraDomain}.atlassian.net/rest/api/3/myself`, {
-        headers: {
-          "Authorization": `Basic ${Buffer.from(`${userEmail}:${company.jiraApiToken}`).toString('base64')}`,
-          "Accept": "application/json",
-        },
-        timeout: 5000,
-      });
-      
-      res.json({ 
-        success: true, 
-        message: "Jira connection successful",
-        user: response.data?.displayName || "Connected"
-      });
+
+      const result = await integration.testConnection();
+      res.json(result);
     } catch (error: any) {
       console.error("Error testing Jira:", error);
-      res.status(500).json({ success: false, message: error.response?.data?.message || error.message });
+      res.status(500).json({ success: false, error: error.message });
     }
   });
-  
+
+  // Fetch Jira projects
+  app.get("/api/integrations/jira/projects", isAuthenticated, async (req: any, res) => {
+    try {
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+
+      const { getJiraIntegration } = await import("./lib/jiraIntegration");
+      const integration = await getJiraIntegration(user.companyId);
+      
+      if (!integration) {
+        return res.json({ success: false, error: "Jira not configured" });
+      }
+
+      const projects = await integration.fetchProjects();
+      res.json({ success: true, projects });
+    } catch (error: any) {
+      console.error("Error fetching Jira projects:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Fetch Jira issues
+  app.get("/api/integrations/jira/issues/:projectKey", isAuthenticated, async (req: any, res) => {
+    try {
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+
+      const { getJiraIntegration } = await import("./lib/jiraIntegration");
+      const integration = await getJiraIntegration(user.companyId);
+      
+      if (!integration) {
+        return res.json({ success: false, error: "Jira not configured" });
+      }
+
+      const issues = await integration.fetchIssues(req.params.projectKey);
+      res.json({ success: true, issues });
+    } catch (error: any) {
+      console.error("Error fetching Jira issues:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // ==========================================
   // LINEAR INTEGRATION ROUTES
   // ==========================================

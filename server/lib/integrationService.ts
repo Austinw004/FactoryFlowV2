@@ -133,13 +133,13 @@ const INTEGRATION_REGISTRY: Record<string, IntegrationMeta> = {
   "shopify": {
     name: "Shopify",
     type: "ecommerce",
-    tier: "configured",
-    dataFlowDirection: "inbound",
+    tier: "full",
+    dataFlowDirection: "bidirectional",
     supportedObjects: ["orders", "products", "inventory"],
-    supportedOperations: ["read", "webhook"],
-    limitations: ["Credentials stored - requires Shopify store connection"],
+    supportedOperations: ["read", "sync", "webhook"],
+    limitations: [],
     regimeAware: true,
-    companyConfigCheck: (c) => !!c.shopifyAccessToken && c.shopifyEnabled === 1
+    companyConfigCheck: (c) => !!c.shopifyApiKey && c.shopifyEnabled === 1
   },
   "google-sheets": {
     name: "Google Sheets",
@@ -177,24 +177,35 @@ const INTEGRATION_REGISTRY: Record<string, IntegrationMeta> = {
   "jira": {
     name: "Jira",
     type: "project_management",
-    tier: "configured",
+    tier: "full",
     dataFlowDirection: "bidirectional",
     supportedObjects: ["issues", "projects", "sprints"],
     supportedOperations: ["read", "create", "update"],
-    limitations: ["Credentials stored - requires Jira API token"],
+    limitations: [],
     regimeAware: false,
     companyConfigCheck: (c) => !!c.jiraApiToken && c.jiraEnabled === 1
   },
   "linear": {
     name: "Linear",
     type: "project_management",
-    tier: "configured",
+    tier: "full",
     dataFlowDirection: "bidirectional",
-    supportedObjects: ["issues", "projects"],
+    supportedObjects: ["issues", "projects", "teams"],
     supportedOperations: ["read", "create", "update"],
-    limitations: ["Credentials stored - requires Linear API key"],
+    limitations: [],
     regimeAware: false,
     companyConfigCheck: (c) => !!c.linearApiKey && c.linearEnabled === 1
+  },
+  "quickbooks": {
+    name: "QuickBooks",
+    type: "finance",
+    tier: "configured",
+    dataFlowDirection: "bidirectional",
+    supportedObjects: ["invoices", "vendors", "purchase_orders"],
+    supportedOperations: ["read"],
+    limitations: ["API service implemented - OAuth flow pending for full sync"],
+    regimeAware: true,
+    companyConfigCheck: (c) => !!c.quickbooksAccessToken && c.quickbooksEnabled === 1
   },
 };
 
@@ -205,7 +216,6 @@ const ADDITIONAL_INTEGRATIONS: Array<{id: string, name: string, type: string}> =
   { id: "netsuite", name: "NetSuite", type: "erp" },
   { id: "sage-x3", name: "Sage X3", type: "erp" },
   { id: "infor", name: "Infor", type: "erp" },
-  { id: "quickbooks", name: "QuickBooks", type: "finance" },
   { id: "xero", name: "Xero", type: "finance" },
   { id: "stripe-payments", name: "Stripe Payments", type: "payments" },
   { id: "billcom", name: "Bill.com", type: "finance" },
