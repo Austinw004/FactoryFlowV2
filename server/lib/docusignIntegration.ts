@@ -1,5 +1,6 @@
 import axios from "axios";
 import { storage } from "../storage";
+import { CredentialService } from "./credentialService";
 
 export interface DocuSignEnvelope {
   envelopeId: string;
@@ -179,21 +180,12 @@ export class DocuSignIntegration {
       
       for (const envelope of envelopes.slice(0, 50)) {
         try {
-          await storage.createRFQ({
+          await storage.createRfq({
             companyId: this.companyId,
             title: `Contract: ${envelope.emailSubject}`,
             description: `Completed DocuSign contract - Envelope ID: ${envelope.envelopeId}`,
             status: "closed",
-            priority: "medium",
-            deadline: envelope.completedDateTime ? new Date(envelope.completedDateTime) : new Date(),
-            items: [{
-              description: "Signed contract",
-              quantity: 1,
-              unit: "contract",
-              targetPrice: 0
-            }],
-            externalId: envelope.envelopeId,
-            externalSource: "docusign"
+            dueDate: envelope.completedDateTime ? new Date(envelope.completedDateTime) : new Date()
           });
           synced++;
         } catch (err: any) {
@@ -211,10 +203,15 @@ export class DocuSignIntegration {
 }
 
 export async function getDocuSignIntegration(companyId: string): Promise<DocuSignIntegration | null> {
-  const company = await storage.getCompany(companyId);
-  if (!company?.docusignAccessToken || !company?.docusignAccountId) {
-    return null;
+  try {
+    const credentials = await CredentialService.getDecryptedCredentials(companyId, 'docusign');
+    if (credentials?.accessToken && credentials?.accountId) {
+      console.log(`[DocuSign] Using centralized credential storage for company ${companyId}`);
+      const baseUrl = credentials.instanceUrl || "https://demo.docusign.net";
+      return new DocuSignIntegration(credentials.accessToken, credentials.accountId, baseUrl, companyId);
+    }
+  } catch (error) {
+    console.log(`[DocuSign] Credentials not available for company ${companyId}`);
   }
-  const baseUrl = company.docusignBaseUrl || "https://demo.docusign.net";
-  return new DocuSignIntegration(company.docusignAccessToken, company.docusignAccountId, baseUrl, companyId);
+  return null;
 }

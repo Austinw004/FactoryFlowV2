@@ -1,5 +1,6 @@
 import axios from "axios";
 import { storage } from "../storage";
+import { CredentialService } from "./credentialService";
 
 export interface MondayBoard {
   id: string;
@@ -213,14 +214,14 @@ export class MondayIntegration {
     let synced = 0;
 
     try {
-      const rfqs = await storage.getRFQs(this.companyId);
+      const rfqs = await storage.getRfqs(this.companyId);
       
       for (const rfq of rfqs.slice(0, 50)) {
         try {
           await this.createItem(boardId, rfq.title, {
             status: { label: rfq.status },
             priority: { label: rfq.priority },
-            date: { date: rfq.deadline?.toISOString().split("T")[0] }
+            date: { date: rfq.dueDate?.toISOString().split("T")[0] }
           });
           synced++;
         } catch (err: any) {
@@ -246,9 +247,7 @@ export class MondayIntegration {
       for (const supplier of suppliers) {
         try {
           await this.createItem(boardId, supplier.name, {
-            email: { email: supplier.contactEmail, text: supplier.contactEmail },
-            phone: { phone: supplier.phone },
-            text: supplier.category
+            email: { email: supplier.contactEmail, text: supplier.contactEmail }
           });
           synced++;
         } catch (err: any) {
@@ -266,9 +265,51 @@ export class MondayIntegration {
 }
 
 export async function getMondayIntegration(companyId: string): Promise<MondayIntegration | null> {
-  const company = await storage.getCompany(companyId);
-  if (!company?.mondayApiKey) {
-    return null;
+  try {
+    const credentials = await CredentialService.getDecryptedCredentials(companyId, 'monday');
+    if (credentials?.apiKey) {
+      console.log(`[Monday] Using centralized credential storage for company ${companyId}`);
+      return new MondayIntegration(credentials.apiKey, companyId);
+    }
+  } catch (error) {
+    console.log(`[Monday] Credentials not available for company ${companyId}`);
   }
-  return new MondayIntegration(company.mondayApiKey, companyId);
+  return null;
+}
+
+export async function syncMondayData(companyId: string): Promise<{
+  success: boolean;
+  boards?: number;
+  items?: number;
+  error?: string;
+}> {
+  const integration = await getMondayIntegration(companyId);
+  if (!integration) {
+    return { success: false, error: 'Monday.com not configured' };
+  }
+
+  try {
+    const connectionTest = await integration.testConnection();
+    if (!connectionTest.success) {
+      return { success: false, error: connectionTest.message };
+    }
+
+    const boards = await integration.listBoards();
+    let totalItems = 0;
+
+    for (const board of boards.slice(0, 10)) {
+      const items = await integration.getBoardItems(board.id, 50);
+      totalItems += items.length;
+    }
+
+    console.log(`[Monday] Full sync complete: ${boards.length} boards, ${totalItems} items`);
+    return {
+      success: true,
+      boards: boards.length,
+      items: totalItems
+    };
+  } catch (error: any) {
+    console.error('[Monday] Sync failed:', error.message);
+    return { success: false, error: error.message };
+  }
 }

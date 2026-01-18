@@ -1,6 +1,7 @@
 import axios from "axios";
 import crypto from "crypto";
 import { storage } from "../storage";
+import { CredentialService } from "./credentialService";
 
 export interface NetSuiteVendor {
   id: string;
@@ -180,28 +181,20 @@ export class NetSuiteIntegration {
 
     try {
       const vendors = await this.fetchVendors(200);
+      const existingSuppliers = await storage.getSuppliers(this.companyId);
       
       for (const vendor of vendors) {
         try {
-          const existingSuppliers = await storage.getSuppliers(this.companyId);
-          const existing = existingSuppliers.find(s => s.externalId === vendor.id);
+          const existing = existingSuppliers.find(s => s.name === vendor.companyName);
           
           if (!existing) {
             await storage.createSupplier({
               companyId: this.companyId,
               name: vendor.companyName,
-              contactEmail: vendor.email || "",
-              phone: vendor.phone || "",
-              address: "",
-              category: "NetSuite Vendor",
-              riskScore: 50,
-              tier: 1,
-              leadTime: vendor.terms === "Net 30" ? 30 : 14,
-              reliabilityScore: 85,
-              externalId: vendor.id,
-              externalSource: "netsuite"
+              contactEmail: vendor.email || null
             });
             synced++;
+            console.log(`[NetSuite] Created supplier: ${vendor.companyName}`);
           }
         } catch (err: any) {
           errors.push(`Vendor ${vendor.companyName}: ${err.message}`);
@@ -223,33 +216,29 @@ export class NetSuiteIntegration {
 
     try {
       const items = await this.fetchInventoryItems(200);
+      const materials = await storage.getMaterials(this.companyId);
       
       for (const item of items) {
         try {
-          const materials = await storage.getMaterials(this.companyId);
-          const existing = materials.find(m => m.externalId === item.id);
+          const materialCode = item.sku || item.itemId;
+          const existing = materials.find(m => m.code === materialCode);
           
           if (existing) {
             await storage.updateMaterial(existing.id, {
-              currentStock: item.quantityOnHand,
-              unitCost: item.averageCost || item.lastPurchasePrice
+              onHand: item.quantityOnHand
             });
             updated++;
           } else {
             await storage.createMaterial({
               companyId: this.companyId,
               name: item.displayName,
-              sku: item.sku || item.itemId,
-              category: "NetSuite Inventory",
+              code: materialCode,
               unit: "units",
-              currentStock: item.quantityOnHand,
-              reorderPoint: Math.ceil(item.quantityOnHand * 0.2),
-              leadTimeDays: 14,
-              unitCost: item.averageCost || item.lastPurchasePrice,
-              externalId: item.id,
-              externalSource: "netsuite"
+              onHand: item.quantityOnHand,
+              inbound: 0
             });
             synced++;
+            console.log(`[NetSuite] Created material: ${item.displayName}`);
           }
         } catch (err: any) {
           errors.push(`Item ${item.displayName}: ${err.message}`);
@@ -273,23 +262,22 @@ export class NetSuiteIntegration {
       
       for (const po of orders) {
         try {
-          await storage.createRFQ({
+          await storage.createRfq({
             companyId: this.companyId,
+            rfqNumber: `NS-${po.tranId}`,
             title: `PO: ${po.tranId}`,
             description: `NetSuite Purchase Order from ${po.entity.refName}`,
             status: po.status === "Fully Billed" ? "closed" : "pending",
             priority: "medium",
-            deadline: po.tranDate ? new Date(po.tranDate) : new Date(),
-            items: [{
-              description: `Purchase Order ${po.tranId}`,
-              quantity: 1,
-              unit: "order",
-              targetPrice: po.total
-            }],
-            externalId: po.id,
-            externalSource: "netsuite"
+            dueDate: po.tranDate ? new Date(po.tranDate) : new Date(),
+            unit: "units",
+            materialId: "",
+            requestedQuantity: 1,
+            regimeAtGeneration: "normal",
+            fdrAtGeneration: 0
           });
           synced++;
+          console.log(`[NetSuite] Created RFQ from PO: ${po.tranId}`);
         } catch (err: any) {
           errors.push(`PO ${po.tranId}: ${err.message}`);
         }
@@ -305,16 +293,56 @@ export class NetSuiteIntegration {
 }
 
 export async function getNetSuiteIntegration(companyId: string): Promise<NetSuiteIntegration | null> {
-  const company = await storage.getCompany(companyId);
-  if (!company?.netsuiteAccountId || !company?.netsuiteConsumerKey || !company?.netsuiteTokenId) {
-    return null;
+  try {
+    const credentials = await CredentialService.getDecryptedCredentials(companyId, 'netsuite');
+    if (credentials?.accountId && credentials?.apiKey && credentials?.apiSecret) {
+      console.log(`[NetSuite] Using centralized credential storage for company ${companyId}`);
+      return new NetSuiteIntegration(
+        credentials.accountId,
+        credentials.apiKey,
+        credentials.apiSecret,
+        credentials.additionalData?.tokenId || "",
+        credentials.additionalData?.tokenSecret || "",
+        companyId
+      );
+    }
+  } catch (error) {
+    console.log(`[NetSuite] Credentials not available for company ${companyId}`);
   }
-  return new NetSuiteIntegration(
-    company.netsuiteAccountId,
-    company.netsuiteConsumerKey,
-    company.netsuiteConsumerSecret || "",
-    company.netsuiteTokenId,
-    company.netsuiteTokenSecret || "",
-    companyId
-  );
+  return null;
+}
+
+export async function syncNetSuiteData(companyId: string): Promise<{
+  success: boolean;
+  vendors?: { synced: number; errors: number };
+  inventory?: { synced: number; updated: number };
+  purchaseOrders?: number;
+  error?: string;
+}> {
+  const integration = await getNetSuiteIntegration(companyId);
+  if (!integration) {
+    return { success: false, error: 'NetSuite not configured' };
+  }
+
+  try {
+    const connectionTest = await integration.testConnection();
+    if (!connectionTest.success) {
+      return { success: false, error: connectionTest.message };
+    }
+
+    const vendorResult = await integration.syncVendorsAsSuppliers();
+    const inventoryResult = await integration.syncInventoryAsMaterials();
+    const poResult = await integration.syncPurchaseOrdersAsRFQs();
+
+    console.log(`[NetSuite] Full sync complete for company ${companyId}`);
+    return {
+      success: true,
+      vendors: { synced: vendorResult.synced, errors: vendorResult.errors.length },
+      inventory: { synced: inventoryResult.synced, updated: inventoryResult.updated },
+      purchaseOrders: poResult.synced
+    };
+  } catch (error: any) {
+    console.error('[NetSuite] Sync failed:', error.message);
+    return { success: false, error: error.message };
+  }
 }

@@ -1,5 +1,6 @@
 import axios from "axios";
 import { storage } from "../storage";
+import { CredentialService } from "./credentialService";
 
 export interface UPSRate {
   serviceCode: string;
@@ -156,9 +157,14 @@ function getUPSServiceName(code: string): string {
 }
 
 export async function getUPSIntegration(companyId: string): Promise<UPSIntegration | null> {
-  const company = await storage.getCompany(companyId);
-  if (!company?.upsClientId || !company?.upsClientSecret || !company?.upsAccountNumber) {
-    return null;
+  try {
+    const credentials = await CredentialService.getDecryptedCredentials(companyId, 'ups');
+    if (credentials?.clientId && credentials?.clientSecret && credentials?.accountNumber) {
+      console.log(`[UPS] Using centralized credential storage for company ${companyId}`);
+      return new UPSIntegration(credentials.clientId, credentials.clientSecret, credentials.accountNumber, companyId);
+    }
+  } catch (error) {
+    console.log(`[UPS] Credentials not available for company ${companyId}`);
   }
-  return new UPSIntegration(company.upsClientId, company.upsClientSecret, company.upsAccountNumber, companyId);
+  return null;
 }

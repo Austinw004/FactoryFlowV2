@@ -1,5 +1,6 @@
 import axios from "axios";
 import { storage } from "../storage";
+import { CredentialService } from "./credentialService";
 
 export interface AsanaWorkspace {
   gid: string;
@@ -172,7 +173,7 @@ export class AsanaIntegration {
     let synced = 0;
 
     try {
-      const rfqs = await storage.getRFQs(this.companyId);
+      const rfqs = await storage.getRfqs(this.companyId);
       
       for (const rfq of rfqs.slice(0, 50)) {
         try {
@@ -180,7 +181,7 @@ export class AsanaIntegration {
             projectGid,
             `RFQ: ${rfq.title}`,
             `Status: ${rfq.status}\nPriority: ${rfq.priority}\n\n${rfq.description || ""}`,
-            rfq.deadline?.toISOString().split("T")[0]
+            rfq.dueDate?.toISOString().split("T")[0]
           );
           synced++;
         } catch (err: any) {
@@ -207,13 +208,20 @@ export class AsanaIntegration {
         try {
           await storage.createDemandSignal({
             companyId: this.companyId,
-            source: "asana",
             signalType: "task",
-            rawData: task,
+            signalDate: new Date(task.createdAt),
+            quantity: 1,
+            unit: "units",
+            channel: "asana",
+            customer: task.assignee?.name,
             confidence: task.dueOn ? 70 : 50,
-            impactedSkus: [],
-            forecastAdjustment: 1,
-            expiresAt: task.dueOn ? new Date(task.dueOn) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+            priority: "medium",
+            attributes: {
+              source: "asana",
+              taskId: task.gid,
+              taskName: task.name,
+              dueOn: task.dueOn
+            }
           });
           synced++;
         } catch (err: any) {
@@ -231,9 +239,59 @@ export class AsanaIntegration {
 }
 
 export async function getAsanaIntegration(companyId: string): Promise<AsanaIntegration | null> {
-  const company = await storage.getCompany(companyId);
-  if (!company?.asanaAccessToken) {
-    return null;
+  try {
+    const credentials = await CredentialService.getDecryptedCredentials(companyId, 'asana');
+    if (credentials?.accessToken) {
+      console.log(`[Asana] Using centralized credential storage for company ${companyId}`);
+      return new AsanaIntegration(credentials.accessToken, companyId);
+    }
+  } catch (error) {
+    console.log(`[Asana] Credentials not available for company ${companyId}`);
   }
-  return new AsanaIntegration(company.asanaAccessToken, companyId);
+  return null;
+}
+
+export async function syncAsanaData(companyId: string): Promise<{
+  success: boolean;
+  workspaces?: number;
+  projects?: number;
+  tasks?: number;
+  error?: string;
+}> {
+  const integration = await getAsanaIntegration(companyId);
+  if (!integration) {
+    return { success: false, error: 'Asana not configured' };
+  }
+
+  try {
+    const connectionTest = await integration.testConnection();
+    if (!connectionTest.success) {
+      return { success: false, error: connectionTest.message };
+    }
+
+    const workspaces = await integration.listWorkspaces();
+    let totalProjects = 0;
+    let totalTasks = 0;
+
+    for (const workspace of workspaces) {
+      const projects = await integration.listProjects(workspace.gid);
+      totalProjects += projects.length;
+
+      for (const project of projects.slice(0, 5)) {
+        const tasks = await integration.getProjectTasks(project.gid);
+        totalTasks += tasks.length;
+      }
+    }
+
+    console.log(`[Asana] Full sync complete: ${workspaces.length} workspaces, ${totalProjects} projects, ${totalTasks} tasks`);
+    return {
+      success: true,
+      workspaces: workspaces.length,
+      projects: totalProjects,
+      tasks: totalTasks
+    };
+  } catch (error: any) {
+    console.error('[Asana] Sync failed:', error.message);
+    return { success: false, error: error.message };
+  }
 }

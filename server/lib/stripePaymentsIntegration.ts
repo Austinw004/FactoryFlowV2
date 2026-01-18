@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import { storage } from "../storage";
+import { CredentialService } from "./credentialService";
 
 export interface StripeCustomer {
   id: string;
@@ -35,7 +36,7 @@ export class StripePaymentsIntegration {
   private companyId: string;
 
   constructor(secretKey: string, companyId: string) {
-    this.stripe = new Stripe(secretKey, { apiVersion: "2025-01-27.acacia" });
+    this.stripe = new Stripe(secretKey);
     this.companyId = companyId;
   }
 
@@ -56,7 +57,7 @@ export class StripePaymentsIntegration {
       const customers = result.data.map(c => ({
         id: c.id,
         email: c.email || "",
-        name: c.name,
+        name: c.name || null,
         created: c.created,
         balance: c.balance || 0
       }));
@@ -72,7 +73,7 @@ export class StripePaymentsIntegration {
     try {
       const result = await this.stripe.invoices.list({ limit });
       const invoices = result.data.map(i => ({
-        id: i.id,
+        id: i.id || "",
         customer: typeof i.customer === "string" ? i.customer : i.customer?.id || "",
         status: i.status || "unknown",
         total: i.total,
@@ -127,7 +128,7 @@ export class StripePaymentsIntegration {
 
       console.log(`[Stripe] Created invoice ${invoice.id}`);
       return {
-        id: invoice.id,
+        id: invoice.id || "",
         customer: customerId,
         status: invoice.status || "draft",
         total: invoice.total,
@@ -153,22 +154,13 @@ export class StripePaymentsIntegration {
       for (const customer of customers) {
         try {
           const existingSuppliers = await storage.getSuppliers(this.companyId);
-          const existing = existingSuppliers.find(s => s.externalId === customer.id);
+          const existing = existingSuppliers.find(s => s.name === (customer.name || customer.email));
           
           if (!existing && customer.email) {
             await storage.createSupplier({
               companyId: this.companyId,
               name: customer.name || customer.email,
-              contactEmail: customer.email,
-              phone: "",
-              address: "",
-              category: "Stripe Customer",
-              riskScore: 30,
-              tier: 1,
-              leadTime: 7,
-              reliabilityScore: 90,
-              externalId: customer.id,
-              externalSource: "stripe"
+              contactEmail: customer.email
             });
             synced++;
           }
@@ -197,13 +189,21 @@ export class StripePaymentsIntegration {
           if (invoice.status === "paid" || invoice.status === "open") {
             await storage.createDemandSignal({
               companyId: this.companyId,
-              source: "stripe",
               signalType: "invoice",
-              rawData: invoice,
+              signalDate: new Date(invoice.created * 1000),
+              quantity: invoice.total / 100,
+              unit: invoice.currency.toUpperCase(),
+              channel: "stripe",
               confidence: invoice.status === "paid" ? 100 : 70,
-              impactedSkus: [],
-              forecastAdjustment: invoice.total / 100,
-              expiresAt: invoice.dueDate ? new Date(invoice.dueDate * 1000) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+              priority: "medium",
+              attributes: {
+                source: "stripe",
+                invoiceId: invoice.id,
+                customerId: invoice.customer,
+                status: invoice.status,
+                amountDue: invoice.amountDue,
+                amountPaid: invoice.amountPaid
+              }
             });
             synced++;
           }
@@ -222,12 +222,17 @@ export class StripePaymentsIntegration {
 }
 
 export async function getStripePaymentsIntegration(companyId: string): Promise<StripePaymentsIntegration | null> {
-  const company = await storage.getCompany(companyId);
-  if (!company?.stripeSecretKey) {
-    if (!process.env.STRIPE_SECRET_KEY) {
-      return null;
+  try {
+    const credentials = await CredentialService.getDecryptedCredentials(companyId, 'stripe');
+    if (credentials?.apiKey) {
+      console.log(`[Stripe] Using centralized credential storage for company ${companyId}`);
+      return new StripePaymentsIntegration(credentials.apiKey, companyId);
     }
+  } catch (error) {
+    console.log(`[Stripe] Credentials not available for company ${companyId}`);
+  }
+  if (process.env.STRIPE_SECRET_KEY) {
     return new StripePaymentsIntegration(process.env.STRIPE_SECRET_KEY, companyId);
   }
-  return new StripePaymentsIntegration(company.stripeSecretKey, companyId);
+  return null;
 }

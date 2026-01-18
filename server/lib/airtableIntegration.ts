@@ -1,5 +1,6 @@
 import axios from "axios";
 import { storage } from "../storage";
+import { CredentialService } from "./credentialService";
 
 export interface AirtableBase {
   id: string;
@@ -131,13 +132,11 @@ export class AirtableIntegration {
       for (const material of materials) {
         try {
           await this.createRecord(baseId, tableName, {
-            "SKU": material.sku,
+            "Code": material.code,
             "Name": material.name,
-            "Category": material.category || "",
-            "Current Stock": material.currentStock || 0,
-            "Reorder Point": material.reorderPoint || 0,
-            "Unit Cost": material.unitCost || 0,
-            "Lead Time (Days)": material.leadTimeDays || 0
+            "Unit": material.unit || "units",
+            "On Hand": material.onHand || 0,
+            "Inbound": material.inbound || 0
           });
           synced++;
         } catch (err: any) {
@@ -163,24 +162,18 @@ export class AirtableIntegration {
       for (const record of records) {
         try {
           const fields = record.fields;
-          const sku = fields["SKU"] || fields["sku"] || `AT-${record.id.slice(0, 8)}`;
+          const code = fields["Code"] || fields["code"] || fields["SKU"] || fields["sku"] || `AT-${record.id.slice(0, 8)}`;
           
           const materials = await storage.getMaterials(this.companyId);
-          const existing = materials.find(m => m.sku === sku || m.externalId === record.id);
+          const existing = materials.find(m => m.code === code);
           
           if (!existing) {
             await storage.createMaterial({
               companyId: this.companyId,
-              name: fields["Name"] || fields["name"] || sku,
-              sku,
-              category: fields["Category"] || fields["category"] || "Airtable Import",
-              unit: "units",
-              currentStock: parseInt(fields["Current Stock"] || fields["Stock"] || "0") || 0,
-              reorderPoint: parseInt(fields["Reorder Point"] || "10") || 10,
-              leadTimeDays: parseInt(fields["Lead Time (Days)"] || fields["Lead Time"] || "7") || 7,
-              unitCost: parseFloat(fields["Unit Cost"] || fields["Cost"] || "0") || 0,
-              externalId: record.id,
-              externalSource: "airtable"
+              name: fields["Name"] || fields["name"] || code,
+              code,
+              unit: fields["Unit"] || fields["unit"] || "units",
+              onHand: parseInt(fields["On Hand"] || fields["Current Stock"] || fields["Stock"] || "0") || 0
             });
             imported++;
           }
@@ -199,9 +192,14 @@ export class AirtableIntegration {
 }
 
 export async function getAirtableIntegration(companyId: string): Promise<AirtableIntegration | null> {
-  const company = await storage.getCompany(companyId);
-  if (!company?.airtableAccessToken) {
-    return null;
+  try {
+    const credentials = await CredentialService.getDecryptedCredentials(companyId, 'airtable');
+    if (credentials?.accessToken) {
+      console.log(`[Airtable] Using centralized credential storage for company ${companyId}`);
+      return new AirtableIntegration(credentials.accessToken, companyId);
+    }
+  } catch (error) {
+    console.log(`[Airtable] Credentials not available for company ${companyId}`);
   }
-  return new AirtableIntegration(company.airtableAccessToken, companyId);
+  return null;
 }

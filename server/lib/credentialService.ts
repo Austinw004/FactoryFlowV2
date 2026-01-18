@@ -24,6 +24,14 @@ export interface DecryptedCredentials {
   tokenType?: string;
   scope?: string;
   region?: string;
+  sellerId?: string;
+  marketplaceId?: string;
+  accountNumber?: string;
+  storeUrl?: string;
+  consumerKey?: string;
+  consumerSecret?: string;
+  storeHash?: string;
+  token?: string;
   additionalData?: Record<string, any>;
 }
 

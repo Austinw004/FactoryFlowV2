@@ -1,5 +1,6 @@
 import axios from "axios";
 import { storage } from "../storage";
+import { CredentialService } from "./credentialService";
 
 export interface SendGridContact {
   id: string;
@@ -172,8 +173,7 @@ export class SendGridIntegration {
         return null;
       }
 
-      const company = await storage.getCompany(this.companyId);
-      const fromEmail = company?.notificationEmail || "noreply@prescientlabs.io";
+      const fromEmail = "noreply@prescientlabs.io";
 
       return await this.sendEmail(
         supplier.contactEmail,
@@ -192,14 +192,13 @@ export class SendGridIntegration {
     let sent = 0;
 
     try {
-      const rfq = await storage.getRFQ(rfqId);
+      const rfq = await storage.getRfq(rfqId);
       if (!rfq) {
         throw new Error("RFQ not found");
       }
 
       const suppliers = await storage.getSuppliers(this.companyId);
-      const company = await storage.getCompany(this.companyId);
-      const fromEmail = company?.notificationEmail || "noreply@prescientlabs.io";
+      const fromEmail = "noreply@prescientlabs.io";
 
       for (const supplier of suppliers.slice(0, 10)) {
         if (!supplier.contactEmail) continue;
@@ -209,7 +208,7 @@ export class SendGridIntegration {
             supplier.contactEmail,
             fromEmail,
             `New RFQ: ${rfq.title}`,
-            `You have been invited to respond to RFQ: ${rfq.title}\n\nDescription: ${rfq.description}\n\nDeadline: ${rfq.deadline}\n\nPlease login to respond.`
+            `You have been invited to respond to RFQ: ${rfq.title}\n\nDescription: ${rfq.description}\n\nDeadline: ${rfq.dueDate}\n\nPlease login to respond.`
           );
           sent++;
         } catch (err: any) {
@@ -227,12 +226,17 @@ export class SendGridIntegration {
 }
 
 export async function getSendGridIntegration(companyId: string): Promise<SendGridIntegration | null> {
-  const company = await storage.getCompany(companyId);
-  if (!company?.sendgridApiKey) {
-    if (!process.env.SENDGRID_API_KEY) {
-      return null;
+  try {
+    const credentials = await CredentialService.getDecryptedCredentials(companyId, 'sendgrid');
+    if (credentials?.apiKey) {
+      console.log(`[SendGrid] Using centralized credential storage for company ${companyId}`);
+      return new SendGridIntegration(credentials.apiKey, companyId);
     }
+  } catch (error) {
+    console.log(`[SendGrid] Credentials not available for company ${companyId}`);
+  }
+  if (process.env.SENDGRID_API_KEY) {
     return new SendGridIntegration(process.env.SENDGRID_API_KEY, companyId);
   }
-  return new SendGridIntegration(company.sendgridApiKey, companyId);
+  return null;
 }

@@ -1,5 +1,6 @@
 import axios from "axios";
 import { storage } from "../storage";
+import { CredentialService } from "./credentialService";
 
 export interface TrelloBoard {
   id: string;
@@ -211,7 +212,7 @@ export class TrelloIntegration {
           await this.createCard(
             listId,
             supplier.name,
-            `Category: ${supplier.category}\nEmail: ${supplier.contactEmail}\nPhone: ${supplier.phone}\nRisk Score: ${supplier.riskScore}`
+            `Email: ${supplier.contactEmail || 'N/A'}`
           );
           synced++;
         } catch (err: any) {
@@ -238,13 +239,19 @@ export class TrelloIntegration {
         try {
           await storage.createDemandSignal({
             companyId: this.companyId,
-            source: "trello",
             signalType: "card",
-            rawData: card,
+            signalDate: new Date(),
+            quantity: 1,
+            unit: "units",
+            channel: "trello",
             confidence: card.due ? 70 : 50,
-            impactedSkus: [],
-            forecastAdjustment: 1,
-            expiresAt: card.due ? new Date(card.due) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+            priority: "medium",
+            attributes: {
+              source: "trello",
+              cardId: card.id,
+              cardName: card.name,
+              due: card.due
+            }
           });
           synced++;
         } catch (err: any) {
@@ -262,9 +269,58 @@ export class TrelloIntegration {
 }
 
 export async function getTrelloIntegration(companyId: string): Promise<TrelloIntegration | null> {
-  const company = await storage.getCompany(companyId);
-  if (!company?.trelloApiKey || !company?.trelloToken) {
-    return null;
+  try {
+    const credentials = await CredentialService.getDecryptedCredentials(companyId, 'trello');
+    if (credentials?.apiKey && credentials?.accessToken) {
+      console.log(`[Trello] Using centralized credential storage for company ${companyId}`);
+      return new TrelloIntegration(credentials.apiKey, credentials.accessToken, companyId);
+    }
+  } catch (error) {
+    console.log(`[Trello] Credentials not available for company ${companyId}`);
   }
-  return new TrelloIntegration(company.trelloApiKey, company.trelloToken, companyId);
+  return null;
+}
+
+export async function syncTrelloData(companyId: string): Promise<{
+  success: boolean;
+  boards?: number;
+  lists?: number;
+  cards?: number;
+  error?: string;
+}> {
+  const integration = await getTrelloIntegration(companyId);
+  if (!integration) {
+    return { success: false, error: 'Trello not configured' };
+  }
+
+  try {
+    const connectionTest = await integration.testConnection();
+    if (!connectionTest.success) {
+      return { success: false, error: connectionTest.message };
+    }
+
+    const boards = await integration.listBoards();
+    let totalLists = 0;
+    let totalCards = 0;
+
+    for (const board of boards.slice(0, 10)) {
+      const lists = await integration.getBoardLists(board.id);
+      totalLists += lists.length;
+      for (const list of lists.slice(0, 5)) {
+        const cards = await integration.getListCards(list.id);
+        totalCards += cards.length;
+      }
+    }
+
+    console.log(`[Trello] Full sync complete: ${boards.length} boards, ${totalLists} lists, ${totalCards} cards`);
+    return {
+      success: true,
+      boards: boards.length,
+      lists: totalLists,
+      cards: totalCards
+    };
+  } catch (error: any) {
+    console.error('[Trello] Sync failed:', error.message);
+    return { success: false, error: error.message };
+  }
 }

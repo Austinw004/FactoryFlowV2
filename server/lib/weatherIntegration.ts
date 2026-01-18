@@ -1,5 +1,6 @@
 import axios from "axios";
 import { storage } from "../storage";
+import { CredentialService } from "./credentialService";
 
 export interface WeatherData {
   location: string;
@@ -124,15 +125,13 @@ export class WeatherIntegration {
       const locations = new Set<string>();
 
       for (const supplier of suppliers) {
-        if (supplier.address) {
-          const city = supplier.address.split(",")[0]?.trim();
-          if (city && city.length > 2) {
-            locations.add(city);
-          }
+        if (supplier.name) {
+          locations.add(supplier.name.split(" ")[0]?.trim() || "");
         }
       }
 
       for (const location of Array.from(locations).slice(0, 10)) {
+        if (!location || location.length < 2) continue;
         try {
           const weather = await this.getCurrentWeather(location);
           weatherMap.set(location, weather);
@@ -155,7 +154,7 @@ export class WeatherIntegration {
     try {
       const weatherMap = await this.getWeatherForSupplierLocations();
 
-      for (const [location, weather] of weatherMap) {
+      for (const [location, weather] of Array.from(weatherMap.entries())) {
         const isExtreme = 
           weather.temperature < -10 || 
           weather.temperature > 40 ||
@@ -169,13 +168,20 @@ export class WeatherIntegration {
           
           await storage.createDemandSignal({
             companyId: this.companyId,
-            source: "weather",
             signalType: "weather_alert",
-            rawData: weather,
+            signalDate: new Date(),
+            quantity: 1,
+            unit: "alert",
+            channel: "weather",
             confidence: 90,
-            impactedSkus: [],
-            forecastAdjustment: -10,
-            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+            priority: "high",
+            attributes: {
+              source: "weather",
+              location,
+              temperature: weather.temperature,
+              conditions: weather.conditions,
+              windSpeed: weather.windSpeed
+            }
           });
         }
       }
@@ -190,12 +196,17 @@ export class WeatherIntegration {
 }
 
 export async function getWeatherIntegration(companyId: string): Promise<WeatherIntegration | null> {
-  const company = await storage.getCompany(companyId);
-  if (!company?.weatherApiKey) {
-    if (!process.env.OPENWEATHER_API_KEY) {
-      return null;
+  try {
+    const credentials = await CredentialService.getDecryptedCredentials(companyId, 'weather');
+    if (credentials?.apiKey) {
+      console.log(`[Weather] Using centralized credential storage for company ${companyId}`);
+      return new WeatherIntegration(credentials.apiKey, companyId);
     }
+  } catch (error) {
+    console.log(`[Weather] Credentials not available for company ${companyId}`);
+  }
+  if (process.env.OPENWEATHER_API_KEY) {
     return new WeatherIntegration(process.env.OPENWEATHER_API_KEY, companyId);
   }
-  return new WeatherIntegration(company.weatherApiKey, companyId);
+  return null;
 }

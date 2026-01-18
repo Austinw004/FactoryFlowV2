@@ -1,5 +1,6 @@
 import axios from "axios";
 import { storage } from "../storage";
+import { CredentialService } from "./credentialService";
 
 export interface FedExRate {
   serviceType: string;
@@ -140,9 +141,14 @@ export class FedExIntegration {
 }
 
 export async function getFedExIntegration(companyId: string): Promise<FedExIntegration | null> {
-  const company = await storage.getCompany(companyId);
-  if (!company?.fedexApiKey || !company?.fedexSecretKey || !company?.fedexAccountNumber) {
-    return null;
+  try {
+    const credentials = await CredentialService.getDecryptedCredentials(companyId, 'fedex');
+    if (credentials?.apiKey && credentials?.clientSecret && credentials?.accountNumber) {
+      console.log(`[FedEx] Using centralized credential storage for company ${companyId}`);
+      return new FedExIntegration(credentials.apiKey, credentials.clientSecret, credentials.accountNumber, companyId);
+    }
+  } catch (error) {
+    console.log(`[FedEx] Credentials not available for company ${companyId}`);
   }
-  return new FedExIntegration(company.fedexApiKey, company.fedexSecretKey, company.fedexAccountNumber, companyId);
+  return null;
 }

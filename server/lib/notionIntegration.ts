@@ -1,5 +1,6 @@
 import axios from "axios";
 import { storage } from "../storage";
+import { CredentialService } from "./credentialService";
 
 export interface NotionPage {
   id: string;
@@ -178,11 +179,7 @@ export class NotionIntegration {
             parent: { database_id: databaseId },
             properties: {
               "Name": { title: [{ text: { content: supplier.name } }] },
-              "Email": { email: supplier.contactEmail || null },
-              "Phone": { phone_number: supplier.phone || null },
-              "Category": { select: { name: supplier.category || "General" } },
-              "Risk Score": { number: supplier.riskScore || 50 },
-              "Tier": { number: supplier.tier || 1 }
+              "Email": { email: supplier.contactEmail || null }
             }
           });
           synced++;
@@ -209,9 +206,46 @@ export class NotionIntegration {
 }
 
 export async function getNotionIntegration(companyId: string): Promise<NotionIntegration | null> {
-  const company = await storage.getCompany(companyId);
-  if (!company?.notionAccessToken) {
-    return null;
+  try {
+    const credentials = await CredentialService.getDecryptedCredentials(companyId, 'notion');
+    if (credentials?.accessToken) {
+      console.log(`[Notion] Using centralized credential storage for company ${companyId}`);
+      return new NotionIntegration(credentials.accessToken, companyId);
+    }
+  } catch (error) {
+    console.log(`[Notion] Credentials not available for company ${companyId}`);
   }
-  return new NotionIntegration(company.notionAccessToken, companyId);
+  return null;
+}
+
+export async function syncNotionData(companyId: string): Promise<{
+  success: boolean;
+  pages?: number;
+  databases?: number;
+  error?: string;
+}> {
+  const integration = await getNotionIntegration(companyId);
+  if (!integration) {
+    return { success: false, error: 'Notion not configured' };
+  }
+
+  try {
+    const connectionTest = await integration.testConnection();
+    if (!connectionTest.success) {
+      return { success: false, error: connectionTest.message };
+    }
+
+    const pages = await integration.searchPages();
+    const databases = await integration.searchDatabases();
+
+    console.log(`[Notion] Full sync complete: ${pages.length} pages, ${databases.length} databases`);
+    return {
+      success: true,
+      pages: pages.length,
+      databases: databases.length
+    };
+  } catch (error: any) {
+    console.error('[Notion] Sync failed:', error.message);
+    return { success: false, error: error.message };
+  }
 }

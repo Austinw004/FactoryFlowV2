@@ -1,5 +1,6 @@
 import axios from "axios";
 import { storage } from "../storage";
+import { CredentialService } from "./credentialService";
 
 export interface WooCommerceOrder {
   id: number;
@@ -112,13 +113,21 @@ export class WooCommerceIntegration {
           
           await storage.createDemandSignal({
             companyId: this.companyId,
-            source: "woocommerce",
             signalType: "order",
-            rawData: order,
+            signalDate: new Date(order.date_created),
+            quantity: order.line_items.reduce((sum, item) => sum + item.quantity, 0),
+            unit: order.currency,
+            channel: "woocommerce",
+            customer: `Customer ${order.customer_id}`,
             confidence: order.status === "completed" ? 100 : 80,
-            impactedSkus: skus,
-            forecastAdjustment: parseFloat(order.total) / 100,
-            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+            priority: "medium",
+            attributes: {
+              source: "woocommerce",
+              orderId: order.id,
+              orderStatus: order.status,
+              total: order.total,
+              lineItems: order.line_items.map(item => item.name)
+            }
           });
           synced++;
         } catch (err: any) {
@@ -150,15 +159,9 @@ export class WooCommerceIntegration {
             await storage.createMaterial({
               companyId: this.companyId,
               name: product.name,
-              sku: product.sku || `WOO-${product.id}`,
-              category: product.categories[0]?.name || "WooCommerce Product",
+              code: product.sku || `WOO-${product.id}`,
               unit: "units",
-              currentStock: product.stock_quantity || 0,
-              reorderPoint: 10,
-              leadTimeDays: 7,
-              unitCost: parseFloat(product.price) || 0,
-              externalId: String(product.id),
-              externalSource: "woocommerce"
+              onHand: product.stock_quantity || 0
             });
             synced++;
           }
@@ -177,14 +180,57 @@ export class WooCommerceIntegration {
 }
 
 export async function getWooCommerceIntegration(companyId: string): Promise<WooCommerceIntegration | null> {
-  const company = await storage.getCompany(companyId);
-  if (!company?.woocommerceStoreUrl || !company?.woocommerceConsumerKey || !company?.woocommerceConsumerSecret) {
-    return null;
+  try {
+    const credentials = await CredentialService.getDecryptedCredentials(companyId, 'woocommerce');
+    if (credentials?.storeUrl && credentials?.consumerKey && credentials?.consumerSecret) {
+      console.log(`[WooCommerce] Using centralized credential storage for company ${companyId}`);
+      return new WooCommerceIntegration(
+        credentials.storeUrl,
+        credentials.consumerKey,
+        credentials.consumerSecret,
+        companyId
+      );
+    }
+  } catch (error) {
+    console.log(`[WooCommerce] Credentials not available for company ${companyId}`);
   }
-  return new WooCommerceIntegration(
-    company.woocommerceStoreUrl,
-    company.woocommerceConsumerKey,
-    company.woocommerceConsumerSecret,
-    companyId
-  );
+  return null;
+}
+
+export async function syncWooCommerceData(companyId: string): Promise<{
+  success: boolean;
+  orders?: number;
+  products?: number;
+  demandSignals?: number;
+  materials?: number;
+  error?: string;
+}> {
+  const integration = await getWooCommerceIntegration(companyId);
+  if (!integration) {
+    return { success: false, error: 'WooCommerce not configured' };
+  }
+
+  try {
+    const connectionTest = await integration.testConnection();
+    if (!connectionTest.success) {
+      return { success: false, error: connectionTest.message };
+    }
+
+    const orders = await integration.fetchOrders('any', 100);
+    const products = await integration.fetchProducts(100);
+    const demandResult = await integration.syncOrdersAsDemandSignals();
+    const materialsResult = await integration.syncProductsAsMaterials();
+
+    console.log(`[WooCommerce] Full sync complete: ${orders.length} orders, ${products.length} products`);
+    return {
+      success: true,
+      orders: orders.length,
+      products: products.length,
+      demandSignals: demandResult.synced,
+      materials: materialsResult.synced
+    };
+  } catch (error: any) {
+    console.error('[WooCommerce] Sync failed:', error.message);
+    return { success: false, error: error.message };
+  }
 }

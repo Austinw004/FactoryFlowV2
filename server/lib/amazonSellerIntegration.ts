@@ -1,5 +1,6 @@
 import axios from "axios";
 import { storage } from "../storage";
+import { CredentialService } from "./credentialService";
 
 export interface AmazonOrder {
   AmazonOrderId: string;
@@ -115,13 +116,21 @@ export class AmazonSellerIntegration {
         try {
           await storage.createDemandSignal({
             companyId: this.companyId,
-            source: "amazon",
             signalType: "order",
-            rawData: order,
+            signalDate: new Date(order.PurchaseDate),
+            quantity: order.NumberOfItemsShipped + order.NumberOfItemsUnshipped,
+            unit: order.OrderTotal?.CurrencyCode || "USD",
+            channel: "amazon",
+            customer: `Amazon Customer`,
             confidence: order.OrderStatus === "Shipped" ? 100 : 80,
-            impactedSkus: [],
-            forecastAdjustment: order.OrderTotal ? parseFloat(order.OrderTotal.Amount) / 100 : 0,
-            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+            priority: "medium",
+            attributes: {
+              source: "amazon",
+              orderId: order.AmazonOrderId,
+              orderStatus: order.OrderStatus,
+              fulfillmentChannel: order.FulfillmentChannel,
+              total: order.OrderTotal?.Amount
+            }
           });
           synced++;
         } catch (err: any) {
@@ -148,26 +157,20 @@ export class AmazonSellerIntegration {
       for (const item of inventory) {
         try {
           const materials = await storage.getMaterials(this.companyId);
-          const existing = materials.find(m => m.sku === item.SKU || m.externalId === item.ASIN);
+          const existing = materials.find(m => m.code === item.SKU);
           
           if (existing) {
             await storage.updateMaterial(existing.id, {
-              currentStock: item.TotalQuantity
+              onHand: item.TotalQuantity
             });
             updated++;
           } else {
             await storage.createMaterial({
               companyId: this.companyId,
               name: item.ProductName,
-              sku: item.SKU,
-              category: "Amazon FBA",
+              code: item.SKU,
               unit: "units",
-              currentStock: item.TotalQuantity,
-              reorderPoint: Math.ceil(item.TotalQuantity * 0.2),
-              leadTimeDays: 14,
-              unitCost: 0,
-              externalId: item.ASIN,
-              externalSource: "amazon"
+              onHand: item.TotalQuantity
             });
             synced++;
           }
@@ -186,15 +189,20 @@ export class AmazonSellerIntegration {
 }
 
 export async function getAmazonSellerIntegration(companyId: string): Promise<AmazonSellerIntegration | null> {
-  const company = await storage.getCompany(companyId);
-  if (!company?.amazonAccessToken || !company?.amazonSellerId) {
-    return null;
+  try {
+    const credentials = await CredentialService.getDecryptedCredentials(companyId, 'amazon_seller');
+    if (credentials?.accessToken && credentials?.sellerId) {
+      console.log(`[Amazon] Using centralized credential storage for company ${companyId}`);
+      return new AmazonSellerIntegration(
+        credentials.accessToken,
+        credentials.refreshToken || "",
+        credentials.sellerId,
+        credentials.marketplaceId || "ATVPDKIKX0DER",
+        companyId
+      );
+    }
+  } catch (error) {
+    console.log(`[Amazon] Credentials not available for company ${companyId}`);
   }
-  return new AmazonSellerIntegration(
-    company.amazonAccessToken,
-    company.amazonRefreshToken || "",
-    company.amazonSellerId,
-    company.amazonMarketplaceId || "ATVPDKIKX0DER",
-    companyId
-  );
+  return null;
 }

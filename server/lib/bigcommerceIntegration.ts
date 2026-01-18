@@ -1,5 +1,6 @@
 import axios from "axios";
 import { storage } from "../storage";
+import { CredentialService } from "./credentialService";
 
 export interface BigCommerceOrder {
   id: number;
@@ -116,13 +117,21 @@ export class BigCommerceIntegration {
         try {
           await storage.createDemandSignal({
             companyId: this.companyId,
-            source: "bigcommerce",
             signalType: "order",
-            rawData: order,
+            signalDate: new Date(order.dateCreated),
+            quantity: 1,
+            unit: order.currency,
+            channel: "bigcommerce",
+            customer: `${order.billingAddress.firstName} ${order.billingAddress.lastName}`.trim() || order.billingAddress.email,
             confidence: order.statusId >= 10 ? 100 : 80,
-            impactedSkus: [],
-            forecastAdjustment: parseFloat(order.total) / 100,
-            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+            priority: "medium",
+            attributes: {
+              source: "bigcommerce",
+              orderId: order.id,
+              orderStatus: order.status,
+              total: order.total,
+              customerEmail: order.billingAddress.email
+            }
           });
           synced++;
         } catch (err: any) {
@@ -154,15 +163,9 @@ export class BigCommerceIntegration {
             await storage.createMaterial({
               companyId: this.companyId,
               name: product.name,
-              sku: product.sku,
-              category: "BigCommerce Product",
+              code: product.sku,
               unit: "units",
-              currentStock: product.inventoryLevel,
-              reorderPoint: 10,
-              leadTimeDays: 7,
-              unitCost: parseFloat(product.price) || 0,
-              externalId: String(product.id),
-              externalSource: "bigcommerce"
+              onHand: product.inventoryLevel
             });
             synced++;
           }
@@ -181,9 +184,56 @@ export class BigCommerceIntegration {
 }
 
 export async function getBigCommerceIntegration(companyId: string): Promise<BigCommerceIntegration | null> {
-  const company = await storage.getCompany(companyId);
-  if (!company?.bigcommerceStoreHash || !company?.bigcommerceAccessToken) {
-    return null;
+  try {
+    const credentials = await CredentialService.getDecryptedCredentials(companyId, 'bigcommerce');
+    if (credentials?.storeHash && credentials?.accessToken) {
+      console.log(`[BigCommerce] Using centralized credential storage for company ${companyId}`);
+      return new BigCommerceIntegration(
+        credentials.storeHash,
+        credentials.accessToken,
+        companyId
+      );
+    }
+  } catch (error) {
+    console.log(`[BigCommerce] Credentials not available for company ${companyId}`);
   }
-  return new BigCommerceIntegration(company.bigcommerceStoreHash, company.bigcommerceAccessToken, companyId);
+  return null;
+}
+
+export async function syncBigCommerceData(companyId: string): Promise<{
+  success: boolean;
+  orders?: number;
+  products?: number;
+  demandSignals?: number;
+  materials?: number;
+  error?: string;
+}> {
+  const integration = await getBigCommerceIntegration(companyId);
+  if (!integration) {
+    return { success: false, error: 'BigCommerce not configured' };
+  }
+
+  try {
+    const connectionTest = await integration.testConnection();
+    if (!connectionTest.success) {
+      return { success: false, error: connectionTest.message };
+    }
+
+    const orders = await integration.fetchOrders(100);
+    const products = await integration.fetchProducts(100);
+    const demandResult = await integration.syncOrdersAsDemandSignals();
+    const materialsResult = await integration.syncProductsAsMaterials();
+
+    console.log(`[BigCommerce] Full sync complete: ${orders.length} orders, ${products.length} products`);
+    return {
+      success: true,
+      orders: orders.length,
+      products: products.length,
+      demandSignals: demandResult.synced,
+      materials: materialsResult.synced
+    };
+  } catch (error: any) {
+    console.error('[BigCommerce] Sync failed:', error.message);
+    return { success: false, error: error.message };
+  }
 }

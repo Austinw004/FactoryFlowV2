@@ -1,5 +1,6 @@
 import axios from "axios";
 import { storage } from "../storage";
+import { CredentialService } from "./credentialService";
 
 export interface ZendeskTicket {
   id: number;
@@ -198,22 +199,13 @@ export class ZendeskIntegration {
       for (const org of orgs) {
         try {
           const existingSuppliers = await storage.getSuppliers(this.companyId);
-          const existing = existingSuppliers.find(s => s.externalId === String(org.id));
+          const existing = existingSuppliers.find(s => s.name === org.name);
           
           if (!existing) {
             await storage.createSupplier({
               companyId: this.companyId,
               name: org.name,
-              contactEmail: "",
-              phone: "",
-              address: "",
-              category: "Zendesk Organization",
-              riskScore: 40,
-              tier: 2,
-              leadTime: 14,
-              reliabilityScore: 80,
-              externalId: String(org.id),
-              externalSource: "zendesk"
+              contactEmail: ""
             });
             synced++;
           }
@@ -240,7 +232,7 @@ export class ZendeskIntegration {
 
       return await this.createTicket(
         `Supplier Issue: ${supplier.name} - ${subject}`,
-        `Supplier: ${supplier.name}\nCategory: ${supplier.category}\n\n${description}`,
+        `Supplier: ${supplier.name}\n\n${description}`,
         "high",
         supplier.contactEmail || undefined
       );
@@ -252,9 +244,14 @@ export class ZendeskIntegration {
 }
 
 export async function getZendeskIntegration(companyId: string): Promise<ZendeskIntegration | null> {
-  const company = await storage.getCompany(companyId);
-  if (!company?.zendeskSubdomain || !company?.zendeskEmail || !company?.zendeskApiToken) {
-    return null;
+  try {
+    const credentials = await CredentialService.getDecryptedCredentials(companyId, 'zendesk');
+    if (credentials?.domain && credentials?.username && credentials?.apiKey) {
+      console.log(`[Zendesk] Using centralized credential storage for company ${companyId}`);
+      return new ZendeskIntegration(credentials.domain, credentials.username, credentials.apiKey, companyId);
+    }
+  } catch (error) {
+    console.log(`[Zendesk] Credentials not available for company ${companyId}`);
   }
-  return new ZendeskIntegration(company.zendeskSubdomain, company.zendeskEmail, company.zendeskApiToken, companyId);
+  return null;
 }

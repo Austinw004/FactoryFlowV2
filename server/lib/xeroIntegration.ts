@@ -1,5 +1,6 @@
 import axios from "axios";
 import { storage } from "../storage";
+import { CredentialService } from "./credentialService";
 
 export interface XeroInvoice {
   InvoiceID: string;
@@ -114,31 +115,20 @@ export class XeroIntegration {
     try {
       const contacts = await this.fetchContacts();
       const suppliers = contacts.filter(c => c.IsSupplier);
+      const existingSuppliers = await storage.getSuppliers(this.companyId);
       
       for (const contact of suppliers) {
         try {
-          const existingSuppliers = await storage.getSuppliers(this.companyId);
-          const existing = existingSuppliers.find(s => s.externalId === contact.ContactID);
+          const existing = existingSuppliers.find(s => s.name === contact.Name);
           
           if (!existing) {
-            const phone = contact.Phones?.find(p => p.PhoneType === "DEFAULT")?.PhoneNumber || "";
-            const address = contact.Addresses?.find(a => a.AddressType === "POBOX");
-            
             await storage.createSupplier({
               companyId: this.companyId,
               name: contact.Name,
-              contactEmail: contact.EmailAddress || "",
-              phone: phone,
-              address: address ? `${address.City}, ${address.Country}` : "",
-              category: "Xero Supplier",
-              riskScore: 50,
-              tier: 1,
-              leadTime: 14,
-              reliabilityScore: 85,
-              externalId: contact.ContactID,
-              externalSource: "xero"
+              contactEmail: contact.EmailAddress || null
             });
             synced++;
+            console.log(`[Xero] Created supplier: ${contact.Name}`);
           }
         } catch (err: any) {
           errors.push(`Contact ${contact.Name}: ${err.message}`);
@@ -162,23 +152,22 @@ export class XeroIntegration {
       
       for (const bill of bills.slice(0, 50)) {
         try {
-          await storage.createRFQ({
+          await storage.createRfq({
             companyId: this.companyId,
+            rfqNumber: `XERO-${bill.InvoiceNumber}`,
             title: `Bill: ${bill.InvoiceNumber}`,
             description: `Imported from Xero - ${bill.Contact.Name}`,
             status: bill.Status === "PAID" ? "closed" : "draft",
             priority: "medium",
-            deadline: bill.DueDate ? new Date(bill.DueDate) : new Date(),
-            items: [{
-              description: `Bill from ${bill.Contact.Name}`,
-              quantity: 1,
-              unit: "each",
-              targetPrice: bill.Total
-            }],
-            externalId: bill.InvoiceID,
-            externalSource: "xero"
+            dueDate: bill.DueDate ? new Date(bill.DueDate) : new Date(),
+            unit: "units",
+            materialId: "",
+            requestedQuantity: 1,
+            regimeAtGeneration: "normal",
+            fdrAtGeneration: 0
           });
           synced++;
+          console.log(`[Xero] Created RFQ from bill: ${bill.InvoiceNumber}`);
         } catch (err: any) {
           errors.push(`Bill ${bill.InvoiceNumber}: ${err.message}`);
         }
@@ -194,9 +183,49 @@ export class XeroIntegration {
 }
 
 export async function getXeroIntegration(companyId: string): Promise<XeroIntegration | null> {
-  const company = await storage.getCompany(companyId);
-  if (!company?.xeroAccessToken || !company?.xeroTenantId) {
-    return null;
+  try {
+    const credentials = await CredentialService.getDecryptedCredentials(companyId, 'xero');
+    if (credentials?.accessToken && credentials?.tenantId) {
+      console.log(`[Xero] Using centralized credential storage for company ${companyId}`);
+      return new XeroIntegration(credentials.accessToken, credentials.tenantId, companyId);
+    }
+  } catch (error) {
+    console.log(`[Xero] Credentials not available for company ${companyId}`);
   }
-  return new XeroIntegration(company.xeroAccessToken, company.xeroTenantId, companyId);
+  return null;
+}
+
+export async function syncXeroData(companyId: string): Promise<{
+  success: boolean;
+  suppliers?: number;
+  invoices?: number;
+  bills?: number;
+  error?: string;
+}> {
+  const integration = await getXeroIntegration(companyId);
+  if (!integration) {
+    return { success: false, error: 'Xero not configured' };
+  }
+
+  try {
+    const connectionTest = await integration.testConnection();
+    if (!connectionTest.success) {
+      return { success: false, error: connectionTest.message };
+    }
+
+    const supplierResult = await integration.syncSuppliersFromContacts();
+    const invoices = await integration.fetchInvoices();
+    const billResult = await integration.syncBillsAsRFQs();
+
+    console.log(`[Xero] Full sync complete for company ${companyId}`);
+    return {
+      success: true,
+      suppliers: supplierResult.synced,
+      invoices: invoices.length,
+      bills: billResult.synced
+    };
+  } catch (error: any) {
+    console.error('[Xero] Sync failed:', error.message);
+    return { success: false, error: error.message };
+  }
 }

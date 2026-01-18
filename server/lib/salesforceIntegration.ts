@@ -115,22 +115,13 @@ export class SalesforceIntegration {
       for (const account of accounts) {
         try {
           const existingSuppliers = await storage.getSuppliers(this.companyId);
-          const existing = existingSuppliers.find(s => s.externalId === account.Id);
+          const existing = existingSuppliers.find(s => s.name === account.Name);
           
           if (!existing) {
             await storage.createSupplier({
               companyId: this.companyId,
               name: account.Name,
-              contactEmail: "",
-              phone: account.Phone || "",
-              address: account.BillingCity ? `${account.BillingCity}, ${account.BillingCountry || ""}` : "",
-              category: account.Industry || "General",
-              riskScore: 50,
-              tier: 1,
-              leadTime: 14,
-              reliabilityScore: 85,
-              externalId: account.Id,
-              externalSource: "salesforce"
+              contactEmail: ""
             });
             synced++;
           }
@@ -158,15 +149,23 @@ export class SalesforceIntegration {
         try {
           await storage.createDemandSignal({
             companyId: this.companyId,
-            source: "salesforce",
             signalType: "opportunity",
-            rawData: opp,
+            signalDate: new Date(opp.CloseDate),
+            quantity: opp.Amount ? Math.round(opp.Amount / 100) : 1,
+            unit: "USD",
+            channel: "salesforce",
             confidence: opp.StageName === "Closed Won" ? 100 : 
                         opp.StageName === "Negotiation" ? 70 :
                         opp.StageName === "Proposal" ? 50 : 30,
-            impactedSkus: [],
-            forecastAdjustment: opp.Amount ? opp.Amount / 1000 : 0,
-            expiresAt: new Date(opp.CloseDate)
+            priority: "medium",
+            attributes: {
+              source: "salesforce",
+              opportunityId: opp.Id,
+              opportunityName: opp.Name,
+              stageName: opp.StageName,
+              accountId: opp.AccountId,
+              amount: opp.Amount
+            }
           });
           synced++;
         } catch (err: any) {
@@ -191,12 +190,7 @@ export async function getSalesforceIntegration(companyId: string): Promise<Sales
       return new SalesforceIntegration(credentials.accessToken, credentials.instanceUrl, companyId);
     }
   } catch (error) {
-    console.log(`[Salesforce] Centralized credentials not available, falling back to company config`);
+    console.log(`[Salesforce] Credentials not available for company ${companyId}`);
   }
-  
-  const company = await storage.getCompany(companyId);
-  if (!company?.salesforceAccessToken || !company.salesforceInstanceUrl) {
-    return null;
-  }
-  return new SalesforceIntegration(company.salesforceAccessToken, company.salesforceInstanceUrl, companyId);
+  return null;
 }

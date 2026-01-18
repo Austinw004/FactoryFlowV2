@@ -1,6 +1,5 @@
-import { db } from "../db";
-import { companies } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { CredentialService } from "./credentialService";
+import { storage } from "../storage";
 
 export interface LinearIssue {
   id: string;
@@ -184,22 +183,86 @@ export class LinearIntegration {
 
 export async function getLinearIntegration(companyId: string): Promise<LinearIntegration | null> {
   try {
-    const [company] = await db
-      .select()
-      .from(companies)
-      .where(eq(companies.id, companyId))
-      .limit(1);
+    const credentials = await CredentialService.getDecryptedCredentials(companyId, 'linear');
+    if (credentials?.apiKey) {
+      console.log(`[Linear] Using centralized credential storage for company ${companyId}`);
+      return new LinearIntegration({
+        apiKey: credentials.apiKey,
+        companyId,
+      });
+    }
+  } catch (error) {
+    console.log(`[Linear] Credentials not available for company ${companyId}`);
+  }
+  return null;
+}
 
-    if (!company?.linearApiKey) {
-      return null;
+export async function syncLinearData(companyId: string): Promise<{
+  success: boolean;
+  teams?: number;
+  issues?: number;
+  demandSignals?: number;
+  error?: string;
+}> {
+  const integration = await getLinearIntegration(companyId);
+  if (!integration) {
+    return { success: false, error: 'Linear not configured' };
+  }
+
+  try {
+    const connectionTest = await integration.testConnection();
+    if (!connectionTest.success) {
+      return { success: false, error: connectionTest.error };
     }
 
-    return new LinearIntegration({
-      apiKey: company.linearApiKey,
-      companyId,
-    });
-  } catch (error) {
-    console.error("[Linear] Failed to get integration:", error);
-    return null;
+    const teams = await integration.fetchTeams();
+    let totalIssues = 0;
+    let demandSignals = 0;
+
+    for (const team of teams) {
+      const issues = await integration.fetchIssues(team.id, 50);
+      totalIssues += issues.length;
+
+      for (const issue of issues) {
+        const labels = issue.labels.nodes.map(l => l.name);
+        if (labels.includes('demand') || labels.includes('procurement') || issue.priority <= 2) {
+          try {
+            await storage.createDemandSignal({
+              companyId,
+              signalType: 'issue',
+              signalDate: new Date(issue.createdAt),
+              quantity: 1,
+              unit: 'units',
+              channel: 'linear',
+              customer: issue.creator?.name,
+              confidence: issue.state.name === 'Done' ? 100 : issue.state.name === 'In Progress' ? 70 : 50,
+              priority: issue.priorityLabel || 'medium',
+              attributes: {
+                source: 'linear',
+                issueId: issue.id,
+                issueIdentifier: issue.identifier,
+                issueTitle: issue.title,
+                teamName: team.name,
+                labels
+              }
+            });
+            demandSignals++;
+          } catch (err) {
+            console.error(`[Linear] Failed to create demand signal for issue ${issue.identifier}:`, err);
+          }
+        }
+      }
+    }
+
+    console.log(`[Linear] Full sync complete: ${teams.length} teams, ${totalIssues} issues, ${demandSignals} demand signals`);
+    return {
+      success: true,
+      teams: teams.length,
+      issues: totalIssues,
+      demandSignals
+    };
+  } catch (error: any) {
+    console.error('[Linear] Sync failed:', error.message);
+    return { success: false, error: error.message };
   }
 }

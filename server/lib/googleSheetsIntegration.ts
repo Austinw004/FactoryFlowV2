@@ -1,5 +1,6 @@
 import axios from "axios";
 import { storage } from "../storage";
+import { CredentialService } from "./credentialService";
 
 export interface SheetData {
   spreadsheetId: string;
@@ -116,20 +117,18 @@ export class GoogleSheetsIntegration {
     try {
       const materials = await storage.getMaterials(this.companyId);
       
-      const headers = ["SKU", "Name", "Category", "Current Stock", "Reorder Point", "Unit Cost", "Lead Time (Days)"];
+      const headers = ["Code", "Name", "Unit", "On Hand", "Inbound"];
       const rows = materials.map(m => [
-        m.sku,
+        m.code,
         m.name,
-        m.category || "",
-        String(m.currentStock || 0),
-        String(m.reorderPoint || 0),
-        String(m.unitCost || 0),
-        String(m.leadTimeDays || 0)
+        m.unit || "units",
+        String(m.onHand || 0),
+        String(m.inbound || 0)
       ]);
 
-      await this.writeRange(spreadsheetId, "Inventory!A1:G1", [headers]);
+      await this.writeRange(spreadsheetId, "Inventory!A1:E1", [headers]);
       if (rows.length > 0) {
-        await this.writeRange(spreadsheetId, `Inventory!A2:G${rows.length + 1}`, rows);
+        await this.writeRange(spreadsheetId, `Inventory!A2:E${rows.length + 1}`, rows);
       }
 
       console.log(`[GoogleSheets] Exported ${rows.length} inventory items`);
@@ -152,24 +151,18 @@ export class GoogleSheetsIntegration {
         try {
           if (row.length < 2) continue;
           
-          const [sku, name, category, currentStock, reorderPoint, unitCost, leadTime] = row;
+          const [code, name, unit, onHand, inbound] = row;
           
           const materials = await storage.getMaterials(this.companyId);
-          const existing = materials.find(m => m.sku === sku);
+          const existing = materials.find(m => m.code === code);
           
           if (!existing) {
             await storage.createMaterial({
               companyId: this.companyId,
-              name: name || sku,
-              sku,
-              category: category || "Imported",
-              unit: "units",
-              currentStock: parseInt(currentStock) || 0,
-              reorderPoint: parseInt(reorderPoint) || 10,
-              leadTimeDays: parseInt(leadTime) || 7,
-              unitCost: parseFloat(unitCost) || 0,
-              externalId: `gsheet-${sku}`,
-              externalSource: "google-sheets"
+              name: name || code,
+              code,
+              unit: unit || "units",
+              onHand: parseInt(onHand) || 0
             });
             imported++;
           }
@@ -188,9 +181,14 @@ export class GoogleSheetsIntegration {
 }
 
 export async function getGoogleSheetsIntegration(companyId: string): Promise<GoogleSheetsIntegration | null> {
-  const company = await storage.getCompany(companyId);
-  if (!company?.googleAccessToken) {
-    return null;
+  try {
+    const credentials = await CredentialService.getDecryptedCredentials(companyId, 'google_sheets');
+    if (credentials?.accessToken) {
+      console.log(`[GoogleSheets] Using centralized credential storage for company ${companyId}`);
+      return new GoogleSheetsIntegration(credentials.accessToken, companyId);
+    }
+  } catch (error) {
+    console.log(`[GoogleSheets] Credentials not available for company ${companyId}`);
   }
-  return new GoogleSheetsIntegration(company.googleAccessToken, companyId);
+  return null;
 }
