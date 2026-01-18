@@ -15898,6 +15898,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: error.message });
     }
   });
+
+  // Integration Readiness Report - Compliance mandate endpoint
+  app.get("/api/integrations/readiness", isAuthenticated, async (req: any, res) => {
+    try {
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      
+      const { integrationService } = await import("./lib/integrationService");
+      const report = await integrationService.generateHealthReport(user?.companyId || undefined);
+      
+      res.json({
+        success: true,
+        report,
+        mandate: {
+          description: "Integration Integrity Mandate Compliance Report",
+          requirements: [
+            "End-to-end dataflow testing",
+            "Downstream effect verification", 
+            "Entity resolution consistency",
+            "Regime-aware data handling",
+            "Explicit failure logging",
+            "No conflicting information",
+            "Documented scope and limitations"
+          ]
+        }
+      });
+    } catch (error: any) {
+      console.error("Error generating readiness report:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get single integration info
+  app.get("/api/integrations/:integrationId/info", isAuthenticated, async (req: any, res) => {
+    try {
+      const { integrationId } = req.params;
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      
+      const { integrationService } = await import("./lib/integrationService");
+      const company = user?.companyId ? await storage.getCompany(user.companyId) : null;
+      const info = integrationService.getIntegrationReadiness(integrationId, company);
+      
+      res.json({ success: true, integration: info });
+    } catch (error: any) {
+      console.error("Error getting integration info:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
   
   // Configure Slack integration
   app.post("/api/integrations/slack/configure", isAuthenticated, async (req: any, res) => {

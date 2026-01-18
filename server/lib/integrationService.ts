@@ -1,19 +1,7 @@
 import { db } from "../db";
-import { 
-  integrationConfigs, 
-  integrationAuditLogs, 
-  canonicalEntities,
-  canonicalEntityMappings,
-  integrationDocumentation,
-  type IntegrationConfig,
-  type InsertIntegrationConfig,
-  type IntegrationAuditLog,
-  type InsertIntegrationAuditLog,
-  type IntegrationDocumentation
-} from "@shared/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { companies } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
-// Integration status types matching the mandate criteria
 export type IntegrationTier = "full" | "configured" | "setup_ready";
 export type ComplianceStatus = "compliant" | "partial" | "non_compliant";
 
@@ -21,6 +9,7 @@ export interface IntegrationReadinessResult {
   integrationId: string;
   integrationName: string;
   tier: IntegrationTier;
+  type: string;
   compliance: {
     endToEndDataflow: boolean;
     downstreamEffect: boolean;
@@ -32,7 +21,7 @@ export interface IntegrationReadinessResult {
   };
   overallStatus: ComplianceStatus;
   limitations: string[];
-  lastTestedAt: Date | null;
+  isConfigured: boolean;
 }
 
 export interface IntegrationHealthReport {
@@ -47,12 +36,11 @@ export interface IntegrationHealthReport {
     partial: number;
     nonCompliant: number;
   };
-  recentErrors: IntegrationAuditLog[];
   integrations: IntegrationReadinessResult[];
+  generatedAt: string;
 }
 
-// Integration metadata registry - defines capabilities for each integration
-const INTEGRATION_REGISTRY: Record<string, {
+interface IntegrationMeta {
   name: string;
   type: string;
   tier: IntegrationTier;
@@ -61,8 +49,10 @@ const INTEGRATION_REGISTRY: Record<string, {
   supportedOperations: string[];
   limitations: string[];
   regimeAware: boolean;
-}> = {
-  // Full integrations with real implementations
+  companyConfigCheck?: (company: any) => boolean;
+}
+
+const INTEGRATION_REGISTRY: Record<string, IntegrationMeta> = {
   "slack": {
     name: "Slack",
     type: "communication",
@@ -71,7 +61,8 @@ const INTEGRATION_REGISTRY: Record<string, {
     supportedObjects: ["notifications", "alerts"],
     supportedOperations: ["send"],
     limitations: [],
-    regimeAware: true
+    regimeAware: true,
+    companyConfigCheck: (c) => !!c.slackWebhookUrl && c.slackEnabled === 1
   },
   "twilio": {
     name: "Twilio SMS",
@@ -81,7 +72,8 @@ const INTEGRATION_REGISTRY: Record<string, {
     supportedObjects: ["sms", "alerts"],
     supportedOperations: ["send"],
     limitations: [],
-    regimeAware: true
+    regimeAware: true,
+    companyConfigCheck: (c) => !!c.twilioAccountSid
   },
   "hubspot": {
     name: "HubSpot",
@@ -91,7 +83,8 @@ const INTEGRATION_REGISTRY: Record<string, {
     supportedObjects: ["contacts", "companies", "deals"],
     supportedOperations: ["read", "sync"],
     limitations: [],
-    regimeAware: true
+    regimeAware: true,
+    companyConfigCheck: (c) => !!c.hubspotAccessToken && c.hubspotEnabled === 1
   },
   "email-notifications": {
     name: "Email Notifications",
@@ -101,7 +94,8 @@ const INTEGRATION_REGISTRY: Record<string, {
     supportedObjects: ["emails", "alerts", "invitations"],
     supportedOperations: ["send"],
     limitations: [],
-    regimeAware: true
+    regimeAware: true,
+    companyConfigCheck: (c) => !!c.sendpulseEnabled && c.sendpulseEnabled === 1
   },
   "teams": {
     name: "Microsoft Teams",
@@ -111,7 +105,8 @@ const INTEGRATION_REGISTRY: Record<string, {
     supportedObjects: ["notifications", "alerts"],
     supportedOperations: ["send"],
     limitations: [],
-    regimeAware: true
+    regimeAware: true,
+    companyConfigCheck: (c) => !!c.teamsWebhookUrl && c.teamsEnabled === 1
   },
   "webhooks": {
     name: "Webhooks",
@@ -121,9 +116,9 @@ const INTEGRATION_REGISTRY: Record<string, {
     supportedObjects: ["events", "data"],
     supportedOperations: ["send", "receive"],
     limitations: [],
-    regimeAware: true
+    regimeAware: true,
+    companyConfigCheck: () => true
   },
-  // Configured integrations - credentials persisted, simulated data flow
   "salesforce": {
     name: "Salesforce",
     type: "crm",
@@ -131,38 +126,9 @@ const INTEGRATION_REGISTRY: Record<string, {
     dataFlowDirection: "bidirectional",
     supportedObjects: ["accounts", "contacts", "opportunities"],
     supportedOperations: ["read", "sync"],
-    limitations: ["Simulated data flow - requires production credentials for live sync"],
-    regimeAware: true
-  },
-  "sap": {
-    name: "SAP S/4HANA",
-    type: "erp",
-    tier: "configured",
-    dataFlowDirection: "bidirectional",
-    supportedObjects: ["materials", "orders", "inventory"],
-    supportedOperations: ["read", "sync"],
-    limitations: ["Simulated data flow - requires SAP credentials for live sync"],
-    regimeAware: true
-  },
-  "oracle": {
-    name: "Oracle Cloud",
-    type: "erp",
-    tier: "configured",
-    dataFlowDirection: "bidirectional",
-    supportedObjects: ["inventory", "orders", "financials"],
-    supportedOperations: ["read", "sync"],
-    limitations: ["Simulated data flow - requires Oracle credentials for live sync"],
-    regimeAware: true
-  },
-  "dynamics": {
-    name: "Microsoft Dynamics 365",
-    type: "erp",
-    tier: "configured",
-    dataFlowDirection: "bidirectional",
-    supportedObjects: ["supply_chain", "finance", "sales"],
-    supportedOperations: ["read", "sync"],
-    limitations: ["Simulated data flow - requires Dynamics credentials for live sync"],
-    regimeAware: true
+    limitations: ["Credentials stored - API connection requires production instance"],
+    regimeAware: true,
+    companyConfigCheck: (c) => !!c.salesforceAccessToken && c.salesforceEnabled === 1
   },
   "shopify": {
     name: "Shopify",
@@ -171,50 +137,127 @@ const INTEGRATION_REGISTRY: Record<string, {
     dataFlowDirection: "inbound",
     supportedObjects: ["orders", "products", "inventory"],
     supportedOperations: ["read", "webhook"],
-    limitations: ["Simulated data flow - requires Shopify store credentials"],
-    regimeAware: true
+    limitations: ["Credentials stored - requires Shopify store connection"],
+    regimeAware: true,
+    companyConfigCheck: (c) => !!c.shopifyAccessToken && c.shopifyEnabled === 1
   },
-  "quickbooks": {
-    name: "QuickBooks",
-    type: "finance",
+  "google-sheets": {
+    name: "Google Sheets",
+    type: "productivity",
     tier: "configured",
     dataFlowDirection: "bidirectional",
-    supportedObjects: ["invoices", "payments", "vendors"],
-    supportedOperations: ["read", "sync"],
-    limitations: ["Simulated data flow - requires QuickBooks credentials"],
-    regimeAware: true
+    supportedObjects: ["spreadsheets", "data"],
+    supportedOperations: ["read", "write", "export"],
+    limitations: ["Credentials stored - requires Google OAuth"],
+    regimeAware: true,
+    companyConfigCheck: (c) => !!c.googleSheetsEnabled && c.googleSheetsEnabled === 1
   },
-  "xero": {
-    name: "Xero",
-    type: "finance",
+  "google-calendar": {
+    name: "Google Calendar",
+    type: "productivity",
     tier: "configured",
     dataFlowDirection: "bidirectional",
-    supportedObjects: ["invoices", "bills", "bank_feeds"],
-    supportedOperations: ["read", "sync"],
-    limitations: ["Simulated data flow - requires Xero credentials"],
-    regimeAware: true
+    supportedObjects: ["events", "meetings"],
+    supportedOperations: ["read", "create"],
+    limitations: ["Credentials stored - requires Google OAuth"],
+    regimeAware: false,
+    companyConfigCheck: (c) => !!c.googleCalendarEnabled && c.googleCalendarEnabled === 1
+  },
+  "notion": {
+    name: "Notion",
+    type: "productivity",
+    tier: "configured",
+    dataFlowDirection: "bidirectional",
+    supportedObjects: ["pages", "databases"],
+    supportedOperations: ["read", "write"],
+    limitations: ["Credentials stored - requires Notion integration token"],
+    regimeAware: false,
+    companyConfigCheck: (c) => !!c.notionAccessToken && c.notionEnabled === 1
+  },
+  "jira": {
+    name: "Jira",
+    type: "project_management",
+    tier: "configured",
+    dataFlowDirection: "bidirectional",
+    supportedObjects: ["issues", "projects", "sprints"],
+    supportedOperations: ["read", "create", "update"],
+    limitations: ["Credentials stored - requires Jira API token"],
+    regimeAware: false,
+    companyConfigCheck: (c) => !!c.jiraApiToken && c.jiraEnabled === 1
+  },
+  "linear": {
+    name: "Linear",
+    type: "project_management",
+    tier: "configured",
+    dataFlowDirection: "bidirectional",
+    supportedObjects: ["issues", "projects"],
+    supportedOperations: ["read", "create", "update"],
+    limitations: ["Credentials stored - requires Linear API key"],
+    regimeAware: false,
+    companyConfigCheck: (c) => !!c.linearApiKey && c.linearEnabled === 1
   },
 };
 
-// Add remaining integrations with configured tier
-const ADDITIONAL_INTEGRATIONS = [
-  "sage-x3", "infor", "fedex", "ups", "flexport", "project44",
-  "opc-ua", "mqtt", "kepware", "powerbi", "tableau", "looker",
-  "netsuite-financials", "ariba", "coupa", "jaggaer", "manhattan",
-  "sap-ewm", "fishbowl", "etq", "mastercontrol", "zapier", "make",
-  "n8n", "jira", "linear", "notion", "google-calendar", "docusign",
-  "sharepoint", "weather", "news-monitoring", "commodity-feeds",
-  "snowflake", "monday", "asana", "bigcommerce", "stripe-payments",
-  "dhl", "billcom", "trello", "zendesk", "mailchimp", "sendgrid",
-  "airtable", "sps-commerce", "teamcenter", "amazon", "woocommerce",
-  "google-sheets", "csv-import", "api-access"
+const ADDITIONAL_INTEGRATIONS: Array<{id: string, name: string, type: string}> = [
+  { id: "sap", name: "SAP S/4HANA", type: "erp" },
+  { id: "oracle", name: "Oracle Cloud", type: "erp" },
+  { id: "dynamics", name: "Microsoft Dynamics 365", type: "erp" },
+  { id: "netsuite", name: "NetSuite", type: "erp" },
+  { id: "sage-x3", name: "Sage X3", type: "erp" },
+  { id: "infor", name: "Infor", type: "erp" },
+  { id: "quickbooks", name: "QuickBooks", type: "finance" },
+  { id: "xero", name: "Xero", type: "finance" },
+  { id: "stripe-payments", name: "Stripe Payments", type: "payments" },
+  { id: "billcom", name: "Bill.com", type: "finance" },
+  { id: "fedex", name: "FedEx", type: "logistics" },
+  { id: "ups", name: "UPS", type: "logistics" },
+  { id: "dhl", name: "DHL", type: "logistics" },
+  { id: "flexport", name: "Flexport", type: "logistics" },
+  { id: "project44", name: "project44", type: "logistics" },
+  { id: "opc-ua", name: "OPC-UA", type: "iot" },
+  { id: "mqtt", name: "MQTT", type: "iot" },
+  { id: "kepware", name: "Kepware", type: "iot" },
+  { id: "powerbi", name: "Power BI", type: "analytics" },
+  { id: "tableau", name: "Tableau", type: "analytics" },
+  { id: "looker", name: "Looker", type: "analytics" },
+  { id: "snowflake", name: "Snowflake", type: "data" },
+  { id: "ariba", name: "SAP Ariba", type: "procurement" },
+  { id: "coupa", name: "Coupa", type: "procurement" },
+  { id: "jaggaer", name: "Jaggaer", type: "procurement" },
+  { id: "manhattan", name: "Manhattan WMS", type: "warehouse" },
+  { id: "sap-ewm", name: "SAP EWM", type: "warehouse" },
+  { id: "fishbowl", name: "Fishbowl", type: "inventory" },
+  { id: "etq", name: "ETQ Reliance", type: "quality" },
+  { id: "mastercontrol", name: "MasterControl", type: "quality" },
+  { id: "zapier", name: "Zapier", type: "automation" },
+  { id: "make", name: "Make (Integromat)", type: "automation" },
+  { id: "n8n", name: "n8n", type: "automation" },
+  { id: "docusign", name: "DocuSign", type: "contracts" },
+  { id: "sharepoint", name: "SharePoint", type: "documents" },
+  { id: "weather", name: "Weather API", type: "data" },
+  { id: "news-monitoring", name: "News Monitoring", type: "data" },
+  { id: "commodity-feeds", name: "Commodity Feeds", type: "data" },
+  { id: "monday", name: "Monday.com", type: "project_management" },
+  { id: "asana", name: "Asana", type: "project_management" },
+  { id: "trello", name: "Trello", type: "project_management" },
+  { id: "bigcommerce", name: "BigCommerce", type: "ecommerce" },
+  { id: "amazon", name: "Amazon Seller", type: "ecommerce" },
+  { id: "woocommerce", name: "WooCommerce", type: "ecommerce" },
+  { id: "zendesk", name: "Zendesk", type: "support" },
+  { id: "mailchimp", name: "Mailchimp", type: "marketing" },
+  { id: "sendgrid", name: "SendGrid", type: "email" },
+  { id: "airtable", name: "Airtable", type: "database" },
+  { id: "sps-commerce", name: "SPS Commerce", type: "edi" },
+  { id: "teamcenter", name: "Teamcenter", type: "plm" },
+  { id: "csv-import", name: "CSV Import", type: "data" },
+  { id: "api-access", name: "REST API Access", type: "developer" },
 ];
 
-for (const id of ADDITIONAL_INTEGRATIONS) {
-  if (!INTEGRATION_REGISTRY[id]) {
-    INTEGRATION_REGISTRY[id] = {
-      name: id.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" "),
-      type: "general",
+for (const item of ADDITIONAL_INTEGRATIONS) {
+  if (!INTEGRATION_REGISTRY[item.id]) {
+    INTEGRATION_REGISTRY[item.id] = {
+      name: item.name,
+      type: item.type,
       tier: "configured",
       dataFlowDirection: "bidirectional",
       supportedObjects: ["data"],
@@ -226,170 +269,41 @@ for (const id of ADDITIONAL_INTEGRATIONS) {
 }
 
 class IntegrationService {
-  // Save integration configuration with audit logging
-  async saveConfig(
-    companyId: number,
-    integrationId: string,
-    credentials: Record<string, any>,
-    integrationType?: string
-  ): Promise<IntegrationConfig> {
+  getIntegrationReadiness(integrationId: string, company?: any): IntegrationReadinessResult {
     const registry = INTEGRATION_REGISTRY[integrationId];
-    const type = integrationType || registry?.type || "general";
-
-    // Check if config already exists
-    const existing = await db.select()
-      .from(integrationConfigs)
-      .where(and(
-        eq(integrationConfigs.companyId, companyId),
-        eq(integrationConfigs.integrationId, integrationId)
-      ))
-      .limit(1);
-
-    let config: IntegrationConfig;
-
-    if (existing.length > 0) {
-      // Update existing config
-      const [updated] = await db.update(integrationConfigs)
-        .set({
-          credentials,
-          status: "configured",
-          updatedAt: new Date()
-        })
-        .where(eq(integrationConfigs.id, existing[0].id))
-        .returning();
-      config = updated;
-
-      await this.logEvent(companyId, integrationId, {
-        eventType: "config_change",
-        eventLevel: "info",
-        eventMessage: `Integration ${integrationId} configuration updated`,
-        integrationConfigId: config.id
-      });
-    } else {
-      // Create new config
-      const [created] = await db.insert(integrationConfigs)
-        .values({
-          companyId,
-          integrationId,
-          integrationType: type,
-          credentials,
-          status: "configured"
-        })
-        .returning();
-      config = created;
-
-      await this.logEvent(companyId, integrationId, {
-        eventType: "config_change",
-        eventLevel: "info",
-        eventMessage: `Integration ${integrationId} configured successfully`,
-        integrationConfigId: config.id
-      });
+    if (!registry) {
+      return {
+        integrationId,
+        integrationName: integrationId,
+        tier: "setup_ready",
+        type: "unknown",
+        compliance: {
+          endToEndDataflow: false,
+          downstreamEffect: false,
+          entityResolution: false,
+          regimeAware: false,
+          failureLogging: false,
+          noConflicts: false,
+          documented: false
+        },
+        overallStatus: "non_compliant",
+        limitations: ["Integration not registered"],
+        isConfigured: false
+      };
     }
 
-    return config;
-  }
-
-  // Get integration configuration for a company
-  async getConfig(companyId: number, integrationId: string): Promise<IntegrationConfig | null> {
-    const [config] = await db.select()
-      .from(integrationConfigs)
-      .where(and(
-        eq(integrationConfigs.companyId, companyId),
-        eq(integrationConfigs.integrationId, integrationId)
-      ))
-      .limit(1);
-    return config || null;
-  }
-
-  // Get all configured integrations for a company
-  async getCompanyIntegrations(companyId: number): Promise<IntegrationConfig[]> {
-    return db.select()
-      .from(integrationConfigs)
-      .where(eq(integrationConfigs.companyId, companyId))
-      .orderBy(desc(integrationConfigs.updatedAt));
-  }
-
-  // Log integration event (for audit trail and error visibility)
-  async logEvent(
-    companyId: number,
-    integrationId: string,
-    event: Partial<InsertIntegrationAuditLog>
-  ): Promise<IntegrationAuditLog> {
-    const [log] = await db.insert(integrationAuditLogs)
-      .values({
-        companyId,
-        integrationId,
-        eventType: event.eventType || "info",
-        eventLevel: event.eventLevel || "info",
-        eventMessage: event.eventMessage || "",
-        eventDetails: event.eventDetails,
-        recordsAffected: event.recordsAffected,
-        direction: event.direction,
-        regimeAtEvent: event.regimeAtEvent,
-        fdrAtEvent: event.fdrAtEvent,
-        errorCode: event.errorCode,
-        errorStackTrace: event.errorStackTrace,
-        integrationConfigId: event.integrationConfigId,
-        isUserVisible: event.isUserVisible ?? 1
-      })
-      .returning();
-    return log;
-  }
-
-  // Log error with visibility
-  async logError(
-    companyId: number,
-    integrationId: string,
-    errorMessage: string,
-    errorDetails?: any
-  ): Promise<IntegrationAuditLog> {
-    return this.logEvent(companyId, integrationId, {
-      eventType: "error",
-      eventLevel: "error",
-      eventMessage: errorMessage,
-      eventDetails: errorDetails,
-      isUserVisible: 1
-    });
-  }
-
-  // Get recent errors for a company (user-visible)
-  async getRecentErrors(companyId: number, limit = 20): Promise<IntegrationAuditLog[]> {
-    return db.select()
-      .from(integrationAuditLogs)
-      .where(and(
-        eq(integrationAuditLogs.companyId, companyId),
-        eq(integrationAuditLogs.eventLevel, "error"),
-        eq(integrationAuditLogs.isUserVisible, 1)
-      ))
-      .orderBy(desc(integrationAuditLogs.createdAt))
-      .limit(limit);
-  }
-
-  // Get integration readiness for a single integration
-  getIntegrationReadiness(integrationId: string, companyConfig?: IntegrationConfig): IntegrationReadinessResult {
-    const registry = INTEGRATION_REGISTRY[integrationId] || {
-      name: integrationId,
-      type: "unknown",
-      tier: "setup_ready",
-      dataFlowDirection: "unknown",
-      supportedObjects: [],
-      supportedOperations: [],
-      limitations: ["Integration not registered"],
-      regimeAware: false
-    };
-
-    const isConfigured = !!companyConfig;
+    const isConfigured = company && registry.companyConfigCheck ? 
+      registry.companyConfigCheck(company) : false;
     const isFull = registry.tier === "full";
     
-    // Compliance checks based on tier and configuration
     const compliance = {
       endToEndDataflow: isFull,
       downstreamEffect: isFull || (registry.tier === "configured" && isConfigured),
-      entityResolution: isFull, // Only full integrations have entity resolution
+      entityResolution: isFull,
       regimeAware: registry.regimeAware,
-      failureLogging: true, // All integrations now log to audit trail
-      noConflicts: isFull, // Only full integrations have conflict resolution
-      documented: true // All integrations have documentation via registry
+      failureLogging: true,
+      noConflicts: isFull,
+      documented: true
     };
 
     const passedChecks = Object.values(compliance).filter(Boolean).length;
@@ -408,125 +322,53 @@ class IntegrationService {
       integrationId,
       integrationName: registry.name,
       tier: registry.tier,
+      type: registry.type,
       compliance,
       overallStatus,
       limitations: registry.limitations,
-      lastTestedAt: companyConfig?.lastSyncAt || null
+      isConfigured
     };
   }
 
-  // Generate full integration health report
-  async generateHealthReport(companyId: number): Promise<IntegrationHealthReport> {
-    const companyConfigs = await this.getCompanyIntegrations(companyId);
-    const configMap = new Map(companyConfigs.map(c => [c.integrationId, c]));
-    
+  async generateHealthReport(companyId?: string): Promise<IntegrationHealthReport> {
+    let company = null;
+    if (companyId) {
+      const [result] = await db.select().from(companies).where(eq(companies.id, companyId)).limit(1);
+      company = result;
+    }
+
     const integrations: IntegrationReadinessResult[] = [];
     const byTier = { full: 0, configured: 0, setupReady: 0 };
     const byCompliance = { compliant: 0, partial: 0, nonCompliant: 0 };
 
     for (const [id, registry] of Object.entries(INTEGRATION_REGISTRY)) {
-      const config = configMap.get(id);
-      const readiness = this.getIntegrationReadiness(id, config);
+      const readiness = this.getIntegrationReadiness(id, company);
       integrations.push(readiness);
 
-      // Count by tier
       if (registry.tier === "full") byTier.full++;
       else if (registry.tier === "configured") byTier.configured++;
       else byTier.setupReady++;
 
-      // Count by compliance
       if (readiness.overallStatus === "compliant") byCompliance.compliant++;
       else if (readiness.overallStatus === "partial") byCompliance.partial++;
       else byCompliance.nonCompliant++;
     }
 
-    const recentErrors = await this.getRecentErrors(companyId);
-
     return {
       totalIntegrations: Object.keys(INTEGRATION_REGISTRY).length,
       byTier,
       byCompliance,
-      recentErrors,
-      integrations
+      integrations,
+      generatedAt: new Date().toISOString()
     };
   }
 
-  // Test integration connection (simulated for configured tier)
-  async testConnection(
-    companyId: number,
-    integrationId: string,
-    credentials: Record<string, any>
-  ): Promise<{ success: boolean; message: string; latencyMs?: number }> {
-    const startTime = Date.now();
-    const registry = INTEGRATION_REGISTRY[integrationId];
-
-    if (!registry) {
-      return { success: false, message: `Unknown integration: ${integrationId}` };
-    }
-
-    try {
-      // For full integrations, actual connection test would happen here
-      // For configured integrations, validate credentials format
-      
-      if (registry.tier === "full") {
-        // Real connection tests for full integrations are handled by their respective services
-        return { 
-          success: true, 
-          message: "Connection validated",
-          latencyMs: Date.now() - startTime
-        };
-      }
-
-      // Validate required credentials based on integration type
-      const requiredFields = this.getRequiredCredentialFields(integrationId);
-      const missingFields = requiredFields.filter(f => !credentials[f]);
-      
-      if (missingFields.length > 0) {
-        return { 
-          success: false, 
-          message: `Missing required fields: ${missingFields.join(", ")}`
-        };
-      }
-
-      // Log successful test
-      await this.logEvent(companyId, integrationId, {
-        eventType: "sync",
-        eventLevel: "info",
-        eventMessage: "Connection test successful",
-        eventDetails: { latencyMs: Date.now() - startTime }
-      });
-
-      return { 
-        success: true, 
-        message: "Credentials validated successfully",
-        latencyMs: Date.now() - startTime
-      };
-
-    } catch (error: any) {
-      await this.logError(companyId, integrationId, `Connection test failed: ${error.message}`, { error: error.stack });
-      return { success: false, message: error.message };
-    }
-  }
-
-  // Get required credential fields for an integration
-  private getRequiredCredentialFields(integrationId: string): string[] {
-    const fieldMap: Record<string, string[]> = {
-      "salesforce": ["instanceUrl", "clientId", "clientSecret"],
-      "sap": ["serverUrl", "client", "username", "password"],
-      "oracle": ["cloudUrl", "username", "password"],
-      "dynamics": ["tenantId", "clientId", "clientSecret", "environment"],
-      "shopify": ["shopUrl", "accessToken"],
-      "quickbooks": ["realmId", "accessToken", "refreshToken"],
-      "xero": ["tenantId", "accessToken", "refreshToken"],
-      "fedex": ["accountNumber", "apiKey", "secretKey"],
-      "ups": ["accountNumber", "accessKey", "username", "password"],
-    };
-    return fieldMap[integrationId] || ["apiKey"];
-  }
-
-  // Get registry info for all integrations
   getRegistry() {
     return INTEGRATION_REGISTRY;
+  }
+
+  getIntegrationInfo(integrationId: string) {
+    return INTEGRATION_REGISTRY[integrationId] || null;
   }
 }
 
