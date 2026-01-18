@@ -11,6 +11,7 @@ import {
   index,
   uniqueIndex,
   boolean,
+  serial,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
@@ -7947,3 +7948,216 @@ export type BehavioralPatternAggregate =
 export type InsertBehavioralPatternAggregate = z.infer<
   typeof insertBehavioralPatternAggregateSchema
 >;
+
+// ============================================================================
+// INTEGRATION INFRASTRUCTURE - Unified Integration Management
+// ============================================================================
+
+// Integration Configurations - Unified storage for all integration credentials
+export const integrationConfigs = pgTable(
+  "integration_configs",
+  {
+    id: serial("id").primaryKey(),
+    companyId: integer("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "cascade" }),
+    integrationId: text("integration_id").notNull(), // e.g., "salesforce", "sap", "shopify"
+    integrationType: text("integration_type").notNull(), // "crm", "erp", "ecommerce", etc.
+    
+    // Connection details (encrypted in production)
+    credentials: jsonb("credentials").notNull(), // API keys, tokens, URLs, etc.
+    
+    // Status tracking
+    status: text("status").notNull().default("configured"), // "configured", "active", "error", "disabled"
+    lastSyncAt: timestamp("last_sync_at"),
+    lastErrorAt: timestamp("last_error_at"),
+    lastErrorMessage: text("last_error_message"),
+    
+    // Data flow metrics
+    inboundRecordCount: integer("inbound_record_count").default(0),
+    outboundRecordCount: integer("outbound_record_count").default(0),
+    lastInboundAt: timestamp("last_inbound_at"),
+    lastOutboundAt: timestamp("last_outbound_at"),
+    
+    // Regime awareness
+    regimeAwareEnabled: integer("regime_aware_enabled").default(1),
+    regimeFilterLevel: text("regime_filter_level").default("all"), // "all", "confirmed_only", "high_confidence"
+    
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("integration_configs_company_idx").on(table.companyId),
+    index("integration_configs_integration_idx").on(table.integrationId),
+    index("integration_configs_status_idx").on(table.status),
+  ],
+);
+
+// Integration Audit Logs - Centralized error and event tracking
+export const integrationAuditLogs = pgTable(
+  "integration_audit_logs",
+  {
+    id: serial("id").primaryKey(),
+    companyId: integer("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "cascade" }),
+    integrationConfigId: integer("integration_config_id")
+      .references(() => integrationConfigs.id, { onDelete: "cascade" }),
+    integrationId: text("integration_id").notNull(),
+    
+    // Event details
+    eventType: text("event_type").notNull(), // "sync", "error", "config_change", "data_inbound", "data_outbound"
+    eventLevel: text("event_level").notNull().default("info"), // "debug", "info", "warn", "error", "critical"
+    eventMessage: text("event_message").notNull(),
+    eventDetails: jsonb("event_details"), // Additional context
+    
+    // Data flow tracking
+    recordsAffected: integer("records_affected").default(0),
+    direction: text("direction"), // "inbound", "outbound", "bidirectional"
+    
+    // Regime context at time of event
+    regimeAtEvent: text("regime_at_event"),
+    fdrAtEvent: real("fdr_at_event"),
+    
+    // Error handling
+    errorCode: text("error_code"),
+    errorStackTrace: text("error_stack_trace"),
+    isResolved: integer("is_resolved").default(0),
+    resolvedAt: timestamp("resolved_at"),
+    resolvedBy: integer("resolved_by"),
+    
+    // User visibility
+    isUserVisible: integer("is_user_visible").default(1),
+    acknowledgedAt: timestamp("acknowledged_at"),
+    
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("integration_audit_logs_company_idx").on(table.companyId),
+    index("integration_audit_logs_integration_idx").on(table.integrationId),
+    index("integration_audit_logs_level_idx").on(table.eventLevel),
+    index("integration_audit_logs_created_idx").on(table.createdAt),
+  ],
+);
+
+// Canonical Entities - Cross-integration entity resolution
+export const canonicalEntities = pgTable(
+  "canonical_entities",
+  {
+    id: serial("id").primaryKey(),
+    companyId: integer("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "cascade" }),
+    
+    // Canonical entity info
+    entityType: text("entity_type").notNull(), // "customer", "supplier", "product", "order", "invoice"
+    canonicalId: text("canonical_id").notNull(), // Internal unique ID
+    canonicalName: text("canonical_name").notNull(),
+    canonicalData: jsonb("canonical_data"), // Merged/normalized data
+    
+    // Resolution metadata
+    primarySourceIntegration: text("primary_source_integration"), // Which integration is authoritative
+    confidenceScore: real("confidence_score").default(1.0),
+    lastResolvedAt: timestamp("last_resolved_at"),
+    conflictCount: integer("conflict_count").default(0),
+    
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("canonical_entities_company_idx").on(table.companyId),
+    index("canonical_entities_type_idx").on(table.entityType),
+    index("canonical_entities_canonical_id_idx").on(table.canonicalId),
+  ],
+);
+
+// Canonical Entity Mappings - Links external IDs to canonical entities
+export const canonicalEntityMappings = pgTable(
+  "canonical_entity_mappings",
+  {
+    id: serial("id").primaryKey(),
+    canonicalEntityId: integer("canonical_entity_id")
+      .notNull()
+      .references(() => canonicalEntities.id, { onDelete: "cascade" }),
+    integrationId: text("integration_id").notNull(),
+    externalId: text("external_id").notNull(),
+    externalData: jsonb("external_data"), // Raw data from external system
+    
+    // Sync tracking
+    lastSyncAt: timestamp("last_sync_at"),
+    syncStatus: text("sync_status").default("synced"), // "synced", "pending", "conflict", "stale"
+    
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("canonical_entity_mappings_canonical_idx").on(table.canonicalEntityId),
+    index("canonical_entity_mappings_integration_idx").on(table.integrationId),
+    index("canonical_entity_mappings_external_idx").on(table.externalId),
+  ],
+);
+
+// Integration Documentation - Scope and limitations registry
+export const integrationDocumentation = pgTable(
+  "integration_documentation",
+  {
+    id: serial("id").primaryKey(),
+    integrationId: text("integration_id").notNull().unique(),
+    integrationName: text("integration_name").notNull(),
+    integrationType: text("integration_type").notNull(),
+    
+    // Capabilities
+    supportedDataObjects: jsonb("supported_data_objects").notNull(), // ["orders", "invoices", "customers"]
+    supportedOperations: jsonb("supported_operations").notNull(), // ["read", "write", "sync", "webhook"]
+    dataFlowDirection: text("data_flow_direction").notNull(), // "inbound", "outbound", "bidirectional"
+    
+    // Limitations
+    knownLimitations: jsonb("known_limitations"), // Array of limitation descriptions
+    rateLimits: jsonb("rate_limits"), // { requests_per_minute: 100, daily_limit: 10000 }
+    dataFreshness: text("data_freshness"), // "real-time", "hourly", "daily", "manual"
+    
+    // Regime integration
+    regimeAwareCapable: integer("regime_aware_capable").default(1),
+    regimeDataFields: jsonb("regime_data_fields"), // Which fields are regime-filtered
+    
+    // Compliance
+    lastTestedAt: timestamp("last_tested_at"),
+    testStatus: text("test_status").default("untested"), // "untested", "passed", "failed", "partial"
+    complianceNotes: text("compliance_notes"),
+    
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("integration_documentation_type_idx").on(table.integrationType),
+    index("integration_documentation_status_idx").on(table.testStatus),
+  ],
+);
+
+// Integration Schemas
+export const insertIntegrationConfigSchema = createInsertSchema(
+  integrationConfigs,
+).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertIntegrationAuditLogSchema = createInsertSchema(
+  integrationAuditLogs,
+).omit({ id: true, createdAt: true });
+export const insertCanonicalEntitySchema = createInsertSchema(
+  canonicalEntities,
+).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertCanonicalEntityMappingSchema = createInsertSchema(
+  canonicalEntityMappings,
+).omit({ id: true, createdAt: true });
+export const insertIntegrationDocumentationSchema = createInsertSchema(
+  integrationDocumentation,
+).omit({ id: true, createdAt: true, updatedAt: true });
+
+// Integration Types
+export type IntegrationConfig = typeof integrationConfigs.$inferSelect;
+export type InsertIntegrationConfig = z.infer<typeof insertIntegrationConfigSchema>;
+export type IntegrationAuditLog = typeof integrationAuditLogs.$inferSelect;
+export type InsertIntegrationAuditLog = z.infer<typeof insertIntegrationAuditLogSchema>;
+export type CanonicalEntity = typeof canonicalEntities.$inferSelect;
+export type InsertCanonicalEntity = z.infer<typeof insertCanonicalEntitySchema>;
+export type CanonicalEntityMapping = typeof canonicalEntityMappings.$inferSelect;
+export type InsertCanonicalEntityMapping = z.infer<typeof insertCanonicalEntityMappingSchema>;
+export type IntegrationDocumentation = typeof integrationDocumentation.$inferSelect;
+export type InsertIntegrationDocumentation = z.infer<typeof insertIntegrationDocumentationSchema>;
