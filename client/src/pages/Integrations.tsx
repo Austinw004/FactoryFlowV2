@@ -66,6 +66,7 @@ import { NetSuiteFinancialsConfigDialog } from "@/components/NetSuiteFinancialsC
 import { JaggaerConfigDialog } from "@/components/JaggaerConfigDialog";
 import { SAPEWMConfigDialog } from "@/components/SAPEWMConfigDialog";
 import { MasterControlConfigDialog } from "@/components/MasterControlConfigDialog";
+import { IntegrationReadinessReport } from "@/components/IntegrationReadinessReport";
 import {
   Building2,
   MessageSquare,
@@ -1299,6 +1300,10 @@ export default function Integrations() {
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        <div className="mb-8">
+          <IntegrationReadinessReport />
         </div>
 
         {selectedCategory === "all" && (
