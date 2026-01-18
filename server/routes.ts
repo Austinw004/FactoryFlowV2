@@ -18790,6 +18790,293 @@ You'll receive emails for:
     }
   });
 
+  // ============================================
+  // OAuth Flow Routes for Integration Authentication
+  // ============================================
+  
+  // Middleware to check OAuth security requirements
+  const requireOAuthSecurityKey = (_req: any, res: any, next: any) => {
+    if (!process.env.INTEGRATION_ENCRYPTION_KEY) {
+      console.error("[OAuth] INTEGRATION_ENCRYPTION_KEY not configured - OAuth disabled");
+      return res.status(503).json({ 
+        error: "OAuth not available", 
+        message: "Integration security key not configured. Contact administrator." 
+      });
+    }
+    next();
+  };
+  
+  app.get("/api/oauth/authorize/:integrationId", isAuthenticated, requireOAuthSecurityKey, async (req: any, res) => {
+    try {
+      const { integrationId } = req.params;
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const { OAuthService } = await import("./lib/oauthService");
+      
+      if (!OAuthService.isOAuthIntegration(integrationId)) {
+        return res.status(400).json({ error: `${integrationId} does not support OAuth` });
+      }
+      
+      const authUrl = OAuthService.getAuthorizationUrl(integrationId, user.companyId);
+      res.json({ authorizationUrl: authUrl });
+    } catch (error: any) {
+      console.error("Error generating OAuth URL:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  app.get("/api/oauth/callback/:integrationId", requireOAuthSecurityKey, async (req, res) => {
+    try {
+      const { integrationId } = req.params;
+      const { code, state, error: oauthError, error_description } = req.query;
+      
+      if (oauthError) {
+        console.error(`OAuth error for ${integrationId}:`, oauthError, error_description);
+        return res.redirect(`/integrations?error=${encodeURIComponent(String(error_description || oauthError))}`);
+      }
+      
+      if (!code || !state) {
+        return res.redirect("/integrations?error=missing_code_or_state");
+      }
+      
+      const { OAuthService } = await import("./lib/oauthService");
+      const stateData = OAuthService.parseState(String(state));
+      
+      if (!stateData || stateData.integrationId !== integrationId) {
+        return res.redirect("/integrations?error=invalid_state");
+      }
+      
+      await OAuthService.exchangeCodeForTokens(integrationId, String(code), stateData.companyId);
+      
+      res.redirect(`/integrations?success=${integrationId}`);
+    } catch (error: any) {
+      console.error("OAuth callback error:", error);
+      res.redirect(`/integrations?error=${encodeURIComponent(error.message)}`);
+    }
+  });
+  
+  app.get("/api/oauth/supported", isAuthenticated, async (_req, res) => {
+    const { OAuthService } = await import("./lib/oauthService");
+    res.json({ integrations: OAuthService.getSupportedIntegrations() });
+  });
+  
+  app.post("/api/oauth/refresh/:integrationId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { integrationId } = req.params;
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const { OAuthService } = await import("./lib/oauthService");
+      const result = await OAuthService.refreshAccessToken(user.companyId, integrationId);
+      
+      if (result) {
+        res.json({ success: true, message: "Token refreshed successfully" });
+      } else {
+        res.status(400).json({ success: false, message: "Token refresh failed - reauthorization required" });
+      }
+    } catch (error: any) {
+      console.error("Token refresh error:", error);
+      res.status(500).json({ success: false, message: error.message });
+    }
+  });
+  
+  // Credential management routes - require MANAGE_INTEGRATIONS permission for write operations
+  const oauthCredentialsSchema = z.object({
+    accessToken: z.string().min(1).max(10000),
+    refreshToken: z.string().max(10000).optional(),
+    instanceUrl: z.string().url().optional(),
+    expiresIn: z.number().int().positive().optional(),
+    tokenType: z.string().max(50).optional(),
+    scope: z.string().max(1000).optional()
+  });
+  
+  const apiKeyCredentialsSchema = z.object({
+    apiKey: z.string().min(1).max(500),
+    apiSecret: z.string().max(500).optional(),
+    accountId: z.string().max(100).optional(),
+    region: z.string().max(50).optional()
+  });
+  
+  const basicAuthCredentialsSchema = z.object({
+    username: z.string().min(1).max(200),
+    password: z.string().min(1).max(500),
+    domain: z.string().max(200).optional()
+  });
+  
+  const webhookCredentialsSchema = z.object({
+    webhookUrl: z.string().url().max(2000),
+    webhookSecret: z.string().max(500).optional(),
+    headers: z.record(z.string().max(1000)).optional()
+  });
+  
+  const credentialBodySchema = z.discriminatedUnion("credentialType", [
+    z.object({
+      credentialType: z.literal("oauth2"),
+      credentials: oauthCredentialsSchema,
+      integrationName: z.string().min(1).max(100).optional()
+    }),
+    z.object({
+      credentialType: z.literal("api_key"),
+      credentials: apiKeyCredentialsSchema,
+      integrationName: z.string().min(1).max(100).optional()
+    }),
+    z.object({
+      credentialType: z.literal("basic_auth"),
+      credentials: basicAuthCredentialsSchema,
+      integrationName: z.string().min(1).max(100).optional()
+    }),
+    z.object({
+      credentialType: z.literal("webhook"),
+      credentials: webhookCredentialsSchema,
+      integrationName: z.string().min(1).max(100).optional()
+    })
+  ]);
+  
+  app.get("/api/credentials/:integrationId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { integrationId } = req.params;
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const { CredentialService } = await import("./lib/credentialService");
+      const credential = await CredentialService.getCredentials(user.companyId, integrationId);
+      
+      if (!credential) {
+        return res.json({ configured: false });
+      }
+      
+      res.json({
+        configured: true,
+        status: credential.status,
+        credentialType: credential.credentialType,
+        lastUsedAt: credential.lastUsedAt,
+        tokenExpiresAt: credential.tokenExpiresAt,
+        connectionTestPassed: credential.connectionTestPassed === 1,
+      });
+    } catch (error: any) {
+      console.error("Error fetching credentials:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  app.post("/api/credentials/:integrationId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { integrationId } = req.params;
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      // RBAC check - require MANAGE_INTEGRATIONS permission
+      const { userHasPermission } = await import("./lib/rbac");
+      const hasPermission = await userHasPermission(authUserId, user.companyId, "manage_integrations");
+      if (!hasPermission) {
+        console.warn(`[Security] User ${authUserId} attempted credential write without manage_integrations permission`);
+        return res.status(403).json({ error: "Insufficient permissions - requires manage_integrations" });
+      }
+      
+      // Validate request body
+      const parseResult = credentialBodySchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          error: "Invalid request body", 
+          details: parseResult.error.flatten().fieldErrors 
+        });
+      }
+      
+      const { credentials, integrationName, credentialType } = parseResult.data;
+      
+      const { CredentialService } = await import("./lib/credentialService");
+      await CredentialService.storeCredentials(
+        user.companyId,
+        integrationId,
+        integrationName || integrationId,
+        credentialType || "api_key",
+        credentials,
+        authUserId
+      );
+      
+      console.log(`[Credentials] User ${authUserId} stored credentials for ${integrationId}`);
+      res.json({ success: true, message: "Credentials stored securely" });
+    } catch (error: any) {
+      console.error("Error storing credentials:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  app.delete("/api/credentials/:integrationId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { integrationId } = req.params;
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      // RBAC check - require MANAGE_INTEGRATIONS permission
+      const { userHasPermission } = await import("./lib/rbac");
+      const hasPermission = await userHasPermission(authUserId, user.companyId, "manage_integrations");
+      if (!hasPermission) {
+        console.warn(`[Security] User ${authUserId} attempted credential delete without manage_integrations permission`);
+        return res.status(403).json({ error: "Insufficient permissions - requires manage_integrations" });
+      }
+      
+      const { CredentialService } = await import("./lib/credentialService");
+      await CredentialService.deleteCredentials(user.companyId, integrationId);
+      
+      console.log(`[Credentials] User ${authUserId} deleted credentials for ${integrationId}`);
+      res.json({ success: true, message: "Credentials deleted" });
+    } catch (error: any) {
+      console.error("Error deleting credentials:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  app.get("/api/credentials", isAuthenticated, async (req: any, res) => {
+    try {
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const { CredentialService } = await import("./lib/credentialService");
+      const credentials = await CredentialService.getAllCredentialsForCompany(user.companyId);
+      
+      res.json({
+        credentials: credentials.map(c => ({
+          integrationId: c.integrationId,
+          integrationName: c.integrationName,
+          status: c.status,
+          credentialType: c.credentialType,
+          lastUsedAt: c.lastUsedAt,
+          tokenExpiresAt: c.tokenExpiresAt,
+          connectionTestPassed: c.connectionTestPassed === 1,
+        }))
+      });
+    } catch (error: any) {
+      console.error("Error fetching all credentials:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   
   setupWebSocket(httpServer);

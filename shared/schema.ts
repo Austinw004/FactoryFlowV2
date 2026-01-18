@@ -268,6 +268,61 @@ export const companies = pgTable("companies", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Integration Credentials - Centralized encrypted credential storage
+export const integrationCredentials = pgTable(
+  "integration_credentials",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    companyId: varchar("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "cascade" }),
+    integrationId: text("integration_id").notNull(), // e.g., "salesforce", "google-sheets", "xero"
+    integrationName: text("integration_name").notNull(), // Human-readable name
+    credentialType: text("credential_type").notNull(), // "oauth2", "api_key", "basic_auth", "token"
+    // Encrypted credentials stored as JSON string
+    encryptedCredentials: text("encrypted_credentials").notNull(),
+    // OAuth-specific fields
+    accessToken: text("access_token"), // Encrypted
+    refreshToken: text("refresh_token"), // Encrypted
+    tokenExpiresAt: timestamp("token_expires_at"),
+    tokenRefreshedAt: timestamp("token_refreshed_at"),
+    // OAuth scopes and configuration
+    scopes: text("scopes"), // JSON array of granted scopes
+    instanceUrl: text("instance_url"), // For Salesforce, NetSuite, etc.
+    tenantId: text("tenant_id"), // For multi-tenant APIs like Xero
+    accountId: text("account_id"), // External account identifier
+    // Status and metadata
+    status: text("status").notNull().default("active"), // "active", "expired", "revoked", "error"
+    lastUsedAt: timestamp("last_used_at"),
+    lastErrorAt: timestamp("last_error_at"),
+    lastErrorMessage: text("last_error_message"),
+    connectionTestPassed: integer("connection_test_passed").default(0),
+    // Audit fields
+    createdBy: varchar("created_by").references(() => users.id),
+    updatedBy: varchar("updated_by").references(() => users.id),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("integration_credentials_company_idx").on(table.companyId),
+    index("integration_credentials_integration_idx").on(table.integrationId),
+    uniqueIndex("integration_credentials_company_integration_unique").on(
+      table.companyId,
+      table.integrationId
+    ),
+  ]
+);
+
+export const insertIntegrationCredentialSchema = createInsertSchema(integrationCredentials).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertIntegrationCredential = z.infer<typeof insertIntegrationCredentialSchema>;
+export type IntegrationCredential = typeof integrationCredentials.$inferSelect;
+
 // Company Locations (warehouses, factories, offices)
 export const companyLocations = pgTable(
   "company_locations",

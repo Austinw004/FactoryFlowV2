@@ -1,5 +1,6 @@
 import axios from "axios";
 import { storage } from "../storage";
+import { CredentialService } from "./credentialService";
 
 export interface SalesforceAccount {
   Id: string;
@@ -183,6 +184,16 @@ export class SalesforceIntegration {
 }
 
 export async function getSalesforceIntegration(companyId: string): Promise<SalesforceIntegration | null> {
+  try {
+    const credentials = await CredentialService.getDecryptedCredentials(companyId, "salesforce");
+    if (credentials?.accessToken && credentials?.instanceUrl) {
+      console.log(`[Salesforce] Using centralized credential storage for company ${companyId}`);
+      return new SalesforceIntegration(credentials.accessToken, credentials.instanceUrl, companyId);
+    }
+  } catch (error) {
+    console.log(`[Salesforce] Centralized credentials not available, falling back to company config`);
+  }
+  
   const company = await storage.getCompany(companyId);
   if (!company?.salesforceAccessToken || !company.salesforceInstanceUrl) {
     return null;

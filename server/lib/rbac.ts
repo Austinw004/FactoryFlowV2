@@ -41,6 +41,7 @@ export const PERMISSIONS = {
   MANAGE_USERS: "manage_users",
   MANAGE_ROLES: "manage_roles",
   MANAGE_COMPANY_SETTINGS: "manage_company_settings",
+  MANAGE_INTEGRATIONS: "manage_integrations",
   VIEW_AUDIT_LOGS: "view_audit_logs",
   
   // Data Management
@@ -82,6 +83,7 @@ export const PERMISSION_METADATA: Record<PermissionName, { description: string; 
   [PERMISSIONS.MANAGE_USERS]: { description: "Add and manage users", category: "Administration" },
   [PERMISSIONS.MANAGE_ROLES]: { description: "Create and assign roles", category: "Administration" },
   [PERMISSIONS.MANAGE_COMPANY_SETTINGS]: { description: "Edit company settings", category: "Administration" },
+  [PERMISSIONS.MANAGE_INTEGRATIONS]: { description: "Configure and manage integrations", category: "Administration" },
   [PERMISSIONS.VIEW_AUDIT_LOGS]: { description: "View audit logs", category: "Administration" },
   
   [PERMISSIONS.IMPORT_DATA]: { description: "Import data from files", category: "Data" },
