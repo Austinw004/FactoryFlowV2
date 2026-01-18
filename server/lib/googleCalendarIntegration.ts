@@ -197,9 +197,9 @@ export class GoogleCalendarIntegration {
     }
   }
 
-  async syncSOPMeetingsFromRfqs(): Promise<{ scheduled: number; errors: string[] }> {
+  async syncSOPMeetingsFromRfqs(): Promise<{ synced: number; errors: string[] }> {
     const errors: string[] = [];
-    let scheduled = 0;
+    let synced = 0;
 
     try {
       const rfqs = await storage.getRfqs(this.companyId);
@@ -212,14 +212,31 @@ export class GoogleCalendarIntegration {
             meetingTime.setDate(meetingTime.getDate() - 2);
 
             if (meetingTime > now) {
-              await this.createSOPMeeting(
+              const event = await this.createSOPMeeting(
                 `RFQ Review: ${rfq.title}`,
                 `Review meeting for RFQ: ${rfq.title}\n\nDescription: ${rfq.description || 'No description'}`,
                 meetingTime,
                 30,
                 []
               );
-              scheduled++;
+              
+              await storage.createDemandSignal({
+                companyId: this.companyId,
+                signalType: "sop_meeting_scheduled",
+                signalDate: meetingTime,
+                quantity: 1,
+                unit: "meeting",
+                channel: "google_calendar",
+                confidence: 100,
+                priority: "medium",
+                attributes: {
+                  source: "google_calendar",
+                  eventId: event.id,
+                  rfqId: rfq.id,
+                  rfqTitle: rfq.title
+                }
+              });
+              synced++;
             }
           }
         } catch (err: any) {
@@ -227,8 +244,8 @@ export class GoogleCalendarIntegration {
         }
       }
 
-      console.log(`[GoogleCalendar] Scheduled ${scheduled} S&OP meetings from RFQs`);
-      return { scheduled, errors };
+      console.log(`[GoogleCalendar] Synced ${synced} S&OP meetings from RFQs`);
+      return { synced, errors };
     } catch (error: any) {
       console.error("[GoogleCalendar] S&OP sync failed:", error.message);
       throw error;
