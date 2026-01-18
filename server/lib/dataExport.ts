@@ -1,6 +1,5 @@
 import { storage as globalStorage } from '../storage';
 import type { IStorage } from '../storage';
-import { CredentialService } from './credentialService';
 
 export interface ExportOptions {
   format: 'json' | 'csv' | 'excel';
@@ -13,6 +12,7 @@ export class DataExportService {
 
   async testConnection(): Promise<{ success: boolean; message?: string }> {
     try {
+      // Data export is an internal service that doesn't require external credentials
       console.log('[DataExport] Connection test successful');
       return { success: true, message: 'Data export service ready' };
     } catch (error: any) {

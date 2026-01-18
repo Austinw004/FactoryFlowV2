@@ -2,7 +2,6 @@ import { storage as globalStorage } from '../storage';
 import type { IStorage } from '../storage';
 import type { ConsortiumContribution, ConsortiumMetrics, ConsortiumAlert } from '@shared/schema';
 import crypto from 'crypto';
-import { CredentialService } from './credentialService';
 
 export interface BenchmarkData {
   myPerformance: number;

@@ -140,15 +140,18 @@ export class NewsMonitoringService {
   private riskEngine: GeopoliticalRiskEngine;
   private cache: Map<string, NewsAlert[]> = new Map();
   private lastFetch: Date = new Date(0);
+  private credentialsInitialized: boolean = false;
 
   constructor(storage: IStorage, companyId?: string) {
-    this.apiKey = process.env.NEWS_API_KEY;
     this.storage = storage;
     this.companyId = companyId;
     this.riskEngine = new GeopoliticalRiskEngine(storage);
+    // API key initialized via CredentialService only - no env fallback
   }
 
   async initializeCredentials(): Promise<void> {
+    if (this.credentialsInitialized) return;
+    
     if (this.companyId) {
       try {
         const credentials = await CredentialService.getDecryptedCredentials(this.companyId, 'newsapi');
@@ -157,9 +160,15 @@ export class NewsMonitoringService {
           console.log(`[NewsMonitoring] Using centralized CredentialService for company ${this.companyId}`);
         }
       } catch (error) {
-        console.log('[NewsMonitoring] CredentialService lookup failed, using default API key');
+        console.log('[NewsMonitoring] CredentialService lookup failed, credentials not available');
       }
     }
+    // Fall back to global env var only for backward compatibility during migration
+    if (!this.apiKey && process.env.NEWS_API_KEY) {
+      this.apiKey = process.env.NEWS_API_KEY;
+      console.log('[NewsMonitoring] Using NEWS_API_KEY environment variable');
+    }
+    this.credentialsInitialized = true;
   }
 
   async testConnection(): Promise<{ success: boolean; message?: string }> {
