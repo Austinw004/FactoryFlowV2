@@ -138,6 +138,88 @@ export class FedExIntegration {
       throw error;
     }
   }
+
+  async syncShipmentTrackingAsDemandSignals(trackingNumbers: string[]): Promise<{ synced: number; errors: string[] }> {
+    const errors: string[] = [];
+    let synced = 0;
+
+    try {
+      for (const trackingNumber of trackingNumbers) {
+        try {
+          const tracking = await this.trackShipment(trackingNumber);
+          if (!tracking) continue;
+
+          await storage.createDemandSignal({
+            companyId: this.companyId,
+            signalType: "shipment_tracking",
+            signalDate: new Date(),
+            quantity: 1,
+            unit: "shipment",
+            channel: "fedex",
+            confidence: tracking.status === "DL" ? 100 : tracking.status === "IT" ? 70 : 50,
+            priority: tracking.status === "DE" || tracking.status === "EX" ? "high" : "medium",
+            attributes: {
+              source: "fedex",
+              trackingNumber,
+              status: tracking.status,
+              statusDescription: tracking.statusDescription,
+              estimatedDelivery: tracking.estimatedDelivery,
+              eventCount: tracking.events.length
+            }
+          });
+          synced++;
+        } catch (err: any) {
+          errors.push(`Tracking ${trackingNumber}: ${err.message}`);
+        }
+      }
+
+      console.log(`[FedEx] Synced ${synced} shipment tracking records`);
+      return { synced, errors };
+    } catch (error: any) {
+      console.error("[FedEx] Tracking sync failed:", error.message);
+      throw error;
+    }
+  }
+
+  async syncRateQuotesAsDemandSignals(origin: any, destination: any, weight: number): Promise<{ synced: number; errors: string[] }> {
+    const errors: string[] = [];
+    let synced = 0;
+
+    try {
+      const rates = await this.getRates(origin, destination, weight);
+      
+      for (const rate of rates) {
+        try {
+          await storage.createDemandSignal({
+            companyId: this.companyId,
+            signalType: "shipping_rate",
+            signalDate: new Date(),
+            quantity: rate.totalNetCharge,
+            unit: rate.currency,
+            channel: "fedex",
+            confidence: 85,
+            priority: "low",
+            attributes: {
+              source: "fedex",
+              serviceType: rate.serviceType,
+              serviceName: rate.serviceName,
+              transitTime: rate.transitTime,
+              deliveryDate: rate.deliveryDate
+            }
+          });
+          synced++;
+        } catch (err: any) {
+          errors.push(`Rate ${rate.serviceType}: ${err.message}`);
+        }
+      }
+
+      console.log(`[FedEx] Synced ${synced} rate quotes`);
+      return { synced, errors };
+    } catch (error: any) {
+      console.error("[FedEx] Rate sync failed:", error.message);
+      throw error;
+    }
+  }
 }
 
 export async function getFedExIntegration(companyId: string): Promise<FedExIntegration | null> {

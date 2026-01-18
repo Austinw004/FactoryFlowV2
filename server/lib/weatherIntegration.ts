@@ -193,6 +193,48 @@ export class WeatherIntegration {
       throw error;
     }
   }
+
+  async syncWeatherDataForLocations(locations: string[]): Promise<{ synced: number; errors: string[] }> {
+    const errors: string[] = [];
+    let synced = 0;
+
+    try {
+      for (const location of locations) {
+        try {
+          const weather = await this.getCurrentWeather(location);
+          
+          await storage.createDemandSignal({
+            companyId: this.companyId,
+            signalType: "weather_update",
+            signalDate: new Date(),
+            quantity: Math.round(weather.temperature),
+            unit: "celsius",
+            channel: "weather",
+            confidence: 95,
+            priority: weather.temperature < 0 || weather.temperature > 35 ? "high" : "low",
+            attributes: {
+              source: "weather",
+              location,
+              temperature: weather.temperature,
+              humidity: weather.humidity,
+              conditions: weather.conditions,
+              windSpeed: weather.windSpeed,
+              pressure: weather.pressure
+            }
+          });
+          synced++;
+        } catch (err: any) {
+          errors.push(`Location ${location}: ${err.message}`);
+        }
+      }
+
+      console.log(`[Weather] Synced weather data for ${synced} locations`);
+      return { synced, errors };
+    } catch (error: any) {
+      console.error("[Weather] Weather sync failed:", error.message);
+      throw error;
+    }
+  }
 }
 
 export async function getWeatherIntegration(companyId: string): Promise<WeatherIntegration | null> {

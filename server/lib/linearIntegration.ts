@@ -179,6 +179,55 @@ export class LinearIntegration {
       throw error;
     }
   }
+
+  async syncIssuesAsDemandSignals(): Promise<{ synced: number; errors: string[] }> {
+    const errors: string[] = [];
+    let synced = 0;
+
+    try {
+      const teams = await this.fetchTeams();
+
+      for (const team of teams) {
+        const issues = await this.fetchIssues(team.id, 50);
+
+        for (const issue of issues) {
+          const labels = issue.labels.nodes.map(l => l.name);
+          if (labels.includes('demand') || labels.includes('procurement') || issue.priority <= 2) {
+            try {
+              await storage.createDemandSignal({
+                companyId: this.companyId,
+                signalType: 'issue',
+                signalDate: new Date(issue.createdAt),
+                quantity: 1,
+                unit: 'units',
+                channel: 'linear',
+                customer: issue.creator?.name,
+                confidence: issue.state.name === 'Done' ? 100 : issue.state.name === 'In Progress' ? 70 : 50,
+                priority: issue.priorityLabel || 'medium',
+                attributes: {
+                  source: 'linear',
+                  issueId: issue.id,
+                  issueIdentifier: issue.identifier,
+                  issueTitle: issue.title,
+                  teamName: team.name,
+                  labels
+                }
+              });
+              synced++;
+            } catch (err: any) {
+              errors.push(`Issue ${issue.identifier}: ${err.message}`);
+            }
+          }
+        }
+      }
+
+      console.log(`[Linear] Synced ${synced} demand signals`);
+      return { synced, errors };
+    } catch (error: any) {
+      console.error('[Linear] Sync failed:', error.message);
+      throw error;
+    }
+  }
 }
 
 export async function getLinearIntegration(companyId: string): Promise<LinearIntegration | null> {

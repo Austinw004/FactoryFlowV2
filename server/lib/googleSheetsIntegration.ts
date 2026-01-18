@@ -178,6 +178,87 @@ export class GoogleSheetsIntegration {
       throw error;
     }
   }
+
+  async syncSuppliersFromSheet(spreadsheetId: string, range: string): Promise<{ synced: number; errors: string[] }> {
+    const errors: string[] = [];
+    let synced = 0;
+
+    try {
+      const data = await this.readRange(spreadsheetId, range);
+      const rows = data.values.slice(1);
+
+      for (const row of rows) {
+        try {
+          if (row.length < 2) continue;
+          
+          const [name, email] = row;
+          
+          const suppliers = await storage.getSuppliers(this.companyId);
+          const existing = suppliers.find(s => s.name === name || s.contactEmail === email);
+          
+          if (!existing && name) {
+            await storage.createSupplier({
+              companyId: this.companyId,
+              name,
+              contactEmail: email || ""
+            });
+            synced++;
+          }
+        } catch (err: any) {
+          errors.push(`Row: ${err.message}`);
+        }
+      }
+
+      console.log(`[GoogleSheets] Synced ${synced} suppliers`);
+      return { synced, errors };
+    } catch (error: any) {
+      console.error("[GoogleSheets] Supplier sync failed:", error.message);
+      throw error;
+    }
+  }
+
+  async syncDemandSignalsFromSheet(spreadsheetId: string, range: string): Promise<{ synced: number; errors: string[] }> {
+    const errors: string[] = [];
+    let synced = 0;
+
+    try {
+      const data = await this.readRange(spreadsheetId, range);
+      const rows = data.values.slice(1);
+
+      for (const row of rows) {
+        try {
+          if (row.length < 3) continue;
+          
+          const [signalType, date, quantity, unit, channel, customer] = row;
+          
+          const parsedDate = new Date(date);
+          const signalDate = isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
+          
+          await storage.createDemandSignal({
+            companyId: this.companyId,
+            signalType: signalType || "import",
+            signalDate,
+            quantity: parseInt(quantity) || 1,
+            unit: unit || "units",
+            channel: channel || "google_sheets",
+            customer: customer,
+            confidence: 70,
+            priority: "medium",
+            attributes: { source: "google_sheets" }
+          });
+          synced++;
+        } catch (err: any) {
+          errors.push(`Row: ${err.message}`);
+        }
+      }
+
+      console.log(`[GoogleSheets] Synced ${synced} demand signals`);
+      return { synced, errors };
+    } catch (error: any) {
+      console.error("[GoogleSheets] Demand signal sync failed:", error.message);
+      throw error;
+    }
+  }
 }
 
 export async function getGoogleSheetsIntegration(companyId: string): Promise<GoogleSheetsIntegration | null> {

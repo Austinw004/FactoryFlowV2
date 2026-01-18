@@ -223,6 +223,79 @@ export class SendGridIntegration {
       throw error;
     }
   }
+
+  async syncContactsAsSuppliers(): Promise<{ synced: number; errors: string[] }> {
+    const errors: string[] = [];
+    let synced = 0;
+
+    try {
+      const contacts = await this.listContacts(500);
+      
+      for (const contact of contacts) {
+        try {
+          const existingSuppliers = await storage.getSuppliers(this.companyId);
+          const existing = existingSuppliers.find(s => s.contactEmail === contact.email);
+          
+          if (!existing && contact.email) {
+            await storage.createSupplier({
+              companyId: this.companyId,
+              name: `${contact.firstName || ""} ${contact.lastName || ""}`.trim() || contact.email,
+              contactEmail: contact.email
+            });
+            synced++;
+          }
+        } catch (err: any) {
+          errors.push(`Contact ${contact.email}: ${err.message}`);
+        }
+      }
+
+      console.log(`[SendGrid] Synced ${synced} contacts as suppliers`);
+      return { synced, errors };
+    } catch (error: any) {
+      console.error("[SendGrid] Contact sync failed:", error.message);
+      throw error;
+    }
+  }
+
+  async syncEmailActivityAsDemandSignals(): Promise<{ synced: number; errors: string[] }> {
+    const errors: string[] = [];
+    let synced = 0;
+
+    try {
+      const contacts = await this.listContacts(100);
+      
+      for (const contact of contacts) {
+        try {
+          await storage.createDemandSignal({
+            companyId: this.companyId,
+            signalType: "email_contact",
+            signalDate: new Date(contact.createdAt),
+            quantity: 1,
+            unit: "contact",
+            channel: "sendgrid",
+            customer: contact.email,
+            confidence: 60,
+            priority: "low",
+            attributes: {
+              source: "sendgrid",
+              contactId: contact.id,
+              firstName: contact.firstName,
+              lastName: contact.lastName
+            }
+          });
+          synced++;
+        } catch (err: any) {
+          errors.push(`Contact ${contact.email}: ${err.message}`);
+        }
+      }
+
+      console.log(`[SendGrid] Created ${synced} demand signals from contacts`);
+      return { synced, errors };
+    } catch (error: any) {
+      console.error("[SendGrid] Email sync failed:", error.message);
+      throw error;
+    }
+  }
 }
 
 export async function getSendGridIntegration(companyId: string): Promise<SendGridIntegration | null> {

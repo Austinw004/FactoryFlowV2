@@ -141,6 +141,88 @@ export class UPSIntegration {
       throw error;
     }
   }
+
+  async syncShipmentTrackingAsDemandSignals(trackingNumbers: string[]): Promise<{ synced: number; errors: string[] }> {
+    const errors: string[] = [];
+    let synced = 0;
+
+    try {
+      for (const trackingNumber of trackingNumbers) {
+        try {
+          const tracking = await this.trackShipment(trackingNumber);
+          if (!tracking) continue;
+
+          await storage.createDemandSignal({
+            companyId: this.companyId,
+            signalType: "shipment_tracking",
+            signalDate: new Date(),
+            quantity: 1,
+            unit: "shipment",
+            channel: "ups",
+            confidence: tracking.status === "D" ? 100 : tracking.status === "I" ? 70 : 50,
+            priority: tracking.status === "X" || tracking.status === "RS" ? "high" : "medium",
+            attributes: {
+              source: "ups",
+              trackingNumber,
+              status: tracking.status,
+              statusDescription: tracking.statusDescription,
+              scheduledDelivery: tracking.scheduledDelivery,
+              eventCount: tracking.events.length
+            }
+          });
+          synced++;
+        } catch (err: any) {
+          errors.push(`Tracking ${trackingNumber}: ${err.message}`);
+        }
+      }
+
+      console.log(`[UPS] Synced ${synced} shipment tracking records`);
+      return { synced, errors };
+    } catch (error: any) {
+      console.error("[UPS] Tracking sync failed:", error.message);
+      throw error;
+    }
+  }
+
+  async syncRateQuotesAsDemandSignals(origin: any, destination: any, weight: number): Promise<{ synced: number; errors: string[] }> {
+    const errors: string[] = [];
+    let synced = 0;
+
+    try {
+      const rates = await this.getRates(origin, destination, weight);
+      
+      for (const rate of rates) {
+        try {
+          await storage.createDemandSignal({
+            companyId: this.companyId,
+            signalType: "shipping_rate",
+            signalDate: new Date(),
+            quantity: rate.totalCharges,
+            unit: rate.currency,
+            channel: "ups",
+            confidence: 85,
+            priority: "low",
+            attributes: {
+              source: "ups",
+              serviceCode: rate.serviceCode,
+              serviceName: rate.serviceName,
+              transitDays: rate.transitDays,
+              guaranteedDelivery: rate.guaranteedDelivery
+            }
+          });
+          synced++;
+        } catch (err: any) {
+          errors.push(`Rate ${rate.serviceCode}: ${err.message}`);
+        }
+      }
+
+      console.log(`[UPS] Synced ${synced} rate quotes`);
+      return { synced, errors };
+    } catch (error: any) {
+      console.error("[UPS] Rate sync failed:", error.message);
+      throw error;
+    }
+  }
 }
 
 function getUPSServiceName(code: string): string {

@@ -149,6 +149,60 @@ export class JiraIntegration {
       throw error;
     }
   }
+
+  async syncIssuesAsDemandSignals(): Promise<{ synced: number; errors: string[] }> {
+    const errors: string[] = [];
+    let synced = 0;
+
+    try {
+      const projects = await this.fetchProjects();
+      
+      for (const project of projects.slice(0, 5)) {
+        try {
+          const issues = await this.fetchIssues(project.key, 100);
+          
+          for (const issue of issues) {
+            if (issue.fields.labels.includes('demand') || 
+                issue.fields.labels.includes('procurement') ||
+                issue.fields.issuetype.name === 'Story') {
+              try {
+                await storage.createDemandSignal({
+                  companyId: this.companyId,
+                  signalType: 'issue',
+                  signalDate: new Date(issue.fields.created),
+                  quantity: 1,
+                  unit: 'units',
+                  channel: 'jira',
+                  customer: issue.fields.reporter?.displayName,
+                  confidence: issue.fields.status.name === 'Done' ? 100 :
+                              issue.fields.status.name === 'In Progress' ? 70 : 50,
+                  priority: issue.fields.priority?.name || 'medium',
+                  attributes: {
+                    source: 'jira',
+                    issueKey: issue.key,
+                    issueSummary: issue.fields.summary,
+                    issueType: issue.fields.issuetype.name,
+                    projectKey: project.key
+                  }
+                });
+                synced++;
+              } catch (err: any) {
+                errors.push(`Issue ${issue.key}: ${err.message}`);
+              }
+            }
+          }
+        } catch (err: any) {
+          errors.push(`Project ${project.key}: ${err.message}`);
+        }
+      }
+
+      console.log(`[Jira] Synced ${synced} demand signals`);
+      return { synced, errors };
+    } catch (error: any) {
+      console.error("[Jira] Sync failed:", error.message);
+      throw error;
+    }
+  }
 }
 
 export async function getJiraIntegration(companyId: string): Promise<JiraIntegration | null> {
