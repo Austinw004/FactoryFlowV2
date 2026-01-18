@@ -1,6 +1,8 @@
 import axios, { AxiosError } from 'axios';
 import crypto from 'crypto';
+import { storage } from '../storage';
 import type { IStorage } from '../storage';
+import { CredentialService } from './credentialService';
 
 export interface WebhookPayload {
   event: string;
@@ -152,28 +154,61 @@ function applyTransform(value: any, transform?: string): any {
 
 export class WebhookService {
   private middlewareIntegrations: Map<string, MiddlewareWebhookConfig> = new Map();
+  private companyWebhookCache: Map<string, { url: string; events: string[]; secret?: string }> = new Map();
 
-  constructor(private storage: IStorage) {}
+  constructor(private storageInstance: IStorage) {}
+
+  async testConnection(companyId: string): Promise<{ success: boolean; message?: string }> {
+    try {
+      const credentials = await CredentialService.getDecryptedCredentials(companyId, 'webhook');
+      if (credentials?.webhookUrl) {
+        const response = await axios.get(credentials.webhookUrl, { timeout: 5000 });
+        console.log(`[Webhook] Connection test successful for company ${companyId}`);
+        return { success: true, message: 'Webhook endpoint verified' };
+      }
+      
+      const cached = this.companyWebhookCache.get(companyId);
+      if (cached?.url) {
+        console.log(`[Webhook] Using cached webhook URL for company ${companyId}`);
+        return { success: true, message: 'Webhook endpoint configured' };
+      }
+      
+      return { success: false, message: 'Webhook not configured' };
+    } catch (error: any) {
+      console.error(`[Webhook] Connection test failed:`, error.message);
+      return { success: false, message: error.message };
+    }
+  }
+
+  async registerCompanyWebhook(companyId: string, webhookUrl: string, enabledEvents: string[], secret?: string): Promise<void> {
+    this.companyWebhookCache.set(companyId, { url: webhookUrl, events: enabledEvents, secret });
+    console.log(`[Webhook] Registered webhook for company ${companyId}`);
+  }
 
   async fireWebhook(companyId: string, event: string, data: Record<string, any>): Promise<void> {
     try {
-      const company = await this.storage.getCompany(companyId);
-      if (!company) {
-        return;
-      }
-
-      if (!company.webhookUrl) {
-        return;
-      }
-
+      let webhookUrl: string | undefined;
       let enabledEvents: string[] = [];
-      if (company.webhookEvents) {
-        try {
-          enabledEvents = JSON.parse(company.webhookEvents);
-        } catch (e) {
-          console.error('Failed to parse webhookEvents:', e);
-          return;
+      let webhookSecret: string | undefined;
+      
+      const credentials = await CredentialService.getDecryptedCredentials(companyId, 'webhook');
+      if (credentials?.webhookUrl) {
+        webhookUrl = credentials.webhookUrl;
+        webhookSecret = (credentials as any).webhookSecret;
+        const rawEvents = (credentials as any).webhookEvents;
+        enabledEvents = rawEvents ? JSON.parse(rawEvents) : [];
+        console.log(`[Webhook] Using CredentialService for company ${companyId}`);
+      } else {
+        const cached = this.companyWebhookCache.get(companyId);
+        if (cached) {
+          webhookUrl = cached.url;
+          enabledEvents = cached.events;
+          webhookSecret = cached.secret;
         }
+      }
+
+      if (!webhookUrl) {
+        return;
       }
 
       if (enabledEvents.length > 0 && !enabledEvents.includes(event)) {
@@ -187,13 +222,16 @@ export class WebhookService {
         data,
       };
 
-      await axios.post(company.webhookUrl, payload, {
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'ManufacturingAI-Webhook/1.0',
-        },
-        timeout: 10000,
-      });
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'User-Agent': 'ManufacturingAI-Webhook/1.0',
+      };
+      
+      if (webhookSecret) {
+        headers['X-Webhook-Signature'] = generateHmacSignature(JSON.stringify(payload), webhookSecret);
+      }
+
+      await axios.post(webhookUrl, payload, { headers, timeout: 10000 });
 
       console.log(`Webhook fired successfully for company ${companyId}, event: ${event}`);
     } catch (error) {
@@ -387,5 +425,43 @@ export class WebhookService {
       const axiosError = error as AxiosError;
       console.error(`[Webhook] Failed to send to ${integration.name}:`, axiosError.message);
     }
+  }
+
+  async syncWebhookEventsAsDemandSignals(companyId: string, events: Array<{
+    eventType: string;
+    source: string;
+    timestamp: Date;
+    recordsProcessed?: number;
+    success: boolean;
+  }>): Promise<{ synced: number; errors: string[] }> {
+    const errors: string[] = [];
+    let synced = 0;
+
+    for (const event of events) {
+      try {
+        await storage.createDemandSignal({
+          companyId,
+          signalType: 'webhook_event',
+          signalDate: event.timestamp,
+          quantity: event.recordsProcessed || 1,
+          unit: 'records',
+          channel: 'webhook',
+          confidence: event.success ? 100 : 50,
+          priority: event.eventType.includes('alert') || event.eventType.includes('risk') ? 'high' : 'medium',
+          attributes: {
+            source: event.source,
+            eventType: event.eventType,
+            success: event.success,
+            recordsProcessed: event.recordsProcessed
+          }
+        });
+        synced++;
+      } catch (err: any) {
+        errors.push(`Event ${event.eventType}: ${err.message}`);
+      }
+    }
+
+    console.log(`[Webhook] Synced ${synced} webhook events as demand signals`);
+    return { synced, errors };
   }
 }

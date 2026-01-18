@@ -1,30 +1,71 @@
 import sendpulse from 'sendpulse-api';
+import { storage } from '../storage';
+import { CredentialService } from './credentialService';
 
-const API_USER_ID = process.env.SENDPULSE_API_USER_ID || '';
-const API_SECRET = process.env.SENDPULSE_API_SECRET || '';
 const TOKEN_STORAGE = '/tmp/';
 
+interface SendPulseCredentials {
+  userId: string;
+  secret: string;
+}
+
+let cachedCredentials: SendPulseCredentials | null = null;
 let isInitialized = false;
 
-function initSendPulse(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (!API_USER_ID || !API_SECRET) {
+async function getCredentials(companyId?: string): Promise<SendPulseCredentials | null> {
+  if (cachedCredentials) return cachedCredentials;
+  
+  if (companyId) {
+    try {
+      const credentials = await CredentialService.getDecryptedCredentials(companyId, 'sendpulse');
+      if (credentials?.clientId && credentials?.clientSecret) {
+        console.log(`[Email] Using centralized CredentialService for company ${companyId}`);
+        cachedCredentials = { userId: credentials.clientId, secret: credentials.clientSecret };
+        return cachedCredentials;
+      }
+    } catch (error) {
+      console.error('[Email] CredentialService lookup failed:', error);
+    }
+  }
+  
+  console.warn('[Email] No credentials found - configure via CredentialService');
+  return null;
+}
+
+async function initSendPulse(companyId?: string): Promise<boolean> {
+  return new Promise(async (resolve) => {
+    const credentials = await getCredentials(companyId);
+    if (!credentials) {
       console.warn('[Email] SendPulse credentials not configured');
-      resolve();
+      resolve(false);
       return;
     }
     
     if (isInitialized) {
-      resolve();
+      resolve(true);
       return;
     }
 
-    sendpulse.init(API_USER_ID, API_SECRET, TOKEN_STORAGE, () => {
+    sendpulse.init(credentials.userId, credentials.secret, TOKEN_STORAGE, () => {
       isInitialized = true;
       console.log('[Email] SendPulse initialized successfully');
-      resolve();
+      resolve(true);
     });
   });
+}
+
+export async function testConnection(companyId?: string): Promise<{ success: boolean; message?: string }> {
+  try {
+    const initialized = await initSendPulse(companyId);
+    if (!initialized) {
+      return { success: false, message: 'SendPulse credentials not configured' };
+    }
+    console.log('[Email] SendPulse connection test successful');
+    return { success: true, message: 'SendPulse connection verified' };
+  } catch (error: any) {
+    console.error('[Email] Connection test failed:', error.message);
+    return { success: false, message: error.message };
+  }
 }
 
 export interface EmailOptions {
@@ -35,11 +76,11 @@ export interface EmailOptions {
   from?: { name: string; email: string };
 }
 
-export async function sendEmail(options: EmailOptions): Promise<{ success: boolean; error?: string; id?: string }> {
+export async function sendEmail(options: EmailOptions, companyId?: string): Promise<{ success: boolean; error?: string; id?: string }> {
   try {
-    await initSendPulse();
+    const initialized = await initSendPulse(companyId);
 
-    if (!API_USER_ID || !API_SECRET) {
+    if (!initialized) {
       console.warn('[Email] SendPulse not configured - email not sent');
       return { success: false, error: 'Email service not configured' };
     }
@@ -287,4 +328,44 @@ Log in to Prescient Labs to view meeting details.
     html,
     text
   });
+}
+
+export async function syncEmailCampaignsAsDemandSignals(companyId: string, campaigns: Array<{
+  campaignId: string;
+  subject: string;
+  sentAt: Date;
+  recipientCount: number;
+  openRate?: number;
+  clickRate?: number;
+}>): Promise<{ synced: number; errors: string[] }> {
+  const errors: string[] = [];
+  let synced = 0;
+
+  for (const campaign of campaigns) {
+    try {
+      await storage.createDemandSignal({
+        companyId,
+        signalType: 'email_campaign',
+        signalDate: campaign.sentAt,
+        quantity: campaign.recipientCount,
+        unit: 'recipients',
+        channel: 'email',
+        confidence: Math.round((campaign.openRate || 20) * 100) / 100,
+        priority: campaign.recipientCount > 1000 ? 'high' : 'medium',
+        attributes: {
+          source: 'sendpulse',
+          campaignId: campaign.campaignId,
+          subject: campaign.subject,
+          openRate: campaign.openRate,
+          clickRate: campaign.clickRate
+        }
+      });
+      synced++;
+    } catch (err: any) {
+      errors.push(`Campaign ${campaign.campaignId}: ${err.message}`);
+    }
+  }
+
+  console.log(`[Email] Synced ${synced} email campaigns as demand signals`);
+  return { synced, errors };
 }
