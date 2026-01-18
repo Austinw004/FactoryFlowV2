@@ -109,7 +109,7 @@ import {
 } from "lucide-react";
 import { SiSalesforce, SiHubspot, SiShopify, SiQuickbooks, SiSlack, SiGooglesheets, SiZapier, SiSap, SiOracle, SiJira, SiLinear, SiNotion, SiGooglecalendar, SiXero } from "react-icons/si";
 
-type IntegrationStatus = "connected" | "available" | "coming_soon";
+type IntegrationStatus = "connected" | "available" | "setup_ready" | "coming_soon";
 
 interface Integration {
   id: string;
@@ -145,7 +145,7 @@ const integrations: Integration[] = [
     name: "Salesforce",
     description: "Enterprise CRM integration for demand planning",
     category: "crm",
-    status: "available",
+    status: "setup_ready",
     icon: SiSalesforce,
     iconType: "si",
     valueProposition: "Leverage opportunity data for accurate demand forecasting",
@@ -214,7 +214,7 @@ const integrations: Integration[] = [
     name: "Google Sheets",
     description: "Export data as CSV for spreadsheet import",
     category: "data",
-    status: "available",
+    status: "setup_ready",
     icon: SiGooglesheets,
     iconType: "si",
     valueProposition: "Easy data export for spreadsheet analysis",
@@ -251,7 +251,7 @@ const integrations: Integration[] = [
     name: "Shopify",
     description: "Sync orders and inventory for D2C manufacturers",
     category: "ecommerce",
-    status: "available",
+    status: "setup_ready",
     icon: SiShopify,
     iconType: "si",
     valueProposition: "Real-time demand signals from e-commerce orders",
@@ -264,7 +264,7 @@ const integrations: Integration[] = [
     name: "Amazon Seller Central",
     description: "Marketplace demand intelligence",
     category: "ecommerce",
-    status: "available",
+    status: "setup_ready",
     icon: ShoppingCart,
     iconType: "lucide",
     valueProposition: "Forecast demand from marketplace sales",
@@ -277,7 +277,7 @@ const integrations: Integration[] = [
     name: "WooCommerce",
     description: "WordPress e-commerce integration",
     category: "ecommerce",
-    status: "available",
+    status: "setup_ready",
     icon: ShoppingCart,
     iconType: "lucide",
     valueProposition: "Connect your WordPress store for demand signals",
@@ -291,7 +291,7 @@ const integrations: Integration[] = [
     name: "SAP S/4HANA",
     description: "Enterprise resource planning with real-time analytics",
     category: "erp",
-    status: "available",
+    status: "setup_ready",
     icon: SiSap,
     iconType: "si",
     valueProposition: "Seamless bi-directional sync with SAP",
@@ -304,7 +304,7 @@ const integrations: Integration[] = [
     name: "Oracle NetSuite",
     description: "Cloud ERP integration",
     category: "erp",
-    status: "available",
+    status: "setup_ready",
     icon: SiOracle,
     iconType: "si",
     valueProposition: "Complete visibility across your NetSuite data",
@@ -317,7 +317,7 @@ const integrations: Integration[] = [
     name: "Microsoft Dynamics 365",
     description: "Unified ERP, CRM, and supply chain management",
     category: "erp",
-    status: "available",
+    status: "setup_ready",
     icon: Building2,
     iconType: "lucide",
     valueProposition: "Unified Microsoft ecosystem integration",
@@ -329,7 +329,7 @@ const integrations: Integration[] = [
     name: "Sage X3",
     description: "Mid-market ERP for manufacturing and distribution",
     category: "erp",
-    status: "available",
+    status: "setup_ready",
     icon: Building2,
     iconType: "lucide",
     valueProposition: "Connect Sage for comprehensive operations visibility",
@@ -341,7 +341,7 @@ const integrations: Integration[] = [
     name: "Infor CloudSuite",
     description: "Industry-tailored ERP for manufacturing and distribution",
     category: "erp",
-    status: "available",
+    status: "setup_ready",
     icon: Cloud,
     iconType: "lucide",
     valueProposition: "Industry-specific manufacturing intelligence",
@@ -355,7 +355,7 @@ const integrations: Integration[] = [
     name: "FedEx",
     description: "Track shipments and delivery status",
     category: "logistics",
-    status: "available",
+    status: "setup_ready",
     icon: Truck,
     iconType: "lucide",
     valueProposition: "Real-time shipment visibility for inbound materials",
@@ -368,7 +368,7 @@ const integrations: Integration[] = [
     name: "UPS",
     description: "Package and freight tracking",
     category: "logistics",
-    status: "available",
+    status: "setup_ready",
     icon: Truck,
     iconType: "lucide",
     valueProposition: "Proactive logistics intelligence",
@@ -380,7 +380,7 @@ const integrations: Integration[] = [
     name: "Flexport",
     description: "Global freight visibility",
     category: "logistics",
-    status: "available",
+    status: "setup_ready",
     icon: Globe,
     iconType: "lucide",
     valueProposition: "End-to-end supply chain visibility",
@@ -393,7 +393,7 @@ const integrations: Integration[] = [
     name: "project44",
     description: "Real-time supply chain visibility and predictive ETAs",
     category: "logistics",
-    status: "available",
+    status: "setup_ready",
     icon: Truck,
     iconType: "lucide",
     valueProposition: "Predictive ETA and risk management",
@@ -407,7 +407,7 @@ const integrations: Integration[] = [
     name: "OPC-UA",
     description: "Industrial machine connectivity protocol",
     category: "iot",
-    status: "available",
+    status: "setup_ready",
     icon: Radio,
     iconType: "lucide",
     valueProposition: "Real-time machine data for OEE optimization",
@@ -419,7 +419,7 @@ const integrations: Integration[] = [
     name: "MQTT Broker",
     description: "IoT messaging protocol for sensor data",
     category: "iot",
-    status: "available",
+    status: "setup_ready",
     icon: Radio,
     iconType: "lucide",
     valueProposition: "Lightweight IoT data streaming",
@@ -431,7 +431,7 @@ const integrations: Integration[] = [
     name: "Kepware KEPServerEX",
     description: "Industrial connectivity platform with 300+ device drivers",
     category: "iot",
-    status: "available",
+    status: "setup_ready",
     icon: Factory,
     iconType: "lucide",
     valueProposition: "Universal industrial protocol translation",
@@ -445,7 +445,7 @@ const integrations: Integration[] = [
     name: "Power BI",
     description: "Connect Power BI to our Data Export API",
     category: "analytics",
-    status: "available",
+    status: "setup_ready",
     icon: BarChart3,
     iconType: "lucide",
     valueProposition: "Enhanced analytics and executive dashboards",
@@ -458,7 +458,7 @@ const integrations: Integration[] = [
     name: "Tableau",
     description: "Connect Tableau to our Data Export API",
     category: "analytics",
-    status: "available",
+    status: "setup_ready",
     icon: BarChart3,
     iconType: "lucide",
     valueProposition: "Advanced visualization and analysis",
@@ -470,7 +470,7 @@ const integrations: Integration[] = [
     name: "Looker",
     description: "Google Cloud BI platform",
     category: "analytics",
-    status: "available",
+    status: "setup_ready",
     icon: BarChart3,
     iconType: "lucide",
     valueProposition: "Semantic layer for consistent metrics",
@@ -484,7 +484,7 @@ const integrations: Integration[] = [
     name: "QuickBooks",
     description: "Small business accounting",
     category: "finance",
-    status: "available",
+    status: "setup_ready",
     icon: SiQuickbooks,
     iconType: "si",
     valueProposition: "Financial visibility for procurement optimization",
@@ -497,7 +497,7 @@ const integrations: Integration[] = [
     name: "Xero",
     description: "Cloud accounting platform",
     category: "finance",
-    status: "available",
+    status: "setup_ready",
     icon: SiXero,
     iconType: "si",
     valueProposition: "Streamlined financial operations",
@@ -509,7 +509,7 @@ const integrations: Integration[] = [
     name: "NetSuite Financials",
     description: "Enterprise financial management and reporting",
     category: "finance",
-    status: "available",
+    status: "setup_ready",
     icon: DollarSign,
     iconType: "lucide",
     valueProposition: "Complete financial integration for cost analysis",
@@ -523,7 +523,7 @@ const integrations: Integration[] = [
     name: "SAP Ariba",
     description: "Procurement network",
     category: "procurement",
-    status: "available",
+    status: "setup_ready",
     icon: Building2,
     iconType: "lucide",
     valueProposition: "Connect with your supplier network",
@@ -536,7 +536,7 @@ const integrations: Integration[] = [
     name: "Coupa",
     description: "Spend management platform",
     category: "procurement",
-    status: "available",
+    status: "setup_ready",
     icon: Building2,
     iconType: "lucide",
     valueProposition: "Unified spend visibility",
@@ -549,7 +549,7 @@ const integrations: Integration[] = [
     name: "Jaggaer",
     description: "Source-to-pay and procurement automation platform",
     category: "procurement",
-    status: "available",
+    status: "setup_ready",
     icon: Building2,
     iconType: "lucide",
     valueProposition: "End-to-end procurement automation",
@@ -563,7 +563,7 @@ const integrations: Integration[] = [
     name: "Manhattan WMS",
     description: "Warehouse management system",
     category: "warehouse",
-    status: "available",
+    status: "setup_ready",
     icon: Warehouse,
     iconType: "lucide",
     valueProposition: "Real-time warehouse visibility",
@@ -576,7 +576,7 @@ const integrations: Integration[] = [
     name: "SAP EWM",
     description: "Extended Warehouse Management for complex logistics",
     category: "warehouse",
-    status: "available",
+    status: "setup_ready",
     icon: Warehouse,
     iconType: "lucide",
     valueProposition: "Advanced warehouse operations integration",
@@ -588,7 +588,7 @@ const integrations: Integration[] = [
     name: "Fishbowl",
     description: "Inventory management and manufacturing for SMBs",
     category: "warehouse",
-    status: "available",
+    status: "setup_ready",
     icon: Boxes,
     iconType: "lucide",
     valueProposition: "Affordable inventory visibility",
@@ -602,7 +602,7 @@ const integrations: Integration[] = [
     name: "ETQ Reliance",
     description: "Quality management system",
     category: "quality",
-    status: "available",
+    status: "setup_ready",
     icon: FileCheck,
     iconType: "lucide",
     valueProposition: "Quality data for supplier scoring",
@@ -615,7 +615,7 @@ const integrations: Integration[] = [
     name: "MasterControl",
     description: "Quality management for regulated industries",
     category: "quality",
-    status: "available",
+    status: "setup_ready",
     icon: Shield,
     iconType: "lucide",
     valueProposition: "Regulated industry quality integration",
@@ -629,7 +629,7 @@ const integrations: Integration[] = [
     name: "Zapier",
     description: "Connect via webhooks for automation",
     category: "automation",
-    status: "available",
+    status: "setup_ready",
     icon: SiZapier,
     iconType: "si",
     valueProposition: "Connect to 5,000+ apps without code",
@@ -642,7 +642,7 @@ const integrations: Integration[] = [
     name: "Make (Integromat)",
     description: "Connect via webhooks for automation",
     category: "automation",
-    status: "available",
+    status: "setup_ready",
     icon: Zap,
     iconType: "lucide",
     valueProposition: "Complex workflow automation",
@@ -654,7 +654,7 @@ const integrations: Integration[] = [
     name: "n8n",
     description: "Open-source workflow automation",
     category: "automation",
-    status: "available",
+    status: "setup_ready",
     icon: Zap,
     iconType: "lucide",
     valueProposition: "Self-hosted automation for advanced workflows",
@@ -679,7 +679,7 @@ const integrations: Integration[] = [
     name: "Jira",
     description: "Issue tracking and project management",
     category: "productivity",
-    status: "available",
+    status: "setup_ready",
     icon: SiJira,
     iconType: "si",
     valueProposition: "Track supply chain issues and procurement tasks",
@@ -692,7 +692,7 @@ const integrations: Integration[] = [
     name: "Linear",
     description: "Modern project tracking platform",
     category: "productivity",
-    status: "available",
+    status: "setup_ready",
     icon: SiLinear,
     iconType: "si",
     valueProposition: "Fast issue tracking for agile teams",
@@ -704,7 +704,7 @@ const integrations: Integration[] = [
     name: "Notion",
     description: "Knowledge base and documentation",
     category: "productivity",
-    status: "available",
+    status: "setup_ready",
     icon: SiNotion,
     iconType: "si",
     valueProposition: "Centralized knowledge management",
@@ -717,7 +717,7 @@ const integrations: Integration[] = [
     name: "Google Calendar",
     description: "Calendar and meeting scheduling",
     category: "productivity",
-    status: "available",
+    status: "setup_ready",
     icon: SiGooglecalendar,
     iconType: "si",
     valueProposition: "Schedule S&OP meetings and planning sessions",
@@ -731,7 +731,7 @@ const integrations: Integration[] = [
     name: "DocuSign",
     description: "Electronic signature platform",
     category: "documents",
-    status: "available",
+    status: "setup_ready",
     icon: FileText,
     iconType: "lucide",
     valueProposition: "Streamline contract and PO approvals",
@@ -743,7 +743,7 @@ const integrations: Integration[] = [
     name: "SharePoint",
     description: "Document management and collaboration",
     category: "documents",
-    status: "available",
+    status: "setup_ready",
     icon: FileText,
     iconType: "lucide",
     valueProposition: "Centralized document storage",
@@ -793,7 +793,7 @@ const integrations: Integration[] = [
     name: "Snowflake",
     description: "Cloud data warehouse integration",
     category: "analytics",
-    status: "available",
+    status: "setup_ready",
     icon: Database,
     iconType: "lucide",
     valueProposition: "Export data to your data warehouse for advanced analytics",
@@ -808,7 +808,7 @@ const integrations: Integration[] = [
     name: "Monday.com",
     description: "Work management platform",
     category: "productivity",
-    status: "available",
+    status: "setup_ready",
     icon: LayoutGrid,
     iconType: "lucide",
     valueProposition: "Track procurement and operations tasks",
@@ -821,7 +821,7 @@ const integrations: Integration[] = [
     name: "Asana",
     description: "Project and task management",
     category: "productivity",
-    status: "available",
+    status: "setup_ready",
     icon: ListTodo,
     iconType: "lucide",
     valueProposition: "Manage supply chain projects and tasks",
@@ -835,7 +835,7 @@ const integrations: Integration[] = [
     name: "BigCommerce",
     description: "Enterprise e-commerce platform",
     category: "ecommerce",
-    status: "available",
+    status: "setup_ready",
     icon: ShoppingBag,
     iconType: "lucide",
     valueProposition: "Sync orders and inventory from your BigCommerce store",
@@ -849,7 +849,7 @@ const integrations: Integration[] = [
     name: "Stripe",
     description: "Payment processing and reconciliation",
     category: "finance",
-    status: "available",
+    status: "setup_ready",
     icon: CreditCard,
     iconType: "lucide",
     valueProposition: "Automate payment tracking and supplier reconciliation",
@@ -864,7 +864,7 @@ const integrations: Integration[] = [
     name: "DHL Express",
     description: "International shipping and logistics",
     category: "logistics",
-    status: "available",
+    status: "setup_ready",
     icon: Truck,
     iconType: "lucide",
     valueProposition: "Global shipment tracking and delivery intelligence",
@@ -879,7 +879,7 @@ const integrations: Integration[] = [
     name: "Bill.com",
     description: "AP/AR automation platform",
     category: "finance",
-    status: "available",
+    status: "setup_ready",
     icon: DollarSign,
     iconType: "lucide",
     valueProposition: "Streamline accounts payable and receivable",
@@ -893,7 +893,7 @@ const integrations: Integration[] = [
     name: "Trello",
     description: "Visual project management with boards",
     category: "productivity",
-    status: "available",
+    status: "setup_ready",
     icon: LayoutGrid,
     iconType: "lucide",
     valueProposition: "Visualize procurement workflows with Kanban boards",
@@ -907,7 +907,7 @@ const integrations: Integration[] = [
     name: "Zendesk",
     description: "Customer service and support platform",
     category: "crm",
-    status: "available",
+    status: "setup_ready",
     icon: Users,
     iconType: "lucide",
     valueProposition: "Connect customer feedback to demand signals",
@@ -921,7 +921,7 @@ const integrations: Integration[] = [
     name: "Mailchimp",
     description: "Email marketing and automation",
     category: "communication",
-    status: "available",
+    status: "setup_ready",
     icon: Mail,
     iconType: "lucide",
     valueProposition: "Automate supplier and customer communications",
@@ -933,7 +933,7 @@ const integrations: Integration[] = [
     name: "SendGrid",
     description: "Transactional email delivery",
     category: "communication",
-    status: "available",
+    status: "setup_ready",
     icon: Send,
     iconType: "lucide",
     valueProposition: "Reliable transactional email for alerts and notifications",
@@ -947,7 +947,7 @@ const integrations: Integration[] = [
     name: "Airtable",
     description: "Spreadsheet-database hybrid platform",
     category: "data",
-    status: "available",
+    status: "setup_ready",
     icon: Database,
     iconType: "lucide",
     valueProposition: "Flexible data management and collaboration",
@@ -962,7 +962,7 @@ const integrations: Integration[] = [
     name: "SPS Commerce",
     description: "EDI and supply chain connectivity",
     category: "data",
-    status: "available",
+    status: "setup_ready",
     icon: Link2,
     iconType: "lucide",
     valueProposition: "Connect with retail and wholesale partners via EDI",
@@ -977,7 +977,7 @@ const integrations: Integration[] = [
     name: "Siemens Teamcenter",
     description: "Product lifecycle management",
     category: "data",
-    status: "available",
+    status: "setup_ready",
     icon: Settings,
     iconType: "lucide",
     valueProposition: "Integrate BOM and engineering data for procurement",
@@ -1013,6 +1013,8 @@ function getStatusBadge(status: IntegrationStatus) {
       return <Badge variant="default" className="bg-green-500"><CheckCircle className="w-3 h-3 mr-1" /> Connected</Badge>;
     case "available":
       return <Badge variant="secondary"><Zap className="w-3 h-3 mr-1" /> Available</Badge>;
+    case "setup_ready":
+      return <Badge variant="outline" className="border-amber-500 text-amber-600"><Settings className="w-3 h-3 mr-1" /> Setup Ready</Badge>;
     case "coming_soon":
       return <Badge variant="outline"><Clock className="w-3 h-3 mr-1" /> Coming Soon</Badge>;
   }
@@ -1092,6 +1094,7 @@ export default function Integrations() {
   const popularIntegrations = integrations.filter(i => i.popular);
   const connectedCount = integrations.filter(i => i.status === "connected").length;
   const availableCount = integrations.filter(i => i.status === "available").length;
+  const setupReadyCount = integrations.filter(i => i.status === "setup_ready").length;
 
   const handleConnect = (integration: Integration) => {
     if (integration.id === "slack") {
@@ -1288,11 +1291,11 @@ export default function Integrations() {
           <Card>
             <CardContent className="p-4 flex items-center gap-4">
               <div className="p-3 bg-amber-500/10 rounded-lg">
-                <Star className="w-6 h-6 text-amber-500" />
+                <Settings className="w-6 h-6 text-amber-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{popularIntegrations.length}</p>
-                <p className="text-sm text-muted-foreground">Most Popular</p>
+                <p className="text-2xl font-bold" data-testid="text-setup-ready-count">{setupReadyCount}</p>
+                <p className="text-sm text-muted-foreground">Setup Ready</p>
               </div>
             </CardContent>
           </Card>
@@ -1315,8 +1318,8 @@ export default function Integrations() {
                     <Card key={integration.id} className="hover-elevate cursor-pointer" data-testid={`card-popular-${integration.id}`}>
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between mb-3">
-                          <div className={`p-2 rounded-lg ${integration.status === "connected" ? "bg-green-500/10" : integration.status === "coming_soon" ? "bg-muted" : "bg-primary/10"}`}>
-                            <IconComponent className={`w-5 h-5 ${integration.status === "connected" ? "text-green-500" : integration.status === "coming_soon" ? "text-muted-foreground" : "text-primary"}`} />
+                          <div className={`p-2 rounded-lg ${integration.status === "connected" ? "bg-green-500/10" : integration.status === "coming_soon" ? "bg-muted" : integration.status === "setup_ready" ? "bg-amber-500/10" : "bg-primary/10"}`}>
+                            <IconComponent className={`w-5 h-5 ${integration.status === "connected" ? "text-green-500" : integration.status === "coming_soon" ? "text-muted-foreground" : integration.status === "setup_ready" ? "text-amber-600" : "text-primary"}`} />
                           </div>
                           {getStatusBadge(integration.status)}
                         </div>
@@ -1325,6 +1328,11 @@ export default function Integrations() {
                         {integration.status === "available" && (
                           <Button size="sm" className="w-full" onClick={() => handleConnect(integration)} data-testid={`button-connect-popular-${integration.id}`}>
                             Connect <ArrowRight className="w-4 h-4 ml-2" />
+                          </Button>
+                        )}
+                        {integration.status === "setup_ready" && (
+                          <Button size="sm" variant="outline" className="w-full border-amber-500 text-amber-600 hover:bg-amber-50" onClick={() => handleConnect(integration)} data-testid={`button-configure-popular-${integration.id}`}>
+                            <Settings className="w-4 h-4 mr-2" /> Configure
                           </Button>
                         )}
                         {integration.status === "coming_soon" && (
@@ -1403,8 +1411,8 @@ export default function Integrations() {
                     <CardContent className="p-5">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-3">
-                          <div className={`p-2.5 rounded-lg ${integration.status === "connected" ? "bg-green-500/10" : integration.status === "coming_soon" ? "bg-muted" : "bg-primary/10"}`}>
-                            <IconComponent className={`w-5 h-5 ${integration.status === "connected" ? "text-green-500" : integration.status === "coming_soon" ? "text-muted-foreground" : "text-primary"}`} />
+                          <div className={`p-2.5 rounded-lg ${integration.status === "connected" ? "bg-green-500/10" : integration.status === "coming_soon" ? "bg-muted" : integration.status === "setup_ready" ? "bg-amber-500/10" : "bg-primary/10"}`}>
+                            <IconComponent className={`w-5 h-5 ${integration.status === "connected" ? "text-green-500" : integration.status === "coming_soon" ? "text-muted-foreground" : integration.status === "setup_ready" ? "text-amber-600" : "text-primary"}`} />
                           </div>
                           <div>
                             <h3 className="font-semibold">{integration.name}</h3>
@@ -1450,6 +1458,11 @@ export default function Integrations() {
                           {integration.status === "available" && (
                             <Button size="sm" onClick={() => handleConnect(integration)} data-testid={`button-connect-${integration.id}`}>
                               Connect <ArrowRight className="w-4 h-4 ml-1" />
+                            </Button>
+                          )}
+                          {integration.status === "setup_ready" && (
+                            <Button size="sm" variant="outline" className="border-amber-500 text-amber-600 hover:bg-amber-50" onClick={() => handleConnect(integration)} data-testid={`button-configure-${integration.id}`}>
+                              <Settings className="w-4 h-4 mr-1" /> Configure
                             </Button>
                           )}
                           {integration.status === "coming_soon" && (
