@@ -1,6 +1,7 @@
 import { db } from "../db";
 import { companies, demandSignals, materials } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import { CredentialService } from "./credentialService";
 
 export interface ShopifyConfig {
   shopDomain: string;
@@ -240,6 +241,20 @@ export class ShopifyIntegration {
 }
 
 export async function getShopifyIntegration(companyId: string): Promise<ShopifyIntegration | null> {
+  try {
+    const credentials = await CredentialService.getDecryptedCredentials(companyId, 'shopify');
+    if (credentials?.accessToken && credentials?.shopDomain) {
+      console.log(`[Shopify] Using centralized credential storage for company ${companyId}`);
+      return new ShopifyIntegration({
+        shopDomain: credentials.shopDomain,
+        accessToken: credentials.accessToken,
+        companyId,
+      });
+    }
+  } catch (error) {
+    console.log(`[Shopify] Centralized credentials not available, falling back to company config`);
+  }
+  
   try {
     const [company] = await db
       .select()

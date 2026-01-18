@@ -13,6 +13,17 @@ export interface DecryptedCredentials {
   accountId?: string;
   instanceUrl?: string;
   tenantId?: string;
+  realmId?: string;
+  domain?: string;
+  username?: string;
+  password?: string;
+  shopDomain?: string;
+  webhookUrl?: string;
+  webhookSecret?: string;
+  expiresIn?: number;
+  tokenType?: string;
+  scope?: string;
+  region?: string;
   additionalData?: Record<string, any>;
 }
 

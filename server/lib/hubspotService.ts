@@ -1,4 +1,6 @@
 import axios from 'axios';
+import { CredentialService } from './credentialService';
+import { storage } from '../storage';
 
 export interface HubSpotContact {
   id?: string;
@@ -30,13 +32,31 @@ export interface HubSpotDeal {
 export class HubSpotService {
   private accessToken: string | null = null;
   private baseUrl = 'https://api.hubapi.com';
+  private companyId: string | null = null;
 
-  configure(accessToken: string) {
+  configure(accessToken: string, companyId?: string) {
     this.accessToken = accessToken;
+    this.companyId = companyId || null;
   }
 
   isConfigured(): boolean {
     return !!this.accessToken;
+  }
+
+  async configureFromCredentials(companyId: string): Promise<boolean> {
+    try {
+      const credentials = await CredentialService.getDecryptedCredentials(companyId, 'hubspot');
+      if (credentials?.accessToken) {
+        this.accessToken = credentials.accessToken;
+        this.companyId = companyId;
+        console.log(`[HubSpot] Configured from centralized credential storage for company ${companyId}`);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('[HubSpot] Failed to configure from credentials:', error);
+      return false;
+    }
   }
 
   private async request<T>(method: string, endpoint: string, data?: unknown): Promise<T> {
@@ -218,3 +238,83 @@ export class HubSpotService {
 }
 
 export const hubspotService = new HubSpotService();
+
+export async function getHubSpotIntegration(companyId: string): Promise<HubSpotService | null> {
+  try {
+    const credentials = await CredentialService.getDecryptedCredentials(companyId, 'hubspot');
+    if (credentials?.accessToken) {
+      const service = new HubSpotService();
+      service.configure(credentials.accessToken, companyId);
+      console.log(`[HubSpot] Using centralized credential storage for company ${companyId}`);
+      return service;
+    }
+  } catch (error) {
+    console.log(`[HubSpot] Centralized credentials not available for ${companyId}`);
+  }
+  return null;
+}
+
+export async function syncHubSpotData(companyId: string): Promise<{
+  success: boolean;
+  contacts?: number;
+  companies?: number;
+  deals?: number;
+  error?: string;
+}> {
+  const service = await getHubSpotIntegration(companyId);
+  if (!service) {
+    return { success: false, error: 'HubSpot not configured' };
+  }
+
+  try {
+    const connectionTest = await service.testConnection();
+    if (!connectionTest.success) {
+      return { success: false, error: connectionTest.message };
+    }
+
+    const contacts = await service.getContacts(100);
+    const companies = await service.getCompanies(100);
+    const deals = await service.getDeals(100);
+
+    for (const deal of deals) {
+      if (deal.amount && deal.amount > 0) {
+        try {
+          await storage.createDemandSignal({
+            companyId,
+            signalType: 'deal',
+            signalDate: new Date(),
+            quantity: Math.ceil(deal.amount / 1000),
+            unit: 'units',
+            channel: 'hubspot',
+            customer: deal.dealname,
+            confidence: deal.dealstage === 'closedwon' ? 100 : 
+                        deal.dealstage === 'contractsent' ? 80 :
+                        deal.dealstage === 'qualifiedtobuy' ? 60 : 40,
+            priority: 'medium',
+            attributes: {
+              source: 'hubspot',
+              dealId: deal.id,
+              dealName: deal.dealname,
+              dealStage: deal.dealstage,
+              amount: deal.amount,
+              closeDate: deal.closedate
+            }
+          });
+        } catch (err) {
+          console.error(`[HubSpot] Failed to create demand signal for deal ${deal.id}:`, err);
+        }
+      }
+    }
+
+    console.log(`[HubSpot] Synced ${contacts.length} contacts, ${companies.length} companies, ${deals.length} deals`);
+    return {
+      success: true,
+      contacts: contacts.length,
+      companies: companies.length,
+      deals: deals.length
+    };
+  } catch (error: any) {
+    console.error('[HubSpot] Sync failed:', error.message);
+    return { success: false, error: error.message };
+  }
+}

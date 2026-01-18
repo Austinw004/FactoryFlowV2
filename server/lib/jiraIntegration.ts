@@ -1,6 +1,5 @@
-import { db } from "../db";
-import { companies } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { CredentialService } from "./credentialService";
+import { storage } from "../storage";
 
 export interface JiraIssue {
   id: string;
@@ -154,24 +153,94 @@ export class JiraIntegration {
 
 export async function getJiraIntegration(companyId: string): Promise<JiraIntegration | null> {
   try {
-    const [company] = await db
-      .select()
-      .from(companies)
-      .where(eq(companies.id, companyId))
-      .limit(1);
+    const credentials = await CredentialService.getDecryptedCredentials(companyId, 'jira');
+    if (credentials?.domain && credentials?.username && credentials?.password) {
+      console.log(`[Jira] Using centralized credential storage for company ${companyId}`);
+      return new JiraIntegration({
+        domain: credentials.domain,
+        email: credentials.username,
+        apiToken: credentials.password,
+        companyId,
+      });
+    }
+  } catch (error) {
+    console.log(`[Jira] Credentials not available for company ${companyId}`);
+  }
+  
+  return null;
+}
 
-    if (!company?.jiraDomain || !company?.jiraEmail || !company?.jiraApiToken) {
-      return null;
+export async function syncJiraData(companyId: string): Promise<{
+  success: boolean;
+  projects?: number;
+  issues?: number;
+  demandSignals?: number;
+  error?: string;
+}> {
+  const integration = await getJiraIntegration(companyId);
+  if (!integration) {
+    return { success: false, error: "Jira not configured" };
+  }
+
+  try {
+    const connectionTest = await integration.testConnection();
+    if (!connectionTest.success) {
+      return { success: false, error: connectionTest.error };
     }
 
-    return new JiraIntegration({
-      domain: company.jiraDomain,
-      email: company.jiraEmail,
-      apiToken: company.jiraApiToken,
-      companyId,
-    });
-  } catch (error) {
-    console.error("[Jira] Failed to get integration:", error);
-    return null;
+    const projects = await integration.fetchProjects();
+    let totalIssues = 0;
+    let demandSignals = 0;
+
+    for (const project of projects.slice(0, 5)) {
+      try {
+        const issues = await integration.fetchIssues(project.key, 100);
+        totalIssues += issues.length;
+
+        for (const issue of issues) {
+          if (issue.fields.labels.includes('demand') || 
+              issue.fields.labels.includes('procurement') ||
+              issue.fields.issuetype.name === 'Story') {
+            try {
+              await storage.createDemandSignal({
+                companyId,
+                signalType: 'issue',
+                signalDate: new Date(issue.fields.created),
+                quantity: 1,
+                unit: 'units',
+                channel: 'jira',
+                customer: issue.fields.reporter?.displayName,
+                confidence: issue.fields.status.name === 'Done' ? 100 :
+                            issue.fields.status.name === 'In Progress' ? 70 : 50,
+                priority: issue.fields.priority?.name || 'medium',
+                attributes: {
+                  source: 'jira',
+                  issueKey: issue.key,
+                  issueSummary: issue.fields.summary,
+                  issueType: issue.fields.issuetype.name,
+                  labels: issue.fields.labels
+                }
+              });
+              demandSignals++;
+            } catch (err) {
+              console.error(`[Jira] Failed to create demand signal for issue ${issue.key}:`, err);
+            }
+          }
+        }
+      } catch (err) {
+        console.error(`[Jira] Failed to fetch issues for project ${project.key}:`, err);
+      }
+    }
+
+    console.log(`[Jira] Synced ${projects.length} projects, ${totalIssues} issues, ${demandSignals} demand signals`);
+    return {
+      success: true,
+      projects: projects.length,
+      issues: totalIssues,
+      demandSignals
+    };
+  } catch (error: any) {
+    console.error("[Jira] Sync failed:", error.message);
+    return { success: false, error: error.message };
   }
 }

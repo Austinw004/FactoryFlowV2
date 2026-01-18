@@ -1,6 +1,5 @@
-import { db } from "../db";
-import { companies } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { CredentialService } from "./credentialService";
+import { storage } from "../storage";
 
 export interface QuickBooksCompanyInfo {
   CompanyName: string;
@@ -150,24 +149,77 @@ export class QuickBooksIntegration {
 
 export async function getQuickBooksIntegration(companyId: string): Promise<QuickBooksIntegration | null> {
   try {
-    const [company] = await db
-      .select()
-      .from(companies)
-      .where(eq(companies.id, companyId))
-      .limit(1);
+    const credentials = await CredentialService.getDecryptedCredentials(companyId, 'quickbooks');
+    if (credentials?.accessToken && credentials?.realmId) {
+      console.log(`[QuickBooks] Using centralized credential storage for company ${companyId}`);
+      return new QuickBooksIntegration({
+        accessToken: credentials.accessToken,
+        realmId: credentials.realmId,
+        companyId,
+        sandbox: process.env.NODE_ENV !== "production",
+      });
+    }
+  } catch (error) {
+    console.log(`[QuickBooks] Credentials not available for company ${companyId}`);
+  }
+  
+  return null;
+}
 
-    if (!company?.quickbooksAccessToken || !company?.quickbooksRealmId) {
-      return null;
+export async function syncQuickBooksData(companyId: string): Promise<{
+  success: boolean;
+  vendors?: { synced: number; errors: number };
+  invoices?: number;
+  purchaseOrders?: number;
+  error?: string;
+}> {
+  const integration = await getQuickBooksIntegration(companyId);
+  if (!integration) {
+    return { success: false, error: "QuickBooks not configured" };
+  }
+
+  try {
+    const connectionTest = await integration.testConnection();
+    if (!connectionTest.success) {
+      return { success: false, error: connectionTest.error };
     }
 
-    return new QuickBooksIntegration({
-      accessToken: company.quickbooksAccessToken,
-      realmId: company.quickbooksRealmId,
-      companyId,
-      sandbox: process.env.NODE_ENV !== "production",
-    });
-  } catch (error) {
-    console.error("[QuickBooks] Failed to get integration:", error);
-    return null;
+    const vendors = await integration.fetchVendors(500);
+    let synced = 0;
+    let errors = 0;
+    
+    for (const vendor of vendors) {
+      try {
+        const existingSuppliers = await storage.getSuppliers(companyId);
+        const existing = existingSuppliers.find(s => s.name === (vendor.DisplayName || vendor.CompanyName));
+        
+        if (!existing) {
+          await storage.createSupplier({
+            companyId,
+            name: vendor.DisplayName || vendor.CompanyName,
+            contactEmail: vendor.PrimaryEmailAddr?.Address || null
+          });
+          synced++;
+          console.log(`[QuickBooks] Created supplier: ${vendor.DisplayName || vendor.CompanyName}`);
+        }
+      } catch (err: any) {
+        console.error(`[QuickBooks] Error syncing vendor ${vendor.Id}:`, err.message);
+        errors++;
+      }
+    }
+
+    const invoices = await integration.fetchInvoices(100);
+    const purchaseOrders = await integration.fetchPurchaseOrders(100);
+
+    console.log(`[QuickBooks] Synced ${synced} vendors, ${invoices.length} invoices, ${purchaseOrders.length} POs`);
+    return {
+      success: true,
+      vendors: { synced, errors },
+      invoices: invoices.length,
+      purchaseOrders: purchaseOrders.length
+    };
+  } catch (error: any) {
+    console.error("[QuickBooks] Sync failed:", error.message);
+    return { success: false, error: error.message };
   }
 }

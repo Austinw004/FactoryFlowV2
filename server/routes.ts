@@ -16446,6 +16446,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Full HubSpot data sync (using centralized credential storage)
+  app.post("/api/integrations/hubspot/sync", isAuthenticated, async (req: any, res) => {
+    try {
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const { syncHubSpotData } = await import("./lib/hubspotService");
+      const result = await syncHubSpotData(user.companyId);
+      
+      if (!result.success) {
+        return res.status(400).json({ success: false, error: result.error });
+      }
+      
+      res.json({ 
+        success: true, 
+        message: `Synced ${result.contacts} contacts, ${result.companies} companies, ${result.deals} deals`,
+        ...result
+      });
+    } catch (error: any) {
+      console.error("[HubSpot Sync] Error:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Full QuickBooks data sync (using centralized credential storage)
+  app.post("/api/integrations/quickbooks/sync", isAuthenticated, async (req: any, res) => {
+    try {
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const { syncQuickBooksData } = await import("./lib/quickbooksIntegration");
+      const result = await syncQuickBooksData(user.companyId);
+      
+      if (!result.success) {
+        return res.status(400).json({ success: false, error: result.error });
+      }
+      
+      res.json({ 
+        success: true, 
+        message: `Synced ${result.vendors?.synced || 0} vendors, fetched ${result.invoices || 0} invoices`,
+        ...result
+      });
+    } catch (error: any) {
+      console.error("[QuickBooks Sync] Error:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Full Jira data sync (using centralized credential storage)
+  app.post("/api/integrations/jira/sync", isAuthenticated, async (req: any, res) => {
+    try {
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUser(authUserId);
+      if (!user?.companyId) {
+        return res.status(401).json({ error: "No company associated" });
+      }
+      
+      const { syncJiraData } = await import("./lib/jiraIntegration");
+      const result = await syncJiraData(user.companyId);
+      
+      if (!result.success) {
+        return res.status(400).json({ success: false, error: result.error });
+      }
+      
+      res.json({ 
+        success: true, 
+        message: `Synced ${result.projects} projects, ${result.issues} issues, ${result.demandSignals} demand signals`,
+        ...result
+      });
+    } catch (error: any) {
+      console.error("[Jira Sync] Error:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // Send SMS alert (internal use)
   app.post("/api/integrations/twilio/send", isAuthenticated, async (req: any, res) => {
     try {
