@@ -1,4 +1,6 @@
 import axios from 'axios';
+import { storage } from '../storage';
+import { CredentialService } from './credentialService';
 
 export interface SlackMessage {
   text: string;
@@ -267,6 +269,58 @@ export class SlackService {
       return { success: false, message: error.message };
     }
   }
+
+  async syncAlertHistoryAsDemandSignals(companyId: string, alerts: Array<{type: AlertType; channel: string; title: string; timestamp: Date}>): Promise<{ synced: number; errors: string[] }> {
+    const errors: string[] = [];
+    let synced = 0;
+
+    for (const alert of alerts) {
+      try {
+        const config = ALERT_CONFIGS[alert.type];
+        await storage.createDemandSignal({
+          companyId,
+          signalType: 'slack_alert',
+          signalDate: alert.timestamp,
+          quantity: 1,
+          unit: 'alert',
+          channel: 'slack',
+          confidence: 100,
+          priority: config.priority,
+          attributes: {
+            source: 'slack',
+            alertType: alert.type,
+            slackChannel: alert.channel,
+            alertTitle: alert.title
+          }
+        });
+        synced++;
+      } catch (err: any) {
+        errors.push(`Alert ${alert.type}: ${err.message}`);
+      }
+    }
+
+    console.log(`[Slack] Synced ${synced} alert history as demand signals`);
+    return { synced, errors };
+  }
 }
 
 export const slackService = new SlackService();
+
+export async function getSlackService(companyId: string): Promise<SlackService | null> {
+  try {
+    const credentials = await CredentialService.getDecryptedCredentials(companyId, 'slack');
+    if (credentials?.webhookUrl) {
+      console.log(`[Slack] Using centralized credential storage for company ${companyId}`);
+      const service = new SlackService();
+      service.configure(credentials.webhookUrl);
+      return service;
+    }
+  } catch (error) {
+    console.log(`[Slack] Credentials not available for company ${companyId}`);
+  }
+  
+  if (slackService.isConfigured()) {
+    return slackService;
+  }
+  return null;
+}

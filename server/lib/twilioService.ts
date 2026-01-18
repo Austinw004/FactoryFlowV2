@@ -1,4 +1,6 @@
 import twilio from 'twilio';
+import { storage } from '../storage';
+import { CredentialService } from './credentialService';
 
 export type SMSAlertType = 
   | 'regime_change'
@@ -198,6 +200,58 @@ export class TwilioService {
       return { success: false, message: error.message };
     }
   }
+
+  async syncAlertHistoryAsDemandSignals(companyId: string, alerts: Array<{type: SMSAlertType; recipient: string; message: string; timestamp: Date}>): Promise<{ synced: number; errors: string[] }> {
+    const errors: string[] = [];
+    let synced = 0;
+
+    for (const alert of alerts) {
+      try {
+        await storage.createDemandSignal({
+          companyId,
+          signalType: 'sms_alert',
+          signalDate: alert.timestamp,
+          quantity: 1,
+          unit: 'alert',
+          channel: 'twilio',
+          customer: alert.recipient,
+          confidence: 100,
+          priority: ALERT_CONFIGS[alert.type].priority === 'critical' ? 'high' : ALERT_CONFIGS[alert.type].priority,
+          attributes: {
+            source: 'twilio',
+            alertType: alert.type,
+            recipient: alert.recipient,
+            messagePreview: alert.message.substring(0, 100)
+          }
+        });
+        synced++;
+      } catch (err: any) {
+        errors.push(`Alert ${alert.type}: ${err.message}`);
+      }
+    }
+
+    console.log(`[Twilio] Synced ${synced} alert history as demand signals`);
+    return { synced, errors };
+  }
 }
 
 export const twilioService = new TwilioService();
+
+export async function getTwilioService(companyId: string): Promise<TwilioService | null> {
+  try {
+    const credentials = await CredentialService.getDecryptedCredentials(companyId, 'twilio');
+    if (credentials?.clientId && credentials?.clientSecret && credentials?.webhookUrl) {
+      console.log(`[Twilio] Using centralized credential storage for company ${companyId}`);
+      const service = new TwilioService();
+      service.configure(credentials.clientId, credentials.clientSecret, credentials.webhookUrl);
+      return service;
+    }
+  } catch (error) {
+    console.log(`[Twilio] Credentials not available for company ${companyId}`);
+  }
+  
+  if (twilioService.isConfigured()) {
+    return twilioService;
+  }
+  return null;
+}

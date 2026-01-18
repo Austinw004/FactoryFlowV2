@@ -1,5 +1,7 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import crypto from 'crypto';
+import { storage } from '../storage';
+import { CredentialService } from './credentialService';
 
 // ================================
 // SAP S/4HANA INTEGRATION SERVICE
@@ -670,5 +672,305 @@ export async function syncErpData(
       errors,
       duration: Date.now() - startTime,
     };
+  }
+}
+
+export async function getSapClient(companyId: string): Promise<SapS4HanaClient | null> {
+  try {
+    const credentials = await CredentialService.getDecryptedCredentials(companyId, 'sap');
+    if (credentials?.instanceUrl && credentials?.username && credentials?.password) {
+      console.log(`[SAP] Using centralized credential storage for company ${companyId}`);
+      return new SapS4HanaClient({
+        baseUrl: credentials.instanceUrl,
+        username: credentials.username,
+        password: credentials.password,
+        authMethod: 'basic'
+      });
+    }
+    if (credentials?.instanceUrl && credentials?.clientId && credentials?.clientSecret) {
+      console.log(`[SAP] Using OAuth2 credentials for company ${companyId}`);
+      return new SapS4HanaClient({
+        baseUrl: credentials.instanceUrl,
+        clientId: credentials.clientId,
+        clientSecret: credentials.clientSecret,
+        authMethod: 'oauth2'
+      });
+    }
+  } catch (error) {
+    console.log(`[SAP] Credentials not available for company ${companyId}`);
+  }
+  return null;
+}
+
+export async function getOracleClient(companyId: string): Promise<OracleErpClient | null> {
+  try {
+    const credentials = await CredentialService.getDecryptedCredentials(companyId, 'oracle');
+    if (credentials?.instanceUrl && credentials?.username && credentials?.password) {
+      console.log(`[Oracle] Using centralized credential storage for company ${companyId}`);
+      return new OracleErpClient({
+        baseUrl: credentials.instanceUrl,
+        username: credentials.username,
+        password: credentials.password,
+        authMethod: 'basic'
+      });
+    }
+    if (credentials?.instanceUrl && credentials?.clientId && credentials?.clientSecret) {
+      console.log(`[Oracle] Using OAuth2 credentials for company ${companyId}`);
+      return new OracleErpClient({
+        baseUrl: credentials.instanceUrl,
+        clientId: credentials.clientId,
+        clientSecret: credentials.clientSecret,
+        authMethod: 'oauth2'
+      });
+    }
+  } catch (error) {
+    console.log(`[Oracle] Credentials not available for company ${companyId}`);
+  }
+  return null;
+}
+
+export async function syncSapMaterialsToStorage(companyId: string): Promise<{ synced: number; errors: string[] }> {
+  const errors: string[] = [];
+  let synced = 0;
+
+  try {
+    const client = await getSapClient(companyId);
+    if (!client) {
+      return { synced: 0, errors: ['SAP not configured'] };
+    }
+
+    const materials = await client.getMaterials({ top: 500 });
+    const transformed = client.transformToStandardFormat(materials, 'material');
+
+    for (const mat of transformed) {
+      try {
+        const existing = await storage.getMaterials(companyId);
+        const exists = existing.find(m => m.code === mat.code);
+        
+        if (!exists) {
+          await storage.createMaterial({
+            companyId,
+            code: mat.code,
+            name: mat.name,
+            unit: mat.baseUnit || 'units',
+            onHand: 0
+          });
+          synced++;
+        }
+      } catch (err: any) {
+        errors.push(`Material ${mat.code}: ${err.message}`);
+      }
+    }
+
+    console.log(`[SAP] Synced ${synced} materials to storage`);
+    return { synced, errors };
+  } catch (error: any) {
+    return { synced: 0, errors: [error.message] };
+  }
+}
+
+export async function syncSapSuppliersToStorage(companyId: string): Promise<{ synced: number; errors: string[] }> {
+  const errors: string[] = [];
+  let synced = 0;
+
+  try {
+    const client = await getSapClient(companyId);
+    if (!client) {
+      return { synced: 0, errors: ['SAP not configured'] };
+    }
+
+    const suppliers = await client.getSuppliers({ top: 500 });
+    const transformed = client.transformToStandardFormat(suppliers, 'supplier');
+
+    for (const sup of transformed) {
+      try {
+        const existing = await storage.getSuppliers(companyId);
+        const exists = existing.find(s => s.name === sup.name);
+        
+        if (!exists && sup.name) {
+          await storage.createSupplier({
+            companyId,
+            name: sup.name,
+            contactEmail: ''
+          });
+          synced++;
+        }
+      } catch (err: any) {
+        errors.push(`Supplier ${sup.name}: ${err.message}`);
+      }
+    }
+
+    console.log(`[SAP] Synced ${synced} suppliers to storage`);
+    return { synced, errors };
+  } catch (error: any) {
+    return { synced: 0, errors: [error.message] };
+  }
+}
+
+export async function syncSapPurchaseOrdersAsDemandSignals(companyId: string): Promise<{ synced: number; errors: string[] }> {
+  const errors: string[] = [];
+  let synced = 0;
+
+  try {
+    const client = await getSapClient(companyId);
+    if (!client) {
+      return { synced: 0, errors: ['SAP not configured'] };
+    }
+
+    const purchaseOrders = await client.getPurchaseOrders({ top: 100 });
+    const transformed = client.transformToStandardFormat(purchaseOrders, 'purchase_order');
+
+    for (const po of transformed) {
+      try {
+        await storage.createDemandSignal({
+          companyId,
+          signalType: 'purchase_order',
+          signalDate: new Date(po.creationDate) || new Date(),
+          quantity: po.totalAmount || 1,
+          unit: po.currency || 'USD',
+          channel: 'sap',
+          customer: po.supplier,
+          confidence: 95,
+          priority: 'medium',
+          attributes: {
+            source: 'sap_s4hana',
+            poNumber: po.poNumber,
+            status: po.status,
+            purchasingOrg: po.purchasingOrg
+          }
+        });
+        synced++;
+      } catch (err: any) {
+        errors.push(`PO ${po.poNumber}: ${err.message}`);
+      }
+    }
+
+    console.log(`[SAP] Synced ${synced} purchase orders as demand signals`);
+    return { synced, errors };
+  } catch (error: any) {
+    return { synced: 0, errors: [error.message] };
+  }
+}
+
+export async function syncOracleMaterialsToStorage(companyId: string): Promise<{ synced: number; errors: string[] }> {
+  const errors: string[] = [];
+  let synced = 0;
+
+  try {
+    const client = await getOracleClient(companyId);
+    if (!client) {
+      return { synced: 0, errors: ['Oracle not configured'] };
+    }
+
+    const items = await client.getItems({ limit: 500 });
+    const transformed = client.transformToStandardFormat(items, 'item');
+
+    for (const item of transformed) {
+      try {
+        const existing = await storage.getMaterials(companyId);
+        const exists = existing.find(m => m.code === item.code);
+        
+        if (!exists) {
+          await storage.createMaterial({
+            companyId,
+            code: item.code,
+            name: item.name,
+            unit: item.baseUnit || 'units',
+            onHand: 0
+          });
+          synced++;
+        }
+      } catch (err: any) {
+        errors.push(`Item ${item.code}: ${err.message}`);
+      }
+    }
+
+    console.log(`[Oracle] Synced ${synced} items to storage`);
+    return { synced, errors };
+  } catch (error: any) {
+    return { synced: 0, errors: [error.message] };
+  }
+}
+
+export async function syncOracleSuppliersToStorage(companyId: string): Promise<{ synced: number; errors: string[] }> {
+  const errors: string[] = [];
+  let synced = 0;
+
+  try {
+    const client = await getOracleClient(companyId);
+    if (!client) {
+      return { synced: 0, errors: ['Oracle not configured'] };
+    }
+
+    const suppliers = await client.getSuppliers({ limit: 500 });
+    const transformed = client.transformToStandardFormat(suppliers, 'supplier');
+
+    for (const sup of transformed) {
+      try {
+        const existing = await storage.getSuppliers(companyId);
+        const exists = existing.find(s => s.name === sup.name);
+        
+        if (!exists && sup.name) {
+          await storage.createSupplier({
+            companyId,
+            name: sup.name,
+            contactEmail: ''
+          });
+          synced++;
+        }
+      } catch (err: any) {
+        errors.push(`Supplier ${sup.name}: ${err.message}`);
+      }
+    }
+
+    console.log(`[Oracle] Synced ${synced} suppliers to storage`);
+    return { synced, errors };
+  } catch (error: any) {
+    return { synced: 0, errors: [error.message] };
+  }
+}
+
+export async function syncOraclePurchaseOrdersAsDemandSignals(companyId: string): Promise<{ synced: number; errors: string[] }> {
+  const errors: string[] = [];
+  let synced = 0;
+
+  try {
+    const client = await getOracleClient(companyId);
+    if (!client) {
+      return { synced: 0, errors: ['Oracle not configured'] };
+    }
+
+    const purchaseOrders = await client.getPurchaseOrders({ limit: 100 });
+    const transformed = client.transformToStandardFormat(purchaseOrders, 'purchase_order');
+
+    for (const po of transformed) {
+      try {
+        await storage.createDemandSignal({
+          companyId,
+          signalType: 'purchase_order',
+          signalDate: new Date(po.creationDate) || new Date(),
+          quantity: po.totalAmount || 1,
+          unit: po.currency || 'USD',
+          channel: 'oracle',
+          customer: po.supplier,
+          confidence: 95,
+          priority: 'medium',
+          attributes: {
+            source: 'oracle_erp',
+            poNumber: po.poNumber,
+            status: po.status,
+            procurementBU: po.procurementBU
+          }
+        });
+        synced++;
+      } catch (err: any) {
+        errors.push(`PO ${po.poNumber}: ${err.message}`);
+      }
+    }
+
+    console.log(`[Oracle] Synced ${synced} purchase orders as demand signals`);
+    return { synced, errors };
+  } catch (error: any) {
+    return { synced: 0, errors: [error.message] };
   }
 }
