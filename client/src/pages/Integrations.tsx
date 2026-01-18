@@ -1298,46 +1298,48 @@ export default function Integrations() {
           </Card>
         </div>
 
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Star className="w-5 h-5 text-amber-500" />
-              Popular Integrations
-            </CardTitle>
-            <CardDescription>Most commonly used by manufacturing companies</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {popularIntegrations.map(integration => {
-                const IconComponent = integration.icon;
-                return (
-                  <Card key={integration.id} className="hover-elevate cursor-pointer" data-testid={`card-popular-${integration.id}`}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className={`p-2 rounded-lg ${integration.status === "connected" ? "bg-green-500/10" : integration.status === "coming_soon" ? "bg-muted" : "bg-primary/10"}`}>
-                          <IconComponent className={`w-5 h-5 ${integration.status === "connected" ? "text-green-500" : integration.status === "coming_soon" ? "text-muted-foreground" : "text-primary"}`} />
+        {selectedCategory === "all" && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Star className="w-5 h-5 text-amber-500" />
+                Popular Integrations
+              </CardTitle>
+              <CardDescription>Most commonly used by manufacturing companies</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {popularIntegrations.map(integration => {
+                  const IconComponent = integration.icon;
+                  return (
+                    <Card key={integration.id} className="hover-elevate cursor-pointer" data-testid={`card-popular-${integration.id}`}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className={`p-2 rounded-lg ${integration.status === "connected" ? "bg-green-500/10" : integration.status === "coming_soon" ? "bg-muted" : "bg-primary/10"}`}>
+                            <IconComponent className={`w-5 h-5 ${integration.status === "connected" ? "text-green-500" : integration.status === "coming_soon" ? "text-muted-foreground" : "text-primary"}`} />
+                          </div>
+                          {getStatusBadge(integration.status)}
                         </div>
-                        {getStatusBadge(integration.status)}
-                      </div>
-                      <h3 className="font-semibold mb-1">{integration.name}</h3>
-                      <p className="text-sm text-muted-foreground mb-3">{integration.description}</p>
-                      {integration.status === "available" && (
-                        <Button size="sm" className="w-full" onClick={() => handleConnect(integration)} data-testid={`button-connect-popular-${integration.id}`}>
-                          Connect <ArrowRight className="w-4 h-4 ml-2" />
-                        </Button>
-                      )}
-                      {integration.status === "coming_soon" && (
-                        <Button size="sm" variant="outline" className="w-full" disabled data-testid={`button-coming-soon-popular-${integration.id}`}>
-                          Coming Soon
-                        </Button>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+                        <h3 className="font-semibold mb-1">{integration.name}</h3>
+                        <p className="text-sm text-muted-foreground mb-3">{integration.description}</p>
+                        {integration.status === "available" && (
+                          <Button size="sm" className="w-full" onClick={() => handleConnect(integration)} data-testid={`button-connect-popular-${integration.id}`}>
+                            Connect <ArrowRight className="w-4 h-4 ml-2" />
+                          </Button>
+                        )}
+                        {integration.status === "coming_soon" && (
+                          <Button size="sm" variant="outline" className="w-full" disabled data-testid={`button-coming-soon-popular-${integration.id}`}>
+                            Coming Soon
+                          </Button>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="lg:w-64 shrink-0">
@@ -1355,7 +1357,10 @@ export default function Integrations() {
                     return (
                       <button
                         key={category.id}
-                        onClick={() => setSelectedCategory(category.id)}
+                        onClick={() => {
+                          setSelectedCategory(category.id);
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
                         className={`w-full flex items-center justify-between px-4 py-2 text-sm transition-colors ${
                           selectedCategory === category.id
                             ? "bg-primary/10 text-primary font-medium"
