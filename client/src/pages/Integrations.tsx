@@ -1331,7 +1331,7 @@ export default function Integrations() {
                           </Button>
                         )}
                         {integration.status === "setup_ready" && (
-                          <Button size="sm" variant="outline" className="w-full border-amber-500 text-amber-600 hover:bg-amber-50" onClick={() => handleConnect(integration)} data-testid={`button-configure-popular-${integration.id}`}>
+                          <Button size="sm" variant="outline" className="w-full" onClick={() => handleConnect(integration)} data-testid={`button-configure-popular-${integration.id}`}>
                             <Settings className="w-4 h-4 mr-2" /> Configure
                           </Button>
                         )}
@@ -1461,7 +1461,7 @@ export default function Integrations() {
                             </Button>
                           )}
                           {integration.status === "setup_ready" && (
-                            <Button size="sm" variant="outline" className="border-amber-500 text-amber-600 hover:bg-amber-50" onClick={() => handleConnect(integration)} data-testid={`button-configure-${integration.id}`}>
+                            <Button size="sm" variant="outline" onClick={() => handleConnect(integration)} data-testid={`button-configure-${integration.id}`}>
                               <Settings className="w-4 h-4 mr-1" /> Configure
                             </Button>
                           )}
