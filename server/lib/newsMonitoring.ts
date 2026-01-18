@@ -163,11 +163,7 @@ export class NewsMonitoringService {
         console.log('[NewsMonitoring] CredentialService lookup failed, credentials not available');
       }
     }
-    // Fall back to global env var only for backward compatibility during migration
-    if (!this.apiKey && process.env.NEWS_API_KEY) {
-      this.apiKey = process.env.NEWS_API_KEY;
-      console.log('[NewsMonitoring] Using NEWS_API_KEY environment variable');
-    }
+    // Strict CredentialService-only mode - no environment variable fallback
     this.credentialsInitialized = true;
   }
 
