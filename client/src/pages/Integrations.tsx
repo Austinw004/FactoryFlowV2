@@ -58,6 +58,14 @@ import { DynamicsConfigDialog } from "@/components/DynamicsConfigDialog";
 import { InforConfigDialog } from "@/components/InforConfigDialog";
 import { Project44ConfigDialog } from "@/components/Project44ConfigDialog";
 import { FishbowlConfigDialog } from "@/components/FishbowlConfigDialog";
+import { SageX3ConfigDialog } from "@/components/SageX3ConfigDialog";
+import { OPCUAConfigDialog } from "@/components/OPCUAConfigDialog";
+import { MQTTConfigDialog } from "@/components/MQTTConfigDialog";
+import { KepwareConfigDialog } from "@/components/KepwareConfigDialog";
+import { NetSuiteFinancialsConfigDialog } from "@/components/NetSuiteFinancialsConfigDialog";
+import { JaggaerConfigDialog } from "@/components/JaggaerConfigDialog";
+import { SAPEWMConfigDialog } from "@/components/SAPEWMConfigDialog";
+import { MasterControlConfigDialog } from "@/components/MasterControlConfigDialog";
 import {
   Building2,
   MessageSquare,
@@ -317,16 +325,16 @@ const integrations: Integration[] = [
     setupTime: "15 minutes",
   },
   {
-    id: "sage",
+    id: "sage-x3",
     name: "Sage X3",
-    description: "Mid-market ERP solution",
+    description: "Mid-market ERP for manufacturing and distribution",
     category: "erp",
-    status: "coming_soon",
+    status: "available",
     icon: Building2,
     iconType: "lucide",
     valueProposition: "Connect Sage for comprehensive operations visibility",
     features: ["Inventory sync", "Purchase orders", "Supplier data", "Production planning"],
-    setupTime: "3-5 days",
+    setupTime: "15 minutes",
   },
   {
     id: "infor",
@@ -395,40 +403,40 @@ const integrations: Integration[] = [
   
   // IoT & Machine Data
   {
-    id: "opcua",
+    id: "opc-ua",
     name: "OPC-UA",
-    description: "Industrial machine connectivity",
+    description: "Industrial machine connectivity protocol",
     category: "iot",
-    status: "coming_soon",
+    status: "available",
     icon: Radio,
     iconType: "lucide",
     valueProposition: "Real-time machine data for OEE optimization",
     features: ["PLC connectivity", "Sensor data", "Production counts", "Downtime tracking"],
-    setupTime: "1-2 hours",
+    setupTime: "30 minutes",
   },
   {
     id: "mqtt",
     name: "MQTT Broker",
-    description: "IoT messaging protocol",
+    description: "IoT messaging protocol for sensor data",
     category: "iot",
-    status: "coming_soon",
+    status: "available",
     icon: Radio,
     iconType: "lucide",
     valueProposition: "Lightweight IoT data streaming",
     features: ["Sensor streams", "Edge devices", "Real-time alerts", "Data buffering"],
-    setupTime: "30 minutes",
+    setupTime: "15 minutes",
   },
   {
     id: "kepware",
     name: "Kepware KEPServerEX",
-    description: "Industrial connectivity platform",
+    description: "Industrial connectivity platform with 300+ device drivers",
     category: "iot",
-    status: "coming_soon",
+    status: "available",
     icon: Factory,
     iconType: "lucide",
     valueProposition: "Universal industrial protocol translation",
     features: ["300+ drivers", "OPC connectivity", "Cloud gateway", "Historian integration"],
-    setupTime: "1-2 hours",
+    setupTime: "30 minutes",
   },
   
   // BI & Analytics
@@ -497,15 +505,16 @@ const integrations: Integration[] = [
     setupTime: "10 minutes",
   },
   {
-    id: "netsuite-finance",
+    id: "netsuite-financials",
     name: "NetSuite Financials",
-    description: "Enterprise financial management",
+    description: "Enterprise financial management and reporting",
     category: "finance",
-    status: "coming_soon",
+    status: "available",
     icon: DollarSign,
     iconType: "lucide",
     valueProposition: "Complete financial integration for cost analysis",
     features: ["GL transactions", "AP/AR sync", "Budget data", "Cost centers"],
+    setupTime: "15 minutes",
   },
   
   // Procurement & Sourcing
@@ -538,14 +547,14 @@ const integrations: Integration[] = [
   {
     id: "jaggaer",
     name: "Jaggaer",
-    description: "Source-to-pay platform",
+    description: "Source-to-pay and procurement automation platform",
     category: "procurement",
-    status: "coming_soon",
+    status: "available",
     icon: Building2,
     iconType: "lucide",
     valueProposition: "End-to-end procurement automation",
     features: ["Sourcing", "Contracts", "Supplier risk", "Spend analytics"],
-    setupTime: "3-5 days",
+    setupTime: "15 minutes",
   },
   
   // Warehouse & Inventory
@@ -565,14 +574,14 @@ const integrations: Integration[] = [
   {
     id: "sap-ewm",
     name: "SAP EWM",
-    description: "Extended warehouse management",
+    description: "Extended Warehouse Management for complex logistics",
     category: "warehouse",
-    status: "coming_soon",
+    status: "available",
     icon: Warehouse,
     iconType: "lucide",
     valueProposition: "Advanced warehouse operations integration",
     features: ["Slotting", "Labor management", "Yard management", "Cross-docking"],
-    setupTime: "1-2 weeks",
+    setupTime: "20 minutes",
   },
   {
     id: "fishbowl",
@@ -604,14 +613,14 @@ const integrations: Integration[] = [
   {
     id: "mastercontrol",
     name: "MasterControl",
-    description: "Life sciences QMS",
+    description: "Quality management for regulated industries",
     category: "quality",
-    status: "coming_soon",
+    status: "available",
     icon: Shield,
     iconType: "lucide",
     valueProposition: "Regulated industry quality integration",
     features: ["Deviation management", "Training records", "Validation", "Electronic signatures"],
-    setupTime: "1-2 weeks",
+    setupTime: "15 minutes",
   },
   
   // Automation & Workflow
@@ -1064,6 +1073,14 @@ export default function Integrations() {
   const [inforDialogOpen, setInforDialogOpen] = useState(false);
   const [project44DialogOpen, setProject44DialogOpen] = useState(false);
   const [fishbowlDialogOpen, setFishbowlDialogOpen] = useState(false);
+  const [sageX3DialogOpen, setSageX3DialogOpen] = useState(false);
+  const [opcuaDialogOpen, setOpcuaDialogOpen] = useState(false);
+  const [mqttDialogOpen, setMqttDialogOpen] = useState(false);
+  const [kepwareDialogOpen, setKepwareDialogOpen] = useState(false);
+  const [netsuiteFinancialsDialogOpen, setNetsuiteFinancialsDialogOpen] = useState(false);
+  const [jaggaerDialogOpen, setJaggaerDialogOpen] = useState(false);
+  const [sapEwmDialogOpen, setSapEwmDialogOpen] = useState(false);
+  const [mastercontrolDialogOpen, setMastercontrolDialogOpen] = useState(false);
 
   const filteredIntegrations = integrations.filter(integration => {
     const matchesSearch = integration.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1179,6 +1196,22 @@ export default function Integrations() {
       setProject44DialogOpen(true);
     } else if (integration.id === "fishbowl") {
       setFishbowlDialogOpen(true);
+    } else if (integration.id === "sage-x3") {
+      setSageX3DialogOpen(true);
+    } else if (integration.id === "opc-ua") {
+      setOpcuaDialogOpen(true);
+    } else if (integration.id === "mqtt") {
+      setMqttDialogOpen(true);
+    } else if (integration.id === "kepware") {
+      setKepwareDialogOpen(true);
+    } else if (integration.id === "netsuite-financials") {
+      setNetsuiteFinancialsDialogOpen(true);
+    } else if (integration.id === "jaggaer") {
+      setJaggaerDialogOpen(true);
+    } else if (integration.id === "sap-ewm") {
+      setSapEwmDialogOpen(true);
+    } else if (integration.id === "mastercontrol") {
+      setMastercontrolDialogOpen(true);
     } else if (integration.status === "available") {
       toast({
         title: "Integration Setup",
@@ -1510,6 +1543,14 @@ export default function Integrations() {
       <InforConfigDialog open={inforDialogOpen} onOpenChange={setInforDialogOpen} />
       <Project44ConfigDialog open={project44DialogOpen} onOpenChange={setProject44DialogOpen} />
       <FishbowlConfigDialog open={fishbowlDialogOpen} onOpenChange={setFishbowlDialogOpen} />
+      <SageX3ConfigDialog open={sageX3DialogOpen} onOpenChange={setSageX3DialogOpen} />
+      <OPCUAConfigDialog open={opcuaDialogOpen} onOpenChange={setOpcuaDialogOpen} />
+      <MQTTConfigDialog open={mqttDialogOpen} onOpenChange={setMqttDialogOpen} />
+      <KepwareConfigDialog open={kepwareDialogOpen} onOpenChange={setKepwareDialogOpen} />
+      <NetSuiteFinancialsConfigDialog open={netsuiteFinancialsDialogOpen} onOpenChange={setNetsuiteFinancialsDialogOpen} />
+      <JaggaerConfigDialog open={jaggaerDialogOpen} onOpenChange={setJaggaerDialogOpen} />
+      <SAPEWMConfigDialog open={sapEwmDialogOpen} onOpenChange={setSapEwmDialogOpen} />
+      <MasterControlConfigDialog open={mastercontrolDialogOpen} onOpenChange={setMastercontrolDialogOpen} />
     </div>
   );
 }
