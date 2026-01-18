@@ -1,6 +1,8 @@
+import { storage as globalStorage } from '../storage';
 import type { IStorage } from '../storage';
 import type { ConsortiumContribution, ConsortiumMetrics, ConsortiumAlert } from '@shared/schema';
 import crypto from 'crypto';
+import { CredentialService } from './credentialService';
 
 export interface BenchmarkData {
   myPerformance: number;
@@ -253,5 +255,57 @@ export class IndustryConsortiumEngine {
   private avg(values: number[]): number | null {
     if (values.length === 0) return null;
     return values.reduce((a, b) => a + b, 0) / values.length;
+  }
+
+  async testConnection(): Promise<{ success: boolean; message?: string }> {
+    try {
+      const metrics = await this.storage.getConsortiumMetrics('expansion', {});
+      console.log('[IndustryConsortium] Connection test successful');
+      return { success: true, message: `Industry consortium connected with ${metrics.length} metrics available` };
+    } catch (error: any) {
+      console.error('[IndustryConsortium] Connection test failed:', error.message);
+      return { success: false, message: error.message };
+    }
+  }
+
+  async syncBenchmarkDataAsDemandSignals(companyId: string, regime: string): Promise<{ synced: number; errors: string[] }> {
+    const errors: string[] = [];
+    let synced = 0;
+
+    try {
+      const metrics = await this.storage.getConsortiumMetrics(regime, {});
+      
+      for (const metric of metrics.slice(0, 10)) {
+        try {
+          await globalStorage.createDemandSignal({
+            companyId,
+            signalType: 'benchmark_data',
+            signalDate: new Date(),
+            quantity: metric.contributorCount || 1,
+            unit: 'contributors',
+            channel: 'industry_consortium',
+            confidence: Math.min(100, (metric.contributorCount || 1) * 10),
+            priority: 'low',
+            attributes: {
+              source: 'industry_consortium',
+              regime: metric.regime,
+              industrySector: metric.industrySector,
+              medianOEE: metric.medianOEE,
+              avgProcurementSavings: metric.avgProcurementSavings,
+              medianTurnover: metric.medianTurnover
+            }
+          });
+          synced++;
+        } catch (err: any) {
+          errors.push(`Metric ${metric.id}: ${err.message}`);
+        }
+      }
+
+      console.log(`[IndustryConsortium] Synced ${synced} benchmark metrics as demand signals`);
+      return { synced, errors };
+    } catch (error: any) {
+      console.error('[IndustryConsortium] Benchmark sync failed:', error.message);
+      return { synced: 0, errors: [error.message] };
+    }
   }
 }

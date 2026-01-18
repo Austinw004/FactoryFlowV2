@@ -244,9 +244,6 @@ export class BenchmarkAggregationService {
    */
   async autoSubmitFromSupplierMaterials(companyId: string): Promise<number> {
     try {
-      const company = await this.storage.getCompany(companyId);
-      if (!company) return 0;
-
       const suppliers = await this.storage.getSuppliers(companyId);
       let submitted = 0;
 
@@ -271,9 +268,9 @@ export class BenchmarkAggregationService {
               currency: "USD",
               purchaseVolume: sm.minimumOrderQuantity,
               volumePeriod: "monthly",
-              companyIndustry: company.industry || null,
-              companySize: company.companySize || null,
-              companyLocation: company.location || null,
+              companyIndustry: null,
+              companySize: null,
+              companyLocation: null,
               snapshotDate: new Date().toISOString(),
               dataQuality: "verified",
               shareConsent: 1,

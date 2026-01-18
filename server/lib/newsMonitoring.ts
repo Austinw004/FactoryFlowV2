@@ -1,6 +1,8 @@
 import axios from "axios";
 import { GeopoliticalRiskEngine, type GeopoliticalEvent } from "./geopoliticalRisk";
+import { storage as globalStorage } from "../storage";
 import type { IStorage } from "../storage";
+import { CredentialService } from "./credentialService";
 
 export interface NewsAlert {
   id: string;
@@ -134,14 +136,97 @@ export interface NewsAlertResult {
 export class NewsMonitoringService {
   private apiKey: string | undefined;
   private storage: IStorage;
+  private companyId: string | undefined;
   private riskEngine: GeopoliticalRiskEngine;
   private cache: Map<string, NewsAlert[]> = new Map();
   private lastFetch: Date = new Date(0);
 
-  constructor(storage: IStorage) {
+  constructor(storage: IStorage, companyId?: string) {
     this.apiKey = process.env.NEWS_API_KEY;
     this.storage = storage;
+    this.companyId = companyId;
     this.riskEngine = new GeopoliticalRiskEngine(storage);
+  }
+
+  async initializeCredentials(): Promise<void> {
+    if (this.companyId) {
+      try {
+        const credentials = await CredentialService.getDecryptedCredentials(this.companyId, 'newsapi');
+        if (credentials?.apiKey) {
+          this.apiKey = credentials.apiKey;
+          console.log(`[NewsMonitoring] Using centralized CredentialService for company ${this.companyId}`);
+        }
+      } catch (error) {
+        console.log('[NewsMonitoring] CredentialService lookup failed, using default API key');
+      }
+    }
+  }
+
+  async testConnection(): Promise<{ success: boolean; message?: string }> {
+    try {
+      await this.initializeCredentials();
+      if (!this.apiKey) {
+        return { success: false, message: 'News API key not configured' };
+      }
+      
+      const response = await axios.get('https://newsapi.org/v2/top-headlines', {
+        params: { apiKey: this.apiKey, country: 'us', pageSize: 1 },
+        timeout: 10000
+      });
+      
+      if (response.data.status === 'ok') {
+        console.log('[NewsMonitoring] Connection test successful');
+        return { success: true, message: 'News API connection verified' };
+      }
+      return { success: false, message: 'News API returned unexpected status' };
+    } catch (error: any) {
+      console.error('[NewsMonitoring] Connection test failed:', error.message);
+      return { success: false, message: error.response?.data?.message || error.message };
+    }
+  }
+
+  async syncNewsAlertsAsDemandSignals(companyId: string, currentFDR: number = 1.0): Promise<{ synced: number; errors: string[] }> {
+    const errors: string[] = [];
+    let synced = 0;
+
+    try {
+      await this.initializeCredentials();
+      const result = await this.fetchSupplyChainNewsWithMeta(currentFDR);
+
+      for (const alert of result.alerts.slice(0, 50)) {
+        try {
+          await globalStorage.createDemandSignal({
+            companyId,
+            signalType: 'news_alert',
+            signalDate: alert.publishedAt,
+            quantity: alert.relevanceScore,
+            unit: 'relevance_score',
+            channel: 'news',
+            confidence: alert.relevanceScore,
+            priority: alert.severity === 'critical' || alert.severity === 'high' ? 'high' : 
+                      alert.severity === 'medium' ? 'medium' : 'low',
+            attributes: {
+              source: alert.source,
+              category: alert.category,
+              severity: alert.severity,
+              affectedRegions: alert.affectedRegions,
+              affectedCommodities: alert.affectedCommodities,
+              fdrImpact: alert.fdrImpact,
+              isSimulated: result.isSimulated
+            }
+          });
+          synced++;
+        } catch (err: any) {
+          errors.push(`Alert ${alert.id}: ${err.message}`);
+        }
+      }
+
+      console.log(`[NewsMonitoring] Synced ${synced} news alerts as demand signals`);
+      return { synced, errors };
+    } catch (error: any) {
+      console.error('[NewsMonitoring] News sync failed:', error.message);
+      return { synced: 0, errors: [error.message] };
+    }
   }
 
   async fetchSupplyChainNewsWithMeta(currentFDR: number = 1.0): Promise<NewsAlertResult> {

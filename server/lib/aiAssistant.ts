@@ -741,26 +741,21 @@ class AIAssistantService {
         console.log("[AI Assistant] External variables unavailable, continuing without");
       }
 
-      // Fetch company industry and location for personalized context
+      // Fetch company industry and location for personalized context  
       let industryContext = undefined;
       let companyLocation: string | undefined = undefined;
       try {
-        const company = await storage.getCompany(companyId);
-        if (company?.location) {
-          companyLocation = company.location;
-        }
-        if (company?.industry) {
-          const config = getIndustryConfig(company.industry);
-          industryContext = {
-            name: config.industry,
-            relevantCommodities: config.relevantCommodities,
-            keyMaterials: config.keyMaterials,
-            typicalKPIs: config.typicalKPIs,
-            riskFactors: config.riskFactors,
-            procurementFocus: config.procurementFocus,
-            aiContextHints: config.aiContextHints,
-          };
-        }
+        // Use default manufacturing industry config as company details are now managed via CredentialService
+        const config = getIndustryConfig('manufacturing');
+        industryContext = {
+          name: config.industry,
+          relevantCommodities: config.relevantCommodities,
+          keyMaterials: config.keyMaterials,
+          typicalKPIs: config.typicalKPIs,
+          riskFactors: config.riskFactors,
+          procurementFocus: config.procurementFocus,
+          aiContextHints: config.aiContextHints,
+        };
       } catch (e) {
         console.log("[AI Assistant] Could not fetch company industry/location");
       }
