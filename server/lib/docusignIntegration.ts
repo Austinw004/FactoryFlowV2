@@ -185,7 +185,13 @@ export class DocuSignIntegration {
             title: `Contract: ${envelope.emailSubject}`,
             description: `Completed DocuSign contract - Envelope ID: ${envelope.envelopeId}`,
             status: "closed",
-            dueDate: envelope.completedDateTime ? new Date(envelope.completedDateTime) : new Date()
+            dueDate: envelope.completedDateTime ? new Date(envelope.completedDateTime) : new Date(),
+            rfqNumber: `DS-${envelope.envelopeId.substring(0, 8)}`,
+            materialId: "",
+            requestedQuantity: 1,
+            unit: "contract",
+            regimeAtGeneration: "normal",
+            fdrAtGeneration: 0
           });
           synced++;
         } catch (err: any) {
