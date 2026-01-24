@@ -153,7 +153,7 @@ export class WooCommerceIntegration {
       for (const product of products) {
         try {
           const materials = await storage.getMaterials(this.companyId);
-          const existing = materials.find(m => m.externalId === String(product.id));
+          const existing = materials.find(m => m.code === (product.sku || `WOO-${product.id}`));
           
           if (!existing) {
             await storage.createMaterial({

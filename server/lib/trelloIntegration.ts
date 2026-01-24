@@ -176,7 +176,7 @@ export class TrelloIntegration {
     let synced = 0;
 
     try {
-      const rfqs = await storage.getRFQs(this.companyId);
+      const rfqs = await storage.getRfqs(this.companyId);
       
       for (const rfq of rfqs.slice(0, 50)) {
         try {
@@ -184,7 +184,7 @@ export class TrelloIntegration {
             listId,
             rfq.title,
             `Status: ${rfq.status}\nPriority: ${rfq.priority}\n\n${rfq.description || ""}`,
-            rfq.deadline?.toISOString()
+            rfq.dueDate?.toISOString()
           );
           synced++;
         } catch (err: any) {

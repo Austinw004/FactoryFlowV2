@@ -157,7 +157,7 @@ export class BigCommerceIntegration {
       for (const product of products) {
         try {
           const materials = await storage.getMaterials(this.companyId);
-          const existing = materials.find(m => m.externalId === String(product.id));
+          const existing = materials.find(m => m.code === product.sku);
           
           if (!existing) {
             await storage.createMaterial({
