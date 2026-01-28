@@ -61,10 +61,9 @@ interface AlertsResponse {
     materialsTracked: number;
     regionsMonitored: number;
   };
-  // Data source transparency
-  isSimulated?: boolean;
-  dataSource?: 'newsapi' | 'simulation';
-  simulationWarning?: string;
+  // Data source transparency - Integration Integrity Mandate
+  dataSource?: 'newsapi' | 'unavailable';
+  unavailableReason?: string;
 }
 
 interface SummaryResponse {
@@ -310,6 +309,38 @@ export default function EventMonitoring() {
             <div className="flex items-center justify-center p-12">
               <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
+          ) : alertsData?.dataSource === 'unavailable' ? (
+            <Card className="border-amber-500/30 bg-amber-500/5" data-testid="card-data-unavailable">
+              <CardContent className="py-8">
+                <div className="flex flex-col items-center text-center gap-4">
+                  <AlertTriangle className="h-12 w-12 text-amber-500" />
+                  <div>
+                    <h3 className="text-lg font-semibold text-foreground">News Data Unavailable</h3>
+                    <p className="text-sm text-muted-foreground mt-1 max-w-md">
+                      {alertsData.unavailableReason || 'Real-time news data is currently unavailable.'}
+                    </p>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    This system only displays verified, real news from authenticated sources. 
+                    No fabricated or simulated data is shown.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : alerts.length === 0 ? (
+            <Card data-testid="card-no-alerts">
+              <CardContent className="py-8">
+                <div className="flex flex-col items-center text-center gap-4">
+                  <Activity className="h-12 w-12 text-muted-foreground" />
+                  <div>
+                    <h3 className="text-lg font-semibold">No Alerts Found</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      No supply chain alerts match your current filters.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {alerts.map((alert) => {

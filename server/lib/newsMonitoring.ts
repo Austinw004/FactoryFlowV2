@@ -134,7 +134,8 @@ export interface CompanyContext {
 
 export interface NewsAlertResult {
   alerts: NewsAlert[];
-  dataSource: 'newsapi' | 'curated';
+  dataSource: 'newsapi' | 'unavailable';
+  unavailableReason?: string;
 }
 
 export class NewsMonitoringService {
@@ -239,12 +240,14 @@ export class NewsMonitoringService {
   }
 
   async fetchSupplyChainNewsWithMeta(currentFDR: number = 1.0, companyContext?: CompanyContext): Promise<NewsAlertResult> {
+    // Integration Integrity Mandate: Never show fabricated content
+    // If real news data is unavailable, we must honestly report that state
     if (!this.apiKey) {
-      console.log('[NewsMonitoring] Using curated industry news personalized to company profile');
-      const alerts = await this.getPersonalizedAlerts(currentFDR, companyContext);
+      console.log('[NewsMonitoring] NEWS_API_KEY not configured - returning unavailable state (no fabricated content)');
       return {
-        alerts,
-        dataSource: 'curated'
+        alerts: [],
+        dataSource: 'unavailable',
+        unavailableReason: 'News API key not configured. Contact administrator to enable real-time news monitoring.'
       };
     }
 
@@ -255,11 +258,12 @@ export class NewsMonitoringService {
         dataSource: 'newsapi'
       };
     } catch (error: any) {
-      console.error('[NewsMonitoring] Real news fetch failed, using curated news:', error.message);
-      const alerts = await this.getPersonalizedAlerts(currentFDR, companyContext);
+      console.error('[NewsMonitoring] Real news fetch failed:', error.message);
+      // Integration Integrity Mandate: Report failure honestly, don't substitute fake data
       return {
-        alerts,
-        dataSource: 'curated'
+        alerts: [],
+        dataSource: 'unavailable',
+        unavailableReason: `News API temporarily unavailable: ${error.message}`
       };
     }
   }

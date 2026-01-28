@@ -7986,7 +7986,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           { id: 'geopolitical_tension', label: 'Geopolitical Tensions' },
           { id: 'economic_crisis', label: 'Economic Crisis' }
         ],
-        dataSource: newsResult.dataSource
+        dataSource: newsResult.dataSource,
+        unavailableReason: newsResult.unavailableReason
       });
     } catch (error: any) {
       console.error('News alerts error:', error);
