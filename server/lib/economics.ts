@@ -1,4 +1,16 @@
 import { regimeIntelligence, RegimeIntelligence } from "./regimeIntelligence";
+import { 
+  type Regime,
+  REGIME_ORDER,
+  CANONICAL_REGIME_THRESHOLDS,
+  HYSTERESIS_BAND,
+  MIN_REGIME_DURATION_DAYS,
+  CONFIRMATION_READINGS,
+  TYPICAL_REGIME_DURATIONS,
+  classifyRegimeFromFDR,
+  classifyRegimeWithHysteresis,
+  validateRegimeClassification,
+} from "./regimeConstants";
 
 export {
   type Regime,
@@ -11,7 +23,7 @@ export {
   classifyRegimeFromFDR,
   classifyRegimeWithHysteresis,
   validateRegimeClassification,
-} from "./regimeConstants";
+};
 
 export interface EconomicData {
   manufacturing_pmi: number;
@@ -171,8 +183,7 @@ export class DualCircuitEconomics {
     // Thresholds: HEALTHY_EXPANSION [0, 1.2), ASSET_LED_GROWTH [1.2, 1.8), 
     //             IMBALANCED_EXCESS [1.8, 2.5), REAL_ECONOMY_LEAD [2.5, 10]
     // REAL_ECONOMY_LEAD at HIGH FDR = asset markets overshot, counter-cyclical opportunity
-    const { classifyRegimeFromFDR: classify } = require("./regimeConstants");
-    this.regime = classify(this.fdr);
+    this.regime = classifyRegimeFromFDR(this.fdr);
   }
 
   signals(): PolicySignal[] {

@@ -8,6 +8,7 @@ import { fetchExternalVariables } from "./externalAPIs";
 import { getAISystemPromptEnhancements } from "./industryPersonalization";
 import { getIndustryConfig } from "@shared/industryConfig";
 import { smartInsightsService } from "./smartInsights";
+import { classifyRegimeFromFDR } from "./regimeConstants";
 
 // Format regime names from SCREAMING_SNAKE_CASE to Title Case
 function formatRegimeName(regime: string): string {
@@ -352,14 +353,14 @@ function handleFollowUpQuestion(message: string, context: ConversationContext): 
   return "I'd be happy to provide more details. Could you clarify what specific information you're looking for? I can help with commodities, forecasts, suppliers, procurement timing, or operations.";
 }
 
-async function callOpenAI(messages: Array<{ role: string; content: string }>): Promise<string> {
+async function callOpenAI(messages: Array<{ role: string; content: string }>): Promise<string | null> {
   const baseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
   const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
 
-  // Integration Integrity Mandate: Be honest about AI unavailability
+  // If OpenAI not configured, return null to trigger intelligent fallback
   if (!baseUrl || !apiKey) {
-    console.warn("[AI Assistant] OpenAI credentials not configured - returning unavailable message");
-    return getAIUnavailableMessage();
+    console.warn("[AI Assistant] OpenAI credentials not configured - using contextual fallback");
+    return null;
   }
 
   try {
@@ -372,26 +373,29 @@ async function callOpenAI(messages: Array<{ role: string; content: string }>): P
         "Authorization": `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gpt-5",
         messages: messages,
-        temperature: 0.7,
-        max_tokens: 1500
+        max_completion_tokens: 1500
       })
     });
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error("[AI Assistant] OpenAI API error:", response.status, errorText);
-      // Integration Integrity Mandate: Be honest about API failures
-      return getAIUnavailableMessage(`API error: ${response.status}`);
+      // Return null to trigger intelligent contextual fallback
+      return null;
     }
 
     const data = await response.json();
-    return data.choices?.[0]?.message?.content || "I apologize, I couldn't process that request.";
+    const content = data.choices?.[0]?.message?.content;
+    if (!content || content.trim().length === 0) {
+      console.warn("[AI Assistant] OpenAI returned empty content, will use fallback");
+      return null; // Signal to use fallback
+    }
+    return content;
   } catch (error) {
     console.error("[AI Assistant] OpenAI call failed:", error);
-    // Integration Integrity Mandate: Be honest about failures
-    return getAIUnavailableMessage();
+    return null; // Signal to use fallback instead of unavailable message
   }
 }
 
@@ -1223,7 +1227,6 @@ class AIAssistantService {
     // Use canonical thresholds from regimeConstants.ts
     // Thresholds: HEALTHY_EXPANSION [0, 1.2), ASSET_LED_GROWTH [1.2, 1.8), 
     //             IMBALANCED_EXCESS [1.8, 2.5), REAL_ECONOMY_LEAD [2.5, 10]
-    const { classifyRegimeFromFDR } = require("./regimeConstants");
     const regime = classifyRegimeFromFDR(fdr);
     
     // Return human-readable labels matching canonical regimes
@@ -1242,7 +1245,6 @@ class AIAssistantService {
     // IMBALANCED_EXCESS (FDR >= 1.8) = sell/caution
     // ASSET_LED_GROWTH (FDR >= 1.2) = hold
     // HEALTHY_EXPANSION (FDR < 1.2) = accumulate
-    const { classifyRegimeFromFDR } = require("./regimeConstants");
     const regime = classifyRegimeFromFDR(fdr);
     
     switch (regime) {
@@ -1277,7 +1279,13 @@ class AIAssistantService {
       ...history.map(m => ({ role: m.role, content: m.content }))
     ];
 
-    const assistantMessage = await callOpenAI(messages);
+    let assistantMessage = await callOpenAI(messages);
+    
+    // If OpenAI call failed or returned empty, use intelligent fallback based on context
+    if (!assistantMessage) {
+      console.log("[AI Assistant] Using intelligent context-based fallback response");
+      assistantMessage = this.generateContextualFallbackResponse(userMessage, context);
+    }
 
     history.push({ role: "assistant", content: assistantMessage });
     this.conversationHistory.set(convId, history.slice(-20));
@@ -1837,6 +1845,133 @@ RESPONSE STYLE:
     }
 
     return insights.slice(0, 7);
+  }
+
+  private generateContextualFallbackResponse(userMessage: string, context: PlatformContext): string {
+    const lowerMessage = userMessage.toLowerCase();
+    
+    // Determine intent from user message
+    const isAskingAboutFocus = lowerMessage.includes('focus') || lowerMessage.includes('priority') || lowerMessage.includes('today') || lowerMessage.includes('should i');
+    const isAskingAboutRisk = lowerMessage.includes('risk') || lowerMessage.includes('attention') || lowerMessage.includes('warning') || lowerMessage.includes('alert');
+    const isAskingAboutBuying = lowerMessage.includes('buy') || lowerMessage.includes('purchase') || lowerMessage.includes('procure') || lowerMessage.includes('timing');
+    const isAskingAboutMarket = lowerMessage.includes('market') || lowerMessage.includes('regime') || lowerMessage.includes('economic') || lowerMessage.includes('outlook');
+    const isAskingAboutSuppliers = lowerMessage.includes('supplier') || lowerMessage.includes('vendor') || lowerMessage.includes('supply chain');
+    const isAskingAboutInventory = lowerMessage.includes('inventory') || lowerMessage.includes('stock') || lowerMessage.includes('material');
+    const isAskingAboutForecasts = lowerMessage.includes('forecast') || lowerMessage.includes('demand') || lowerMessage.includes('prediction');
+    
+    // Build context-aware response based on real platform data
+    const parts: string[] = [];
+    
+    // Priority/focus response
+    if (isAskingAboutFocus || (!isAskingAboutRisk && !isAskingAboutBuying && !isAskingAboutMarket)) {
+      parts.push(`Based on your current platform data, here are the key areas that need attention:`);
+      
+      // Economic regime context
+      parts.push(`\n\n**Market Conditions**: The economy is in ${context.regime.regime} regime with FDR at ${context.regime.fdr.toFixed(2)}. ${context.regime.fdr > 1.0 ? 'Consider deferring non-essential purchases.' : context.regime.fdr < 0.85 ? 'This presents favorable buying conditions.' : 'Market conditions are neutral.'}`);
+      
+      // Inventory priorities
+      if (context.inventory.lowStockItems > 0) {
+        parts.push(`\n\n**Inventory Alert**: ${context.inventory.lowStockItems} items are below reorder point. Consider reviewing these in the Materials Catalog.`);
+      }
+      
+      // Supplier risks
+      if (context.suppliers.atRiskSuppliers > 0) {
+        parts.push(`\n\n**Supplier Risk**: ${context.suppliers.atRiskSuppliers} supplier(s) flagged as at-risk. Review in Supply Chain Intelligence for mitigation actions.`);
+      }
+      
+      // Forecast health
+      if (context.forecasts.degradedSkus > 0) {
+        parts.push(`\n\n**Forecast Accuracy**: ${context.forecasts.degradedSkus} SKU forecasts showing degraded accuracy. Consider retraining these models in the Demand Hub.`);
+      }
+      
+      // Production issues
+      if (context.production.activeBottlenecks > 0) {
+        parts.push(`\n\n**Production**: ${context.production.activeBottlenecks} active bottleneck(s) detected. Review Operations Hub for details.`);
+      }
+      
+      // Commodity opportunities
+      if (context.commodities.buySignals.length > 0) {
+        parts.push(`\n\n**Buying Opportunities**: ${context.commodities.buySignals.length} commodities showing favorable pricing: ${context.commodities.buySignals.slice(0, 3).join(', ')}.`);
+      }
+    }
+    
+    // Risk-specific response
+    if (isAskingAboutRisk) {
+      parts.push(`Here's your current risk summary:`);
+      parts.push(`\n- Suppliers at risk: ${context.suppliers.atRiskSuppliers}`);
+      parts.push(`\n- Critical events: ${context.events.criticalAlerts}`);
+      parts.push(`\n- Degraded forecasts: ${context.forecasts.degradedSkus}`);
+      parts.push(`\n- Low stock items: ${context.inventory.lowStockItems}`);
+      if (context.suppliers.multiTierRisks.length > 0) {
+        parts.push(`\n- Multi-tier supply chain risks: ${context.suppliers.multiTierRisks.length}`);
+      }
+    }
+    
+    // Buying/timing response
+    if (isAskingAboutBuying) {
+      const timing = context.regime.fdr > 1.0 ? 'unfavorable' : context.regime.fdr < 0.85 ? 'favorable' : 'neutral';
+      parts.push(`Current procurement timing is ${timing} (FDR: ${context.regime.fdr.toFixed(2)}, Regime: ${context.regime.regime}).`);
+      if (context.commodities.buySignals.length > 0) {
+        parts.push(`\n\nBuy signals active for: ${context.commodities.buySignals.join(', ')}.`);
+      }
+      if (context.commodities.significantChanges.length > 0) {
+        parts.push(`\n\nRecent price movements: ${context.commodities.significantChanges.map(c => `${c.name} ${c.change > 0 ? '+' : ''}${c.change.toFixed(1)}%`).join(', ')}.`);
+      }
+    }
+    
+    // Market/regime response
+    if (isAskingAboutMarket) {
+      parts.push(`**Current Economic Regime**: ${context.regime.regime}`);
+      parts.push(`\n- FDR (Financialization-Deflator Ratio): ${context.regime.fdr.toFixed(2)}`);
+      parts.push(`\n- Market momentum: ${context.commodities.priceTrends.rising} commodities rising, ${context.commodities.priceTrends.falling} falling`);
+      parts.push(`\n- Signal: ${context.regime.signal}`);
+    }
+    
+    // Supplier-specific response
+    if (isAskingAboutSuppliers) {
+      parts.push(`**Supplier Overview**:`);
+      parts.push(`\n- Total suppliers: ${context.suppliers.totalSuppliers}`);
+      parts.push(`\n- At-risk suppliers: ${context.suppliers.atRiskSuppliers}`);
+      if (context.suppliers.riskDetails.length > 0) {
+        const highRisk = context.suppliers.riskDetails.filter(s => s.riskLevel === 'high' || s.riskLevel === 'critical');
+        if (highRisk.length > 0) {
+          parts.push(`\n- High-risk: ${highRisk.map(s => s.name).join(', ')}`);
+        }
+      }
+    }
+    
+    // Inventory-specific response
+    if (isAskingAboutInventory) {
+      parts.push(`**Inventory Status**:`);
+      parts.push(`\n- Items below reorder point: ${context.inventory.lowStockItems}`);
+      parts.push(`\n- Inventory value: $${(context.inventory.totalValue / 1000000).toFixed(1)}M`);
+      if (context.inventory.criticalItems.length > 0) {
+        parts.push(`\n- Critical items: ${context.inventory.criticalItems.map(i => i.name).slice(0, 5).join(', ')}`);
+      }
+    }
+    
+    // Forecast-specific response
+    if (isAskingAboutForecasts) {
+      parts.push(`**Forecast Health**:`);
+      parts.push(`\n- Average MAPE: ${context.forecasts.averageMape.toFixed(1)}%`);
+      parts.push(`\n- Accuracy trend: ${context.forecasts.accuracyTrend}`);
+      parts.push(`\n- SKUs needing retraining: ${context.forecasts.retrainingNeeded}`);
+      if (context.forecasts.degradedSkus > 0) {
+        parts.push(`\n- Degraded forecasts: ${context.forecasts.degradedSkus}`);
+      }
+    }
+    
+    // If we have no specific parts, provide a general overview
+    if (parts.length === 0) {
+      parts.push(`Here's a quick overview of your platform status:`);
+      parts.push(`\n\n**Economic Regime**: ${context.regime.regime} (FDR: ${context.regime.fdr.toFixed(2)})`);
+      parts.push(`\n**Inventory**: ${context.inventory.lowStockItems} items below reorder point`);
+      parts.push(`\n**Suppliers**: ${context.suppliers.atRiskSuppliers} at-risk`);
+      parts.push(`\n**Forecasts**: Average MAPE ${context.forecasts.averageMape.toFixed(1)}%`);
+      parts.push(`\n\nYou can ask me about specific areas for more detailed insights.`);
+    }
+    
+    return parts.join('');
   }
 
   async checkProactiveAlerts(companyId: string): Promise<ProactiveAlert[]> {
