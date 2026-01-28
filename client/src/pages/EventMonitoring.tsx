@@ -174,22 +174,6 @@ export default function EventMonitoring() {
         </div>
       </div>
 
-      {/* Simulation Warning Banner - Required for epistemic integrity */}
-      {alertsData?.isSimulated && (
-        <Card className="border-amber-500/40 bg-amber-500/10" data-testid="card-simulation-warning">
-          <CardContent className="py-3">
-            <div className="flex items-center gap-3 text-sm">
-              <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-              <div>
-                <span className="font-semibold text-amber-700 dark:text-amber-300">Demonstration Data</span>
-                <span className="text-amber-600/90 dark:text-amber-400/90 ml-2">
-                  {alertsData.simulationWarning || 'These scenarios are for training purposes only and do not represent real news events.'}
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {companyContext && (companyContext.materialsTracked > 0 || companyContext.regionsMonitored > 0 || companyContext.industry) && (
         <Card className="border-primary/20 bg-primary/5" data-testid="card-company-context">

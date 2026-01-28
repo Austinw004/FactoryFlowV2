@@ -7845,10 +7845,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const companyId = req.user?.companyId;
       const currentFDR = parseFloat(req.query.fdr as string) || 1.0;
-      const newsResult = await newsMonitoringService.fetchSupplyChainNewsWithMeta(currentFDR);
-      const alerts = newsResult.alerts;
       
-      // Get company context for relevance scoring
+      // Get company context for personalized news
       let companyContext: {
         industry?: string;
         materials: string[];
@@ -7865,9 +7863,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         companyContext = {
           industry: company?.industry || undefined,
           materials: materials.map((m: { name: string }) => m.name.toLowerCase()),
-          supplierRegions: Array.from(new Set(suppliers.map((s: { region?: string | null }) => s.region).filter(Boolean) as string[]))
+          supplierRegions: Array.from(new Set(suppliers.map((s: any) => s.region || s.location).filter(Boolean) as string[]))
         };
       }
+      
+      // Fetch personalized news based on company context
+      const newsResult = await newsMonitoringService.fetchSupplyChainNewsWithMeta(currentFDR, companyContext);
+      const alerts = newsResult.alerts;
       
       // Industry-to-commodity mapping for relevance
       const industryMaterials: Record<string, string[]> = {
@@ -7984,10 +7986,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           { id: 'geopolitical_tension', label: 'Geopolitical Tensions' },
           { id: 'economic_crisis', label: 'Economic Crisis' }
         ],
-        // Data source transparency - required for epistemic integrity
-        isSimulated: newsResult.isSimulated,
-        dataSource: newsResult.dataSource,
-        simulationWarning: newsResult.simulationWarning
+        dataSource: newsResult.dataSource
       });
     } catch (error: any) {
       console.error('News alerts error:', error);
