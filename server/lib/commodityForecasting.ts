@@ -11,7 +11,7 @@
  * - Supply chain stress indicators
  */
 
-import { fetchCommodityPrices, type CommodityPrice } from './commodityPricing';
+import { type CommodityPrice } from './commodityPricing';
 
 export interface PriceForecast {
   materialCode: string;
@@ -30,6 +30,9 @@ export interface PriceForecast {
   drivers: string[];
   regimeImpact: string;
   recommendation: string;
+  // Integration Integrity Mandate: Include data source for transparency
+  priceDataSource: 'live' | 'reference';
+  priceDataWarning?: string; // Warning when forecast is based on reference prices
 }
 
 export interface ForecastPoint {
@@ -304,10 +307,18 @@ export async function generateCommodityForecasts(
 ): Promise<PriceForecast[]> {
   const forecasts: PriceForecast[] = [];
   
-  // Fetch current prices
+  // Fetch current prices with metadata for integrity tracking
   let currentPrices: CommodityPrice[] = [];
+  let priceDataSource: 'live' | 'reference' = 'reference';
   try {
-    currentPrices = await fetchCommodityPrices(materialCodes);
+    const { fetchCommodityPricesWithMeta } = await import('./commodityPricing');
+    const priceResult = await fetchCommodityPricesWithMeta(materialCodes);
+    currentPrices = priceResult.prices;
+    priceDataSource = priceResult.dataSource;
+    
+    if (priceResult.dataSource === 'reference') {
+      console.log('[CommodityForecasting] Using reference prices for forecasting - live market data unavailable');
+    }
   } catch (error) {
     console.error('Error fetching commodity prices for forecasting:', error);
   }
@@ -363,6 +374,11 @@ export async function generateCommodityForecasts(
       drivers,
       regimeImpact: regimeImpact.description,
       recommendation,
+      // Integration Integrity Mandate: Include data source for transparency
+      priceDataSource: priceDataSource,
+      priceDataWarning: priceDataSource === 'reference' 
+        ? 'Forecast based on reference prices - live market data unavailable' 
+        : undefined,
     });
   }
   

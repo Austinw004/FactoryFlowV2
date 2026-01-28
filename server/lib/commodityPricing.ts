@@ -22,7 +22,15 @@ export interface CommodityPrice {
   timestamp: string;
   change24h?: number;
   changePercent24h?: number;
-  source?: string; // API source: 'metals-dev', 'alpha-vantage', 'api-ninjas', 'mock'
+  source?: string; // API source: 'metals-dev', 'alpha-vantage', 'api-ninjas'
+  isEstimate?: boolean; // Integration Integrity Mandate: true when using reference prices, not live market data
+  estimateReason?: string; // Reason why real data unavailable
+}
+
+export interface CommodityPriceResult {
+  prices: CommodityPrice[];
+  dataSource: 'live' | 'reference'; // 'live' = real API data, 'reference' = industry reference prices
+  unavailableReason?: string; // Set when using reference prices instead of live data
 }
 
 /**
@@ -252,14 +260,19 @@ const API_NINJAS_COMMODITY_MAP: { [key: string]: string } = {
 /**
  * Fetches real-time commodity prices from Metals.Dev API
  */
-export async function fetchCommodityPrices(
+// Integration Integrity Mandate: Returns prices with full metadata about data source
+export async function fetchCommodityPricesWithMeta(
   materialCodes: string[]
-): Promise<CommodityPrice[]> {
+): Promise<CommodityPriceResult> {
   const apiKey = process.env.METALS_API_KEY;
   
   if (!apiKey) {
-    console.warn('METALS_API_KEY not configured, using mock data for commodity prices');
-    return generateMockPrices(materialCodes);
+    console.warn('[CommodityPricing] METALS_API_KEY not configured - using reference prices (clearly marked)');
+    return {
+      prices: generateReferencePrices(materialCodes),
+      dataSource: 'reference',
+      unavailableReason: 'Live market data API not configured. Showing industry reference prices for planning purposes only.'
+    };
   }
 
   try {
@@ -270,8 +283,12 @@ export async function fetchCommodityPrices(
       .join(',');
 
     if (!symbols) {
-      console.warn('No tradeable symbols found for materials:', materialCodes);
-      return generateMockPrices(materialCodes);
+      console.warn('[CommodityPricing] No tradeable symbols found for materials:', materialCodes);
+      return {
+        prices: generateReferencePrices(materialCodes),
+        dataSource: 'reference',
+        unavailableReason: 'No tradeable symbols available for requested materials. Showing reference prices.'
+      };
     }
 
     // Fetch from Metals.Dev API
@@ -285,45 +302,72 @@ export async function fetchCommodityPrices(
     );
 
     if (!response.ok) {
-      console.error('Metals.Dev API error:', response.status, response.statusText);
-      return generateMockPrices(materialCodes);
+      console.error('[CommodityPricing] Metals.Dev API error:', response.status, response.statusText);
+      return {
+        prices: generateReferencePrices(materialCodes),
+        dataSource: 'reference',
+        unavailableReason: `Live market API error (${response.status}). Showing reference prices.`
+      };
     }
 
     const data: MetalsDevResponse = await response.json();
 
     if (!data.success || !data.rates) {
-      console.error('Invalid response from Metals.Dev API');
-      return generateMockPrices(materialCodes);
+      console.error('[CommodityPricing] Invalid response from Metals.Dev API');
+      return {
+        prices: generateReferencePrices(materialCodes),
+        dataSource: 'reference',
+        unavailableReason: 'Invalid API response. Showing reference prices.'
+      };
     }
 
-    // Convert API response to commodity prices
+    // Convert API response to commodity prices - LIVE DATA
     const prices: CommodityPrice[] = [];
     for (const [materialCode, symbol] of Object.entries(MATERIAL_SYMBOL_MAP)) {
       if (materialCodes.includes(materialCode) && data.rates[symbol]) {
         prices.push({
           code: materialCode,
           name: getCommodityName(materialCode),
-          material: materialCode, // Legacy alias
-          price: 1 / data.rates[symbol], // Metals.Dev returns 1/price, need to invert
+          material: materialCode,
+          price: 1 / data.rates[symbol],
           unit: getUnitForMaterial(materialCode),
           currency: 'USD',
           timestamp: new Date(data.timestamp * 1000).toISOString(),
+          source: 'metals-dev',
+          isEstimate: false
         });
       }
     }
 
-    return prices;
-  } catch (error) {
-    console.error('Error fetching commodity prices:', error);
-    return generateMockPrices(materialCodes);
+    return {
+      prices,
+      dataSource: 'live'
+    };
+  } catch (error: any) {
+    console.error('[CommodityPricing] Error fetching commodity prices:', error);
+    return {
+      prices: generateReferencePrices(materialCodes),
+      dataSource: 'reference',
+      unavailableReason: `API error: ${error.message}. Showing reference prices.`
+    };
   }
 }
 
+// Legacy function for backward compatibility - wraps new function
+export async function fetchCommodityPrices(
+  materialCodes: string[]
+): Promise<CommodityPrice[]> {
+  const result = await fetchCommodityPricesWithMeta(materialCodes);
+  return result.prices;
+}
+
 /**
- * Generates realistic mock commodity prices for demo/testing
- * Covers all 110+ tradeable commodities with market-accurate pricing
+ * Generates industry reference commodity prices when live API data is unavailable
+ * Integration Integrity Mandate: These are clearly marked as reference/estimated prices
+ * Based on industry standard pricing, not real-time market data
+ * Covers 110+ tradeable commodities with typical industry pricing
  */
-function generateMockPrices(materialCodes: string[]): CommodityPrice[] {
+function generateReferencePrices(materialCodes: string[]): CommodityPrice[] {
   const basePrices: { [key: string]: number } = {
     // Base Metals
     'STEEL-CS': 0.8,           // Carbon Steel $/kg
@@ -468,21 +512,21 @@ function generateMockPrices(materialCodes: string[]): CommodityPrice[] {
 
   return materialCodes.map(code => {
     const basePrice = basePrices[code] || 10.0;
-    // Add small random variation (+/- 2%)
-    const variation = 1 + (Math.random() * 0.04 - 0.02);
-    const price = basePrice * variation;
-    const change24h = basePrice * (Math.random() * 0.06 - 0.03); // +/- 3% daily change
+    // Integration Integrity Mandate: No fake price variations - these are stable reference prices
+    // Real price changes only come from live API data
 
     return {
       code: code,
       name: getCommodityName(code),
-      material: code, // Legacy alias
-      price: parseFloat(price.toFixed(2)),
+      material: code,
+      price: parseFloat(basePrice.toFixed(2)),
       unit: getUnitForMaterial(code),
       currency: 'USD',
       timestamp: new Date().toISOString(),
-      change24h: parseFloat(change24h.toFixed(2)),
-      changePercent24h: parseFloat(((change24h / basePrice) * 100).toFixed(2)),
+      // No change24h or changePercent24h - we don't have real market data
+      source: 'reference',
+      isEstimate: true,
+      estimateReason: 'Industry reference price - live market data unavailable'
     };
   });
 }

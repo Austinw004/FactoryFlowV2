@@ -368,7 +368,8 @@ export class NewsMonitoringService {
       return uniqueAlerts;
     } catch (error: any) {
       console.error('Error fetching news:', error.message);
-      return this.getCuratedAlerts(currentFDR);
+      // Integration Integrity Mandate: Don't fall back to fabricated content
+      throw error; // Let the caller handle the unavailable state
     }
   }
 

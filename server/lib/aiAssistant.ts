@@ -356,9 +356,10 @@ async function callOpenAI(messages: Array<{ role: string; content: string }>): P
   const baseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
   const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
 
+  // Integration Integrity Mandate: Be honest about AI unavailability
   if (!baseUrl || !apiKey) {
-    console.warn("[AI Assistant] OpenAI credentials not configured, using fallback response");
-    return generateFallbackResponse(messages);
+    console.warn("[AI Assistant] OpenAI credentials not configured - returning unavailable message");
+    return getAIUnavailableMessage();
   }
 
   try {
@@ -381,15 +382,33 @@ async function callOpenAI(messages: Array<{ role: string; content: string }>): P
     if (!response.ok) {
       const errorText = await response.text();
       console.error("[AI Assistant] OpenAI API error:", response.status, errorText);
-      return generateFallbackResponse(messages);
+      // Integration Integrity Mandate: Be honest about API failures
+      return getAIUnavailableMessage(`API error: ${response.status}`);
     }
 
     const data = await response.json();
     return data.choices?.[0]?.message?.content || "I apologize, I couldn't process that request.";
   } catch (error) {
     console.error("[AI Assistant] OpenAI call failed:", error);
-    return generateFallbackResponse(messages);
+    // Integration Integrity Mandate: Be honest about failures
+    return getAIUnavailableMessage();
   }
+}
+
+// Integration Integrity Mandate: Honest message when AI is unavailable
+function getAIUnavailableMessage(reason?: string): string {
+  const reasonText = reason ? ` (${reason})` : '';
+  return `AI Assistant Unavailable${reasonText}
+
+The AI assistant requires OpenAI API access to provide intelligent responses. Currently, this service is not configured or temporarily unavailable.
+
+What you can still do:
+• Navigate directly to platform features using the sidebar
+• View real-time data in dashboards (Demand Hub, Supply Chain, Operations)
+• Check Economic Regime status in Strategic Analysis
+• Review automated insights in the Smart Insights panel
+
+To enable AI assistance, ensure the OpenAI integration is properly configured.`;
 }
 
 function generateFallbackResponse(messages: Array<{ role: string; content: string }>): string {

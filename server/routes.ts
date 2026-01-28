@@ -1692,15 +1692,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Bulk fetch prices for specific materials
+  // Integration Integrity Mandate: Include dataSource metadata so UI can display data provenance
   app.post("/api/commodities/prices/bulk", isAuthenticated, async (req: any, res) => {
     try {
       const { materialCodes } = req.body;
       if (!Array.isArray(materialCodes)) {
         return res.status(400).json({ error: "materialCodes must be an array" });
       }
-      const { fetchCommodityPrices } = await import("./lib/commodityPricing");
-      const prices = await fetchCommodityPrices(materialCodes);
-      res.json(prices);
+      const { fetchCommodityPricesWithMeta } = await import("./lib/commodityPricing");
+      const result = await fetchCommodityPricesWithMeta(materialCodes);
+      // Return full result with dataSource and unavailableReason for UI transparency
+      res.json({
+        prices: result.prices,
+        dataSource: result.dataSource,
+        unavailableReason: result.unavailableReason
+      });
     } catch (error: any) {
       console.error("Error fetching bulk commodity prices:", error);
       res.status(500).json({ error: error.message });
@@ -8358,10 +8364,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalPredictions: results.totalPredictions,
         mape: results.meanAbsolutePercentageError,
         directionalAccuracy: results.correctDirectionPct,
-        regimeAccuracy: results.correctRegimePct
+        regimeAccuracy: results.correctRegimePct,
+        dataSource: results.dataSource
       });
 
-      res.json(results);
+      // Integration Integrity Mandate: Include data source in response for UI transparency
+      res.json({
+        ...results,
+        // Ensure dataSource and warning are always present
+        integrityInfo: {
+          dataSource: results.dataSource,
+          isSynthetic: results.dataSource === 'synthetic',
+          warning: results.dataSourceWarning,
+          disclaimer: results.dataSource === 'synthetic' 
+            ? 'These accuracy metrics are based on synthetic test data and should not be used for business decisions.'
+            : 'These accuracy metrics are based on real historical market data from FRED and Alpha Vantage APIs.'
+        }
+      });
     } catch (error: any) {
       console.error('Backtest error:', error);
       res.status(500).json({ error: error.message });

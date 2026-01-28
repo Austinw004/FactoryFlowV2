@@ -32,11 +32,15 @@ interface BacktestResult {
     imbalancedExcess: number;
     realEconomyLead: number;
   };
+  // Integration Integrity Mandate: Clearly indicate data source
+  dataSource: 'real_api' | 'synthetic';
+  dataSourceWarning?: string; // Explanation when synthetic data is used
 }
 
 export class HistoricalBacktestingEngine {
   private realDataFetcher: RealHistoricalDataFetcher;
   private cachedHistoricalData: HistoricalDataPoint[] | null = null;
+  private lastDataSource: 'real_api' | 'synthetic' = 'synthetic'; // Track data source for integrity
 
   constructor(private storage: IStorage) {
     try {
@@ -88,8 +92,9 @@ export class HistoricalBacktestingEngine {
 
         console.log(`[HistoricalBacktesting] Successfully fetched ${historicalData.length} real data points`);
         
-        // Cache the data for this session
+        // Cache the data for this session and track data source
         this.cachedHistoricalData = historicalData;
+        this.lastDataSource = 'real_api'; // Integration Integrity: Real data from FRED/Alpha Vantage
         
         return historicalData;
       } catch (error: any) {
@@ -97,7 +102,8 @@ export class HistoricalBacktestingEngine {
       }
     }
 
-    // Fallback to synthetic data
+    // Fallback to synthetic data - clearly mark as synthetic
+    this.lastDataSource = 'synthetic'; // Integration Integrity: Synthetic data, NOT real historical data
     console.log('[HistoricalBacktesting] Using SYNTHETIC historical data (for testing only)');
     return this.generateSyntheticData(startYear, endYear);
   }
@@ -383,6 +389,11 @@ export class HistoricalBacktestingEngine {
           ? Math.round((accuracyByRegime.realEconomyLead.correct / accuracyByRegime.realEconomyLead.total) * 1000) / 10 
           : 0,
       },
+      // Integration Integrity Mandate: Clearly indicate data source
+      dataSource: this.lastDataSource,
+      dataSourceWarning: this.lastDataSource === 'synthetic' 
+        ? 'Results based on synthetic historical data - NOT real historical market data. For research/testing purposes only.'
+        : undefined,
     };
   }
 
@@ -424,6 +435,12 @@ export class HistoricalBacktestingEngine {
    * Store backtest results to database
    */
   async storeBacktestResults(companyId: string, results: BacktestResult): Promise<void> {
+    // Integration Integrity Mandate: Log warning if storing synthetic data
+    if (results.dataSource === 'synthetic') {
+      console.warn('[HistoricalBacktesting] WARNING: Storing backtest results based on SYNTHETIC data - not real historical market data');
+      console.warn('[HistoricalBacktesting] These results are for research/testing purposes only and should not be presented as verified accuracy metrics');
+    }
+    
     // Store aggregate metrics with explicit numeric coercion to prevent type issues
     await this.storage.createPredictionAccuracyMetrics({
       companyId,

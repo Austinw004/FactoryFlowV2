@@ -317,55 +317,22 @@ export async function updateExternalEconomicData() {
       throw new Error('Incomplete external data');
     }
   } catch (error: any) {
-    const companies = await getActiveCompanyIds();
-    const mockFdr = 1.15 + (Math.random() - 0.5) * 0.1;
-    const mockRegime = calculateEconomicRegime(mockFdr);
+    // Integration Integrity Mandate: Don't fabricate random economic data
+    // Instead, keep the last known good values and log the failure
+    console.error('[Background] Failed to fetch external economic data - keeping last known values:', error.code || error.message);
     
-    if (companies.length > 0) {
-      for (const companyId of companies) {
-        // Apply persistence enforcement even for fallback data
-        const { confirmedRegime } = await applyPersistenceEnforcement(companyId, mockFdr);
-        
-        // Persist fallback data with both raw and confirmed regime
-        await storage.createEconomicSnapshot({
-          companyId,
-          timestamp: new Date(),
-          fdr: mockFdr,
-          regime: mockRegime,
-          confirmedRegime,
-          source: 'fallback'
-        });
-
-        broadcastUpdate({
-          type: 'database_update',
-          entity: 'economic_indicators',
-          action: 'update',
-          timestamp: new Date().toISOString(),
-          companyId,
-          data: { 
-            fdr: mockFdr.toFixed(2), 
-            regime: mockRegime,
-            confirmedRegime,
-            source: 'fallback'
-          },
-        });
-      }
-
-      broadcastUpdate({
-        type: 'database_update',
-        entity: 'external_economic_data',
-        action: 'update',
-        timestamp: new Date().toISOString(),
-        data: { 
-          fdr: mockFdr.toFixed(2), 
-          regime: mockRegime,
-          source: 'fallback',
-          companiesUpdated: companies.length 
-        },
-      });
-    }
-
-    console.error('[Background] Failed to fetch external economic data, using fallback:', error.code || error.message);
+    // Broadcast a status update so the UI can indicate data may be stale
+    broadcastUpdate({
+      type: 'database_update',
+      entity: 'external_economic_data',
+      action: 'update',
+      timestamp: new Date().toISOString(),
+      data: { 
+        dataStatus: 'unavailable',
+        reason: `API error: ${error.code || error.message}`,
+        message: 'Economic data temporarily unavailable - using last known values'
+      },
+    });
   }
 }
 
@@ -458,32 +425,44 @@ export async function generateSensorReadings() {
 
 export async function updateCommodityPrices() {
   try {
+    const { fetchCommodityPricesWithMeta } = await import('./lib/commodityPricing');
     const companies = await getActiveCompanyIds();
     let totalUpdates = 0;
     
     for (const companyId of companies) {
       const materials = await storage.getMaterials(companyId);
+      const materialCodes = materials.slice(0, 20).map(m => m.materialCode).filter(Boolean);
+      
+      if (materialCodes.length === 0) continue;
+      
+      // Integration Integrity Mandate: Use real API data with metadata tracking
+      const priceResult = await fetchCommodityPricesWithMeta(materialCodes);
       
       for (const material of materials.slice(0, 20)) {
-        const priceChange = (Math.random() - 0.5) * 0.15;
-        const basePrice = 100;
-        const newPrice = basePrice * (1 + priceChange);
+        const priceData = priceResult.prices.find(p => 
+          p.code === material.materialCode || p.material === material.materialCode
+        );
         
-        const recommendation = await storage.createInventoryRecommendation({
-          companyId,
-          recommendationType: Math.random() < 0.5 ? 'reorder' : 'adjust_safety_stock',
-          priority: 'medium',
-          reasoning: `Price fluctuation detected: ${(priceChange * 100).toFixed(1)}%`,
-          estimatedSavings: Math.round(Math.abs(priceChange) * 10000),
-        });
-
+        if (!priceData) continue;
+        
+        // Only create recommendations when we have actual price data
+        // Include data source in reasoning for transparency
+        const dataSourceNote = priceResult.dataSource === 'reference' 
+          ? ' (based on reference pricing)' 
+          : ' (based on live market data)';
+        
         broadcastUpdate({
           type: 'database_update',
           entity: 'commodity_price',
           action: 'update',
           timestamp: new Date().toISOString(),
           companyId,
-          data: { materialId: material.id, priceChange: priceChange * 100 },
+          data: { 
+            materialId: material.id, 
+            price: priceData.price,
+            dataSource: priceResult.dataSource,
+            isEstimate: priceData.isEstimate || false
+          },
         });
 
         totalUpdates++;
