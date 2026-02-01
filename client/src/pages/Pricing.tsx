@@ -24,8 +24,7 @@ const subscriptionTiers = [
     bgColor: "bg-purple-100 dark:bg-purple-900/30",
     popular: true,
     features: [
-      "Up to 250 SKUs",
-      "Up to 50 suppliers"
+      "Up to 250 SKUs"
     ]
   },
   {
