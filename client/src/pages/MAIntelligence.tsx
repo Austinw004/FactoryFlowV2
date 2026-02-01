@@ -2,8 +2,30 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TrendingUp, TrendingDown, Target, Building2, Clock } from "lucide-react";
+import { TrendingUp, TrendingDown, Target, Building2, Clock, AlertCircle } from "lucide-react";
 import type { MaTarget, MaRecommendation } from "@shared/schema";
+import { formatRegimeName } from "@/lib/utils";
+
+interface RegimeData {
+  regime: string;
+  fdr: number;
+  lastUpdated?: string;
+}
+
+function getRegimeTimingForMA(regime: string, fdr: number): { label: string; variant: "default" | "secondary" | "destructive" | "outline"; description: string } {
+  switch (regime) {
+    case "HEALTHY_EXPANSION":
+      return { label: "Favorable", variant: "default", description: "Low FDR indicates strong real economy - favorable for acquisitions" };
+    case "ASSET_LED_GROWTH":
+      return { label: "Neutral", variant: "secondary", description: "Moderate FDR - mixed signals, proceed with caution" };
+    case "IMBALANCED_EXCESS":
+      return { label: "Cautious", variant: "outline", description: "Elevated FDR - asset valuations may be inflated" };
+    case "REAL_ECONOMY_LEAD":
+      return { label: "Unfavorable", variant: "destructive", description: "High FDR - real economy stress, high acquisition risk" };
+    default:
+      return { label: "Unknown", variant: "outline", description: "Regime data unavailable" };
+  }
+}
 
 export default function MAIntelligence() {
   const { data: targets = [] } = useQuery<MaTarget[]>({
@@ -13,6 +35,14 @@ export default function MAIntelligence() {
   const { data: recommendations = [] } = useQuery<MaRecommendation[]>({
     queryKey: ["/api/ma/recommendations"],
   });
+
+  const { data: regimeData, isLoading: regimeLoading } = useQuery<RegimeData>({
+    queryKey: ["/api/economics/regime"],
+  });
+
+  const currentRegime = regimeData?.regime || "Unknown";
+  const currentFDR = regimeData?.fdr || 0;
+  const regimeTiming = getRegimeTimingForMA(currentRegime, currentFDR);
 
   const acquisitions = targets.filter(t => t.targetType === 'acquisition');
   const divestitures = targets.filter(t => t.targetType === 'divestiture');
@@ -81,12 +111,21 @@ export default function MAIntelligence() {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <Badge variant="default" data-testid="badge-timing-status">
-              Favorable
-            </Badge>
+            {regimeLoading ? (
+              <Badge variant="outline" data-testid="badge-timing-status">Loading...</Badge>
+            ) : (
+              <Badge variant={regimeTiming.variant} data-testid="badge-timing-status">
+                {regimeTiming.label}
+              </Badge>
+            )}
             <p className="text-xs text-muted-foreground mt-2">
-              Current economic regime
+              {regimeData ? formatRegimeName(currentRegime) : "Loading regime data..."}
             </p>
+            {regimeData && (
+              <p className="text-xs text-muted-foreground mt-1">
+                FDR: {currentFDR.toFixed(2)}
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
