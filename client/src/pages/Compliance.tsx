@@ -76,7 +76,7 @@ export default function Compliance() {
   });
 
   // Fetch compliance audits
-  const { data: audits = [], isLoading: auditsLoading } = useQuery({
+  const { data: audits = [], isLoading: auditsLoading } = useQuery<any[]>({
     queryKey: ["/api/compliance/audits"],
   });
 
@@ -89,14 +89,22 @@ export default function Compliance() {
   const { data: complianceScore, isLoading: scoreLoading, refetch: refetchScore } = useQuery<{
     score: number;
     breakdown: { documentation: number; audits: number; training: number; findings: number };
-    alerts: { expiringDocs: number; overdueAudits: number; criticalFindings: number };
+    alerts: { 
+      expiringDocs: number; 
+      expiringDocuments: number;
+      overdueAudits: number; 
+      upcomingDeadlines: number;
+      criticalFindings: number;
+      openFindings: number;
+      expiredTraining: number;
+    };
     expiringDocuments: any[];
   }>({
     queryKey: ["/api/compliance/score"],
   });
 
   // Fetch audit findings
-  const { data: findings = [], isLoading: findingsLoading } = useQuery({
+  const { data: findings = [], isLoading: findingsLoading } = useQuery<any[]>({
     queryKey: ["/api/compliance/findings"],
   });
 
@@ -106,12 +114,12 @@ export default function Compliance() {
   });
 
   // Fetch checklist templates
-  const { data: checklists = [], isLoading: checklistsLoading } = useQuery({
+  const { data: checklists = [], isLoading: checklistsLoading } = useQuery<any[]>({
     queryKey: ["/api/compliance/checklists"],
   });
 
   // Fetch training records
-  const { data: trainingRecords = [], isLoading: trainingLoading } = useQuery({
+  const { data: trainingRecords = [], isLoading: trainingLoading } = useQuery<any[]>({
     queryKey: ["/api/compliance/training"],
   });
 
@@ -393,7 +401,7 @@ export default function Compliance() {
                 </div>
                 <div className="grid grid-cols-4 gap-2 text-sm">
                   <div className="text-center">
-                    <div className="font-semibold">{complianceScore.breakdown?.documents || 0}%</div>
+                    <div className="font-semibold">{complianceScore.breakdown?.documentation || 0}%</div>
                     <div className="text-muted-foreground">Documents</div>
                   </div>
                   <div className="text-center">
