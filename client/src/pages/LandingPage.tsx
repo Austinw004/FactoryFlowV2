@@ -122,7 +122,7 @@ export default function LandingPage() {
       price: "Contact Sales",
       period: "",
       description: "Unlimited scale with dedicated support",
-      features: ["Unlimited SKUs", "Supply chain digital twin", "Custom integrations", "Dedicated manager", "Custom SLAs"],
+      features: ["Unlimited SKUs", "Dedicated manager", "Custom SLAs", "Priority support", "Advanced analytics"],
       icon: Building2,
     },
   ];
@@ -133,7 +133,7 @@ export default function LandingPage() {
       price: "2%",
       period: " + $2K/mo",
       description: "Enterprise partnership with full platform access",
-      features: ["Unlimited SKUs", "Supply chain digital twin", "M&A intelligence", "Custom ERP integrations", "Dedicated success manager"],
+      features: ["Unlimited SKUs", "Dedicated success manager", "Performance-based pricing", "Quarterly reviews", "Priority support"],
       highlighted: true,
       icon: Building2,
     },

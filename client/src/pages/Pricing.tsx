@@ -29,7 +29,7 @@ const subscriptionTiers = [
       "Multi-tier supplier mapping",
       "Automated RFQ generation",
       "Real-time commodity tracking (110+)",
-      "M&A intelligence & due diligence",
+      "Regime-based procurement timing",
       "Up to 250 SKUs",
       "Up to 50 suppliers",
       "Priority support + onboarding"
@@ -48,12 +48,12 @@ const subscriptionTiers = [
     bgColor: "bg-amber-100 dark:bg-amber-900/30",
     features: [
       "Unlimited SKUs & suppliers",
-      "Supply chain digital twin",
-      "Custom ERP/MRP integrations",
       "Dedicated success manager",
       "Quarterly business reviews",
       "Custom SLAs",
-      "SSO & advanced security"
+      "SSO & advanced security",
+      "Priority support",
+      "Advanced analytics"
     ]
   }
 ];
@@ -71,12 +71,12 @@ const savingsBasedTiers = [
     bgColor: "bg-amber-100 dark:bg-amber-900/30",
     popular: true,
     features: [
-      "Supply chain digital twin",
-      "Industry consortium benchmarking",
       "Unlimited SKUs & suppliers",
       "Dedicated success manager",
       "Quarterly business reviews",
-      "Custom SLAs"
+      "Custom SLAs",
+      "Priority support",
+      "Advanced analytics"
     ],
     competitorRate: "Varies by provider",
     yourSavings: "Competitive pricing"
