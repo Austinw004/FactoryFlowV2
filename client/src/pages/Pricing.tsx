@@ -24,11 +24,8 @@ const subscriptionTiers = [
     bgColor: "bg-purple-100 dark:bg-purple-900/30",
     popular: true,
     features: [
-      "AI-powered demand forecasting",
-      "Economic regime monitoring",
       "Counter-cyclical procurement signals",
       "Supplier risk scoring",
-      "Advanced scenario simulations",
       "Multi-tier supplier mapping",
       "Automated RFQ generation",
       "Real-time commodity tracking (110+)",
@@ -63,60 +60,16 @@ const subscriptionTiers = [
 
 const savingsBasedTiers = [
   {
-    id: "accelerate",
-    name: "Accelerate",
-    description: "Perfect for companies starting their optimization journey",
-    percentageRate: 6,
-    minimumSavings: 50000,
-    platformFee: 0,
-    icon: Zap,
-    color: "text-blue-500",
-    bgColor: "bg-blue-100 dark:bg-blue-900/30",
-    features: [
-      "AI-powered demand forecasting",
-      "Economic regime monitoring",
-      "Supplier risk scoring",
-      "Counter-cyclical procurement signals",
-      "Up to 100 SKUs",
-      "Up to 25 suppliers",
-      "Email support"
-    ],
-    competitorRate: "Varies by provider",
-    yourSavings: "Competitive pricing"
-  },
-  {
-    id: "transform",
-    name: "Transform",
-    description: "For growing manufacturers ready to scale their savings",
-    percentageRate: 4,
-    minimumSavings: 250000,
-    platformFee: 0,
-    icon: Rocket,
-    color: "text-purple-500",
-    bgColor: "bg-purple-100 dark:bg-purple-900/30",
-    popular: true,
-    features: [
-      "Advanced scenario simulations",
-      "Multi-tier supplier mapping",
-      "Automated RFQ generation",
-      "Real-time commodity tracking",
-      "Up to 500 SKUs",
-      "Up to 100 suppliers",
-      "Priority support + onboarding"
-    ],
-    competitorRate: "Varies by provider",
-    yourSavings: "Competitive pricing"
-  },
-  {
     id: "strategic",
     name: "Strategic Alliance",
-    description: "Enterprise-grade for maximum procurement optimization",
+    description: "Enterprise-grade performance-based pricing tied to verified savings",
     percentageRate: 2,
     minimumSavings: 1000000,
     platformFee: 2000,
-    icon: Building2,
+    icon: Handshake,
     color: "text-amber-500",
     bgColor: "bg-amber-100 dark:bg-amber-900/30",
+    popular: true,
     features: [
       "Supply chain digital twin",
       "Industry consortium benchmarking",
@@ -131,7 +84,7 @@ const savingsBasedTiers = [
 ];
 
 const competitorComparison = [
-  { name: "Prescient Labs", savingsShare: "2-6%", platformFee: "$0-2K/mo", approach: "Low savings share, no hidden fees", highlight: true },
+  { name: "Prescient Labs", savingsShare: "2%", platformFee: "$2K/mo", approach: "Low savings share, transparent pricing", highlight: true },
   { name: "Coupa", savingsShare: "Varies", platformFee: "Contact for pricing", approach: "Savings share + platform fee" },
   { name: "SAP Ariba", savingsShare: "Varies", platformFee: "Contact for pricing", approach: "Per-supplier + transaction fees" },
   { name: "Jaggaer", savingsShare: "Varies", platformFee: "Contact for pricing", approach: "Module-based pricing" },
@@ -151,9 +104,7 @@ export default function Pricing() {
   };
 
   const getRecommendedTier = (savings: number) => {
-    if (savings >= 1000000) return "strategic";
-    if (savings >= 250000) return "transform";
-    return "accelerate";
+    return "strategic"; // Only one performance-based tier
   };
 
   const formatCurrency = (amount: number) => {
@@ -302,12 +253,12 @@ export default function Pricing() {
             <div className="grid md:grid-cols-3 gap-4 max-w-4xl mx-auto mb-8">
               <div className="p-4 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
                 <DollarSign className="h-6 w-6 text-green-600 mx-auto mb-2" />
-                <div className="font-semibold text-green-700 dark:text-green-400">No Upfront Costs</div>
+                <div className="font-semibold text-green-700 dark:text-green-400">30-Day Free Pilot</div>
                 <p className="text-sm text-muted-foreground">Start free, pay only when you see real savings</p>
               </div>
               <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
                 <Percent className="h-6 w-6 text-blue-600 mx-auto mb-2" />
-                <div className="font-semibold text-blue-700 dark:text-blue-400">2-6% Savings Share</div>
+                <div className="font-semibold text-blue-700 dark:text-blue-400">2% Savings Share</div>
                 <p className="text-sm text-muted-foreground">Transparent, competitive pricing</p>
               </div>
               <div className="p-4 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800">
@@ -351,62 +302,61 @@ export default function Pricing() {
                     </div>
                   </div>
 
-                  <div className="grid md:grid-cols-3 gap-4">
-                    {savingsBasedTiers.map((tier) => {
-                      const yourCost = calculateYourCost(tier, estimatedSavings);
-                      const isRecommended = getRecommendedTier(estimatedSavings) === tier.id;
+                  {savingsBasedTiers.map((tier) => {
+                    const yourCost = calculateYourCost(tier, estimatedSavings);
+                    const netSavings = estimatedSavings - yourCost;
 
-                      return (
-                        <div 
-                          key={tier.id}
-                          className={`p-4 rounded-lg border ${isRecommended ? "border-primary bg-primary/5" : "border-muted"}`}
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="font-semibold">{tier.name}</span>
-                            {isRecommended && <Badge variant="secondary">Recommended</Badge>}
+                    return (
+                      <div 
+                        key={tier.id}
+                        className="p-6 rounded-lg border border-primary bg-primary/5 max-w-md mx-auto"
+                      >
+                        <div className="flex items-center justify-between mb-4">
+                          <span className="text-lg font-semibold">{tier.name}</span>
+                          <Badge>Performance-Based</Badge>
+                        </div>
+                        <div className="text-sm text-muted-foreground mb-2">
+                          {tier.percentageRate}% of savings + {formatCurrency(tier.platformFee)}/mo platform fee
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 mt-4">
+                          <div>
+                            <div className="text-xs text-muted-foreground">Your Annual Cost</div>
+                            <div className="text-xl font-bold text-primary">{formatCurrency(yourCost)}</div>
                           </div>
-                          <div className="text-sm text-muted-foreground mb-1">
-                            {tier.percentageRate}% of savings {tier.platformFee > 0 ? `+ ${formatCurrency(tier.platformFee)}/mo` : ""}
-                          </div>
-                          <div className="text-xl font-bold text-primary">
-                            {formatCurrency(yourCost)}/year
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            Your estimated annual cost
+                          <div>
+                            <div className="text-xs text-muted-foreground">Net Savings</div>
+                            <div className="text-xl font-bold text-green-600">{formatCurrency(netSavings)}</div>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
 
-            {/* Performance-Based Pricing Tiers */}
+            {/* Performance-Based Pricing Tier */}
             <div className="mb-8">
-              <h2 className="text-2xl font-bold text-center mb-2">Performance-Based Plans</h2>
-              <p className="text-center text-muted-foreground mb-8">All plans include a 30-day free pilot. No credit card required.</p>
+              <h2 className="text-2xl font-bold text-center mb-2">Strategic Alliance</h2>
+              <p className="text-center text-muted-foreground mb-8">Enterprise partnership with 30-day free pilot. No credit card required.</p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6 mb-16">
+            <div className="flex justify-center mb-16">
               {savingsBasedTiers.map((tier) => {
                 const Icon = tier.icon;
-                const isPopular = tier.popular;
 
                 return (
                   <Card
                     key={tier.id}
-                    className={`relative flex flex-col ${isPopular ? "border-primary shadow-lg scale-105" : ""}`}
+                    className="relative flex flex-col border-primary shadow-lg max-w-md w-full"
                     data-testid={`card-plan-${tier.id}`}
                   >
-                    {isPopular && (
-                      <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                        <Badge className="bg-primary text-primary-foreground">
-                          <Crown className="h-3 w-3 mr-1" />
-                          Most Popular
-                        </Badge>
-                      </div>
-                    )}
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                      <Badge className="bg-primary text-primary-foreground">
+                        <Handshake className="h-3 w-3 mr-1" />
+                        Enterprise Partnership
+                      </Badge>
+                    </div>
 
                     <CardHeader className="text-center pb-4">
                       <div className={`w-12 h-12 mx-auto mb-4 rounded-xl ${tier.bgColor} flex items-center justify-center ${tier.color}`}>
@@ -461,7 +411,7 @@ export default function Pricing() {
                     <CardFooter className="pt-4">
                       <Button
                         className="w-full"
-                        variant={isPopular ? "default" : "outline"}
+                        variant="default"
                         onClick={() => handleGetStarted(tier.id)}
                         data-testid={`button-subscribe-${tier.id}`}
                       >

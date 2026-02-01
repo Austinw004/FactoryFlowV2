@@ -129,28 +129,12 @@ export default function LandingPage() {
 
   const performancePlans = [
     {
-      name: "Accelerate",
-      price: "6%",
-      period: " of verified savings",
-      description: "For manufacturers starting with procurement optimization",
-      features: ["Up to 100 SKUs", "AI-powered forecasting", "Economic regime signals", "Supplier risk scoring", "No upfront cost"],
-      icon: Zap,
-    },
-    {
-      name: "Transform",
-      price: "4%",
-      period: " of verified savings",
-      description: "For growing manufacturers scaling operations",
-      features: ["Up to 500 SKUs", "Advanced simulations", "Multi-tier supplier mapping", "Automated RFQs", "Real-time commodities"],
-      highlighted: true,
-      icon: Rocket,
-    },
-    {
       name: "Strategic Alliance",
       price: "2%",
       period: " + $2K/mo",
-      description: "Enterprise-grade platform access",
+      description: "Enterprise partnership with full platform access",
       features: ["Unlimited SKUs", "Supply chain digital twin", "M&A intelligence", "Custom ERP integrations", "Dedicated success manager"],
+      highlighted: true,
       icon: Building2,
     },
   ];
@@ -301,17 +285,17 @@ export default function LandingPage() {
               </div>
             )}
             
-            {/* Performance-Based Plans */}
+            {/* Performance-Based Plan */}
             {pricingModel === "performance" && (
-              <div className="grid md:grid-cols-3 gap-6">
+              <div className="flex justify-center">
                 {performancePlans.map((plan, idx) => (
                   <Card 
                     key={idx} 
-                    className={`p-5 flex flex-col text-left ${plan.highlighted ? 'border-primary shadow-lg ring-2 ring-primary/20' : ''}`}
+                    className={`p-5 flex flex-col text-left max-w-md w-full ${plan.highlighted ? 'border-primary shadow-lg ring-2 ring-primary/20' : ''}`}
                     data-testid={`card-hero-plan-${plan.name.toLowerCase().replace(" ", "-")}`}
                   >
                     {plan.highlighted && (
-                      <Badge className="mb-3 self-start">Most Popular</Badge>
+                      <Badge className="mb-3 self-start">Enterprise Partnership</Badge>
                     )}
                     <div className="flex items-center gap-3 mb-2">
                       <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
