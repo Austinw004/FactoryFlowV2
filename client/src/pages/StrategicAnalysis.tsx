@@ -381,7 +381,7 @@ export default function StrategicAnalysis() {
   const backtestResults = validationResults || (storedBacktestResults && Array.isArray(storedBacktestResults) && storedBacktestResults.length > 0 ? storedBacktestResults[0] : null);
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-6 p-6 pb-12">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold" data-testid="text-page-title">
           Strategic Analysis
