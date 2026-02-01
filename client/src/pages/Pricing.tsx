@@ -48,12 +48,8 @@ const subscriptionTiers = [
     bgColor: "bg-amber-100 dark:bg-amber-900/30",
     features: [
       "Unlimited SKUs & suppliers",
-      "Dedicated success manager",
-      "Quarterly business reviews",
       "Custom SLAs",
-      "SSO & advanced security",
-      "Priority support",
-      "Advanced analytics"
+      "SSO & advanced security"
     ]
   }
 ];
@@ -72,11 +68,7 @@ const savingsBasedTiers = [
     popular: true,
     features: [
       "Unlimited SKUs & suppliers",
-      "Dedicated success manager",
-      "Quarterly business reviews",
-      "Custom SLAs",
-      "Priority support",
-      "Advanced analytics"
+      "Custom SLAs"
     ],
     competitorRate: "Varies by provider",
     yourSavings: "Competitive pricing"

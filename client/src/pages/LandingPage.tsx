@@ -122,7 +122,7 @@ export default function LandingPage() {
       price: "Contact Sales",
       period: "",
       description: "Unlimited scale with dedicated support",
-      features: ["Unlimited SKUs", "Dedicated manager", "Custom SLAs", "Priority support", "Advanced analytics"],
+      features: ["Unlimited SKUs", "Custom SLAs"],
       icon: Building2,
     },
   ];
@@ -133,7 +133,7 @@ export default function LandingPage() {
       price: "2%",
       period: " + $2K/mo",
       description: "Enterprise partnership with full platform access",
-      features: ["Unlimited SKUs", "Dedicated success manager", "Performance-based pricing", "Quarterly reviews", "Priority support"],
+      features: ["Unlimited SKUs", "2% of verified savings"],
       highlighted: true,
       icon: Building2,
     },
