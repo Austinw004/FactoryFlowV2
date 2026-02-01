@@ -410,13 +410,19 @@ export default function StrategicAnalysis() {
           <div>
             <p className="text-muted-foreground text-xs mb-1">Asset Circuit</p>
             <p className="font-semibold" data-testid="metric-asset-circuit">
-              {currentFDR > 1.5 ? 'Elevated' : currentFDR < 0.9 ? 'Compressed' : 'Balanced'}
+              {currentFDR >= 2.5 ? 'Deflated' : currentFDR >= 1.8 ? 'Overheated' : currentFDR >= 1.2 ? 'Elevated' : 'Balanced'}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {currentFDR >= 2.5 ? 'Asset prices below real value' : currentFDR >= 1.8 ? 'Asset prices detached from fundamentals' : currentFDR >= 1.2 ? 'Asset growth outpacing real economy' : 'Healthy equilibrium'}
             </p>
           </div>
           <div>
             <p className="text-muted-foreground text-xs mb-1">Real Circuit</p>
             <p className="font-semibold" data-testid="metric-real-circuit">
-              {currentFDR > 1.5 ? 'Lagging' : currentFDR < 0.9 ? 'Leading' : 'Balanced'}
+              {currentFDR >= 2.5 ? 'Leading' : currentFDR >= 1.8 ? 'Stressed' : currentFDR >= 1.2 ? 'Lagging' : 'Balanced'}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {currentFDR >= 2.5 ? 'Real economy outperforming assets' : currentFDR >= 1.8 ? 'Real economy under pressure' : currentFDR >= 1.2 ? 'Real growth trailing assets' : 'Strong demand equilibrium'}
             </p>
           </div>
         </CardContent>

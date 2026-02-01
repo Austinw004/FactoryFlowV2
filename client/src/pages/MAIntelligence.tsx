@@ -15,13 +15,13 @@ interface RegimeData {
 function getRegimeTimingForMA(regime: string, fdr: number): { label: string; variant: "default" | "secondary" | "destructive" | "outline"; description: string } {
   switch (regime) {
     case "HEALTHY_EXPANSION":
-      return { label: "Favorable", variant: "default", description: "Low FDR indicates strong real economy - favorable for acquisitions" };
+      return { label: "Favorable", variant: "default", description: `FDR ${fdr.toFixed(2)} < 1.2 - Balanced growth, good timing for strategic acquisitions` };
     case "ASSET_LED_GROWTH":
-      return { label: "Neutral", variant: "secondary", description: "Moderate FDR - mixed signals, proceed with caution" };
+      return { label: "Cautious", variant: "secondary", description: `FDR ${fdr.toFixed(2)} (1.2-1.8) - Assets outpacing real economy, valuations elevated` };
     case "IMBALANCED_EXCESS":
-      return { label: "Cautious", variant: "outline", description: "Elevated FDR - asset valuations may be inflated" };
+      return { label: "Avoid", variant: "destructive", description: `FDR ${fdr.toFixed(2)} (1.8-2.5) - Asset bubble territory, wait for correction` };
     case "REAL_ECONOMY_LEAD":
-      return { label: "Unfavorable", variant: "destructive", description: "High FDR - real economy stress, high acquisition risk" };
+      return { label: "Counter-Cyclical", variant: "default", description: `FDR ${fdr.toFixed(2)} >= 2.5 - Real economy leading, asset prices deflated, potential buying opportunity` };
     default:
       return { label: "Unknown", variant: "outline", description: "Regime data unavailable" };
   }
