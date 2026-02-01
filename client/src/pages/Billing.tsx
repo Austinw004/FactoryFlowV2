@@ -277,9 +277,6 @@ export default function Billing() {
             {tier === "enterprise" && (
               <>
                 <FeatureItem>Unlimited SKUs</FeatureItem>
-                <FeatureItem>Unlimited supplier connections</FeatureItem>
-                <FeatureItem>Custom SLAs</FeatureItem>
-                <FeatureItem>SSO & advanced security</FeatureItem>
               </>
             )}
             {!tier && (

@@ -47,9 +47,7 @@ const subscriptionTiers = [
     color: "text-amber-500",
     bgColor: "bg-amber-100 dark:bg-amber-900/30",
     features: [
-      "Unlimited SKUs & suppliers",
-      "Custom SLAs",
-      "SSO & advanced security"
+      "Unlimited SKUs & suppliers"
     ]
   }
 ];
@@ -67,8 +65,7 @@ const savingsBasedTiers = [
     bgColor: "bg-amber-100 dark:bg-amber-900/30",
     popular: true,
     features: [
-      "Unlimited SKUs & suppliers",
-      "Custom SLAs"
+      "Unlimited SKUs & suppliers"
     ],
     competitorRate: "Varies by provider",
     yourSavings: "Competitive pricing"

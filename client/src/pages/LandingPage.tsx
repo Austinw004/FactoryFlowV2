@@ -122,7 +122,7 @@ export default function LandingPage() {
       price: "Contact Sales",
       period: "",
       description: "Unlimited scale with dedicated support",
-      features: ["Unlimited SKUs", "Custom SLAs"],
+      features: ["Unlimited SKUs"],
       icon: Building2,
     },
   ];
@@ -133,7 +133,7 @@ export default function LandingPage() {
       price: "2%",
       period: " + $2K/mo",
       description: "Enterprise partnership with full platform access",
-      features: ["Unlimited SKUs", "2% of verified savings"],
+      features: ["Unlimited SKUs"],
       highlighted: true,
       icon: Building2,
     },
