@@ -113,7 +113,7 @@ export default function LandingPage() {
       price: "$1,999",
       period: "/month",
       description: "Complete platform access for growing manufacturers",
-      features: ["Up to 250 SKUs", "AI-powered forecasting", "Economic regime signals", "Advanced simulations", "Priority support"],
+      features: ["Up to 250 SKUs"],
       highlighted: true,
       icon: Rocket,
     },

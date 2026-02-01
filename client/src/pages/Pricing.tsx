@@ -24,15 +24,8 @@ const subscriptionTiers = [
     bgColor: "bg-purple-100 dark:bg-purple-900/30",
     popular: true,
     features: [
-      "Counter-cyclical procurement signals",
-      "Supplier risk scoring",
-      "Multi-tier supplier mapping",
-      "Automated RFQ generation",
-      "Real-time commodity tracking (110+)",
-      "Regime-based procurement timing",
       "Up to 250 SKUs",
-      "Up to 50 suppliers",
-      "Priority support + onboarding"
+      "Up to 50 suppliers"
     ]
   },
   {

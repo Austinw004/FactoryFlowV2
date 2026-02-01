@@ -255,23 +255,11 @@ export default function Billing() {
             {tier === "starter" && (
               <>
                 <FeatureItem>Up to 100 SKUs</FeatureItem>
-                <FeatureItem>Basic demand forecasting</FeatureItem>
-                <FeatureItem>Economic regime monitoring</FeatureItem>
-                <FeatureItem>5 supplier connections</FeatureItem>
-                <FeatureItem>Email support</FeatureItem>
-                <FeatureItem>Standard reports</FeatureItem>
               </>
             )}
             {tier === "professional" && (
               <>
-                <FeatureItem>Up to 1,000 SKUs</FeatureItem>
-                <FeatureItem>Multi-horizon forecasting</FeatureItem>
-                <FeatureItem>FDR-based procurement signals</FeatureItem>
-                <FeatureItem>25 supplier connections</FeatureItem>
-                <FeatureItem>ERP integration</FeatureItem>
-                <FeatureItem>Priority support</FeatureItem>
-                <FeatureItem>Custom dashboards</FeatureItem>
-                <FeatureItem>API access</FeatureItem>
+                <FeatureItem>Up to 250 SKUs</FeatureItem>
               </>
             )}
             {tier === "enterprise" && (
@@ -282,9 +270,6 @@ export default function Billing() {
             {!tier && (
               <>
                 <FeatureItem disabled>Limited SKU access</FeatureItem>
-                <FeatureItem disabled>Basic forecasting preview</FeatureItem>
-                <FeatureItem disabled>Dashboard access</FeatureItem>
-                <FeatureItem disabled>Community support</FeatureItem>
               </>
             )}
           </div>
