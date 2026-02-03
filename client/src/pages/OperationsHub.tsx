@@ -36,7 +36,7 @@ export default function OperationsHub({ initialTab = "machinery" }: OperationsHu
 
   return (
     <div className="h-full flex flex-col">
-      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="border-b bg-background">
         <div className="px-6 pt-4 pb-0">
           <div className="flex items-center justify-between mb-2">
             <div>

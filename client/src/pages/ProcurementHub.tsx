@@ -29,7 +29,7 @@ export default function ProcurementHub({ initialTab = "purchasing" }: Procuremen
 
   return (
     <div className="h-full flex flex-col">
-      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="border-b bg-background">
         <div className="px-6 pt-4 pb-0">
           <h1 className="text-2xl font-bold" data-testid="heading-procurement-hub">
             Procurement
