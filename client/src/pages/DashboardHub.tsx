@@ -22,7 +22,7 @@ export default function DashboardHub({ initialTab = "overview" }: DashboardHubPr
 
   return (
     <div className="h-full flex flex-col">
-      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="border-b bg-background">
         <div className="px-6 pt-4 pb-0">
           <h1 className="text-2xl font-bold" data-testid="heading-dashboard-hub">
             Dashboard
@@ -48,7 +48,7 @@ export default function DashboardHub({ initialTab = "overview" }: DashboardHubPr
         </div>
       </div>
       
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto bg-background">
         {tabs.map((tab) => (
           activeTab === tab.id && (
             <SafeTabContent key={tab.id} tabName={tab.label}>
