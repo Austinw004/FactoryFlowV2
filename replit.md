@@ -50,6 +50,8 @@ The system is a multi-tenant application with data isolation per company. Core t
 - **ERP Integration Templates**: Pre-built templates for major ERPs.
 - **Onboarding Wizard**: A 3-step wizard for new users covering company setup, team invitations, and platform launch. Includes ref-based validation fallback for robust form handling.
 - **Integration Health Monitoring**: Live connectivity health checks (GET /api/integrations/health) for all 18 configured integrations across 8 categories (data, ai, communication, payments, crm, ecommerce, productivity, project_management) with latency tracking, status categorization (healthy/degraded/offline/not_configured), and parallel execution.
+- **Data Freshness Indicators**: Dashboard displays real-time data freshness status for regime analysis, allocations, and SKU data using TanStack Query's dataUpdatedAt. Color-coded indicators show fresh (<1min), recent (<5min), or stale (>5min) data with manual refresh capability.
+- **Inventory Status Check (Allocation Flow)**: Pre-allocation inventory verification showing measured on-hand and inbound stock levels. Highlights materials with low stock (<10 units) and requires explicit acknowledgment before running allocation when low stock materials exist. No fabricated capacity metrics - only displays actual measured data for epistemic honesty.
 
 ### System Design Choices
 

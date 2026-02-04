@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { formatRegimeName } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,12 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
 import { useToast } from "@/hooks/use-toast";
-import { Boxes, PlayCircle, AlertCircle, Clock, Plus, X, Package } from "lucide-react";
+import { Boxes, PlayCircle, AlertCircle, Clock, Plus, X, Package, WarehouseIcon, Info, CheckCircle2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Allocation, AllocationResult, Material } from "@shared/schema";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface MaterialRequirement {
   materialId: string;
@@ -36,6 +39,7 @@ export default function Allocation() {
   const [materialRequirements, setMaterialRequirements] = useState<MaterialRequirement[]>([
     { materialId: "", quantity: "" }
   ]);
+  const [lowStockAcknowledged, setLowStockAcknowledged] = useState(false);
   const { toast } = useToast();
 
   const { data: catalogData } = useQuery<{ materials: CatalogMaterial[]; categories: string[] }>({
@@ -45,6 +49,31 @@ export default function Allocation() {
   const { data: allocations, isLoading } = useQuery<Allocation[]>({
     queryKey: ["/api/allocations"],
   });
+
+  // Fetch materials for inventory capacity check
+  const { data: materials = [] } = useQuery<Material[]>({
+    queryKey: ["/api/materials"],
+  });
+
+  // Calculate measured inventory status (no fabricated capacity metrics)
+  const inventoryCapacityCheck = useMemo(() => {
+    if (!materials.length) return null;
+    
+    const totalOnHand = materials.reduce((sum, m) => sum + (m.onHand || 0), 0);
+    const totalInbound = materials.reduce((sum, m) => sum + (m.inbound || 0), 0);
+    
+    // Identify materials with low stock (<10 units on hand) - based on actual measured data
+    const materialsLowStock = materials.filter(m => {
+      const onHand = m.onHand || 0;
+      return onHand < 10;
+    });
+
+    return {
+      totalOnHand,
+      totalInbound,
+      materialsLowStock
+    };
+  }, [materials]);
 
   const addMaterialRequirement = () => {
     setMaterialRequirements([...materialRequirements, { materialId: "", quantity: "" }]);
@@ -172,6 +201,72 @@ export default function Allocation() {
           Optimize material distribution across SKUs based on demand and constraints
         </p>
       </div>
+
+      {/* Inventory Status Check */}
+      {inventoryCapacityCheck && (
+        <Card className="border-muted" data-testid="card-inventory-status">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <WarehouseIcon className="h-4 w-4" />
+              Inventory Status
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p>Shows current measured inventory levels. Low stock alerts indicate materials below 10 units on hand.</p>
+                </TooltipContent>
+              </Tooltip>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {/* Measured inventory levels - actual data */}
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-muted-foreground block">Total On Hand (measured)</span>
+                <span className="font-semibold" data-testid="text-on-hand">{inventoryCapacityCheck.totalOnHand.toLocaleString()} units</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block">Total Inbound (measured)</span>
+                <span className="font-semibold" data-testid="text-inbound">{inventoryCapacityCheck.totalInbound.toLocaleString()} units</span>
+              </div>
+            </div>
+
+            {/* Low stock warnings - based on actual data */}
+            {inventoryCapacityCheck.materialsLowStock.length > 0 && (
+              <Alert className="py-2 border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20" data-testid="alert-low-stock">
+                <AlertCircle className="h-4 w-4 text-yellow-600" />
+                <AlertDescription className="space-y-2">
+                  <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                    <strong>{inventoryCapacityCheck.materialsLowStock.length} material(s) with low stock (&lt;10 units):</strong>{' '}
+                    {inventoryCapacityCheck.materialsLowStock.slice(0, 3).map(m => m.name || m.code).join(', ')}
+                    {inventoryCapacityCheck.materialsLowStock.length > 3 && ` (+${inventoryCapacityCheck.materialsLowStock.length - 3} more)`}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Checkbox 
+                      id="acknowledge-low-stock"
+                      checked={lowStockAcknowledged}
+                      onCheckedChange={(checked) => setLowStockAcknowledged(checked === true)}
+                      data-testid="checkbox-acknowledge-low-stock"
+                    />
+                    <Label htmlFor="acknowledge-low-stock" className="text-sm text-yellow-700 dark:text-yellow-300 cursor-pointer">
+                      I acknowledge low stock and want to proceed with allocation
+                    </Label>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* All clear message */}
+            {inventoryCapacityCheck.materialsLowStock.length === 0 && (
+              <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-300" data-testid="text-inventory-healthy">
+                <CheckCircle2 className="h-4 w-4" />
+                All materials have adequate stock levels for allocation.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card data-testid="card-run-allocation">
         <CardHeader>
@@ -338,9 +433,18 @@ export default function Allocation() {
             )}
           </div>
           
+          {/* Pre-run warning if low stock and not acknowledged */}
+          {inventoryCapacityCheck && inventoryCapacityCheck.materialsLowStock.length > 0 && !lowStockAcknowledged && (
+            <Alert className="mb-4 border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20" data-testid="alert-acknowledge-required">
+              <AlertCircle className="h-4 w-4 text-yellow-600" />
+              <AlertDescription className="text-sm text-yellow-700 dark:text-yellow-300">
+                Please acknowledge the low stock warning above before running allocation.
+              </AlertDescription>
+            </Alert>
+          )}
           <Button
             onClick={handleRunAllocation}
-            disabled={runAllocationMutation.isPending}
+            disabled={runAllocationMutation.isPending || (inventoryCapacityCheck?.materialsLowStock?.length > 0 && !lowStockAcknowledged)}
             data-testid="button-run-allocation"
             className="w-full"
           >

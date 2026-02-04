@@ -17,7 +17,7 @@ import { InfoTooltip } from "@/components/InfoTooltip";
 import { ActivityFeed } from "@/components/ActivityFeed";
 import { SmartInsightsCompact } from "@/components/SmartInsightsPanel";
 import { generateDashboardPDF } from "@/lib/pdfExport";
-import { TrendingUp, DollarSign, Package, AlertCircle, Plus, Upload, GitCompare, Loader2, Globe, Radio, Package2, Building2, Box, FileDown } from "lucide-react";
+import { TrendingUp, DollarSign, Package, AlertCircle, Plus, Upload, GitCompare, Loader2, Globe, Radio, Package2, Building2, Box, FileDown, Clock, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +30,7 @@ import { useWebSocket } from "@/hooks/useWebSocket";
 import { useLocation } from "wouter";
 import { useOnboardingSteps } from "@/hooks/useOnboardingSteps";
 import React from "react";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 const regimeDescriptions: Record<string, string> = {
   HEALTHY_EXPANSION: "Balanced and healthy market conditions. Standard procurement pace recommended.",
@@ -86,21 +86,62 @@ export default function Dashboard() {
     },
   });
 
-  const { data: regime, isLoading: regimeLoading } = useQuery({
+  // Data freshness tracking
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const { data: regime, isLoading: regimeLoading, dataUpdatedAt: regimeUpdatedAt } = useQuery({
     queryKey: ["/api/economics/regime"],
     refetchInterval: 30000, // Refetch every 30 seconds as fallback
     enabled: !!user,
   });
 
-  const { data: allocations = [], isLoading: allocationsLoading } = useQuery({
+  const { data: allocations = [], isLoading: allocationsLoading, dataUpdatedAt: allocationsUpdatedAt } = useQuery({
     queryKey: ["/api/allocations"],
     enabled: !!user,
   });
 
-  const { data: skus = [], isLoading: skusLoading } = useQuery({
+  const { data: skus = [], isLoading: skusLoading, dataUpdatedAt: skusUpdatedAt } = useQuery({
     queryKey: ["/api/skus"],
     enabled: !!user,
   });
+
+  // Calculate data freshness
+  const getDataAge = useCallback((updatedAt: number | undefined) => {
+    if (!updatedAt) return 'Unknown';
+    const ageMs = Date.now() - updatedAt;
+    const seconds = Math.floor(ageMs / 1000);
+    if (seconds < 60) return 'Just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    return `${Math.floor(hours / 24)}d ago`;
+  }, []);
+
+  const getDataFreshnessStatus = useCallback((updatedAt: number | undefined) => {
+    if (!updatedAt) return 'stale';
+    const ageMs = Date.now() - updatedAt;
+    if (ageMs < 60000) return 'fresh'; // < 1 minute
+    if (ageMs < 300000) return 'recent'; // < 5 minutes
+    return 'stale'; // > 5 minutes
+  }, []);
+
+  // Refresh all data
+  const handleRefreshAll = async () => {
+    setIsRefreshing(true);
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["/api/economics/regime"] }),
+      queryClient.invalidateQueries({ queryKey: ["/api/allocations"] }),
+      queryClient.invalidateQueries({ queryKey: ["/api/skus"] }),
+    ]);
+    setLastRefreshTime(new Date());
+    setIsRefreshing(false);
+    toast({
+      title: "Data Refreshed",
+      description: "All dashboard data has been updated.",
+    });
+  };
 
   const latestAllocation = Array.isArray(allocations) && allocations.length > 0 
     ? allocations[0] 
@@ -264,6 +305,38 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Data Freshness Indicator */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border bg-muted/30" data-testid="data-freshness-indicator">
+            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+            <div className="flex items-center gap-3 text-xs">
+              <span className="flex items-center gap-1">
+                <span className={`h-1.5 w-1.5 rounded-full ${getDataFreshnessStatus(regimeUpdatedAt) === 'fresh' ? 'bg-green-500' : getDataFreshnessStatus(regimeUpdatedAt) === 'recent' ? 'bg-yellow-500' : 'bg-red-500'}`} />
+                <span className="text-muted-foreground">Regime:</span>
+                <span className="font-medium">{getDataAge(regimeUpdatedAt)}</span>
+              </span>
+              <span className="flex items-center gap-1">
+                <span className={`h-1.5 w-1.5 rounded-full ${getDataFreshnessStatus(allocationsUpdatedAt) === 'fresh' ? 'bg-green-500' : getDataFreshnessStatus(allocationsUpdatedAt) === 'recent' ? 'bg-yellow-500' : 'bg-red-500'}`} />
+                <span className="text-muted-foreground">Allocations:</span>
+                <span className="font-medium">{getDataAge(allocationsUpdatedAt)}</span>
+              </span>
+              <span className="flex items-center gap-1">
+                <span className={`h-1.5 w-1.5 rounded-full ${getDataFreshnessStatus(skusUpdatedAt) === 'fresh' ? 'bg-green-500' : getDataFreshnessStatus(skusUpdatedAt) === 'recent' ? 'bg-yellow-500' : 'bg-red-500'}`} />
+                <span className="text-muted-foreground">SKUs:</span>
+                <span className="font-medium">{getDataAge(skusUpdatedAt)}</span>
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 ml-1"
+              onClick={handleRefreshAll}
+              disabled={isRefreshing}
+              data-testid="button-refresh-all-data"
+            >
+              <RefreshCw className={`h-3 w-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
+          <Separator orientation="vertical" className="h-8" />
           <Badge variant={isConnected ? "default" : "outline"} className="gap-1.5" data-testid="badge-connection-status">
             <Radio className={`h-3 w-3 ${isConnected ? 'animate-pulse' : ''}`} />
             {isConnected ? 'Live Updates' : 'Connecting...'}
