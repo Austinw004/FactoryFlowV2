@@ -142,8 +142,8 @@ async function runEnhancedForecastComparison(): Promise<EnhancedAccuracyResult[]
       .filter(v => v !== undefined && v !== 0);
     if (regimeImprovements.length > 0) {
       const avgRegimeImprovement = regimeImprovements.reduce((a, b) => a + b, 0) / regimeImprovements.length;
-      const emoji = avgRegimeImprovement > 0 ? '✅' : avgRegimeImprovement < 0 ? '⚠️' : '➖';
-      console.log(`    ${emoji} ${regime}: ${avgRegimeImprovement.toFixed(2)}% improvement`);
+      const label = avgRegimeImprovement > 0 ? '[+]' : avgRegimeImprovement < 0 ? '[-]' : '[=]';
+      console.log(`    ${label} ${regime}: ${avgRegimeImprovement.toFixed(2)}% improvement`);
     }
   }
 
@@ -155,7 +155,7 @@ async function runEnhancedForecastComparison(): Promise<EnhancedAccuracyResult[]
     }
   }
   for (const e of allEnhancements) {
-    console.log(`    ✓ ${e}`);
+    console.log(`    - ${e}`);
   }
 
   return results;
@@ -279,7 +279,7 @@ function runEnhancedForecasting(
 }
 
 async function main() {
-  console.log('🎯 TESTING FORECAST ACCURACY\n');
+  console.log('[TEST] TESTING FORECAST ACCURACY\n');
   
   // Run the enhanced forecasting comparison (primary test)
   const enhancedResults = await runEnhancedForecastComparison();
@@ -294,31 +294,31 @@ async function main() {
   
   if (enhancedResults.length > 0) {
     const avgImprovement = enhancedResults.reduce((sum, r) => sum + r.improvement.overall, 0) / enhancedResults.length;
-    console.log(`  ✅ ${enhancedResults.length} companies tested with 6 thesis-aligned enhancements`);
-    console.log(`  ✅ Average accuracy improvement: ${avgImprovement.toFixed(2)}%`);
-    console.log(`  ✅ All enhancements reinforce the FDR thesis\n`);
+    console.log(`  [RESULT] ${enhancedResults.length} companies tested with 6 thesis-aligned enhancements`);
+    console.log(`  [RESULT] Average accuracy improvement: ${avgImprovement.toFixed(2)}%`);
+    console.log(`  [RESULT] All enhancements reinforce the FDR thesis\n`);
   }
   
-  console.log('📊 MAPE THRESHOLDS:');
-  console.log(`  • MAPE < 5%:  Threshold A`);
-  console.log(`  • MAPE < 10%: Threshold B`);
-  console.log(`  • MAPE < 15%: Threshold C`);
-  console.log(`  • MAPE > 20%: Threshold D\n`);
+  console.log('[THRESHOLDS] MAPE THRESHOLDS:');
+  console.log(`  - MAPE < 5%:  Threshold A`);
+  console.log(`  - MAPE < 10%: Threshold B`);
+  console.log(`  - MAPE < 15%: Threshold C`);
+  console.log(`  - MAPE > 20%: Threshold D\n`);
 
   // Skip comprehensive validation which requires valid company records
   // Focus on the enhanced forecasting results above
   const results = { totalPredictions: 0, commodityPredictions: 0, machineryPredictions: 0, workforcePredictions: 0, avgCommodityMAPE: 0, avgMachineryMAPE: 0, avgWorkforceMAPE: 0 };
 
-  console.log('\n\n📊 COMPREHENSIVE FORECAST ACCURACY RESULTS');
+  console.log('\n\n[RESULTS] COMPREHENSIVE FORECAST ACCURACY RESULTS');
   console.log('═══════════════════════════════════════════════════════════════\n');
 
-  console.log('📈 PREDICTION VOLUME:');
+  console.log('[VOLUME] PREDICTION VOLUME:');
   console.log(`  Total Predictions: ${results.totalPredictions.toLocaleString()}`);
-  console.log(`  ├─ Commodity Forecasts: ${results.commodityPredictions.toLocaleString()}`);
-  console.log(`  ├─ Machinery Forecasts: ${results.machineryPredictions.toLocaleString()}`);
-  console.log(`  └─ Workforce Forecasts: ${results.workforcePredictions.toLocaleString()}\n`);
+  console.log(`  - Commodity Forecasts: ${results.commodityPredictions.toLocaleString()}`);
+  console.log(`  - Machinery Forecasts: ${results.machineryPredictions.toLocaleString()}`);
+  console.log(`  - Workforce Forecasts: ${results.workforcePredictions.toLocaleString()}\n`);
 
-  console.log('🎯 ACCURACY METRICS (MAPE - Lower is Better):');
+  console.log('[ACCURACY] ACCURACY METRICS (MAPE - Lower is Better):');
   console.log(`  Commodity Price MAPE: ${(results.avgCommodityMAPE * 100).toFixed(2)}%`);
   console.log(`  Machinery Performance MAPE: ${(results.avgMachineryMAPE * 100).toFixed(2)}%`);
   console.log(`  Workforce Economics MAPE: ${(results.avgWorkforceMAPE * 100).toFixed(2)}%\n`);
@@ -330,28 +330,29 @@ async function main() {
   console.log('OVERALL PERFORMANCE:');
   console.log(`  Combined MAPE: ${overallMAPE.toFixed(2)}%\n`);
 
-  console.log('📊 MAPE THRESHOLDS:');
-  console.log(`  • MAPE < 5%:  Threshold A`);
-  console.log(`  • MAPE < 10%: Threshold B`);
-  console.log(`  • MAPE < 15%: Threshold C`);
-  console.log(`  • MAPE > 20%: Threshold D\n`);
+  console.log('[THRESHOLDS] MAPE THRESHOLDS:');
+  console.log(`  - MAPE < 5%:  Threshold A`);
+  console.log(`  - MAPE < 10%: Threshold B`);
+  console.log(`  - MAPE < 15%: Threshold C`);
+  console.log(`  - MAPE > 20%: Threshold D\n`);
 
-  console.log('🔬 METHODOLOGY:');
-  console.log('  • Historical Backtesting: 500 states from 2000-2024');
-  console.log('  • Prediction Horizons: 1 month, 3 months, 6 months');
-  console.log('  • Economic Regimes: All 4 dual-circuit regimes tested');
-  console.log('  • Comparison Models: Outperforms quantity theory, random walk, momentum\n');
+  console.log('[METHODOLOGY] METHODOLOGY:');
+  console.log('  - Historical Backtesting: 500 states from 2000-2024');
+  console.log('  - Prediction Horizons: 1 month, 3 months, 6 months');
+  console.log('  - Economic Regimes: All 4 dual-circuit regimes tested');
+  console.log('  - Comparison Models: Tested against quantity theory, random walk, momentum');
+  console.log('  NOTE: Comparative performance requires validated backtest results\n');
 
   console.log('═══════════════════════════════════════════════════════════════\n');
 
   // Try to get database metrics if available
   try {
-    console.log('🗄️ Checking for historical database metrics...\n');
+    console.log('[DATABASE] Checking for historical database metrics...\n');
     const dbEngine = new DatabaseValidationEngine();
     const dbMetrics = await dbEngine.analyzeExistingData();
     
     if (dbMetrics.totalPredictions > 0) {
-      console.log('📊 DATABASE HISTORICAL PERFORMANCE:');
+      console.log('[DATABASE] DATABASE HISTORICAL PERFORMANCE:');
       console.log(`  Total Historical Predictions: ${dbMetrics.totalPredictions.toLocaleString()}`);
       console.log(`  Overall MAPE: ${dbMetrics.overallMetrics.mape.toFixed(2)}%`);
       console.log(`  Directional Accuracy: ${dbMetrics.overallMetrics.directionalAccuracy.toFixed(2)}%`);
@@ -369,7 +370,7 @@ async function main() {
     console.log('  No historical database metrics available yet.\n');
   }
 
-  console.log('✅ Forecast accuracy testing complete!\n');
+  console.log('[COMPLETE] Forecast accuracy testing complete!\n');
 }
 
 main().catch(console.error);

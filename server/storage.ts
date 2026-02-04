@@ -366,6 +366,9 @@ export interface IStorage {
     confidenceHitRate: number | null;
     mae: number | null;
     rmse: number | null;
+    // Date range for transparency
+    earliestPrediction: string | null;
+    latestPrediction: string | null;
   }>;
   getForecastAccuracyByPeriod(companyId: string): Promise<Array<{
     period: string;
@@ -1725,7 +1728,9 @@ export class DbStorage implements IStorage {
               WHEN ${demandPredictions.actualDemand} IS NOT NULL 
               THEN POWER(${demandPredictions.predictedDemand} - ${demandPredictions.actualDemand}, 2)
             END
-          ))`
+          ))`,
+        earliestPrediction: sql<string>`MIN(${demandPredictions.createdAt})::text`,
+        latestPrediction: sql<string>`MAX(${demandPredictions.createdAt})::text`
       })
       .from(demandPredictions)
       .where(eq(demandPredictions.companyId, companyId));

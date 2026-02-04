@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Play, CheckCircle2, TrendingUp, Target, Activity } from "lucide-react";
+import { Loader2, Play, CheckCircle2, TrendingUp, Target, Activity, AlertTriangle, Database, Wifi } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -98,11 +98,12 @@ export default function HistoricalBacktesting() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <div className="bg-primary/5 border border-primary/20 rounded-md p-3 mb-2">
-            <p className="text-sm font-medium text-primary mb-1">✓ Real Data Integration Ready</p>
+          <div className="bg-muted/50 border border-muted-foreground/20 rounded-md p-3 mb-2">
+            <p className="text-sm font-medium mb-1">Data Sources</p>
             <p className="text-xs text-muted-foreground">
-              System configured for FRED (Federal Reserve) and Alpha Vantage APIs.
-              Using deterministic fallback data when APIs unavailable.
+              Configured to use FRED (Federal Reserve) and Alpha Vantage APIs when available.
+              Falls back to deterministic historical data if live APIs are unavailable.
+              Data source will be shown in results.
             </p>
           </div>
           
@@ -180,6 +181,46 @@ export default function HistoricalBacktesting() {
       {/* Results Display */}
       {results && results.totalPredictions > 0 && (
         <>
+          {/* Data Source & Disclaimer Banner */}
+          <Card className={results.dataSource === 'synthetic' ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20' : 'border-green-500 bg-green-50 dark:bg-green-950/20'}>
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-start gap-3">
+                {results.dataSource === 'synthetic' ? (
+                  <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+                ) : (
+                  <Database className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                )}
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-sm">Data Source:</span>
+                    <Badge 
+                      variant={results.dataSource === 'synthetic' ? 'secondary' : 'default'}
+                      data-testid="badge-data-source"
+                    >
+                      {results.dataSource === 'real_api' ? (
+                        <><Wifi className="h-3 w-3 mr-1" /> Real API Data</>
+                      ) : (
+                        <><Database className="h-3 w-3 mr-1" /> Synthetic/Fallback</>
+                      )}
+                    </Badge>
+                  </div>
+                  {results.dataSource === 'real_api' ? (
+                    <p className="text-sm text-green-700 dark:text-green-300">
+                      Results based on real historical data from FRED and Alpha Vantage APIs.
+                    </p>
+                  ) : (
+                    <p className="text-sm text-yellow-700 dark:text-yellow-300" data-testid="text-data-warning">
+                      {results.dataSourceWarning || 'Results based on synthetic/fallback data. For research and testing purposes only.'}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1" data-testid="text-results-disclaimer">
+                    Results based on {results.totalPredictions} predictions from 2015-2023 test period.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Summary Cards */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
@@ -308,10 +349,10 @@ export default function HistoricalBacktesting() {
                 <h3 className="font-semibold text-sm">Overall Performance</h3>
                 <p className="text-sm text-muted-foreground">
                   {results.correctDirectionPct >= 70 
-                    ? "✅ Strong validation - The FDR-based system successfully predicted market direction in most cases, significantly outperforming random chance (50%)."
+                    ? `Strong result - ${results.correctDirectionPct}% directional accuracy exceeds the 50% random baseline by ${(results.correctDirectionPct - 50).toFixed(0)} percentage points.`
                     : results.correctDirectionPct >= 60
-                    ? "⚠️ Moderate validation - The system shows predictive power above baseline, but has room for calibration improvements."
-                    : "❌ Weak validation - Results suggest the model needs recalibration or additional features."}
+                    ? `Moderate result - ${results.correctDirectionPct}% accuracy shows some predictive signal above 50% baseline, but further validation is recommended.`
+                    : `Weak result - ${results.correctDirectionPct}% accuracy is close to 50% random chance. Model calibration may be needed.`}
                 </p>
               </div>
 
@@ -319,8 +360,8 @@ export default function HistoricalBacktesting() {
                 <h3 className="font-semibold text-sm">Regime Classification</h3>
                 <p className="text-sm text-muted-foreground">
                   {results.correctRegimePct >= 65
-                    ? "✅ The four-regime framework (Healthy Expansion, Asset-Led Growth, Imbalanced Excess, Real Economy Lead) accurately categorized economic conditions."
-                    : "⚠️ Regime boundaries may need adjustment based on historical patterns."}
+                    ? `The four-regime framework achieved ${results.correctRegimePct}% accuracy in categorizing economic conditions.`
+                    : `${results.correctRegimePct}% regime accuracy - boundaries may need adjustment based on historical patterns.`}
                 </p>
               </div>
 
@@ -328,29 +369,36 @@ export default function HistoricalBacktesting() {
                 <h3 className="font-semibold text-sm">Price Forecasting</h3>
                 <p className="text-sm text-muted-foreground">
                   {results.commodityPriceMAPE <= 15
-                    ? `✅ Excellent - ${results.commodityPriceMAPE}% MAPE is highly competitive for commodity price forecasting.`
+                    ? `${results.commodityPriceMAPE}% MAPE - competitive accuracy for commodity price forecasting.`
                     : results.commodityPriceMAPE <= 25
-                    ? `✅ Good - ${results.commodityPriceMAPE}% MAPE is acceptable for 6-month commodity forecasts.`
-                    : `⚠️ ${results.commodityPriceMAPE}% MAPE suggests volatility challenges in the test period.`}
+                    ? `${results.commodityPriceMAPE}% MAPE - acceptable for 6-month commodity forecasts.`
+                    : `${results.commodityPriceMAPE}% MAPE - higher than typical; volatility challenges in the test period may be a factor.`}
                 </p>
               </div>
 
               <div className="bg-muted p-4 rounded-md">
-                <h3 className="font-semibold text-sm mb-2">Statistical Significance</h3>
+                <h3 className="font-semibold text-sm mb-2">Statistical Context</h3>
                 <p className="text-sm text-muted-foreground">
-                  With {results.totalPredictions} predictions validated against real 2015-2023 data, these results are 
-                  statistically significant (p {"<"} 0.001). The dual-circuit FDR framework demonstrates measurable 
-                  predictive power for economic regime transitions and commodity price movements using actual historical data 
-                  from the Federal Reserve Economic Data (FRED) and Alpha Vantage.
+                  With {results.totalPredictions} predictions tested against 2015-2023 data
+                  {results.dataSource === 'synthetic' && ' (synthetic fallback data)'}
+                  {results.dataSource === 'real_api' && ' (real FRED/Alpha Vantage data)'}
+                  , these results provide {results.totalPredictions >= 100 ? 'a reasonable sample size' : 'a limited sample size'} for evaluation.
+                  {results.correctDirectionPct >= 60 
+                    ? ` The ${results.correctDirectionPct}% directional accuracy exceeds the 50% random baseline.`
+                    : ` The ${results.correctDirectionPct}% directional accuracy is close to random chance (50%), suggesting further calibration may be needed.`
+                  }
                 </p>
+                {results.dataSource === 'synthetic' && (
+                  <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2">
+                    Note: These results use synthetic fallback data and should not be treated as verified performance metrics.
+                  </p>
+                )}
               </div>
               
               <div className="bg-primary/5 border border-primary/20 rounded-md p-4">
-                <h3 className="font-semibold text-sm mb-2">🔒 Private Research - Not For Publication</h3>
+                <h3 className="font-semibold text-sm mb-2">Private Research Data</h3>
                 <p className="text-sm text-muted-foreground">
-                  This validation system is proprietary to your SaaS platform. Results are stored in your private database 
-                  and are not shared publicly. The dual-circuit economic framework is your competitive advantage for 
-                  manufacturing intelligence.
+                  Validation results are stored in your private database and are not shared externally.
                 </p>
               </div>
             </CardContent>
