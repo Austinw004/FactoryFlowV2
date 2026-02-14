@@ -19,6 +19,7 @@
 
 import { RealHistoricalDataFetcher } from './realHistoricalData';
 import type { HistoricalDataPoint } from './historicalBacktesting';
+import { classifyRegimeFromFDR } from './regimeConstants';
 
 export interface CalibrationParams {
   // FDR thresholds for regime classification
@@ -186,15 +187,7 @@ export class ModelCalibrationEngine {
    * Classify regime based on FDR and parameters
    */
   private classifyRegime(fdr: number, params: CalibrationParams): string {
-    if (fdr >= params.fdrHealthyExpansionMin && fdr <= params.fdrHealthyExpansionMax) {
-      return 'Healthy Expansion';
-    } else if (fdr > params.fdrAssetLedGrowthMin && fdr <= params.fdrAssetLedGrowthMax) {
-      return 'Asset-Led Growth';
-    } else if (fdr > params.fdrImbalancedExcessMin) {
-      return 'Imbalanced Excess';
-    } else {
-      return 'Real Economy Lead';
-    }
+    return classifyRegimeFromFDR(fdr);
   }
   
   /**

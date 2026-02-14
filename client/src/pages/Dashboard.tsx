@@ -55,7 +55,7 @@ export default function Dashboard() {
       
       toast({
         title: "Economic Regime Changed",
-        description: `The economic regime has shifted from ${message.data.from} to ${message.data.to}. FDR: ${message.data.fdr?.toFixed(2)}`,
+        description: `The economic regime has shifted from ${message.data.from} to ${message.data.to}. FDR: ${Number.isFinite(Number(message.data.fdr)) ? Number(message.data.fdr).toFixed(2) : '—'}`,
         variant: severity as 'default' | 'destructive',
         duration: 10000, // Show for 10 seconds
       });
@@ -193,18 +193,24 @@ export default function Dashboard() {
   const regimeData = (regime as any) ?? {};
   const policySignals = regimeData?.signals || regimeData?.policySignals || [];
   const regimeType = regimeData?.regime || "UNKNOWN";
-  const fdr = regimeData?.fdr ?? 1.0;
+  const fdrRaw = regimeData?.fdr ?? 1.0;
+  const fdr = Number.isFinite(Number(fdrRaw)) ? Number(fdrRaw) : 1.0;
   const intensity = regimeData?.intensity ?? 50;
   const economicData = regimeData?.data ?? {};
   const dataSource = regimeData?.source || 'unknown';
   const regimeEvidence = regimeData?.regimeEvidence ?? null;
   const regimeIntelligence = regimeData?.intelligence ?? null;
   
-  const sp500 = economicData.sp500Index || economicData.sp500 || null;
-  const inflation = economicData.inflationRate || economicData.inflation || null;
-  const gdpNominal = economicData.gdpNominal || null;
-  const gdpReal = economicData.gdpReal || null;
-  const sentiment = economicData.sentimentScore !== undefined ? economicData.sentimentScore : null;
+  const sp500Raw = economicData.sp500Index || economicData.sp500 || null;
+  const sp500 = sp500Raw != null && Number.isFinite(Number(sp500Raw)) ? Number(sp500Raw) : null;
+  const inflationRaw = economicData.inflationRate ?? economicData.inflation ?? null;
+  const inflation = inflationRaw != null && Number.isFinite(Number(inflationRaw)) ? Number(inflationRaw) : null;
+  const gdpNominalRaw = economicData.gdpNominal || null;
+  const gdpNominal = gdpNominalRaw != null && Number.isFinite(Number(gdpNominalRaw)) ? Number(gdpNominalRaw) : null;
+  const gdpRealRaw = economicData.gdpReal || null;
+  const gdpReal = gdpRealRaw != null && Number.isFinite(Number(gdpRealRaw)) ? Number(gdpRealRaw) : null;
+  const sentimentRaw = economicData.sentimentScore;
+  const sentiment = sentimentRaw !== undefined && sentimentRaw !== null && Number.isFinite(Number(sentimentRaw)) ? Number(sentimentRaw) : null;
 
   const regimeLabels: Record<string, string> = {
     "HEALTHY_EXPANSION": "Healthy Expansion",

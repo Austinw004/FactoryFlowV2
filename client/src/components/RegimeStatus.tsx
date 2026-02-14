@@ -75,7 +75,8 @@ const regimeConfig: Record<Regime, { label: string; description: string; thresho
 };
 
 function ConfidenceBar({ label, value, testId, tooltip }: { label: string; value: number; testId?: string; tooltip?: string }) {
-  const pct = Math.round(value * 100);
+  const safeValue = Number.isFinite(value) ? value : 0;
+  const pct = Math.round(safeValue * 100);
   return (
     <div className="space-y-1" data-testid={testId}>
       <div className="flex justify-between items-center text-xs">
@@ -90,11 +91,12 @@ function ConfidenceBar({ label, value, testId, tooltip }: { label: string; value
   );
 }
 
-export function RegimeStatus({ regime, fdr, intensity, regimeEvidence, intelligence }: RegimeStatusProps) {
+export function RegimeStatus({ regime, fdr: fdrProp, intensity, regimeEvidence, intelligence }: RegimeStatusProps) {
+  const fdr = Number.isFinite(Number(fdrProp)) ? Number(fdrProp) : 1.0;
   const config = regimeConfig[regime] || regimeConfig.HEALTHY_EXPANSION;
   const confidence = intelligence?.confidence || regimeEvidence?.confidence;
   const overallConfidence = confidence?.overall ?? 0.5;
-  const confidencePct = Math.round(overallConfidence * 100);
+  const confidencePct = Math.round(Number.isFinite(overallConfidence) ? overallConfidence * 100 : 50);
 
   const trendDirection = intelligence?.fdrTrend?.trendDirection;
   const TrendIcon = trendDirection === 'rising' ? TrendingUp : trendDirection === 'falling' ? TrendingDown : Minus;
@@ -143,7 +145,7 @@ export function RegimeStatus({ regime, fdr, intensity, regimeEvidence, intellige
             {regimeEvidence && (
               <div className="flex justify-between items-center text-sm">
                 <span className="text-muted-foreground">Distance to Next</span>
-                <span className="font-mono text-xs tabular-nums" data-testid="text-distance-threshold">{regimeEvidence.distanceToNextThreshold.toFixed(2)}</span>
+                <span className="font-mono text-xs tabular-nums" data-testid="text-distance-threshold">{Number.isFinite(regimeEvidence.distanceToNextThreshold) ? regimeEvidence.distanceToNextThreshold.toFixed(2) : '—'}</span>
               </div>
             )}
 

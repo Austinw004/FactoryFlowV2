@@ -19,8 +19,8 @@ const actionRecommendations: Record<string, {
   }>;
 }> = {
   HEALTHY_EXPANSION: {
-    title: "Normal Growth Mode",
-    description: "Balanced economic conditions - standard procurement strategy",
+    title: "Healthy Expansion",
+    description: "FDR < 1.2. Balanced growth between asset and real economy circuits.",
     actions: [
       {
         icon: CheckCircle2,
@@ -37,8 +37,8 @@ const actionRecommendations: Record<string, {
     ],
   },
   ASSET_LED_GROWTH: {
-    title: "Early Warning - Market Heating",
-    description: "Prices starting to rise - prepare for potential peak",
+    title: "Asset-Led Growth",
+    description: "FDR 1.2-1.8. Asset circuit outpacing real economy.",
     actions: [
       {
         icon: AlertCircle,
@@ -61,8 +61,8 @@ const actionRecommendations: Record<string, {
     ],
   },
   IMBALANCED_EXCESS: {
-    title: "Bubble Territory - Correction Likely",
-    description: "Prices too high and disconnected from real economy - expect downturn",
+    title: "Imbalanced Excess",
+    description: "FDR 1.8-2.5. Significant asset-real economy decoupling.",
     actions: [
       {
         icon: TrendingDown,
@@ -85,8 +85,8 @@ const actionRecommendations: Record<string, {
     ],
   },
   REAL_ECONOMY_LEAD: {
-    title: "Opportunity Zone - Best Time to Buy",
-    description: "Prices low, recovery starting - optimal procurement window",
+    title: "Real Economy Lead",
+    description: "FDR > 2.5. Counter-cyclical opportunity window.",
     actions: [
       {
         icon: ShoppingCart,
@@ -170,7 +170,7 @@ export function RegimeActionCards({ regime, fdr }: RegimeActionCardsProps) {
         
         <div className="mt-4 pt-4 border-t">
           <p className="text-xs text-muted-foreground">
-            <strong>Current FDR: {fdr.toFixed(2)}</strong> · These recommendations are automatically adjusted based on the dual-circuit economic model and real-time FDR analysis.
+            <strong>Current FDR: {Number.isFinite(fdr) ? fdr.toFixed(2) : '—'}</strong> · These recommendations are automatically adjusted based on the dual-circuit economic model and real-time FDR analysis.
           </p>
         </div>
       </CardContent>

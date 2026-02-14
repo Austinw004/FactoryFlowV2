@@ -10,6 +10,7 @@
 import { db } from "../db";
 import { historicalPredictions, predictionAccuracyMetrics, economicSnapshots } from "@shared/schema";
 import { sql, and, gte, lte, isNotNull } from "drizzle-orm";
+import { classifyRegimeFromFDR } from './regimeConstants';
 
 export interface DatabaseValidationResult {
   totalPredictions: number;
@@ -325,16 +326,7 @@ export class DatabaseValidationEngine {
    * Determine regime based on FDR and parameters
    */
   private determineRegime(fdr: number, params: any): string {
-    if (fdr < params.fdrRealEconomyLeadMax) {
-      return 'REAL_ECONOMY_LEAD';
-    } else if (fdr >= params.fdrHealthyExpansionMin && fdr < params.fdrHealthyExpansionMax) {
-      return 'HEALTHY_EXPANSION';
-    } else if (fdr >= params.fdrAssetLedGrowthMin && fdr < params.fdrAssetLedGrowthMax) {
-      return 'ASSET_LED_GROWTH';
-    } else if (fdr >= params.fdrImbalancedExcessMin) {
-      return 'IMBALANCED_EXCESS';
-    }
-    return 'HEALTHY_EXPANSION'; // default
+    return classifyRegimeFromFDR(fdr);
   }
   
   /**

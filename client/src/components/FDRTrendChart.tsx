@@ -19,10 +19,10 @@ const regimeColors: Record<string, string> = {
 };
 
 const regimeLabels: Record<string, string> = {
-  HEALTHY_EXPANSION: "Normal Growth",
-  ASSET_LED_GROWTH: "Early Warning",
-  IMBALANCED_EXCESS: "Bubble Territory",
-  REAL_ECONOMY_LEAD: "Opportunity Zone",
+  HEALTHY_EXPANSION: "Healthy Expansion",
+  ASSET_LED_GROWTH: "Asset-Led Growth",
+  IMBALANCED_EXCESS: "Imbalanced Excess",
+  REAL_ECONOMY_LEAD: "Real Economy Lead",
 };
 
 export function FDRTrendChart() {
@@ -90,7 +90,7 @@ export function FDRTrendChart() {
           </div>
           {currentFDR && currentRegime && (
             <div className="text-right">
-              <p className="text-2xl font-mono font-semibold">{currentFDR.toFixed(2)}</p>
+              <p className="text-2xl font-mono font-semibold">{Number.isFinite(currentFDR) ? currentFDR.toFixed(2) : '—'}</p>
               <Badge variant="secondary" className="mt-1">
                 {regimeLabels[currentRegime]}
               </Badge>
@@ -119,7 +119,7 @@ export function FDRTrendChart() {
                 borderRadius: '6px',
               }}
               formatter={(value: number, name: string) => {
-                if (name === 'fdr') return [value.toFixed(2), 'FDR'];
+                if (name === 'fdr') return [Number.isFinite(value) ? value.toFixed(2) : '—', 'FDR'];
                 return [value, name];
               }}
               labelFormatter={(label) => `Date: ${label}`}

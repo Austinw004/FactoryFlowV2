@@ -14,6 +14,7 @@
  */
 
 import axios from 'axios';
+import { classifyRegimeFromFDR } from './regimeConstants';
 
 // ============================================================================
 // TYPES & INTERFACES (Based on Paper Section 2)
@@ -139,15 +140,7 @@ export class DualCircuitEngine {
    * Paper Section 4.1: "Four distinct economic regimes emerge from this framework"
    */
   static determineRegime(fdr: number): EconomicRegime {
-    if (fdr < 1.2) {
-      return 'HEALTHY_EXPANSION';
-    } else if (fdr < 1.8) {
-      return 'ASSET_LED_GROWTH';
-    } else if (fdr < 2.5) {
-      return 'IMBALANCED_EXCESS';
-    } else {
-      return 'REAL_ECONOMY_LEAD';
-    }
+    return classifyRegimeFromFDR(fdr) as EconomicRegime;
   }
   
   /**

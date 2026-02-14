@@ -666,7 +666,7 @@ export default function LandingPage() {
               <span className="font-semibold">Prescient Labs</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              &copy; 2025 Prescient Labs. All rights reserved.
+              &copy; 2026 Prescient Labs. All rights reserved.
             </p>
           </div>
         </div>

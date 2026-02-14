@@ -354,7 +354,7 @@ function FdrAlertForm({ onSubmit, onCancel, isPending }: { onSubmit: (data: any)
             <Label htmlFor="alert-name">Alert Name *</Label>
             <Input
               id="alert-name"
-              placeholder="e.g., Bubble Risk Alert"
+              placeholder="e.g., Regime Transition Alert"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required

@@ -102,8 +102,8 @@ const REGIME_OPTIONS = [
   { value: "balanced", label: "Balanced" },
   { value: "HEALTHY_EXPANSION", label: "Healthy Expansion" },
   { value: "ASSET_LED_GROWTH", label: "Asset-Led Growth" },
-  { value: "IMBALANCED_EXCESS", label: "Bubble Territory" },
-  { value: "REAL_ECONOMY_LEAD", label: "Opportunity Zone" },
+  { value: "IMBALANCED_EXCESS", label: "Imbalanced Excess" },
+  { value: "REAL_ECONOMY_LEAD", label: "Real Economy Lead" },
 ];
 
 const REGIME_COLORS: Record<string, string> = {

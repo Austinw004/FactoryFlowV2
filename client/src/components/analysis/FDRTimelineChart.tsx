@@ -68,10 +68,10 @@ export function FDRTimelineChart({
             {showThresholds && (
               <>
                 <ReferenceLine 
-                  y={1.5} 
+                  y={1.8} 
                   stroke="#ef4444" 
                   strokeDasharray="3 3" 
-                  label={{ value: "Bubble Risk (1.5)", position: "right", fill: "#ef4444" }}
+                  label={{ value: "Imbalanced Excess (1.8)", position: "right", fill: "#ef4444" }}
                 />
                 <ReferenceLine 
                   y={0.9} 

@@ -19,7 +19,7 @@ function getRegimeTimingForMA(regime: string, fdr: number): { label: string; var
     case "ASSET_LED_GROWTH":
       return { label: "Cautious", variant: "secondary", description: `FDR ${fdr.toFixed(2)} (1.2-1.8) - Assets outpacing real economy, valuations elevated` };
     case "IMBALANCED_EXCESS":
-      return { label: "Avoid", variant: "destructive", description: `FDR ${fdr.toFixed(2)} (1.8-2.5) - Asset bubble territory, wait for correction` };
+      return { label: "Avoid", variant: "destructive", description: `FDR ${fdr.toFixed(2)} (1.8-2.5) - Imbalanced Excess, significant asset-real economy decoupling` };
     case "REAL_ECONOMY_LEAD":
       return { label: "Counter-Cyclical", variant: "default", description: `FDR ${fdr.toFixed(2)} >= 2.5 - Real economy leading, asset prices deflated, potential buying opportunity` };
     default:
@@ -302,7 +302,7 @@ export default function MAIntelligence() {
                   The valuation calculator uses the current FDR (Financial-to-Real Divergence) ratio to adjust M&A valuations:
                 </p>
                 <ul className="text-sm space-y-2 list-disc list-inside text-muted-foreground">
-                  <li><strong>Imbalanced Excess:</strong> Apply 15% discount for acquisitions (asset bubble)</li>
+                  <li><strong>Imbalanced Excess:</strong> Apply 15% discount for acquisitions (imbalanced excess)</li>
                   <li><strong>Real Economy Lead:</strong> Apply 10% discount (good buying opportunity)</li>
                   <li><strong>Asset-Led Growth:</strong> Apply 15% premium (assets expensive)</li>
                   <li><strong>Healthy Expansion:</strong> Use market valuations (balanced conditions)</li>

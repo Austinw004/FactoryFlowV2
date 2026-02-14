@@ -62,10 +62,10 @@ const REGIME_COLORS: Record<string, string> = {
 };
 
 const REGIME_LABELS: Record<string, string> = {
-  "HEALTHY_EXPANSION": "Normal Growth",
-  "ASSET_LED_GROWTH": "Early Warning",
-  "IMBALANCED_EXCESS": "Bubble Territory",
-  "REAL_ECONOMY_LEAD": "Opportunity Zone",
+  "HEALTHY_EXPANSION": "Healthy Expansion",
+  "ASSET_LED_GROWTH": "Asset-Led Growth",
+  "IMBALANCED_EXCESS": "Imbalanced Excess",
+  "REAL_ECONOMY_LEAD": "Real Economy Lead",
 };
 
 const PRIORITY_COLORS: Record<string, string> = {

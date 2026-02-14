@@ -145,10 +145,10 @@ export async function runComprehensiveTest(companyId: string): Promise<Comprehen
 
   // Group by FDR level
   const byFDRLevel = [
-    { min: 0, max: 1.2, label: 'Low FDR (0.8-1.2): Real Economy Lead' },
-    { min: 1.2, max: 1.5, label: 'Medium FDR (1.2-1.5): Healthy Expansion' },
-    { min: 1.5, max: 1.8, label: 'High FDR (1.5-1.8): Asset-Led Growth' },
-    { min: 1.8, max: 3.0, label: 'Extreme FDR (1.8+): Bubble/Imbalanced Excess' },
+    { min: 0, max: 1.2, label: 'Low FDR (0-1.2): Healthy Expansion' },
+    { min: 1.2, max: 1.8, label: 'Medium FDR (1.2-1.8): Asset-Led Growth' },
+    { min: 1.8, max: 2.5, label: 'High FDR (1.8-2.5): Imbalanced Excess' },
+    { min: 2.5, max: Infinity, label: 'Extreme FDR (2.5+): Real Economy Lead' },
   ].map(range => {
     const rangePreds = validPredictions.filter(p => 
       p.fdrAtPrediction >= range.min && p.fdrAtPrediction < range.max
