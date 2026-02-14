@@ -3,6 +3,19 @@ import { db } from './db';
 import { users } from '@shared/schema';
 import { eq, sql } from 'drizzle-orm';
 
+const processedEventIds = new Set<string>();
+const MAX_PROCESSED_EVENTS = 10000;
+
+function pruneProcessedEvents() {
+  if (processedEventIds.size > MAX_PROCESSED_EVENTS) {
+    const entries = Array.from(processedEventIds);
+    const toRemove = entries.slice(0, entries.length - MAX_PROCESSED_EVENTS / 2);
+    for (const id of toRemove) {
+      processedEventIds.delete(id);
+    }
+  }
+}
+
 export class WebhookHandlers {
   static async processWebhook(payload: Buffer, signature: string, uuid: string): Promise<void> {
     if (!Buffer.isBuffer(payload)) {
@@ -17,11 +30,19 @@ export class WebhookHandlers {
     const sync = await getStripeSync();
     await sync.processWebhook(payload, signature, uuid);
     
-    // Additionally, process subscription events to update user records
     try {
-      const stripe = await getUncachableStripeClient();
       const event = JSON.parse(payload.toString());
       
+      if (event.id && processedEventIds.has(event.id)) {
+        console.log(`[Webhook] Skipping duplicate event: ${event.id} (${event.type})`);
+        return;
+      }
+
+      if (event.id) {
+        processedEventIds.add(event.id);
+        pruneProcessedEvents();
+      }
+
       await WebhookHandlers.handleSubscriptionEvents(event);
     } catch (error) {
       console.error('Error processing subscription webhook event:', error);
@@ -46,6 +67,15 @@ export class WebhookHandlers {
       case 'customer.subscription.trial_will_end':
         console.log('[Webhook] Trial ending soon for subscription:', data.id);
         break;
+      case 'invoice.paid':
+        await this.handleInvoicePaid(data);
+        break;
+      case 'invoice.payment_failed':
+        await this.handleInvoicePaymentFailed(data);
+        break;
+      case 'charge.refunded':
+        await this.handleChargeRefunded(data);
+        break;
     }
   }
   
@@ -57,7 +87,6 @@ export class WebhookHandlers {
     
     if (!customerId || !subscriptionId) return;
     
-    // Find user by stripe customer ID and update subscription
     const result = await db.execute(
       sql`UPDATE users SET 
         stripe_subscription_id = ${subscriptionId},
@@ -80,11 +109,9 @@ export class WebhookHandlers {
       ? new Date(subscription.trial_end * 1000) 
       : null;
     
-    // Get tier from product metadata
     let tier: string | null = null;
     if (subscription.items?.data?.[0]?.price?.product) {
       const productId = subscription.items.data[0].price.product;
-      // Query the stripe.products table for tier metadata
       const productResult = await db.execute(
         sql`SELECT metadata FROM stripe.products WHERE id = ${productId}`
       );
@@ -93,7 +120,6 @@ export class WebhookHandlers {
       }
     }
     
-    // Update user record
     const updateQuery = tier 
       ? sql`UPDATE users SET 
           stripe_subscription_id = ${subscriptionId},
@@ -132,5 +158,67 @@ export class WebhookHandlers {
     if (result.rows.length > 0) {
       console.log('[Webhook] Subscription canceled for user:', result.rows[0].id);
     }
+  }
+
+  static async handleInvoicePaid(invoice: any): Promise<void> {
+    const customerId = invoice.customer;
+    const subscriptionId = invoice.subscription;
+
+    if (!customerId) return;
+
+    if (subscriptionId) {
+      const result = await db.execute(
+        sql`UPDATE users SET 
+          subscription_status = 'active',
+          updated_at = NOW()
+        WHERE stripe_customer_id = ${customerId}
+          AND subscription_status IN ('past_due', 'incomplete')
+        RETURNING id`
+      );
+
+      if (result.rows.length > 0) {
+        console.log('[Webhook] Invoice paid, subscription reactivated for user:', result.rows[0].id);
+      }
+    }
+
+    console.log(`[Webhook] Invoice ${invoice.id} paid for customer ${customerId}, amount: ${invoice.amount_paid}`);
+  }
+
+  static async handleInvoicePaymentFailed(invoice: any): Promise<void> {
+    const customerId = invoice.customer;
+    const subscriptionId = invoice.subscription;
+
+    if (!customerId) return;
+
+    if (subscriptionId) {
+      const result = await db.execute(
+        sql`UPDATE users SET 
+          subscription_status = 'past_due',
+          updated_at = NOW()
+        WHERE stripe_customer_id = ${customerId}
+          AND subscription_status = 'active'
+        RETURNING id`
+      );
+
+      if (result.rows.length > 0) {
+        console.log('[Webhook] Invoice payment failed, subscription set to past_due for user:', result.rows[0].id);
+      }
+    }
+
+    console.log(`[Webhook] Invoice ${invoice.id} payment failed for customer ${customerId}`);
+  }
+
+  static async handleChargeRefunded(charge: any): Promise<void> {
+    const customerId = charge.customer;
+    const refundedAmount = charge.amount_refunded;
+    const totalAmount = charge.amount;
+    const isFullRefund = refundedAmount >= totalAmount;
+
+    if (!customerId) return;
+
+    console.log(
+      `[Webhook] Charge ${charge.id} refunded for customer ${customerId}. ` +
+      `Amount refunded: ${refundedAmount}/${totalAmount} (${isFullRefund ? 'full' : 'partial'})`
+    );
   }
 }

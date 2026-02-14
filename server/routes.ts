@@ -14233,6 +14233,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get payment methods for current user
+  app.get("/api/stripe/payment-methods", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await stripeService.getUser(userId);
+      
+      if (!user?.stripeCustomerId) {
+        return res.json({ paymentMethods: [] });
+      }
+
+      const stripe = await (await import('./stripeClient')).getUncachableStripeClient();
+      const methods = await stripe.paymentMethods.list({
+        customer: user.stripeCustomerId,
+        type: 'card',
+      });
+
+      const paymentMethods = methods.data.map(pm => ({
+        id: pm.id,
+        brand: pm.card?.brand || 'unknown',
+        last4: pm.card?.last4 || '****',
+        expMonth: pm.card?.exp_month,
+        expYear: pm.card?.exp_year,
+        isDefault: false,
+      }));
+
+      // Check which is the default payment method
+      const customer = await stripe.customers.retrieve(user.stripeCustomerId) as any;
+      const defaultPmId = customer.invoice_settings?.default_payment_method;
+      for (const pm of paymentMethods) {
+        if (pm.id === defaultPmId) {
+          pm.isDefault = true;
+        }
+      }
+
+      res.json({ paymentMethods });
+    } catch (error: any) {
+      console.error("Error fetching payment methods:", error);
+      res.status(500).json({ error: "Failed to fetch payment methods" });
+    }
+  });
+
+  // Get invoices/receipts for current user
+  app.get("/api/stripe/invoices", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await stripeService.getUser(userId);
+      
+      if (!user?.stripeCustomerId) {
+        return res.json({ invoices: [] });
+      }
+
+      const stripe = await (await import('./stripeClient')).getUncachableStripeClient();
+      const invoices = await stripe.invoices.list({
+        customer: user.stripeCustomerId,
+        limit: 24,
+      });
+
+      const invoiceData = invoices.data.map(inv => ({
+        id: inv.id,
+        number: inv.number,
+        status: inv.status,
+        total: inv.total,
+        amountPaid: inv.amount_paid,
+        currency: inv.currency,
+        created: inv.created,
+        periodStart: inv.period_start,
+        periodEnd: inv.period_end,
+        hostedInvoiceUrl: inv.hosted_invoice_url,
+        invoicePdf: inv.invoice_pdf,
+      }));
+
+      res.json({ invoices: invoiceData });
+    } catch (error: any) {
+      console.error("Error fetching invoices:", error);
+      res.status(500).json({ error: "Failed to fetch invoices" });
+    }
+  });
+
   // ============================================================================
   // AGENTIC AI ROUTES - Autonomous Actions & Intelligent Automation
   // ============================================================================

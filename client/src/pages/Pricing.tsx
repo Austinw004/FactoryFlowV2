@@ -1,5 +1,9 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Check, Zap, Building2, Rocket, Crown, ArrowRight, Shield,
   TrendingDown, DollarSign, Calculator, Target, Award, CheckCircle2,
-  BarChart3, Scale, Handshake, Percent, CreditCard
+  BarChart3, Scale, Handshake, Percent, CreditCard, Loader2
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
@@ -77,6 +81,46 @@ export default function Pricing() {
   const [estimatedSavings, setEstimatedSavings] = useState(500000);
   const [pricingModel, setPricingModel] = useState<"subscription" | "performance">("performance");
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("monthly");
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+  const { user, isAuthenticated } = useAuth();
+  const { toast } = useToast();
+
+  const { data: stripeProducts } = useQuery<{ products: Array<{
+    id: string;
+    name: string;
+    description: string;
+    metadata: any;
+    prices: Array<{
+      id: string;
+      unit_amount: number;
+      currency: string;
+      recurring: any;
+      active: boolean;
+      metadata: any;
+    }>;
+  }> }>({
+    queryKey: ["/api/stripe/products"],
+  });
+
+  const checkoutMutation = useMutation({
+    mutationFn: async ({ priceId, withTrial }: { priceId: string; withTrial: boolean }) => {
+      const response = await apiRequest("POST", "/api/stripe/checkout", { priceId, withTrial });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Checkout Error",
+        description: error.message || "Failed to start checkout. Please try again.",
+        variant: "destructive",
+      });
+      setCheckoutLoading(null);
+    },
+  });
 
   const calculateYourCost = (tier: typeof savingsBasedTiers[0], savings: number) => {
     const savingsShare = savings * (tier.percentageRate / 100);
@@ -85,15 +129,48 @@ export default function Pricing() {
   };
 
   const getRecommendedTier = (savings: number) => {
-    return "strategic"; // Only one performance-based tier
+    return "strategic";
   };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount);
   };
 
+  const findPriceForTier = (tierId: string): string | null => {
+    if (!stripeProducts?.products) return null;
+    for (const product of stripeProducts.products) {
+      const metadata = product.metadata as any;
+      if (metadata?.tier === tierId && product.prices.length > 0) {
+        const monthlyPrice = product.prices.find(p => p.recurring?.interval === 'month');
+        return monthlyPrice?.id || product.prices[0]?.id || null;
+      }
+    }
+    return null;
+  };
+
   const handleGetStarted = (tierId: string) => {
-    window.location.href = "/api/login";
+    if (!isAuthenticated) {
+      window.location.href = "/api/login";
+      return;
+    }
+
+    if (tierId === "enterprise" || tierId === "strategic" || tierId === "transform") {
+      setLocation("/pilot-program");
+      return;
+    }
+
+    const priceId = findPriceForTier(tierId);
+    if (!priceId) {
+      toast({
+        title: "Plan Not Available",
+        description: "This plan is not yet available for self-service checkout. Please contact sales.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setCheckoutLoading(tierId);
+    checkoutMutation.mutate({ priceId, withTrial: true });
   };
 
 
@@ -214,10 +291,20 @@ export default function Pricing() {
                         className="w-full"
                         variant={isPopular ? "default" : "outline"}
                         onClick={() => handleGetStarted(tier.id)}
+                        disabled={checkoutLoading === tier.id}
                         data-testid={`button-subscribe-${tier.id}`}
                       >
-                        {tier.contactSales ? "Contact Sales" : "Start 30-Day Free Trial"}
-                        <ArrowRight className="h-4 w-4 ml-2" />
+                        {checkoutLoading === tier.id ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            Redirecting to checkout...
+                          </>
+                        ) : (
+                          <>
+                            {tier.contactSales ? "Contact Sales" : (isAuthenticated ? "Subscribe Now" : "Sign In to Subscribe")}
+                            <ArrowRight className="h-4 w-4 ml-2" />
+                          </>
+                        )}
                       </Button>
                     </CardFooter>
                   </Card>

@@ -17,7 +17,10 @@ import {
   Building2,
   ArrowRight,
   RefreshCw,
-  Receipt
+  Receipt,
+  Download,
+  FileText,
+  Shield
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
@@ -43,6 +46,47 @@ const statusColors: Record<string, string> = {
   incomplete: "bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300",
 };
 
+const invoiceStatusColors: Record<string, string> = {
+  paid: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
+  open: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+  draft: "bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300",
+  uncollectible: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
+  void: "bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300",
+};
+
+const cardBrandLabels: Record<string, string> = {
+  visa: "Visa",
+  mastercard: "Mastercard",
+  amex: "American Express",
+  discover: "Discover",
+  diners: "Diners Club",
+  jcb: "JCB",
+  unionpay: "UnionPay",
+};
+
+interface PaymentMethod {
+  id: string;
+  brand: string;
+  last4: string;
+  expMonth: number;
+  expYear: number;
+  isDefault: boolean;
+}
+
+interface Invoice {
+  id: string;
+  number: string | null;
+  status: string;
+  total: number;
+  amountPaid: number;
+  currency: string;
+  created: number;
+  periodStart: number;
+  periodEnd: number;
+  hostedInvoiceUrl: string | null;
+  invoicePdf: string | null;
+}
+
 export default function Billing() {
   const [, setLocation] = useLocation();
   const searchParams = new URLSearchParams(window.location.search);
@@ -56,6 +100,14 @@ export default function Billing() {
     trialEndsAt: string | null;
   }>({
     queryKey: ["/api/stripe/subscription"],
+  });
+
+  const { data: paymentMethodsData } = useQuery<{ paymentMethods: PaymentMethod[] }>({
+    queryKey: ["/api/stripe/payment-methods"],
+  });
+
+  const { data: invoicesData } = useQuery<{ invoices: Invoice[] }>({
+    queryKey: ["/api/stripe/invoices"],
   });
 
   const portalMutation = useMutation({
@@ -84,7 +136,6 @@ export default function Billing() {
         description: "Welcome to Prescient Labs. Your subscription is now active.",
       });
       refetch();
-      // Clean up URL
       window.history.replaceState({}, "", "/billing");
     }
   }, [success, toast, refetch]);
@@ -93,8 +144,17 @@ export default function Billing() {
   const status = subscriptionData?.status || "none";
   const tier = subscriptionData?.tier;
   const trialEndsAt = subscriptionData?.trialEndsAt;
+  const paymentMethods = paymentMethodsData?.paymentMethods || [];
+  const invoices = invoicesData?.invoices || [];
 
   const TierIcon = tier ? tierIcons[tier] || Zap : Zap;
+
+  const formatAmount = (amount: number, currency: string) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency.toUpperCase(),
+    }).format(amount / 100);
+  };
 
   if (isLoading) {
     return (
@@ -118,7 +178,7 @@ export default function Billing() {
       {/* Current Plan */}
       <Card className="mb-6">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                 <TierIcon className="h-5 w-5 text-primary" />
@@ -238,6 +298,164 @@ export default function Billing() {
           </CardContent>
         </Card>
       )}
+
+      {/* Payment Methods */}
+      <Card className="mb-6">
+        <CardHeader>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              Payment Methods
+            </CardTitle>
+            {subscription && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => portalMutation.mutate()}
+                disabled={portalMutation.isPending}
+                data-testid="button-update-payment"
+              >
+                {portalMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <CreditCard className="h-4 w-4 mr-2" />
+                )}
+                Update Payment Method
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {paymentMethods.length > 0 ? (
+            <div className="space-y-3">
+              {paymentMethods.map((pm) => (
+                <div
+                  key={pm.id}
+                  className="flex items-center justify-between p-3 rounded-lg border"
+                  data-testid={`payment-method-${pm.id}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-7 rounded bg-muted flex items-center justify-center">
+                      <CreditCard className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm">
+                          {cardBrandLabels[pm.brand] || pm.brand}
+                        </span>
+                        <span className="text-muted-foreground text-sm" data-testid={`text-card-last4-${pm.id}`}>
+                          ending in {pm.last4}
+                        </span>
+                        {pm.isDefault && (
+                          <Badge variant="secondary" className="text-xs">Default</Badge>
+                        )}
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        Expires {pm.expMonth.toString().padStart(2, '0')}/{pm.expYear}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 text-green-600">
+                    <Shield className="h-3.5 w-3.5" />
+                    <span className="text-xs">Secure</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-6 text-muted-foreground">
+              <CreditCard className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No payment methods on file.</p>
+              {!subscription && (
+                <p className="text-xs mt-1">A payment method will be added when you subscribe to a plan.</p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Invoice History */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Invoice History
+          </CardTitle>
+          <CardDescription>
+            View and download your past invoices and receipts
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {invoices.length > 0 ? (
+            <div className="space-y-2">
+              {invoices.map((inv) => (
+                <div
+                  key={inv.id}
+                  className="flex items-center justify-between p-3 rounded-lg border"
+                  data-testid={`invoice-${inv.id}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm">
+                          {inv.number || inv.id.slice(0, 12)}
+                        </span>
+                        <Badge
+                          variant="secondary"
+                          className={invoiceStatusColors[inv.status] || ""}
+                        >
+                          {inv.status.charAt(0).toUpperCase() + inv.status.slice(1)}
+                        </Badge>
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {format(new Date(inv.created * 1000), "MMM d, yyyy")}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-semibold text-sm" data-testid={`text-invoice-amount-${inv.id}`}>
+                      {formatAmount(inv.total, inv.currency)}
+                    </span>
+                    <div className="flex gap-1">
+                      {inv.hostedInvoiceUrl && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          asChild
+                          data-testid={`button-view-invoice-${inv.id}`}
+                        >
+                          <a href={inv.hostedInvoiceUrl} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                        </Button>
+                      )}
+                      {inv.invoicePdf && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          asChild
+                          data-testid={`button-download-invoice-${inv.id}`}
+                        >
+                          <a href={inv.invoicePdf} target="_blank" rel="noopener noreferrer">
+                            <Download className="h-4 w-4" />
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-6 text-muted-foreground">
+              <Receipt className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No invoices yet.</p>
+              <p className="text-xs mt-1">Invoices will appear here after your first payment.</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Feature Access */}
       <Card>
