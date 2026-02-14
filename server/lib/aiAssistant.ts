@@ -1465,7 +1465,7 @@ CURRENT PLATFORM STATE:${locationSection}${industrySection}
 
 ECONOMIC CONTEXT:
 - Regime: ${formatRegimeName(context.regime.regime)} (FDR: ${context.regime.fdr.toFixed(2)})
-- Market Signal: ${context.regime.signal.toUpperCase()}
+- Market Signal: ${formatRegimeName(context.regime.signal)}
 - Confidence: ${(context.regime.confidence * 100).toFixed(0)}%${externalVarsSection}
 
 DEMAND FORECASTING:
@@ -1595,7 +1595,8 @@ RESPONSE STYLE:
 - Reference platform features for next steps
 - Keep responses focused and scannable
 - Use industry terminology appropriately but explain when helpful
-- For natural language queries, lead with the direct answer then provide context`;
+- For natural language queries, lead with the direct answer then provide context
+- Always use proper grammar and natural language. Never output internal identifiers, code variable names, or SCREAMING_SNAKE_CASE terms like "HEALTHY_EXPANSION" or "ASSET_LED_GROWTH". Instead write "Healthy Expansion" or "Asset-Led Growth". All regime names, signals, and status values must be human-readable Title Case.`;
   }
 
   private getRegimeGuidance(regime: string): string {
@@ -1867,7 +1868,7 @@ RESPONSE STYLE:
       parts.push(`Based on your current platform data, here are the key areas that need attention:`);
       
       // Economic regime context
-      parts.push(`\n\n**Market Conditions**: The economy is in ${context.regime.regime} regime with FDR at ${context.regime.fdr.toFixed(2)}. ${context.regime.fdr > 1.0 ? 'Consider deferring non-essential purchases.' : context.regime.fdr < 0.85 ? 'This presents favorable buying conditions.' : 'Market conditions are neutral.'}`);
+      parts.push(`\n\n**Market Conditions**: The economy is in a ${formatRegimeName(context.regime.regime)} regime with FDR at ${context.regime.fdr.toFixed(2)}. ${context.regime.fdr > 1.0 ? 'Consider deferring non-essential purchases.' : context.regime.fdr < 0.85 ? 'This presents favorable buying conditions.' : 'Market conditions are neutral.'}`);
       
       // Inventory priorities
       if (context.inventory.lowStockItems > 0) {
@@ -1910,7 +1911,7 @@ RESPONSE STYLE:
     // Buying/timing response
     if (isAskingAboutBuying) {
       const timing = context.regime.fdr > 1.0 ? 'unfavorable' : context.regime.fdr < 0.85 ? 'favorable' : 'neutral';
-      parts.push(`Current procurement timing is ${timing} (FDR: ${context.regime.fdr.toFixed(2)}, Regime: ${context.regime.regime}).`);
+      parts.push(`Current procurement timing is ${timing} (FDR: ${context.regime.fdr.toFixed(2)}, Regime: ${formatRegimeName(context.regime.regime)}).`);
       if (context.commodities.buySignals.length > 0) {
         parts.push(`\n\nBuy signals active for: ${context.commodities.buySignals.join(', ')}.`);
       }
@@ -1921,10 +1922,10 @@ RESPONSE STYLE:
     
     // Market/regime response
     if (isAskingAboutMarket) {
-      parts.push(`**Current Economic Regime**: ${context.regime.regime}`);
+      parts.push(`**Current Economic Regime**: ${formatRegimeName(context.regime.regime)}`);
       parts.push(`\n- FDR (Financialization-Deflator Ratio): ${context.regime.fdr.toFixed(2)}`);
       parts.push(`\n- Market momentum: ${context.commodities.priceTrends.rising} commodities rising, ${context.commodities.priceTrends.falling} falling`);
-      parts.push(`\n- Signal: ${context.regime.signal}`);
+      parts.push(`\n- Signal: ${formatRegimeName(context.regime.signal)}`);
     }
     
     // Supplier-specific response
@@ -1964,7 +1965,7 @@ RESPONSE STYLE:
     // If we have no specific parts, provide a general overview
     if (parts.length === 0) {
       parts.push(`Here's a quick overview of your platform status:`);
-      parts.push(`\n\n**Economic Regime**: ${context.regime.regime} (FDR: ${context.regime.fdr.toFixed(2)})`);
+      parts.push(`\n\n**Economic Regime**: ${formatRegimeName(context.regime.regime)} (FDR: ${context.regime.fdr.toFixed(2)})`);
       parts.push(`\n**Inventory**: ${context.inventory.lowStockItems} items below reorder point`);
       parts.push(`\n**Suppliers**: ${context.suppliers.atRiskSuppliers} at-risk`);
       parts.push(`\n**Forecasts**: Average MAPE ${context.forecasts.averageMape.toFixed(1)}%`);
