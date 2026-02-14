@@ -68,6 +68,30 @@ export function classifyRegimeWithHysteresis(
   return { regime: currentRegime, requiresConfirmation: false, isReversion: false };
 }
 
+const REGIME_ALIASES: Record<string, Regime> = {
+  "HEALTHY_EXPANSION": "HEALTHY_EXPANSION",
+  "ASSET_LED_GROWTH": "ASSET_LED_GROWTH",
+  "IMBALANCED_EXCESS": "IMBALANCED_EXCESS",
+  "REAL_ECONOMY_LEAD": "REAL_ECONOMY_LEAD",
+  "Healthy Expansion": "HEALTHY_EXPANSION",
+  "Asset Led Growth": "ASSET_LED_GROWTH",
+  "Asset-Led Growth": "ASSET_LED_GROWTH",
+  "Imbalanced Excess": "IMBALANCED_EXCESS",
+  "Real Economy Lead": "REAL_ECONOMY_LEAD",
+  "healthy_expansion": "HEALTHY_EXPANSION",
+  "asset_led_growth": "ASSET_LED_GROWTH",
+  "imbalanced_excess": "IMBALANCED_EXCESS",
+  "real_economy_lead": "REAL_ECONOMY_LEAD",
+};
+
+export function normalizeRegimeName(input: string): Regime {
+  const mapped = REGIME_ALIASES[input];
+  if (mapped) return mapped;
+  const upper = input.toUpperCase().replace(/[\s-]+/g, '_');
+  if (REGIME_ORDER.includes(upper as Regime)) return upper as Regime;
+  return "HEALTHY_EXPANSION";
+}
+
 export function validateRegimeClassification(fdr: number, storedRegime: string): {
   isValid: boolean;
   canonicalRegime: Regime;

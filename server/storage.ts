@@ -242,7 +242,7 @@ export interface IStorage {
   // Price Alerts
   getPriceAlerts(companyId: string): Promise<PriceAlert[]>;
   getPriceAlert(id: string): Promise<PriceAlert | undefined>;
-  getActivePriceAlerts(): Promise<PriceAlert[]>;
+  getActivePriceAlerts(companyId: string): Promise<PriceAlert[]>;
   createPriceAlert(alert: InsertPriceAlert): Promise<PriceAlert>;
   updatePriceAlert(id: string, alert: Partial<InsertPriceAlert>): Promise<PriceAlert | undefined>;
   deletePriceAlert(id: string): Promise<void>;
@@ -424,9 +424,9 @@ export interface IStorage {
   updateSupplierRelationship(id: string, relationship: Partial<InsertSupplierRelationship>): Promise<SupplierRelationship | undefined>;
   deleteSupplierRelationship(id: string): Promise<void>;
   
-  getSupplierRegionRisks(companyId?: string): Promise<SupplierRegionRisk[]>;
+  getSupplierRegionRisks(companyId: string): Promise<SupplierRegionRisk[]>;
   getSupplierRegionRisk(id: string): Promise<SupplierRegionRisk | undefined>;
-  getSupplierRegionRiskByCountry(country: string): Promise<SupplierRegionRisk[]>;
+  getSupplierRegionRiskByCountry(country: string, companyId: string): Promise<SupplierRegionRisk[]>;
   createSupplierRegionRisk(risk: InsertSupplierRegionRisk): Promise<SupplierRegionRisk>;
   updateSupplierRegionRisk(id: string, risk: Partial<InsertSupplierRegionRisk>): Promise<SupplierRegionRisk | undefined>;
   deleteSupplierRegionRisk(id: string): Promise<void>;
@@ -1329,8 +1329,8 @@ export class DbStorage implements IStorage {
     return alert;
   }
 
-  async getActivePriceAlerts(): Promise<PriceAlert[]> {
-    return db.select().from(priceAlerts).where(eq(priceAlerts.isActive, 1));
+  async getActivePriceAlerts(companyId: string): Promise<PriceAlert[]> {
+    return db.select().from(priceAlerts).where(and(eq(priceAlerts.isActive, 1), eq(priceAlerts.companyId, companyId)));
   }
 
   async createPriceAlert(insertAlert: InsertPriceAlert): Promise<PriceAlert> {
@@ -2015,11 +2015,8 @@ export class DbStorage implements IStorage {
     await db.delete(supplierRelationships).where(eq(supplierRelationships.id, id));
   }
 
-  async getSupplierRegionRisks(companyId?: string): Promise<SupplierRegionRisk[]> {
-    if (companyId) {
-      return db.select().from(supplierRegionRisks).where(eq(supplierRegionRisks.companyId, companyId));
-    }
-    return db.select().from(supplierRegionRisks);
+  async getSupplierRegionRisks(companyId: string): Promise<SupplierRegionRisk[]> {
+    return db.select().from(supplierRegionRisks).where(eq(supplierRegionRisks.companyId, companyId));
   }
 
   async getSupplierRegionRisk(id: string): Promise<SupplierRegionRisk | undefined> {
@@ -2027,8 +2024,8 @@ export class DbStorage implements IStorage {
     return risk;
   }
 
-  async getSupplierRegionRiskByCountry(country: string): Promise<SupplierRegionRisk[]> {
-    return db.select().from(supplierRegionRisks).where(eq(supplierRegionRisks.country, country));
+  async getSupplierRegionRiskByCountry(country: string, companyId: string): Promise<SupplierRegionRisk[]> {
+    return db.select().from(supplierRegionRisks).where(and(eq(supplierRegionRisks.country, country), eq(supplierRegionRisks.companyId, companyId)));
   }
 
   async createSupplierRegionRisk(insertRisk: InsertSupplierRegionRisk): Promise<SupplierRegionRisk> {

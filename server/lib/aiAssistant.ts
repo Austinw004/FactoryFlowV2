@@ -1700,13 +1700,22 @@ RESPONSE STYLE:
   private generateInsights(context: PlatformContext): AIInsight[] {
     const insights: AIInsight[] = [];
 
-    if (context.regime.fdr >= 1.2) {
+    if (context.regime.fdr >= 1.8) {
       insights.push({
         category: "Market Timing",
-        title: "Overheated Market Detected",
-        description: `FDR at ${context.regime.fdr.toFixed(2)} suggests prices are elevated. Consider delaying non-critical purchases.`,
+        title: "Market Imbalance Detected",
+        description: `FDR at ${context.regime.fdr.toFixed(2)} indicates Imbalanced Excess. Asset prices may be disconnected from real economic fundamentals. Consider delaying non-critical purchases.`,
         impact: "negative",
         confidence: 0.9,
+        source: "FDR Model"
+      });
+    } else if (context.regime.fdr >= 1.2) {
+      insights.push({
+        category: "Market Timing",
+        title: "Asset-Led Growth Conditions",
+        description: `FDR at ${context.regime.fdr.toFixed(2)} indicates asset markets are leading economic growth. Monitor closely for further imbalance.`,
+        impact: "negative",
+        confidence: 0.7,
         source: "FDR Model"
       });
     } else if (context.regime.fdr <= 0.8) {
@@ -1868,7 +1877,7 @@ RESPONSE STYLE:
       parts.push(`Based on your current platform data, here are the key areas that need attention:`);
       
       // Economic regime context
-      parts.push(`\n\n**Market Conditions**: The economy is in a ${formatRegimeName(context.regime.regime)} regime with FDR at ${context.regime.fdr.toFixed(2)}. ${context.regime.fdr > 1.0 ? 'Consider deferring non-essential purchases.' : context.regime.fdr < 0.85 ? 'This presents favorable buying conditions.' : 'Market conditions are neutral.'}`);
+      parts.push(`\n\n**Market Conditions**: The economy is in a ${formatRegimeName(context.regime.regime)} regime with FDR at ${context.regime.fdr.toFixed(2)}. ${context.regime.fdr >= 1.8 ? 'Consider deferring non-essential purchases — market conditions suggest caution.' : context.regime.fdr >= 1.2 ? 'Monitor asset-driven dynamics before making large purchases.' : 'Market conditions appear stable for procurement.'}`);
       
       // Inventory priorities
       if (context.inventory.lowStockItems > 0) {
@@ -1910,7 +1919,7 @@ RESPONSE STYLE:
     
     // Buying/timing response
     if (isAskingAboutBuying) {
-      const timing = context.regime.fdr > 1.0 ? 'unfavorable' : context.regime.fdr < 0.85 ? 'favorable' : 'neutral';
+      const timing = context.regime.fdr >= 1.8 ? 'unfavorable' : context.regime.fdr >= 1.2 ? 'cautious' : 'favorable';
       parts.push(`Current procurement timing is ${timing} (FDR: ${context.regime.fdr.toFixed(2)}, Regime: ${formatRegimeName(context.regime.regime)}).`);
       if (context.commodities.buySignals.length > 0) {
         parts.push(`\n\nBuy signals active for: ${context.commodities.buySignals.join(', ')}.`);
@@ -1988,13 +1997,13 @@ RESPONSE STYLE:
     const context = await this.getContext(companyId);
     const alerts: ProactiveAlert[] = [];
 
-    if (context.regime.fdr >= 1.25) {
+    if (context.regime.fdr >= 1.8) {
       alerts.push({
         id: `alert_regime_${now}`,
         type: "regime_change",
         severity: "warning",
-        title: "Market Overheating Detected",
-        description: `FDR has reached ${context.regime.fdr.toFixed(2)}, indicating bubble territory conditions.`,
+        title: "Elevated Market Imbalance Detected",
+        description: `FDR has reached ${context.regime.fdr.toFixed(2)}, indicating Imbalanced Excess conditions. Asset prices may be disconnected from real economic fundamentals.`,
         recommendation: "Review procurement strategy. Consider delaying large purchases and locking in existing contracts.",
         timestamp: new Date().toISOString()
       });

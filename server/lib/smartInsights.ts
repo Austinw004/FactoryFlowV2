@@ -287,8 +287,8 @@ export class SmartInsightsService {
       });
     }
     
-    // ASSET_LED_GROWTH at FDR 1.2-1.8 indicates assets leading - watch for overheating
-    if (regimeName === 'ASSET_LED_GROWTH' && fdr >= 1.5) {
+    // ASSET_LED_GROWTH at FDR 1.2-1.8 indicates assets leading - warn when approaching IMBALANCED_EXCESS boundary (1.8)
+    if (regimeName === 'ASSET_LED_GROWTH' && fdr >= 1.65) {
       insights.push({
         id: `regime-caution-${Date.now()}`,
         type: 'risk',

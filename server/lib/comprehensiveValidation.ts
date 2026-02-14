@@ -171,9 +171,9 @@ export function generateHistoricalStates(numStates: number = 500): HistoricalSta
     const fdr = (ma * va) / (mr * vr);
     const dualCircuit = new DualCircuitEconomics();
     const regime: EconomicRegime = 
-      fdr > 1.8 ? 'IMBALANCED_EXCESS' :
-      fdr > 1.5 ? 'ASSET_LED_GROWTH' :
-      fdr < 1.2 ? 'REAL_ECONOMY_LEAD' :
+      fdr >= 2.5 ? 'REAL_ECONOMY_LEAD' :
+      fdr >= 1.8 ? 'IMBALANCED_EXCESS' :
+      fdr >= 1.2 ? 'ASSET_LED_GROWTH' :
       'HEALTHY_EXPANSION';
     
     // Calculate other metrics

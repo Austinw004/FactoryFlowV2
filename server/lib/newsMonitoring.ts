@@ -631,9 +631,11 @@ export class NewsMonitoringService {
   }
 
   private async getCuratedAlerts(currentFDR: number): Promise<NewsAlert[]> {
-    // Curated industry news covering major supply chain events
-    console.log('[NewsMonitoring] Generating curated industry news based on current market conditions');
-    
+    console.log('[NewsMonitoring] No curated alerts available - requires authenticated news sources');
+    return [];
+  }
+
+  private async _REMOVED_getCuratedAlerts_fabricated(currentFDR: number): Promise<NewsAlert[]> {
     const simulatedEvents: Array<{
       title: string;
       description: string;
@@ -642,7 +644,6 @@ export class NewsMonitoringService {
       regions: string[];
       commodities: string[];
     }> = [
-      // PORT CLOSURE - 6 articles
       {
         title: "Major Port Congestion at Shanghai Impacts Global Shipping",
         description: "Container backlog at Shanghai port reaches critical levels, with delays expected to extend 2-3 weeks for eastbound cargo. Shipping companies warn of rate increases.",

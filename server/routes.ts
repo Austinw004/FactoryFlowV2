@@ -15696,7 +15696,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Company not found" });
       }
       
-      type HealthStatus = 'healthy' | 'degraded' | 'offline' | 'not_configured';
+      type HealthStatus = 'healthy' | 'configured' | 'degraded' | 'offline' | 'not_configured';
       
       const healthChecks: Array<{
         integration: string;
@@ -15866,90 +15866,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // These check configuration presence
       healthChecks.push({
         integration: 'slack',
-        status: company.slackWebhookUrl ? 'healthy' : 'not_configured',
+        status: company.slackWebhookUrl ? 'configured' : 'not_configured',
         latencyMs: 0,
-        message: company.slackWebhookUrl ? 'Slack webhook configured' : 'Slack webhook not set',
+        message: company.slackWebhookUrl ? 'Configuration saved - connectivity not verified' : 'Slack webhook not set',
         category: 'communication',
       });
       
       healthChecks.push({
         integration: 'teams',
-        status: company.teamsWebhookUrl ? 'healthy' : 'not_configured',
+        status: company.teamsWebhookUrl ? 'configured' : 'not_configured',
         latencyMs: 0,
-        message: company.teamsWebhookUrl ? 'Teams webhook configured' : 'Teams webhook not set',
+        message: company.teamsWebhookUrl ? 'Configuration saved - connectivity not verified' : 'Teams webhook not set',
         category: 'communication',
       });
       
       healthChecks.push({
         integration: 'hubspot',
-        status: company.hubspotAccessToken ? 'healthy' : 'not_configured',
+        status: company.hubspotAccessToken ? 'configured' : 'not_configured',
         latencyMs: 0,
-        message: company.hubspotAccessToken ? 'HubSpot token configured' : 'HubSpot not configured',
+        message: company.hubspotAccessToken ? 'Configuration saved - connectivity not verified' : 'HubSpot not configured',
         category: 'crm',
       });
       
       healthChecks.push({
         integration: 'shopify',
-        status: company.shopifyDomain ? 'healthy' : 'not_configured',
+        status: company.shopifyDomain ? 'configured' : 'not_configured',
         latencyMs: 0,
-        message: company.shopifyDomain ? `Shopify (${company.shopifyDomain}) configured` : 'Shopify not configured',
+        message: company.shopifyDomain ? 'Configuration saved - connectivity not verified' : 'Shopify not configured',
         category: 'ecommerce',
       });
       
-      // New integrations
       healthChecks.push({
         integration: 'google_sheets',
-        status: company.googleSheetsEnabled === 1 ? 'healthy' : 'not_configured',
+        status: company.googleSheetsEnabled === 1 ? 'configured' : 'not_configured',
         latencyMs: 0,
-        message: company.googleSheetsEnabled === 1 ? 'Google Sheets enabled' : 'Google Sheets not configured',
+        message: company.googleSheetsEnabled === 1 ? 'Configuration saved - connectivity not verified' : 'Google Sheets not configured',
         category: 'productivity',
       });
       
       healthChecks.push({
         integration: 'google_calendar',
-        status: company.googleCalendarEnabled === 1 ? 'healthy' : 'not_configured',
+        status: company.googleCalendarEnabled === 1 ? 'configured' : 'not_configured',
         latencyMs: 0,
-        message: company.googleCalendarEnabled === 1 ? 'Google Calendar enabled' : 'Google Calendar not configured',
+        message: company.googleCalendarEnabled === 1 ? 'Configuration saved - connectivity not verified' : 'Google Calendar not configured',
         category: 'productivity',
       });
       
       healthChecks.push({
         integration: 'notion',
-        status: company.notionEnabled === 1 && company.notionAccessToken ? 'healthy' : 'not_configured',
+        status: company.notionEnabled === 1 && company.notionAccessToken ? 'configured' : 'not_configured',
         latencyMs: 0,
-        message: company.notionEnabled === 1 ? 'Notion connected' : 'Notion not configured',
+        message: company.notionEnabled === 1 && company.notionAccessToken ? 'Configuration saved - connectivity not verified' : 'Notion not configured',
         category: 'productivity',
       });
       
       healthChecks.push({
         integration: 'salesforce',
-        status: company.salesforceEnabled === 1 && company.salesforceAccessToken ? 'healthy' : 'not_configured',
+        status: company.salesforceEnabled === 1 && company.salesforceAccessToken ? 'configured' : 'not_configured',
         latencyMs: 0,
-        message: company.salesforceEnabled === 1 ? 'Salesforce connected' : 'Salesforce not configured',
+        message: company.salesforceEnabled === 1 && company.salesforceAccessToken ? 'Configuration saved - connectivity not verified' : 'Salesforce not configured',
         category: 'crm',
       });
       
       healthChecks.push({
         integration: 'jira',
-        status: company.jiraEnabled === 1 && company.jiraApiToken ? 'healthy' : 'not_configured',
+        status: company.jiraEnabled === 1 && company.jiraApiToken ? 'configured' : 'not_configured',
         latencyMs: 0,
-        message: company.jiraEnabled === 1 ? 'Jira connected' : 'Jira not configured',
+        message: company.jiraEnabled === 1 && company.jiraApiToken ? 'Configuration saved - connectivity not verified' : 'Jira not configured',
         category: 'project_management',
       });
       
       healthChecks.push({
         integration: 'linear',
-        status: company.linearEnabled === 1 && company.linearApiKey ? 'healthy' : 'not_configured',
+        status: company.linearEnabled === 1 && company.linearApiKey ? 'configured' : 'not_configured',
         latencyMs: 0,
-        message: company.linearEnabled === 1 ? 'Linear connected' : 'Linear not configured',
+        message: company.linearEnabled === 1 && company.linearApiKey ? 'Configuration saved - connectivity not verified' : 'Linear not configured',
         category: 'project_management',
       });
       
       // Calculate overall health
       const healthyCount = healthChecks.filter(h => h.status === 'healthy').length;
+      const configuredOnlyCount = healthChecks.filter(h => h.status === 'configured').length;
       const degradedCount = healthChecks.filter(h => h.status === 'degraded').length;
       const offlineCount = healthChecks.filter(h => h.status === 'offline').length;
-      const configuredCount = healthChecks.filter(h => h.status !== 'not_configured').length;
+      const activeCount = healthChecks.filter(h => h.status !== 'not_configured').length;
       const totalCount = healthChecks.length;
       
       let overall: 'healthy' | 'degraded' | 'critical' | 'minimal';
@@ -15957,7 +15957,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         overall = offlineCount > 2 ? 'critical' : 'degraded';
       } else if (degradedCount > 0) {
         overall = 'degraded';
-      } else if (healthyCount === configuredCount && configuredCount > 0) {
+      } else if (healthyCount > 0 && healthyCount === (activeCount - configuredOnlyCount)) {
         overall = 'healthy';
       } else {
         overall = 'minimal';
@@ -15980,9 +15980,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         overall,
         summary: {
           healthy: healthyCount,
+          configured: configuredOnlyCount,
           degraded: degradedCount,
           offline: offlineCount,
-          notConfigured: totalCount - configuredCount,
+          notConfigured: totalCount - activeCount,
           total: totalCount,
         },
         avgLatencyMs,
@@ -16290,8 +16291,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For enhanced security in production, capture raw body before parsing
       // For now, we use a relaxed check that logs mismatches but allows processing
       if (computedHmac !== hmacHeader) {
-        console.log("Shopify webhook HMAC mismatch (body may have been re-serialized)");
-        // In production with raw body capture, this would be a hard rejection
+        console.log("Shopify webhook HMAC mismatch - rejecting request");
+        return res.status(401).json({ error: "Invalid HMAC signature" });
       }
       
       console.log(`Shopify webhook received: ${topic} from ${shopDomain}`);
@@ -16921,7 +16922,7 @@ You'll receive emails for:
       
       res.json({ 
         success: true, 
-        message: "Notion connection successful",
+        message: "Notion configuration saved (connectivity not verified)",
         user: response.data?.name || "Connected"
       });
     } catch (error: any) {
@@ -16988,7 +16989,7 @@ You'll receive emails for:
       
       res.json({ 
         success: true, 
-        message: "Salesforce connection successful",
+        message: "Salesforce configuration saved (connectivity not verified)",
         objects: response.data?.sobjects?.length || 0
       });
     } catch (error: any) {
@@ -17162,7 +17163,7 @@ You'll receive emails for:
       
       res.json({ 
         success: true, 
-        message: "Linear connection successful",
+        message: "Linear configuration saved (connectivity not verified)",
         user: response.data?.data?.viewer?.name || "Connected"
       });
     } catch (error: any) {
@@ -17199,7 +17200,7 @@ You'll receive emails for:
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
       // Simulated connection test - in production would validate with Amazon SP-API
-      res.json({ success: true, message: "Amazon Seller Central connection verified" });
+      res.json({ success: true, message: "Amazon Seller Central configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing Amazon Seller:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -17233,7 +17234,7 @@ You'll receive emails for:
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
       // Simulated connection test - in production would validate with WooCommerce REST API
-      res.json({ success: true, message: "WooCommerce store connection verified" });
+      res.json({ success: true, message: "WooCommerce store configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing WooCommerce:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -17267,7 +17268,7 @@ You'll receive emails for:
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
       // Simulated connection test - in production would validate with Microsoft Graph API
-      res.json({ success: true, message: "SharePoint connection verified" });
+      res.json({ success: true, message: "SharePoint configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing SharePoint:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -17301,7 +17302,7 @@ You'll receive emails for:
         return res.status(400).json({ success: false, message: "Missing API key" });
       }
       // Simulated connection test - in production would validate with Flexport API
-      res.json({ success: true, message: "Flexport API connection verified" });
+      res.json({ success: true, message: "Flexport API configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing Flexport:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -17335,7 +17336,7 @@ You'll receive emails for:
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
       // Simulated connection test - in production would validate with Tableau REST API
-      res.json({ success: true, message: "Tableau Server connection verified" });
+      res.json({ success: true, message: "Tableau Server configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing Tableau:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -17368,7 +17369,7 @@ You'll receive emails for:
       if (!accountIdentifier || !username || !password) {
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
-      res.json({ success: true, message: "Snowflake connection verified" });
+      res.json({ success: true, message: "Snowflake configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing Snowflake:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -17401,7 +17402,7 @@ You'll receive emails for:
       if (!apiToken) {
         return res.status(400).json({ success: false, message: "Missing API token" });
       }
-      res.json({ success: true, message: "Monday.com connection verified" });
+      res.json({ success: true, message: "Monday.com configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing Monday:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -17434,7 +17435,7 @@ You'll receive emails for:
       if (!accessToken) {
         return res.status(400).json({ success: false, message: "Missing access token" });
       }
-      res.json({ success: true, message: "Asana connection verified" });
+      res.json({ success: true, message: "Asana configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing Asana:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -17467,7 +17468,7 @@ You'll receive emails for:
       if (!storeHash || !accessToken) {
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
-      res.json({ success: true, message: "BigCommerce store connection verified" });
+      res.json({ success: true, message: "BigCommerce store configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing BigCommerce:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -17500,7 +17501,7 @@ You'll receive emails for:
       if (!secretKey) {
         return res.status(400).json({ success: false, message: "Missing secret key" });
       }
-      res.json({ success: true, message: "Stripe API connection verified" });
+      res.json({ success: true, message: "Stripe API configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing Stripe:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -17536,7 +17537,7 @@ You'll receive emails for:
       if (!integrationKey || !userId || !accountId) {
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
-      res.json({ success: true, message: "DocuSign connection verified" });
+      res.json({ success: true, message: "DocuSign configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing DocuSign:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -17572,7 +17573,7 @@ You'll receive emails for:
       if (!apiKey || !secretKey || !accountNumber) {
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
-      res.json({ success: true, message: "FedEx API connection verified" });
+      res.json({ success: true, message: "FedEx API configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing FedEx:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -17608,7 +17609,7 @@ You'll receive emails for:
       if (!clientId || !clientSecret || !accountNumber) {
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
-      res.json({ success: true, message: "UPS API connection verified" });
+      res.json({ success: true, message: "UPS API configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing UPS:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -17644,7 +17645,7 @@ You'll receive emails for:
       if (!clientId || !clientSecret || !realmId) {
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
-      res.json({ success: true, message: "QuickBooks connection verified" });
+      res.json({ success: true, message: "QuickBooks configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing QuickBooks:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -17680,7 +17681,7 @@ You'll receive emails for:
       if (!clientId || !clientSecret) {
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
-      res.json({ success: true, message: "Xero connection verified" });
+      res.json({ success: true, message: "Xero configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing Xero:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -17716,7 +17717,7 @@ You'll receive emails for:
       if (!instanceUrl || !clientId || !clientSecret) {
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
-      res.json({ success: true, message: "Looker connection verified" });
+      res.json({ success: true, message: "Looker configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing Looker:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -17752,7 +17753,7 @@ You'll receive emails for:
       if (!apiKey || !apiSecret) {
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
-      res.json({ success: true, message: "DHL API connection verified" });
+      res.json({ success: true, message: "DHL API configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing DHL:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -17788,7 +17789,7 @@ You'll receive emails for:
       if (!developerKey || !userName || !password) {
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
-      res.json({ success: true, message: "Bill.com connection verified" });
+      res.json({ success: true, message: "Bill.com configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing Bill.com:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -17824,7 +17825,7 @@ You'll receive emails for:
       if (!apiKey || !apiToken) {
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
-      res.json({ success: true, message: "Trello API connection verified" });
+      res.json({ success: true, message: "Trello API configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing Trello:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -17860,7 +17861,7 @@ You'll receive emails for:
       if (!subdomain || !email || !apiToken) {
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
-      res.json({ success: true, message: "Zendesk connection verified" });
+      res.json({ success: true, message: "Zendesk configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing Zendesk:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -17896,7 +17897,7 @@ You'll receive emails for:
       if (!apiKey || !serverPrefix) {
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
-      res.json({ success: true, message: "Mailchimp API connection verified" });
+      res.json({ success: true, message: "Mailchimp API configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing Mailchimp:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -17932,7 +17933,7 @@ You'll receive emails for:
       if (!apiKey) {
         return res.status(400).json({ success: false, message: "Missing API key" });
       }
-      res.json({ success: true, message: "SendGrid API connection verified" });
+      res.json({ success: true, message: "SendGrid API configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing SendGrid:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -17968,7 +17969,7 @@ You'll receive emails for:
       if (!apiKey || !baseId) {
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
-      res.json({ success: true, message: "Airtable connection verified" });
+      res.json({ success: true, message: "Airtable configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing Airtable:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -18004,7 +18005,7 @@ You'll receive emails for:
       if (!realm || !applicationKey || !sharedSecret) {
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
-      res.json({ success: true, message: "SAP Ariba connection verified" });
+      res.json({ success: true, message: "SAP Ariba configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing SAP Ariba:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -18040,7 +18041,7 @@ You'll receive emails for:
       if (!instanceUrl || !clientId || !clientSecret) {
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
-      res.json({ success: true, message: "Coupa connection verified" });
+      res.json({ success: true, message: "Coupa configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing Coupa:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -18076,7 +18077,7 @@ You'll receive emails for:
       if (!serverUrl || !username || !password) {
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
-      res.json({ success: true, message: "Manhattan WMS connection verified" });
+      res.json({ success: true, message: "Manhattan WMS configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing Manhattan WMS:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -18112,7 +18113,7 @@ You'll receive emails for:
       if (!instanceUrl || !apiKey || !apiSecret) {
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
-      res.json({ success: true, message: "ETQ Reliance connection verified" });
+      res.json({ success: true, message: "ETQ Reliance configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing ETQ Reliance:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -18148,7 +18149,7 @@ You'll receive emails for:
       if (!accountId || !consumerKey || !consumerSecret || !tokenId || !tokenSecret) {
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
-      res.json({ success: true, message: "Oracle NetSuite connection verified" });
+      res.json({ success: true, message: "Oracle NetSuite configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing Oracle NetSuite:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -18184,7 +18185,7 @@ You'll receive emails for:
       if (!apiKey || !apiSecret) {
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
-      res.json({ success: true, message: "SPS Commerce connection verified" });
+      res.json({ success: true, message: "SPS Commerce configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing SPS Commerce:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -18220,7 +18221,7 @@ You'll receive emails for:
       if (!serverUrl || !username || !password) {
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
-      res.json({ success: true, message: "Siemens Teamcenter connection verified" });
+      res.json({ success: true, message: "Siemens Teamcenter configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing Siemens Teamcenter:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -18256,7 +18257,7 @@ You'll receive emails for:
       if (!serverUrl || !client || !username || !password) {
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
-      res.json({ success: true, message: "SAP S/4HANA connection verified" });
+      res.json({ success: true, message: "SAP S/4HANA configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing SAP S/4HANA:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -18292,7 +18293,7 @@ You'll receive emails for:
       if (!tenantId || !clientId || !clientSecret || !environmentUrl) {
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
-      res.json({ success: true, message: "Microsoft Dynamics 365 connection verified" });
+      res.json({ success: true, message: "Microsoft Dynamics 365 configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing Microsoft Dynamics 365:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -18328,7 +18329,7 @@ You'll receive emails for:
       if (!ionApiUrl || !tenantId || !clientId || !clientSecret) {
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
-      res.json({ success: true, message: "Infor CloudSuite connection verified" });
+      res.json({ success: true, message: "Infor CloudSuite configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing Infor CloudSuite:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -18364,7 +18365,7 @@ You'll receive emails for:
       if (!apiKey || !clientId || !clientSecret) {
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
-      res.json({ success: true, message: "project44 connection verified" });
+      res.json({ success: true, message: "project44 configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing project44:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -18400,7 +18401,7 @@ You'll receive emails for:
       if (!serverUrl || !username || !password) {
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
-      res.json({ success: true, message: "Fishbowl connection verified" });
+      res.json({ success: true, message: "Fishbowl configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing Fishbowl:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -18432,7 +18433,7 @@ You'll receive emails for:
       if (!serverUrl || !folder || !username || !password) {
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
-      res.json({ success: true, message: "Sage X3 connection verified" });
+      res.json({ success: true, message: "Sage X3 configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing Sage X3:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -18464,7 +18465,7 @@ You'll receive emails for:
       if (!endpointUrl || !securityMode) {
         return res.status(400).json({ success: false, message: "Missing required: endpointUrl, securityMode" });
       }
-      res.json({ success: true, message: "OPC-UA server connection verified" });
+      res.json({ success: true, message: "OPC-UA server configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing OPC-UA:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -18496,7 +18497,7 @@ You'll receive emails for:
       if (!brokerUrl || !port) {
         return res.status(400).json({ success: false, message: "Missing required: brokerUrl, port" });
       }
-      res.json({ success: true, message: "MQTT broker connection verified" });
+      res.json({ success: true, message: "MQTT broker configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing MQTT:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -18528,7 +18529,7 @@ You'll receive emails for:
       if (!serverUrl || !username || !password) {
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
-      res.json({ success: true, message: "Kepware KEPServerEX connection verified" });
+      res.json({ success: true, message: "Kepware KEPServerEX configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing Kepware:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -18560,7 +18561,7 @@ You'll receive emails for:
       if (!accountId || !consumerKey || !consumerSecret || !tokenId || !tokenSecret) {
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
-      res.json({ success: true, message: "NetSuite Financials connection verified" });
+      res.json({ success: true, message: "NetSuite Financials configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing NetSuite Financials:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -18592,7 +18593,7 @@ You'll receive emails for:
       if (!instanceUrl || !apiKey || !apiSecret) {
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
-      res.json({ success: true, message: "Jaggaer connection verified" });
+      res.json({ success: true, message: "Jaggaer configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing Jaggaer:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -18624,7 +18625,7 @@ You'll receive emails for:
       if (!serverUrl || !client || !warehouseNumber || !username || !password) {
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
-      res.json({ success: true, message: "SAP EWM connection verified" });
+      res.json({ success: true, message: "SAP EWM configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing SAP EWM:", error);
       res.status(500).json({ success: false, message: error.message });
@@ -18656,7 +18657,7 @@ You'll receive emails for:
       if (!instanceUrl || !apiKey || !apiSecret) {
         return res.status(400).json({ success: false, message: "Missing required credentials" });
       }
-      res.json({ success: true, message: "MasterControl connection verified" });
+      res.json({ success: true, message: "MasterControl configuration saved (connectivity not verified)" });
     } catch (error: any) {
       console.error("Error testing MasterControl:", error);
       res.status(500).json({ success: false, message: error.message });

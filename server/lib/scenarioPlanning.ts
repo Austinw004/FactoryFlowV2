@@ -1,4 +1,5 @@
 import type { IStorage } from '../storage';
+import { classifyRegimeFromFDR, normalizeRegimeName, type Regime } from './regimeConstants';
 
 export interface ScenarioInput {
   scenarioName: string;
@@ -67,16 +68,7 @@ export class ScenarioPlanningEngine {
    */
   private calculateNewRegime(currentFDR: number, fdrDelta: number): { fdr: number; regime: string } {
     const newFDR = currentFDR + fdrDelta;
-    
-    let regime = 'Healthy Expansion';
-    if (newFDR > 1.3) {
-      regime = 'Imbalanced Excess';
-    } else if (newFDR > 1.15) {
-      regime = 'Asset-Led Growth';
-    } else if (newFDR < 0.85) {
-      regime = 'Real Economy Lead';
-    }
-    
+    const regime = classifyRegimeFromFDR(newFDR);
     return { fdr: newFDR, regime };
   }
 
@@ -110,9 +102,9 @@ export class ScenarioPlanningEngine {
       baseMargin: number;
     }
   ): Promise<ScenarioOutput> {
-    // Calculate new economic regime
+    // Calculate new economic regime (normalize any title-case or legacy regime names)
     const { fdr: newFDR, regime: newRegime } = input.newRegime 
-      ? { fdr: currentContext.currentFDR + input.fdrDelta, regime: input.newRegime }
+      ? { fdr: currentContext.currentFDR + input.fdrDelta, regime: normalizeRegimeName(input.newRegime) }
       : this.calculateNewRegime(currentContext.currentFDR, input.fdrDelta);
 
     // Assess regime stability
@@ -193,7 +185,7 @@ export class ScenarioPlanningEngine {
     const recommendations: ScenarioOutput['recommendations'] = [];
 
     // Procurement recommendations
-    if (newRegime === 'Imbalanced Excess' || newRegime === 'Asset-Led Growth') {
+    if (newRegime === 'IMBALANCED_EXCESS' || newRegime === 'ASSET_LED_GROWTH') {
       recommendations.push({
         category: 'procurement',
         action: 'Delay non-critical material purchases - asset prices inflated',
@@ -201,7 +193,7 @@ export class ScenarioPlanningEngine {
         impact: 'Avoid 10-15% premium on commodity purchases',
         timeline: 'Next 3-6 months',
       });
-    } else if (newRegime === 'Real Economy Lead') {
+    } else if (newRegime === 'REAL_ECONOMY_LEAD') {
       recommendations.push({
         category: 'procurement',
         action: 'Accelerate strategic material purchases - favorable pricing window',
@@ -307,8 +299,7 @@ export class ScenarioPlanningEngine {
       });
     }
 
-    // Bubble burst risk (Imbalanced Excess)
-    if (newRegime === 'Imbalanced Excess') {
+    if (newRegime === 'IMBALANCED_EXCESS') {
       risks.push({
         factor: 'Asset Bubble Correction',
         probability: 80,

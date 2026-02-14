@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { classifyRegimeFromFDR } from './regimeConstants';
 
 /**
  * Real Historical Data Integration
@@ -353,17 +354,6 @@ export class RealHistoricalDataFetcher {
    * Determine economic regime based on FDR and other indicators
    */
   determineRegime(fdr: number, dataPoint: HistoricalDataPoint): string {
-    const unemploymentLow = dataPoint.unemployment < 5.0;
-    const industrialProductionGrowing = true; // Would need to compare to previous month
-
-    if (fdr < 1.1 && unemploymentLow) {
-      return 'Healthy Expansion';
-    } else if (fdr >= 1.1 && fdr < 1.3) {
-      return 'Asset-Led Growth';
-    } else if (fdr >= 1.3 && fdr < 1.5) {
-      return 'Imbalanced Excess';
-    } else {
-      return 'Real Economy Lead';
-    }
+    return classifyRegimeFromFDR(fdr);
   }
 }

@@ -145,19 +145,19 @@ export class DualCircuitFDRModel implements BaselineModel {
       predictedPrice = currentPrice * 1.08; // Expect 8% growth
       confidence = 0.82; // High confidence in real economy lead
       
-    } else if (context.fdr >= 1.2 && context.fdr < 1.5) {
-      // HEALTHY EXPANSION: Balanced growth
-      // Theory predicts stable, moderate growth
-      predictedDirection = 'up';
-      predictedPrice = currentPrice * 1.03; // Expect 3% growth
-      confidence = 0.75;
-      
-    } else {
-      // ASSET-LED GROWTH: Moderate asset dominance
+    } else if (context.fdr >= 1.2 && context.fdr < 1.8) {
+      // ASSET-LED GROWTH (FDR 1.2-1.8): Moderate asset dominance
       // Theory predicts continued but slowing growth
       predictedDirection = currentPrice > 2500 ? 'down' : 'up';
       predictedPrice = currentPrice * 1.02;
       confidence = 0.70;
+      
+    } else {
+      // HEALTHY EXPANSION (FDR < 1.2): Balanced growth
+      // Theory predicts stable, moderate growth
+      predictedDirection = 'up';
+      predictedPrice = currentPrice * 1.03; // Expect 3% growth
+      confidence = 0.75;
     }
     
     return { predictedPrice, predictedDirection, confidence };

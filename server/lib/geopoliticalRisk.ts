@@ -165,8 +165,10 @@ export class GeopoliticalRiskEngine {
    */
   private assessProcurementImpact(eventType: string, severity: string, currentFDR: number): string {
     if (eventType === 'trade_war') {
-      return currentFDR > 1.2
-        ? 'Combine with asset bubble - extreme procurement caution. Lock in alternatives now.'
+      return currentFDR >= 1.8
+        ? 'Trade tensions combined with market imbalance - extreme procurement caution. Lock in alternatives now.'
+        : currentFDR >= 1.2
+        ? 'Trade tensions with asset-led dynamics - review procurement timing carefully.'
         : 'Trade tensions + healthy FDR - opportunity to negotiate hard and diversify.';
     } else if (eventType === 'sanctions') {
       return 'Immediate sourcing pivot required. Leverage FDR-favorable regimes for alternative suppliers.';
@@ -195,8 +197,10 @@ export class GeopoliticalRiskEngine {
         action: `Diversify ${event.region} suppliers to at least 3 alternative regions`,
         priority: riskLevel === 'critical' ? 'critical' : 'high',
         timeline: 'Within 60-90 days',
-        fdrContext: currentFDR > 1.2 
-          ? 'Asset bubble creates urgency - alternatives may become expensive'
+        fdrContext: currentFDR >= 1.8
+          ? 'Market imbalance creates urgency - alternatives may become expensive'
+          : currentFDR >= 1.2
+          ? 'Asset-led growth dynamics - diversify while conditions are manageable'
           : 'Favorable FDR environment for establishing new supplier relationships',
       });
     }
