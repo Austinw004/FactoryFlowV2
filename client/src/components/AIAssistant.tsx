@@ -421,7 +421,7 @@ export function AIAssistant() {
               </TabsList>
 
               <TabsContent value="chat" className="flex-1 flex flex-col m-0 overflow-hidden min-h-0">
-                <ScrollArea className="flex-1 min-h-0">
+                <div className="flex-1 min-h-0 overflow-y-auto">
                   <div className="p-4">
                   {messages.length === 0 ? (
                     <div className="space-y-4">
@@ -577,7 +577,7 @@ export function AIAssistant() {
                     </div>
                   )}
                   </div>
-                </ScrollArea>
+                </div>
                 
                 <div className="p-3 border-t">
                   <div className="flex gap-2">
@@ -744,7 +744,7 @@ export function AIAssistant() {
           
           {!agenticMode && (
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-              <ScrollArea className="flex-1 min-h-0">
+              <div className="flex-1 min-h-0 overflow-y-auto">
                 <div className="p-4">
                 {messages.length === 0 ? (
                   <div className="space-y-4">
@@ -849,7 +849,7 @@ export function AIAssistant() {
                   </div>
                 )}
                 </div>
-              </ScrollArea>
+              </div>
               
               <div className="p-3 border-t">
                 <div className="flex gap-2">
