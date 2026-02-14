@@ -163,7 +163,7 @@ export function AIAssistant() {
     refetchInterval: 30 * 1000,
   });
 
-  const { data: agenticStats } = useQuery({
+  const { data: agenticStats } = useQuery<{ completedToday: number; totalSavings: number }>({
     queryKey: ["/api/agentic/stats"],
     enabled: isOpen,
   });
@@ -438,11 +438,11 @@ export function AIAssistant() {
                       {agenticStats && (
                         <div className="grid grid-cols-2 gap-2 text-center">
                           <div className="p-2 bg-muted rounded-lg">
-                            <p className="text-lg font-bold text-green-600">{(agenticStats as any).completedToday || 0}</p>
+                            <p className="text-lg font-bold text-green-600">{agenticStats?.completedToday || 0}</p>
                             <p className="text-[10px] text-muted-foreground">Actions Today</p>
                           </div>
                           <div className="p-2 bg-muted rounded-lg">
-                            <p className="text-lg font-bold">${((agenticStats as any).totalSavings || 0).toLocaleString()}</p>
+                            <p className="text-lg font-bold">${(agenticStats?.totalSavings || 0).toLocaleString()}</p>
                             <p className="text-[10px] text-muted-foreground">Savings This Month</p>
                           </div>
                         </div>
