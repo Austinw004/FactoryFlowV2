@@ -33,10 +33,10 @@ import React from "react";
 import { useState, useEffect, useCallback } from "react";
 
 const regimeDescriptions: Record<string, string> = {
-  HEALTHY_EXPANSION: "Balanced and healthy market conditions. Standard procurement pace recommended.",
-  ASSET_LED_GROWTH: "Market heating up - prices starting to rise. Consider accelerating key purchases.",
-  IMBALANCED_EXCESS: "Bubble territory - prices too high. Defer non-critical purchases, renegotiate contracts.",
-  REAL_ECONOMY_LEAD: "Opportunity zone - best time to buy. Lock in favorable pricing now.",
+  HEALTHY_EXPANSION: "Balanced growth. FDR < 1.2 indicates equilibrium between asset and real economy circuits. Standard procurement pace.",
+  ASSET_LED_GROWTH: "Asset circuit outpacing real economy. FDR 1.2-1.8. Consider accelerating procurement of critical materials.",
+  IMBALANCED_EXCESS: "Significant asset-real economy decoupling. FDR 1.8-2.5. Defer non-critical purchases, renegotiate contracts.",
+  REAL_ECONOMY_LEAD: "Counter-cyclical opportunity. FDR > 2.5. Lock in favorable supplier terms while asset markets correct.",
 };
 
 function getRegimeDescription(regime: string): string {
@@ -190,28 +190,28 @@ export default function Dashboard() {
     ? (allocationDetails.results.reduce((sum: number, r: any) => sum + (r.fillRate || 0), 0) / allocationDetails.results.length * 100).toFixed(1)
     : "0.0";
 
-  const regimeData = regime as any || {};
-  const policySignals = regimeData.signals || regimeData.policySignals || [];
-  const regimeType = regimeData.regime || "UNKNOWN";
-  const fdr = regimeData.fdr || 1.0;
-  const intensity = regimeData.intensity || 50;
-  const economicData = regimeData.data || {};
-  const dataSource = regimeData.source || 'unknown';
+  const regimeData = (regime as any) ?? {};
+  const policySignals = regimeData?.signals || regimeData?.policySignals || [];
+  const regimeType = regimeData?.regime || "UNKNOWN";
+  const fdr = regimeData?.fdr ?? 1.0;
+  const intensity = regimeData?.intensity ?? 50;
+  const economicData = regimeData?.data ?? {};
+  const dataSource = regimeData?.source || 'unknown';
+  const regimeEvidence = regimeData?.regimeEvidence ?? null;
+  const regimeIntelligence = regimeData?.intelligence ?? null;
   
-  // Fallback values for economic data
   const sp500 = economicData.sp500Index || economicData.sp500 || null;
   const inflation = economicData.inflationRate || economicData.inflation || null;
   const gdpNominal = economicData.gdpNominal || null;
   const gdpReal = economicData.gdpReal || null;
   const sentiment = economicData.sentimentScore !== undefined ? economicData.sentimentScore : null;
 
-  // Map regime types to friendly labels
   const regimeLabels: Record<string, string> = {
-    "HEALTHY_EXPANSION": "Normal Growth",
-    "ASSET_LED_GROWTH": "Early Warning",
-    "IMBALANCED_EXCESS": "Bubble Territory",
-    "REAL_ECONOMY_LEAD": "Opportunity Zone",
-    "UNKNOWN": "Unknown"
+    "HEALTHY_EXPANSION": "Healthy Expansion",
+    "ASSET_LED_GROWTH": "Asset-Led Growth",
+    "IMBALANCED_EXCESS": "Imbalanced Excess",
+    "REAL_ECONOMY_LEAD": "Real Economy Lead",
+    "UNKNOWN": "Analyzing"
   };
   
   const friendlyRegime = regimeLabels[regimeType] || regimeType;
@@ -433,13 +433,22 @@ export default function Dashboard() {
           </Button>
       </div>
 
+      {regimeData.degraded && (
+        <div className="flex items-center gap-2 p-3 rounded-md border bg-muted/50 text-sm" data-testid="alert-data-degraded">
+          <AlertCircle className="h-4 w-4 text-muted-foreground shrink-0" />
+          <span className="text-muted-foreground">
+            {regimeData.degradedReason || "Economic data temporarily unavailable. Displaying baseline defaults with minimal confidence."}
+          </span>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
           icon={TrendingUp}
-          label="Market Conditions"
+          label="FDR Score"
           value={fdr.toFixed(2)}
           subtitle={friendlyRegime}
-          trend={{ value: "Live", positive: true }}
+          trend={{ value: regimeIntelligence?.confidence?.overall ? `${Math.round(regimeIntelligence.confidence.overall * 100)}% conf.` : "Live", positive: true }}
           tooltipTerm="fdr"
         />
         <KPICard
@@ -468,7 +477,9 @@ export default function Dashboard() {
           <RegimeStatus 
             regime={regimeType} 
             fdr={fdr} 
-            intensity={intensity} 
+            intensity={intensity}
+            regimeEvidence={regimeEvidence}
+            intelligence={regimeIntelligence}
           />
         </div>
         <EditableBudgetGauge />

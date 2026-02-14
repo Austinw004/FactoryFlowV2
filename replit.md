@@ -52,6 +52,10 @@ The system is a multi-tenant application with data isolation per company. Core t
 - **Integration Health Monitoring**: Live connectivity health checks (GET /api/integrations/health) for all 18 configured integrations across 8 categories (data, ai, communication, payments, crm, ecommerce, productivity, project_management) with latency tracking, status categorization (healthy/degraded/offline/not_configured), and parallel execution.
 - **Data Freshness Indicators**: Dashboard displays real-time data freshness status for regime analysis, allocations, and SKU data using TanStack Query's dataUpdatedAt. Color-coded indicators show fresh (<1min), recent (<5min), or stale (>5min) data with manual refresh capability.
 - **Inventory Status Check (Allocation Flow)**: Pre-allocation inventory verification showing measured on-hand and inbound stock levels. Highlights materials with low stock (<10 units) and requires explicit acknowledgment before running allocation when low stock materials exist. No fabricated capacity metrics - only displays actual measured data for epistemic honesty.
+- **Structural Confidence Display**: RegimeStatus component shows decomposed confidence (FDR Stability, Regime Maturity, Regime Stability, Data Quality) with progress bars, threshold ranges, regime duration, and transition probability warnings. Dashboard passes regimeEvidence and intelligence data from the API.
+- **Graceful Degradation**: Regime API returns degraded responses with regime="UNKNOWN", fdr=0, and minimal confidence (10%) instead of 500 errors during data outages. Dashboard shows a degradation banner when data is unavailable.
+- **Edge Case Resilience**: classifyRegimeFromFDR and classifyRegimeWithHysteresis guard against NaN, negative, and infinite FDR values, defaulting to safe behavior.
+- **Prediction Tracking**: predictionOutcomes schema tracks predictions with FDR/regime context and resolves against actual outcomes with accuracy metrics (MAPE, directional accuracy).
 
 ### System Design Choices
 

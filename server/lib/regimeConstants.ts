@@ -22,6 +22,9 @@ export const TYPICAL_REGIME_DURATIONS: Record<Regime, number> = {
 };
 
 export function classifyRegimeFromFDR(fdr: number): Regime {
+  if (!Number.isFinite(fdr) || fdr < 0) {
+    return "HEALTHY_EXPANSION";
+  }
   if (fdr >= CANONICAL_REGIME_THRESHOLDS.REAL_ECONOMY_LEAD.min) {
     return "REAL_ECONOMY_LEAD";
   } else if (fdr >= CANONICAL_REGIME_THRESHOLDS.IMBALANCED_EXCESS.min) {
@@ -38,6 +41,9 @@ export function classifyRegimeWithHysteresis(
   currentRegime: Regime,
   previousRegime?: Regime | null
 ): { regime: Regime; requiresConfirmation: boolean; isReversion: boolean } {
+  if (!Number.isFinite(fdr) || fdr < 0) {
+    return { regime: currentRegime, requiresConfirmation: false, isReversion: false };
+  }
   const rawRegime = classifyRegimeFromFDR(fdr);
   
   if (rawRegime === currentRegime) {
@@ -90,6 +96,49 @@ export function normalizeRegimeName(input: string): Regime {
   const upper = input.toUpperCase().replace(/[\s-]+/g, '_');
   if (REGIME_ORDER.includes(upper as Regime)) return upper as Regime;
   return "HEALTHY_EXPANSION";
+}
+
+export interface RegimeEvidence {
+  fdr: number;
+  regime: Regime;
+  thresholds: { min: number; max: number };
+  confidence: {
+    overall: number;
+    fdrStability: number;
+    regimeMaturity: number;
+    transitionRisk: number;
+    dataQuality: number;
+  };
+  distanceToNextThreshold: number;
+  regimeDurationDays: number;
+  dataSource: string;
+  timestamp: string;
+}
+
+export function buildRegimeEvidence(
+  fdr: number,
+  regime: Regime,
+  confidence: { overall: number; fdrStability: number; regimeMaturity: number; transitionRisk: number; dataQuality: number },
+  regimeDurationDays: number,
+  dataSource: string
+): RegimeEvidence {
+  const thresholds = CANONICAL_REGIME_THRESHOLDS[regime];
+  const idx = REGIME_ORDER.indexOf(regime);
+  const nextThreshold = idx < REGIME_ORDER.length - 1
+    ? CANONICAL_REGIME_THRESHOLDS[REGIME_ORDER[idx + 1]].min
+    : thresholds.max;
+  const distanceToNextThreshold = Math.abs(nextThreshold - fdr);
+
+  return {
+    fdr,
+    regime,
+    thresholds,
+    confidence,
+    distanceToNextThreshold: Math.round(distanceToNextThreshold * 100) / 100,
+    regimeDurationDays,
+    dataSource,
+    timestamp: new Date().toISOString(),
+  };
 }
 
 export function validateRegimeClassification(fdr: number, storedRegime: string): {

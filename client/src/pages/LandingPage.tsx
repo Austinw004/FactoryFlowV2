@@ -144,7 +144,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background">
       <SEOHead 
         title="Prescient Labs - Manufacturing Intelligence Platform"
-        description="Give your manufacturing operation the foresight to make smarter decisions. Predict demand, time purchases, and optimize production with AI-powered intelligence."
+        description="Manufacturing intelligence built on the Dual-Circuit FDR framework. Time procurement to economic regimes, forecast demand with macro-awareness, and optimize production with traceable evidence."
       />
       {/* Navigation */}
       <nav className="border-b sticky top-0 bg-background/95 backdrop-blur z-50">
@@ -218,7 +218,7 @@ export default function LandingPage() {
               {/* Floating badge */}
               <div className="absolute -bottom-4 -right-4 bg-primary text-primary-foreground px-4 py-2 rounded-lg shadow-lg text-sm font-medium">
                 <Sparkles className="h-4 w-4 inline mr-2" />
-                AI-Powered
+                Regime-Aware
               </div>
             </div>
           </div>

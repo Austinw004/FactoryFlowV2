@@ -4,6 +4,7 @@ import {
   forecastAccuracyTracking, demandHistory 
 } from "@shared/schema";
 import { eq, desc, and, gte } from "drizzle-orm";
+import { type RegimeEvidence } from "./regimeConstants";
 
 export interface SmartInsight {
   id: string;
@@ -15,6 +16,12 @@ export interface SmartInsight {
   actionLink?: string;
   actionLabel?: string;
   metrics?: Record<string, string | number>;
+  regimeBasis?: {
+    fdr: number;
+    regime: string;
+    confidenceLevel: number;
+    derivedFrom: string;
+  };
   timestamp: Date;
 }
 
@@ -267,40 +274,48 @@ export class SmartInsightsService {
     const regimeName = regime.regime || 'Unknown';
     const fdr = regime.fdr || 1.0;
     
-    // REAL_ECONOMY_LEAD at high FDR (≥2.5) = asset markets overheated, counter-cyclical opportunity
+    const regimeBasis = {
+      fdr,
+      regime: regimeName,
+      confidenceLevel: regime.confidence?.overall || 0.5,
+      derivedFrom: 'dual_circuit_fdr_model',
+    };
+
     if (regimeName === 'REAL_ECONOMY_LEAD' && fdr >= 2.5) {
       insights.push({
         id: `regime-opportunity-${Date.now()}`,
         type: 'opportunity',
         priority: 'high',
         title: 'Counter-Cyclical Procurement Window',
-        description: 'Asset markets overheated (high FDR). Favor real economy investments and lock in supplier terms.',
+        description: `FDR at ${fdr.toFixed(2)} indicates asset-real economy decoupling. Canonical threshold: 2.5. Lock in supplier terms while real economy leads.`,
         dataPoints: [
-          `FDR Score: ${fdr.toFixed(2)}`,
+          `FDR: ${fdr.toFixed(2)} (threshold: 2.5)`,
           `Regime: ${regimeName}`,
           `${commodities.falling.length} commodities trending down`,
         ],
         actionLink: '/procurement',
         actionLabel: 'Review Procurement',
         metrics: { fdr, fallingCommodities: commodities.falling.length },
+        regimeBasis,
         timestamp: new Date(),
       });
     }
     
-    // ASSET_LED_GROWTH at FDR 1.2-1.8 indicates assets leading - warn when approaching IMBALANCED_EXCESS boundary (1.8)
     if (regimeName === 'ASSET_LED_GROWTH' && fdr >= 1.65) {
       insights.push({
         id: `regime-caution-${Date.now()}`,
         type: 'risk',
         priority: 'medium',
-        title: 'Market Overheating Signals',
-        description: 'Asset-led growth with high FDR - consider securing supply agreements',
+        title: 'Approaching Imbalanced Excess Threshold',
+        description: `FDR at ${fdr.toFixed(2)} approaching IMBALANCED_EXCESS boundary (1.8). Consider securing supply agreements before regime transition.`,
         dataPoints: [
-          `FDR Score: ${fdr.toFixed(2)}`,
+          `FDR: ${fdr.toFixed(2)} (next threshold: 1.8)`,
+          `Distance to transition: ${(1.8 - fdr).toFixed(2)}`,
           `${skuData.lowStock.length} items at low stock`,
         ],
         actionLink: '/supply-chain',
         actionLabel: 'Review Supply Chain',
+        regimeBasis,
         timestamp: new Date(),
       });
     }

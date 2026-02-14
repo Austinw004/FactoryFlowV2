@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import axios from "axios";
 import { storage } from "./storage";
 import { db } from "@db";
-import { sql, eq } from "drizzle-orm";
+import { sql, eq, and } from "drizzle-orm";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { attachRbacUser, requirePermission } from "./middleware/rbac";
 import rbacRoutes from "./routes/rbac";
@@ -16,6 +16,7 @@ import { smartInsightsService } from "./lib/smartInsights";
 import { DemandForecaster } from "./lib/forecasting";
 import { EnhancedDemandForecaster, LeadIndicatorService, type DemandDataPoint } from "./lib/enhancedForecasting";
 import { getCompanyRegimeIntelligence } from "./lib/regimeIntelligence";
+import { buildRegimeEvidence, type RegimeEvidence } from "./lib/regimeConstants";
 import { AllocationEngine } from "./lib/allocation";
 import { setupWebSocket, getConnectedClientCount } from "./websocket";
 import { applySecurityHardening, securityMonitor, rateLimiters } from "./lib/securityHardening";
@@ -97,6 +98,8 @@ import {
   insertDigitalTwinSimulationSchema,
   insertDigitalTwinAlertSchema,
   insertDigitalTwinMetricSchema,
+  predictionOutcomes,
+  insertPredictionOutcomeSchema,
 } from "@shared/schema";
 
 const economics = new DualCircuitEconomics();
@@ -1033,10 +1036,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           confidenceCap: validationConfidenceCap,
         };
         
-        // Use persisted snapshot data
+        const regimeDuration = intelligenceSummary.regimeDuration;
+        const regimeEvidence = buildRegimeEvidence(
+          Number(snapshot.fdr),
+          (snapshot.confirmedRegime || snapshot.regime) as any,
+          {
+            overall: cappedConfidence.overall,
+            fdrStability: cappedConfidence.fdrStability || 0.5,
+            regimeMaturity: cappedConfidence.regimeMaturity || 0.5,
+            transitionRisk: cappedConfidence.transitionRisk || 0.5,
+            dataQuality: cappedConfidence.dataQuality || 0.5,
+          },
+          regimeDuration?.daysInRegime || 0,
+          snapshot.source || 'unknown'
+        );
+
         const responseData = {
-          regime: snapshot.regime, // Raw classification from FDR value
-          confirmedRegime: snapshot.confirmedRegime || snapshot.regime, // Persistence-filtered regime (with hysteresis/duration/confirmation)
+          regime: snapshot.regime,
+          confirmedRegime: snapshot.confirmedRegime || snapshot.regime,
           fdr: snapshot.fdr,
           data: {
             gdpReal: snapshot.gdpReal,
@@ -1047,8 +1064,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
           source: snapshot.source,
           timestamp: snapshot.timestamp,
-          signals: calculateSignalsForRegime(snapshot.confirmedRegime || snapshot.regime), // Signals based on confirmed regime
-          // Thesis-aligned regime intelligence (company-scoped)
+          signals: calculateSignalsForRegime(snapshot.confirmedRegime || snapshot.regime),
+          regimeEvidence,
           intelligence: {
             fdrTrend: intelligenceSummary.fdrAnalysis,
             transitionPrediction: intelligenceSummary.transitionPrediction,
@@ -1101,14 +1118,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
           confidenceCap: validationConfidenceCap,
         };
         
+        const fallbackDuration = intelligenceSummary.regimeDuration;
+        const fallbackEvidence = buildRegimeEvidence(
+          companyFdr,
+          companyRegime as any,
+          {
+            overall: cappedConfidence.overall,
+            fdrStability: cappedConfidence.fdrStability || 0.5,
+            regimeMaturity: cappedConfidence.regimeMaturity || 0.5,
+            transitionRisk: cappedConfidence.transitionRisk || 0.5,
+            dataQuality: cappedConfidence.dataQuality || 0.5,
+          },
+          fallbackDuration?.daysInRegime || 0,
+          'company_intelligence'
+        );
+
         res.json({
           regime: companyRegime,
-          confirmedRegime: companyRegime, // Fallback uses same value (no persistence history)
+          confirmedRegime: companyRegime,
           fdr: companyFdr,
-          data: {}, // No legacy balance sheet data in company-specific mode
+          data: {},
           source: 'company_intelligence',
           signals: calculateSignalsForRegime(companyRegime),
-          // Thesis-aligned regime intelligence (company-scoped)
+          regimeEvidence: fallbackEvidence,
           intelligence: {
             fdrTrend: intelligenceSummary.fdrAnalysis,
             transitionPrediction: intelligenceSummary.transitionPrediction,
@@ -1119,7 +1151,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      console.error("[RegimeAPI] Error fetching regime data, returning degraded response:", error.message);
+      res.json({
+        regime: "UNKNOWN",
+        confirmedRegime: "UNKNOWN",
+        fdr: 0,
+        data: {},
+        source: 'degraded_fallback',
+        signals: [],
+        regimeEvidence: buildRegimeEvidence(0, "HEALTHY_EXPANSION", {
+          overall: 0.1,
+          fdrStability: 0.1,
+          regimeMaturity: 0.1,
+          transitionRisk: 0.9,
+          dataQuality: 0.0,
+        }, 0, 'degraded_fallback'),
+        intelligence: {
+          fdrTrend: null,
+          transitionPrediction: null,
+          regimeDuration: null,
+          confidence: {
+            overall: 0.1,
+            fdrStability: 0.1,
+            regimeMaturity: 0.1,
+            transitionRisk: 0.9,
+            dataQuality: 0.0,
+            validationPassed: false,
+            validationDiagnosis: `Data outage: ${error.message}`,
+            confidenceCap: 0.1,
+          },
+          procurementSignal: null,
+        },
+        degraded: true,
+        degradedReason: "Unable to fetch live economic data. Displaying baseline defaults with minimal confidence.",
+      });
     }
   });
 
@@ -2885,6 +2950,170 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(alerts);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
+
+  // Prediction Performance Metrics
+  app.get("/api/prediction-performance", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+
+      const outcomes = await db
+        .select()
+        .from(predictionOutcomes)
+        .where(eq(predictionOutcomes.companyId, user.companyId));
+
+      const totalPredictions = outcomes.length;
+      const resolvedCount = outcomes.filter((o: any) => o.isResolved).length;
+      const accurateCount = outcomes.filter((o: any) => o.wasAccurate === 1).length;
+      const accuracyRate = resolvedCount > 0 ? (accurateCount / resolvedCount) * 100 : 0;
+
+      // Group by prediction type
+      const byType: Record<string, any> = {};
+      outcomes.forEach((outcome: any) => {
+        if (!byType[outcome.predictionType]) {
+          byType[outcome.predictionType] = {
+            total: 0,
+            resolved: 0,
+            accurate: 0,
+            accuracyRate: 0,
+          };
+        }
+        byType[outcome.predictionType].total++;
+        if (outcome.isResolved) byType[outcome.predictionType].resolved++;
+        if (outcome.wasAccurate === 1) byType[outcome.predictionType].accurate++;
+      });
+
+      // Calculate accuracy rates by type
+      Object.keys(byType).forEach((type) => {
+        if (byType[type].resolved > 0) {
+          byType[type].accuracyRate = (byType[type].accurate / byType[type].resolved) * 100;
+        }
+      });
+
+      // Group by regime
+      const byRegime: Record<string, any> = {};
+      outcomes.forEach((outcome: any) => {
+        if (!byRegime[outcome.regimeAtPrediction]) {
+          byRegime[outcome.regimeAtPrediction] = {
+            total: 0,
+            resolved: 0,
+            accurate: 0,
+            accuracyRate: 0,
+          };
+        }
+        byRegime[outcome.regimeAtPrediction].total++;
+        if (outcome.isResolved) byRegime[outcome.regimeAtPrediction].resolved++;
+        if (outcome.wasAccurate === 1) byRegime[outcome.regimeAtPrediction].accurate++;
+      });
+
+      // Calculate accuracy rates by regime
+      Object.keys(byRegime).forEach((regime) => {
+        if (byRegime[regime].resolved > 0) {
+          byRegime[regime].accuracyRate = (byRegime[regime].accurate / byRegime[regime].resolved) * 100;
+        }
+      });
+
+      res.json({
+        summary: {
+          totalPredictions,
+          resolvedCount,
+          accuracyRate: Math.round(accuracyRate * 100) / 100,
+        },
+        byType,
+        byRegime,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Log a new prediction
+  app.post("/api/prediction-outcomes", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+
+      const {
+        predictionType,
+        predictionId,
+        fdrAtPrediction,
+        regimeAtPrediction,
+        confidenceAtPrediction,
+        predictedValue,
+        predictedDirection,
+        metadata,
+      } = req.body;
+
+      const schema = insertPredictionOutcomeSchema.parse({
+        companyId: user.companyId,
+        predictionType,
+        predictionId,
+        fdrAtPrediction,
+        regimeAtPrediction,
+        confidenceAtPrediction,
+        predictedValue,
+        predictedDirection,
+        metadata,
+      });
+
+      const result = await db
+        .insert(predictionOutcomes)
+        .values(schema)
+        .returning();
+
+      res.status(201).json(result[0]);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid request data", details: error.errors });
+      }
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Resolve a prediction with actual outcome
+  app.post("/api/prediction-outcomes/:id/resolve", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+
+      const { id } = req.params;
+      const { actualValue, actualDirection, wasAccurate, errorMagnitude } = req.body;
+
+      if (!actualValue) {
+        return res.status(400).json({ error: "actualValue is required" });
+      }
+
+      const result = await db
+        .update(predictionOutcomes)
+        .set({
+          actualValue,
+          actualDirection,
+          wasAccurate: wasAccurate !== undefined ? (wasAccurate ? 1 : 0) : null,
+          errorMagnitude,
+          isResolved: 1,
+          outcomeTimestamp: new Date(),
+        })
+        .where(and(eq(predictionOutcomes.id, parseInt(id)), eq(predictionOutcomes.companyId, user.companyId)))
+        .returning();
+
+      if (result.length === 0) {
+        return res.status(404).json({ error: "Prediction not found" });
+      }
+
+      res.json(result[0]);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
     }
   });
 

@@ -8216,3 +8216,40 @@ export type CanonicalEntityMapping = typeof canonicalEntityMappings.$inferSelect
 export type InsertCanonicalEntityMapping = z.infer<typeof insertCanonicalEntityMappingSchema>;
 export type IntegrationDocumentation = typeof integrationDocumentation.$inferSelect;
 export type InsertIntegrationDocumentation = z.infer<typeof insertIntegrationDocumentationSchema>;
+
+// Prediction Outcome Tracking (Falsification Discipline)
+export const predictionOutcomes = pgTable(
+  "prediction_outcomes",
+  {
+    id: serial("id").primaryKey(),
+    companyId: text("company_id").notNull(),
+    predictionType: text("prediction_type").notNull(),
+    predictionId: text("prediction_id").notNull(),
+    fdrAtPrediction: real("fdr_at_prediction").notNull(),
+    regimeAtPrediction: text("regime_at_prediction").notNull(),
+    confidenceAtPrediction: real("confidence_at_prediction").notNull(),
+    predictedValue: text("predicted_value").notNull(),
+    predictedDirection: text("predicted_direction"),
+    actualValue: text("actual_value"),
+    actualDirection: text("actual_direction"),
+    isResolved: integer("is_resolved").default(0),
+    wasAccurate: integer("was_accurate"),
+    errorMagnitude: real("error_magnitude"),
+    regimeAtOutcome: text("regime_at_outcome"),
+    fdrAtOutcome: real("fdr_at_outcome"),
+    predictionTimestamp: timestamp("prediction_timestamp").defaultNow().notNull(),
+    outcomeTimestamp: timestamp("outcome_timestamp"),
+    metadata: text("metadata"),
+  },
+  (table) => [
+    index("prediction_outcomes_company_idx").on(table.companyId),
+    index("prediction_outcomes_type_idx").on(table.predictionType),
+    index("prediction_outcomes_resolved_idx").on(table.isResolved),
+  ],
+);
+
+export const insertPredictionOutcomeSchema = createInsertSchema(
+  predictionOutcomes,
+).omit({ id: true });
+export type PredictionOutcome = typeof predictionOutcomes.$inferSelect;
+export type InsertPredictionOutcome = z.infer<typeof insertPredictionOutcomeSchema>;
