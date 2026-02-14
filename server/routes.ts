@@ -10,6 +10,7 @@ import rbacRoutes from "./routes/rbac";
 import platformAnalyticsRoutes from "./routes/platformAnalytics";
 import { initializePermissions, initializeDefaultRoles } from "./lib/rbac";
 import { logAudit } from "./lib/auditLogger";
+import { registerIntegrationOrchestratorRoutes } from "./lib/integrationRoutes";
 import { globalCache } from "./lib/caching";
 import { DualCircuitEconomics } from "./lib/economics";
 import { smartInsightsService } from "./lib/smartInsights";
@@ -482,6 +483,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Platform Analytics routes (owner-only, not visible to customers)
   app.use('/api/platform', platformAnalyticsRoutes);
+
+  // Integration Orchestrator routes
+  registerIntegrationOrchestratorRoutes(app, isAuthenticated, rateLimiters);
 
   // Health check endpoint for monitoring
   app.get('/api/health', async (req, res) => {

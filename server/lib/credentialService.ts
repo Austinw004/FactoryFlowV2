@@ -74,6 +74,14 @@ export class CredentialService {
     return !!process.env.INTEGRATION_ENCRYPTION_KEY;
   }
 
+  static getEncryptionKeyStatus(): { available: boolean; keyLength: number } {
+    const key = process.env.INTEGRATION_ENCRYPTION_KEY;
+    return {
+      available: !!key,
+      keyLength: key ? key.length : 0,
+    };
+  }
+
   static async storeCredentials(
     companyId: string,
     integrationId: string,

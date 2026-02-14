@@ -67,7 +67,9 @@ import { JaggaerConfigDialog } from "@/components/JaggaerConfigDialog";
 import { SAPEWMConfigDialog } from "@/components/SAPEWMConfigDialog";
 import { MasterControlConfigDialog } from "@/components/MasterControlConfigDialog";
 import { IntegrationReadinessReport } from "@/components/IntegrationReadinessReport";
+import { IntegrationOrchestratorPanel } from "@/components/IntegrationOrchestratorPanel";
 import {
+  Activity,
   Building2,
   MessageSquare,
   FileSpreadsheet,
@@ -1023,6 +1025,7 @@ function getStatusBadge(status: IntegrationStatus) {
 
 export default function Integrations() {
   const { toast } = useToast();
+  const [viewMode, setViewMode] = useState<"catalog" | "orchestrator">("catalog");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [csvDialogOpen, setCsvDialogOpen] = useState(false);
@@ -1248,13 +1251,39 @@ export default function Integrations() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-6 max-w-7xl">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2" data-testid="text-page-title">Integrations</h1>
+        <div className="mb-6">
+          <div className="flex items-center justify-between gap-4 flex-wrap mb-2">
+            <h1 className="text-3xl font-bold" data-testid="text-page-title">Integrations</h1>
+            <div className="flex items-center gap-2">
+              <Button
+                variant={viewMode === "catalog" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("catalog")}
+                data-testid="button-view-catalog"
+              >
+                Catalog
+              </Button>
+              <Button
+                variant={viewMode === "orchestrator" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("orchestrator")}
+                data-testid="button-view-orchestrator"
+              >
+                <Activity className="w-4 h-4 mr-1" /> Live Status
+              </Button>
+            </div>
+          </div>
           <p className="text-muted-foreground">
-            Connect Prescient Labs with your existing systems for seamless data flow and enhanced intelligence
+            {viewMode === "catalog"
+              ? "Connect Prescient Labs with your existing systems for seamless data flow and enhanced intelligence"
+              : "Real-time orchestrator status showing actual sync health, data freshness, and event processing"}
           </p>
         </div>
 
+        {viewMode === "orchestrator" ? (
+          <IntegrationOrchestratorPanel />
+        ) : (
+        <>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <Card>
             <CardContent className="p-4 flex items-center gap-4">
@@ -1513,6 +1542,8 @@ export default function Integrations() {
             </Button>
           </CardContent>
         </Card>
+        </>
+        )}
       </div>
 
       <CSVImportExportDialog open={csvDialogOpen} onOpenChange={setCsvDialogOpen} />

@@ -8253,3 +8253,219 @@ export const insertPredictionOutcomeSchema = createInsertSchema(
 ).omit({ id: true });
 export type PredictionOutcome = typeof predictionOutcomes.$inferSelect;
 export type InsertPredictionOutcome = z.infer<typeof insertPredictionOutcomeSchema>;
+
+// ============================================
+// Integration Orchestrator - Canonical Data Model
+// ============================================
+
+// Integration Connections - tracks per-tenant connection state for each integration
+export const integrationConnections = pgTable(
+  "integration_connections",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    integrationId: text("integration_id").notNull(),
+    displayName: text("display_name").notNull(),
+    status: text("status").notNull().default("not_configured"),
+    capabilities: text("capabilities").default("[]"),
+    supportedObjects: text("supported_objects").default("[]"),
+    dataFlowDirection: text("data_flow_direction").default("bidirectional"),
+    lastSyncAt: timestamp("last_sync_at"),
+    lastSyncStatus: text("last_sync_status"),
+    lastSuccessfulSyncAt: timestamp("last_successful_sync_at"),
+    lastErrorAt: timestamp("last_error_at"),
+    lastErrorMessage: text("last_error_message"),
+    syncFrequencyMinutes: integer("sync_frequency_minutes").default(60),
+    totalSyncs: integer("total_syncs").default(0),
+    totalErrors: integer("total_errors").default(0),
+    totalObjectsSynced: integer("total_objects_synced").default(0),
+    isVerified: integer("is_verified").default(0),
+    verifiedAt: timestamp("verified_at"),
+    configuredBy: varchar("configured_by").references(() => users.id),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("ic_company_idx").on(table.companyId),
+    index("ic_integration_idx").on(table.integrationId),
+    uniqueIndex("ic_company_integration_unique").on(table.companyId, table.integrationId),
+  ],
+);
+
+export const insertIntegrationConnectionSchema = createInsertSchema(integrationConnections).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertIntegrationConnection = z.infer<typeof insertIntegrationConnectionSchema>;
+export type IntegrationConnection = typeof integrationConnections.$inferSelect;
+
+// Integration Events - normalized event stream for all integration activity
+export const integrationEvents = pgTable(
+  "integration_events",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    integrationId: text("integration_id").notNull(),
+    connectionId: varchar("connection_id").references(() => integrationConnections.id),
+    eventType: text("event_type").notNull(),
+    canonicalObjectType: text("canonical_object_type"),
+    canonicalObjectId: text("canonical_object_id"),
+    externalObjectId: text("external_object_id"),
+    direction: text("direction").notNull().default("inbound"),
+    status: text("status").notNull().default("pending"),
+    payload: text("payload"),
+    errorMessage: text("error_message"),
+    idempotencyKey: text("idempotency_key"),
+    retryCount: integer("retry_count").default(0),
+    processedAt: timestamp("processed_at"),
+    regimeContext: text("regime_context"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("ie_company_idx").on(table.companyId),
+    index("ie_integration_idx").on(table.integrationId),
+    index("ie_event_type_idx").on(table.eventType),
+    index("ie_status_idx").on(table.status),
+    index("ie_idempotency_idx").on(table.idempotencyKey),
+  ],
+);
+
+export const insertIntegrationEventSchema = createInsertSchema(integrationEvents).omit({ id: true, createdAt: true });
+export type InsertIntegrationEvent = z.infer<typeof insertIntegrationEventSchema>;
+export type IntegrationEvent = typeof integrationEvents.$inferSelect;
+
+// Sync Jobs - tracks sync operations for each integration
+export const syncJobs = pgTable(
+  "sync_jobs",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    connectionId: varchar("connection_id").notNull().references(() => integrationConnections.id),
+    integrationId: text("integration_id").notNull(),
+    jobType: text("job_type").notNull().default("pull"),
+    status: text("status").notNull().default("pending"),
+    objectTypes: text("object_types").default("[]"),
+    totalObjects: integer("total_objects").default(0),
+    processedObjects: integer("processed_objects").default(0),
+    failedObjects: integer("failed_objects").default(0),
+    checkpointData: text("checkpoint_data"),
+    errorMessage: text("error_message"),
+    startedAt: timestamp("started_at"),
+    completedAt: timestamp("completed_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("sj_company_idx").on(table.companyId),
+    index("sj_connection_idx").on(table.connectionId),
+    index("sj_status_idx").on(table.status),
+  ],
+);
+
+export const insertSyncJobSchema = createInsertSchema(syncJobs).omit({ id: true, createdAt: true });
+export type InsertSyncJob = z.infer<typeof insertSyncJobSchema>;
+export type SyncJob = typeof syncJobs.$inferSelect;
+
+// Dead Letter Events - failed events that need manual review
+export const deadLetterEvents = pgTable(
+  "dead_letter_events",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    integrationId: text("integration_id").notNull(),
+    connectionId: varchar("connection_id").references(() => integrationConnections.id),
+    originalEventId: varchar("original_event_id"),
+    eventType: text("event_type").notNull(),
+    canonicalObjectType: text("canonical_object_type"),
+    payload: text("payload"),
+    errorMessage: text("error_message").notNull(),
+    errorCategory: text("error_category").notNull().default("unknown"),
+    retryCount: integer("retry_count").default(0),
+    maxRetries: integer("max_retries").default(3),
+    isResolved: integer("is_resolved").default(0),
+    resolvedAt: timestamp("resolved_at"),
+    resolvedBy: varchar("resolved_by").references(() => users.id),
+    resolution: text("resolution"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("dle_company_idx").on(table.companyId),
+    index("dle_integration_idx").on(table.integrationId),
+    index("dle_resolved_idx").on(table.isResolved),
+  ],
+);
+
+export const insertDeadLetterEventSchema = createInsertSchema(deadLetterEvents).omit({ id: true, createdAt: true });
+export type InsertDeadLetterEvent = z.infer<typeof insertDeadLetterEventSchema>;
+export type DeadLetterEvent = typeof deadLetterEvents.$inferSelect;
+
+// External Identity Resolution - maps external IDs to canonical internal IDs
+export const externalIdentities = pgTable(
+  "external_identities",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    integrationId: text("integration_id").notNull(),
+    externalId: text("external_id").notNull(),
+    externalObjectType: text("external_object_type").notNull(),
+    canonicalObjectType: text("canonical_object_type").notNull(),
+    canonicalObjectId: text("canonical_object_id").notNull(),
+    lastSyncedAt: timestamp("last_synced_at").defaultNow(),
+    metadata: text("metadata"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("ei_company_idx").on(table.companyId),
+    index("ei_external_idx").on(table.externalId),
+    uniqueIndex("ei_unique_external").on(table.companyId, table.integrationId, table.externalId, table.externalObjectType),
+  ],
+);
+
+export const insertExternalIdentitySchema = createInsertSchema(externalIdentities).omit({ id: true, createdAt: true });
+export type InsertExternalIdentity = z.infer<typeof insertExternalIdentitySchema>;
+export type ExternalIdentity = typeof externalIdentities.$inferSelect;
+
+// Integration Health Snapshots - periodic health checks
+export const integrationHealthSnapshots = pgTable(
+  "integration_health_snapshots",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    connectionId: varchar("connection_id").notNull().references(() => integrationConnections.id),
+    integrationId: text("integration_id").notNull(),
+    status: text("status").notNull(),
+    latencyMs: integer("latency_ms"),
+    errorRate: real("error_rate"),
+    objectsFreshness: text("objects_freshness"),
+    details: text("details"),
+    checkedAt: timestamp("checked_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("ihs_company_idx").on(table.companyId),
+    index("ihs_connection_idx").on(table.connectionId),
+    index("ihs_checked_idx").on(table.checkedAt),
+  ],
+);
+
+export const insertIntegrationHealthSnapshotSchema = createInsertSchema(integrationHealthSnapshots).omit({ id: true });
+export type InsertIntegrationHealthSnapshot = z.infer<typeof insertIntegrationHealthSnapshotSchema>;
+export type IntegrationHealthSnapshot = typeof integrationHealthSnapshots.$inferSelect;
+
+// Canonical Object Types enum for type safety
+export const CANONICAL_OBJECT_TYPES = [
+  "organization", "user", "location", "sku", "material", "supplier",
+  "customer", "contract", "rfq", "purchase_order", "invoice", "payment",
+  "shipment", "inventory_snapshot", "production_run", "quality_event",
+  "work_order", "ticket", "project", "document", "news_item",
+  "economic_snapshot", "commodity_price", "weather_data",
+] as const;
+export type CanonicalObjectType = typeof CANONICAL_OBJECT_TYPES[number];
+
+// Integration Status enum
+export const INTEGRATION_STATUSES = [
+  "not_configured", "connected", "syncing", "healthy",
+  "degraded", "failed", "disabled",
+] as const;
+export type IntegrationStatus = typeof INTEGRATION_STATUSES[number];
+
+// Integration Capability enum
+export const INTEGRATION_CAPABILITIES = [
+  "import", "export", "bidirectional", "webhooks", "batch", "file_edi", "real_time",
+] as const;
+export type IntegrationCapability = typeof INTEGRATION_CAPABILITIES[number];
