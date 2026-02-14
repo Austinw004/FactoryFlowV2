@@ -230,13 +230,8 @@ export default function Dashboard() {
     return (
       <>
         <div className="p-6 space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-semibold">Dashboard</h1>
-              <p className="text-muted-foreground mt-1">
-                Your manufacturing control center
-              </p>
-            </div>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <h1 className="text-3xl font-semibold">Dashboard</h1>
             <div className="flex items-center gap-2">
               <Badge variant={isConnected ? "default" : "outline"} className="gap-1.5">
                 <Radio className={`h-3 w-3 ${isConnected ? 'animate-pulse' : ''}`} />
@@ -294,16 +289,8 @@ export default function Dashboard() {
   // Main dashboard content
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold">Dashboard</h1>
-          <div className="flex items-center gap-4 mt-1">
-            <p className="text-muted-foreground">
-              Your manufacturing control center
-            </p>
-            <IndustryBanner />
-          </div>
-        </div>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h1 className="text-3xl font-semibold">Dashboard</h1>
         <div className="flex items-center gap-2 flex-wrap">
           {/* Data Freshness Indicator */}
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border bg-muted/30" data-testid="data-freshness-indicator">
@@ -341,7 +328,10 @@ export default function Dashboard() {
             <Radio className={`h-3 w-3 ${isConnected ? 'animate-pulse' : ''}`} />
             {isConnected ? 'Live Updates' : 'Connecting...'}
           </Badge>
-          <Separator orientation="vertical" className="h-8" />
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 flex-wrap">
           <Button
             variant="outline"
             size="sm"
