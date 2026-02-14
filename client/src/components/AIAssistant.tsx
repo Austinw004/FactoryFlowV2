@@ -421,7 +421,8 @@ export function AIAssistant() {
               </TabsList>
 
               <TabsContent value="chat" className="flex-1 flex flex-col m-0 overflow-hidden min-h-0">
-                <ScrollArea className="flex-1 min-h-0 p-4">
+                <ScrollArea className="flex-1 min-h-0">
+                  <div className="p-4">
                   {messages.length === 0 ? (
                     <div className="space-y-4">
                       <div className="text-center py-4">
@@ -575,6 +576,7 @@ export function AIAssistant() {
                       <div ref={messagesEndRef} />
                     </div>
                   )}
+                  </div>
                 </ScrollArea>
                 
                 <div className="p-3 border-t">
@@ -602,7 +604,8 @@ export function AIAssistant() {
               </TabsContent>
 
               <TabsContent value="actions" className="flex-1 m-0 overflow-hidden">
-                <ScrollArea className="h-full p-4">
+                <ScrollArea className="h-full">
+                  <div className="p-4">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="font-medium text-sm">Pending Actions</h3>
                     <Button variant="ghost" size="sm" onClick={() => refetchPendingActions()}>
@@ -689,11 +692,13 @@ export function AIAssistant() {
                       <ChevronRight className="h-3 w-3 ml-auto" />
                     </Button>
                   </div>
+                  </div>
                 </ScrollArea>
               </TabsContent>
 
               <TabsContent value="alerts" className="flex-1 m-0 overflow-hidden">
-                <ScrollArea className="h-full p-4">
+                <ScrollArea className="h-full">
+                  <div className="p-4">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="font-medium text-sm">Proactive Alerts</h3>
                     <Button variant="ghost" size="sm" onClick={() => refetchAlerts()}>
@@ -731,6 +736,7 @@ export function AIAssistant() {
                       ))}
                     </div>
                   )}
+                  </div>
                 </ScrollArea>
               </TabsContent>
             </Tabs>
@@ -738,7 +744,8 @@ export function AIAssistant() {
           
           {!agenticMode && (
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-              <ScrollArea className="flex-1 min-h-0 p-4">
+              <ScrollArea className="flex-1 min-h-0">
+                <div className="p-4">
                 {messages.length === 0 ? (
                   <div className="space-y-4">
                     <div className="text-center py-6">
@@ -841,6 +848,7 @@ export function AIAssistant() {
                     <div ref={messagesEndRef} />
                   </div>
                 )}
+                </div>
               </ScrollArea>
               
               <div className="p-3 border-t">
