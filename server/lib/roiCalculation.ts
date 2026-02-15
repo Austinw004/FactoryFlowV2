@@ -1,4 +1,5 @@
 import { db } from "../db";
+import { CANONICAL_REGIME_THRESHOLDS } from "./regimeConstants";
 import {
   roiMetrics,
   roiSummary,
@@ -91,8 +92,7 @@ export class RoiCalculationService {
       for (const rfq of companyRfqs) {
         const estimatedValue = Number(rfq.bestQuotePrice || rfq.requestedQuantity * 50) || 1000;
         
-        // REAL_ECONOMY_LEAD at high FDR (≥2.5) = counter-cyclical opportunity
-        if (currentRegime === "REAL_ECONOMY_LEAD" && currentFdr >= 2.5) {
+        if (currentRegime === "REAL_ECONOMY_LEAD" && currentFdr >= CANONICAL_REGIME_THRESHOLDS.REAL_ECONOMY_LEAD.min) {
           result.counterCyclicalOpportunities += estimatedValue * 0.18;
           result.regimeTimingSavings += estimatedValue * 0.12;
         } else if (currentRegime === "HEALTHY_EXPANSION") {

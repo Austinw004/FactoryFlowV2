@@ -2,6 +2,7 @@ import { db } from "../db";
 import { maTargets, maRecommendations, economicSnapshots } from "@shared/schema";
 import { eq, desc, sql } from "drizzle-orm";
 import type { IStorage } from "../storage";
+import { CANONICAL_REGIME_THRESHOLDS } from "./regimeConstants";
 
 /**
  * M&A Intelligence Population Service
@@ -128,12 +129,12 @@ export class MAIntelligencePopulationService {
   }
 
   private getRegimeTimingSignal(regime: string, fdr: number): string {
-    // REAL_ECONOMY_LEAD at high FDR (≥2.5) = asset markets overheated, buy real assets
-    if (regime === "REAL_ECONOMY_LEAD" && fdr >= 2.5) return "BUY";
+    // REAL_ECONOMY_LEAD at high FDR (see regimeConstants.ts) = asset markets overheated, buy real assets
+    if (regime === "REAL_ECONOMY_LEAD" && fdr >= CANONICAL_REGIME_THRESHOLDS.REAL_ECONOMY_LEAD.min) return "BUY";
     if (regime === "HEALTHY_EXPANSION") return "OPPORTUNISTIC";
     if (regime === "ASSET_LED_GROWTH") return "CAUTIOUS";
-    // IMBALANCED_EXCESS (FDR 1.8-2.5) = sell/divest
-    if (regime === "IMBALANCED_EXCESS" || fdr >= 1.8) return "SELL";
+    // IMBALANCED_EXCESS (see regimeConstants.ts) = sell/divest
+    if (regime === "IMBALANCED_EXCESS" || fdr >= CANONICAL_REGIME_THRESHOLDS.IMBALANCED_EXCESS.min) return "SELL";
     return "HOLD";
   }
 
@@ -167,10 +168,10 @@ export class MAIntelligencePopulationService {
     if (fdr >= 2.8) {
       actions.push("Counter-cyclical opportunity: Aggressive acquisition stance warranted - asset valuations extreme");
     }
-    // Canonical threshold: ASSET_LED_GROWTH starts at 1.2, use canonical import if needed
-    if (fdr >= 1.8 && fdr < 2.5) {
+    // Canonical thresholds from regimeConstants.ts
+    if (fdr >= CANONICAL_REGIME_THRESHOLDS.IMBALANCED_EXCESS.min && fdr < CANONICAL_REGIME_THRESHOLDS.REAL_ECONOMY_LEAD.min) {
       actions.push("Caution: FDR in IMBALANCED_EXCESS zone - defer acquisitions, preserve cash");
-    } else if (fdr >= 1.2 && fdr < 1.8) {
+    } else if (fdr >= CANONICAL_REGIME_THRESHOLDS.ASSET_LED_GROWTH.min && fdr < CANONICAL_REGIME_THRESHOLDS.IMBALANCED_EXCESS.min) {
       actions.push("Note: FDR in ASSET_LED_GROWTH zone - be selective with acquisitions");
     }
 

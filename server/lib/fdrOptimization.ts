@@ -24,6 +24,7 @@
  */
 
 import type { Regime } from './economics';
+import { CANONICAL_REGIME_THRESHOLDS } from './regimeConstants';
 
 // ============================================================================
 // VERSIONED CONFIGURATION - ALL CHANGES TRACKED
@@ -68,12 +69,12 @@ const THRESHOLD_HISTORY: ThresholdConfig[] = [
     version: '1.0.0',
     effectiveDate: '2025-01-09',
     thresholds: {
-      HEALTHY_EXPANSION: { min: 0.0, max: 1.2 },
-      ASSET_LED_GROWTH: { min: 1.2, max: 1.8 },
-      IMBALANCED_EXCESS: { min: 1.8, max: 2.5 },
-      REAL_ECONOMY_LEAD: { min: 2.5, max: 10.0 },
+      HEALTHY_EXPANSION: { min: CANONICAL_REGIME_THRESHOLDS.HEALTHY_EXPANSION.min, max: CANONICAL_REGIME_THRESHOLDS.HEALTHY_EXPANSION.max },
+      ASSET_LED_GROWTH: { min: CANONICAL_REGIME_THRESHOLDS.ASSET_LED_GROWTH.min, max: CANONICAL_REGIME_THRESHOLDS.ASSET_LED_GROWTH.max },
+      IMBALANCED_EXCESS: { min: CANONICAL_REGIME_THRESHOLDS.IMBALANCED_EXCESS.min, max: CANONICAL_REGIME_THRESHOLDS.IMBALANCED_EXCESS.max },
+      REAL_ECONOMY_LEAD: { min: CANONICAL_REGIME_THRESHOLDS.REAL_ECONOMY_LEAD.min, max: CANONICAL_REGIME_THRESHOLDS.REAL_ECONOMY_LEAD.max },
     },
-    changeLog: 'Initial canonical thresholds. Consolidated from regimeIntelligence.ts. REAL_ECONOMY_LEAD now correctly triggers at HIGH FDR (asset dominance creating counter-cyclical opportunity when it reverts).',
+    changeLog: 'Initial canonical thresholds from regimeConstants.ts. REAL_ECONOMY_LEAD now correctly triggers at HIGH FDR (asset dominance creating counter-cyclical opportunity when it reverts).',
   },
 ];
 
@@ -157,7 +158,11 @@ export function predictRegimeTransition(
   let nearestThreshold = Infinity;
   let bufferZone = false;
   
-  const thresholdValues = [1.2, 1.8, 2.5];
+  const thresholdValues = [
+    CANONICAL_REGIME_THRESHOLDS.ASSET_LED_GROWTH.min,
+    CANONICAL_REGIME_THRESHOLDS.IMBALANCED_EXCESS.min,
+    CANONICAL_REGIME_THRESHOLDS.REAL_ECONOMY_LEAD.min,
+  ];
   for (const threshold of thresholdValues) {
     const distance = Math.abs(currentFdr - threshold);
     if (distance < nearestThreshold) {
@@ -289,7 +294,11 @@ export function calculateConfidenceScore(
   let transitionRisk = 1.0;
   if (fdrHistory.length > 0) {
     const currentFdr = fdrHistory[fdrHistory.length - 1].fdr;
-    const thresholds = [1.2, 1.8, 2.5];
+    const thresholds = [
+      CANONICAL_REGIME_THRESHOLDS.ASSET_LED_GROWTH.min,
+      CANONICAL_REGIME_THRESHOLDS.IMBALANCED_EXCESS.min,
+      CANONICAL_REGIME_THRESHOLDS.REAL_ECONOMY_LEAD.min,
+    ];
     const minDistance = Math.min(...thresholds.map(t => Math.abs(currentFdr - t)));
     transitionRisk = Math.min(1.0, minDistance / 0.3); // Full confidence if > 0.3 from threshold
     if (minDistance < 0.1) flags.push('NEAR_THRESHOLD');
@@ -420,8 +429,8 @@ export function generateBinarySignal(
     };
   }
   
-  // HEALTHY_EXPANSION (FDR < 1.2) with stable or rising FDR - favorable for deployment
-  if (regime === 'HEALTHY_EXPANSION' && fdr < 1.2 && fdrVelocity >= 0) {
+  // HEALTHY_EXPANSION (FDR < threshold, see regimeConstants.ts) with stable or rising FDR - favorable for deployment
+  if (regime === 'HEALTHY_EXPANSION' && fdr < CANONICAL_REGIME_THRESHOLDS.ASSET_LED_GROWTH.min && fdrVelocity >= 0) {
     return {
       decision: 'DEPLOY_CAPITAL',
       confidence: Math.min(0.8, confidence.overall),

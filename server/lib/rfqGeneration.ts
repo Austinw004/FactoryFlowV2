@@ -11,6 +11,7 @@ import {
 } from "@shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 import type { IStorage } from "../storage";
+import { CANONICAL_REGIME_THRESHOLDS } from "./regimeConstants";
 
 /**
  * Automated RFQ Generation Service
@@ -78,12 +79,12 @@ export class RfqGenerationService {
     const targetInventoryDays = 90;
     let baseOrderQty = Math.max(0, targetInventoryDays - currentInventory);
 
-    // Canonical regime adjustments (using canonical thresholds from regimeConstants.ts)
-    // REAL_ECONOMY_LEAD (FDR >= 2.5) = counter-cyclical opportunity, buy aggressively
-    // IMBALANCED_EXCESS (FDR 1.8-2.5) = caution, reduce buying
-    // ASSET_LED_GROWTH (FDR 1.2-1.8) = watch carefully
-    // HEALTHY_EXPANSION (FDR < 1.2) = normal buying
-    if (regime === "REAL_ECONOMY_LEAD" && fdr >= 2.5) {
+    // Canonical regime adjustments (see regimeConstants.ts for threshold values)
+    // REAL_ECONOMY_LEAD = counter-cyclical opportunity, buy aggressively
+    // IMBALANCED_EXCESS = caution, reduce buying
+    // ASSET_LED_GROWTH = watch carefully
+    // HEALTHY_EXPANSION = normal buying
+    if (regime === "REAL_ECONOMY_LEAD" && fdr >= CANONICAL_REGIME_THRESHOLDS.REAL_ECONOMY_LEAD.min) {
       // High FDR = asset markets overheated, counter-cyclical opportunity
       baseOrderQty *= 1.5; // Buy 50% more - good time to invest in real assets
     } else if (regime === "IMBALANCED_EXCESS") {
@@ -103,12 +104,12 @@ export class RfqGenerationService {
    * Uses canonical thresholds from regimeConstants.ts
    */
   private getPolicySignal(regime: string, fdr: number): string {
-    // Canonical regime-based signals:
-    // REAL_ECONOMY_LEAD (FDR >= 2.5) = counter-cyclical buy opportunity
-    // IMBALANCED_EXCESS (FDR 1.8-2.5) = caution, defer purchases
-    // ASSET_LED_GROWTH (FDR 1.2-1.8) = lock prices
-    // HEALTHY_EXPANSION (FDR < 1.2) = normal buying
-    if (regime === "REAL_ECONOMY_LEAD" && fdr >= 2.5) {
+    // Canonical regime-based signals (see regimeConstants.ts for threshold values):
+    // REAL_ECONOMY_LEAD = counter-cyclical buy opportunity
+    // IMBALANCED_EXCESS = caution, defer purchases
+    // ASSET_LED_GROWTH = lock prices
+    // HEALTHY_EXPANSION = normal buying
+    if (regime === "REAL_ECONOMY_LEAD" && fdr >= CANONICAL_REGIME_THRESHOLDS.REAL_ECONOMY_LEAD.min) {
       return "buy_aggressively"; // Counter-cyclical opportunity
     } else if (regime === "IMBALANCED_EXCESS") {
       return "wait_and_monitor"; // Asset bubble forming

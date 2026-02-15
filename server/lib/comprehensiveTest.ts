@@ -8,6 +8,7 @@
  * - FDR level (low, medium, high, extreme)
  * - Prediction accuracy types (MAPE, directional, regime)
  */
+import { CANONICAL_REGIME_THRESHOLDS } from "./regimeConstants";
 
 import { db } from '../db';
 import { historicalPredictions, predictionAccuracyMetrics } from '../../shared/schema';
@@ -145,10 +146,10 @@ export async function runComprehensiveTest(companyId: string): Promise<Comprehen
 
   // Group by FDR level
   const byFDRLevel = [
-    { min: 0, max: 1.2, label: 'Low FDR (0-1.2): Healthy Expansion' },
-    { min: 1.2, max: 1.8, label: 'Medium FDR (1.2-1.8): Asset-Led Growth' },
-    { min: 1.8, max: 2.5, label: 'High FDR (1.8-2.5): Imbalanced Excess' },
-    { min: 2.5, max: Infinity, label: 'Extreme FDR (2.5+): Real Economy Lead' },
+    { min: 0, max: CANONICAL_REGIME_THRESHOLDS.HEALTHY_EXPANSION.max, label: `Low FDR (0-${CANONICAL_REGIME_THRESHOLDS.HEALTHY_EXPANSION.max}): Healthy Expansion` },
+    { min: CANONICAL_REGIME_THRESHOLDS.ASSET_LED_GROWTH.min, max: CANONICAL_REGIME_THRESHOLDS.ASSET_LED_GROWTH.max, label: `Medium FDR (${CANONICAL_REGIME_THRESHOLDS.ASSET_LED_GROWTH.min}-${CANONICAL_REGIME_THRESHOLDS.ASSET_LED_GROWTH.max}): Asset-Led Growth` },
+    { min: CANONICAL_REGIME_THRESHOLDS.IMBALANCED_EXCESS.min, max: CANONICAL_REGIME_THRESHOLDS.IMBALANCED_EXCESS.max, label: `High FDR (${CANONICAL_REGIME_THRESHOLDS.IMBALANCED_EXCESS.min}-${CANONICAL_REGIME_THRESHOLDS.IMBALANCED_EXCESS.max}): Imbalanced Excess` },
+    { min: CANONICAL_REGIME_THRESHOLDS.REAL_ECONOMY_LEAD.min, max: Infinity, label: `Extreme FDR (${CANONICAL_REGIME_THRESHOLDS.REAL_ECONOMY_LEAD.min}+): Real Economy Lead` },
   ].map(range => {
     const rangePreds = validPredictions.filter(p => 
       p.fdrAtPrediction >= range.min && p.fdrAtPrediction < range.max
@@ -182,7 +183,7 @@ export async function runComprehensiveTest(companyId: string): Promise<Comprehen
   });
 
   // Analyze extreme conditions (bubbles and crashes)
-  const bubblePredictions = validPredictions.filter(p => p.fdrAtPrediction > 1.8);
+  const bubblePredictions = validPredictions.filter(p => p.fdrAtPrediction > CANONICAL_REGIME_THRESHOLDS.IMBALANCED_EXCESS.min);
   const correctBubbleDownwardCalls = bubblePredictions.filter(p => 
     p.predictedDirection === 'down' && p.actualDirection === 'down'
   ).length;
