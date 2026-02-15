@@ -297,7 +297,7 @@ export default function Dashboard() {
     <div className="p-6 space-y-6">
       <div className="flex items-center flex-wrap gap-2">
         <h1 className="text-3xl font-semibold">Dashboard</h1>
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border bg-muted/30" data-testid="data-freshness-indicator">
+        <div className="flex items-center gap-2 px-3 py-1.5 ml-4 rounded-md border bg-muted/30" data-testid="data-freshness-indicator">
           <Clock className="h-3.5 w-3.5 text-muted-foreground" />
           <div className="flex items-center gap-3 text-xs">
             <span className="flex items-center gap-1">
