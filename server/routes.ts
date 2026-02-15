@@ -14555,6 +14555,252 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const companyPendingActions: Map<string, any[]> = new Map();
   const companyActionHistory: Map<string, any[]> = new Map();
 
+  async function logAutomationEvent(companyId: string, event: string, details: Record<string, any>, userId?: string) {
+    try {
+      await storage.createAuditLog({
+        companyId,
+        userId: userId || "system",
+        action: `automation.${event}`,
+        entityType: "automation_rule",
+        entityId: details.ruleId || details.actionId || "system",
+        details: JSON.stringify(details),
+        ipAddress: "internal",
+      });
+    } catch (e) {
+      console.error("[Automation Audit] Failed to log event:", event, e);
+    }
+  }
+
+  function validateActionPrerequisites(action: any, companyId: string): { valid: boolean; errors: string[] } {
+    const errors: string[] = [];
+    const payload = action.actionPayload || {};
+    
+    switch (action.actionType) {
+      case "create_po":
+        if (!payload.materialId && !payload.materialName) errors.push("Material identification required");
+        if (!payload.supplierId && !payload.supplierName) errors.push("Supplier identification required");
+        if (!payload.quantity || payload.quantity <= 0) errors.push("Valid quantity required");
+        if (payload.estimatedCost !== undefined && payload.estimatedCost < 0) errors.push("Cost cannot be negative");
+        break;
+      case "rebalance_inventory":
+        if (!payload.transfers || !Array.isArray(payload.transfers) || payload.transfers.length === 0) {
+          errors.push("Transfer plan required for inventory rebalance");
+        }
+        break;
+      case "adjust_safety_stock":
+        if (!payload.regimeMultipliers && !action.actionConfig?.regimeMultipliers) {
+          errors.push("Regime multipliers required for safety stock adjustment");
+        }
+        break;
+      case "pause_orders":
+      case "send_alert":
+      case "escalate":
+        break;
+      default:
+        break;
+    }
+    
+    return { valid: errors.length === 0, errors };
+  }
+
+  function evaluateGuardrails(action: any, companyId: string, context: { regime?: string; currentTime?: Date }): { allowed: boolean; violations: Array<{guardrailId: string; guardrailName: string; reason: string; enforcement: string}> } {
+    const violations: Array<{guardrailId: string; guardrailName: string; reason: string; enforcement: string}> = [];
+    
+    if (!companyGuardrails.has(companyId)) {
+      companyGuardrails.set(companyId, getDefaultGuardrails(companyId));
+    }
+    const guardrails = companyGuardrails.get(companyId) || [];
+    const now = context.currentTime || new Date();
+    const payload = action.actionPayload || {};
+    
+    for (const guard of guardrails) {
+      if (!guard.isEnabled) continue;
+      
+      const actionTypeMatches = guard.appliesToActionTypes?.includes("all") || guard.appliesToActionTypes?.includes(action.actionType);
+      if (!actionTypeMatches) continue;
+      
+      switch (guard.guardrailType) {
+        case "spending_limit": {
+          if (payload.estimatedCost) {
+            const history = companyActionHistory.get(companyId) || [];
+            const todayStart = new Date(now);
+            todayStart.setHours(0, 0, 0, 0);
+            const spentToday = history
+              .filter((h: any) => h.status === "executed" && h.executedAt && new Date(h.executedAt) >= todayStart)
+              .reduce((sum: number, h: any) => sum + (h.actionPayload?.estimatedCost || 0), 0);
+            
+            if (spentToday + payload.estimatedCost > (guard.conditions?.limit || Infinity)) {
+              guard.violationCount = (guard.violationCount || 0) + 1;
+              guard.lastViolationAt = now.toISOString();
+              violations.push({
+                guardrailId: guard.id,
+                guardrailName: guard.name,
+                reason: `Daily spending limit of $${guard.conditions.limit.toLocaleString()} would be exceeded. Spent today: $${spentToday.toLocaleString()}, this action: $${payload.estimatedCost.toLocaleString()}`,
+                enforcement: guard.onViolation || "block",
+              });
+            }
+          }
+          break;
+        }
+        case "time_restriction": {
+          if (payload.estimatedCost && payload.estimatedCost >= (guard.conditions?.minValue || 0)) {
+            const hour = now.getHours();
+            const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+            const currentDay = dayNames[now.getDay()];
+            const allowedDays = guard.conditions?.allowedDays || [];
+            const allowedHours = guard.conditions?.allowedHours || [];
+            
+            const dayAllowed = allowedDays.length === 0 || allowedDays.includes(currentDay);
+            let hourAllowed = allowedHours.length === 0;
+            for (const range of allowedHours) {
+              const [start, end] = range.split("-").map((t: string) => parseInt(t.split(":")[0]));
+              if (hour >= start && hour < end) { hourAllowed = true; break; }
+            }
+            
+            if (!dayAllowed || !hourAllowed) {
+              guard.violationCount = (guard.violationCount || 0) + 1;
+              guard.lastViolationAt = now.toISOString();
+              violations.push({
+                guardrailId: guard.id,
+                guardrailName: guard.name,
+                reason: `High-value action ($${payload.estimatedCost.toLocaleString()}) attempted outside allowed hours/days`,
+                enforcement: guard.onViolation || "block",
+              });
+            }
+          }
+          break;
+        }
+        case "regime_restriction": {
+          const regime = context.regime || "";
+          const cautionRegimes = guard.conditions?.cautionRegimes || [];
+
+          if (regime === "UNKNOWN" || regime === "") {
+            guard.violationCount = (guard.violationCount || 0) + 1;
+            guard.lastViolationAt = now.toISOString();
+            violations.push({
+              guardrailId: guard.id,
+              guardrailName: guard.name,
+              reason: `Economic regime is unconfirmed or degraded ("${regime || "UNKNOWN"}"). Automated actions require a confirmed regime to proceed safely.`,
+              enforcement: "block",
+            });
+          } else if (cautionRegimes.includes(regime)) {
+            guard.violationCount = (guard.violationCount || 0) + 1;
+            guard.lastViolationAt = now.toISOString();
+            violations.push({
+              guardrailId: guard.id,
+              guardrailName: guard.name,
+              reason: `Current economic regime "${regime}" requires extra caution. Action escalated for additional approval.`,
+              enforcement: guard.onViolation || "require_approval",
+            });
+          }
+          break;
+        }
+        case "supplier_restriction": {
+          if (action.actionType === "create_po" || action.actionType === "generate_rfq") {
+            const minRating = guard.conditions?.minRating || 0;
+            const supplierRating = payload.supplierRating;
+            if (guard.conditions?.onlyApproved && !payload.supplierApproved) {
+              guard.violationCount = (guard.violationCount || 0) + 1;
+              guard.lastViolationAt = now.toISOString();
+              violations.push({
+                guardrailId: guard.id,
+                guardrailName: guard.name,
+                reason: `Supplier "${payload.supplierName || payload.supplierId}" is not pre-approved`,
+                enforcement: guard.onViolation || "block",
+              });
+            } else if (supplierRating !== undefined && supplierRating < minRating) {
+              guard.violationCount = (guard.violationCount || 0) + 1;
+              guard.lastViolationAt = now.toISOString();
+              violations.push({
+                guardrailId: guard.id,
+                guardrailName: guard.name,
+                reason: `Supplier rating ${supplierRating} is below minimum required rating of ${minRating}`,
+                enforcement: guard.onViolation || "block",
+              });
+            }
+          }
+          break;
+        }
+      }
+    }
+    
+    companyGuardrails.set(companyId, guardrails);
+    const hasBlockingViolation = violations.some(v => v.enforcement === "block");
+    return { allowed: !hasBlockingViolation, violations };
+  }
+
+  function canExecuteRule(rule: any): { allowed: boolean; reason?: string } {
+    const now = new Date();
+    
+    if (rule.lastExecutedAt) {
+      const lastExec = new Date(rule.lastExecutedAt);
+      const cooldownMs = (rule.cooldownMinutes || 0) * 60 * 1000;
+      if (now.getTime() - lastExec.getTime() < cooldownMs) {
+        const remainingMin = Math.ceil((cooldownMs - (now.getTime() - lastExec.getTime())) / 60000);
+        return { allowed: false, reason: `Cooldown active: ${remainingMin} minutes remaining` };
+      }
+      
+      const lastExecDay = lastExec.toISOString().slice(0, 10);
+      const todayStr = now.toISOString().slice(0, 10);
+      if (lastExecDay === todayStr && rule.executionCount >= (rule.maxExecutionsPerDay || Infinity)) {
+        return { allowed: false, reason: `Daily execution limit reached: ${rule.maxExecutionsPerDay} per day` };
+      }
+    }
+    
+    return { allowed: true };
+  }
+
+  function sweepExpiredActions(companyId: string): number {
+    const now = new Date();
+    const pendingActions = companyPendingActions.get(companyId) || [];
+    const expiredIds: string[] = [];
+    
+    const remaining = pendingActions.filter((action: any) => {
+      if (!action.approvalTimeout || action.approvalTimeout <= 0) return true;
+      const createdAt = new Date(action.createdAt || action.triggeredAt || now);
+      const expiresAt = new Date(createdAt.getTime() + action.approvalTimeout * 60 * 60 * 1000);
+      if (now > expiresAt) {
+        expiredIds.push(action.id);
+        const history = companyActionHistory.get(companyId) || [];
+        history.unshift({
+          ...action,
+          status: "expired",
+          expiredAt: now.toISOString(),
+          expirationReason: `Approval timeout exceeded (${action.approvalTimeout} hours)`,
+        });
+        companyActionHistory.set(companyId, history);
+        return false;
+      }
+      return true;
+    });
+    
+    if (expiredIds.length > 0) {
+      companyPendingActions.set(companyId, remaining);
+    }
+    
+    return expiredIds.length;
+  }
+
+  function generateIdempotencyKey(ruleId: string, actionType: string, triggerSignature: string): string {
+    const timeBucket = Math.floor(Date.now() / (5 * 60 * 1000));
+    return `${ruleId}_${actionType}_${triggerSignature}_${timeBucket}`;
+  }
+
+  function isDuplicateAction(companyId: string, idempotencyKey: string): boolean {
+    const pending = companyPendingActions.get(companyId) || [];
+    if (pending.some((a: any) => a.idempotencyKey === idempotencyKey)) return true;
+    
+    const history = companyActionHistory.get(companyId) || [];
+    const recentCutoff = Date.now() - 10 * 60 * 1000;
+    const recentHistory = history.filter((a: any) => {
+      const ts = a.executedAt || a.approvedAt || a.expiredAt || a.rejectedAt;
+      return ts && new Date(ts).getTime() > recentCutoff;
+    });
+    if (recentHistory.some((a: any) => a.idempotencyKey === idempotencyKey)) return true;
+    
+    return false;
+  }
+
   // Initialize default agents for a company
   function getDefaultAgents(companyId: string) {
     return [
@@ -14577,9 +14823,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         activeHoursEnd: "18:00",
         activeDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
         timezone: "America/New_York",
-        actionsToday: Math.floor(Math.random() * 20) + 5,
-        valueToday: Math.floor(Math.random() * 50000) + 10000,
-        successRate: 94 + Math.floor(Math.random() * 5),
+        actionsToday: 0,
+        valueToday: 0,
+        successRate: null,
       },
       {
         id: "agent_inventory",
@@ -14600,9 +14846,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         activeHoursEnd: "23:59",
         activeDays: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
         timezone: "America/New_York",
-        actionsToday: Math.floor(Math.random() * 30) + 10,
+        actionsToday: 0,
         valueToday: 0,
-        successRate: 98 + Math.floor(Math.random() * 2),
+        successRate: null,
       },
       {
         id: "agent_forecasting",
@@ -14623,9 +14869,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         activeHoursEnd: "23:59",
         activeDays: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
         timezone: "America/New_York",
-        actionsToday: Math.floor(Math.random() * 50) + 20,
+        actionsToday: 0,
         valueToday: 0,
-        successRate: 96 + Math.floor(Math.random() * 3),
+        successRate: null,
       },
       {
         id: "agent_supplier",
@@ -14646,9 +14892,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         activeHoursEnd: "20:00",
         activeDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
         timezone: "America/New_York",
-        actionsToday: Math.floor(Math.random() * 15) + 5,
+        actionsToday: 0,
         valueToday: 0,
-        successRate: 90 + Math.floor(Math.random() * 8),
+        successRate: null,
       },
       {
         id: "agent_production",
@@ -14669,9 +14915,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         activeHoursEnd: "23:59",
         activeDays: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"],
         timezone: "America/New_York",
-        actionsToday: Math.floor(Math.random() * 25) + 10,
+        actionsToday: 0,
         valueToday: 0,
-        successRate: 92 + Math.floor(Math.random() * 6),
+        successRate: null,
       },
     ];
   }
@@ -14795,8 +15041,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         notifyOnViolation: ["cfo", "procurement_director"],
         isEnabled: 1,
         priority: 100,
-        violationCount: 3,
-        lastViolationAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+        violationCount: 0,
+        lastViolationAt: null,
       },
       {
         id: "guard_hours",
@@ -14838,8 +15084,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         notifyOnViolation: ["finance_director", "coo"],
         isEnabled: 1,
         priority: 95,
-        violationCount: 5,
-        lastViolationAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        violationCount: 0,
+        lastViolationAt: null,
       },
       {
         id: "guard_supplier",
@@ -14859,8 +15105,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         notifyOnViolation: ["procurement_manager"],
         isEnabled: 1,
         priority: 85,
-        violationCount: 1,
-        lastViolationAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+        violationCount: 0,
+        lastViolationAt: null,
       },
     ];
   }
@@ -15180,6 +15426,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       rules.push(newRule);
       companyRules.set(companyId, rules);
 
+      await logAutomationEvent(companyId, "rule_created", {
+        ruleId: newRule.id, name: newRule.name, actionType: newRule.actionType, triggerType: newRule.triggerType,
+      }, userId);
+
       res.json(newRule);
     } catch (error: any) {
       console.error("Error creating automation rule:", error);
@@ -15233,6 +15483,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       rules[ruleIndex] = updatedRule;
       companyRules.set(companyId, rules);
 
+      await logAutomationEvent(companyId, "rule_updated", {
+        ruleId: ruleId, updates: Object.keys(sanitizedUpdates),
+      }, userId);
+
       res.json(updatedRule);
     } catch (error: any) {
       console.error("Error updating automation rule:", error);
@@ -15255,10 +15509,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         companyRules.set(companyId, getDefaultRules(companyId));
       }
       
-      // Remove the rule from in-memory cache
+      const ruleId = req.params.id;
       const rules = companyRules.get(companyId) || [];
-      const filteredRules = rules.filter((r: any) => r.id !== req.params.id);
+      const filteredRules = rules.filter((r: any) => r.id !== ruleId);
       companyRules.set(companyId, filteredRules);
+
+      const pendingActions = companyPendingActions.get(companyId) || [];
+      const orphaned = pendingActions.filter((a: any) => a.ruleId === ruleId);
+      if (orphaned.length > 0) {
+        const remaining = pendingActions.filter((a: any) => a.ruleId !== ruleId);
+        companyPendingActions.set(companyId, remaining);
+        const history = companyActionHistory.get(companyId) || [];
+        for (const action of orphaned) {
+          history.unshift({
+            ...action,
+            status: "cancelled",
+            cancelledAt: new Date().toISOString(),
+            cancellationReason: "Parent rule deleted",
+          });
+        }
+        companyActionHistory.set(companyId, history);
+      }
+
+      await logAutomationEvent(companyId, "rule_deleted", { ruleId }, req.user.claims.sub);
 
       res.status(204).send();
     } catch (error: any) {
@@ -15287,6 +15560,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         companyPendingActions.set(companyId, getDefaultPendingActions(companyId, currentRegime, currentFdr));
       }
 
+      sweepExpiredActions(companyId);
       const pendingActions = companyPendingActions.get(companyId) || [];
       res.json(pendingActions);
     } catch (error: any) {
@@ -15307,12 +15581,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Company ID required" });
       }
 
-      // Get current economic data for context
       await economics.fetch();
       const currentRegime = economics.regime || "HEALTHY_EXPANSION";
       const currentFdr = economics.fdr || 1.0;
 
-      // Initialize if not exists
       if (!companyPendingActions.has(companyId)) {
         companyPendingActions.set(companyId, getDefaultPendingActions(companyId, currentRegime, currentFdr));
       }
@@ -15320,48 +15592,127 @@ export async function registerRoutes(app: Express): Promise<Server> {
         companyActionHistory.set(companyId, []);
       }
 
-      // Find the action
+      sweepExpiredActions(companyId);
+
       const pendingActions = companyPendingActions.get(companyId) || [];
       const actionIndex = pendingActions.findIndex((a: any) => a.id === actionId);
       
       if (actionIndex === -1) {
-        return res.status(404).json({ error: "Action not found" });
+        return res.status(404).json({ error: "Action not found or has expired" });
       }
 
       const action = pendingActions[actionIndex];
-      const now = new Date().toISOString();
+      const now = new Date();
+      const nowISO = now.toISOString();
 
-      // Execute the action
+      const validation = validateActionPrerequisites(action, companyId);
+      if (!validation.valid) {
+        await logAutomationEvent(companyId, "validation_failed", {
+          actionId, ruleId: action.ruleId, errors: validation.errors, actionType: action.actionType,
+        }, userId);
+        return res.status(400).json({
+          error: "Pre-execution validation failed",
+          validationErrors: validation.errors,
+        });
+      }
+
+      const guardrailResult = evaluateGuardrails(action, companyId, { regime: currentRegime, currentTime: now });
+      if (!guardrailResult.allowed) {
+        await logAutomationEvent(companyId, "guardrail_blocked", {
+          actionId, ruleId: action.ruleId, violations: guardrailResult.violations,
+        }, userId);
+        
+        const blockedAction = {
+          ...action, status: "guardrail_blocked", blockedAt: nowISO, blockedBy: "guardrail",
+          guardrailViolations: guardrailResult.violations,
+        };
+        pendingActions.splice(actionIndex, 1);
+        companyPendingActions.set(companyId, pendingActions);
+        const history = companyActionHistory.get(companyId) || [];
+        history.unshift(blockedAction);
+        companyActionHistory.set(companyId, history);
+
+        return res.status(403).json({
+          error: "Action blocked by guardrails",
+          violations: guardrailResult.violations,
+        });
+      }
+
+      if (guardrailResult.violations.length > 0) {
+        await logAutomationEvent(companyId, "guardrail_warning", {
+          actionId, ruleId: action.ruleId, violations: guardrailResult.violations,
+        }, userId);
+      }
+
+      if (action.ruleId) {
+        if (!companyRules.has(companyId)) {
+          companyRules.set(companyId, getDefaultRules(companyId));
+        }
+        const rules = companyRules.get(companyId) || [];
+        const rule = rules.find((r: any) => r.id === action.ruleId);
+        if (rule) {
+          const rateCheck = canExecuteRule(rule);
+          if (!rateCheck.allowed) {
+            await logAutomationEvent(companyId, "rate_limit_hit", {
+              actionId, ruleId: action.ruleId, reason: rateCheck.reason,
+            }, userId);
+            return res.status(429).json({ error: "Rate limit exceeded", reason: rateCheck.reason });
+          }
+        }
+      }
+
+      await logAutomationEvent(companyId, "action_approved", {
+        actionId, ruleId: action.ruleId, actionType: action.actionType, approvedBy: userId,
+      }, userId);
+
       const executionResult = await executeAction(action, userId);
 
-      // Update action status and move to history
+      if (action.ruleId) {
+        const rules = companyRules.get(companyId) || [];
+        const ruleIndex = rules.findIndex((r: any) => r.id === action.ruleId);
+        if (ruleIndex !== -1) {
+          rules[ruleIndex].executionCount = (rules[ruleIndex].executionCount || 0) + 1;
+          rules[ruleIndex].lastExecutedAt = nowISO;
+          if (executionResult.success) {
+            const totalExec = rules[ruleIndex].executionCount;
+            const prevRate = rules[ruleIndex].successRate || 100;
+            rules[ruleIndex].successRate = Math.round(((prevRate * (totalExec - 1)) + 100) / totalExec);
+          } else {
+            const totalExec = rules[ruleIndex].executionCount;
+            const prevRate = rules[ruleIndex].successRate || 100;
+            rules[ruleIndex].successRate = Math.round(((prevRate * (totalExec - 1)) + 0) / totalExec);
+          }
+          companyRules.set(companyId, rules);
+        }
+      }
+
       const completedAction = {
         ...action,
         status: executionResult.success ? "executed" : "execution_failed",
-        approvedBy: userId,
-        approvedAt: now,
-        executedAt: now,
+        approvedBy: userId, approvedAt: nowISO, executedAt: nowISO,
         executionResult: executionResult.result,
         executionError: executionResult.error || null,
       };
 
-      // Remove from pending
       pendingActions.splice(actionIndex, 1);
       companyPendingActions.set(companyId, pendingActions);
-
-      // Add to history
       const history = companyActionHistory.get(companyId) || [];
       history.unshift(completedAction);
       companyActionHistory.set(companyId, history);
+
+      await logAutomationEvent(companyId, executionResult.success ? "action_executed" : "execution_failed", {
+        actionId, ruleId: action.ruleId, actionType: action.actionType,
+        result: executionResult.success ? "success" : "failure",
+        error: executionResult.error || null,
+      }, userId);
 
       res.json({
         success: executionResult.success,
         actionId,
         status: completedAction.status,
-        approvedBy: userId,
-        approvedAt: now,
-        executedAt: now,
+        approvedBy: userId, approvedAt: nowISO, executedAt: nowISO,
         executionResult: executionResult.result,
+        guardrailWarnings: guardrailResult.violations.length > 0 ? guardrailResult.violations : undefined,
         message: executionResult.success 
           ? executionResult.result?.message || "Action executed successfully"
           : `Execution failed: ${executionResult.error}`,
