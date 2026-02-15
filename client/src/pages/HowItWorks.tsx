@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, TrendingUp, Target, Lightbulb, CheckCircle2, Factory, DollarSign, Package, BarChart3, Truck, Settings, AlertTriangle, ShieldCheck, Zap, Clock, Calendar, ArrowRight } from "lucide-react";
+import { BookOpen, TrendingUp, Target, Lightbulb, CheckCircle2, Factory, Package, BarChart3, Truck, ShieldCheck, Zap, Clock, Layers, Brain, LineChart } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { 
   Accordion,
@@ -7,13 +7,9 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { OnboardingChecklist } from "@/components/OnboardingChecklist";
-import { useOnboardingSteps } from "@/hooks/useOnboardingSteps";
 import { Badge } from "@/components/ui/badge";
 
 export default function HowItWorks() {
-  const { steps, isFullyCompleted, isLoading: onboardingLoading } = useOnboardingSteps();
-
   return (
     <div className="p-6 space-y-6 max-w-5xl">
       <div>
@@ -21,20 +17,11 @@ export default function HowItWorks() {
           How It Works
         </h1>
         <p className="text-muted-foreground mt-1">
-          Your complete guide to getting value from Prescient Labs
+          Understand what Prescient Labs does for your manufacturing operation
         </p>
       </div>
 
-      {!onboardingLoading && !isFullyCompleted && (
-        <OnboardingChecklist 
-          steps={steps}
-          showDismissButton={false}
-          compact={true}
-        />
-      )}
-
-      {/* QUICK START */}
-      <Card className="border-primary/20 bg-primary/5" data-testid="card-quick-start">
+      <Card className="border-primary/20 bg-primary/5" data-testid="card-big-picture">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-xl">
             <Lightbulb className="h-5 w-5 text-primary" />
@@ -43,80 +30,106 @@ export default function HowItWorks() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-base">
-            Prescient Labs helps you <strong className="text-foreground">buy materials at better times</strong> and <strong className="text-foreground">plan production smarter</strong> by analyzing market conditions and your operational data together.
+            Prescient Labs continuously monitors economic conditions, your inventory, supplier health, and demand patterns to tell you <strong className="text-foreground">when to buy</strong>, <strong className="text-foreground">what to prioritize</strong>, and <strong className="text-foreground">where risks are forming</strong> &mdash; before they become problems.
           </p>
           
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="flex items-start gap-3 p-3 rounded-lg border bg-card">
-              <div className="p-2 rounded-full bg-primary/10">
+              <div className="p-2 rounded-full bg-primary/10 shrink-0">
                 <TrendingUp className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <p className="font-medium text-sm">Market Intelligence</p>
-                <p className="text-xs text-muted-foreground">Know when conditions favor buying vs. waiting</p>
+                <p className="font-medium text-sm">Market-Aware Timing</p>
+                <p className="text-xs text-muted-foreground">Procurement signals adjust to real economic conditions so you buy at better prices</p>
               </div>
             </div>
             <div className="flex items-start gap-3 p-3 rounded-lg border bg-card">
-              <div className="p-2 rounded-full bg-primary/10">
+              <div className="p-2 rounded-full bg-primary/10 shrink-0">
                 <Target className="h-4 w-4 text-primary" />
               </div>
               <div>
                 <p className="font-medium text-sm">Demand Forecasting</p>
-                <p className="text-xs text-muted-foreground">Predict what you'll need before you need it</p>
+                <p className="text-xs text-muted-foreground">Predict what you will need across every SKU and plan production ahead of time</p>
               </div>
             </div>
             <div className="flex items-start gap-3 p-3 rounded-lg border bg-card">
-              <div className="p-2 rounded-full bg-primary/10">
+              <div className="p-2 rounded-full bg-primary/10 shrink-0">
                 <Package className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <p className="font-medium text-sm">Smart Optimization</p>
-                <p className="text-xs text-muted-foreground">Allocate materials to maximize results</p>
+                <p className="font-medium text-sm">Smart Allocation</p>
+                <p className="text-xs text-muted-foreground">When materials are limited, optimize which products to prioritize for maximum value</p>
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* GETTING STARTED */}
-      <Card data-testid="card-getting-started">
+      <Card data-testid="card-how-platform-works">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-xl">
-            <ArrowRight className="h-5 w-5" />
-            Getting Started
+            <Layers className="h-5 w-5" />
+            What the Platform Does
           </CardTitle>
           <CardDescription>
-            Three steps to start getting value
+            A unified system that connects your procurement, production, and supply chain data
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-5">
           <div className="space-y-4">
             <div className="flex gap-4 items-start">
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-semibold text-sm shrink-0">1</div>
+              <div className="p-2 rounded-full bg-primary/10 shrink-0 mt-0.5">
+                <BarChart3 className="h-4 w-4 text-primary" />
+              </div>
               <div>
-                <p className="font-medium">Add Your Data</p>
-                <p className="text-sm text-muted-foreground">Upload your products, materials, and suppliers. The more data you add, the better your recommendations become.</p>
+                <p className="font-medium">Reads the Economic Environment</p>
+                <p className="text-sm text-muted-foreground">The platform continuously ingests data from public economic sources and commodity markets to determine whether current conditions favor aggressive purchasing, steady operations, or cautious cash preservation. This assessment updates automatically and flows into every recommendation you see.</p>
               </div>
             </div>
+
             <div className="flex gap-4 items-start">
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-semibold text-sm shrink-0">2</div>
+              <div className="p-2 rounded-full bg-primary/10 shrink-0 mt-0.5">
+                <LineChart className="h-4 w-4 text-primary" />
+              </div>
               <div>
-                <p className="font-medium">Review Your Dashboard</p>
-                <p className="text-sm text-muted-foreground">Check the current market conditions and see initial recommendations based on your data.</p>
+                <p className="font-medium">Forecasts Demand for Your Products</p>
+                <p className="text-sm text-muted-foreground">Using your historical sales and production data, the system builds forecasts for each product you make. These forecasts are not static &mdash; they re-calibrate as new data arrives and as market conditions shift, so projections stay relevant.</p>
               </div>
             </div>
+
             <div className="flex gap-4 items-start">
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-semibold text-sm shrink-0">3</div>
+              <div className="p-2 rounded-full bg-primary/10 shrink-0 mt-0.5">
+                <Truck className="h-4 w-4 text-primary" />
+              </div>
               <div>
-                <p className="font-medium">Act on Recommendations</p>
-                <p className="text-sm text-muted-foreground">Use procurement signals and allocation suggestions to make better-timed decisions.</p>
+                <p className="font-medium">Monitors Your Supply Chain</p>
+                <p className="text-sm text-muted-foreground">Supplier reliability, lead times, inventory levels, and commodity price movements are tracked in one place. When something changes &mdash; a supplier slips, a material price spikes, or stock runs low &mdash; the platform surfaces it before it disrupts your operation.</p>
+              </div>
+            </div>
+
+            <div className="flex gap-4 items-start">
+              <div className="p-2 rounded-full bg-primary/10 shrink-0 mt-0.5">
+                <Zap className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <p className="font-medium">Generates Actionable Signals</p>
+                <p className="text-sm text-muted-foreground">Rather than showing raw data, the platform converts everything into clear recommendations: buy now or wait, which products to prioritize, which suppliers need attention, and where potential risks are compounding. You make the final call &mdash; the system gives you the information to make it confidently.</p>
+              </div>
+            </div>
+
+            <div className="flex gap-4 items-start">
+              <div className="p-2 rounded-full bg-primary/10 shrink-0 mt-0.5">
+                <Brain className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <p className="font-medium">Learns and Improves Over Time</p>
+                <p className="text-sm text-muted-foreground">Forecasts and recommendations improve as more of your operational data flows through the system. The platform tracks its own accuracy and adjusts, so the value it delivers compounds the longer you use it.</p>
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* UNDERSTANDING MARKET CONDITIONS */}
       <Card data-testid="card-market-conditions">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-xl">
@@ -124,12 +137,12 @@ export default function HowItWorks() {
             Understanding Market Conditions
           </CardTitle>
           <CardDescription>
-            The platform identifies current business conditions and adjusts all recommendations accordingly
+            Every recommendation in the platform adjusts based on current conditions
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Think of market conditions like a weather forecast for business. We analyze economic indicators to tell you whether it's a good time to buy materials, hold steady, or be cautious.
+            Think of it like a weather forecast for your business. The platform reads economic signals and tells you what kind of environment you are operating in right now, so you can act accordingly.
           </p>
           
           <div className="grid gap-3 sm:grid-cols-2">
@@ -138,7 +151,7 @@ export default function HowItWorks() {
                 <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/30">Favorable</Badge>
               </div>
               <p className="text-sm text-muted-foreground">
-                Good time to buy. Prices are competitive, and conditions support building inventory.
+                Good time to buy. Conditions support building inventory and locking in competitive prices.
               </p>
             </div>
             <div className="p-4 rounded-lg border bg-card">
@@ -154,7 +167,7 @@ export default function HowItWorks() {
                 <Badge variant="outline" className="bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30">Transitioning</Badge>
               </div>
               <p className="text-sm text-muted-foreground">
-                Conditions are shifting. Pay attention to signals and be ready to adjust strategy.
+                Conditions are shifting. Pay closer attention to signals and be ready to adjust strategy.
               </p>
             </div>
             <div className="p-4 rounded-lg border bg-card">
@@ -162,18 +175,13 @@ export default function HowItWorks() {
                 <Badge variant="outline" className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30">Cautious</Badge>
               </div>
               <p className="text-sm text-muted-foreground">
-                Consider slowing purchases. Preserve cash and wait for better conditions.
+                Consider slowing purchases. Preserve cash and wait for better conditions before committing.
               </p>
             </div>
           </div>
-
-          <p className="text-sm text-muted-foreground pt-2">
-            Every feature in the platform uses this context. Forecasts, procurement signals, inventory recommendations, and supplier evaluations all adjust based on current conditions.
-          </p>
         </CardContent>
       </Card>
 
-      {/* DAILY & WEEKLY ROUTINES */}
       <Card data-testid="card-routines">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-xl">
@@ -258,7 +266,6 @@ export default function HowItWorks() {
         </CardContent>
       </Card>
 
-      {/* PLATFORM FEATURES */}
       <Card data-testid="card-features">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-xl">
@@ -296,7 +303,7 @@ export default function HowItWorks() {
                 <span className="font-medium">Material Allocation</span>
               </AccordionTrigger>
               <AccordionContent className="text-sm text-muted-foreground space-y-2">
-                <p>When you can't make everything, this tool determines the optimal mix of products based on available materials, product priorities, and constraints.</p>
+                <p>When you cannot make everything, this tool determines the optimal mix of products based on available materials, product priorities, and constraints.</p>
                 <p><strong className="text-foreground">Best for:</strong> Maximizing output value from limited materials or budget.</p>
               </AccordionContent>
             </AccordionItem>
@@ -356,7 +363,7 @@ export default function HowItWorks() {
                 <span className="font-medium">AI Assistant</span>
               </AccordionTrigger>
               <AccordionContent className="text-sm text-muted-foreground space-y-2">
-                <p>Ask questions in plain language and get answers using your data. The assistant understands your inventory, suppliers, forecasts, and market conditions.</p>
+                <p>Ask questions in plain language and get answers drawn from your data. The assistant understands your inventory, suppliers, forecasts, and market conditions.</p>
                 <p><strong className="text-foreground">Best for:</strong> Quick answers without navigating through multiple screens.</p>
               </AccordionContent>
             </AccordionItem>
@@ -374,7 +381,6 @@ export default function HowItWorks() {
         </CardContent>
       </Card>
 
-      {/* KEY CONCEPTS */}
       <Card data-testid="card-key-concepts">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-xl">
@@ -386,25 +392,24 @@ export default function HowItWorks() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1">
               <p className="font-medium text-sm">Cross-Module Intelligence</p>
-              <p className="text-xs text-muted-foreground">All features share data. Supplier issues affect procurement signals. Market conditions adjust forecasts. Everything works together.</p>
+              <p className="text-xs text-muted-foreground">All features share data. Supplier issues affect procurement signals. Market conditions adjust forecasts. Everything works together as one system.</p>
             </div>
             <div className="space-y-1">
               <p className="font-medium text-sm">Proactive Alerts</p>
-              <p className="text-xs text-muted-foreground">The system watches for issues and opportunities, alerting you before problems become urgent.</p>
+              <p className="text-xs text-muted-foreground">The platform watches for issues and opportunities, alerting you before problems become urgent.</p>
             </div>
             <div className="space-y-1">
               <p className="font-medium text-sm">Context-Aware Recommendations</p>
-              <p className="text-xs text-muted-foreground">Suggestions change based on current conditions. What's right today may not be right tomorrow.</p>
+              <p className="text-xs text-muted-foreground">Suggestions change based on current conditions. What is right today may not be right tomorrow.</p>
             </div>
             <div className="space-y-1">
-              <p className="font-medium text-sm">Continuous Learning</p>
-              <p className="text-xs text-muted-foreground">Forecasts improve automatically as more data comes in. The longer you use it, the better it gets.</p>
+              <p className="font-medium text-sm">Performance-Based Pricing</p>
+              <p className="text-xs text-muted-foreground">We earn a percentage of verified savings. If we do not save you money, you do not pay beyond your base subscription.</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* SUPPORT */}
       <Card data-testid="card-support">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-xl">
