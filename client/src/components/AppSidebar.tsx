@@ -113,7 +113,7 @@ export function AppSidebar() {
   const { inventory, suppliers, commodities, isLoading } = useUnifiedData();
 
   const agenticRoutes = ["/agentic-ai"];
-  const strategyRoutes = ["/strategy", "/digital-twin", "/strategic-analysis", "/scenario-simulation", "/ma-intelligence", "/peer-benchmarking", "/event-monitoring"];
+  const strategyRoutes = ["/strategy", "/digital-twin", "/strategic-analysis", "/scenario-simulation", "/ma-intelligence", "/peer-benchmarking"];
   const dashboardRoutes = ["/", "/dashboard", "/roi-dashboard", "/reports"];
   
   const isActive = (url: string) => {
