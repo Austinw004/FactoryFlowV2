@@ -14698,10 +14698,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cooldownMinutes: 30,
         isEnabled: 1,
         priority: 90,
-        executionCount: 234,
-        lastExecutedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-        successRate: 96,
-        avgSavings: 1250,
+        executionCount: 0,
+        lastExecutedAt: null,
+        successRate: null,
+        avgSavings: null,
       },
       {
         id: "rule_regime_safety",
@@ -14722,10 +14722,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cooldownMinutes: 240,
         isEnabled: 1,
         priority: 95,
-        executionCount: 18,
-        lastExecutedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-        successRate: 100,
-        avgSavings: 8500,
+        executionCount: 0,
+        lastExecutedAt: null,
+        successRate: null,
+        avgSavings: null,
       },
       {
         id: "rule_rebalance",
@@ -14746,10 +14746,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cooldownMinutes: 1440,
         isEnabled: 1,
         priority: 70,
-        executionCount: 52,
-        lastExecutedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-        successRate: 92,
-        avgSavings: 3200,
+        executionCount: 0,
+        lastExecutedAt: null,
+        successRate: null,
+        avgSavings: null,
       },
       {
         id: "rule_price_spike",
@@ -14770,10 +14770,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cooldownMinutes: 60,
         isEnabled: 1,
         priority: 100,
-        executionCount: 7,
-        lastExecutedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-        successRate: 100,
-        avgSavings: 25000,
+        executionCount: 0,
+        lastExecutedAt: null,
+        successRate: null,
+        avgSavings: null,
       },
     ];
   }
@@ -14867,71 +14867,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Initialize default pending actions for a company
   function getDefaultPendingActions(companyId: string, regime: string = "HEALTHY_EXPANSION", fdr: number = 1.0) {
-    return [
-      {
-        id: `action_pending_1`,
-        companyId,
-        agentId: "agent_procurement",
-        agentName: "Procurement Agent",
-        ruleId: "rule_low_stock_po",
-        ruleName: "Low Stock Auto-PO",
-        actionType: "create_po",
-        actionPayload: {
-          materialId: "MAT-2847",
-          materialName: "Steel Alloy Grade 304",
-          quantity: 5000,
-          unit: "kg",
-          supplierId: "SUP-125",
-          supplierName: "Global Steel Corp",
-          estimatedCost: 47500,
-          deliveryDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-          currentStock: 1200,
-          reorderPoint: 2000,
-          economicOrderQty: 5000,
-        },
-        status: "awaiting_approval",
-        estimatedImpact: {
-          costSavings: 2400,
-          stockoutRiskReduction: 0.85,
-          confidence: 0.92,
-          reasoning: "Current price is 5% below 30-day average. Ordering now saves $2,400 vs. projected prices.",
-        },
-        economicRegime: regime,
-        fdrValue: fdr,
-        approvalDeadline: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
-        createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      },
-      {
-        id: `action_pending_2`,
-        companyId,
-        agentId: "agent_inventory",
-        agentName: "Inventory Agent",
-        ruleId: "rule_rebalance",
-        ruleName: "Weekly Inventory Rebalance",
-        actionType: "rebalance_inventory",
-        actionPayload: {
-          transfers: [
-            { from: "Warehouse A (East)", to: "Warehouse C (West)", material: "Aluminum Sheets 6061", quantity: 200, unit: "sheets" },
-            { from: "Warehouse B (Central)", to: "Warehouse A (East)", material: "Copper Wire 12AWG", quantity: 150, unit: "spools" },
-            { from: "Warehouse C (West)", to: "Warehouse B (Central)", material: "Plastic Resin ABS", quantity: 500, unit: "kg" },
-          ],
-          totalTransfers: 3,
-          estimatedTransportCost: 1850,
-          balanceImprovement: "32%",
-        },
-        status: "awaiting_approval",
-        estimatedImpact: {
-          costSavings: 4200,
-          efficiencyGain: 0.15,
-          confidence: 0.88,
-          reasoning: "Demand patterns show West region surge. Rebalancing prevents $4,200 in expedited shipping costs.",
-        },
-        economicRegime: regime,
-        fdrValue: fdr,
-        approvalDeadline: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
-        createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-      },
-    ];
+    return [];
   }
 
   // Execute action based on type - returns execution result
