@@ -1,0 +1,23 @@
+I need a comprehensive and technically precise architecture report of this entire application. This report is not for marketing or summarization. It is for enterprise readiness review and potential investment diligence. Assume the audience evaluating this document is technical and expects accuracy, completeness, and transparency. Do not simplify or omit structural details.
+
+Begin by describing the backend architecture in full detail. State the programming language and framework being used. Clarify whether the system is monolithic or modular and explain how services are organized. Identify where business logic resides and how it is separated from presentation layers. Specifically explain where economic regime logic is executed, where FDR calculations occur, and where automation rule execution is handled. Describe how internal modules communicate and whether any logic exists client-side that should be server-side.
+
+Next, provide a full database analysis. Identify the database system in use (for example PostgreSQL, MySQL, MongoDB, SQLite, Replit DB, etc.). State whether the database is persistent or ephemeral and where it is hosted. Confirm whether it is production-grade. Provide a schema overview including tables, relationships, constraints, foreign keys, and indexing strategy. Explain how tenant isolation is enforced at the database level. Confirm whether foreign keys are enforced and whether transactions are atomic. Describe migration tooling, if any, and whether automated backups are configured. Explain what would happen to stored data if the server restarts.
+
+Then document environment configuration and secret management. Explain how environment variables are handled. Confirm whether secrets are ever hardcoded. Clarify whether development and production environments are separated. Confirm API keys are scoped appropriately and not shared improperly across tenants.
+
+Provide a detailed explanation of the payment system. Identify the payment provider in use. Confirm whether idempotency keys are implemented. Explain how webhooks are verified and how billing state reconciles with provider state. Describe what happens if a webhook fails, retries occur, or duplicate events are received. Confirm whether the system prevents duplicate charges and whether financial state is always synchronized.
+
+Describe the automation rules engine in technical detail. Explain where rules are stored, where execution state is stored, and whether execution logs are persistent. Describe how concurrency conflicts are handled and how rate limiting is enforced server-side. Confirm whether duplicate triggers could cause duplicate execution. Clarify how guardrails interact with automation logic and whether they are enforced transactionally.
+
+Document all integrations thoroughly. Explain authentication mechanisms, token storage practices, and how tokens are secured. Clarify whether webhook handling is idempotent. Explain what occurs if an integration fails during an operation. Confirm that external IDs are mapped canonically and cannot create duplicate entities. State how integration health is monitored.
+
+Provide a logging and monitoring overview. Describe what logs are captured and where they are stored. Confirm whether structured logging is implemented. State whether error monitoring or uptime monitoring is active. Confirm whether the system can reconstruct a complete audit trail for automation decisions, regime transitions, payments, and data imports.
+
+Explain security architecture clearly. Describe how tenant isolation is enforced at the API layer. Confirm that role-based access control exists and is consistently applied. Confirm that endpoints prevent cross-tenant access. State whether rate limits exist and how abuse is prevented.
+
+Describe deployment architecture. Identify where production is hosted. State whether the system is horizontally scalable. Confirm whether database connections are pooled properly. Clarify whether staging and production are separated. Explain whether zero-downtime deployment is possible.
+
+Finally, provide a data integrity and recovery analysis. Explain what happens if the application crashes or restarts. Confirm whether any data lives only in memory. Describe backup frequency and recovery procedures. State how the system ensures no silent data corruption or loss.
+
+Output the report as a structured technical explanation of the current real implementation. Do not propose improvements. Do not add aspirational statements. Only describe what exists today.
