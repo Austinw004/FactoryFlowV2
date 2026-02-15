@@ -610,7 +610,7 @@ export default function Dashboard() {
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Source:</span>
                 <Badge variant={dataSource === 'external' ? 'default' : 'secondary'}>
-                  {dataSource === 'external' ? 'Live APIs' : dataSource === 'fallback' ? 'Mock Data' : 'Balance Sheet'}
+                  {dataSource === 'external' ? 'Live APIs' : dataSource === 'fallback' ? 'Fallback (APIs Unavailable)' : 'Balance Sheet'}
                 </Badge>
               </div>
               <div className="flex justify-between">

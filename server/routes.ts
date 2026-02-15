@@ -14959,7 +14959,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         triggerType: "regime_change",
         triggerConditions: { fromRegime: "any", monitorAllRegimes: true },
         actionType: "adjust_safety_stock",
-        actionConfig: { regimeMultipliers: { BUBBLE: 1.5, IMBALANCED_EXCESS: 1.3, HEALTHY: 1.0, IMBALANCED_DEFICIT: 0.8, DEPRESSED: 0.7 } },
+        actionConfig: { regimeMultipliers: { REAL_ECONOMY_LEAD: 1.5, IMBALANCED_EXCESS: 1.3, ASSET_LED_GROWTH: 1.1, HEALTHY_EXPANSION: 1.0 } },
         autonomyLevel: "auto_execute",
         requiresApproval: 0,
         approvalTimeout: 0,
@@ -15322,7 +15322,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timezone: "America/New_York",
         actionsToday: 0,
         valueToday: 0,
-        successRate: 100,
+        successRate: 0,
         createdAt: new Date().toISOString(),
       };
       

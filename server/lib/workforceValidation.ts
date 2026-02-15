@@ -11,6 +11,7 @@
  */
 
 import type { InsertWorkforcePrediction } from '@shared/schema';
+import { CANONICAL_REGIME_THRESHOLDS } from './regimeConstants';
 
 export interface WorkforceContext {
   fdr: number;
@@ -238,11 +239,11 @@ export class DualCircuitWorkforceModel {
     // HEALTHY_EXPANSION [0, 1.2), ASSET_LED_GROWTH [1.2, 1.8), IMBALANCED_EXCESS [1.8, 2.5), REAL_ECONOMY_LEAD [2.5+]
     // REAL_ECONOMY_LEAD at HIGH FDR = asset markets overheated, counter-cyclical opportunity
     let hypothesis = '';
-    if (context.fdr >= 2.5) {
+    if (context.fdr >= CANONICAL_REGIME_THRESHOLDS.REAL_ECONOMY_LEAD.min) {
       hypothesis = 'REAL_ECONOMY_LEAD: Counter-cyclical opportunity - asset markets overheated, invest in workforce capacity';
-    } else if (context.fdr >= 1.8) {
+    } else if (context.fdr >= CANONICAL_REGIME_THRESHOLDS.IMBALANCED_EXCESS.min) {
       hypothesis = 'IMBALANCED_EXCESS: Predict layoffs, wage freezes, unemployment spike, productivity collapse';
-    } else if (context.fdr >= 1.2) {
+    } else if (context.fdr >= CANONICAL_REGIME_THRESHOLDS.ASSET_LED_GROWTH.min) {
       hypothesis = 'ASSET_LED_GROWTH: Predict wage stagnation, hiring caution, rising turnover, forced overtime';
     } else {
       hypothesis = 'HEALTHY_EXPANSION: Predict balanced labor market with moderate growth';

@@ -4,7 +4,7 @@ import {
   forecastAccuracyTracking, demandHistory 
 } from "@shared/schema";
 import { eq, desc, and, gte } from "drizzle-orm";
-import { type RegimeEvidence } from "./regimeConstants";
+import { type RegimeEvidence, CANONICAL_REGIME_THRESHOLDS } from "./regimeConstants";
 
 export interface SmartInsight {
   id: string;
@@ -281,7 +281,7 @@ export class SmartInsightsService {
       derivedFrom: 'dual_circuit_fdr_model',
     };
 
-    if (regimeName === 'REAL_ECONOMY_LEAD' && fdr >= 2.5) {
+    if (regimeName === 'REAL_ECONOMY_LEAD' && fdr >= CANONICAL_REGIME_THRESHOLDS.REAL_ECONOMY_LEAD.min) {
       insights.push({
         id: `regime-opportunity-${Date.now()}`,
         type: 'opportunity',

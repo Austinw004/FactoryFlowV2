@@ -25,7 +25,6 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Link, useLocation } from "wouter";
 import { SidebarTour } from "@/components/GuidedTour";
 import { useUnifiedData } from "@/contexts/UnifiedDataContext";
@@ -130,40 +129,25 @@ export function AppSidebar() {
       const alerts = inventory.lowStockCount + suppliers.atRiskCount;
       if (alerts > 0) {
         return (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Badge 
-                variant="destructive" 
-                className="ml-auto h-5 min-w-5 px-1.5 text-[10px]"
-                data-testid="badge-supply-chain-alerts"
-              >
-                {alerts > 9 ? "9+" : alerts}
-              </Badge>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="text-xs">
-              {inventory.lowStockCount > 0 && <div>{inventory.lowStockCount} low stock items</div>}
-              {suppliers.atRiskCount > 0 && <div>{suppliers.atRiskCount} at-risk suppliers</div>}
-            </TooltipContent>
-          </Tooltip>
+          <Badge 
+            variant="destructive" 
+            className="ml-auto h-5 min-w-5 px-1.5 text-[10px]"
+            data-testid="badge-supply-chain-alerts"
+          >
+            {alerts > 9 ? "9+" : alerts}
+          </Badge>
         );
       }
     }
     
     if (url === "/procurement" && commodities.rising > 2) {
       return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Badge 
-              className="ml-auto h-5 min-w-5 px-1.5 text-[10px] bg-yellow-500 text-yellow-950"
-              data-testid="badge-procurement-commodities"
-            >
-              {commodities.rising}
-            </Badge>
-          </TooltipTrigger>
-          <TooltipContent side="right" className="text-xs">
-            {commodities.rising} commodities with rising prices
-          </TooltipContent>
-        </Tooltip>
+        <Badge 
+          className="ml-auto h-5 min-w-5 px-1.5 text-[10px] bg-yellow-500 text-yellow-950"
+          data-testid="badge-procurement-commodities"
+        >
+          {commodities.rising}
+        </Badge>
       );
     }
     

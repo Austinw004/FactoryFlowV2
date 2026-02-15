@@ -2,6 +2,7 @@ import { db } from "../db";
 import { employees, employeePayroll, employeePtoBalances, employeePerformanceReviews, economicSnapshots, productionMetrics, companies } from "@shared/schema";
 import { eq, desc, and, sql, gte, count } from "drizzle-orm";
 import type { IStorage } from "../storage";
+import { CANONICAL_REGIME_THRESHOLDS } from "./regimeConstants";
 
 /**
  * Workforce Analytics Service
@@ -109,11 +110,10 @@ export class WorkforceAnalyticsService {
 
   private getHiringSignal(regime: string, fdr: number): string {
     // REAL_ECONOMY_LEAD (FDR ≥ 2.5) = asset markets overheated, invest in real capacity
-    if (regime === "REAL_ECONOMY_LEAD" && fdr >= 2.5) return "HIRE_AGGRESSIVELY";
+    if (regime === "REAL_ECONOMY_LEAD" && fdr >= CANONICAL_REGIME_THRESHOLDS.REAL_ECONOMY_LEAD.min) return "HIRE_AGGRESSIVELY";
     if (regime === "HEALTHY_EXPANSION") return "HIRE_MODERATELY";
     if (regime === "ASSET_LED_GROWTH") return "MAINTAIN_CURRENT";
-    // IMBALANCED_EXCESS (FDR 1.8-2.5) = caution, avoid overcommitting
-    if (regime === "IMBALANCED_EXCESS" || fdr >= 1.8) return "FREEZE_HIRING";
+    if (regime === "IMBALANCED_EXCESS" || fdr >= CANONICAL_REGIME_THRESHOLDS.IMBALANCED_EXCESS.min) return "FREEZE_HIRING";
     return "EVALUATE";
   }
 

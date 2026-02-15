@@ -22,6 +22,7 @@ import type {
   InsertWorkforcePrediction 
 } from '@shared/schema';
 import { DualCircuitEconomics } from './economics';
+import { CANONICAL_REGIME_THRESHOLDS } from './regimeConstants';
 
 type EconomicRegime = 'HEALTHY_EXPANSION' | 'ASSET_LED_GROWTH' | 'IMBALANCED_EXCESS' | 'REAL_ECONOMY_LEAD';
 import { QuantityOfMoneyModel, RandomWalkModel, MomentumModel, DualCircuitFDRModel } from './comparisonModels';
@@ -171,18 +172,18 @@ export function generateHistoricalStates(numStates: number = 500): HistoricalSta
     const fdr = (ma * va) / (mr * vr);
     const dualCircuit = new DualCircuitEconomics();
     const regime: EconomicRegime = 
-      fdr >= 2.5 ? 'REAL_ECONOMY_LEAD' :
-      fdr >= 1.8 ? 'IMBALANCED_EXCESS' :
-      fdr >= 1.2 ? 'ASSET_LED_GROWTH' :
+      fdr >= CANONICAL_REGIME_THRESHOLDS.REAL_ECONOMY_LEAD.min ? 'REAL_ECONOMY_LEAD' :
+      fdr >= CANONICAL_REGIME_THRESHOLDS.IMBALANCED_EXCESS.min ? 'IMBALANCED_EXCESS' :
+      fdr >= CANONICAL_REGIME_THRESHOLDS.ASSET_LED_GROWTH.min ? 'ASSET_LED_GROWTH' :
       'HEALTHY_EXPANSION';
     
     // Calculate other metrics
     const gdpGrowth = regime === 'REAL_ECONOMY_LEAD' ? 0.04 : regime === 'IMBALANCED_EXCESS' ? -0.02 : 0.02;
     const m2Growth = (mr - 1000) / 1000;
     const velocityChange = (vr - 1.5) / 1.5;
-    const inflationRate = fdr > 1.8 ? 0.06 : fdr < 1.2 ? 0.02 : 0.03;
+    const inflationRate = fdr > CANONICAL_REGIME_THRESHOLDS.IMBALANCED_EXCESS.min ? 0.06 : fdr < CANONICAL_REGIME_THRESHOLDS.ASSET_LED_GROWTH.min ? 0.02 : 0.03;
     const sp500 = 1000 * (ma / 800) * (va / 2.0);
-    const unemploymentRate = fdr > 1.8 ? 9.0 : fdr < 1.2 ? 4.0 : 5.5;
+    const unemploymentRate = fdr > CANONICAL_REGIME_THRESHOLDS.IMBALANCED_EXCESS.min ? 9.0 : fdr < CANONICAL_REGIME_THRESHOLDS.ASSET_LED_GROWTH.min ? 4.0 : 5.5;
     
     // Update commodity prices based on regime
     if (regime === 'REAL_ECONOMY_LEAD') {

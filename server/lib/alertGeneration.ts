@@ -7,6 +7,7 @@ import {
 } from "@shared/schema";
 import { eq, desc, sql } from "drizzle-orm";
 import type { IStorage } from "../storage";
+import { CANONICAL_REGIME_THRESHOLDS } from "./regimeConstants";
 
 /**
  * Alert Generation Service
@@ -242,7 +243,7 @@ export class AlertGenerationService {
       }
 
       // Counter-cyclical opportunity alert (REAL_ECONOMY_LEAD at high FDR ≥ 2.5 = asset markets overheated, buy real assets)
-      if (current.regime === "REAL_ECONOMY_LEAD" && current.fdr >= 2.5) {
+      if (current.regime === "REAL_ECONOMY_LEAD" && current.fdr >= CANONICAL_REGIME_THRESHOLDS.REAL_ECONOMY_LEAD.min) {
         try {
           await db.insert(alertTriggers).values({
             companyId,

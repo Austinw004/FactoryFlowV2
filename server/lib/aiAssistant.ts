@@ -8,7 +8,7 @@ import { fetchExternalVariables } from "./externalAPIs";
 import { getAISystemPromptEnhancements } from "./industryPersonalization";
 import { getIndustryConfig } from "@shared/industryConfig";
 import { smartInsightsService } from "./smartInsights";
-import { classifyRegimeFromFDR } from "./regimeConstants";
+import { classifyRegimeFromFDR, CANONICAL_REGIME_THRESHOLDS } from "./regimeConstants";
 
 // Format regime names from SCREAMING_SNAKE_CASE to Title Case
 function formatRegimeName(regime: string): string {
@@ -1700,7 +1700,7 @@ RESPONSE STYLE:
   private generateInsights(context: PlatformContext): AIInsight[] {
     const insights: AIInsight[] = [];
 
-    if (context.regime.fdr >= 1.8) {
+    if (context.regime.fdr >= CANONICAL_REGIME_THRESHOLDS.IMBALANCED_EXCESS.min) {
       insights.push({
         category: "Market Timing",
         title: "Market Imbalance Detected",
@@ -1709,7 +1709,7 @@ RESPONSE STYLE:
         confidence: 0.9,
         source: "FDR Model"
       });
-    } else if (context.regime.fdr >= 1.2) {
+    } else if (context.regime.fdr >= CANONICAL_REGIME_THRESHOLDS.ASSET_LED_GROWTH.min) {
       insights.push({
         category: "Market Timing",
         title: "Asset-Led Growth Conditions",
@@ -1877,7 +1877,7 @@ RESPONSE STYLE:
       parts.push(`Based on your current platform data, here are the key areas that need attention:`);
       
       // Economic regime context
-      parts.push(`\n\n**Market Conditions**: The economy is in a ${formatRegimeName(context.regime.regime)} regime with FDR at ${context.regime.fdr.toFixed(2)}. ${context.regime.fdr >= 1.8 ? 'Consider deferring non-essential purchases — market conditions suggest caution.' : context.regime.fdr >= 1.2 ? 'Monitor asset-driven dynamics before making large purchases.' : 'Market conditions appear stable for procurement.'}`);
+      parts.push(`\n\n**Market Conditions**: The economy is in a ${formatRegimeName(context.regime.regime)} regime with FDR at ${context.regime.fdr.toFixed(2)}. ${context.regime.fdr >= CANONICAL_REGIME_THRESHOLDS.IMBALANCED_EXCESS.min ? 'Consider deferring non-essential purchases — market conditions suggest caution.' : context.regime.fdr >= CANONICAL_REGIME_THRESHOLDS.ASSET_LED_GROWTH.min ? 'Monitor asset-driven dynamics before making large purchases.' : 'Market conditions appear stable for procurement.'}`);
       
       // Inventory priorities
       if (context.inventory.lowStockItems > 0) {
@@ -1919,7 +1919,7 @@ RESPONSE STYLE:
     
     // Buying/timing response
     if (isAskingAboutBuying) {
-      const timing = context.regime.fdr >= 1.8 ? 'unfavorable' : context.regime.fdr >= 1.2 ? 'cautious' : 'favorable';
+      const timing = context.regime.fdr >= CANONICAL_REGIME_THRESHOLDS.IMBALANCED_EXCESS.min ? 'unfavorable' : context.regime.fdr >= CANONICAL_REGIME_THRESHOLDS.ASSET_LED_GROWTH.min ? 'cautious' : 'favorable';
       parts.push(`Current procurement timing is ${timing} (FDR: ${context.regime.fdr.toFixed(2)}, Regime: ${formatRegimeName(context.regime.regime)}).`);
       if (context.commodities.buySignals.length > 0) {
         parts.push(`\n\nBuy signals active for: ${context.commodities.buySignals.join(', ')}.`);
@@ -1997,7 +1997,7 @@ RESPONSE STYLE:
     const context = await this.getContext(companyId);
     const alerts: ProactiveAlert[] = [];
 
-    if (context.regime.fdr >= 1.8) {
+    if (context.regime.fdr >= CANONICAL_REGIME_THRESHOLDS.IMBALANCED_EXCESS.min) {
       alerts.push({
         id: `alert_regime_${now}`,
         type: "regime_change",

@@ -6,6 +6,8 @@
  * these are for comparative validation only.
  */
 
+import { CANONICAL_REGIME_THRESHOLDS } from './regimeConstants';
+
 export interface BaselineModel {
   name: string;
   predict(currentPrice: number, context: any): {
@@ -131,21 +133,21 @@ export class DualCircuitFDRModel implements BaselineModel {
     let confidence: number;
     
     // Apply dual-circuit theory logic
-    if (context.fdr > 1.8) {
+    if (context.fdr > CANONICAL_REGIME_THRESHOLDS.IMBALANCED_EXCESS.min) {
       // BUBBLE CONDITIONS: Asset decoupling from real economy
       // Theory predicts mean reversion / correction
       predictedDirection = 'down';
       predictedPrice = currentPrice * 0.92; // Expect 8% correction
       confidence = 0.85; // High confidence in bubble detection
       
-    } else if (context.fdr < 1.2) {
+    } else if (context.fdr < CANONICAL_REGIME_THRESHOLDS.ASSET_LED_GROWTH.min) {
       // REAL ECONOMY LEAD: Real growth outpacing asset inflation
       // Theory predicts asset catch-up / growth
       predictedDirection = 'up';
       predictedPrice = currentPrice * 1.08; // Expect 8% growth
       confidence = 0.82; // High confidence in real economy lead
       
-    } else if (context.fdr >= 1.2 && context.fdr < 1.8) {
+    } else if (context.fdr >= CANONICAL_REGIME_THRESHOLDS.ASSET_LED_GROWTH.min && context.fdr < CANONICAL_REGIME_THRESHOLDS.IMBALANCED_EXCESS.min) {
       // ASSET-LED GROWTH (FDR 1.2-1.8): Moderate asset dominance
       // Theory predicts continued but slowing growth
       predictedDirection = currentPrice > 2500 ? 'down' : 'up';
