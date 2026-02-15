@@ -126,7 +126,8 @@ import type {
   WeeklySchedule, InsertWeeklySchedule,
   ShiftAssignment, InsertShiftAssignment,
   AiAutomationRule, InsertAiAutomationRule,
-  AiAgent, InsertAiAgent
+  AiAgent, InsertAiAgent,
+  TeamInvitation, InsertTeamInvitation
 } from "@shared/schema";
 import { 
   users, companies, companyLocations, skus, materials, boms, suppliers, supplierMaterials,
@@ -166,7 +167,7 @@ import {
   supplierTiers, supplierRelationships, supplierRegionRisks, supplierTierAlerts,
   activityLogs, userNotificationPreferences,
   employeeSkillCertifications, weeklySchedules, shiftAssignments,
-  aiAutomationRules, aiAgents
+  aiAutomationRules, aiAgents, teamInvitations
 } from "@shared/schema";
 
 export interface IStorage {
@@ -776,6 +777,12 @@ export interface IStorage {
   // RBAC - Permissions
   getAllPermissions(): Promise<Permission[]>;
   getPermission(permissionId: string): Promise<Permission | undefined>;
+
+  // Team Invitations
+  createTeamInvitation(invitation: InsertTeamInvitation): Promise<TeamInvitation>;
+  getTeamInvitations(companyId: string): Promise<TeamInvitation[]>;
+  cancelTeamInvitation(id: string, companyId: string): Promise<void>;
+  removeUserFromCompany(userId: string, companyId: string): Promise<void>;
   
   // Peer Benchmarking (Industry Data Consortium)
   createBenchmarkSubmission(submission: InsertBenchmarkSubmission): Promise<BenchmarkSubmission>;
@@ -3961,6 +3968,31 @@ export class DbStorage implements IStorage {
   async getPermission(permissionId: string): Promise<Permission | undefined> {
     const [permission] = await db.select().from(permissions).where(eq(permissions.id, permissionId));
     return permission;
+  }
+
+  async createTeamInvitation(invitation: InsertTeamInvitation): Promise<TeamInvitation> {
+    const [result] = await db.insert(teamInvitations).values(invitation).returning();
+    return result;
+  }
+
+  async getTeamInvitations(companyId: string): Promise<TeamInvitation[]> {
+    return await db.select().from(teamInvitations)
+      .where(eq(teamInvitations.companyId, companyId))
+      .orderBy(desc(teamInvitations.createdAt));
+  }
+
+  async cancelTeamInvitation(id: string, companyId: string): Promise<void> {
+    await db.update(teamInvitations)
+      .set({ status: "cancelled" })
+      .where(and(eq(teamInvitations.id, id), eq(teamInvitations.companyId, companyId)));
+  }
+
+  async removeUserFromCompany(userId: string, companyId: string): Promise<void> {
+    await db.delete(userRoleAssignments)
+      .where(and(eq(userRoleAssignments.userId, userId), eq(userRoleAssignments.companyId, companyId)));
+    await db.update(users)
+      .set({ companyId: null })
+      .where(and(eq(users.id, userId), eq(users.companyId, companyId)));
   }
   
   // ROI Metrics
