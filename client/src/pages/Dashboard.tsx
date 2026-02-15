@@ -297,43 +297,42 @@ export default function Dashboard() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-3xl font-semibold">Dashboard</h1>
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Data Freshness Indicator */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border bg-muted/30" data-testid="data-freshness-indicator">
-            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-            <div className="flex items-center gap-3 text-xs">
-              <span className="flex items-center gap-1">
-                <span className={`h-1.5 w-1.5 rounded-full ${getDataFreshnessStatus(regimeUpdatedAt) === 'fresh' ? 'bg-green-500' : getDataFreshnessStatus(regimeUpdatedAt) === 'recent' ? 'bg-yellow-500' : 'bg-red-500'}`} />
-                <span className="text-muted-foreground">Regime:</span>
-                <span className="font-medium">{getDataAge(regimeUpdatedAt)}</span>
-              </span>
-              <span className="flex items-center gap-1">
-                <span className={`h-1.5 w-1.5 rounded-full ${getDataFreshnessStatus(allocationsUpdatedAt) === 'fresh' ? 'bg-green-500' : getDataFreshnessStatus(allocationsUpdatedAt) === 'recent' ? 'bg-yellow-500' : 'bg-red-500'}`} />
-                <span className="text-muted-foreground">Allocations:</span>
-                <span className="font-medium">{getDataAge(allocationsUpdatedAt)}</span>
-              </span>
-              <span className="flex items-center gap-1">
-                <span className={`h-1.5 w-1.5 rounded-full ${getDataFreshnessStatus(skusUpdatedAt) === 'fresh' ? 'bg-green-500' : getDataFreshnessStatus(skusUpdatedAt) === 'recent' ? 'bg-yellow-500' : 'bg-red-500'}`} />
-                <span className="text-muted-foreground">SKUs:</span>
-                <span className="font-medium">{getDataAge(skusUpdatedAt)}</span>
-              </span>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 ml-1"
-              onClick={handleRefreshAll}
-              disabled={isRefreshing}
-              data-testid="button-refresh-all-data"
-            >
-              <RefreshCw className={`h-3 w-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-            </Button>
+        <Badge variant={isConnected ? "default" : "outline"} className="gap-1.5" data-testid="badge-connection-status">
+          <Radio className={`h-3 w-3 ${isConnected ? 'animate-pulse' : ''}`} />
+          {isConnected ? 'Live Updates' : 'Connecting...'}
+        </Badge>
+      </div>
+
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border bg-muted/30" data-testid="data-freshness-indicator">
+          <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+          <div className="flex items-center gap-3 text-xs">
+            <span className="flex items-center gap-1">
+              <span className={`h-1.5 w-1.5 rounded-full ${getDataFreshnessStatus(regimeUpdatedAt) === 'fresh' ? 'bg-green-500' : getDataFreshnessStatus(regimeUpdatedAt) === 'recent' ? 'bg-yellow-500' : 'bg-red-500'}`} />
+              <span className="text-muted-foreground">Regime:</span>
+              <span className="font-medium">{getDataAge(regimeUpdatedAt)}</span>
+            </span>
+            <span className="flex items-center gap-1">
+              <span className={`h-1.5 w-1.5 rounded-full ${getDataFreshnessStatus(allocationsUpdatedAt) === 'fresh' ? 'bg-green-500' : getDataFreshnessStatus(allocationsUpdatedAt) === 'recent' ? 'bg-yellow-500' : 'bg-red-500'}`} />
+              <span className="text-muted-foreground">Allocations:</span>
+              <span className="font-medium">{getDataAge(allocationsUpdatedAt)}</span>
+            </span>
+            <span className="flex items-center gap-1">
+              <span className={`h-1.5 w-1.5 rounded-full ${getDataFreshnessStatus(skusUpdatedAt) === 'fresh' ? 'bg-green-500' : getDataFreshnessStatus(skusUpdatedAt) === 'recent' ? 'bg-yellow-500' : 'bg-red-500'}`} />
+              <span className="text-muted-foreground">SKUs:</span>
+              <span className="font-medium">{getDataAge(skusUpdatedAt)}</span>
+            </span>
           </div>
-          <Separator orientation="vertical" className="h-8" />
-          <Badge variant={isConnected ? "default" : "outline"} className="gap-1.5" data-testid="badge-connection-status">
-            <Radio className={`h-3 w-3 ${isConnected ? 'animate-pulse' : ''}`} />
-            {isConnected ? 'Live Updates' : 'Connecting...'}
-          </Badge>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 ml-1"
+            onClick={handleRefreshAll}
+            disabled={isRefreshing}
+            data-testid="button-refresh-all-data"
+          >
+            <RefreshCw className={`h-3 w-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </Button>
         </div>
       </div>
 
