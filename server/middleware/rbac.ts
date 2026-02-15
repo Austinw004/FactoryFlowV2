@@ -112,31 +112,36 @@ export function requireAllPermissions(...permissionNames: PermissionName[]) {
 // Helper to attach user info from session to request for RBAC
 export async function attachRbacUser(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   try {
-    // First try to get user from session (primary path)
+    let userId: string | undefined;
+    let email: string | undefined;
+
     if (req.session && (req.session as any).passport?.user) {
       const sessionUser = (req.session as any).passport.user;
-      req.rbacUser = {
-        id: sessionUser.id,
-        email: sessionUser.email,
-        companyId: sessionUser.companyId,
-      };
+      userId = sessionUser.claims?.sub || sessionUser.id;
+      email = sessionUser.claims?.email || sessionUser.email;
     }
-    
-    // Fallback: if session doesn't have complete data, fetch from storage
-    if (req.rbacUser && (!req.rbacUser.companyId || !req.rbacUser.email)) {
-      const dbUser = await storage.getUser(req.rbacUser.id);
-      if (dbUser) {
-        req.rbacUser = {
-          id: dbUser.id,
-          email: dbUser.email || req.rbacUser.email,
-          companyId: dbUser.companyId || req.rbacUser.companyId,
-        };
-      }
+
+    if (!userId) {
+      return next();
+    }
+
+    const dbUser = await storage.getUser(userId);
+    if (dbUser) {
+      req.rbacUser = {
+        id: dbUser.id,
+        email: dbUser.email || email,
+        companyId: dbUser.companyId || undefined,
+      };
+    } else {
+      req.rbacUser = {
+        id: userId,
+        email,
+      };
     }
     
     next();
   } catch (error) {
     console.error("[RBAC Middleware] Error attaching RBAC user:", error);
-    next(); // Continue even if there's an error - let permission checks handle it
+    next();
   }
 }

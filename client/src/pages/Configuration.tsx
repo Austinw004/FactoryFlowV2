@@ -1147,25 +1147,74 @@ function AuditLogViewer() {
 function RoleManagement() {
   const { toast } = useToast();
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  
-  // Fetch all users in company
-  const { data: currentUser } = useQuery({
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRoleId, setInviteRoleId] = useState<string>("");
+  const [expandedRole, setExpandedRole] = useState<string | null>(null);
+  const [confirmRemoveUser, setConfirmRemoveUser] = useState<string | null>(null);
+
+  const { data: currentUser } = useQuery<any>({
     queryKey: ["/api/auth/user"],
   });
-  
+
   const { data: users = [], isLoading: usersLoading } = useQuery<User[]>({
     queryKey: ["/api/users"],
   });
-  
+
   const { data: roles = [], isLoading: rolesLoading } = useQuery<Role[]>({
     queryKey: ["/api/rbac/roles"],
   });
-  
+
+  const { data: invitations = [] } = useQuery<any[]>({
+    queryKey: ["/api/rbac/team/invitations"],
+  });
+
   const { data: userRoles = [], refetch: refetchUserRoles } = useQuery<Role[]>({
     queryKey: ["/api/rbac/users", selectedUserId, "roles"],
     enabled: !!selectedUserId,
   });
-  
+
+  const { data: rolePermissions } = useQuery<any>({
+    queryKey: ["/api/rbac/roles", expandedRole],
+    enabled: !!expandedRole,
+  });
+
+  const inviteMutation = useMutation({
+    mutationFn: (data: { email: string; roleId?: string }) =>
+      apiRequest("POST", "/api/rbac/team/invite", data),
+    onSuccess: () => {
+      toast({ title: "Invitation Sent", description: `Invitation sent to ${inviteEmail}` });
+      setInviteEmail("");
+      setInviteRoleId("");
+      queryClient.invalidateQueries({ queryKey: ["/api/rbac/team/invitations"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const cancelInviteMutation = useMutation({
+    mutationFn: (id: string) =>
+      apiRequest("DELETE", `/api/rbac/team/invitations/${id}`),
+    onSuccess: () => {
+      toast({ title: "Cancelled", description: "Invitation cancelled" });
+      queryClient.invalidateQueries({ queryKey: ["/api/rbac/team/invitations"] });
+    },
+  });
+
+  const removeUserMutation = useMutation({
+    mutationFn: (userId: string) =>
+      apiRequest("DELETE", `/api/rbac/team/members/${userId}`),
+    onSuccess: () => {
+      toast({ title: "Removed", description: "Team member removed from company" });
+      setConfirmRemoveUser(null);
+      setSelectedUserId(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
   const assignRoleMutation = useMutation({
     mutationFn: ({ userId, roleId }: { userId: string; roleId: string }) =>
       apiRequest("POST", `/api/rbac/users/${userId}/roles`, { roleId }),
@@ -1177,7 +1226,7 @@ function RoleManagement() {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
-  
+
   const removeRoleMutation = useMutation({
     mutationFn: ({ userId, roleId }: { userId: string; roleId: string }) =>
       apiRequest("DELETE", `/api/rbac/users/${userId}/roles/${roleId}`),
@@ -1189,7 +1238,44 @@ function RoleManagement() {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
-  
+
+  const permissionSections: Record<string, { label: string; permissions: string[] }> = {
+    Forecasting: {
+      label: "Demand Forecasting",
+      permissions: ["view_forecast", "edit_forecast", "approve_forecast"],
+    },
+    Procurement: {
+      label: "Procurement & Suppliers",
+      permissions: ["view_procurement", "edit_procurement", "approve_procurement", "view_suppliers", "edit_suppliers"],
+    },
+    Materials: {
+      label: "Materials & Inventory",
+      permissions: ["view_materials", "edit_materials", "view_inventory"],
+    },
+    Production: {
+      label: "Production & SKUs",
+      permissions: ["view_skus", "edit_skus", "view_production", "edit_production"],
+    },
+    Allocations: {
+      label: "Allocations",
+      permissions: ["view_allocations", "run_allocations", "approve_allocations"],
+    },
+    Financials: {
+      label: "Financial Data",
+      permissions: ["view_financials", "edit_budget", "view_costs"],
+    },
+    Administration: {
+      label: "Administration",
+      permissions: ["manage_users", "manage_roles", "manage_company_settings", "manage_integrations", "view_audit_logs"],
+    },
+    Data: {
+      label: "Data Import/Export",
+      permissions: ["import_data", "export_data"],
+    },
+  };
+
+  const pendingInvitations = invitations.filter((inv: any) => inv.status === "pending");
+
   if (usersLoading || rolesLoading) {
     return (
       <div className="space-y-4">
@@ -1197,110 +1283,200 @@ function RoleManagement() {
       </div>
     );
   }
-  
+
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>User Access Control</CardTitle>
+          <CardTitle data-testid="text-access-control-title">Team Members</CardTitle>
           <CardDescription>
-            Manage user roles and permissions. Only administrators can modify access control.
+            Add or remove people from your organization and control what they can access.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Alert>
-            <Shield className="h-4 w-4" />
-            <AlertDescription>
-              Roles define what actions users can perform. Each role has a set of permissions that control access to features.
-            </AlertDescription>
-          </Alert>
-          
-          <div className="space-y-4">
-            <h3 className="font-semibold">Available Roles</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {roles.map((role: any) => (
-                <Card key={role.id} className="hover-elevate">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">{role.name}</CardTitle>
-                    <CardDescription className="text-xs">
-                      {role.description}
-                      {role.isDefault ? " (Default Role)" : ""}
-                    </CardDescription>
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
-          </div>
-          
-          <Separator />
-          
-          <div className="space-y-4">
-            <h3 className="font-semibold">Assign Roles to Users</h3>
-            <div className="space-y-2">
-              <Label>Select User</Label>
-              <Select
-                value={selectedUserId || ""}
-                onValueChange={setSelectedUserId}
-              >
-                <SelectTrigger data-testid="select-user">
-                  <SelectValue placeholder="Choose a user..." />
+          <div className="space-y-3">
+            <h3 className="font-semibold text-sm">Invite New Member</h3>
+            <div className="flex gap-2 flex-wrap">
+              <Input
+                type="email"
+                placeholder="colleague@company.com"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                className="flex-1 min-w-[200px]"
+                data-testid="input-invite-email"
+              />
+              <Select value={inviteRoleId} onValueChange={setInviteRoleId}>
+                <SelectTrigger className="w-[180px]" data-testid="select-invite-role">
+                  <SelectValue placeholder="Select role..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {users.map((user: any) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.firstName} {user.lastName} ({user.email})
+                  {roles.map((role: any) => (
+                    <SelectItem key={role.id} value={role.id}>
+                      {role.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              <Button
+                onClick={() => inviteMutation.mutate({ email: inviteEmail, roleId: inviteRoleId || undefined })}
+                disabled={!inviteEmail.includes("@") || inviteMutation.isPending}
+                data-testid="button-send-invite"
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                {inviteMutation.isPending ? "Sending..." : "Send Invite"}
+              </Button>
             </div>
-            
-            {selectedUserId && (
+          </div>
+
+          {pendingInvitations.length > 0 && (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <h3 className="font-semibold text-sm">Pending Invitations</h3>
+                <div className="space-y-2">
+                  {pendingInvitations.map((inv: any) => (
+                    <div key={inv.id} className="flex items-center justify-between gap-2 p-3 bg-muted rounded-md" data-testid={`invitation-${inv.id}`}>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{inv.email}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Invited {new Date(inv.createdAt).toLocaleDateString()} · Expires {new Date(inv.expiresAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => cancelInviteMutation.mutate(inv.id)}
+                        disabled={cancelInviteMutation.isPending}
+                        data-testid={`button-cancel-invite-${inv.id}`}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          <Separator />
+
+          <div className="space-y-3">
+            <h3 className="font-semibold text-sm">Current Members ({users.length})</h3>
+            <div className="space-y-2">
+              {users.map((member: any) => {
+                const isCurrentUser = currentUser?.id === member.id;
+                return (
+                  <div
+                    key={member.id}
+                    className={`flex items-center justify-between gap-2 p-3 rounded-md border cursor-pointer ${selectedUserId === member.id ? "border-primary bg-muted/50" : ""}`}
+                    onClick={() => setSelectedUserId(selectedUserId === member.id ? null : member.id)}
+                    data-testid={`member-row-${member.id}`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-medium">
+                          {member.firstName || ""} {member.lastName || ""}{!member.firstName && !member.lastName ? member.email : ""}
+                        </p>
+                        {isCurrentUser && (
+                          <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-md">You</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate">{member.email}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {!isCurrentUser && (
+                        <>
+                          {confirmRemoveUser === member.id ? (
+                            <div className="flex items-center gap-1">
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeUserMutation.mutate(member.id);
+                                }}
+                                disabled={removeUserMutation.isPending}
+                                data-testid={`button-confirm-remove-${member.id}`}
+                              >
+                                Confirm
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setConfirmRemoveUser(null);
+                                }}
+                                data-testid={`button-cancel-remove-${member.id}`}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setConfirmRemoveUser(member.id);
+                              }}
+                              data-testid={`button-remove-member-${member.id}`}
+                            >
+                              Remove
+                            </Button>
+                          )}
+                        </>
+                      )}
+                      <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${selectedUserId === member.id ? "rotate-90" : ""}`} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {selectedUserId && (
+            <>
+              <Separator />
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm">Current Roles</CardTitle>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">
+                    Role Assignment for {users.find((u: any) => u.id === selectedUserId)?.firstName || users.find((u: any) => u.id === selectedUserId)?.email}
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Roles control which sections and actions this person can access
+                  </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-2">
+                <CardContent className="space-y-3">
                   {userRoles.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No roles assigned yet</p>
+                    <p className="text-sm text-muted-foreground">No roles assigned yet. Assign a role to grant access.</p>
                   ) : (
                     <div className="flex flex-wrap gap-2">
                       {userRoles.map((role: any) => (
                         <div
                           key={role.id}
-                          className="flex items-center gap-2 bg-muted px-3 py-1 rounded-md text-sm"
+                          className="flex items-center gap-2 bg-muted px-3 py-1.5 rounded-md text-sm"
                         >
                           <span>{role.name}</span>
                           <Button
                             size="icon"
                             variant="ghost"
-                            className="h-4 w-4 p-0"
-                            onClick={() =>
-                              removeRoleMutation.mutate({
-                                userId: selectedUserId,
-                                roleId: role.id,
-                              })
-                            }
+                            onClick={() => removeRoleMutation.mutate({ userId: selectedUserId, roleId: role.id })}
                             disabled={removeRoleMutation.isPending}
                             data-testid={`button-remove-role-${role.id}`}
                           >
-                            ×
+                            <span className="text-xs">x</span>
                           </Button>
                         </div>
                       ))}
                     </div>
                   )}
-                  
-                  <Separator className="my-3" />
-                  
+
                   <div className="space-y-2">
-                    <Label>Add Role</Label>
+                    <Label className="text-xs">Add Role</Label>
                     <Select
                       onValueChange={(roleId) =>
-                        assignRoleMutation.mutate({
-                          userId: selectedUserId,
-                          roleId,
-                        })
+                        assignRoleMutation.mutate({ userId: selectedUserId, roleId })
                       }
                       disabled={assignRoleMutation.isPending}
                     >
@@ -1309,10 +1485,7 @@ function RoleManagement() {
                       </SelectTrigger>
                       <SelectContent>
                         {roles
-                          .filter(
-                            (role: any) =>
-                              !userRoles.some((ur: any) => ur.id === role.id)
-                          )
+                          .filter((role: any) => !userRoles.some((ur: any) => ur.id === role.id))
                           .map((role: any) => (
                             <SelectItem key={role.id} value={role.id}>
                               {role.name}
@@ -1323,8 +1496,57 @@ function RoleManagement() {
                   </div>
                 </CardContent>
               </Card>
-            )}
-          </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Roles & Section Permissions</CardTitle>
+          <CardDescription>
+            See exactly which data sections each role grants access to. Click a role to view details.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {roles.map((role: any) => (
+            <div key={role.id} className="border rounded-md" data-testid={`role-card-${role.id}`}>
+              <button
+                className="w-full flex items-center justify-between gap-2 p-3 text-left hover-elevate rounded-md"
+                onClick={() => setExpandedRole(expandedRole === role.id ? null : role.id)}
+                data-testid={`button-expand-role-${role.id}`}
+              >
+                <div>
+                  <p className="text-sm font-medium">{role.name}</p>
+                  <p className="text-xs text-muted-foreground">{role.description}</p>
+                </div>
+                <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${expandedRole === role.id ? "rotate-90" : ""}`} />
+              </button>
+              {expandedRole === role.id && rolePermissions?.permissions && (
+                <div className="px-3 pb-3 space-y-3 border-t pt-3">
+                  {Object.entries(permissionSections).map(([key, section]) => {
+                    const grantedInSection = section.permissions.filter(p =>
+                      rolePermissions.permissions.some((rp: any) => rp.name === p)
+                    );
+                    const hasAccess = grantedInSection.length > 0;
+                    const fullAccess = grantedInSection.length === section.permissions.length;
+
+                    return (
+                      <div key={key} className="flex items-center gap-3" data-testid={`section-access-${key}`}>
+                        <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${fullAccess ? "bg-green-500" : hasAccess ? "bg-yellow-500" : "bg-muted-foreground/30"}`} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm">{section.label}</p>
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          {fullAccess ? "Full access" : hasAccess ? `${grantedInSection.length}/${section.permissions.length} permissions` : "No access"}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ))}
         </CardContent>
       </Card>
     </div>

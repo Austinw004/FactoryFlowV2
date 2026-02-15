@@ -1,8 +1,10 @@
 import { Router } from "express";
+import { randomBytes } from "crypto";
 import { storage } from "../storage";
 import { requirePermission } from "../middleware/rbac";
 import { PERMISSIONS } from "../lib/rbac";
 import { insertRoleSchema, insertUserRoleAssignmentSchema } from "@shared/schema";
+import { z } from "zod";
 
 const router = Router();
 
@@ -337,6 +339,144 @@ router.get("/audit-logs", requirePermission(PERMISSIONS.VIEW_AUDIT_LOGS), async 
   } catch (error) {
     console.error("[RBAC Routes] Error fetching audit logs:", error);
     res.status(500).json({ error: "Failed to fetch audit logs" });
+  }
+});
+
+const inviteSchema = z.object({
+  email: z.string().email("Valid email address is required"),
+  roleId: z.string().optional(),
+});
+
+// Team Invitations - invite new members
+router.post("/team/invite", requirePermission(PERMISSIONS.MANAGE_USERS), async (req, res) => {
+  try {
+    const user = (req as any).rbacUser;
+    if (!user?.companyId) {
+      return res.status(403).json({ error: "User not associated with a company" });
+    }
+
+    const parsed = inviteSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: parsed.error.errors[0]?.message || "Invalid input" });
+    }
+    const { email, roleId } = parsed.data;
+
+    if (roleId) {
+      const role = await storage.getRole(roleId, user.companyId);
+      if (!role) {
+        return res.status(400).json({ error: "Selected role does not exist in your company" });
+      }
+    }
+
+    const existingUsers = await storage.getUsersByCompany(user.companyId);
+    if (existingUsers.some(u => u.email === email)) {
+      return res.status(400).json({ error: "This user is already a member of your company" });
+    }
+
+    const token = `inv_${randomBytes(24).toString("hex")}`;
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    const invitation = await storage.createTeamInvitation({
+      companyId: user.companyId,
+      email,
+      roleId: roleId || null,
+      invitedBy: user.id,
+      status: "pending",
+      token,
+      expiresAt,
+    });
+
+    await storage.createAuditLog({
+      companyId: user.companyId,
+      userId: user.id,
+      action: "create",
+      entityType: "team_invitation",
+      entityId: invitation.id,
+      changes: { email, roleId },
+    });
+
+    res.status(201).json(invitation);
+  } catch (error) {
+    console.error("[RBAC Routes] Error creating invitation:", error);
+    res.status(500).json({ error: "Failed to create invitation" });
+  }
+});
+
+// List team invitations
+router.get("/team/invitations", requirePermission(PERMISSIONS.MANAGE_USERS), async (req, res) => {
+  try {
+    const user = (req as any).rbacUser;
+    if (!user?.companyId) {
+      return res.status(403).json({ error: "User not associated with a company" });
+    }
+
+    const invitations = await storage.getTeamInvitations(user.companyId);
+    res.json(invitations);
+  } catch (error) {
+    console.error("[RBAC Routes] Error fetching invitations:", error);
+    res.status(500).json({ error: "Failed to fetch invitations" });
+  }
+});
+
+// Cancel invitation
+router.delete("/team/invitations/:id", requirePermission(PERMISSIONS.MANAGE_USERS), async (req, res) => {
+  try {
+    const user = (req as any).rbacUser;
+    if (!user?.companyId) {
+      return res.status(403).json({ error: "User not associated with a company" });
+    }
+
+    await storage.cancelTeamInvitation(req.params.id, user.companyId);
+
+    await storage.createAuditLog({
+      companyId: user.companyId,
+      userId: user.id,
+      action: "delete",
+      entityType: "team_invitation",
+      entityId: req.params.id,
+      changes: {},
+    });
+
+    res.status(204).send();
+  } catch (error) {
+    console.error("[RBAC Routes] Error cancelling invitation:", error);
+    res.status(500).json({ error: "Failed to cancel invitation" });
+  }
+});
+
+// Remove user from company
+router.delete("/team/members/:userId", requirePermission(PERMISSIONS.MANAGE_USERS), async (req, res) => {
+  try {
+    const user = (req as any).rbacUser;
+    if (!user?.companyId) {
+      return res.status(403).json({ error: "User not associated with a company" });
+    }
+
+    const targetUserId = req.params.userId;
+    if (targetUserId === user.id) {
+      return res.status(400).json({ error: "You cannot remove yourself from the company" });
+    }
+
+    const targetUser = await storage.getUser(targetUserId);
+    if (!targetUser || targetUser.companyId !== user.companyId) {
+      return res.status(404).json({ error: "User not found in your company" });
+    }
+
+    await storage.removeUserFromCompany(targetUserId, user.companyId);
+
+    await storage.createAuditLog({
+      companyId: user.companyId,
+      userId: user.id,
+      action: "delete",
+      entityType: "team_member",
+      entityId: targetUserId,
+      changes: { removedUserId: targetUserId },
+    });
+
+    res.status(204).send();
+  } catch (error) {
+    console.error("[RBAC Routes] Error removing team member:", error);
+    res.status(500).json({ error: "Failed to remove team member" });
   }
 });
 
