@@ -154,30 +154,6 @@ export default function ForecastAccuracy() {
         </Card>
       )}
 
-      {/* Data Context Disclaimer */}
-      <Card className="border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/20" data-testid="card-data-disclaimer">
-        <CardContent className="pt-4 pb-4">
-          <div className="flex items-start gap-3">
-            <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-            <div className="flex flex-col gap-1">
-              <span className="font-semibold text-sm text-blue-700 dark:text-blue-300">Measured Performance Metrics</span>
-              <p className="text-sm text-blue-600 dark:text-blue-400">
-                These metrics are calculated from actual predictions with recorded outcomes. 
-                {metrics?.predictionsWithActuals && metrics.predictionsWithActuals > 0 
-                  ? ` Based on ${metrics.predictionsWithActuals} predictions with verified actual values${metrics.earliestPrediction && metrics.latestPrediction ? ` (${new Date(metrics.earliestPrediction).toLocaleDateString()} - ${new Date(metrics.latestPrediction).toLocaleDateString()})` : ' (date range unavailable)'}.`
-                  : ' No predictions with actual outcomes available yet.'}
-              </p>
-              {metrics?.predictionsWithActuals && metrics.predictionsWithActuals > 0 && metrics.predictionsWithActuals < 30 && (
-                <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
-                  Small sample size ({metrics.predictionsWithActuals} predictions) - results may have high variance. 
-                  Minimum 30 predictions recommended for reliable accuracy assessment.
-                </p>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card data-testid="card-overall-mape">
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
