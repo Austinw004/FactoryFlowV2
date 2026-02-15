@@ -295,15 +295,8 @@ export default function Dashboard() {
   // Main dashboard content
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-2">
+      <div className="flex items-center flex-wrap gap-2">
         <h1 className="text-3xl font-semibold">Dashboard</h1>
-        <Badge variant={isConnected ? "default" : "outline"} className="gap-1.5" data-testid="badge-connection-status">
-          <Radio className={`h-3 w-3 ${isConnected ? 'animate-pulse' : ''}`} />
-          {isConnected ? 'Live Updates' : 'Connecting...'}
-        </Badge>
-      </div>
-
-      <div className="flex items-center gap-2 flex-wrap">
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border bg-muted/30" data-testid="data-freshness-indicator">
           <Clock className="h-3.5 w-3.5 text-muted-foreground" />
           <div className="flex items-center gap-3 text-xs">
@@ -333,6 +326,12 @@ export default function Dashboard() {
           >
             <RefreshCw className={`h-3 w-3 ${isRefreshing ? 'animate-spin' : ''}`} />
           </Button>
+        </div>
+        <div className="ml-auto">
+          <Badge variant={isConnected ? "default" : "outline"} className="gap-1.5" data-testid="badge-connection-status">
+            <Radio className={`h-3 w-3 ${isConnected ? 'animate-pulse' : ''}`} />
+            {isConnected ? 'Live Updates' : 'Connecting...'}
+          </Badge>
         </div>
       </div>
 
