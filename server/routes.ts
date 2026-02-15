@@ -475,6 +475,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await initializePermissions();
   console.log("[RBAC] Permissions initialized successfully");
 
+  // Public API routes that don't require authentication (must be registered BEFORE global auth middleware)
+  // Stripe public config
+  app.get("/api/stripe/config", async (_req, res) => {
+    try {
+      const publishableKey = await getStripePublishableKey();
+      res.json({ publishableKey });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to load Stripe configuration" });
+    }
+  });
+
+  app.get("/api/stripe/products", async (_req, res) => {
+    try {
+      const rows = await stripeService.listProductsWithPrices(true);
+      const productsMap = new Map();
+      for (const row of rows) {
+        if (!productsMap.has(row.product_id)) {
+          productsMap.set(row.product_id, {
+            id: row.product_id,
+            name: row.product_name,
+            description: row.product_description,
+            active: row.product_active,
+            metadata: row.product_metadata,
+            prices: []
+          });
+        }
+        if (row.price_id) {
+          productsMap.get(row.product_id).prices.push({
+            id: row.price_id,
+            unitAmount: row.unit_amount,
+            currency: row.currency,
+            interval: row.recurring_interval,
+            active: row.price_active,
+          });
+        }
+      }
+      res.json(Array.from(productsMap.values()));
+    } catch (error: any) {
+      console.error("[Stripe] Error listing products:", error);
+      res.json([]);
+    }
+  });
+
   // Attach RBAC user to all authenticated API requests (not frontend static files)
   app.use('/api', isAuthenticated, attachRbacUser);
 
@@ -14309,52 +14352,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // STRIPE SUBSCRIPTION ROUTES
   // ============================================
   
-  // Get Stripe publishable key (public endpoint)
-  app.get("/api/stripe/config", async (_req, res) => {
-    try {
-      const publishableKey = await getStripePublishableKey();
-      res.json({ publishableKey });
-    } catch (error: any) {
-      res.status(500).json({ error: "Failed to load Stripe configuration" });
-    }
-  });
-
-  // Get available subscription plans/products
-  app.get("/api/stripe/products", async (_req, res) => {
-    try {
-      const rows = await stripeService.listProductsWithPrices(true);
-
-      // Group prices by product
-      const productsMap = new Map();
-      for (const row of rows) {
-        if (!productsMap.has(row.product_id)) {
-          productsMap.set(row.product_id, {
-            id: row.product_id,
-            name: row.product_name,
-            description: row.product_description,
-            active: row.product_active,
-            metadata: row.product_metadata,
-            prices: []
-          });
-        }
-        if (row.price_id) {
-          productsMap.get(row.product_id).prices.push({
-            id: row.price_id,
-            unit_amount: row.unit_amount,
-            currency: row.currency,
-            recurring: row.recurring,
-            active: row.price_active,
-            metadata: row.price_metadata,
-          });
-        }
-      }
-
-      res.json({ products: Array.from(productsMap.values()) });
-    } catch (error: any) {
-      console.error("Error fetching products:", error);
-      res.status(500).json({ error: "Failed to fetch subscription plans" });
-    }
-  });
+  // NOTE: Public Stripe routes (/api/stripe/config and /api/stripe/products) 
+  // are registered above the global auth middleware at the top of registerRoutes()
 
   // Get current user's subscription status
   app.get("/api/stripe/subscription", isAuthenticated, async (req: any, res) => {
