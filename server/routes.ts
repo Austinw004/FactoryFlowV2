@@ -14837,7 +14837,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!companyId) {
         return res.status(400).json({ error: "Company ID required" });
       }
-      const stats = await engine.getStats(companyId);
+      const rawStats = await engine.getStats(companyId);
+      const stats = {
+        totalAgents: rawStats.agents.total,
+        activeAgents: rawStats.agents.active,
+        totalRules: rawStats.rules.total,
+        activeRules: rawStats.rules.active,
+        pendingActions: rawStats.actions.pending,
+        completedToday: rawStats.actions.completed,
+        totalSavings: rawStats.performance.measuredSavings,
+        measuredSavings: rawStats.performance.measuredSavings,
+        measuredSavingsCount: rawStats.performance.measuredSavingsCount,
+        estimatedSavings: rawStats.performance.estimatedSavings,
+        estimatedSavingsLabel: rawStats.performance.estimatedSavingsLabel,
+        avgSuccessRate: rawStats.performance.successRate,
+        avgConfidence: rawStats.performance.avgConfidence,
+        dailySpend: rawStats.performance.dailySpend,
+        guardrails: rawStats.guardrails,
+        actions: rawStats.actions,
+      };
       res.json(stats);
     } catch (error: any) {
       logger.error("automation", "fetch_stats_failed", { errorMessage: error.message });
@@ -15047,6 +15065,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updated);
     } catch (error: any) {
       logger.error("automation", "safe_mode_update_failed", { errorMessage: error.message });
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ==========================================
+  // ENTERPRISE READINESS CHECK
+  // ==========================================
+  app.get("/api/agentic/readiness-check", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "Company ID required" });
+      }
+      const { readinessChecker } = await import("./lib/enterpriseReadinessChecker");
+      const result = await readinessChecker.runFullCheck(user.companyId);
+      res.json(result);
+    } catch (error: any) {
+      logger.error("automation", "readiness_check_failed", { errorMessage: error.message });
       res.status(500).json({ error: error.message });
     }
   });

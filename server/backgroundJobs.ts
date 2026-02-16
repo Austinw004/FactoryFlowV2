@@ -9,6 +9,7 @@ import { globalCache } from './lib/caching';
 import { createRfqGenerationService } from './lib/rfqGeneration';
 import { createBenchmarkAggregationService } from './lib/benchmarkAggregation';
 import { logAudit } from './lib/auditLogger';
+import { AutomationEngine } from './lib/automationEngine';
 import { 
   classifyRegimeFromFDR, 
   classifyRegimeWithHysteresis,
@@ -1075,6 +1076,27 @@ async function aggregateBenchmarkDataJob() {
   }
 }
 
+async function automationMaintenanceJob() {
+  try {
+    const engine = AutomationEngine.getInstance();
+    const companyIds = await storage.getAllCompanyIds();
+    for (const companyId of companyIds) {
+      try {
+        const expired = await engine.expireStaleApprovals(companyId, 24);
+        if (expired > 0) {
+          console.log(`[Automation Maintenance] Expired ${expired} stale approvals for company ${companyId.substring(0, 8)}`);
+        }
+      } catch (err) {
+        // skip individual company failures
+      }
+    }
+    await engine.runDataRetention(90);
+    console.log(`[Automation Maintenance] Data retention cleanup completed`);
+  } catch (error) {
+    console.error('[Automation Maintenance] Failed:', error);
+  }
+}
+
 const jobConfigs: BackgroundJobConfig[] = [
   { name: 'Economic Data Updates', intervalMs: 5 * 60 * 1000, enabled: true },
   { name: 'Sensor Readings Generation', intervalMs: 30 * 1000, enabled: true },
@@ -1084,10 +1106,11 @@ const jobConfigs: BackgroundJobConfig[] = [
   { name: 'Workforce Metrics Updates', intervalMs: 10 * 60 * 1000, enabled: true },
   { name: 'Production KPI Updates', intervalMs: 2 * 60 * 1000, enabled: true },
   { name: 'Historical Backtesting (Research)', intervalMs: 20 * 60 * 1000, enabled: true },
-  { name: 'Automated Forecast Retraining', intervalMs: 24 * 60 * 60 * 1000, enabled: true }, // Daily at 24 hours
-  { name: 'Forecast Accuracy Tracking', intervalMs: 4 * 60 * 60 * 1000, enabled: true }, // Every 4 hours
-  { name: 'RFQ Auto-Generation', intervalMs: 15 * 60 * 1000, enabled: true }, // Every 15 minutes
-  { name: 'Benchmark Data Aggregation', intervalMs: 24 * 60 * 60 * 1000, enabled: true }, // Daily (monthly aggregation check)
+  { name: 'Automated Forecast Retraining', intervalMs: 24 * 60 * 60 * 1000, enabled: true },
+  { name: 'Forecast Accuracy Tracking', intervalMs: 4 * 60 * 60 * 1000, enabled: true },
+  { name: 'RFQ Auto-Generation', intervalMs: 15 * 60 * 1000, enabled: true },
+  { name: 'Benchmark Data Aggregation', intervalMs: 24 * 60 * 60 * 1000, enabled: true },
+  { name: 'Automation Maintenance', intervalMs: 60 * 60 * 1000, enabled: true },
 ];
 
 export function startBackgroundJobs() {
@@ -1106,6 +1129,7 @@ export function startBackgroundJobs() {
     trackForecastAccuracy,
     autoGenerateRfqsJob,
     aggregateBenchmarkDataJob,
+    automationMaintenanceJob,
   ];
   
   jobConfigs.forEach((config, index) => {

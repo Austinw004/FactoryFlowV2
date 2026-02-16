@@ -7110,6 +7110,8 @@ export const aiExecutionQueue = pgTable(
     attempts: integer("attempts").default(0),
     maxAttempts: integer("max_attempts").default(3),
     lastAttemptAt: timestamp("last_attempt_at"),
+    claimedAt: timestamp("claimed_at"),
+    claimedBy: text("claimed_by"),
 
     // Results
     completedAt: timestamp("completed_at"),
@@ -7201,11 +7203,15 @@ export const processedTriggerEvents = pgTable(
     processedAt: timestamp("processed_at").defaultNow().notNull(),
     result: text("result"),
     actionId: varchar("action_id"),
+    status: text("status").notNull().default("processing"),
+    claimedAt: timestamp("claimed_at").defaultNow(),
+    completedAt: timestamp("completed_at"),
   },
   (table) => [
     uniqueIndex("pte_company_trigger_unique").on(table.companyId, table.triggerType, table.triggerEventId),
     index("pte_company_idx").on(table.companyId),
     index("pte_processed_idx").on(table.processedAt),
+    index("pte_status_idx").on(table.status),
   ],
 );
 
@@ -7273,6 +7279,27 @@ export const structuredEventLog = pgTable(
     index("sel_level_idx").on(table.level),
   ],
 );
+
+// Enterprise: Background job locks for distributed deduplication
+export const backgroundJobLocks = pgTable(
+  "background_job_locks",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    jobName: text("job_name").notNull(),
+    companyId: varchar("company_id").references(() => companies.id, { onDelete: "cascade" }),
+    lockedBy: text("locked_by").notNull(),
+    lockedAt: timestamp("locked_at").defaultNow().notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    heartbeatAt: timestamp("heartbeat_at"),
+  },
+  (table) => [
+    uniqueIndex("bjl_job_company_unique").on(table.jobName, table.companyId),
+    index("bjl_job_name_idx").on(table.jobName),
+    index("bjl_expires_idx").on(table.expiresAt),
+  ],
+);
+
+export type BackgroundJobLock = typeof backgroundJobLocks.$inferSelect;
 
 export const insertAutomationRuntimeStateSchema = createInsertSchema(automationRuntimeState).omit({ id: true, lastUpdatedAt: true });
 export type AutomationRuntimeState = typeof automationRuntimeState.$inferSelect;
@@ -8135,7 +8162,7 @@ export const integrationConfigs = pgTable(
   "integration_configs",
   {
     id: serial("id").primaryKey(),
-    companyId: integer("company_id")
+    companyId: varchar("company_id")
       .notNull()
       .references(() => companies.id, { onDelete: "cascade" }),
     integrationId: text("integration_id").notNull(), // e.g., "salesforce", "sap", "shopify"
@@ -8175,7 +8202,7 @@ export const integrationAuditLogs = pgTable(
   "integration_audit_logs",
   {
     id: serial("id").primaryKey(),
-    companyId: integer("company_id")
+    companyId: varchar("company_id")
       .notNull()
       .references(() => companies.id, { onDelete: "cascade" }),
     integrationConfigId: integer("integration_config_id")
@@ -8201,7 +8228,7 @@ export const integrationAuditLogs = pgTable(
     errorStackTrace: text("error_stack_trace"),
     isResolved: integer("is_resolved").default(0),
     resolvedAt: timestamp("resolved_at"),
-    resolvedBy: integer("resolved_by"),
+    resolvedBy: varchar("resolved_by").references(() => users.id),
     
     // User visibility
     isUserVisible: integer("is_user_visible").default(1),
@@ -8222,7 +8249,7 @@ export const canonicalEntities = pgTable(
   "canonical_entities",
   {
     id: serial("id").primaryKey(),
-    companyId: integer("company_id")
+    companyId: varchar("company_id")
       .notNull()
       .references(() => companies.id, { onDelete: "cascade" }),
     

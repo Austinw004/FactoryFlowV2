@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, lt } from "drizzle-orm";
 import {
   aiAgents,
   aiAutomationRules,
@@ -9,6 +9,8 @@ import {
   automationRuntimeState,
   processedTriggerEvents,
   automationSafeMode,
+  structuredEventLog,
+  backgroundJobLocks,
 } from "@shared/schema";
 
 export class AutomationEngine {
@@ -437,18 +439,43 @@ export class AutomationEngine {
       .limit(limit);
   }
 
+  private static readonly HIGH_STAKES_ACTIONS = ["create_po", "pause_orders"];
+
   async createAction(companyId: string, data: any) {
     const safeMode = await this.getSafeMode(companyId);
+
     if (safeMode?.safeModeEnabled === 1) {
-      const highStakes = ["create_po", "pause_orders"];
-      const isHighStakes = highStakes.includes(data.actionType) ||
+      const isHighStakes = AutomationEngine.HIGH_STAKES_ACTIONS.includes(data.actionType) ||
         (data.actionType === "adjust_safety_stock" &&
           data.actionPayload?.estimatedCost &&
           data.actionPayload.estimatedCost > 10000);
 
+      const readinessNotPassed = safeMode.readinessChecklistPassed !== 1;
+      let policyReason = "";
+
       if (isHighStakes) {
+        policyReason = `High-stakes action '${data.actionType}' requires approval under safe mode`;
+      } else if (readinessNotPassed && data.autonomyLevel === "auto_execute") {
+        policyReason = `Auto-execute downgraded to approval-required: safe mode on, readiness checklist not passed`;
+      }
+
+      if (policyReason) {
         data.requiresApproval = 1;
         data.status = "awaiting_approval";
+
+        await db.insert(structuredEventLog).values({
+          companyId,
+          level: "warn",
+          category: "automation",
+          event: "safe_mode_policy_override",
+          details: {
+            message: policyReason,
+            actionType: data.actionType,
+            originalAutonomyLevel: data.autonomyLevel,
+            isHighStakes,
+            readinessChecklistPassed: safeMode.readinessChecklistPassed,
+          },
+        });
       }
     }
 
@@ -468,8 +495,30 @@ export class AutomationEngine {
         approvedAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(and(eq(aiActions.id, actionId), eq(aiActions.companyId, companyId)))
+      .where(
+        and(
+          eq(aiActions.id, actionId),
+          eq(aiActions.companyId, companyId),
+          eq(aiActions.status, "awaiting_approval")
+        )
+      )
       .returning();
+
+    if (action) {
+      await db.insert(structuredEventLog).values({
+        companyId,
+        level: "info",
+        category: "automation",
+        event: "action_approved",
+        details: {
+          message: `Action ${actionId} approved by user ${userId}`,
+          actionId,
+          actionType: action.actionType,
+          userId,
+        },
+        userId,
+      });
+    }
     return action;
   }
 
@@ -483,9 +532,165 @@ export class AutomationEngine {
         rejectionReason: reason,
         updatedAt: new Date(),
       })
-      .where(and(eq(aiActions.id, actionId), eq(aiActions.companyId, companyId)))
+      .where(
+        and(
+          eq(aiActions.id, actionId),
+          eq(aiActions.companyId, companyId),
+          eq(aiActions.status, "awaiting_approval")
+        )
+      )
       .returning();
+
+    if (action) {
+      await db.insert(structuredEventLog).values({
+        companyId,
+        level: "info",
+        category: "automation",
+        event: "action_rejected",
+        details: {
+          message: `Action ${actionId} rejected by user ${userId}: ${reason}`,
+          actionId,
+          actionType: action.actionType,
+          userId,
+          reason,
+        },
+        userId,
+      });
+    }
     return action;
+  }
+
+  /**
+   * Expire actions that have been awaiting approval for longer than the deadline (default 24h).
+   * Returns the count of expired actions.
+   */
+  async expireStaleApprovals(companyId: string, deadlineHours: number = 24): Promise<number> {
+    const cutoff = new Date(Date.now() - deadlineHours * 60 * 60 * 1000);
+    const expired = await db
+      .update(aiActions)
+      .set({
+        status: "expired",
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(aiActions.companyId, companyId),
+          eq(aiActions.status, "awaiting_approval"),
+          lt(aiActions.createdAt, cutoff)
+        )
+      )
+      .returning();
+
+    if (expired.length > 0) {
+      await db.insert(structuredEventLog).values({
+        companyId,
+        level: "warn",
+        category: "automation",
+        event: "approvals_expired",
+        details: {
+          message: `${expired.length} action(s) expired after ${deadlineHours}h without approval`,
+          expiredActionIds: expired.map(a => a.id),
+          deadlineHours,
+        },
+      });
+    }
+
+    return expired.length;
+  }
+
+  /**
+   * Atomic queue claiming: UPDATE...WHERE status='queued' AND scheduled_for<=NOW() RETURNING
+   * Claims at most `limit` items atomically. Includes stale lock recovery for stuck 'processing' items.
+   */
+  async claimQueuedActions(
+    companyId: string,
+    limit: number = 5,
+    workerId?: string
+  ): Promise<any[]> {
+    const STALE_CLAIM_MINUTES = 5;
+    const now = new Date();
+    const workerLabel = workerId || `worker-${process.pid}-${Date.now()}`;
+
+    await db
+      .update(aiExecutionQueue)
+      .set({
+        status: "queued",
+        claimedAt: null,
+        claimedBy: null,
+        attempts: sql`${aiExecutionQueue.attempts} + 1`,
+      })
+      .where(
+        and(
+          eq(aiExecutionQueue.companyId, companyId),
+          eq(aiExecutionQueue.status, "processing"),
+          lt(aiExecutionQueue.claimedAt!, new Date(now.getTime() - STALE_CLAIM_MINUTES * 60 * 1000))
+        )
+      );
+
+    const result = await db.execute(sql`
+      WITH eligible AS (
+        SELECT id FROM ai_execution_queue
+        WHERE company_id = ${companyId}
+          AND status = 'queued'
+          AND scheduled_for <= ${now}
+        ORDER BY priority DESC, scheduled_for ASC
+        LIMIT ${limit}
+        FOR UPDATE SKIP LOCKED
+      )
+      UPDATE ai_execution_queue q
+      SET status = 'processing',
+          claimed_at = ${now},
+          claimed_by = ${workerLabel},
+          last_attempt_at = ${now},
+          attempts = q.attempts + 1
+      FROM eligible e
+      WHERE q.id = e.id
+      RETURNING q.*
+    `);
+
+    const rows = result.rows || result;
+
+    if (rows.length > 0) {
+      await db.insert(structuredEventLog).values({
+        companyId,
+        level: "info",
+        category: "automation",
+        event: "queue_items_claimed",
+        details: {
+          message: `Claimed ${rows.length} queue items for processing`,
+          workerId: workerLabel,
+          itemIds: rows.map((r: any) => r.id),
+        },
+      });
+    }
+
+    return rows;
+  }
+
+  /**
+   * Mark a queue item as completed or failed with CAS guard on status='processing'.
+   */
+  async markQueueOutcome(
+    queueId: string,
+    outcome: "completed" | "failed",
+    errorMessage?: string
+  ): Promise<boolean> {
+    const updated = await db
+      .update(aiExecutionQueue)
+      .set({
+        status: outcome,
+        completedAt: outcome === "completed" ? new Date() : null,
+        errorMessage: errorMessage || null,
+      })
+      .where(
+        and(
+          eq(aiExecutionQueue.id, queueId),
+          eq(aiExecutionQueue.status, "processing")
+        )
+      )
+      .returning();
+
+    return updated.length > 0;
   }
 
   async executeAction(action: any, approvedBy: string): Promise<{ success: boolean; result: any; error?: string }> {
@@ -664,20 +869,165 @@ export class AutomationEngine {
       });
   }
 
-  async checkTriggerIdempotency(companyId: string, triggerType: string, triggerEventId: string): Promise<boolean> {
-    const rows = await db
-      .select()
-      .from(processedTriggerEvents)
+  /**
+   * Insert-first trigger lock: atomically claims ownership of a trigger event.
+   * Returns { acquired: true } if this worker owns the lock, { acquired: false } if another worker already claimed it.
+   * Stale locks (processing for >5 minutes) are recovered via CAS takeover.
+   */
+  async claimTriggerLock(
+    companyId: string,
+    triggerType: string,
+    triggerEventId: string,
+    ruleId?: string
+  ): Promise<{ acquired: boolean; existingStatus?: string }> {
+    const STALE_LOCK_MINUTES = 5;
+    try {
+      await db.insert(processedTriggerEvents).values({
+        companyId,
+        triggerType,
+        triggerEventId,
+        ruleId: ruleId || null,
+        status: "processing",
+        result: null,
+      });
+
+      await db.insert(structuredEventLog).values({
+        companyId,
+        level: "info",
+        category: "automation",
+        event: "trigger_lock_acquired",
+        details: {
+          message: `Trigger lock acquired: ${triggerType}/${triggerEventId}`,
+          triggerType,
+          triggerEventId,
+          ruleId,
+        },
+      });
+
+      return { acquired: true };
+    } catch (e: any) {
+      if (e.code === "23505" || e.message?.includes("unique") || e.message?.includes("duplicate")) {
+        const existing = await db
+          .select({ status: processedTriggerEvents.status, claimedAt: processedTriggerEvents.claimedAt })
+          .from(processedTriggerEvents)
+          .where(
+            and(
+              eq(processedTriggerEvents.companyId, companyId),
+              eq(processedTriggerEvents.triggerType, triggerType),
+              eq(processedTriggerEvents.triggerEventId, triggerEventId)
+            )
+          );
+
+        if (existing.length > 0 && existing[0].status === "processing") {
+          const claimedAt = existing[0].claimedAt;
+          if (claimedAt && (Date.now() - claimedAt.getTime()) > STALE_LOCK_MINUTES * 60 * 1000) {
+            const recovered = await db
+              .update(processedTriggerEvents)
+              .set({ status: "processing", claimedAt: new Date(), completedAt: null })
+              .where(
+                and(
+                  eq(processedTriggerEvents.companyId, companyId),
+                  eq(processedTriggerEvents.triggerType, triggerType),
+                  eq(processedTriggerEvents.triggerEventId, triggerEventId),
+                  eq(processedTriggerEvents.status, "processing"),
+                  lt(processedTriggerEvents.claimedAt!, new Date(Date.now() - STALE_LOCK_MINUTES * 60 * 1000))
+                )
+              )
+              .returning();
+
+            if (recovered.length > 0) {
+              await db.insert(structuredEventLog).values({
+                companyId,
+                level: "warn",
+                category: "automation",
+                event: "trigger_stale_lock_recovered",
+                details: {
+                  message: `Stale trigger lock recovered after ${STALE_LOCK_MINUTES}min: ${triggerType}/${triggerEventId}`,
+                  triggerType,
+                  triggerEventId,
+                  originalClaimedAt: claimedAt?.toISOString(),
+                },
+              });
+              return { acquired: true };
+            }
+          }
+        }
+
+        await db.insert(structuredEventLog).values({
+          companyId,
+          level: "info",
+          category: "automation",
+          event: "trigger_lock_rejected",
+          details: {
+            message: `Trigger already claimed: ${triggerType}/${triggerEventId}`,
+            triggerType,
+            triggerEventId,
+            existingStatus: existing[0]?.status,
+          },
+        });
+
+        return { acquired: false, existingStatus: existing[0]?.status };
+      }
+      throw e;
+    }
+  }
+
+  /**
+   * Mark a claimed trigger as completed (processed or failed).
+   * Only updates if current status is 'processing' (CAS guard).
+   */
+  async markTriggerOutcome(
+    companyId: string,
+    triggerType: string,
+    triggerEventId: string,
+    outcome: "processed" | "failed",
+    actionId?: string,
+    result?: string
+  ): Promise<boolean> {
+    const updated = await db
+      .update(processedTriggerEvents)
+      .set({
+        status: outcome,
+        result: result || outcome,
+        actionId: actionId || null,
+        completedAt: new Date(),
+      })
       .where(
         and(
           eq(processedTriggerEvents.companyId, companyId),
           eq(processedTriggerEvents.triggerType, triggerType),
-          eq(processedTriggerEvents.triggerEventId, triggerEventId)
+          eq(processedTriggerEvents.triggerEventId, triggerEventId),
+          eq(processedTriggerEvents.status, "processing")
         )
-      );
-    return rows.length === 0;
+      )
+      .returning();
+
+    if (updated.length > 0) {
+      await db.insert(structuredEventLog).values({
+        companyId,
+        level: outcome === "failed" ? "error" : "info",
+        category: "automation",
+        event: `trigger_${outcome}`,
+        details: {
+          message: `Trigger ${outcome}: ${triggerType}/${triggerEventId}`,
+          triggerType,
+          triggerEventId,
+          actionId,
+          result,
+        },
+      });
+    }
+
+    return updated.length > 0;
   }
 
+  /** @deprecated Use claimTriggerLock + markTriggerOutcome instead */
+  async checkTriggerIdempotency(companyId: string, triggerType: string, triggerEventId: string): Promise<boolean> {
+    const lock = await this.claimTriggerLock(companyId, triggerType, triggerEventId);
+    return lock.acquired;
+  }
+
+  /** @deprecated Use claimTriggerLock + markTriggerOutcome instead */
   async recordTriggerProcessed(
     companyId: string,
     triggerType: string,
@@ -685,22 +1035,7 @@ export class AutomationEngine {
     ruleId: string,
     actionId: string
   ): Promise<boolean> {
-    try {
-      await db.insert(processedTriggerEvents).values({
-        companyId,
-        triggerType,
-        triggerEventId,
-        ruleId,
-        actionId,
-        result: "processed",
-      });
-      return true;
-    } catch (e: any) {
-      if (e.code === "23505" || e.message?.includes("unique") || e.message?.includes("duplicate")) {
-        return false;
-      }
-      throw e;
-    }
+    return this.markTriggerOutcome(companyId, triggerType, triggerEventId, "processed", actionId);
   }
 
   async getSafeMode(companyId: string) {
@@ -881,6 +1216,26 @@ export class AutomationEngine {
       }
     }
 
+    if (violations.length > 0) {
+      await db.insert(structuredEventLog).values({
+        companyId,
+        level: violations.some(v => v.enforcement === "block") ? "error" : "warn",
+        category: "automation",
+        event: "guardrail_violations",
+        details: {
+          message: `${violations.length} guardrail violation(s) for action '${action.actionType}'`,
+          actionType: action.actionType,
+          actionId: action.id,
+          violations: violations.map(v => ({
+            guardrailId: v.guardrailId,
+            guardrailName: v.guardrailName,
+            enforcement: v.enforcement,
+            reason: v.reason,
+          })),
+        },
+      });
+    }
+
     const hasBlockingViolation = violations.some((v) => v.enforcement === "block");
     return { allowed: !hasBlockingViolation, violations };
   }
@@ -895,6 +1250,10 @@ export class AutomationEngine {
         if (!payload.supplierId && !payload.supplierName) errors.push("Supplier identification required");
         if (!payload.quantity || payload.quantity <= 0) errors.push("Valid quantity required");
         if (payload.estimatedCost !== undefined && payload.estimatedCost < 0) errors.push("Cost cannot be negative");
+        if (!payload.paymentTerms) errors.push("Payment terms required for PO creation (e.g., 'NET30', 'NET60')");
+        if (!payload.paymentMethod) errors.push("Payment method required for PO creation (e.g., 'wire', 'ach', 'check')");
+        if (!payload.deliveryDate) errors.push("Expected delivery date required for PO creation");
+        if (!payload.estimatedCost || payload.estimatedCost <= 0) errors.push("Positive estimated cost required for PO creation");
         break;
       case "rebalance_inventory":
         if (!payload.transfers || !Array.isArray(payload.transfers) || payload.transfers.length === 0) {
@@ -954,9 +1313,20 @@ export class AutomationEngine {
     const failedActions = historyActions.filter((a) => a.status === "failed");
 
     const totalExecuted = completedActions.length;
-    const totalSavings = completedActions.reduce((sum, a) => {
-      const impact = a.estimatedImpact as any;
-      return sum + (impact?.costSavings || 0);
+
+    const actionsWithMeasuredSavings = completedActions.filter(a => {
+      const actual = a.actualImpact as any;
+      return actual?.costSavings !== undefined && actual?.costSavings !== null && actual.costSavings > 0;
+    });
+
+    const measuredSavings = actionsWithMeasuredSavings.reduce((sum, a) => {
+      const actual = a.actualImpact as any;
+      return sum + (actual.costSavings || 0);
+    }, 0);
+
+    const estimatedSavings = completedActions.reduce((sum, a) => {
+      const est = a.estimatedImpact as any;
+      return sum + (est?.costSavings || 0);
     }, 0);
 
     const avgConfidence = completedActions.length > 0
@@ -988,7 +1358,10 @@ export class AutomationEngine {
         total: pendingActions.length + historyActions.length,
       },
       performance: {
-        totalSavings,
+        measuredSavings,
+        measuredSavingsCount: actionsWithMeasuredSavings.length,
+        estimatedSavings,
+        estimatedSavingsLabel: "estimated (unverified)",
         avgConfidence: Math.round(avgConfidence * 100) / 100,
         successRate: totalExecuted + failedActions.length > 0
           ? Math.round((totalExecuted / (totalExecuted + failedActions.length)) * 100)
@@ -996,6 +1369,149 @@ export class AutomationEngine {
         dailySpend,
       },
     };
+  }
+
+  /**
+   * Distributed job lock: INSERT-first with expiry-based recovery.
+   * Returns true if this worker acquired the lock.
+   */
+  async acquireJobLock(
+    jobName: string,
+    companyId: string,
+    ttlMinutes: number = 10,
+    workerId?: string
+  ): Promise<boolean> {
+    const workerLabel = workerId || `worker-${process.pid}-${Date.now()}`;
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + ttlMinutes * 60 * 1000);
+
+    try {
+      await db.insert(backgroundJobLocks).values({
+        jobName,
+        companyId,
+        lockedBy: workerLabel,
+        lockedAt: now,
+        expiresAt,
+        heartbeatAt: now,
+      });
+      return true;
+    } catch (e: any) {
+      if (e.code === "23505" || e.message?.includes("unique") || e.message?.includes("duplicate")) {
+        const recovered = await db
+          .update(backgroundJobLocks)
+          .set({
+            lockedBy: workerLabel,
+            lockedAt: now,
+            expiresAt,
+            heartbeatAt: now,
+          })
+          .where(
+            and(
+              eq(backgroundJobLocks.jobName, jobName),
+              eq(backgroundJobLocks.companyId, companyId),
+              lt(backgroundJobLocks.expiresAt, now)
+            )
+          )
+          .returning();
+
+        if (recovered.length > 0) {
+          await db.insert(structuredEventLog).values({
+            companyId,
+            level: "warn",
+            category: "automation",
+            event: "stale_job_lock_recovered",
+            details: {
+              message: `Stale job lock recovered: ${jobName}`,
+              jobName,
+              workerId: workerLabel,
+            },
+          });
+          return true;
+        }
+        return false;
+      }
+      throw e;
+    }
+  }
+
+  async releaseJobLock(jobName: string, companyId: string): Promise<boolean> {
+    const deleted = await db
+      .delete(backgroundJobLocks)
+      .where(
+        and(
+          eq(backgroundJobLocks.jobName, jobName),
+          eq(backgroundJobLocks.companyId, companyId)
+        )
+      )
+      .returning();
+    return deleted.length > 0;
+  }
+
+  async heartbeatJobLock(jobName: string, companyId: string, extendMinutes: number = 10): Promise<boolean> {
+    const now = new Date();
+    const updated = await db
+      .update(backgroundJobLocks)
+      .set({
+        heartbeatAt: now,
+        expiresAt: new Date(now.getTime() + extendMinutes * 60 * 1000),
+      })
+      .where(
+        and(
+          eq(backgroundJobLocks.jobName, jobName),
+          eq(backgroundJobLocks.companyId, companyId)
+        )
+      )
+      .returning();
+    return updated.length > 0;
+  }
+
+  /**
+   * Data retention: Clean up old processed trigger events and structured event logs.
+   */
+  async runDataRetention(companyId: string, retentionDays: number = 90): Promise<{ triggerEventsDeleted: number; eventLogsDeleted: number }> {
+    const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
+
+    const triggerDeleted = await db
+      .delete(processedTriggerEvents)
+      .where(
+        and(
+          eq(processedTriggerEvents.companyId, companyId),
+          lt(processedTriggerEvents.processedAt, cutoff),
+          sql`${processedTriggerEvents.status} IN ('processed', 'failed')`
+        )
+      )
+      .returning();
+
+    const logsDeleted = await db
+      .delete(structuredEventLog)
+      .where(
+        and(
+          eq(structuredEventLog.companyId, companyId),
+          lt(structuredEventLog.timestamp, cutoff)
+        )
+      )
+      .returning();
+
+    const result = {
+      triggerEventsDeleted: triggerDeleted.length,
+      eventLogsDeleted: logsDeleted.length,
+    };
+
+    if (result.triggerEventsDeleted > 0 || result.eventLogsDeleted > 0) {
+      await db.insert(structuredEventLog).values({
+        companyId,
+        level: "info",
+        category: "automation",
+        event: "data_retention_run",
+        details: {
+          message: `Data retention: deleted ${result.triggerEventsDeleted} trigger events and ${result.eventLogsDeleted} event logs older than ${retentionDays} days`,
+          triggerEventsDeleted: result.triggerEventsDeleted,
+          eventLogsDeleted: result.eventLogsDeleted,
+        },
+      });
+    }
+
+    return result;
   }
 }
 
