@@ -75,8 +75,15 @@ app.post(
 
       res.status(200).json({ received: true });
     } catch (error: any) {
-      console.error('Webhook error:', error.message);
-      res.status(400).json({ error: 'Webhook processing error' });
+      const msg = error.message || '';
+      if (msg.includes('Invalid webhook') || msg.includes('unparseable')) {
+        return res.status(400).json({ error: 'Invalid webhook payload' });
+      }
+      if (msg.includes('signature') || msg.includes('Signature')) {
+        return res.status(401).json({ error: 'Webhook signature verification failed' });
+      }
+      console.error('Webhook processing error:', msg);
+      res.status(200).json({ received: true });
     }
   }
 );

@@ -1,0 +1,11 @@
+“Additionally, upgrade enterprise reliability and security guarantees beyond automation correctness. Implement database-level tenant isolation safeguards: either enable PostgreSQL Row-Level Security (RLS) on all company-scoped tables or, if RLS is not implemented immediately, create automated security tests that attempt cross-tenant access across every endpoint and every storage method to prove companyId scoping cannot be bypassed. The system must fail CI if any cross-tenant leakage is detected.
+
+Implement distributed job safety for all background jobs (economic polling, forecasting retraining, sync schedulers). Add a DB-backed job lock / leader-election mechanism so that for each job type, only one runner can execute per company per interval. This prevents duplicate runs under horizontal scaling, deploys, or restarts.
+
+Remove any production behavior that silently weakens security. In production, missing CREDENTIAL_ENCRYPTION_KEY or SESSION_SECRET must hard-fail startup; no ephemeral encryption fallback is allowed.
+
+Define and enforce data retention policies. Add TTL/archival for structured_event_log, integration_events payloads, webhook_event_logs, processed_trigger_events, and behavioral observation tables. Provide per-company deletion/export mechanisms and ensure platform-level analytics are anonymized and irreversibly aggregated.
+
+Enforce a platform-wide ‘No Bullshit Mode’ policy for automation and predictions: deterministic logic (FDR regimes + persistence + rule evaluation + guardrails) is the only source of action decisions. Any LLM output must be strictly downstream (explanations, summaries, drafts) and must reference the exact underlying data objects used; it may not invent values or claim savings. If data is missing, the system must say so and degrade to safeMode behavior.
+
+Finally, implement an automated Enterprise Readiness Checklist runner that produces a pass/fail report with evidence. The checklist must verify: trigger idempotency, queue locking, job locking, approval workflow correctness, guardrail enforcement, payment/terms prerequisites, integration status consistency, tenant isolation tests, and honest-metrics constraints. Only upon passing may automationSafeMode.readinessChecklistPassed be set to 1.”
