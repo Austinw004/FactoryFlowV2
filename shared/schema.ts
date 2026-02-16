@@ -7209,22 +7209,25 @@ export const processedTriggerEvents = pgTable(
   ],
 );
 
-// Enterprise: Durable Stripe webhook event deduplication
+// Enterprise: Durable Stripe webhook event deduplication with atomic locking
 export const stripeProcessedEvents = pgTable(
   "stripe_processed_events",
   {
     eventId: varchar("event_id").primaryKey(),
     eventType: text("event_type").notNull(),
-    processedAt: timestamp("processed_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    processedAt: timestamp("processed_at"),
     customerId: text("customer_id"),
     subscriptionId: text("subscription_id"),
-    status: text("status").default("processed"),
+    status: text("status").default("processing").notNull(), // 'processing' | 'processed' | 'failed'
+    errorMessage: text("error_message"),
     idempotencyHash: text("idempotency_hash"),
   },
   (table) => [
     index("spe_type_idx").on(table.eventType),
     index("spe_processed_idx").on(table.processedAt),
     index("spe_customer_idx").on(table.customerId),
+    index("spe_status_idx").on(table.status),
   ],
 );
 
