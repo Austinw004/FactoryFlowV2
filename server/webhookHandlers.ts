@@ -1,20 +1,8 @@
 import { getStripeSync, getUncachableStripeClient } from './stripeClient';
 import { db } from './db';
-import { users } from '@shared/schema';
+import { users, stripeProcessedEvents } from '@shared/schema';
 import { eq, sql } from 'drizzle-orm';
-
-const processedEventIds = new Set<string>();
-const MAX_PROCESSED_EVENTS = 10000;
-
-function pruneProcessedEvents() {
-  if (processedEventIds.size > MAX_PROCESSED_EVENTS) {
-    const entries = Array.from(processedEventIds);
-    const toRemove = entries.slice(0, entries.length - MAX_PROCESSED_EVENTS / 2);
-    for (const id of toRemove) {
-      processedEventIds.delete(id);
-    }
-  }
-}
+import { logger } from './lib/structuredLogger';
 
 export class WebhookHandlers {
   static async processWebhook(payload: Buffer, signature: string, uuid: string): Promise<void> {
@@ -33,19 +21,51 @@ export class WebhookHandlers {
     try {
       const event = JSON.parse(payload.toString());
       
-      if (event.id && processedEventIds.has(event.id)) {
-        console.log(`[Webhook] Skipping duplicate event: ${event.id} (${event.type})`);
-        return;
-      }
-
+      // Check if event was already processed using database deduplication
       if (event.id) {
-        processedEventIds.add(event.id);
-        pruneProcessedEvents();
+        const existing = await db
+          .select()
+          .from(stripeProcessedEvents)
+          .where(eq(stripeProcessedEvents.eventId, event.id))
+          .limit(1);
+        
+        if (existing.length > 0) {
+          logger.webhook("duplicate_skipped", { 
+            details: { eventId: event.id, eventType: event.type } 
+          });
+          return;
+        }
       }
 
+      // Process the subscription event
       await WebhookHandlers.handleSubscriptionEvents(event);
+
+      // Record as processed in database
+      if (event.id) {
+        try {
+          await db.insert(stripeProcessedEvents).values({
+            eventId: event.id,
+            eventType: event.type,
+            customerId: event.data?.object?.customer || null,
+            subscriptionId: event.data?.object?.subscription || event.data?.object?.id || null,
+            status: "processed",
+          });
+        } catch (e: any) {
+          // Unique constraint violation = already processed (race condition)
+          if (e.code === '23505') {
+            logger.webhook("duplicate_race_condition", { 
+              details: { eventId: event.id } 
+            });
+            return;
+          }
+          throw e;
+        }
+      }
     } catch (error) {
-      console.error('Error processing subscription webhook event:', error);
+      logger.error("webhook", "subscription_webhook_error", { 
+        errorMessage: error instanceof Error ? error.message : String(error),
+        details: error instanceof Error ? { stack: error.stack } : {}
+      });
     }
   }
   
@@ -65,7 +85,9 @@ export class WebhookHandlers {
         await this.handleSubscriptionDeleted(data);
         break;
       case 'customer.subscription.trial_will_end':
-        console.log('[Webhook] Trial ending soon for subscription:', data.id);
+        logger.webhook("trial_ending_soon", { 
+          details: { subscriptionId: data.id } 
+        });
         break;
       case 'invoice.paid':
         await this.handleInvoicePaid(data);
@@ -93,11 +115,14 @@ export class WebhookHandlers {
         subscription_status = 'active',
         updated_at = NOW()
       WHERE stripe_customer_id = ${customerId}
+        AND subscription_status != 'active'
       RETURNING id`
     );
     
     if (result.rows.length > 0) {
-      console.log('[Webhook] Updated subscription for user after checkout:', result.rows[0].id);
+      logger.webhook("checkout_completed", { 
+        details: { userId: result.rows[0].id, customerId, subscriptionId } 
+      });
     }
   }
   
@@ -140,7 +165,15 @@ export class WebhookHandlers {
     const result = await db.execute(updateQuery);
     
     if (result.rows.length > 0) {
-      console.log(`[Webhook] Subscription ${status} for user:`, result.rows[0].id);
+      logger.webhook("subscription_updated", { 
+        details: { 
+          userId: result.rows[0].id, 
+          customerId, 
+          subscriptionId,
+          status,
+          tier: tier || "none"
+        } 
+      });
     }
   }
   
@@ -152,11 +185,14 @@ export class WebhookHandlers {
         subscription_status = 'canceled',
         updated_at = NOW()
       WHERE stripe_customer_id = ${customerId}
+        AND subscription_status != 'canceled'
       RETURNING id`
     );
     
     if (result.rows.length > 0) {
-      console.log('[Webhook] Subscription canceled for user:', result.rows[0].id);
+      logger.webhook("subscription_deleted", { 
+        details: { userId: result.rows[0].id, customerId } 
+      });
     }
   }
 
@@ -177,11 +213,26 @@ export class WebhookHandlers {
       );
 
       if (result.rows.length > 0) {
-        console.log('[Webhook] Invoice paid, subscription reactivated for user:', result.rows[0].id);
+        logger.webhook("invoice_paid_reactivated", { 
+          details: { 
+            userId: result.rows[0].id, 
+            customerId, 
+            subscriptionId, 
+            invoiceId: invoice.id,
+            amountPaid: invoice.amount_paid
+          } 
+        });
+      } else {
+        logger.webhook("invoice_paid_no_update", { 
+          details: { 
+            customerId, 
+            subscriptionId, 
+            invoiceId: invoice.id,
+            amountPaid: invoice.amount_paid
+          } 
+        });
       }
     }
-
-    console.log(`[Webhook] Invoice ${invoice.id} paid for customer ${customerId}, amount: ${invoice.amount_paid}`);
   }
 
   static async handleInvoicePaymentFailed(invoice: any): Promise<void> {
@@ -201,11 +252,16 @@ export class WebhookHandlers {
       );
 
       if (result.rows.length > 0) {
-        console.log('[Webhook] Invoice payment failed, subscription set to past_due for user:', result.rows[0].id);
+        logger.webhook("invoice_payment_failed", { 
+          details: { 
+            userId: result.rows[0].id, 
+            customerId, 
+            subscriptionId, 
+            invoiceId: invoice.id
+          } 
+        });
       }
     }
-
-    console.log(`[Webhook] Invoice ${invoice.id} payment failed for customer ${customerId}`);
   }
 
   static async handleChargeRefunded(charge: any): Promise<void> {
@@ -216,9 +272,14 @@ export class WebhookHandlers {
 
     if (!customerId) return;
 
-    console.log(
-      `[Webhook] Charge ${charge.id} refunded for customer ${customerId}. ` +
-      `Amount refunded: ${refundedAmount}/${totalAmount} (${isFullRefund ? 'full' : 'partial'})`
-    );
+    logger.webhook("charge_refunded", { 
+      details: {
+        chargeId: charge.id,
+        customerId,
+        amountRefunded: refundedAmount,
+        totalAmount: totalAmount,
+        isFullRefund
+      }
+    });
   }
 }

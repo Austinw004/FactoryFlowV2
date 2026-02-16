@@ -44,6 +44,12 @@ export const PERMISSIONS = {
   MANAGE_INTEGRATIONS: "manage_integrations",
   VIEW_AUDIT_LOGS: "view_audit_logs",
   
+  // Automation & Agentic AI
+  VIEW_AUTOMATION: "view_automation",
+  EDIT_AUTOMATION: "edit_automation",
+  APPROVE_AUTOMATION: "approve_automation",
+  MANAGE_SAFE_MODE: "manage_safe_mode",
+
   // Data Management
   IMPORT_DATA: "import_data",
   EXPORT_DATA: "export_data",
@@ -86,6 +92,11 @@ export const PERMISSION_METADATA: Record<PermissionName, { description: string; 
   [PERMISSIONS.MANAGE_INTEGRATIONS]: { description: "Configure and manage integrations", category: "Administration" },
   [PERMISSIONS.VIEW_AUDIT_LOGS]: { description: "View audit logs", category: "Administration" },
   
+  [PERMISSIONS.VIEW_AUTOMATION]: { description: "View automation agents, rules, and actions", category: "Automation" },
+  [PERMISSIONS.EDIT_AUTOMATION]: { description: "Create and edit automation rules and agents", category: "Automation" },
+  [PERMISSIONS.APPROVE_AUTOMATION]: { description: "Approve or reject automated actions", category: "Automation" },
+  [PERMISSIONS.MANAGE_SAFE_MODE]: { description: "Enable/disable safe mode and manage overrides", category: "Automation" },
+
   [PERMISSIONS.IMPORT_DATA]: { description: "Import data from files", category: "Data" },
   [PERMISSIONS.EXPORT_DATA]: { description: "Export company data", category: "Data" },
 };
@@ -95,7 +106,7 @@ export const DEFAULT_ROLES = {
   ADMIN: {
     name: "Admin",
     description: "Full system access including user and role management",
-    permissions: Object.values(PERMISSIONS), // All permissions
+    permissions: Object.values(PERMISSIONS),
   },
   EXECUTIVE: {
     name: "Executive",
@@ -129,6 +140,8 @@ export const DEFAULT_ROLES = {
       PERMISSIONS.VIEW_INVENTORY,
       PERMISSIONS.VIEW_ALLOCATIONS,
       PERMISSIONS.VIEW_COSTS,
+      PERMISSIONS.VIEW_AUTOMATION,
+      PERMISSIONS.APPROVE_AUTOMATION,
       PERMISSIONS.IMPORT_DATA,
       PERMISSIONS.EXPORT_DATA,
     ],

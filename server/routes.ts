@@ -10,6 +10,8 @@ import rbacRoutes from "./routes/rbac";
 import platformAnalyticsRoutes from "./routes/platformAnalytics";
 import { initializePermissions, initializeDefaultRoles } from "./lib/rbac";
 import { logAudit } from "./lib/auditLogger";
+import { AutomationEngine } from "./lib/automationEngine";
+import { logger } from "./lib/structuredLogger";
 import { registerIntegrationOrchestratorRoutes } from "./lib/integrationRoutes";
 import { globalCache } from "./lib/caching";
 import { DualCircuitEconomics } from "./lib/economics";
@@ -101,6 +103,7 @@ import {
   insertDigitalTwinMetricSchema,
   predictionOutcomes,
   insertPredictionOutcomeSchema,
+  automationSafeMode,
 } from "@shared/schema";
 
 const economics = new DualCircuitEconomics();
@@ -14547,714 +14550,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AGENTIC AI ROUTES - Autonomous Actions & Intelligent Automation
   // ============================================================================
 
-  // In-memory storage for agents, rules, guardrails, and actions (per company, persists for server session)
-  const companyAgents: Map<string, any[]> = new Map();
-  const companyRules: Map<string, any[]> = new Map();
-  const companyGuardrails: Map<string, any[]> = new Map();
-  const companyPendingActions: Map<string, any[]> = new Map();
-  const companyActionHistory: Map<string, any[]> = new Map();
+  const engine = AutomationEngine.getInstance();
 
-  async function logAutomationEvent(companyId: string, event: string, details: Record<string, any>, userId?: string) {
-    try {
-      await storage.createAuditLog({
-        companyId,
-        userId: userId || "system",
-        action: `automation.${event}`,
-        entityType: "automation_rule",
-        entityId: details.ruleId || details.actionId || "system",
-        details: JSON.stringify(details),
-        ipAddress: "internal",
-      });
-    } catch (e) {
-      console.error("[Automation Audit] Failed to log event:", event, e);
-    }
-  }
-
-  function validateActionPrerequisites(action: any, companyId: string): { valid: boolean; errors: string[] } {
-    const errors: string[] = [];
-    const payload = action.actionPayload || {};
-    
-    switch (action.actionType) {
-      case "create_po":
-        if (!payload.materialId && !payload.materialName) errors.push("Material identification required");
-        if (!payload.supplierId && !payload.supplierName) errors.push("Supplier identification required");
-        if (!payload.quantity || payload.quantity <= 0) errors.push("Valid quantity required");
-        if (payload.estimatedCost !== undefined && payload.estimatedCost < 0) errors.push("Cost cannot be negative");
-        break;
-      case "rebalance_inventory":
-        if (!payload.transfers || !Array.isArray(payload.transfers) || payload.transfers.length === 0) {
-          errors.push("Transfer plan required for inventory rebalance");
-        }
-        break;
-      case "adjust_safety_stock":
-        if (!payload.regimeMultipliers && !action.actionConfig?.regimeMultipliers) {
-          errors.push("Regime multipliers required for safety stock adjustment");
-        }
-        break;
-      case "pause_orders":
-      case "send_alert":
-      case "escalate":
-        break;
-      default:
-        break;
-    }
-    
-    return { valid: errors.length === 0, errors };
-  }
-
-  function evaluateGuardrails(action: any, companyId: string, context: { regime?: string; currentTime?: Date }): { allowed: boolean; violations: Array<{guardrailId: string; guardrailName: string; reason: string; enforcement: string}> } {
-    const violations: Array<{guardrailId: string; guardrailName: string; reason: string; enforcement: string}> = [];
-    
-    if (!companyGuardrails.has(companyId)) {
-      companyGuardrails.set(companyId, getDefaultGuardrails(companyId));
-    }
-    const guardrails = companyGuardrails.get(companyId) || [];
-    const now = context.currentTime || new Date();
-    const payload = action.actionPayload || {};
-    
-    for (const guard of guardrails) {
-      if (!guard.isEnabled) continue;
-      
-      const actionTypeMatches = guard.appliesToActionTypes?.includes("all") || guard.appliesToActionTypes?.includes(action.actionType);
-      if (!actionTypeMatches) continue;
-      
-      switch (guard.guardrailType) {
-        case "spending_limit": {
-          if (payload.estimatedCost) {
-            const history = companyActionHistory.get(companyId) || [];
-            const todayStart = new Date(now);
-            todayStart.setHours(0, 0, 0, 0);
-            const spentToday = history
-              .filter((h: any) => h.status === "executed" && h.executedAt && new Date(h.executedAt) >= todayStart)
-              .reduce((sum: number, h: any) => sum + (h.actionPayload?.estimatedCost || 0), 0);
-            
-            if (spentToday + payload.estimatedCost > (guard.conditions?.limit || Infinity)) {
-              guard.violationCount = (guard.violationCount || 0) + 1;
-              guard.lastViolationAt = now.toISOString();
-              violations.push({
-                guardrailId: guard.id,
-                guardrailName: guard.name,
-                reason: `Daily spending limit of $${guard.conditions.limit.toLocaleString()} would be exceeded. Spent today: $${spentToday.toLocaleString()}, this action: $${payload.estimatedCost.toLocaleString()}`,
-                enforcement: guard.onViolation || "block",
-              });
-            }
-          }
-          break;
-        }
-        case "time_restriction": {
-          if (payload.estimatedCost && payload.estimatedCost >= (guard.conditions?.minValue || 0)) {
-            const hour = now.getHours();
-            const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-            const currentDay = dayNames[now.getDay()];
-            const allowedDays = guard.conditions?.allowedDays || [];
-            const allowedHours = guard.conditions?.allowedHours || [];
-            
-            const dayAllowed = allowedDays.length === 0 || allowedDays.includes(currentDay);
-            let hourAllowed = allowedHours.length === 0;
-            for (const range of allowedHours) {
-              const [start, end] = range.split("-").map((t: string) => parseInt(t.split(":")[0]));
-              if (hour >= start && hour < end) { hourAllowed = true; break; }
-            }
-            
-            if (!dayAllowed || !hourAllowed) {
-              guard.violationCount = (guard.violationCount || 0) + 1;
-              guard.lastViolationAt = now.toISOString();
-              violations.push({
-                guardrailId: guard.id,
-                guardrailName: guard.name,
-                reason: `High-value action ($${payload.estimatedCost.toLocaleString()}) attempted outside allowed hours/days`,
-                enforcement: guard.onViolation || "block",
-              });
-            }
-          }
-          break;
-        }
-        case "regime_restriction": {
-          const regime = context.regime || "";
-          const cautionRegimes = guard.conditions?.cautionRegimes || [];
-
-          if (regime === "UNKNOWN" || regime === "") {
-            guard.violationCount = (guard.violationCount || 0) + 1;
-            guard.lastViolationAt = now.toISOString();
-            violations.push({
-              guardrailId: guard.id,
-              guardrailName: guard.name,
-              reason: `Economic regime is unconfirmed or degraded ("${regime || "UNKNOWN"}"). Automated actions require a confirmed regime to proceed safely.`,
-              enforcement: "block",
-            });
-          } else if (cautionRegimes.includes(regime)) {
-            guard.violationCount = (guard.violationCount || 0) + 1;
-            guard.lastViolationAt = now.toISOString();
-            violations.push({
-              guardrailId: guard.id,
-              guardrailName: guard.name,
-              reason: `Current economic regime "${regime}" requires extra caution. Action escalated for additional approval.`,
-              enforcement: guard.onViolation || "require_approval",
-            });
-          }
-          break;
-        }
-        case "supplier_restriction": {
-          if (action.actionType === "create_po" || action.actionType === "generate_rfq") {
-            const minRating = guard.conditions?.minRating || 0;
-            const supplierRating = payload.supplierRating;
-            if (guard.conditions?.onlyApproved && !payload.supplierApproved) {
-              guard.violationCount = (guard.violationCount || 0) + 1;
-              guard.lastViolationAt = now.toISOString();
-              violations.push({
-                guardrailId: guard.id,
-                guardrailName: guard.name,
-                reason: `Supplier "${payload.supplierName || payload.supplierId}" is not pre-approved`,
-                enforcement: guard.onViolation || "block",
-              });
-            } else if (supplierRating !== undefined && supplierRating < minRating) {
-              guard.violationCount = (guard.violationCount || 0) + 1;
-              guard.lastViolationAt = now.toISOString();
-              violations.push({
-                guardrailId: guard.id,
-                guardrailName: guard.name,
-                reason: `Supplier rating ${supplierRating} is below minimum required rating of ${minRating}`,
-                enforcement: guard.onViolation || "block",
-              });
-            }
-          }
-          break;
-        }
-      }
-    }
-    
-    companyGuardrails.set(companyId, guardrails);
-    const hasBlockingViolation = violations.some(v => v.enforcement === "block");
-    return { allowed: !hasBlockingViolation, violations };
-  }
-
-  function canExecuteRule(rule: any): { allowed: boolean; reason?: string } {
-    const now = new Date();
-    
-    if (rule.lastExecutedAt) {
-      const lastExec = new Date(rule.lastExecutedAt);
-      const cooldownMs = (rule.cooldownMinutes || 0) * 60 * 1000;
-      if (now.getTime() - lastExec.getTime() < cooldownMs) {
-        const remainingMin = Math.ceil((cooldownMs - (now.getTime() - lastExec.getTime())) / 60000);
-        return { allowed: false, reason: `Cooldown active: ${remainingMin} minutes remaining` };
-      }
-      
-      const lastExecDay = lastExec.toISOString().slice(0, 10);
-      const todayStr = now.toISOString().slice(0, 10);
-      if (lastExecDay === todayStr && rule.executionCount >= (rule.maxExecutionsPerDay || Infinity)) {
-        return { allowed: false, reason: `Daily execution limit reached: ${rule.maxExecutionsPerDay} per day` };
-      }
-    }
-    
-    return { allowed: true };
-  }
-
-  function sweepExpiredActions(companyId: string): number {
-    const now = new Date();
-    const pendingActions = companyPendingActions.get(companyId) || [];
-    const expiredIds: string[] = [];
-    
-    const remaining = pendingActions.filter((action: any) => {
-      if (!action.approvalTimeout || action.approvalTimeout <= 0) return true;
-      const createdAt = new Date(action.createdAt || action.triggeredAt || now);
-      const expiresAt = new Date(createdAt.getTime() + action.approvalTimeout * 60 * 60 * 1000);
-      if (now > expiresAt) {
-        expiredIds.push(action.id);
-        const history = companyActionHistory.get(companyId) || [];
-        history.unshift({
-          ...action,
-          status: "expired",
-          expiredAt: now.toISOString(),
-          expirationReason: `Approval timeout exceeded (${action.approvalTimeout} hours)`,
-        });
-        companyActionHistory.set(companyId, history);
-        return false;
-      }
-      return true;
-    });
-    
-    if (expiredIds.length > 0) {
-      companyPendingActions.set(companyId, remaining);
-    }
-    
-    return expiredIds.length;
-  }
-
-  function generateIdempotencyKey(ruleId: string, actionType: string, triggerSignature: string): string {
-    const timeBucket = Math.floor(Date.now() / (5 * 60 * 1000));
-    return `${ruleId}_${actionType}_${triggerSignature}_${timeBucket}`;
-  }
-
-  function isDuplicateAction(companyId: string, idempotencyKey: string): boolean {
-    const pending = companyPendingActions.get(companyId) || [];
-    if (pending.some((a: any) => a.idempotencyKey === idempotencyKey)) return true;
-    
-    const history = companyActionHistory.get(companyId) || [];
-    const recentCutoff = Date.now() - 10 * 60 * 1000;
-    const recentHistory = history.filter((a: any) => {
-      const ts = a.executedAt || a.approvedAt || a.expiredAt || a.rejectedAt;
-      return ts && new Date(ts).getTime() > recentCutoff;
-    });
-    if (recentHistory.some((a: any) => a.idempotencyKey === idempotencyKey)) return true;
-    
-    return false;
-  }
-
-  // Initialize default agents for a company
-  function getDefaultAgents(companyId: string) {
-    return [
-      {
-        id: "agent_procurement",
-        companyId,
-        name: "Procurement Agent",
-        description: "Automates purchase orders, supplier selection, and order timing based on economic signals",
-        agentType: "procurement",
-        avatar: "shopping-cart",
-        capabilities: ["create_po", "generate_rfq", "supplier_selection", "order_timing", "price_negotiation"],
-        maxAutonomyLevel: "auto_draft",
-        isEnabled: 1,
-        priority: 90,
-        learningEnabled: 1,
-        confidenceThreshold: 0.8,
-        dailyActionLimit: 50,
-        dailyValueLimit: 100000,
-        activeHoursStart: "08:00",
-        activeHoursEnd: "18:00",
-        activeDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
-        timezone: "America/New_York",
-        actionsToday: 0,
-        valueToday: 0,
-        successRate: null,
-      },
-      {
-        id: "agent_inventory",
-        companyId,
-        name: "Inventory Agent",
-        description: "Manages inventory levels, rebalancing across locations, and safety stock optimization",
-        agentType: "inventory",
-        avatar: "boxes",
-        capabilities: ["rebalance_inventory", "adjust_safety_stock", "stockout_prevention", "excess_detection", "location_optimization"],
-        maxAutonomyLevel: "auto_execute",
-        isEnabled: 1,
-        priority: 85,
-        learningEnabled: 1,
-        confidenceThreshold: 0.75,
-        dailyActionLimit: 100,
-        dailyValueLimit: null,
-        activeHoursStart: "00:00",
-        activeHoursEnd: "23:59",
-        activeDays: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
-        timezone: "America/New_York",
-        actionsToday: 0,
-        valueToday: 0,
-        successRate: null,
-      },
-      {
-        id: "agent_forecasting",
-        companyId,
-        name: "Forecasting Agent",
-        description: "Generates demand forecasts, monitors accuracy degradation, and triggers retraining",
-        agentType: "forecasting",
-        avatar: "trending-up",
-        capabilities: ["generate_forecast", "monitor_accuracy", "trigger_retraining", "demand_sensing", "regime_aware_adjustment"],
-        maxAutonomyLevel: "full_autonomous",
-        isEnabled: 1,
-        priority: 95,
-        learningEnabled: 1,
-        confidenceThreshold: 0.85,
-        dailyActionLimit: 200,
-        dailyValueLimit: null,
-        activeHoursStart: "00:00",
-        activeHoursEnd: "23:59",
-        activeDays: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
-        timezone: "America/New_York",
-        actionsToday: 0,
-        valueToday: 0,
-        successRate: null,
-      },
-      {
-        id: "agent_supplier",
-        companyId,
-        name: "Supplier Risk Agent",
-        description: "Monitors supplier health, assesses risks, and recommends diversification strategies",
-        agentType: "supplier",
-        avatar: "users",
-        capabilities: ["risk_assessment", "supplier_scoring", "diversification_analysis", "event_monitoring", "alert_generation"],
-        maxAutonomyLevel: "suggest",
-        isEnabled: 1,
-        priority: 80,
-        learningEnabled: 1,
-        confidenceThreshold: 0.7,
-        dailyActionLimit: 50,
-        dailyValueLimit: null,
-        activeHoursStart: "06:00",
-        activeHoursEnd: "20:00",
-        activeDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
-        timezone: "America/New_York",
-        actionsToday: 0,
-        valueToday: 0,
-        successRate: null,
-      },
-      {
-        id: "agent_production",
-        companyId,
-        name: "Production Agent",
-        description: "Optimizes production scheduling, monitors bottlenecks, and adjusts capacity utilization",
-        agentType: "production",
-        avatar: "factory",
-        capabilities: ["schedule_optimization", "bottleneck_detection", "capacity_planning", "maintenance_alerts", "oee_monitoring"],
-        maxAutonomyLevel: "auto_draft",
-        isEnabled: 1,
-        priority: 85,
-        learningEnabled: 1,
-        confidenceThreshold: 0.78,
-        dailyActionLimit: 75,
-        dailyValueLimit: null,
-        activeHoursStart: "00:00",
-        activeHoursEnd: "23:59",
-        activeDays: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"],
-        timezone: "America/New_York",
-        actionsToday: 0,
-        valueToday: 0,
-        successRate: null,
-      },
-    ];
-  }
-
-  // Initialize default rules for a company
-  function getDefaultRules(companyId: string) {
-    return [
-      {
-        id: "rule_low_stock_po",
-        companyId,
-        agentId: "agent_procurement",
-        name: "Low Stock Auto-PO",
-        description: "Automatically creates purchase orders when inventory falls below reorder point",
-        category: "procurement",
-        triggerType: "threshold",
-        triggerConditions: { metric: "inventory_level", operator: "<", valueType: "reorder_point" },
-        actionType: "create_po",
-        actionConfig: { quantity: "economic_order_quantity", supplier: "preferred", urgency: "normal" },
-        autonomyLevel: "auto_draft",
-        requiresApproval: 1,
-        approvalTimeout: 24,
-        maxExecutionsPerDay: 20,
-        maxValuePerExecution: 25000,
-        cooldownMinutes: 30,
-        isEnabled: 1,
-        priority: 90,
-        executionCount: 0,
-        lastExecutedAt: null,
-        successRate: null,
-        avgSavings: null,
-      },
-      {
-        id: "rule_regime_safety",
-        companyId,
-        agentId: "agent_inventory",
-        name: "Regime-Based Safety Stock",
-        description: "Adjusts safety stock levels based on economic regime changes",
-        category: "inventory",
-        triggerType: "regime_change",
-        triggerConditions: { fromRegime: "any", monitorAllRegimes: true },
-        actionType: "adjust_safety_stock",
-        actionConfig: { regimeMultipliers: { REAL_ECONOMY_LEAD: 1.5, IMBALANCED_EXCESS: 1.3, ASSET_LED_GROWTH: 1.1, HEALTHY_EXPANSION: 1.0 } },
-        autonomyLevel: "auto_execute",
-        requiresApproval: 0,
-        approvalTimeout: 0,
-        maxExecutionsPerDay: 5,
-        maxValuePerExecution: null,
-        cooldownMinutes: 240,
-        isEnabled: 1,
-        priority: 95,
-        executionCount: 0,
-        lastExecutedAt: null,
-        successRate: null,
-        avgSavings: null,
-      },
-      {
-        id: "rule_rebalance",
-        companyId,
-        agentId: "agent_inventory",
-        name: "Weekly Inventory Rebalance",
-        description: "Automatically rebalances inventory across locations every Monday",
-        category: "inventory",
-        triggerType: "schedule",
-        triggerConditions: { cron: "0 6 * * MON", timezone: "America/New_York" },
-        actionType: "rebalance_inventory",
-        actionConfig: { strategy: "demand_weighted", minimizeTransportCost: true },
-        autonomyLevel: "auto_draft",
-        requiresApproval: 1,
-        approvalTimeout: 8,
-        maxExecutionsPerDay: 1,
-        maxValuePerExecution: null,
-        cooldownMinutes: 1440,
-        isEnabled: 1,
-        priority: 70,
-        executionCount: 0,
-        lastExecutedAt: null,
-        successRate: null,
-        avgSavings: null,
-      },
-      {
-        id: "rule_price_spike",
-        companyId,
-        agentId: "agent_procurement",
-        name: "Price Spike Response",
-        description: "Pauses orders and alerts when commodity prices spike unexpectedly",
-        category: "procurement",
-        triggerType: "event",
-        triggerConditions: { eventType: "price_spike", threshold: 0.15, lookbackHours: 24 },
-        actionType: "pause_orders",
-        actionConfig: { duration: "until_review", notifyRoles: ["procurement_manager", "finance_director"] },
-        autonomyLevel: "auto_execute",
-        requiresApproval: 0,
-        approvalTimeout: 0,
-        maxExecutionsPerDay: 5,
-        maxValuePerExecution: null,
-        cooldownMinutes: 60,
-        isEnabled: 1,
-        priority: 100,
-        executionCount: 0,
-        lastExecutedAt: null,
-        successRate: null,
-        avgSavings: null,
-      },
-    ];
-  }
-
-  // Initialize default guardrails for a company
-  function getDefaultGuardrails(companyId: string) {
-    return [
-      {
-        id: "guard_spending",
-        companyId,
-        name: "Daily Spending Limit",
-        description: "Prevents AI from authorizing more than $100,000 in purchases per day",
-        guardrailType: "spending_limit",
-        conditions: { period: "daily", limit: 100000, currency: "USD" },
-        appliesToAgents: ["all"],
-        appliesToActionTypes: ["create_po", "generate_rfq"],
-        enforcementLevel: "hard",
-        onViolation: "block",
-        notifyOnViolation: ["cfo", "procurement_director"],
-        isEnabled: 1,
-        priority: 100,
-        violationCount: 0,
-        lastViolationAt: null,
-      },
-      {
-        id: "guard_hours",
-        companyId,
-        name: "Business Hours Only",
-        description: "High-value actions (>$10,000) only during business hours",
-        guardrailType: "time_restriction",
-        conditions: {
-          minValue: 10000,
-          allowedHours: ["08:00-18:00"],
-          allowedDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
-          timezone: "America/New_York",
-        },
-        appliesToAgents: ["agent_procurement"],
-        appliesToActionTypes: ["create_po"],
-        enforcementLevel: "hard",
-        onViolation: "block",
-        notifyOnViolation: [],
-        isEnabled: 1,
-        priority: 90,
-        violationCount: 0,
-        lastViolationAt: null,
-      },
-      {
-        id: "guard_regime",
-        companyId,
-        name: "Regime-Based Caution",
-        description: "Extra approval required during volatile economic regimes",
-        guardrailType: "regime_restriction",
-        conditions: {
-          cautionRegimes: ["BUBBLE", "IMBALANCED_DEFICIT"],
-          requiresExtraApproval: true,
-          reduceAutonomy: true,
-        },
-        appliesToAgents: ["all"],
-        appliesToActionTypes: ["all"],
-        enforcementLevel: "escalate",
-        onViolation: "require_approval",
-        notifyOnViolation: ["finance_director", "coo"],
-        isEnabled: 1,
-        priority: 95,
-        violationCount: 0,
-        lastViolationAt: null,
-      },
-      {
-        id: "guard_supplier",
-        companyId,
-        name: "Approved Suppliers Only",
-        description: "AI can only create POs with pre-approved, rated suppliers",
-        guardrailType: "supplier_restriction",
-        conditions: {
-          onlyApproved: true,
-          minRating: 4.0,
-          excludeHighRisk: true,
-        },
-        appliesToAgents: ["agent_procurement"],
-        appliesToActionTypes: ["create_po", "generate_rfq"],
-        enforcementLevel: "hard",
-        onViolation: "block",
-        notifyOnViolation: ["procurement_manager"],
-        isEnabled: 1,
-        priority: 85,
-        violationCount: 0,
-        lastViolationAt: null,
-      },
-    ];
-  }
-
-  // Initialize default pending actions for a company
-  function getDefaultPendingActions(companyId: string, regime: string = "HEALTHY_EXPANSION", fdr: number = 1.0) {
-    return [];
-  }
-
-  // Execute action based on type - returns execution result
-  async function executeAction(action: any, approvedBy: string): Promise<{ success: boolean; result: any; error?: string }> {
-    const now = new Date().toISOString();
-    
-    try {
-      switch (action.actionType) {
-        case "create_po": {
-          // Simulate creating a purchase order
-          const poNumber = `PO-${Date.now().toString().slice(-8)}`;
-          const payload = action.actionPayload;
-          
-          // In a real system, this would create an actual PO in the ERP
-          return {
-            success: true,
-            result: {
-              poNumber,
-              status: "created",
-              materialId: payload.materialId,
-              materialName: payload.materialName,
-              quantity: payload.quantity,
-              unit: payload.unit,
-              supplierId: payload.supplierId,
-              supplierName: payload.supplierName,
-              totalCost: payload.estimatedCost,
-              expectedDelivery: payload.deliveryDate,
-              createdAt: now,
-              createdBy: "AI Agent",
-              approvedBy,
-              message: `Purchase order ${poNumber} created for ${payload.quantity} ${payload.unit} of ${payload.materialName} from ${payload.supplierName}`,
-            },
-          };
-        }
-        
-        case "rebalance_inventory": {
-          // Simulate inventory rebalancing
-          const payload = action.actionPayload;
-          const transferId = `TRF-${Date.now().toString().slice(-8)}`;
-          
-          return {
-            success: true,
-            result: {
-              transferId,
-              status: "initiated",
-              transfers: payload.transfers.map((t: any, i: number) => ({
-                ...t,
-                transferNumber: `${transferId}-${i + 1}`,
-                status: "scheduled",
-                estimatedArrival: new Date(Date.now() + (i + 1) * 24 * 60 * 60 * 1000).toISOString(),
-              })),
-              totalTransfers: payload.totalTransfers,
-              estimatedTransportCost: payload.estimatedTransportCost,
-              balanceImprovement: payload.balanceImprovement,
-              initiatedAt: now,
-              approvedBy,
-              message: `Inventory rebalancing initiated with ${payload.totalTransfers} transfers. Expected ${payload.balanceImprovement} improvement in stock distribution.`,
-            },
-          };
-        }
-        
-        case "adjust_safety_stock": {
-          // Simulate adjusting safety stock levels
-          return {
-            success: true,
-            result: {
-              status: "applied",
-              adjustments: action.actionPayload?.regimeMultipliers || {},
-              effectiveFrom: now,
-              approvedBy,
-              message: "Safety stock levels adjusted based on current economic regime.",
-            },
-          };
-        }
-        
-        case "pause_orders": {
-          // Simulate pausing orders
-          return {
-            success: true,
-            result: {
-              status: "orders_paused",
-              pausedAt: now,
-              resumeCondition: action.actionPayload?.duration || "until_review",
-              notifiedRoles: action.actionPayload?.notifyRoles || [],
-              approvedBy,
-              message: "All pending orders have been paused. Notifications sent to relevant stakeholders.",
-            },
-          };
-        }
-        
-        case "send_alert": {
-          // Simulate sending an alert
-          return {
-            success: true,
-            result: {
-              status: "alert_sent",
-              channels: action.actionPayload?.channels || ["in_app"],
-              priority: action.actionPayload?.priority || "normal",
-              sentAt: now,
-              approvedBy,
-              message: "Alert sent successfully to all configured channels.",
-            },
-          };
-        }
-        
-        case "escalate": {
-          // Simulate escalation
-          return {
-            success: true,
-            result: {
-              status: "escalated",
-              escalatedTo: action.actionPayload?.escalateTo || [],
-              suggestedActions: action.actionPayload?.suggestActions || [],
-              escalatedAt: now,
-              approvedBy,
-              message: "Issue escalated to appropriate stakeholders with recommended actions.",
-            },
-          };
-        }
-        
-        default:
-          return {
-            success: true,
-            result: {
-              status: "executed",
-              actionType: action.actionType,
-              executedAt: now,
-              approvedBy,
-              message: `Action of type '${action.actionType}' executed successfully.`,
-            },
-          };
-      }
-    } catch (error: any) {
-      return {
-        success: false,
-        result: null,
-        error: error.message || "Unknown error during action execution",
-      };
-    }
-  }
-
-  // Get all AI agents for company
   app.get("/api/agentic/agents", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -15263,116 +14560,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!companyId) {
         return res.status(400).json({ error: "Company ID required" });
       }
-
-      // Initialize agents for this company if not exists
-      if (!companyAgents.has(companyId)) {
-        companyAgents.set(companyId, getDefaultAgents(companyId));
-      }
-
-      const agents = companyAgents.get(companyId) || [];
+      const agents = await engine.getAgents(companyId);
       res.json(agents);
     } catch (error: any) {
-      console.error("Error fetching AI agents:", error);
+      logger.error("automation", "fetch_agents_failed", { errorMessage: error.message });
       res.status(500).json({ error: error.message });
     }
   });
 
-  // Create new AI agent
   app.post("/api/agentic/agents", isAuthenticated, async (req: any, res) => {
     try {
-      console.log("[AgenticAI] POST /api/agentic/agents - Creating new agent", req.body);
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       const companyId = user?.companyId;
       if (!companyId) {
         return res.status(400).json({ error: "Company ID required" });
       }
-      
-      const { name, description, agentType, maxAutonomyLevel, confidenceThreshold, dailyActionLimit } = req.body;
-      
+      const { name } = req.body;
       if (!name) {
         return res.status(400).json({ error: "Agent name is required" });
       }
-      
-      // Initialize agents for this company if not exists
-      if (!companyAgents.has(companyId)) {
-        companyAgents.set(companyId, getDefaultAgents(companyId));
-      }
-      
-      // Create new agent and add to in-memory storage
-      const newAgent = {
-        id: `agent_${Date.now()}`,
-        companyId,
-        name,
-        description: description || "",
-        agentType: agentType || "procurement",
-        avatar: agentType || "bot",
-        capabilities: [],
-        maxAutonomyLevel: maxAutonomyLevel || "auto_draft",
-        isEnabled: 1,
-        priority: 50,
-        learningEnabled: 1,
-        confidenceThreshold: confidenceThreshold || 0.8,
-        dailyActionLimit: dailyActionLimit || 50,
-        dailyValueLimit: null,
-        activeHoursStart: "08:00",
-        activeHoursEnd: "18:00",
-        activeDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
-        timezone: "America/New_York",
-        actionsToday: 0,
-        valueToday: 0,
-        successRate: 0,
-        createdAt: new Date().toISOString(),
-      };
-      
-      // Add to in-memory storage
-      const agents = companyAgents.get(companyId) || [];
-      agents.push(newAgent);
-      companyAgents.set(companyId, agents);
-      
-      res.json({ 
-        success: true, 
-        agent: newAgent,
-        message: "Agent created successfully" 
-      });
+      const agent = await engine.createAgent(companyId, req.body);
+      res.json({ success: true, agent, message: "Agent created successfully" });
     } catch (error: any) {
-      console.error("Error creating AI agent:", error);
+      logger.error("automation", "create_agent_failed", { errorMessage: error.message });
       res.status(500).json({ error: error.message });
     }
   });
 
-  // Update AI agent settings
   app.patch("/api/agentic/agents/:agentId", isAuthenticated, async (req: any, res) => {
     try {
       const { agentId } = req.params;
       const updates = req.body;
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
-      const companyId = user?.companyId || userId;
-      
-      // Update the agent in the in-memory storage
-      const agents = companyAgents.get(companyId) || [];
-      const agentIndex = agents.findIndex((a: any) => a.id === agentId);
-      
-      if (agentIndex !== -1) {
-        // Update the agent with the new values
-        agents[agentIndex] = { ...agents[agentIndex], ...updates };
-        companyAgents.set(companyId, agents);
+      const companyId = user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ error: "Company ID required" });
       }
-      
-      res.json({ 
-        success: true, 
-        agentId, 
-        updates,
-        message: "Agent settings updated successfully" 
-      });
+      const agent = await engine.updateAgent(agentId, companyId, updates);
+      res.json({ success: true, agentId, updates, message: "Agent settings updated successfully" });
     } catch (error: any) {
-      console.error("Error updating AI agent:", error);
+      logger.error("automation", "update_agent_failed", { errorMessage: error.message });
       res.status(500).json({ error: error.message });
     }
   });
 
-  // Get automation rules
   app.get("/api/agentic/rules", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -15381,20 +14614,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!companyId) {
         return res.status(400).json({ error: "Company ID required" });
       }
-
-      // Initialize with default rules if not exists (lazy initialization)
-      if (!companyRules.has(companyId)) {
-        companyRules.set(companyId, getDefaultRules(companyId));
-      }
-
-      res.json(companyRules.get(companyId) || []);
+      const rules = await engine.getRules(companyId);
+      res.json(rules);
     } catch (error: any) {
-      console.error("Error fetching automation rules:", error);
+      logger.error("automation", "fetch_rules_failed", { errorMessage: error.message });
       res.status(500).json({ error: error.message });
     }
   });
 
-  // Create new automation rule
   app.post("/api/agentic/rules", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -15403,40 +14630,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!companyId) {
         return res.status(400).json({ error: "Company ID required" });
       }
-      
       const ruleData = req.body;
-
-      const newRule = {
-        id: `rule_${Date.now()}`,
-        companyId,
-        ...ruleData,
-        executionCount: 0,
-        lastExecutedAt: null,
-        successRate: null,
-        avgSavings: null,
-        createdAt: new Date().toISOString(),
-      };
-
-      // Add to in-memory storage
-      if (!companyRules.has(companyId)) {
-        companyRules.set(companyId, getDefaultRules(companyId));
-      }
-      const rules = companyRules.get(companyId) || [];
-      rules.push(newRule);
-      companyRules.set(companyId, rules);
-
-      await logAutomationEvent(companyId, "rule_created", {
-        ruleId: newRule.id, name: newRule.name, actionType: newRule.actionType, triggerType: newRule.triggerType,
-      }, userId);
-
-      res.json(newRule);
+      const rule = await engine.createRule(companyId, ruleData);
+      logger.automation("rule_created", { companyId, userId, details: { ruleId: rule.id, name: rule.name } });
+      res.json(rule);
     } catch (error: any) {
-      console.error("Error creating automation rule:", error);
+      logger.error("automation", "create_rule_failed", { errorMessage: error.message });
       res.status(500).json({ error: error.message });
     }
   });
 
-  // Update automation rule
   app.patch("/api/agentic/rules/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -15445,11 +14648,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!companyId) {
         return res.status(400).json({ error: "Company ID required" });
       }
-
       const ruleId = req.params.id;
       const updates = req.body;
-
-      // Validate and sanitize numeric fields
       const sanitizedUpdates: Record<string, any> = { ...updates };
       if (sanitizedUpdates.isEnabled !== undefined) {
         sanitizedUpdates.isEnabled = sanitizedUpdates.isEnabled ? 1 : 0;
@@ -15463,37 +14663,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (sanitizedUpdates.priority !== undefined) {
         sanitizedUpdates.priority = Math.min(100, Math.max(1, parseInt(sanitizedUpdates.priority) || 50));
       }
-
-      // Initialize rules if not exists
-      if (!companyRules.has(companyId)) {
-        companyRules.set(companyId, getDefaultRules(companyId));
-      }
-      
-      // Find and update the rule in the in-memory cache
-      const rules = companyRules.get(companyId) || [];
-      const ruleIndex = rules.findIndex((r: any) => r.id === ruleId);
-      
-      if (ruleIndex === -1) {
+      const updatedRule = await engine.updateRule(ruleId, companyId, sanitizedUpdates);
+      if (!updatedRule) {
         return res.status(404).json({ error: "Rule not found" });
       }
-      
-      // Merge updates with existing rule
-      const updatedRule = { ...rules[ruleIndex], ...sanitizedUpdates };
-      rules[ruleIndex] = updatedRule;
-      companyRules.set(companyId, rules);
-
-      await logAutomationEvent(companyId, "rule_updated", {
-        ruleId: ruleId, updates: Object.keys(sanitizedUpdates),
-      }, userId);
-
+      logger.automation("rule_updated", { companyId, userId, details: { ruleId, updates: Object.keys(sanitizedUpdates) } });
       res.json(updatedRule);
     } catch (error: any) {
-      console.error("Error updating automation rule:", error);
+      logger.error("automation", "update_rule_failed", { errorMessage: error.message });
       res.status(500).json({ error: error.message });
     }
   });
 
-  // Delete automation rule
   app.delete("/api/agentic/rules/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -15502,44 +14683,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!companyId) {
         return res.status(400).json({ error: "Company ID required" });
       }
-
-      // Initialize rules if not exists
-      if (!companyRules.has(companyId)) {
-        companyRules.set(companyId, getDefaultRules(companyId));
-      }
-      
       const ruleId = req.params.id;
-      const rules = companyRules.get(companyId) || [];
-      const filteredRules = rules.filter((r: any) => r.id !== ruleId);
-      companyRules.set(companyId, filteredRules);
-
-      const pendingActions = companyPendingActions.get(companyId) || [];
-      const orphaned = pendingActions.filter((a: any) => a.ruleId === ruleId);
-      if (orphaned.length > 0) {
-        const remaining = pendingActions.filter((a: any) => a.ruleId !== ruleId);
-        companyPendingActions.set(companyId, remaining);
-        const history = companyActionHistory.get(companyId) || [];
-        for (const action of orphaned) {
-          history.unshift({
-            ...action,
-            status: "cancelled",
-            cancelledAt: new Date().toISOString(),
-            cancellationReason: "Parent rule deleted",
-          });
-        }
-        companyActionHistory.set(companyId, history);
-      }
-
-      await logAutomationEvent(companyId, "rule_deleted", { ruleId }, req.user.claims.sub);
-
+      await engine.deleteRule(ruleId, companyId);
+      logger.automation("rule_deleted", { companyId, userId, details: { ruleId } });
       res.status(204).send();
     } catch (error: any) {
-      console.error("Error deleting automation rule:", error);
+      logger.error("automation", "delete_rule_failed", { errorMessage: error.message });
       res.status(500).json({ error: error.message });
     }
   });
 
-  // Get pending actions awaiting approval
   app.get("/api/agentic/actions/pending", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -15548,181 +14701,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!companyId) {
         return res.status(400).json({ error: "Company ID required" });
       }
-
-      // Get current economic data for context
-      await economics.fetch();
-      const currentRegime = economics.regime || "HEALTHY_EXPANSION";
-      const currentFdr = economics.fdr || 1.0;
-
-      // Initialize pending actions if not exists
-      if (!companyPendingActions.has(companyId)) {
-        companyPendingActions.set(companyId, getDefaultPendingActions(companyId, currentRegime, currentFdr));
-      }
-
-      sweepExpiredActions(companyId);
-      const pendingActions = companyPendingActions.get(companyId) || [];
+      const pendingActions = await engine.getPendingActions(companyId);
       res.json(pendingActions);
     } catch (error: any) {
-      console.error("Error fetching pending actions:", error);
+      logger.error("automation", "fetch_pending_actions_failed", { errorMessage: error.message });
       res.status(500).json({ error: error.message });
     }
   });
 
-  // Approve an action - executes the action and moves to history
   app.post("/api/agentic/actions/:actionId/approve", isAuthenticated, async (req: any, res) => {
     try {
       const { actionId } = req.params;
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       const companyId = user?.companyId;
-      
       if (!companyId) {
         return res.status(400).json({ error: "Company ID required" });
       }
 
       await economics.fetch();
       const currentRegime = economics.regime || "HEALTHY_EXPANSION";
-      const currentFdr = economics.fdr || 1.0;
 
-      if (!companyPendingActions.has(companyId)) {
-        companyPendingActions.set(companyId, getDefaultPendingActions(companyId, currentRegime, currentFdr));
-      }
-      if (!companyActionHistory.has(companyId)) {
-        companyActionHistory.set(companyId, []);
-      }
-
-      sweepExpiredActions(companyId);
-
-      const pendingActions = companyPendingActions.get(companyId) || [];
-      const actionIndex = pendingActions.findIndex((a: any) => a.id === actionId);
-      
-      if (actionIndex === -1) {
+      const pendingActions = await engine.getPendingActions(companyId);
+      const action = pendingActions.find((a: any) => a.id === actionId);
+      if (!action) {
         return res.status(404).json({ error: "Action not found or has expired" });
       }
 
-      const action = pendingActions[actionIndex];
-      const now = new Date();
-      const nowISO = now.toISOString();
-
-      const validation = validateActionPrerequisites(action, companyId);
+      const validation = engine.validateActionPrerequisites(action, companyId);
       if (!validation.valid) {
-        await logAutomationEvent(companyId, "validation_failed", {
-          actionId, ruleId: action.ruleId, errors: validation.errors, actionType: action.actionType,
-        }, userId);
-        return res.status(400).json({
-          error: "Pre-execution validation failed",
-          validationErrors: validation.errors,
-        });
+        logger.warn("automation", "validation_failed", { companyId, userId, details: { actionId, errors: validation.errors } });
+        return res.status(400).json({ error: "Pre-execution validation failed", validationErrors: validation.errors });
       }
 
-      const guardrailResult = evaluateGuardrails(action, companyId, { regime: currentRegime, currentTime: now });
+      const guardrailResult = await engine.evaluateGuardrails(action, companyId, { regime: currentRegime, currentTime: new Date() });
       if (!guardrailResult.allowed) {
-        await logAutomationEvent(companyId, "guardrail_blocked", {
-          actionId, ruleId: action.ruleId, violations: guardrailResult.violations,
-        }, userId);
-        
-        const blockedAction = {
-          ...action, status: "guardrail_blocked", blockedAt: nowISO, blockedBy: "guardrail",
-          guardrailViolations: guardrailResult.violations,
-        };
-        pendingActions.splice(actionIndex, 1);
-        companyPendingActions.set(companyId, pendingActions);
-        const history = companyActionHistory.get(companyId) || [];
-        history.unshift(blockedAction);
-        companyActionHistory.set(companyId, history);
-
-        return res.status(403).json({
-          error: "Action blocked by guardrails",
-          violations: guardrailResult.violations,
-        });
+        logger.warn("guardrail", "action_blocked", { companyId, userId, details: { actionId, violations: guardrailResult.violations } });
+        return res.status(403).json({ error: "Action blocked by guardrails", violations: guardrailResult.violations });
       }
 
-      if (guardrailResult.violations.length > 0) {
-        await logAutomationEvent(companyId, "guardrail_warning", {
-          actionId, ruleId: action.ruleId, violations: guardrailResult.violations,
-        }, userId);
-      }
+      const approved = await engine.approveAction(actionId, companyId, userId);
+      const executionResult = await engine.executeAction(approved, userId);
 
-      if (action.ruleId) {
-        if (!companyRules.has(companyId)) {
-          companyRules.set(companyId, getDefaultRules(companyId));
-        }
-        const rules = companyRules.get(companyId) || [];
-        const rule = rules.find((r: any) => r.id === action.ruleId);
-        if (rule) {
-          const rateCheck = canExecuteRule(rule);
-          if (!rateCheck.allowed) {
-            await logAutomationEvent(companyId, "rate_limit_hit", {
-              actionId, ruleId: action.ruleId, reason: rateCheck.reason,
-            }, userId);
-            return res.status(429).json({ error: "Rate limit exceeded", reason: rateCheck.reason });
-          }
-        }
-      }
-
-      await logAutomationEvent(companyId, "action_approved", {
-        actionId, ruleId: action.ruleId, actionType: action.actionType, approvedBy: userId,
-      }, userId);
-
-      const executionResult = await executeAction(action, userId);
-
-      if (action.ruleId) {
-        const rules = companyRules.get(companyId) || [];
-        const ruleIndex = rules.findIndex((r: any) => r.id === action.ruleId);
-        if (ruleIndex !== -1) {
-          rules[ruleIndex].executionCount = (rules[ruleIndex].executionCount || 0) + 1;
-          rules[ruleIndex].lastExecutedAt = nowISO;
-          if (executionResult.success) {
-            const totalExec = rules[ruleIndex].executionCount;
-            const prevRate = rules[ruleIndex].successRate || 100;
-            rules[ruleIndex].successRate = Math.round(((prevRate * (totalExec - 1)) + 100) / totalExec);
-          } else {
-            const totalExec = rules[ruleIndex].executionCount;
-            const prevRate = rules[ruleIndex].successRate || 100;
-            rules[ruleIndex].successRate = Math.round(((prevRate * (totalExec - 1)) + 0) / totalExec);
-          }
-          companyRules.set(companyId, rules);
-        }
-      }
-
-      const completedAction = {
-        ...action,
-        status: executionResult.success ? "executed" : "execution_failed",
-        approvedBy: userId, approvedAt: nowISO, executedAt: nowISO,
-        executionResult: executionResult.result,
-        executionError: executionResult.error || null,
-      };
-
-      pendingActions.splice(actionIndex, 1);
-      companyPendingActions.set(companyId, pendingActions);
-      const history = companyActionHistory.get(companyId) || [];
-      history.unshift(completedAction);
-      companyActionHistory.set(companyId, history);
-
-      await logAutomationEvent(companyId, executionResult.success ? "action_executed" : "execution_failed", {
-        actionId, ruleId: action.ruleId, actionType: action.actionType,
-        result: executionResult.success ? "success" : "failure",
-        error: executionResult.error || null,
-      }, userId);
+      logger.automation(executionResult.success ? "action_executed" : "execution_failed", {
+        companyId, userId, details: { actionId, actionType: action.actionType, success: executionResult.success },
+      });
 
       res.json({
         success: executionResult.success,
         actionId,
-        status: completedAction.status,
-        approvedBy: userId, approvedAt: nowISO, executedAt: nowISO,
+        status: executionResult.success ? "completed" : "failed",
+        approvedBy: userId,
+        approvedAt: approved.approvedAt,
+        executedAt: new Date().toISOString(),
         executionResult: executionResult.result,
         guardrailWarnings: guardrailResult.violations.length > 0 ? guardrailResult.violations : undefined,
-        message: executionResult.success 
+        message: executionResult.success
           ? executionResult.result?.message || "Action executed successfully"
           : `Execution failed: ${executionResult.error}`,
       });
     } catch (error: any) {
-      console.error("Error approving action:", error);
+      logger.error("automation", "approve_action_failed", { errorMessage: error.message });
       res.status(500).json({ error: error.message });
     }
   });
 
-  // Reject an action - moves to history with rejected status
   app.post("/api/agentic/actions/:actionId/reject", isAuthenticated, async (req: any, res) => {
     try {
       const { actionId } = req.params;
@@ -15730,238 +14773,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       const companyId = user?.companyId;
-      
       if (!companyId) {
         return res.status(400).json({ error: "Company ID required" });
       }
-
-      // Get current economic data for context
-      await economics.fetch();
-      const currentRegime = economics.regime || "HEALTHY_EXPANSION";
-      const currentFdr = economics.fdr || 1.0;
-
-      // Initialize if not exists
-      if (!companyPendingActions.has(companyId)) {
-        companyPendingActions.set(companyId, getDefaultPendingActions(companyId, currentRegime, currentFdr));
-      }
-      if (!companyActionHistory.has(companyId)) {
-        companyActionHistory.set(companyId, []);
-      }
-
-      // Find the action
-      const pendingActions = companyPendingActions.get(companyId) || [];
-      const actionIndex = pendingActions.findIndex((a: any) => a.id === actionId);
-      
-      if (actionIndex === -1) {
+      const rejected = await engine.rejectAction(actionId, companyId, userId, reason || "No reason provided");
+      if (!rejected) {
         return res.status(404).json({ error: "Action not found" });
       }
-
-      const action = pendingActions[actionIndex];
-      const now = new Date().toISOString();
-
-      // Update action status and move to history
-      const rejectedAction = {
-        ...action,
-        status: "rejected",
-        rejectedBy: userId,
-        rejectedAt: now,
-        rejectionReason: reason || "No reason provided",
-      };
-
-      // Remove from pending
-      pendingActions.splice(actionIndex, 1);
-      companyPendingActions.set(companyId, pendingActions);
-
-      // Add to history
-      const history = companyActionHistory.get(companyId) || [];
-      history.unshift(rejectedAction);
-      companyActionHistory.set(companyId, history);
-
       res.json({
         success: true,
         actionId,
         status: "rejected",
         rejectedBy: userId,
-        rejectedAt: now,
+        rejectedAt: rejected.rejectedAt,
         rejectionReason: reason || "No reason provided",
         message: "Action rejected",
       });
     } catch (error: any) {
-      console.error("Error rejecting action:", error);
+      logger.error("automation", "reject_action_failed", { errorMessage: error.message });
       res.status(500).json({ error: error.message });
     }
   });
 
-  // Get guardrails
   app.get("/api/agentic/guardrails", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
-      const companyId = user?.companyId || "default";
-
-      // Initialize guardrails for this company if not exists
-      if (!companyGuardrails.has(companyId)) {
-        companyGuardrails.set(companyId, getDefaultGuardrails(companyId));
+      const companyId = user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ error: "Company ID required" });
       }
-
-      const guardrails = companyGuardrails.get(companyId) || [];
+      const guardrails = await engine.getGuardrails(companyId);
       res.json(guardrails);
     } catch (error: any) {
-      console.error("Error fetching guardrails:", error);
+      logger.error("automation", "fetch_guardrails_failed", { errorMessage: error.message });
       res.status(500).json({ error: error.message });
     }
   });
 
-  // Update guardrail settings
   app.patch("/api/agentic/guardrails/:guardrailId", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
-      const companyId = user?.companyId || "default";
+      const companyId = user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ error: "Company ID required" });
+      }
       const { guardrailId } = req.params;
       const updates = req.body;
-      
-      // Initialize guardrails for this company if not exists
-      if (!companyGuardrails.has(companyId)) {
-        companyGuardrails.set(companyId, getDefaultGuardrails(companyId));
-      }
-      
-      // Update the guardrail in memory
-      const guardrails = companyGuardrails.get(companyId) || [];
-      const index = guardrails.findIndex((g: any) => g.id === guardrailId);
-      
-      if (index !== -1) {
-        guardrails[index] = { ...guardrails[index], ...updates };
-        companyGuardrails.set(companyId, guardrails);
-      }
-      
-      res.json({ 
-        success: true, 
-        guardrailId, 
-        guardrail: index !== -1 ? guardrails[index] : null,
-        message: "Guardrail settings updated successfully" 
-      });
+      const guardrail = await engine.updateGuardrail(guardrailId, companyId, updates);
+      res.json({ success: true, guardrailId, guardrail, message: "Guardrail settings updated successfully" });
     } catch (error: any) {
-      console.error("Error updating guardrail:", error);
+      logger.error("automation", "update_guardrail_failed", { errorMessage: error.message });
       res.status(500).json({ error: error.message });
     }
   });
 
-  // Get agentic stats summary
   app.get("/api/agentic/stats", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
-      const companyId = user?.companyId || "default";
-
-      // Get actual counts from in-memory stores
-      const agents = companyAgents.get(companyId) || [];
-      const rules = companyRules.get(companyId) || [];
-      const pendingActions = companyPendingActions.get(companyId) || [];
-      const actionHistory = companyActionHistory.get(companyId) || [];
-      
-      // Count completed actions today
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const completedToday = actionHistory.filter((a: any) => 
-        a.status === "executed" && new Date(a.executedAt) >= today
-      ).length;
-      
-      // Calculate total savings from executed actions
-      const totalSavings = actionHistory
-        .filter((a: any) => a.status === "executed")
-        .reduce((sum: number, a: any) => sum + (a.estimatedImpact?.costSavings || 0), 0);
-
-      const stats = {
-        totalAgents: agents.length || 5,
-        activeAgents: agents.filter((a: any) => a.isEnabled).length || 5,
-        totalRules: rules.length || 6,
-        activeRules: rules.filter((r: any) => r.isEnabled).length || 6,
-        pendingActions: pendingActions.length,
-        completedToday: completedToday + 85 + Math.floor(Math.random() * 20),
-        totalSavings: totalSavings + 127500 + Math.floor(Math.random() * 10000),
-        avgSuccessRate: 95.2,
-        actionsLast24h: actionHistory.length + 142,
-        actionsLast7d: actionHistory.length + 847,
-        topPerformingAgent: "Forecasting Agent",
-        recentAlerts: 3,
-      };
-
+      const companyId = user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ error: "Company ID required" });
+      }
+      const stats = await engine.getStats(companyId);
       res.json(stats);
     } catch (error: any) {
-      console.error("Error fetching agentic stats:", error);
+      logger.error("automation", "fetch_stats_failed", { errorMessage: error.message });
       res.status(500).json({ error: error.message });
     }
   });
 
-  // Get action history
   app.get("/api/agentic/actions/history", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
-      const companyId = user?.companyId || "default";
-      const { limit = 50 } = req.query;
-
-      // Get actual history from in-memory store
-      const actualHistory = companyActionHistory.get(companyId) || [];
-      
-      // Generate sample historical actions to show baseline activity
-      const sampleHistory = [];
-      const statuses = ["executed", "rejected"];
-      const actionTypes = ["create_po", "adjust_safety_stock", "rebalance_inventory", "send_alert"];
-      const agents = [
-        { id: "agent_procurement", name: "Procurement Agent" },
-        { id: "agent_inventory", name: "Inventory Agent" },
-        { id: "agent_forecasting", name: "Forecasting Agent" },
-        { id: "agent_supplier", name: "Supplier Risk Agent" },
-      ];
-
-      // Only generate sample history to fill up to limit if actual history is short
-      const samplesToGenerate = Math.max(0, Math.min(Number(limit) - actualHistory.length, 20));
-      
-      for (let i = 0; i < samplesToGenerate; i++) {
-        const randomAgent = agents[Math.floor(Math.random() * agents.length)];
-        const randomStatus = statuses[Math.floor(Math.random() * 10) < 8 ? 0 : 1];
-        const randomAction = actionTypes[Math.floor(Math.random() * actionTypes.length)];
-        const daysAgo = Math.floor(Math.random() * 30) + 1;
-
-        sampleHistory.push({
-          id: `action_hist_${i}`,
-          companyId,
-          agentId: randomAgent.id,
-          agentName: randomAgent.name,
-          actionType: randomAction,
-          status: randomStatus,
-          estimatedImpact: {
-            costSavings: Math.floor(Math.random() * 5000) + 500,
-            confidence: 0.75 + Math.random() * 0.2,
-          },
-          executionResult: randomStatus === "executed" ? {
-            status: "success",
-            message: `${randomAction.replace(/_/g, " ")} completed successfully`,
-          } : null,
-          actualImpact: randomStatus === "executed" ? {
-            costSavings: Math.floor(Math.random() * 6000) + 400,
-            verified: true,
-          } : null,
-          executedAt: randomStatus === "executed" ? new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString() : null,
-          rejectedAt: randomStatus === "rejected" ? new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString() : null,
-          rejectionReason: randomStatus === "rejected" ? "User declined action" : null,
-          createdAt: new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000 - 2 * 60 * 60 * 1000).toISOString(),
-        });
+      const companyId = user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ error: "Company ID required" });
       }
-
-      // Combine actual history (most recent first) with sample history
-      const combinedHistory = [...actualHistory, ...sampleHistory].slice(0, Number(limit));
-      
-      res.json(combinedHistory);
+      const { limit = 50 } = req.query;
+      const history = await engine.getActionHistory(companyId, Number(limit) || 50);
+      res.json(history);
     } catch (error: any) {
-      console.error("Error fetching action history:", error);
+      logger.error("automation", "fetch_action_history_failed", { errorMessage: error.message });
       res.status(500).json({ error: error.message });
     }
   });
 
-  // AI Assistant chat with agentic capabilities
   app.post("/api/agentic/assistant/chat", isAuthenticated, async (req: any, res) => {
     try {
       const { message, context } = req.body;
@@ -15969,11 +14869,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(userId);
       const companyId = user?.companyId;
 
-      // Get current economic context
       await economics.fetch();
       const currentRegime = economics.regime || "HEALTHY_EXPANSION";
 
-      // Analyze message intent for agentic actions
       const lowerMessage = message.toLowerCase();
       let suggestedActions: any[] = [];
       let responseText = "";
@@ -16024,6 +14922,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         responseText = `I'm your intelligent manufacturing assistant with autonomous capabilities. I can:\n\n• **Create Purchase Orders** - Draft and submit POs based on inventory needs\n• **Rebalance Inventory** - Optimize stock across locations\n• **Adjust Safety Stock** - Adapt to economic regime changes\n• **Monitor Supplier Risk** - Proactive risk assessment\n• **Generate RFQs** - Automated quote requests\n\nThe current economic regime is **${currentRegime}**. How can I assist you today?`;
       }
 
+      logger.info("automation", "assistant_chat", { companyId: companyId || undefined, userId, details: { intent: suggestedActions.length > 0 ? suggestedActions[0].type : "general" } });
+
       res.json({
         response: responseText,
         suggestedActions,
@@ -16035,66 +14935,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
       });
     } catch (error: any) {
-      console.error("Error in agentic assistant chat:", error);
+      logger.error("automation", "assistant_chat_failed", { errorMessage: error.message });
       res.status(500).json({ error: error.message });
     }
   });
 
-  // Execute an agentic action from assistant
   app.post("/api/agentic/assistant/execute", isAuthenticated, async (req: any, res) => {
     try {
       const { actionType, parameters } = req.body;
       const authUserId = req.user.claims.sub;
       const user = await storage.getUser(authUserId);
       const companyId = user?.companyId;
-      const userId = user?.id;
 
-      // Create action record
-      const action = {
-        id: `action_${Date.now()}`,
-        companyId,
-        agentId: "assistant",
+      if (!companyId) {
+        return res.status(400).json({ error: "Company ID required" });
+      }
+
+      const action = await engine.createAction(companyId, {
+        agentId: null,
+        ruleId: null,
         actionType,
-        actionPayload: parameters,
-        status: "executing",
-        createdBy: userId,
-        createdAt: new Date().toISOString(),
-      };
+        actionPayload: parameters || {},
+        status: "pending",
+        triggeredBy: "assistant",
+        estimatedImpact: null,
+      });
 
-      // Simulate execution based on action type
       let result: any = {};
-      
       switch (actionType) {
         case "create_po":
-          result = {
-            success: true,
-            poId: `PO-${Date.now()}`,
-            message: "Purchase order created successfully and pending approval",
-            estimatedSavings: Math.floor(Math.random() * 2000) + 500,
-          };
+          result = { success: true, poId: `PO-${Date.now()}`, message: "Purchase order created successfully and pending approval" };
           break;
         case "rebalance_inventory":
-          result = {
-            success: true,
-            transferCount: 3,
-            message: "Inventory rebalance plan created and queued for approval",
-            estimatedSavings: Math.floor(Math.random() * 3000) + 1000,
-          };
+          result = { success: true, transferCount: 3, message: "Inventory rebalance plan created and queued for approval" };
           break;
         case "adjust_safety_stock":
-          result = {
-            success: true,
-            adjustedItems: 15,
-            message: "Safety stock levels adjusted based on regime multipliers",
-            newMultiplier: 1.15,
-          };
+          result = { success: true, adjustedItems: 15, message: "Safety stock levels adjusted based on regime multipliers", newMultiplier: 1.15 };
           break;
         default:
-          result = {
-            success: true,
-            message: "Action queued for processing",
-          };
+          result = { success: true, message: "Action queued for processing" };
       }
+
+      logger.automation("assistant_action_executed", { companyId, userId: authUserId, details: { actionType, actionId: action.id } });
 
       res.json({
         action,
@@ -16102,7 +14984,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: `Action "${actionType}" executed successfully`,
       });
     } catch (error: any) {
-      console.error("Error executing agentic action:", error);
+      logger.error("automation", "assistant_execute_failed", { errorMessage: error.message });
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+
+  // ==========================================
+  // SAFE MODE ROUTES
+  // ==========================================
+
+  app.get("/api/agentic/safe-mode", isAuthenticated, async (req: any, res) => {
+    try {
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUserByAuthId(authUserId);
+      if (!user?.companyId) return res.status(401).json({ error: "No company" });
+      const config = await engine.getSafeMode(user.companyId);
+      res.json(config || { safeModeEnabled: 1, overrideActions: [], readinessChecklistPassed: 0 });
+    } catch (error: any) {
+      logger.error("automation", "safe_mode_fetch_failed", { errorMessage: error.message });
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/agentic/safe-mode", isAuthenticated, async (req: any, res) => {
+    try {
+      const authUserId = req.user.claims.sub;
+      const user = await storage.getUserByAuthId(authUserId);
+      if (!user?.companyId) return res.status(401).json({ error: "No company" });
+
+      const { safeModeEnabled, overrideActions, readinessChecklistPassed } = req.body;
+      const updates: Record<string, any> = {};
+      if (safeModeEnabled !== undefined) updates.safeModeEnabled = safeModeEnabled ? 1 : 0;
+      if (overrideActions !== undefined) updates.overrideActions = overrideActions;
+      if (readinessChecklistPassed !== undefined) {
+        updates.readinessChecklistPassed = readinessChecklistPassed ? 1 : 0;
+        if (readinessChecklistPassed) {
+          updates.readinessPassedAt = new Date();
+          updates.readinessPassedBy = authUserId;
+        }
+      }
+
+      const existing = await engine.getSafeMode(user.companyId);
+      if (existing) {
+        await db.update(automationSafeMode)
+          .set({ ...updates, updatedAt: new Date() })
+          .where(eq(automationSafeMode.companyId, user.companyId));
+      } else {
+        await db.insert(automationSafeMode).values({
+          companyId: user.companyId,
+          ...updates,
+        });
+      }
+
+      logger.automation("safe_mode_updated", {
+        companyId: user.companyId,
+        userId: authUserId,
+        details: updates,
+      });
+
+      const updated = await engine.getSafeMode(user.companyId);
+      res.json(updated);
+    } catch (error: any) {
+      logger.error("automation", "safe_mode_update_failed", { errorMessage: error.message });
       res.status(500).json({ error: error.message });
     }
   });

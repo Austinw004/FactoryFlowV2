@@ -7172,6 +7172,125 @@ export const aiPerformanceMetrics = pgTable(
   ],
 );
 
+// Enterprise Automation: Runtime state persisted to DB (replaces in-memory Maps)
+export const automationRuntimeState = pgTable(
+  "automation_runtime_state",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    stateDate: text("state_date").notNull(),
+    dailySpendTotal: real("daily_spend_total").default(0),
+    dailyActionCount: integer("daily_action_count").default(0),
+    lastUpdatedAt: timestamp("last_updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("ars_company_date_unique").on(table.companyId, table.stateDate),
+    index("ars_company_idx").on(table.companyId),
+  ],
+);
+
+// Enterprise Automation: Processed trigger events for idempotency
+export const processedTriggerEvents = pgTable(
+  "processed_trigger_events",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    triggerType: text("trigger_type").notNull(),
+    triggerEventId: text("trigger_event_id").notNull(),
+    ruleId: varchar("rule_id"),
+    processedAt: timestamp("processed_at").defaultNow().notNull(),
+    result: text("result"),
+    actionId: varchar("action_id"),
+  },
+  (table) => [
+    uniqueIndex("pte_company_trigger_unique").on(table.companyId, table.triggerType, table.triggerEventId),
+    index("pte_company_idx").on(table.companyId),
+    index("pte_processed_idx").on(table.processedAt),
+  ],
+);
+
+// Enterprise: Durable Stripe webhook event deduplication
+export const stripeProcessedEvents = pgTable(
+  "stripe_processed_events",
+  {
+    eventId: varchar("event_id").primaryKey(),
+    eventType: text("event_type").notNull(),
+    processedAt: timestamp("processed_at").defaultNow().notNull(),
+    customerId: text("customer_id"),
+    subscriptionId: text("subscription_id"),
+    status: text("status").default("processed"),
+    idempotencyHash: text("idempotency_hash"),
+  },
+  (table) => [
+    index("spe_type_idx").on(table.eventType),
+    index("spe_processed_idx").on(table.processedAt),
+    index("spe_customer_idx").on(table.customerId),
+  ],
+);
+
+// Enterprise: Per-company safe mode configuration
+export const automationSafeMode = pgTable(
+  "automation_safe_mode",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    safeModeEnabled: integer("safe_mode_enabled").default(1),
+    overrideActions: text("override_actions").array(),
+    readinessChecklistPassed: integer("readiness_checklist_passed").default(0),
+    readinessPassedAt: timestamp("readiness_passed_at"),
+    readinessPassedBy: varchar("readiness_passed_by"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("asm_company_unique").on(table.companyId),
+  ],
+);
+
+// Enterprise: Structured event log for observability
+export const structuredEventLog = pgTable(
+  "structured_event_log",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    timestamp: timestamp("timestamp").defaultNow().notNull(),
+    level: text("level").notNull(),
+    category: text("category").notNull(),
+    event: text("event").notNull(),
+    companyId: varchar("company_id"),
+    userId: varchar("user_id"),
+    details: jsonb("details"),
+    durationMs: integer("duration_ms"),
+    success: integer("success"),
+    errorMessage: text("error_message"),
+  },
+  (table) => [
+    index("sel_timestamp_idx").on(table.timestamp),
+    index("sel_category_idx").on(table.category),
+    index("sel_company_idx").on(table.companyId),
+    index("sel_level_idx").on(table.level),
+  ],
+);
+
+export const insertAutomationRuntimeStateSchema = createInsertSchema(automationRuntimeState).omit({ id: true, lastUpdatedAt: true });
+export type AutomationRuntimeState = typeof automationRuntimeState.$inferSelect;
+export type InsertAutomationRuntimeState = z.infer<typeof insertAutomationRuntimeStateSchema>;
+
+export const insertProcessedTriggerEventSchema = createInsertSchema(processedTriggerEvents).omit({ id: true, processedAt: true });
+export type ProcessedTriggerEvent = typeof processedTriggerEvents.$inferSelect;
+export type InsertProcessedTriggerEvent = z.infer<typeof insertProcessedTriggerEventSchema>;
+
+export const insertStripeProcessedEventSchema = createInsertSchema(stripeProcessedEvents).omit({ processedAt: true });
+export type StripeProcessedEvent = typeof stripeProcessedEvents.$inferSelect;
+export type InsertStripeProcessedEvent = z.infer<typeof insertStripeProcessedEventSchema>;
+
+export const insertAutomationSafeModeSchema = createInsertSchema(automationSafeMode).omit({ id: true, createdAt: true, updatedAt: true });
+export type AutomationSafeMode = typeof automationSafeMode.$inferSelect;
+export type InsertAutomationSafeMode = z.infer<typeof insertAutomationSafeModeSchema>;
+
+export const insertStructuredEventLogSchema = createInsertSchema(structuredEventLog).omit({ id: true, timestamp: true });
+export type StructuredEventLog = typeof structuredEventLog.$inferSelect;
+export type InsertStructuredEventLog = z.infer<typeof insertStructuredEventLogSchema>;
+
 // AI Agent Schemas
 export const insertAiAgentSchema = createInsertSchema(aiAgents).omit({
   id: true,
