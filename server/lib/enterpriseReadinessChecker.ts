@@ -5,9 +5,11 @@ import {
   aiExecutionQueue,
   aiGuardrails,
   automationSafeMode,
+  automationRuntimeState,
   backgroundJobLocks,
   structuredEventLog,
   companies,
+  aiActions,
 } from "@shared/schema";
 import { automationEngine } from "./automationEngine";
 
@@ -37,6 +39,7 @@ export class EnterpriseReadinessChecker {
       this.checkJobLocking(companyId),
       this.checkDataRetentionPolicy(companyId),
       this.checkObservabilityLogging(companyId),
+      this.checkAtomicSpendEnforcement(companyId),
     ]);
 
     checks.push(...results.flat());
@@ -167,13 +170,27 @@ export class EnterpriseReadinessChecker {
     }];
   }
 
-  private async checkProcurementPrerequisites(_companyId: string): Promise<ReadinessCheck[]> {
-    return [{
-      name: "Procurement safety: payment terms/method validation",
+  private async checkProcurementPrerequisites(companyId: string): Promise<ReadinessCheck[]> {
+    const checks: ReadinessCheck[] = [];
+
+    const testAction = {
+      actionType: "create_po",
+      actionPayload: {},
+    };
+    const prereqResult = automationEngine.validateActionPrerequisites(testAction, companyId);
+    const expectedFields = ["Material identification", "Supplier identification", "Valid quantity", "Payment terms", "Payment method", "delivery date", "cost"];
+    const missingChecks = expectedFields.filter(f => !prereqResult.errors.some(e => e.toLowerCase().includes(f.toLowerCase())));
+
+    checks.push({
+      name: "Procurement safety: PO prerequisite validation",
       category: "procurement",
-      status: "pass",
-      details: "PO creation requires payment terms, payment method, delivery date, and positive cost",
-    }];
+      status: missingChecks.length === 0 ? "pass" : "fail",
+      details: missingChecks.length === 0
+        ? `PO creation validates ${prereqResult.errors.length} required fields: material, supplier, quantity, payment terms, payment method, delivery date, cost`
+        : `PO prerequisite validation missing checks for: ${missingChecks.join(", ")}`,
+    });
+
+    return checks;
   }
 
   private async checkTenantIsolation(companyId: string): Promise<ReadinessCheck[]> {
@@ -198,40 +215,133 @@ export class EnterpriseReadinessChecker {
     }];
   }
 
-  private async checkHonestMetrics(_companyId: string): Promise<ReadinessCheck[]> {
-    return [{
-      name: "Honest metrics: actualImpact-based savings",
-      category: "metrics",
-      status: "pass",
-      details: "getStats uses actualImpact.costSavings for measured savings, clearly labels estimated vs. measured",
-    }, {
+  private async checkHonestMetrics(companyId: string): Promise<ReadinessCheck[]> {
+    const checks: ReadinessCheck[] = [];
+
+    const stats = await automationEngine.getStats(companyId);
+    const perf = stats.performance as any;
+
+    const hasLabel = perf.estimatedSavingsLabel && perf.estimatedSavingsLabel.includes("estimated");
+    checks.push({
       name: "Honest metrics: estimated savings labeled",
       category: "metrics",
-      status: "pass",
-      details: "Estimated savings carry explicit 'estimated (unverified)' label in API responses",
-    }];
+      status: hasLabel ? "pass" : "fail",
+      details: hasLabel
+        ? `Estimated savings carry explicit label: "${perf.estimatedSavingsLabel}"`
+        : "Estimated savings missing 'estimated (unverified)' label in API response",
+    });
+
+    const hasMeasuredField = perf.measuredSavings !== undefined && perf.measuredSavingsCount !== undefined;
+    checks.push({
+      name: "Honest metrics: measured vs estimated separation",
+      category: "metrics",
+      status: hasMeasuredField ? "pass" : "fail",
+      details: hasMeasuredField
+        ? `Stats API separates measured (${perf.measuredSavingsCount} verified) from estimated savings`
+        : "Stats API does not separate measured from estimated savings",
+    });
+
+    return checks;
   }
 
-  private async checkJobLocking(_companyId: string): Promise<ReadinessCheck[]> {
-    const hasTable = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(backgroundJobLocks);
+  private async checkJobLocking(companyId: string): Promise<ReadinessCheck[]> {
+    const checks: ReadinessCheck[] = [];
 
-    return [{
-      name: "Job locking: background_job_locks table exists",
+    const locks = await db
+      .select()
+      .from(backgroundJobLocks)
+      .where(eq(backgroundJobLocks.companyId, companyId));
+
+    const expiredLocks = locks.filter(l => l.expiresAt && l.expiresAt < new Date());
+    checks.push({
+      name: "Job locking: no expired locks lingering",
       category: "job_locking",
-      status: "pass",
-      details: "DB-backed job lock table with INSERT-first pattern and expiry-based recovery is available",
-    }];
+      status: expiredLocks.length === 0 ? "pass" : "warn",
+      details: expiredLocks.length === 0
+        ? `Job lock table healthy (${locks.length} active lock(s))`
+        : `${expiredLocks.length} expired lock(s) lingering in job_locks table - recovery should clean these up`,
+    });
+
+    const lockAcquired = await automationEngine.acquireJobLock("readiness_check_probe", companyId, 1);
+    if (lockAcquired) {
+      await automationEngine.releaseJobLock("readiness_check_probe", companyId);
+    }
+    checks.push({
+      name: "Job locking: INSERT-first acquire/release works",
+      category: "job_locking",
+      status: lockAcquired ? "pass" : "warn",
+      details: lockAcquired
+        ? "Job lock acquire and release cycle completed successfully"
+        : "Could not acquire probe lock - another process may hold it (this is acceptable if jobs are running)",
+    });
+
+    return checks;
   }
 
-  private async checkDataRetentionPolicy(_companyId: string): Promise<ReadinessCheck[]> {
-    return [{
-      name: "Data retention: TTL cleanup available",
+  private async checkDataRetentionPolicy(companyId: string): Promise<ReadinessCheck[]> {
+    const checks: ReadinessCheck[] = [];
+
+    const retentionRuns = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(structuredEventLog)
+      .where(
+        and(
+          eq(structuredEventLog.companyId, companyId),
+          eq(structuredEventLog.event, "data_retention_run")
+        )
+      );
+
+    const runCount = Number(retentionRuns[0]?.count || 0);
+    checks.push({
+      name: "Data retention: cleanup has been executed",
       category: "data_retention",
+      status: runCount > 0 ? "pass" : "warn",
+      details: runCount > 0
+        ? `Data retention has run ${runCount} time(s) - automated cleanup is active`
+        : "No data retention runs recorded yet - ensure maintenance job is scheduled (runs hourly)",
+    });
+
+    return checks;
+  }
+
+  private async checkAtomicSpendEnforcement(companyId: string): Promise<ReadinessCheck[]> {
+    const checks: ReadinessCheck[] = [];
+
+    const today = new Date().toISOString().slice(0, 10);
+    const runtimeState = await db
+      .select()
+      .from(automationRuntimeState)
+      .where(
+        and(
+          eq(automationRuntimeState.companyId, companyId),
+          eq(automationRuntimeState.stateDate, today)
+        )
+      );
+
+    checks.push({
+      name: "Atomic spend: runtime state table accessible",
+      category: "guardrails",
       status: "pass",
-      details: "runDataRetention method available for trigger events and event logs with configurable retention period (default 90 days)",
-    }];
+      details: runtimeState.length > 0
+        ? `Daily spend tracking active: $${runtimeState[0].dailySpendTotal || 0} spent today with ${runtimeState[0].dailyActionCount || 0} action(s)`
+        : "Runtime state table accessible, no spend recorded today yet",
+    });
+
+    const guardrails = await automationEngine.getGuardrails(companyId);
+    const spendGuard = guardrails.find(g => g.guardrailType === "spending_limit" && g.isEnabled === 1);
+    if (spendGuard) {
+      const limit = (spendGuard.conditions as any)?.limit;
+      checks.push({
+        name: "Atomic spend: limit configured with atomic enforcement",
+        category: "guardrails",
+        status: limit && limit > 0 ? "pass" : "warn",
+        details: limit && limit > 0
+          ? `Spending limit of $${limit.toLocaleString()} enforced via atomic upsert-check-rollback pattern (TOCTOU-safe)`
+          : "Spending limit guardrail exists but limit value is not configured",
+      });
+    }
+
+    return checks;
   }
 
   private async checkObservabilityLogging(companyId: string): Promise<ReadinessCheck[]> {

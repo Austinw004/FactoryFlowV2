@@ -693,6 +693,56 @@ export class AutomationEngine {
     return updated.length > 0;
   }
 
+  async getActionById(actionId: string, companyId: string) {
+    const rows = await db
+      .select()
+      .from(aiActions)
+      .where(
+        and(
+          eq(aiActions.id, actionId),
+          eq(aiActions.companyId, companyId)
+        )
+      )
+      .limit(1);
+    return rows[0] || null;
+  }
+
+  async requeueWithBackoff(queueId: string, scheduledFor: Date, errorMessage: string): Promise<boolean> {
+    const updated = await db
+      .update(aiExecutionQueue)
+      .set({
+        status: "queued",
+        claimedAt: null,
+        claimedBy: null,
+        scheduledFor,
+        errorMessage,
+      })
+      .where(
+        and(
+          eq(aiExecutionQueue.id, queueId),
+          eq(aiExecutionQueue.status, "processing")
+        )
+      )
+      .returning();
+
+    if (updated.length > 0) {
+      await db.insert(structuredEventLog).values({
+        companyId: updated[0].companyId,
+        level: "warn",
+        category: "automation",
+        event: "queue_item_requeued",
+        details: {
+          message: `Queue item ${queueId} requeued with backoff until ${scheduledFor.toISOString()}`,
+          queueId,
+          scheduledFor: scheduledFor.toISOString(),
+          errorMessage,
+          attempt: updated[0].attempts,
+        },
+      });
+    }
+    return updated.length > 0;
+  }
+
   async executeAction(action: any, approvedBy: string): Promise<{ success: boolean; result: any; error?: string }> {
     const now = new Date().toISOString();
 
@@ -812,7 +862,7 @@ export class AutomationEngine {
         .where(eq(aiActions.id, action.id));
 
       const cost = action.actionPayload?.estimatedCost;
-      if (cost && cost > 0) {
+      if (cost && cost > 0 && !action._spendReserved) {
         await this.incrementDailySpend(action.companyId, cost);
       }
 
@@ -826,6 +876,20 @@ export class AutomationEngine {
           updatedAt: new Date(),
         })
         .where(eq(aiActions.id, action.id));
+
+      if (action._spendReserved) {
+        const cost = action.actionPayload?.estimatedCost;
+        if (cost && cost > 0) {
+          const today = new Date().toISOString().slice(0, 10);
+          await db.execute(sql`
+            UPDATE automation_runtime_state
+            SET daily_spend_total = GREATEST(0, daily_spend_total - ${cost}),
+                daily_action_count = GREATEST(0, daily_action_count - 1),
+                last_updated_at = NOW()
+            WHERE company_id = ${action.companyId} AND state_date = ${today}
+          `);
+        }
+      }
 
       return {
         success: false,
@@ -867,6 +931,47 @@ export class AutomationEngine {
           lastUpdatedAt: new Date(),
         },
       });
+  }
+
+  /**
+   * Atomic spend reservation: upsert today's row, atomically increment spend,
+   * then check if the new total exceeds the limit. If it does, rollback the increment.
+   * Returns { allowed, currentSpend, newSpend }
+   */
+  async atomicSpendCheck(
+    companyId: string,
+    proposedAmount: number,
+    spendLimit: number
+  ): Promise<{ allowed: boolean; currentSpend: number; newSpend: number }> {
+    const today = new Date().toISOString().slice(0, 10);
+
+    const result = await db.execute(sql`
+      INSERT INTO automation_runtime_state (company_id, state_date, daily_spend_total, daily_action_count)
+      VALUES (${companyId}, ${today}, ${proposedAmount}, 1)
+      ON CONFLICT (company_id, state_date)
+      DO UPDATE SET
+        daily_spend_total = automation_runtime_state.daily_spend_total + ${proposedAmount},
+        daily_action_count = automation_runtime_state.daily_action_count + 1,
+        last_updated_at = NOW()
+      RETURNING daily_spend_total, daily_action_count
+    `);
+
+    const rows = result.rows || result;
+    const newSpend = Number(rows[0]?.daily_spend_total || proposedAmount);
+    const currentSpend = newSpend - proposedAmount;
+
+    if (newSpend > spendLimit) {
+      await db.execute(sql`
+        UPDATE automation_runtime_state
+        SET daily_spend_total = daily_spend_total - ${proposedAmount},
+            daily_action_count = daily_action_count - 1,
+            last_updated_at = NOW()
+        WHERE company_id = ${companyId} AND state_date = ${today}
+      `);
+      return { allowed: false, currentSpend, newSpend: currentSpend };
+    }
+
+    return { allowed: true, currentSpend, newSpend };
   }
 
   /**
@@ -1072,8 +1177,11 @@ export class AutomationEngine {
       switch (guard.guardrailType) {
         case "spending_limit": {
           if (payload.estimatedCost) {
-            const spentToday = await this.getDailySpend(companyId);
-            if (spentToday + payload.estimatedCost > (conditions?.limit || Infinity)) {
+            const limit = conditions?.limit || Infinity;
+            const spendCheck = await this.atomicSpendCheck(companyId, payload.estimatedCost, limit);
+            if (spendCheck.allowed) {
+              action._spendReserved = true;
+            } else {
               await db
                 .update(aiGuardrails)
                 .set({
@@ -1086,7 +1194,7 @@ export class AutomationEngine {
               violations.push({
                 guardrailId: guard.id,
                 guardrailName: guard.name,
-                reason: `Daily spending limit of $${conditions.limit.toLocaleString()} would be exceeded. Spent today: $${spentToday.toLocaleString()}, this action: $${payload.estimatedCost.toLocaleString()}`,
+                reason: `Daily spending limit of $${limit.toLocaleString()} would be exceeded. Spent today: $${spendCheck.currentSpend.toLocaleString()}, this action: $${payload.estimatedCost.toLocaleString()}`,
                 enforcement: guard.onViolation || "block",
               });
             }

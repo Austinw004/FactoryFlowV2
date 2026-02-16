@@ -1076,6 +1076,52 @@ async function aggregateBenchmarkDataJob() {
   }
 }
 
+async function automationQueueWorkerJob() {
+  try {
+    const engine = AutomationEngine.getInstance();
+    const companyIds = await storage.getAllCompanyIds();
+
+    for (const companyId of companyIds) {
+      try {
+        const claimed = await engine.claimQueuedActions(companyId, 5);
+        for (const item of claimed) {
+          try {
+            const action = await engine.getActionById(item.action_id || item.actionId, companyId);
+            if (!action) {
+              await engine.markQueueOutcome(item.id, "failed", "Action not found");
+              continue;
+            }
+
+            const result = await engine.executeAction(action, "queue-worker");
+            if (result.success) {
+              await engine.markQueueOutcome(item.id, "completed");
+            } else {
+              const attempts = item.attempts || 1;
+              const maxAttempts = item.max_attempts || item.maxAttempts || 3;
+
+              if (attempts >= maxAttempts) {
+                await engine.markQueueOutcome(item.id, "failed", `Dead letter: max attempts (${maxAttempts}) exceeded. Last error: ${result.error}`);
+                console.log(`[Queue Worker] Dead-lettered item ${item.id} for company ${companyId.substring(0, 8)} after ${attempts} attempts`);
+              } else {
+                const backoffMs = Math.min(Math.pow(2, attempts) * 1000, 300000);
+                const nextRun = new Date(Date.now() + backoffMs);
+                await engine.requeueWithBackoff(item.id, nextRun, result.error || "Execution failed");
+                console.log(`[Queue Worker] Requeued item ${item.id} with ${backoffMs / 1000}s backoff (attempt ${attempts})`);
+              }
+            }
+          } catch (itemErr: any) {
+            await engine.markQueueOutcome(item.id, "failed", itemErr.message || "Unexpected worker error");
+          }
+        }
+      } catch (err) {
+        // skip individual company failures
+      }
+    }
+  } catch (error) {
+    console.error('[Queue Worker] Failed:', error);
+  }
+}
+
 async function automationMaintenanceJob() {
   try {
     const engine = AutomationEngine.getInstance();
@@ -1086,11 +1132,11 @@ async function automationMaintenanceJob() {
         if (expired > 0) {
           console.log(`[Automation Maintenance] Expired ${expired} stale approvals for company ${companyId.substring(0, 8)}`);
         }
+        await engine.runDataRetention(companyId, 90);
       } catch (err) {
         // skip individual company failures
       }
     }
-    await engine.runDataRetention(90);
     console.log(`[Automation Maintenance] Data retention cleanup completed`);
   } catch (error) {
     console.error('[Automation Maintenance] Failed:', error);
@@ -1111,6 +1157,7 @@ const jobConfigs: BackgroundJobConfig[] = [
   { name: 'RFQ Auto-Generation', intervalMs: 15 * 60 * 1000, enabled: true },
   { name: 'Benchmark Data Aggregation', intervalMs: 24 * 60 * 60 * 1000, enabled: true },
   { name: 'Automation Maintenance', intervalMs: 60 * 60 * 1000, enabled: true },
+  { name: 'Automation Queue Worker', intervalMs: 30 * 1000, enabled: true },
 ];
 
 export function startBackgroundJobs() {
@@ -1130,6 +1177,7 @@ export function startBackgroundJobs() {
     autoGenerateRfqsJob,
     aggregateBenchmarkDataJob,
     automationMaintenanceJob,
+    automationQueueWorkerJob,
   ];
   
   jobConfigs.forEach((config, index) => {
