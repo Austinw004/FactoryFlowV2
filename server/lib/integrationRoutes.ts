@@ -205,7 +205,9 @@ export function registerIntegrationOrchestratorRoutes(app: Express, isAuthentica
 
   app.post("/api/orchestrator/dead-letter/:id/replay", isAuthenticated, rateLimiters.api, async (req: any, res) => {
     try {
-      const event = await orchestrator.replayDeadLetter(req.params.id);
+      const companyId = req.user?.companyId;
+      if (!companyId) return res.status(400).json({ error: "No company associated" });
+      const event = await orchestrator.replayDeadLetter(req.params.id, companyId);
       if (!event) return res.status(404).json({ error: "Dead letter not found or already resolved" });
       res.json(event);
     } catch (error: any) {
@@ -215,8 +217,10 @@ export function registerIntegrationOrchestratorRoutes(app: Express, isAuthentica
 
   app.post("/api/orchestrator/dead-letter/:id/resolve", isAuthenticated, rateLimiters.api, async (req: any, res) => {
     try {
+      const companyId = req.user?.companyId;
+      if (!companyId) return res.status(400).json({ error: "No company associated" });
       const { resolution } = req.body;
-      await orchestrator.resolveDeadLetter(req.params.id, req.user?.id, resolution || "Manually resolved");
+      await orchestrator.resolveDeadLetter(req.params.id, companyId, req.user?.id, resolution || "Manually resolved");
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: "Resolve failed" });

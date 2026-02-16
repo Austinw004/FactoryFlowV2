@@ -1083,34 +1083,46 @@ async function automationQueueWorkerJob() {
 
     for (const companyId of companyIds) {
       try {
+        const safeMode = await engine.getSafeMode(companyId);
+        const isSafeModeEnabled = safeMode && safeMode.isEnabled;
+
         const claimed = await engine.claimQueuedActions(companyId, 5);
         for (const item of claimed) {
           try {
             const action = await engine.getActionById(item.action_id || item.actionId, companyId);
             if (!action) {
-              await engine.markQueueOutcome(item.id, "failed", "Action not found");
+              await engine.markQueueOutcome(item.id, companyId, "failed", "Action not found");
               continue;
+            }
+
+            if (isSafeModeEnabled) {
+              const highStakesTypes = ["create_po", "pause_orders", "adjust_safety_stock", "rebalance_inventory"];
+              if (highStakesTypes.includes(action.actionType)) {
+                await engine.markQueueOutcome(item.id, companyId, "failed", "Blocked by safe mode: high-stakes action requires manual approval");
+                console.log(`[Queue Worker] Safe mode blocked action ${action.id} (${action.actionType}) for company ${companyId.substring(0, 8)}`);
+                continue;
+              }
             }
 
             const result = await engine.executeAction(action, "queue-worker");
             if (result.success) {
-              await engine.markQueueOutcome(item.id, "completed");
+              await engine.markQueueOutcome(item.id, companyId, "completed");
             } else {
               const attempts = item.attempts || 1;
               const maxAttempts = item.max_attempts || item.maxAttempts || 3;
 
               if (attempts >= maxAttempts) {
-                await engine.markQueueOutcome(item.id, "failed", `Dead letter: max attempts (${maxAttempts}) exceeded. Last error: ${result.error}`);
+                await engine.markQueueOutcome(item.id, companyId, "failed", `Dead letter: max attempts (${maxAttempts}) exceeded. Last error: ${result.error}`);
                 console.log(`[Queue Worker] Dead-lettered item ${item.id} for company ${companyId.substring(0, 8)} after ${attempts} attempts`);
               } else {
                 const backoffMs = Math.min(Math.pow(2, attempts) * 1000, 300000);
                 const nextRun = new Date(Date.now() + backoffMs);
-                await engine.requeueWithBackoff(item.id, nextRun, result.error || "Execution failed");
+                await engine.requeueWithBackoff(item.id, companyId, nextRun, result.error || "Execution failed");
                 console.log(`[Queue Worker] Requeued item ${item.id} with ${backoffMs / 1000}s backoff (attempt ${attempts})`);
               }
             }
           } catch (itemErr: any) {
-            await engine.markQueueOutcome(item.id, "failed", itemErr.message || "Unexpected worker error");
+            await engine.markQueueOutcome(item.id, companyId, "failed", itemErr.message || "Unexpected worker error");
           }
         }
       } catch (err) {

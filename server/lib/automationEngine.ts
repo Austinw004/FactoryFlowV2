@@ -667,11 +667,9 @@ export class AutomationEngine {
     return rows;
   }
 
-  /**
-   * Mark a queue item as completed or failed with CAS guard on status='processing'.
-   */
   async markQueueOutcome(
     queueId: string,
+    companyId: string,
     outcome: "completed" | "failed",
     errorMessage?: string
   ): Promise<boolean> {
@@ -685,6 +683,7 @@ export class AutomationEngine {
       .where(
         and(
           eq(aiExecutionQueue.id, queueId),
+          eq(aiExecutionQueue.companyId, companyId),
           eq(aiExecutionQueue.status, "processing")
         )
       )
@@ -707,7 +706,7 @@ export class AutomationEngine {
     return rows[0] || null;
   }
 
-  async requeueWithBackoff(queueId: string, scheduledFor: Date, errorMessage: string): Promise<boolean> {
+  async requeueWithBackoff(queueId: string, companyId: string, scheduledFor: Date, errorMessage: string): Promise<boolean> {
     const updated = await db
       .update(aiExecutionQueue)
       .set({
@@ -720,6 +719,7 @@ export class AutomationEngine {
       .where(
         and(
           eq(aiExecutionQueue.id, queueId),
+          eq(aiExecutionQueue.companyId, companyId),
           eq(aiExecutionQueue.status, "processing")
         )
       )
@@ -1325,9 +1325,12 @@ export class AutomationEngine {
     }
 
     if (violations.length > 0) {
+      const blockingViolations = violations.filter(v => v.enforcement === "block");
+      const hasBlockingViolation = blockingViolations.length > 0;
+
       await db.insert(structuredEventLog).values({
         companyId,
-        level: violations.some(v => v.enforcement === "block") ? "error" : "warn",
+        level: hasBlockingViolation ? "error" : "warn",
         category: "automation",
         event: "guardrail_violations",
         details: {
@@ -1342,10 +1345,30 @@ export class AutomationEngine {
           })),
         },
       });
+
+      if (hasBlockingViolation) {
+        await db.insert(structuredEventLog).values({
+          companyId,
+          level: "error",
+          category: "guardrail_escalation",
+          event: "action_blocked_by_guardrail",
+          details: {
+            message: `Action '${action.actionType}' (${action.id}) BLOCKED by ${blockingViolations.length} guardrail(s) — requires escalation`,
+            actionType: action.actionType,
+            actionId: action.id,
+            blockingGuardrails: blockingViolations.map(v => ({
+              guardrailId: v.guardrailId,
+              guardrailName: v.guardrailName,
+              reason: v.reason,
+            })),
+          },
+        });
+      }
+
+      return { allowed: !hasBlockingViolation, violations };
     }
 
-    const hasBlockingViolation = violations.some((v) => v.enforcement === "block");
-    return { allowed: !hasBlockingViolation, violations };
+    return { allowed: true, violations };
   }
 
   validateActionPrerequisites(action: any, _companyId: string): { valid: boolean; errors: string[] } {

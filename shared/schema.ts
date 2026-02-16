@@ -8034,31 +8034,29 @@ export const behavioralAuditTrail = pgTable(
       .primaryKey()
       .default(sql`gen_random_uuid()`),
 
-    // The insight being audited
-    insightType: text("insight_type").notNull(), // "execution_risk_pattern", "confidence_adjustment", "organizational_tendency"
+    companyId: varchar("company_id").notNull().default("system"),
+
+    insightType: text("insight_type").notNull(),
     insightDescription: text("insight_description").notNull(),
 
-    // Traceability chain
-    observedInputs: jsonb("observed_inputs").notNull(), // What inputs were observed
-    observedOutputs: jsonb("observed_outputs").notNull(), // What outputs system produced
-    observedActions: jsonb("observed_actions").notNull(), // What actions users took
-    regimeConditions: jsonb("regime_conditions").notNull(), // Regime state during observation
+    observedInputs: jsonb("observed_inputs").notNull(),
+    observedOutputs: jsonb("observed_outputs").notNull(),
+    observedActions: jsonb("observed_actions").notNull(),
+    regimeConditions: jsonb("regime_conditions").notNull(),
 
-    // Evidence links
-    signalExposureIds: text("signal_exposure_ids").array(), // References to source observations
+    signalExposureIds: text("signal_exposure_ids").array(),
     userActionIds: text("user_action_ids").array(),
 
-    // Validity
     evidenceCount: integer("evidence_count").notNull(),
-    confidenceInInsight: real("confidence_in_insight"), // How well-supported is this insight
+    confidenceInInsight: real("confidence_in_insight"),
 
-    // Reversibility marker
-    isReversible: integer("is_reversible").default(1), // 1 = can be discarded if traced poorly
+    isReversible: integer("is_reversible").default(1),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
-    expiresAt: timestamp("expires_at"), // Insights may expire if not re-validated
+    expiresAt: timestamp("expires_at"),
   },
   (table) => [
+    index("audit_trail_company_idx").on(table.companyId),
     index("audit_trail_type_idx").on(table.insightType),
     index("audit_trail_created_idx").on(table.createdAt),
   ],
@@ -8271,7 +8269,7 @@ export const canonicalEntities = pgTable(
   (table) => [
     index("canonical_entities_company_idx").on(table.companyId),
     index("canonical_entities_type_idx").on(table.entityType),
-    index("canonical_entities_canonical_id_idx").on(table.canonicalId),
+    uniqueIndex("canonical_entities_company_type_id_unique").on(table.companyId, table.entityType, table.canonicalId),
   ],
 );
 
@@ -8472,7 +8470,7 @@ export const integrationEvents = pgTable(
     index("ie_integration_idx").on(table.integrationId),
     index("ie_event_type_idx").on(table.eventType),
     index("ie_status_idx").on(table.status),
-    index("ie_idempotency_idx").on(table.idempotencyKey),
+    uniqueIndex("ie_idempotency_unique_idx").on(table.companyId, table.idempotencyKey),
   ],
 );
 

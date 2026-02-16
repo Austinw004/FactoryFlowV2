@@ -232,16 +232,46 @@ export class IntegrationOrchestrator {
   }
 
   async publishEvent(event: InsertIntegrationEvent): Promise<IntegrationEvent> {
-    const existingKey = event.idempotencyKey
-      ? await db
+    if (event.idempotencyKey) {
+      const result = await db.execute(sql`
+        INSERT INTO integration_events (
+          id, company_id, integration_id, connection_id, event_type,
+          canonical_object_type, canonical_object_id, external_object_id,
+          direction, status, payload, error_message, idempotency_key,
+          retry_count, processed_at, regime_context
+        ) VALUES (
+          gen_random_uuid(), ${event.companyId}, ${event.integrationId},
+          ${event.connectionId || null}, ${event.eventType},
+          ${event.canonicalObjectType || null}, ${event.canonicalObjectId || null},
+          ${event.externalObjectId || null}, ${event.direction || "inbound"},
+          ${event.status || "pending"}, ${event.payload || null},
+          ${event.errorMessage || null}, ${event.idempotencyKey},
+          ${event.retryCount || 0}, ${event.processedAt || null},
+          ${event.regimeContext || null}
+        )
+        ON CONFLICT (company_id, idempotency_key)
+        WHERE idempotency_key IS NOT NULL
+        DO NOTHING
+        RETURNING *
+      `);
+
+      if (result.rows.length === 0) {
+        const [existing] = await db
           .select()
           .from(integrationEvents)
-          .where(eq(integrationEvents.idempotencyKey, event.idempotencyKey))
-          .limit(1)
-      : [];
+          .where(
+            and(
+              eq(integrationEvents.companyId, event.companyId),
+              eq(integrationEvents.idempotencyKey, event.idempotencyKey),
+            ),
+          )
+          .limit(1);
+        if (existing) return existing;
+      }
 
-    if (existingKey.length > 0) {
-      return existingKey[0];
+      const created = result.rows[0] as unknown as IntegrationEvent;
+      await this.eventBus.publish(created);
+      return created;
     }
 
     const [created] = await db
@@ -305,7 +335,7 @@ export class IntegrationOrchestrator {
       .limit(limit);
   }
 
-  async resolveDeadLetter(id: string, userId: string, resolution: string): Promise<void> {
+  async resolveDeadLetter(id: string, companyId: string, userId: string, resolution: string): Promise<void> {
     await db
       .update(deadLetterEvents)
       .set({
@@ -314,17 +344,27 @@ export class IntegrationOrchestrator {
         resolvedBy: userId,
         resolution,
       })
-      .where(eq(deadLetterEvents.id, id));
+      .where(and(
+        eq(deadLetterEvents.id, id),
+        eq(deadLetterEvents.companyId, companyId),
+      ));
   }
 
-  async replayDeadLetter(id: string): Promise<IntegrationEvent | null> {
+  async replayDeadLetter(id: string, companyId: string): Promise<IntegrationEvent | null> {
     const [dle] = await db
       .select()
       .from(deadLetterEvents)
-      .where(eq(deadLetterEvents.id, id))
+      .where(and(
+        eq(deadLetterEvents.id, id),
+        eq(deadLetterEvents.companyId, companyId),
+      ))
       .limit(1);
 
     if (!dle || dle.isResolved === 1) return null;
+
+    const replayIdempotencyKey = dle.originalEventId
+      ? `replay:${dle.originalEventId}:${(dle.retryCount || 0) + 1}`
+      : undefined;
 
     const newEvent = await this.publishEvent({
       companyId: dle.companyId,
@@ -336,12 +376,16 @@ export class IntegrationOrchestrator {
       direction: "inbound",
       status: "pending",
       retryCount: (dle.retryCount || 0) + 1,
+      idempotencyKey: replayIdempotencyKey,
     });
 
     await db
       .update(deadLetterEvents)
       .set({ retryCount: (dle.retryCount || 0) + 1 })
-      .where(eq(deadLetterEvents.id, id));
+      .where(and(
+        eq(deadLetterEvents.id, id),
+        eq(deadLetterEvents.companyId, companyId),
+      ));
 
     return newEvent;
   }
