@@ -1,0 +1,45 @@
+I want you to run a final “GO / NO-GO” enterprise readiness certification on this application. You must follow a strict decision tree and you must produce an explicit final verdict: GO (beta only), GO (enterprise-ready), or NO GO. You are not allowed to hand-wave. Every claim must be backed by concrete evidence from the codebase (file paths, functions, routes, schema constraints, logs, or test outputs). If you cannot find evidence, you must treat it as failing the gate. Your output must be concise but complete: gate-by-gate verdicts, failure scenarios, and the exact fixes needed.
+
+Use this decision tree and do not skip any gate:
+
+GATE 1 — MONEY CORRECTNESS (Financial Integrity)
+Identify every financially-impactful action path: Stripe subscription lifecycle (checkout.session.completed, subscription created/updated/deleted, invoice.paid, invoice.payment_failed, refunds), any payment method capture, any supplier purchase flow, any PO creation that creates real obligations, any automated procurement actions, and any “buy materials” workflow. For each path, prove whether it is idempotent under webhook replay, retries, concurrency, and process restart. Idempotency must be durable (database uniqueness / transactional enforcement), not in-memory. Prove whether partial failures can occur (action created but audit missing, queue item created but action not recorded, approval state inconsistent). If any financially-impactful action can execute twice or partially succeed, this gate FAILS and verdict is automatically NO GO for enterprise automation execution.
+
+GATE 2 — TENANT ISOLATION (Cross-tenant safety)
+Prove that a single missing companyId filter cannot expose or mutate another tenant’s data. Identify where companyId scoping is enforced and where it could be bypassed (storage layer, route handlers, websocket auth, integrations, background jobs, admin analytics). If tenant isolation relies only on application discipline, flag it as an enterprise risk and fail this gate unless there is compensating enforcement (RLS, DB policies, scoped views, mandatory middleware + tests that enforce companyId everywhere). You must also run a “malice suite” conceptually: attempt tampered companyId, replayed integration event for another tenant, guessed IDs, and missing filters. If any plausible path exists, gate FAILS.
+
+GATE 3 — AUTOMATION SAFETY (Guardrails, concurrency, runaway prevention)
+Treat the automation system as if it will execute real-world actions. Prove that guardrails cannot be bypassed under concurrent triggers. Specifically analyze: daily spend totals, daily action counts, cooldowns, max executions per day, approval workflows, pending queues, safe mode, and idempotent trigger processing. If two triggers fire simultaneously, prove that daily spend cannot exceed limits due to race conditions. Confirm whether spending checks are transactional and durable. If not concurrency-safe, gate FAILS for enterprise automation (you may still pass beta only with automation disabled).
+
+GATE 4 — OBSERVABILITY & FORENSICS (Auditability)
+Prove that after a crash/restart you can reconstruct: who triggered an action, what inputs were used, what regime was active (raw and confirmed), what guardrails applied, whether approval was required, who approved/rejected, what executed, and what the outcome was. This must be stored durably (DB tables), not console logs or in-memory buffers. If any materially important action lacks durable logging, this gate FAILS.
+
+GATE 5 — DATA HONESTY (No fabricated claims, provenance required)
+Confirm that the UI and API never present fabricated performance/savings/claims. For any computed metric, require traceability to source data and show the chain of provenance. For the News tab, enforce: each item must have a real publisher, real URL, publish timestamp, and deduplication. If an article cannot be verified, it must be labeled “unverified” or excluded. If the app currently contains marketing-like claims without evidence, gate FAILS until removed.
+
+GATE 6 — RESTART / SCALING BEHAVIOR (Even if single instance)
+Assume at some point multiple instances may run. Identify background jobs, scheduled tasks, sync jobs, regime computation, websocket broadcasting, rate limiting, dedupe stores, and automation state that would duplicate or break under horizontal scaling. If multi-instance would cause duplicate job execution or duplicated actions, you may still pass beta-only (single instance) but you cannot pass “enterprise-ready” until distributed/advisory locks or a single-runner mechanism is implemented.
+
+CERTIFICATION OUTPUT FORMAT (required)
+
+A gate-by-gate table: Gate, Pass/Fail, Severity, Evidence (file paths / schema constraints / route names), and “What would break” scenario.
+
+A final verdict: GO (beta only) vs GO (enterprise-ready) vs NO GO.
+
+A prioritized remediation list (top 10) with exact changes required (what file, what constraint, what transaction pattern, what tests).
+
+A “publish mode recommendation”: (a) Insight-only mode (no automation execution) OR (b) Automation allowed only with approvals OR (c) Full auto-execute allowed — and justify based on gates.
+
+STRICT RULES
+
+If you cannot prove a gate passes with evidence, mark it FAIL.
+
+If Gate 1 fails, enterprise automation execution is automatically NO GO.
+
+If Gate 2 fails, public launch is NO GO.
+
+Do not suggest new features. Only correctness, safety, auditability, and enforcement.
+
+Preserve the thesis: the canonical FDR thresholds and regime persistence rules are non-negotiable ground truth. Your job is to ensure implementation integrity, not change the model.
+
+Now perform the certification.
