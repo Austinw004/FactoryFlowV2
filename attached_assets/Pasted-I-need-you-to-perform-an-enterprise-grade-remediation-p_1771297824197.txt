@@ -1,0 +1,53 @@
+I need you to perform an enterprise-grade remediation pass based on the following findings, then re-run the enterprise readiness certification. This is not optional: you must implement fixes, add regression tests, and produce proof artifacts. Do not change the economic thesis (canonical FDR thresholds + persistence logic remain ground truth). Your job is to remove correctness, isolation, and automation safety vulnerabilities.
+
+You must fix these items in this exact priority order and you must show evidence for each fix (file paths, code diffs, and test output). If you cannot fix something safely, you must implement a hard “publish mode downgrade” that disables the risky behavior by default (insight-only or approval-only) and you must prove the downgrade is enforced.
+
+CRITICAL-1: Spend limit bypass (atomicSpendCheck must be truly atomic)
+Current problem: atomicSpendCheck uses two separate SQL statements. This permits (a) crashes between statements consuming spend budget without executing an action, and (b) concurrent bypass of limits.
+Required fix: Replace the spend check + spend update with a single atomic DB operation that is correct under concurrency and crash-safe. Use one of these acceptable patterns:
+A) A single INSERT into a spend ledger table + a constraint/enforced aggregate via transaction + SELECT ... FOR UPDATE on per-company runtime state row, or
+B) A single UPDATE ... SET dailySpendTotal = dailySpendTotal + X WHERE companyId=... AND stateDate=... AND dailySpendTotal + X <= limit RETURNING ... (and treat 0 rows returned as limit exceeded), wrapped inside a transaction that also creates the action record in the same transaction, or
+C) A stored procedure (or transaction block) that (1) locks runtime row, (2) validates, (3) updates spend, (4) inserts action, (5) inserts audit log, all in one transaction.
+The “action creation” must be transactionally coupled to the spend update. If the action insert fails, the spend update must roll back.
+Verification: Add a concurrency test that fires 50 parallel action attempts that would exceed the daily limit if all succeeded; prove only allowed ones succeed and total spend never exceeds the limit. Add a crash-simulation test (throw error between steps) and prove no spend is consumed if action doesn’t exist.
+
+CRITICAL-2: Cross-tenant WebSocket data leak (broadcast must always be tenant-scoped)
+Current problem: Some broadcast calls omit companyId, causing filter logic to short-circuit and send data to all connected clients. This includes platform metrics/benchmarks.
+Required fix: Make tenant scoping impossible to omit. Implement a single broadcast API that requires companyId at the type level (TypeScript) and at runtime (throw if missing). Remove or refactor any call sites that broadcast without companyId. For any truly platform-wide data, do not send it over tenant sockets unless it is explicitly anonymized and permitted; default is “no cross-tenant broadcast.”
+Verification: Add an automated test that connects two simulated clients from different companies, triggers each broadcast path, and asserts no message from company A is received by company B. Prove that missing companyId causes a hard failure (logged + blocked) instead of broadcasting.
+
+CRITICAL-3: In-memory regime tracking breaks multi-instance (previousRegimes Map)
+Current problem: previousRegimes is process-local; multiple instances cause duplicate regime-change alerts/webhooks.
+Required fix: Move regime transition deduplication to the database. Use a persisted “last confirmed regime + last transition timestamp” per company, and guard transition emission with an atomic compare-and-set update (or insert into regimeTransitions with a unique constraint keyed on companyId + fromRegime + toRegime + transitionWindow). Do not rely on in-memory Maps for transition uniqueness.
+Verification: Add a test that simulates two workers calling the regime-change handler concurrently and prove only one transition is emitted + only one notification/webhook is sent.
+
+HIGH-1: Safe mode TOCTOU gap (not transactional with execution)
+Required fix: Safe-mode check must happen inside the same transaction that enqueues/executes the action. If safe mode is enabled at commit time, action must not execute and must not leave partial state.
+Verification: Test that toggling safe-mode during execution cannot allow an action through.
+
+HIGH-2: Guardrail violation counters are non-atomic
+Required fix: Use atomic SQL increment (UPDATE ... SET violationCount = violationCount + 1) within transaction.
+Verification: Concurrency test increments 100 times and lands exactly at +100.
+
+HIGH-3: Webhook stale lock recovery resets timer (extends stuck time)
+Required fix: Ensure stale lock recovery does not “push out” the next attempt endlessly; use monotonic retry/backoff rules, and ensure idempotent release.
+Verification: Add unit tests for lock expiry + retry schedule.
+
+HIGH-4: Job lock release doesn’t verify ownership (lock theft)
+Required fix: Lock release must verify owner token/worker id matches lock owner; use compare-and-delete semantics.
+Verification: Test that worker B cannot release worker A’s lock.
+
+MEDIUM items:
+Add a circuit breaker for external APIs (FRED/news/commodities), add rate limiting on automation mutation endpoints, prevent benchmark broadcasts from ever leaving tenant boundary, add scheduled retention for structuredEventLog, and remove/guard process-local caches that become inconsistent under scaling (or explicitly gate to single-instance mode). These can be implemented after CRITICAL/HIGH, but you must not ship “enterprise-ready” without them documented and mitigated.
+
+DELIVERABLES (non-negotiable)
+
+A patch summary listing exactly what files changed and why.
+
+Proof artifacts: tests added, how to run them, and the test outputs.
+
+A re-run of the enterprise readiness certification decision tree with updated gate-by-gate PASS/FAIL and a final verdict.
+
+A “publish configuration” that defaults to the safest mode necessary (insight-only or approval-only) until all enterprise gates pass.
+
+Proceed now: implement fixes, add tests, run tests, and output the deliverables.
