@@ -661,11 +661,11 @@ export interface IStorage {
   
   // AI Automation Rules
   getAiAutomationRules(companyId: string): Promise<AiAutomationRule[]>;
-  getAiAutomationRule(id: string): Promise<AiAutomationRule | undefined>;
-  getAiAutomationRulesByAgent(agentId: string): Promise<AiAutomationRule[]>;
+  getAiAutomationRule(id: string, companyId: string): Promise<AiAutomationRule | undefined>;
+  getAiAutomationRulesByAgent(agentId: string, companyId: string): Promise<AiAutomationRule[]>;
   createAiAutomationRule(rule: InsertAiAutomationRule): Promise<AiAutomationRule>;
-  updateAiAutomationRule(id: string, rule: Partial<InsertAiAutomationRule>): Promise<AiAutomationRule | undefined>;
-  deleteAiAutomationRule(id: string): Promise<void>;
+  updateAiAutomationRule(id: string, companyId: string, rule: Partial<InsertAiAutomationRule>): Promise<AiAutomationRule | undefined>;
+  deleteAiAutomationRule(id: string, companyId: string): Promise<void>;
   
   // Industry Data Consortium
   getConsortiumContributions(filters?: { industrySector?: string; region?: string; regime?: string }): Promise<ConsortiumContribution[]>;
@@ -3083,13 +3083,17 @@ export class DbStorage implements IStorage {
     return await db.select().from(aiAutomationRules).where(eq(aiAutomationRules.companyId, companyId));
   }
 
-  async getAiAutomationRule(id: string): Promise<AiAutomationRule | undefined> {
-    const [rule] = await db.select().from(aiAutomationRules).where(eq(aiAutomationRules.id, id));
+  async getAiAutomationRule(id: string, companyId: string): Promise<AiAutomationRule | undefined> {
+    const [rule] = await db.select().from(aiAutomationRules).where(
+      and(eq(aiAutomationRules.id, id), eq(aiAutomationRules.companyId, companyId))
+    );
     return rule;
   }
 
-  async getAiAutomationRulesByAgent(agentId: string): Promise<AiAutomationRule[]> {
-    return await db.select().from(aiAutomationRules).where(eq(aiAutomationRules.agentId, agentId));
+  async getAiAutomationRulesByAgent(agentId: string, companyId: string): Promise<AiAutomationRule[]> {
+    return await db.select().from(aiAutomationRules).where(
+      and(eq(aiAutomationRules.agentId, agentId), eq(aiAutomationRules.companyId, companyId))
+    );
   }
 
   async createAiAutomationRule(rule: InsertAiAutomationRule): Promise<AiAutomationRule> {
@@ -3097,16 +3101,18 @@ export class DbStorage implements IStorage {
     return created;
   }
 
-  async updateAiAutomationRule(id: string, ruleUpdate: Partial<InsertAiAutomationRule>): Promise<AiAutomationRule | undefined> {
+  async updateAiAutomationRule(id: string, companyId: string, ruleUpdate: Partial<InsertAiAutomationRule>): Promise<AiAutomationRule | undefined> {
     const [rule] = await db.update(aiAutomationRules)
       .set({ ...ruleUpdate, updatedAt: new Date() })
-      .where(eq(aiAutomationRules.id, id))
+      .where(and(eq(aiAutomationRules.id, id), eq(aiAutomationRules.companyId, companyId)))
       .returning();
     return rule;
   }
 
-  async deleteAiAutomationRule(id: string): Promise<void> {
-    await db.delete(aiAutomationRules).where(eq(aiAutomationRules.id, id));
+  async deleteAiAutomationRule(id: string, companyId: string): Promise<void> {
+    await db.delete(aiAutomationRules).where(
+      and(eq(aiAutomationRules.id, id), eq(aiAutomationRules.companyId, companyId))
+    );
   }
 
   // Industry Data Consortium

@@ -7548,7 +7548,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/ai-automation-rules/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const rule = await storage.getAiAutomationRule(req.params.id);
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+      const rule = await storage.getAiAutomationRule(req.params.id, user.companyId);
       if (!rule) {
         return res.status(404).json({ error: "Automation rule not found" });
       }
@@ -7560,7 +7564,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/ai-automation-rules/agent/:agentId", isAuthenticated, async (req: any, res) => {
     try {
-      const rules = await storage.getAiAutomationRulesByAgent(req.params.agentId);
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+      const rules = await storage.getAiAutomationRulesByAgent(req.params.agentId, user.companyId);
       res.json(rules);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -7586,7 +7594,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/ai-automation-rules/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const rule = await storage.updateAiAutomationRule(req.params.id, req.body);
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+      const rule = await storage.updateAiAutomationRule(req.params.id, user.companyId, req.body);
       if (!rule) {
         return res.status(404).json({ error: "Automation rule not found" });
       }
@@ -7598,7 +7610,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/ai-automation-rules/:id", isAuthenticated, async (req: any, res) => {
     try {
-      await storage.deleteAiAutomationRule(req.params.id);
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+      await storage.deleteAiAutomationRule(req.params.id, user.companyId);
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ error: error.message });

@@ -1,0 +1,57 @@
+I need you to STOP summarizing and instead produce HARD EVIDENCE that the three CRITICAL vulnerabilities are fixed. Do not claim “done” unless you can show diffs and real command outputs. Perform the following steps in order and print the results inline.
+
+Git proof
+
+Run: git status
+
+Run: git log -1 --name-status
+
+Run: git diff --stat HEAD~1..HEAD
+
+If there are zero changed files, explain why and identify where your fixes actually exist (or admit they do not exist).
+
+CRITICAL-1 (Cross-tenant rule access / IDOR) proof
+
+Locate the exact routes for GET/PATCH/DELETE automation rule by ID (show file path + line numbers).
+
+Show the before/after logic: the DB query MUST include companyId scoping (id AND companyId) OR a strict ownership check after fetch.
+
+Print the exact SQL/Drizzle query used.
+
+Provide a minimal script (node/ts or curl) that creates two companies (or uses two seeded tenants), creates two rules, then attempts cross-tenant GET/PATCH/DELETE and shows 404 + no mutation.
+
+Run the script and paste the output.
+
+CRITICAL-2 (Spend limit bypass / atomicSpendCheck) proof
+
+Find atomicSpendCheck (or the spend gate function) and show the full implementation with file path + line numbers.
+
+Confirm it uses ONE transactional operation (single conditional UPDATE or SELECT FOR UPDATE + update) that cannot be bypassed under concurrency.
+
+Provide a concurrency test script that fires at least 50 parallel “execute” attempts with amounts that would exceed the daily limit. Show that total spend in DB never exceeds limit.
+
+Run the script and paste output, including the final DB values from automation_runtime_state.
+
+CRITICAL-3 (AI assistant execute bypass + fabricated results) proof
+
+Locate the AI assistant execute endpoint / handler and show the code path.
+
+Prove it cannot execute directly: it must create an ai_actions record and go through the same guardrails + safe mode + spend gate as any other action.
+
+Prove the response is truthful: no “PO created” unless a real purchase_orders row exists and IDs are returned.
+
+Provide and run a test that attempts assistant execution under (a) safe mode enabled, (b) spend limit exceeded, and (c) blocked supplier guardrail. Output must show “blocked” or “drafted/pending approval,” and zero PO rows created.
+
+WebSocket tenant isolation proof
+
+Grep for all broadcasts and list every call site: broadcast, send, wss, or your wrapper function.
+
+Confirm every broadcast is company-scoped and cannot short-circuit to “send to all.”
+
+Run a manual test: connect two sessions from different companies and show that platform metrics/benchmarks do not leak.
+
+Final output requirements
+
+Print a table: Vulnerability -> PASS/FAIL -> Evidence (file/lines + test output).
+
+If anything fails, list the exact next code changes needed. No hand-waving.
