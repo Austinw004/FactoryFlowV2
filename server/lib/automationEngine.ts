@@ -861,9 +861,26 @@ export class AutomationEngine {
         })
         .where(eq(aiActions.id, action.id));
 
-      const cost = action.actionPayload?.estimatedCost;
-      if (cost && cost > 0 && !action._spendReserved) {
-        await this.incrementDailySpend(action.companyId, cost);
+      // Spend should have been reserved atomically BEFORE execution via atomicSpendCheck.
+      // If _spendReserved is false and there's a cost, log a warning but don't double-count.
+      if (action._spendReserved) {
+        // Spend was already reserved atomically, nothing to do
+      } else {
+        const cost = action.actionPayload?.estimatedCost;
+        if (cost && cost > 0) {
+          await db.insert(structuredEventLog).values({
+            companyId: action.companyId,
+            level: "warn",
+            category: "automation",
+            event: "spend_not_reserved_before_execution",
+            details: {
+              message: `Action executed without atomically reserved spend. Cost: ${cost}`,
+              actionId: action.id,
+              actionType: action.actionType,
+              cost,
+            },
+          });
+        }
       }
 
       return { success: true, result: executionResult };
@@ -934,9 +951,9 @@ export class AutomationEngine {
   }
 
   /**
-   * Atomic spend reservation: upsert today's row, atomically increment spend,
-   * then check if the new total exceeds the limit. If it does, rollback the increment.
-   * Returns { allowed, currentSpend, newSpend }
+   * Atomic spend reservation: single UPDATE statement with conditional check.
+   * First ensures row exists (idempotent upsert with zero spend), then atomically
+   * increments spend ONLY if new total <= limit. Returns { allowed, currentSpend, newSpend }
    */
   async atomicSpendCheck(
     companyId: string,
@@ -945,32 +962,39 @@ export class AutomationEngine {
   ): Promise<{ allowed: boolean; currentSpend: number; newSpend: number }> {
     const today = new Date().toISOString().slice(0, 10);
 
+    // First ensure the row exists (idempotent upsert with zero spend)
+    await db.execute(sql`
+      INSERT INTO automation_runtime_state (id, company_id, state_date, daily_spend_total, daily_action_count, last_updated_at)
+      VALUES (gen_random_uuid(), ${companyId}, ${today}, 0, 0, NOW())
+      ON CONFLICT (company_id, state_date) DO NOTHING
+    `);
+
+    // Single atomic conditional update: only increment if new total <= limit
     const result = await db.execute(sql`
-      INSERT INTO automation_runtime_state (company_id, state_date, daily_spend_total, daily_action_count)
-      VALUES (${companyId}, ${today}, ${proposedAmount}, 1)
-      ON CONFLICT (company_id, state_date)
-      DO UPDATE SET
-        daily_spend_total = automation_runtime_state.daily_spend_total + ${proposedAmount},
-        daily_action_count = automation_runtime_state.daily_action_count + 1,
-        last_updated_at = NOW()
+      UPDATE automation_runtime_state
+      SET daily_spend_total = daily_spend_total + ${proposedAmount},
+          daily_action_count = daily_action_count + 1,
+          last_updated_at = NOW()
+      WHERE company_id = ${companyId}
+        AND state_date = ${today}
+        AND daily_spend_total + ${proposedAmount} <= ${spendLimit}
       RETURNING daily_spend_total, daily_action_count
     `);
 
     const rows = result.rows || result;
-    const newSpend = Number(rows[0]?.daily_spend_total || proposedAmount);
-    const currentSpend = newSpend - proposedAmount;
-
-    if (newSpend > spendLimit) {
-      await db.execute(sql`
-        UPDATE automation_runtime_state
-        SET daily_spend_total = daily_spend_total - ${proposedAmount},
-            daily_action_count = daily_action_count - 1,
-            last_updated_at = NOW()
+    
+    if (rows.length === 0) {
+      // Limit would be exceeded — no spend was reserved
+      const currentRows = await db.execute(sql`
+        SELECT daily_spend_total FROM automation_runtime_state
         WHERE company_id = ${companyId} AND state_date = ${today}
       `);
+      const currentSpend = Number((currentRows.rows || currentRows)[0]?.daily_spend_total || 0);
       return { allowed: false, currentSpend, newSpend: currentSpend };
     }
 
+    const newSpend = Number(rows[0].daily_spend_total);
+    const currentSpend = newSpend - proposedAmount;
     return { allowed: true, currentSpend, newSpend };
   }
 
@@ -1182,14 +1206,13 @@ export class AutomationEngine {
             if (spendCheck.allowed) {
               action._spendReserved = true;
             } else {
-              await db
-                .update(aiGuardrails)
-                .set({
-                  violationCount: (guard.violationCount || 0) + 1,
-                  lastViolationAt: now,
-                  updatedAt: now,
-                })
-                .where(eq(aiGuardrails.id, guard.id));
+              await db.execute(sql`
+                UPDATE ai_guardrails
+                SET violation_count = COALESCE(violation_count, 0) + 1,
+                    last_violation_at = ${now},
+                    updated_at = ${now}
+                WHERE id = ${guard.id}
+              `);
 
               violations.push({
                 guardrailId: guard.id,
@@ -1221,14 +1244,13 @@ export class AutomationEngine {
             }
 
             if (!dayAllowed || !hourAllowed) {
-              await db
-                .update(aiGuardrails)
-                .set({
-                  violationCount: (guard.violationCount || 0) + 1,
-                  lastViolationAt: now,
-                  updatedAt: now,
-                })
-                .where(eq(aiGuardrails.id, guard.id));
+              await db.execute(sql`
+                UPDATE ai_guardrails
+                SET violation_count = COALESCE(violation_count, 0) + 1,
+                    last_violation_at = ${now},
+                    updated_at = ${now}
+                WHERE id = ${guard.id}
+              `);
 
               violations.push({
                 guardrailId: guard.id,
@@ -1246,14 +1268,13 @@ export class AutomationEngine {
           const cautionRegimes = conditions?.cautionRegimes || [];
 
           if (regime === "UNKNOWN" || regime === "") {
-            await db
-              .update(aiGuardrails)
-              .set({
-                violationCount: (guard.violationCount || 0) + 1,
-                lastViolationAt: now,
-                updatedAt: now,
-              })
-              .where(eq(aiGuardrails.id, guard.id));
+            await db.execute(sql`
+              UPDATE ai_guardrails
+              SET violation_count = COALESCE(violation_count, 0) + 1,
+                  last_violation_at = ${now},
+                  updated_at = ${now}
+              WHERE id = ${guard.id}
+            `);
 
             violations.push({
               guardrailId: guard.id,
@@ -1262,14 +1283,13 @@ export class AutomationEngine {
               enforcement: "block",
             });
           } else if (cautionRegimes.includes(regime)) {
-            await db
-              .update(aiGuardrails)
-              .set({
-                violationCount: (guard.violationCount || 0) + 1,
-                lastViolationAt: now,
-                updatedAt: now,
-              })
-              .where(eq(aiGuardrails.id, guard.id));
+            await db.execute(sql`
+              UPDATE ai_guardrails
+              SET violation_count = COALESCE(violation_count, 0) + 1,
+                  last_violation_at = ${now},
+                  updated_at = ${now}
+              WHERE id = ${guard.id}
+            `);
 
             violations.push({
               guardrailId: guard.id,
@@ -1286,14 +1306,13 @@ export class AutomationEngine {
             const minRating = conditions?.minRating || 0;
             const supplierRating = payload.supplierRating;
             if (conditions?.onlyApproved && !payload.supplierApproved) {
-              await db
-                .update(aiGuardrails)
-                .set({
-                  violationCount: (guard.violationCount || 0) + 1,
-                  lastViolationAt: now,
-                  updatedAt: now,
-                })
-                .where(eq(aiGuardrails.id, guard.id));
+              await db.execute(sql`
+                UPDATE ai_guardrails
+                SET violation_count = COALESCE(violation_count, 0) + 1,
+                    last_violation_at = ${now},
+                    updated_at = ${now}
+                WHERE id = ${guard.id}
+              `);
 
               violations.push({
                 guardrailId: guard.id,
@@ -1302,14 +1321,13 @@ export class AutomationEngine {
                 enforcement: guard.onViolation || "block",
               });
             } else if (supplierRating !== undefined && supplierRating < minRating) {
-              await db
-                .update(aiGuardrails)
-                .set({
-                  violationCount: (guard.violationCount || 0) + 1,
-                  lastViolationAt: now,
-                  updatedAt: now,
-                })
-                .where(eq(aiGuardrails.id, guard.id));
+              await db.execute(sql`
+                UPDATE ai_guardrails
+                SET violation_count = COALESCE(violation_count, 0) + 1,
+                    last_violation_at = ${now},
+                    updated_at = ${now}
+                WHERE id = ${guard.id}
+              `);
 
               violations.push({
                 guardrailId: guard.id,
@@ -1565,7 +1583,23 @@ export class AutomationEngine {
     }
   }
 
-  async releaseJobLock(jobName: string, companyId: string): Promise<boolean> {
+  async releaseJobLock(jobName: string, companyId: string, workerId?: string): Promise<boolean> {
+    if (workerId) {
+      const deleted = await db
+        .delete(backgroundJobLocks)
+        .where(
+          and(
+            eq(backgroundJobLocks.jobName, jobName),
+            eq(backgroundJobLocks.companyId, companyId),
+            eq(backgroundJobLocks.lockedBy, workerId)
+          )
+        )
+        .returning();
+      if (deleted.length === 0) {
+        console.warn(`[JobLock] Release denied: worker ${workerId} does not own lock ${jobName}/${companyId}`);
+      }
+      return deleted.length > 0;
+    }
     const deleted = await db
       .delete(backgroundJobLocks)
       .where(

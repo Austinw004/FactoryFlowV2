@@ -29,7 +29,6 @@ interface BackgroundJobConfig {
 
 const jobs: Map<string, NodeJS.Timeout> = new Map();
 const webhookService = new WebhookService(storage);
-const previousRegimes: Map<string, string> = new Map();
 
 type EconomicRegime = Regime;
 
@@ -134,32 +133,41 @@ async function applyPersistenceEnforcement(
     notes: transitionNotes,
   };
   
-  // Update state to new confirmed regime, storing current as previous
-  await storage.upsertRegimeState({
+  // Atomic CAS: only update regime state if confirmedRegime still matches what we read.
+  // This prevents duplicate transitions when two workers race on the same company.
+  const casResult = await storage.casRegimeTransition(
     companyId,
-    confirmedRegime: hysteresisResult,
-    previousRegime: currentConfirmed, // Track for future reversion penalty
-    tentativeRegime: null,
-    lastConfirmedAt: new Date(),
-    transitionStartedAt: null,
-    confirmationCount: 0,
-    lastFdr: rawFdr,
-  });
-  
-  // Log the transition
-  await storage.createRegimeTransition({
-    companyId,
-    previousRegime: currentConfirmed,
-    newRegime: hysteresisResult,
-    fdr: rawFdr,
-    triggeredAt: new Date(),
-    hysteresisApplied: 1,
-    durationFilterApplied: 1,
-    confirmationRequired: 1,
-    confirmationCount: newConfirmationCount,
-    daysInPreviousRegime: daysSinceLastConfirm,
-    notes: transitionNotes,
-  });
+    currentConfirmed, // expectedCurrentRegime
+    {
+      companyId,
+      confirmedRegime: hysteresisResult,
+      previousRegime: currentConfirmed,
+      tentativeRegime: null,
+      lastConfirmedAt: new Date(),
+      transitionStartedAt: null,
+      confirmationCount: 0,
+      lastFdr: rawFdr,
+    },
+    {
+      companyId,
+      previousRegime: currentConfirmed,
+      newRegime: hysteresisResult,
+      fdr: rawFdr,
+      triggeredAt: new Date(),
+      hysteresisApplied: 1,
+      durationFilterApplied: 1,
+      confirmationRequired: 1,
+      confirmationCount: newConfirmationCount,
+      daysInPreviousRegime: daysSinceLastConfirm,
+      notes: transitionNotes,
+    }
+  );
+
+  if (!casResult) {
+    // Another worker already transitioned this company — no-op
+    console.log(`[Regime] CAS failed for company ${companyId}: regime already transitioned by another worker`);
+    return { confirmedRegime: currentConfirmed, transitionOccurred: false };
+  }
   
   return { confirmedRegime: hysteresisResult, transitionOccurred: true, transitionDetails };
 }
@@ -272,7 +280,6 @@ export async function updateExternalEconomicData() {
               },
             });
           }
-          previousRegimes.set(companyId, confirmedRegime);
           
           // Invalidate regime-aware cache to ensure fresh data is fetched
           globalCache.invalidate(`economicData:regime:${companyId}`);
@@ -297,19 +304,6 @@ export async function updateExternalEconomicData() {
           });
         }
 
-        broadcastUpdate({
-          type: 'database_update',
-          entity: 'external_economic_data',
-          action: 'update',
-          timestamp: new Date().toISOString(),
-          data: { 
-            fdr: clampedFdr.toFixed(2), 
-            regime,
-            companiesUpdated: companies.length,
-            dataSource: 'FRED API',
-            calculation: `S&P Growth: ${(sp500Growth * 100).toFixed(2)}% / Real Growth: ${(realGrowth * 100).toFixed(2)}%`
-          },
-        });
       }
       
       console.log(`[Background] ✅ Updated economic data from FRED: FDR=${clampedFdr.toFixed(2)}, Regime=${regime}, S&P Growth=${(sp500Growth * 100).toFixed(2)}%, Real Growth=${(realGrowth * 100).toFixed(2)}%, Companies=${companies.length}`);
@@ -322,18 +316,6 @@ export async function updateExternalEconomicData() {
     // Instead, keep the last known good values and log the failure
     console.error('[Background] Failed to fetch external economic data - keeping last known values:', error.code || error.message);
     
-    // Broadcast a status update so the UI can indicate data may be stale
-    broadcastUpdate({
-      type: 'database_update',
-      entity: 'external_economic_data',
-      action: 'update',
-      timestamp: new Date().toISOString(),
-      data: { 
-        dataStatus: 'unavailable',
-        reason: `API error: ${error.code || error.message}`,
-        message: 'Economic data temporarily unavailable - using last known values'
-      },
-    });
   }
 }
 
@@ -477,15 +459,6 @@ export async function updateCommodityPrices() {
       }
     }
 
-    if (totalUpdates > 0) {
-      broadcastUpdate({
-        type: 'database_update',
-        entity: 'commodity_prices',
-        action: 'update',
-        timestamp: new Date().toISOString(),
-        data: { totalUpdates },
-      });
-    }
   } catch (error) {
     console.error('[Background] Failed to update commodity prices:', error);
   }
@@ -541,19 +514,20 @@ export async function regenerateMLPredictions() {
       }
       
       if (materials.length > 0) {
+        if (totalPredictions > 0) {
+          broadcastUpdate({
+            type: 'database_update',
+            entity: 'ml_predictions',
+            action: 'create',
+            timestamp: new Date().toISOString(),
+            companyId,
+            data: { totalPredictions },
+          });
+        }
         console.log(`[Background] Regenerated ML predictions for company ${companyId.substring(0, 8)}`);
       }
     }
 
-    if (totalPredictions > 0) {
-      broadcastUpdate({
-        type: 'database_update',
-        entity: 'ml_predictions',
-        action: 'create',
-        timestamp: new Date().toISOString(),
-        data: { totalPredictions },
-      });
-    }
   } catch (error) {
     console.error('[Background] Failed to regenerate ML predictions:', error);
   }
@@ -595,19 +569,20 @@ export async function updateSupplyChainRisk() {
       }
       
       if (batches.length > 0) {
+        if (totalEvents > 0) {
+          broadcastUpdate({
+            type: 'database_update',
+            entity: 'supply_chain_risk',
+            action: 'update',
+            timestamp: new Date().toISOString(),
+            companyId,
+            data: { totalEvents },
+          });
+        }
         console.log(`[Background] Updated supply chain events for company ${companyId.substring(0, 8)}`);
       }
     }
 
-    if (totalEvents > 0) {
-      broadcastUpdate({
-        type: 'database_update',
-        entity: 'supply_chain_risk',
-        action: 'update',
-        timestamp: new Date().toISOString(),
-        data: { totalEvents },
-      });
-    }
   } catch (error) {
     console.error('[Background] Failed to update supply chain risk:', error);
   }
@@ -648,19 +623,20 @@ export async function updateWorkforceMetrics() {
       }
       
       if (employees.length > 0) {
+        if (totalAssignments > 0) {
+          broadcastUpdate({
+            type: 'database_update',
+            entity: 'workforce_metrics',
+            action: 'update',
+            timestamp: new Date().toISOString(),
+            companyId,
+            data: { totalAssignments },
+          });
+        }
         console.log(`[Background] Updated workforce metrics for company ${companyId.substring(0, 8)}`);
       }
     }
 
-    if (totalAssignments > 0) {
-      broadcastUpdate({
-        type: 'database_update',
-        entity: 'workforce_metrics',
-        action: 'update',
-        timestamp: new Date().toISOString(),
-        data: { totalAssignments },
-      });
-    }
   } catch (error) {
     console.error('[Background] Failed to update workforce metrics:', error);
   }
@@ -700,19 +676,20 @@ export async function updateProductionKPIs() {
       }
       
       if (runs.length > 0) {
+        if (totalEvents > 0) {
+          broadcastUpdate({
+            type: 'database_update',
+            entity: 'production_kpis',
+            action: 'update',
+            timestamp: new Date().toISOString(),
+            companyId,
+            data: { totalEvents },
+          });
+        }
         console.log(`[Background] Updated production KPIs for company ${companyId.substring(0, 8)}`);
       }
     }
 
-    if (totalEvents > 0) {
-      broadcastUpdate({
-        type: 'database_update',
-        entity: 'production_kpis',
-        action: 'update',
-        timestamp: new Date().toISOString(),
-        data: { totalEvents },
-      });
-    }
   } catch (error) {
     console.error('[Background] Failed to update production KPIs:', error);
   }
@@ -1062,14 +1039,6 @@ async function aggregateBenchmarkDataJob() {
     
     if (results.aggregates > 0) {
       console.log(`[Benchmark Aggregation] Processed ${results.processed} submissions, created ${results.aggregates} industry aggregates`);
-      
-      broadcastUpdate({
-        type: 'database_update',
-        entity: 'benchmark_aggregate',
-        action: 'create',
-        timestamp: new Date().toISOString(),
-        data: results,
-      });
     }
   } catch (error) {
     console.error('[Benchmark Aggregation] Failed to aggregate benchmark data:', error);
@@ -1083,9 +1052,6 @@ async function automationQueueWorkerJob() {
 
     for (const companyId of companyIds) {
       try {
-        const safeMode = await engine.getSafeMode(companyId);
-        const isSafeModeEnabled = safeMode && safeMode.isEnabled;
-
         const claimed = await engine.claimQueuedActions(companyId, 5);
         for (const item of claimed) {
           try {
@@ -1094,6 +1060,9 @@ async function automationQueueWorkerJob() {
               await engine.markQueueOutcome(item.id, companyId, "failed", "Action not found");
               continue;
             }
+
+            const currentSafeMode = await engine.getSafeMode(companyId);
+            const isSafeModeEnabled = currentSafeMode && (currentSafeMode.safeModeEnabled === 1 || currentSafeMode.isEnabled);
 
             if (isSafeModeEnabled) {
               const highStakesTypes = ["create_po", "pause_orders", "adjust_safety_stock", "rebalance_inventory"];
@@ -1155,6 +1124,23 @@ async function automationMaintenanceJob() {
   }
 }
 
+async function dataRetentionJob() {
+  try {
+    const engine = AutomationEngine.getInstance();
+    const companyIds = await storage.getAllCompanyIds();
+    for (const companyId of companyIds) {
+      try {
+        await engine.runDataRetention(companyId, 90);
+      } catch (err) {
+        console.error(`[Data Retention] Failed for company ${companyId}:`, err);
+      }
+    }
+    console.log(`[Data Retention] Completed for ${companyIds.length} companies`);
+  } catch (error) {
+    console.error('[Data Retention] Failed:', error);
+  }
+}
+
 const jobConfigs: BackgroundJobConfig[] = [
   { name: 'Economic Data Updates', intervalMs: 5 * 60 * 1000, enabled: true },
   { name: 'Sensor Readings Generation', intervalMs: 30 * 1000, enabled: true },
@@ -1170,6 +1156,7 @@ const jobConfigs: BackgroundJobConfig[] = [
   { name: 'Benchmark Data Aggregation', intervalMs: 24 * 60 * 60 * 1000, enabled: true },
   { name: 'Automation Maintenance', intervalMs: 60 * 60 * 1000, enabled: true },
   { name: 'Automation Queue Worker', intervalMs: 30 * 1000, enabled: true },
+  { name: 'Data Retention', intervalMs: 24 * 60 * 60 * 1000, enabled: true },
 ];
 
 export function startBackgroundJobs() {
@@ -1190,6 +1177,7 @@ export function startBackgroundJobs() {
     aggregateBenchmarkDataJob,
     automationMaintenanceJob,
     automationQueueWorkerJob,
+    dataRetentionJob,
   ];
   
   jobConfigs.forEach((config, index) => {

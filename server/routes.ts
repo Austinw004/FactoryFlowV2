@@ -14709,7 +14709,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/agentic/actions/:actionId/approve", isAuthenticated, async (req: any, res) => {
+  app.post("/api/agentic/actions/:actionId/approve", isAuthenticated, rateLimiters.api, async (req: any, res) => {
     try {
       const { actionId } = req.params;
       const userId = req.user.claims.sub;
@@ -14958,7 +14958,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/agentic/assistant/execute", isAuthenticated, async (req: any, res) => {
+  app.post("/api/agentic/assistant/execute", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    if (process.env.ENABLE_ASSISTANT_EXECUTE !== "true") {
+      return res.status(503).json({ 
+        error: "Assistant action execution is disabled in the current publish mode (insight-only). Enable approval-only automation first.",
+        publishMode: "insight-only"
+      });
+    }
     try {
       const { actionType, parameters } = req.body;
       const authUserId = req.user.claims.sub;
@@ -15025,7 +15031,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/agentic/safe-mode", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/agentic/safe-mode", isAuthenticated, rateLimiters.api, async (req: any, res) => {
     try {
       const authUserId = req.user.claims.sub;
       const user = await storage.getUserByAuthId(authUserId);

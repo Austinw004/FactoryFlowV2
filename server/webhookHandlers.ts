@@ -165,11 +165,28 @@ export class WebhookHandlers {
         return false;
       }
 
+      const MAX_STALE_TAKEOVERS = 3;
+      const takeoverCount = (row as any).error_message?.match(/Stale lock takeover/g)?.length || 0;
+      if (takeoverCount >= MAX_STALE_TAKEOVERS) {
+        await db.execute(
+          sql`UPDATE stripe_processed_events
+              SET status = 'failed',
+                  error_message = ${'Permanent failure: exceeded max stale lock takeovers (' + MAX_STALE_TAKEOVERS + ')'},
+                  processed_at = NOW()
+              WHERE event_id = ${eventId} AND status = 'processing'
+              RETURNING event_id`
+        );
+        logger.error("webhook", "max_stale_takeovers_exceeded", {
+          details: { eventId, eventType, takeoverCount, maxTakeovers: MAX_STALE_TAKEOVERS },
+        });
+        return false;
+      }
+
       const takeoverResult = await db.execute(
         sql`UPDATE stripe_processed_events 
             SET status = 'processing', 
                 created_at = NOW(),
-                error_message = ${'Stale lock takeover after ' + Math.round(ageMs / 1000) + 's'},
+                error_message = COALESCE(error_message, '') || ${'\nStale lock takeover #' + (takeoverCount + 1) + ' after ' + Math.round(ageMs / 1000) + 's'},
                 processed_at = NULL
             WHERE event_id = ${eventId} AND status = 'processing'
             RETURNING event_id`
@@ -181,7 +198,7 @@ export class WebhookHandlers {
         return false;
       }
       logger.webhook("stale_lock_takeover", {
-        details: { eventId, eventType, ageMs, thresholdMs },
+        details: { eventId, eventType, ageMs, thresholdMs, takeoverNumber: takeoverCount + 1 },
       });
       return true;
     }

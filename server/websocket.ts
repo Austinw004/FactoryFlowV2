@@ -7,7 +7,6 @@ import { storage } from './storage';
 
 let wss: WebSocketServer | null = null;
 
-// Store clients with their associated company IDs for tenant isolation
 interface AuthenticatedClient {
   socket: WebSocket;
   companyId?: string;
@@ -20,7 +19,7 @@ export type BroadcastMessage = {
   entity: string;
   action: 'create' | 'update' | 'delete';
   timestamp: string;
-  companyId?: string;
+  companyId: string;
   data?: any;
 };
 
@@ -33,13 +32,11 @@ export function setupWebSocket(server: Server) {
   wss.on('connection', async (ws: WebSocket, req: IncomingMessage) => {
     console.log('[WebSocket] Client attempting connection');
     
-    // SERVER-SIDE AUTHENTICATION: Extract and validate user from session
     let authenticatedCompanyId: string | undefined;
     
     try {
-      // Extract session cookie from upgrade request
       const cookies = req.headers.cookie ? parseCookie(req.headers.cookie) : {};
-      const sessionCookie = cookies['connect.sid']; // Default express-session cookie name
+      const sessionCookie = cookies['connect.sid'];
       
       if (!sessionCookie) {
         console.warn('[WebSocket] No session cookie found, closing connection');
@@ -47,15 +44,12 @@ export function setupWebSocket(server: Server) {
         return;
       }
       
-      // CRITICAL SECURITY: Verify signed cookie signature before trusting session ID
-      // express-session signs cookies as: s:SESSION_ID.SIGNATURE
       if (!sessionCookie.startsWith('s:')) {
         console.warn('[WebSocket] Invalid session cookie format, closing connection');
         ws.close(1008, 'Invalid session cookie');
         return;
       }
       
-      // Remove 's:' prefix and verify signature using SESSION_SECRET
       const signedValue = sessionCookie.slice(2);
       const sessionSecret = process.env.SESSION_SECRET;
       
@@ -65,7 +59,6 @@ export function setupWebSocket(server: Server) {
         return;
       }
       
-      // Unsign the cookie - returns false if signature is invalid
       const sessionId = unsign(signedValue, sessionSecret);
       
       if (sessionId === false) {
@@ -74,8 +67,6 @@ export function setupWebSocket(server: Server) {
         return;
       }
       
-      // Get session from database to extract user info
-      // Note: We need to query the sessions table directly since express-session stores session data there
       const sessionData = await storage.getSessionById(sessionId);
       
       if (!sessionData || !sessionData.passport?.user?.claims?.sub) {
@@ -84,7 +75,6 @@ export function setupWebSocket(server: Server) {
         return;
       }
       
-      // Get authenticated user and their company
       const userId = sessionData.passport.user.claims.sub;
       const user = await storage.getUser(userId);
       
@@ -103,7 +93,6 @@ export function setupWebSocket(server: Server) {
       return;
     }
     
-    // Create authenticated client with SERVER-VALIDATED companyId
     const client: AuthenticatedClient = {
       socket: ws,
       companyId: authenticatedCompanyId,
@@ -146,6 +135,11 @@ export function broadcastUpdate(message: BroadcastMessage) {
     return;
   }
 
+  if (!message.companyId) {
+    console.error(`[WebSocket] BLOCKED: broadcastUpdate called without companyId for entity=${message.entity}. This is a tenant isolation violation.`);
+    return;
+  }
+
   const payload = JSON.stringify(message);
   
   let sentCount = 0;
@@ -154,16 +148,14 @@ export function broadcastUpdate(message: BroadcastMessage) {
   let unauthenticatedCount = 0;
   
   clients.forEach((client) => {
-    // CRITICAL SECURITY: Skip unauthenticated clients entirely
     if (!client.companyId) {
       unauthenticatedCount++;
-      return; // Never send company-scoped data to unauthenticated clients
+      return;
     }
     
-    // TENANT ISOLATION: Only send messages to clients in the same company
-    if (message.companyId && message.companyId !== client.companyId) {
+    if (message.companyId !== client.companyId) {
       filteredCount++;
-      return; // Skip clients from other companies
+      return;
     }
     
     if (client.socket.readyState === WebSocket.OPEN) {

@@ -6,6 +6,43 @@
 
 import axios from "axios";
 
+class CircuitBreaker {
+  private failures = 0;
+  private lastFailure = 0;
+  private readonly threshold: number;
+  private readonly resetMs: number;
+
+  constructor(threshold = 5, resetMs = 300000) {
+    this.threshold = threshold;
+    this.resetMs = resetMs;
+  }
+
+  isOpen(): boolean {
+    if (this.failures < this.threshold) return false;
+    if (Date.now() - this.lastFailure > this.resetMs) {
+      this.failures = 0;
+      return false;
+    }
+    return true;
+  }
+
+  recordFailure(): void {
+    this.failures++;
+    this.lastFailure = Date.now();
+  }
+
+  recordSuccess(): void {
+    this.failures = 0;
+  }
+}
+
+const fredBreaker = new CircuitBreaker(5, 300000);
+const alphaVantageBreaker = new CircuitBreaker(5, 300000);
+const worldBankBreaker = new CircuitBreaker(5, 300000);
+const dbnomicsBreaker = new CircuitBreaker(5, 300000);
+const tradingEconomicsBreaker = new CircuitBreaker(5, 300000);
+const newsApiBreaker = new CircuitBreaker(5, 300000);
+
 // ========================================
 // ECONOMIC INDICATORS APIs
 // ========================================
@@ -15,6 +52,10 @@ import axios from "axios";
  * 800K+ economic time series - FREE, UNLIMITED
  */
 export async function fetchFREDData(seriesId: string, apiKey?: string): Promise<any> {
+  if (fredBreaker.isOpen()) {
+    console.error(`FRED API circuit breaker open, skipping ${seriesId}`);
+    return null;
+  }
   const key = apiKey || process.env.FRED_API_KEY || "demo_key";
   try {
     const response = await axios.get(
@@ -30,8 +71,10 @@ export async function fetchFREDData(seriesId: string, apiKey?: string): Promise<
         timeout: 10000,
       }
     );
+    fredBreaker.recordSuccess();
     return response.data;
   } catch (error: any) {
+    fredBreaker.recordFailure();
     console.error(`FRED API error for ${seriesId}:`, error.message);
     return null;
   }
@@ -45,19 +88,25 @@ export async function fetchAlphaVantageEconomic(
   indicator: string,
   apiKey?: string
 ): Promise<any> {
+  if (alphaVantageBreaker.isOpen()) {
+    console.error(`Alpha Vantage circuit breaker open, skipping ${indicator}`);
+    return null;
+  }
   const key = apiKey || process.env.ALPHA_VANTAGE_API_KEY;
   if (!key) return null;
   
   try {
     const response = await axios.get("https://www.alphavantage.co/query", {
       params: {
-        function: indicator, // REAL_GDP, UNEMPLOYMENT, CPI, etc.
+        function: indicator,
         apikey: key,
       },
       timeout: 10000,
     });
+    alphaVantageBreaker.recordSuccess();
     return response.data;
   } catch (error: any) {
+    alphaVantageBreaker.recordFailure();
     console.error(`Alpha Vantage error for ${indicator}:`, error.message);
     return null;
   }
@@ -71,6 +120,10 @@ export async function fetchAlphaVantageSentiment(
   topics?: string,
   apiKey?: string
 ): Promise<any> {
+  if (alphaVantageBreaker.isOpen()) {
+    console.error(`Alpha Vantage Sentiment circuit breaker open, skipping`);
+    return null;
+  }
   const key = apiKey || process.env.ALPHA_VANTAGE_API_KEY;
   if (!key) return null;
   
@@ -79,13 +132,15 @@ export async function fetchAlphaVantageSentiment(
       params: {
         function: "NEWS_SENTIMENT",
         tickers,
-        topics, // e.g., "technology", "manufacturing", "economy_macro"
+        topics,
         apikey: key,
       },
       timeout: 10000,
     });
+    alphaVantageBreaker.recordSuccess();
     return response.data;
   } catch (error: any) {
+    alphaVantageBreaker.recordFailure();
     console.error("Alpha Vantage Sentiment error:", error.message);
     return null;
   }
@@ -99,6 +154,10 @@ export async function fetchWorldBankData(
   indicator: string,
   country: string = "USA"
 ): Promise<any> {
+  if (worldBankBreaker.isOpen()) {
+    console.error(`World Bank circuit breaker open, skipping ${indicator}`);
+    return null;
+  }
   try {
     const response = await axios.get(
       `https://api.worldbank.org/v2/country/${country}/indicator/${indicator}`,
@@ -110,8 +169,10 @@ export async function fetchWorldBankData(
         timeout: 10000,
       }
     );
+    worldBankBreaker.recordSuccess();
     return response.data;
   } catch (error: any) {
+    worldBankBreaker.recordFailure();
     console.error(`World Bank error for ${indicator}:`, error.message);
     return null;
   }
@@ -126,6 +187,10 @@ export async function fetchDBnomicsData(
   dataset: string,
   series: string
 ): Promise<any> {
+  if (dbnomicsBreaker.isOpen()) {
+    console.error(`DBnomics circuit breaker open, skipping ${provider}/${dataset}/${series}`);
+    return null;
+  }
   try {
     const response = await axios.get(
       `https://api.db.nomics.world/v22/series/${provider}/${dataset}/${series}`,
@@ -136,8 +201,10 @@ export async function fetchDBnomicsData(
         timeout: 10000,
       }
     );
+    dbnomicsBreaker.recordSuccess();
     return response.data;
   } catch (error: any) {
+    dbnomicsBreaker.recordFailure();
     console.error(`DBnomics error for ${provider}/${dataset}/${series}:`, error.message);
     return null;
   }
@@ -152,6 +219,10 @@ export async function fetchTradingEconomicsData(
   indicator: string,
   apiKey?: string
 ): Promise<any> {
+  if (tradingEconomicsBreaker.isOpen()) {
+    console.error(`Trading Economics circuit breaker open, skipping ${country}/${indicator}`);
+    return null;
+  }
   const key = apiKey || process.env.TRADING_ECONOMICS_API_KEY;
   if (!key) return null;
   
@@ -165,8 +236,10 @@ export async function fetchTradingEconomicsData(
         timeout: 10000,
       }
     );
+    tradingEconomicsBreaker.recordSuccess();
     return response.data;
   } catch (error: any) {
+    tradingEconomicsBreaker.recordFailure();
     console.error(`Trading Economics error for ${country}/${indicator}:`, error.message);
     return null;
   }
@@ -180,6 +253,10 @@ export async function fetchNewsData(
   query: string,
   apiKey?: string
 ): Promise<any> {
+  if (newsApiBreaker.isOpen()) {
+    console.error(`News API circuit breaker open, skipping "${query}"`);
+    return null;
+  }
   const key = apiKey || process.env.NEWS_API_KEY;
   if (!key) return null;
   
@@ -193,8 +270,10 @@ export async function fetchNewsData(
       },
       timeout: 10000,
     });
+    newsApiBreaker.recordSuccess();
     return response.data;
   } catch (error: any) {
+    newsApiBreaker.recordFailure();
     console.error(`News API error for "${query}":`, error.message);
     return null;
   }

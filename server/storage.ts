@@ -558,6 +558,7 @@ export interface IStorage {
   // Regime Transitions Audit Log
   getRegimeTransitions(companyId: string, limit?: number): Promise<RegimeTransition[]>;
   createRegimeTransition(transition: InsertRegimeTransition): Promise<RegimeTransition>;
+  casRegimeTransition(companyId: string, expectedCurrentRegime: string, newState: InsertRegimeState, transition: InsertRegimeTransition): Promise<boolean>;
   
   // Research Validation System (Historical Predictions & Backtesting - NOT USER-FACING)
   getHistoricalPredictions(companyId: string): Promise<HistoricalPrediction[]>;
@@ -2599,6 +2600,40 @@ export class DbStorage implements IStorage {
   async createRegimeTransition(insertTransition: InsertRegimeTransition): Promise<RegimeTransition> {
     const [transition] = await db.insert(regimeTransitions).values(insertTransition).returning();
     return transition;
+  }
+
+  async casRegimeTransition(
+    companyId: string,
+    expectedCurrentRegime: string,
+    newState: InsertRegimeState,
+    transition: InsertRegimeTransition
+  ): Promise<boolean> {
+    const updated = await db
+      .update(regimeState)
+      .set({
+        confirmedRegime: newState.confirmedRegime,
+        previousRegime: newState.previousRegime,
+        tentativeRegime: newState.tentativeRegime,
+        lastConfirmedAt: newState.lastConfirmedAt,
+        transitionStartedAt: newState.transitionStartedAt,
+        confirmationCount: newState.confirmationCount,
+        lastFdr: newState.lastFdr,
+        lastUpdatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(regimeState.companyId, companyId),
+          eq(regimeState.confirmedRegime, expectedCurrentRegime)
+        )
+      )
+      .returning();
+
+    if (updated.length === 0) {
+      return false;
+    }
+
+    await db.insert(regimeTransitions).values(transition);
+    return true;
   }
 
   // Research Validation System methods (Historical Predictions & Backtesting)
