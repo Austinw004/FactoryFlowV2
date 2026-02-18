@@ -1,0 +1,44 @@
+I want a DUE-DILIGENCE EVIDENCE PACK generated from this repo. Do NOT summarize. Output only verifiable artifacts: command output, file paths, line numbers, and diffs. Goal: prove CRITICAL-1 through CRITICAL-4 are fixed and produce a reusable checklist for enterprise review.
+A) Repo proof (must include real diffs)
+Run: git status
+Run: git log -1 --name-status
+Run: git diff --stat HEAD~1..HEAD
+Run: git diff HEAD~1..HEAD (show the full diff; if too long, show the key sections and specify omitted ranges)
+B) CRITICAL-1 (Cross-tenant automation rules) proof
+Locate the exact 4 endpoints fixed (GET, GET by agent, PATCH, DELETE). Print file path + line ranges.
+Show the exact database queries and confirm the WHERE clause includes BOTH id AND companyId.
+Re-run the test: node --loader ts-node/esm server/tests/critical-evidence-test.ts (or the correct command for this repo) and print full output.
+Add a negative test: attempt cross-tenant access on at least ONE other by-id resource (pick purchaseOrders or suppliers) and report PASS/FAIL. If FAIL, open a ticket list with file/lines.
+C) CRITICAL-2 (Spend limit atomicity) proof
+Locate the atomic spend gate function (atomicSpendCheck or equivalent). Print file path + line ranges.
+Show the SQL statement and explain why it is atomic under concurrent requests (single conditional UPDATE or transaction with row lock).
+Re-run the concurrency test (50 concurrent requests) and print:
+allowed count
+blocked count
+final dailySpendTotal from automation_runtime_state for that company/date
+Add a crash-safety test: simulate “reserve spend then crash” cannot happen. If your design relies on an atomic UPDATE only, explain the invariant.
+D) CRITICAL-3 (AI execute safety + no fabricated actions) proof
+Locate the assistant execute endpoint/handler. Print file path + line ranges.
+Prove it is disabled by default (show env var name + default behavior).
+Prove when enabled, it still routes through safe mode + guardrails + spend gate.
+Prove responses are truthful:
+no “PO created” unless a purchase_orders row exists
+responses include real IDs or explicitly say “draft/pending/blocked”
+Re-run tests covering:
+safe mode enabled
+spend exceeded
+supplier guardrail blocks
+Print full output and the DB verification queries used.
+E) CRITICAL-4 (WebSocket tenant isolation) proof
+Identify the broadcast function(s). Print file path + line ranges.
+Grep all broadcast call sites (18+). Output the list with file path + line.
+Prove broadcasts require companyId and hard-fail without it.
+Run a two-tenant websocket test (or a mocked version) and show no cross-tenant messages.
+F) Final deliverable
+Print a compact table:
+Critical item -> PASS/FAIL -> Evidence (file:lines + test output snippet)
+Write a short “Enterprise Automation Remaining Work” list with exactly:
+Multi-instance safety requirements
+Idempotency expansion beyond Stripe
+Authorization sweep plan for all by-id endpoints
+No fluff.
