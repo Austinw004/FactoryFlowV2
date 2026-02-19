@@ -478,6 +478,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await initializePermissions();
   console.log("[RBAC] Permissions initialized successfully");
 
+  // Kubernetes-style health probes (unauthenticated)
+  app.get("/healthz", async (_req, res) => {
+    try {
+      await db.execute(sql`SELECT 1`);
+      res.json({ status: "ok", timestamp: new Date().toISOString() });
+    } catch (error) {
+      res.status(503).json({ status: "error", timestamp: new Date().toISOString(), error: "database_unreachable" });
+    }
+  });
+
+  app.get("/readyz", async (_req, res) => {
+    try {
+      await db.execute(sql`SELECT 1`);
+      res.json({ status: "ready", timestamp: new Date().toISOString(), checks: { database: "ok" } });
+    } catch (error) {
+      res.status(503).json({ status: "not_ready", timestamp: new Date().toISOString(), checks: { database: "failed" } });
+    }
+  });
+
+  app.get("/livez", (_req, res) => {
+    res.json({ status: "alive", timestamp: new Date().toISOString(), uptime: process.uptime() });
+  });
+
   // Public API routes that don't require authentication (must be registered BEFORE global auth middleware)
   // Stripe public config
   app.get("/api/stripe/config", async (_req, res) => {
@@ -2622,8 +2645,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      const supplier = await storage.getSupplier(req.params.supplierId);
-      if (!supplier || supplier.companyId !== user.companyId) {
+      const supplier = await storage.getSupplier(req.params.supplierId, user.companyId);
+      if (!supplier) {
         return res.status(403).json({ error: "Access denied" });
       }
       const supplierMaterials = await storage.getSupplierMaterials(req.params.supplierId);
@@ -2664,8 +2687,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      const sku = await storage.getSku(req.params.skuId);
-      if (!sku || sku.companyId !== user.companyId) {
+      const sku = await storage.getSku(req.params.skuId, user.companyId);
+      if (!sku) {
         return res.status(403).json({ error: "Access denied" });
       }
       const history = await storage.getDemandHistory(req.params.skuId);
@@ -7512,7 +7535,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/ai-automation-rules", isAuthenticated, async (req: any, res) => {
+  app.post("/api/ai-automation-rules", isAuthenticated, rateLimiters.api, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
       if (!user?.companyId) {
@@ -7529,7 +7552,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/ai-automation-rules/:id", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/ai-automation-rules/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
       if (!user?.companyId) {
@@ -7545,7 +7568,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/ai-automation-rules/:id", isAuthenticated, async (req: any, res) => {
+  app.delete("/api/ai-automation-rules/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
       if (!user?.companyId) {
@@ -12281,8 +12304,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User not associated with a company" });
       }
       
-      const supplier = await storage.getSupplier(req.params.supplierId);
-      if (!supplier || supplier.companyId !== user.companyId) {
+      const supplier = await storage.getSupplier(req.params.supplierId, user.companyId);
+      if (!supplier) {
         return res.status(404).json({ error: "Supplier not found" });
       }
       
@@ -12308,8 +12331,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User not associated with a company" });
       }
       
-      const supplier = await storage.getSupplier(req.params.supplierId);
-      if (!supplier || supplier.companyId !== user.companyId) {
+      const supplier = await storage.getSupplier(req.params.supplierId, user.companyId);
+      if (!supplier) {
         return res.status(404).json({ error: "Supplier not found" });
       }
       
