@@ -10,6 +10,7 @@ import { createRfqGenerationService } from './lib/rfqGeneration';
 import { createBenchmarkAggregationService } from './lib/benchmarkAggregation';
 import { logAudit } from './lib/auditLogger';
 import { AutomationEngine } from './lib/automationEngine';
+import { withJobLock } from './lib/distributedLock';
 import { 
   classifyRegimeFromFDR, 
   classifyRegimeWithHysteresis,
@@ -1183,26 +1184,37 @@ export function startBackgroundJobs() {
   jobConfigs.forEach((config, index) => {
     if (config.enabled) {
       const jobFn = jobFunctions[index];
-      
+      const lockTtlMs = Math.max(config.intervalMs * 2, 60_000);
+
+      const lockedJobFn = async () => {
+        const result = await withJobLock(
+          { jobName: config.name, ttlMs: lockTtlMs },
+          jobFn
+        );
+        if (!result.executed) {
+          console.log(`[Background Jobs] Skipped ${config.name}: another instance holds the lock`);
+        }
+      };
+
       const intervalId = setInterval(async () => {
         try {
-          await jobFn();
+          await lockedJobFn();
         } catch (error) {
           console.error(`[Background] Error in ${config.name}:`, error);
         }
       }, config.intervalMs);
-      
+
       jobs.set(config.name, intervalId);
-      
+
       setTimeout(() => {
-        jobFn().catch(err => console.error(`[Background] Initial run failed for ${config.name}:`, err));
+        lockedJobFn().catch(err => console.error(`[Background] Initial run failed for ${config.name}:`, err));
       }, 5000);
-      
-      console.log(`[Background Jobs] Scheduled: ${config.name} (every ${config.intervalMs / 1000}s)`);
+
+      console.log(`[Background Jobs] Scheduled: ${config.name} (every ${config.intervalMs / 1000}s, lock TTL ${lockTtlMs / 1000}s)`);
     }
   });
-  
-  console.log(`[Background Jobs] ${jobs.size} background services scheduled`);
+
+  console.log(`[Background Jobs] ${jobs.size} background services scheduled (all lock-protected)`);
 }
 
 export function stopBackgroundJobs() {

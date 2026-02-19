@@ -1870,18 +1870,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Verify ownership
-      const existingAlert = await storage.getPriceAlert(req.params.id);
+      const existingAlert = await storage.getPriceAlert(req.params.id, user.companyId);
       if (!existingAlert) {
         return res.status(404).json({ error: "Price alert not found" });
-      }
-      if (existingAlert.companyId !== user.companyId) {
-        return res.status(403).json({ error: "Forbidden" });
       }
       
       const { updatePriceAlertSchema } = await import("@shared/schema");
       const updateData = updatePriceAlertSchema.parse(req.body);
       
-      const updated = await storage.updatePriceAlert(req.params.id, updateData);
+      const updated = await storage.updatePriceAlert(req.params.id, updateData, user.companyId);
       res.json(updated);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -1895,16 +1892,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User has no company association" });
       }
       
-      // Verify ownership
-      const existingAlert = await storage.getPriceAlert(req.params.id);
+      const existingAlert = await storage.getPriceAlert(req.params.id, user.companyId);
       if (!existingAlert) {
         return res.status(404).json({ error: "Price alert not found" });
       }
-      if (existingAlert.companyId !== user.companyId) {
-        return res.status(403).json({ error: "Forbidden" });
-      }
       
-      await storage.deletePriceAlert(req.params.id);
+      await storage.deletePriceAlert(req.params.id, user.companyId);
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -2135,12 +2128,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User has no company association" });
       }
       
-      const machine = await storage.getMachine(req.params.id);
+      const machine = await storage.getMachine(req.params.id, user.companyId);
       if (!machine) {
         return res.status(404).json({ error: "Machine not found" });
-      }
-      if (machine.companyId !== user.companyId) {
-        return res.status(403).json({ error: "Forbidden" });
       }
       
       res.json(machine);
@@ -2178,12 +2168,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User has no company association" });
       }
       
-      const existingMachine = await storage.getMachine(req.params.id);
+      const existingMachine = await storage.getMachine(req.params.id, user.companyId);
       if (!existingMachine) {
         return res.status(404).json({ error: "Machine not found" });
-      }
-      if (existingMachine.companyId !== user.companyId) {
-        return res.status(403).json({ error: "Forbidden" });
       }
       
       const { updateMachinerySchema } = await import("@shared/schema");
@@ -2194,7 +2181,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       const updateData = updateMachinerySchema.parse(bodyWithParsedDates);
       
-      const updated = await storage.updateMachine(req.params.id, updateData);
+      const updated = await storage.updateMachine(req.params.id, updateData, user.companyId);
       res.json(updated);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -2208,15 +2195,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User has no company association" });
       }
       
-      const existingMachine = await storage.getMachine(req.params.id);
+      const existingMachine = await storage.getMachine(req.params.id, user.companyId);
       if (!existingMachine) {
         return res.status(404).json({ error: "Machine not found" });
       }
-      if (existingMachine.companyId !== user.companyId) {
-        return res.status(403).json({ error: "Forbidden" });
-      }
       
-      await storage.deleteMachine(req.params.id);
+      await storage.deleteMachine(req.params.id, user.companyId);
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -2231,12 +2215,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User has no company association" });
       }
       
-      const machine = await storage.getMachine(req.params.id);
+      const machine = await storage.getMachine(req.params.id, user.companyId);
       if (!machine) {
         return res.status(404).json({ error: "Machine not found" });
-      }
-      if (machine.companyId !== user.companyId) {
-        return res.status(403).json({ error: "Forbidden" });
       }
       
       const { calculateDepreciation } = await import("./lib/depreciation");
@@ -2255,12 +2236,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User has no company association" });
       }
       
-      const machine = await storage.getMachine(req.params.id);
+      const machine = await storage.getMachine(req.params.id, user.companyId);
       if (!machine) {
         return res.status(404).json({ error: "Machine not found" });
-      }
-      if (machine.companyId !== user.companyId) {
-        return res.status(403).json({ error: "Forbidden" });
       }
       
       const records = await storage.getMaintenanceRecords(req.params.id);
@@ -2277,12 +2255,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User has no company association" });
       }
       
-      const machine = await storage.getMachine(req.params.id);
+      const machine = await storage.getMachine(req.params.id, user.companyId);
       if (!machine) {
         return res.status(404).json({ error: "Machine not found" });
-      }
-      if (machine.companyId !== user.companyId) {
-        return res.status(403).json({ error: "Forbidden" });
       }
       
       const { insertMaintenanceRecordSchema } = await import("@shared/schema");
@@ -2295,11 +2270,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const record = await storage.createMaintenanceRecord(recordData);
       
-      // Update machine's last maintenance date
       await storage.updateMachine(req.params.id, {
         lastMaintenanceDate: recordData.performedDate,
         nextMaintenanceDate: recordData.nextScheduledDate || null,
-      });
+      }, user.companyId);
       
       res.json(record);
     } catch (error: any) {
@@ -2338,12 +2312,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      const sku = await storage.getSku(req.params.id);
+      const sku = await storage.getSku(req.params.id, user.companyId);
       if (!sku) {
         return res.status(404).json({ error: "SKU not found" });
-      }
-      if (sku.companyId !== user.companyId) {
-        return res.status(403).json({ error: "Access denied" });
       }
       res.json(sku);
     } catch (error: any) {
@@ -2375,15 +2346,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      const existing = await storage.getSku(req.params.id);
+      const existing = await storage.getSku(req.params.id, user.companyId);
       if (!existing) {
         return res.status(404).json({ error: "SKU not found" });
       }
-      if (existing.companyId !== user.companyId) {
-        return res.status(403).json({ error: "Access denied" });
-      }
       const validatedData = updateSkuSchema.parse(req.body);
-      const sku = await storage.updateSku(req.params.id, validatedData);
+      const sku = await storage.updateSku(req.params.id, validatedData, user.companyId);
       globalCache.invalidate(`masterData:skus:${user.companyId}`);
       await logAudit({ action: "update", entityType: "sku", entityId: req.params.id, changes: validatedData, req });
       res.json(sku);
@@ -2399,14 +2367,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      const existing = await storage.getSku(req.params.id);
+      const existing = await storage.getSku(req.params.id, user.companyId);
       if (!existing) {
         return res.status(404).json({ error: "SKU not found" });
       }
-      if (existing.companyId !== user.companyId) {
-        return res.status(403).json({ error: "Access denied" });
-      }
-      await storage.deleteSku(req.params.id);
+      await storage.deleteSku(req.params.id, user.companyId);
       globalCache.invalidate(`masterData:skus:${user.companyId}`);
       await logAudit({ action: "delete", entityType: "sku", entityId: req.params.id, changes: { name: existing.name }, req });
       res.status(204).send();
@@ -2464,12 +2429,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      const material = await storage.getMaterial(req.params.id);
+      const material = await storage.getMaterial(req.params.id, user.companyId);
       if (!material) {
         return res.status(404).json({ error: "Material not found" });
-      }
-      if (material.companyId !== user.companyId) {
-        return res.status(403).json({ error: "Access denied" });
       }
       res.json(material);
     } catch (error: any) {
@@ -2501,15 +2463,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      const existing = await storage.getMaterial(req.params.id);
+      const existing = await storage.getMaterial(req.params.id, user.companyId);
       if (!existing) {
         return res.status(404).json({ error: "Material not found" });
       }
-      if (existing.companyId !== user.companyId) {
-        return res.status(403).json({ error: "Access denied" });
-      }
       const validatedData = updateMaterialSchema.parse(req.body);
-      const material = await storage.updateMaterial(req.params.id, validatedData);
+      const material = await storage.updateMaterial(req.params.id, validatedData, user.companyId);
       globalCache.invalidate(`masterData:materials:${user.companyId}`);
       await logAudit({ action: "update", entityType: "material", entityId: req.params.id, changes: validatedData, req });
       res.json(material);
@@ -2525,14 +2484,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      const existing = await storage.getMaterial(req.params.id);
+      const existing = await storage.getMaterial(req.params.id, user.companyId);
       if (!existing) {
         return res.status(404).json({ error: "Material not found" });
       }
-      if (existing.companyId !== user.companyId) {
-        return res.status(403).json({ error: "Access denied" });
-      }
-      await storage.deleteMaterial(req.params.id);
+      await storage.deleteMaterial(req.params.id, user.companyId);
       globalCache.invalidate(`masterData:materials:${user.companyId}`);
       await logAudit({ action: "delete", entityType: "material", entityId: req.params.id, changes: { name: existing.name }, req });
       res.status(204).send();
@@ -2549,8 +2505,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      const sku = await storage.getSku(req.params.skuId);
-      if (!sku || sku.companyId !== user.companyId) {
+      const sku = await storage.getSku(req.params.skuId, user.companyId);
+      if (!sku) {
         return res.status(403).json({ error: "Access denied" });
       }
       const boms = await storage.getBomsForSku(req.params.skuId);
@@ -2567,8 +2523,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      const sku = await storage.getSku(req.body.skuId);
-      if (!sku || sku.companyId !== user.companyId) {
+      const sku = await storage.getSku(req.body.skuId, user.companyId);
+      if (!sku) {
         return res.status(403).json({ error: "Access denied" });
       }
       const validatedData = insertBomSchema.parse(req.body);
@@ -2586,8 +2542,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      const sku = await storage.getSku(req.params.skuId);
-      if (!sku || sku.companyId !== user.companyId) {
+      const sku = await storage.getSku(req.params.skuId, user.companyId);
+      if (!sku) {
         return res.status(403).json({ error: "Access denied" });
       }
       await storage.deleteBom(req.params.skuId, req.params.materialId);
@@ -2645,11 +2601,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      const supplier = await storage.getSupplier(req.params.id);
-      if (!supplier || supplier.companyId !== user.companyId) {
+      const supplier = await storage.getSupplier(req.params.id, user.companyId);
+      if (!supplier) {
         return res.status(403).json({ error: "Access denied" });
       }
-      await storage.deleteSupplier(req.params.id);
+      await storage.deleteSupplier(req.params.id, user.companyId);
       globalCache.invalidate(`masterData:suppliers:${user.companyId}`);
       await logAudit({ action: "delete", entityType: "supplier", entityId: req.params.id, changes: { deleted: true }, req });
       res.status(204).send();
@@ -3241,12 +3197,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      const allocation = await storage.getAllocation(req.params.id);
+      const allocation = await storage.getAllocation(req.params.id, user.companyId);
       if (!allocation) {
         return res.status(404).json({ error: "Allocation not found" });
-      }
-      if (allocation.companyId !== user.companyId) {
-        return res.status(403).json({ error: "Access denied" });
       }
       const results = await storage.getAllocationResults(req.params.id);
       res.json({ ...allocation, results });
@@ -3737,12 +3690,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User not associated with a company" });
       }
 
-      const rfq = await storage.getRfq(req.params.id);
+      const rfq = await storage.getRfq(req.params.id, user.companyId);
       if (!rfq) {
         return res.status(404).json({ error: "RFQ not found" });
-      }
-      if (rfq.companyId !== user.companyId) {
-        return res.status(403).json({ error: "Access denied" });
       }
 
       // Also fetch related quotes
@@ -3889,15 +3839,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User not associated with a company" });
       }
 
-      const existingRfq = await storage.getRfq(req.params.id);
+      const existingRfq = await storage.getRfq(req.params.id, user.companyId);
       if (!existingRfq) {
         return res.status(404).json({ error: "RFQ not found" });
       }
-      if (existingRfq.companyId !== user.companyId) {
-        return res.status(403).json({ error: "Access denied" });
-      }
 
-      const updatedRfq = await storage.updateRfq(req.params.id, req.body);
+      const updatedRfq = await storage.updateRfq(req.params.id, req.body, user.companyId);
       
       await logAudit({
         action: "update",
@@ -3924,12 +3871,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User not associated with a company" });
       }
 
-      const rfq = await storage.getRfq(req.params.id);
+      const rfq = await storage.getRfq(req.params.id, user.companyId);
       if (!rfq) {
         return res.status(404).json({ error: "RFQ not found" });
-      }
-      if (rfq.companyId !== user.companyId) {
-        return res.status(403).json({ error: "Access denied" });
       }
 
       const updatedRfq = await storage.updateRfq(req.params.id, {
@@ -3937,7 +3881,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         approvedBy: userId,
         approvedAt: new Date(),
         sentAt: new Date(),
-      });
+      }, user.companyId);
 
       await logAudit({
         action: "update",
@@ -3963,15 +3907,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User not associated with a company" });
       }
 
-      const rfq = await storage.getRfq(req.params.id);
+      const rfq = await storage.getRfq(req.params.id, user.companyId);
       if (!rfq) {
         return res.status(404).json({ error: "RFQ not found" });
       }
-      if (rfq.companyId !== user.companyId) {
-        return res.status(403).json({ error: "Access denied" });
-      }
 
-      await storage.deleteRfq(req.params.id);
+      await storage.deleteRfq(req.params.id, user.companyId);
       
       await logAudit({
         action: "delete",
@@ -3997,12 +3938,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User not associated with a company" });
       }
 
-      const rfq = await storage.getRfq(req.params.rfqId);
+      const rfq = await storage.getRfq(req.params.rfqId, user.companyId);
       if (!rfq) {
         return res.status(404).json({ error: "RFQ not found" });
-      }
-      if (rfq.companyId !== user.companyId) {
-        return res.status(403).json({ error: "Access denied" });
       }
 
       const validationResult = insertRfqQuoteSchema.safeParse({
@@ -4019,11 +3957,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const quote = await storage.createRfqQuote(validationResult.data);
       
-      // Update RFQ quotes count
       await storage.updateRfq(req.params.rfqId, {
         quotesReceived: (rfq.quotesReceived || 0) + 1,
         status: "quotes_received",
-      });
+      }, user.companyId);
 
       await logAudit({
         action: "create",

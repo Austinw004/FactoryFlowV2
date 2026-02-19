@@ -1,0 +1,42 @@
+I have hard evidence that five critical safety gates pass. I now want you to implement the remaining hardening required to truthfully claim “enterprise automation” (multi-instance safe, idempotent under retries, tenant-safe by construction). Do not give general advice. Make concrete code edits, specify exact files/functions, add runnable proof scripts, and produce a final certification document. Preserve the economic thesis and canonical regime thresholds; do not change FDR thresholds or persistence rules.
+
+Proven current state (do not regress):
+
+CRITICAL-1 fixed: Cross-tenant IDOR on automation rules endpoints is blocked by company-scoped WHERE clauses (WHERE id AND company_id). Negative cross-tenant test on purchase orders also passes.
+
+CRITICAL-2 verified: Spend limit is enforced via a single atomic SQL operation; 50 concurrent $5 requests vs $100 results in exactly 20 allowed, 30 blocked, final spend exactly $100.
+
+CRITICAL-3 verified: AI assistant execute is gated behind an environment variable, safe mode is enforced, spend limits are enforced, and the system never claims “PO created” unless a real PO exists.
+
+CRITICAL-4 verified: WebSocket broadcasts are tenant-isolated; broadcast calls require companyId and the broadcast function blocks any message without a tenant identifier. Full scan of the server/ directory confirms all call sites include companyId.
+
+Architect feedback already addressed: verification scope note, scan scope expanded, and BroadcastMessage.companyId is compile-time required.
+
+Now complete the remaining enterprise hardening in three workstreams, each with code changes plus hard evidence tests:
+
+Workstream 1: Distributed locks for multi-instance background jobs and automation runners
+Find every scheduled job or loop that could run twice under horizontal scaling (setInterval background jobs, economic polling, forecast retraining, integration health checks, notification/webhook dispatch, any automation executor). Implement a Postgres-backed distributed lock so exactly one instance performs each job at a time. Use either Postgres advisory locks or a job_locks table with fields like jobName, companyId (optional), lockedBy, lockedAt, expiresAt, and enforce acquire/release via atomic INSERT-first or CAS UPDATE. Release must verify ownership, and stale lock takeover must only occur after expiry. Add explicit logging that shows when locks are acquired, skipped, stolen (after expiry), or rejected. Add a proof script that simulates two workers competing for the same lock and proves: only one runs, stale takeover works after expiry, and non-owners cannot release. Output a runnable script (for example server/tests/multi-instance-lock-proof.ts) with a clear PASS/FAIL summary and exact commands to run it.
+
+Workstream 2: Idempotency expansion beyond Stripe webhooks (automation triggers and side effects)
+Define an idempotency boundary for automation as: trigger event → ai_actions row → external side effect (purchase order creation, RFQ sending, outbound integration webhook, notifications). For each trigger type (threshold, schedule, event, regime_change, compound), generate a stable triggerEventId so the same semantic event yields the same ID (e.g., hash of companyId + ruleId + triggerType + relevant object id + time bucket + values). Use processed_trigger_events with INSERT-first deduplication under the unique constraint (companyId, triggerType, triggerEventId). If insert fails with unique violation, skip execution and log duplicate_trigger_skipped with the triggerEventId. Also add an action-level idempotency key stored on ai_actions (or a new column) so the external side effect can be de-duplicated even if the action retries. Ensure no duplicate purchase orders or duplicate outbound integration events can occur for the same idempotency key. Add a proof script that replays the same trigger 10 times concurrently and proves: exactly one ai_actions row is created, exactly one side effect occurs, and all other attempts are skipped as duplicates with explicit logs. Output a runnable script (for example server/tests/idempotency-proof.ts) with a PASS/FAIL summary and commands to run it.
+
+Workstream 3: Authorization sweep + regression guard
+Locate endpoints that do “fetch by id then check companyId” on tenant-scoped resources. Replace them with WHERE-scoped queries: WHERE id = $1 AND company_id = $2 (or the equivalent with Drizzle). Prioritize automation objects, procurement, suppliers, materials, forecasts, allocations, integrations, analytics snapshots, and any route returning sensitive data. After converting, add a regression guard: a script that scans the server routes for unsafe by-id access patterns that do not include company scoping, and fails with a clear list of offending locations. Add a proof test that creates two companies and attempts cross-tenant access against representative endpoints, proving 404/403 and no data leakage.
+
+Non-negotiable behavioral constraints:
+
+Never claim “PO created” unless the purchase order exists in the database and is linked to an ai_action (relatedEntityType/Id).
+
+Never broadcast WebSocket messages without companyId; if missing, block and log.
+
+All new locking/idempotency must be database-backed and safe under concurrency.
+
+Final deliverables:
+
+ENTERPRISE_AUTOMATION_CERTIFICATION.md that lists what changed, how to run every proof script, and the expected evidence outputs (brief, not excessive logs).
+
+A final PASS/FAIL checklist explicitly covering: distributed locks, idempotency beyond Stripe, authorization sweep + regression guard.
+
+Preserve the economic thesis and canonical regime thresholds. Only harden execution semantics, idempotency, tenancy, and verification.
+
+Proceed by implementing the code changes, then writing proof scripts, then producing the certification report.

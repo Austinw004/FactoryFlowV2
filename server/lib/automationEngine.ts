@@ -12,6 +12,33 @@ import {
   structuredEventLog,
   backgroundJobLocks,
 } from "@shared/schema";
+import { createHash } from "crypto";
+
+export function buildTriggerEventId(params: {
+  companyId: string;
+  ruleId: string;
+  triggerType: string;
+  objectId?: string;
+  timeBucket?: string;
+  values?: Record<string, any>;
+}): string {
+  const bucket = params.timeBucket || new Date().toISOString().slice(0, 13);
+  const sortedValues = params.values
+    ? Object.keys(params.values).sort().reduce((acc: Record<string, any>, key) => {
+        acc[key] = params.values![key];
+        return acc;
+      }, {})
+    : {};
+  const payload = JSON.stringify({
+    c: params.companyId,
+    r: params.ruleId,
+    t: params.triggerType,
+    o: params.objectId || "",
+    b: bucket,
+    v: sortedValues,
+  });
+  return createHash("sha256").update(payload).digest("hex").slice(0, 32);
+}
 
 export class AutomationEngine {
   private static instance: AutomationEngine;
@@ -484,6 +511,28 @@ export class AutomationEngine {
       .values({ ...data, companyId })
       .returning();
     return action;
+  }
+
+  async createActionIdempotent(
+    companyId: string,
+    data: any,
+    triggerEventId: string,
+    triggerType: string,
+    ruleId?: string
+  ): Promise<{ action: any; deduplicated: boolean }> {
+    const lock = await this.claimTriggerLock(companyId, triggerType, triggerEventId, ruleId);
+    if (!lock.acquired) {
+      return { action: null, deduplicated: true };
+    }
+
+    try {
+      const action = await this.createAction(companyId, data);
+      await this.markTriggerOutcome(companyId, triggerType, triggerEventId, "processed", action.id);
+      return { action, deduplicated: false };
+    } catch (error) {
+      await this.markTriggerOutcome(companyId, triggerType, triggerEventId, "failed");
+      throw error;
+    }
   }
 
   async approveAction(actionId: string, companyId: string, userId: string) {
