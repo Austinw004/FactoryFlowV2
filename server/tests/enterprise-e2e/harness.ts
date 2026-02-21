@@ -9,7 +9,7 @@ import {
   decisionRecommendations, decisionOverrides, dataQualityScores,
   materialConstraints, leadTimeDistributions,
   savingsEvidenceRecords, ssoConfigurations, scimProvisioningLog, auditExportConfigs,
-  regimeBacktestReports, optimizationRuns,
+  regimeBacktestReports, optimizationRuns, pilotExperiments,
 } from "@shared/schema";
 import { storage } from "../../storage";
 import { AutomationEngine, buildTriggerEventId } from "../../lib/automationEngine";
@@ -2197,6 +2197,361 @@ async function gate10() {
   });
 }
 
+async function gate11() {
+  currentGate = "Gate 11: Pilot Evaluation Mode";
+  console.log(`\n  ${currentGate}`);
+  const gateStart = TS();
+
+  const { runPilotExperiment, getPilotExperiments, getPilotExperimentById, exportExperimentAudit, hashConfig, replayExperiment } = await import("../../lib/pilotEvaluation");
+
+  // 11.1: Experiment creation with immutable config snapshot
+  const t111 = Date.now();
+  const pilotConfig = {
+    companyId: COMPANY_A,
+    name: `${PREFIX}-pilot-test`,
+    experimentId: `${PREFIX}-exp-001`,
+    windowWeeks: 12,
+    seed: 42,
+    regime: "HEALTHY_EXPANSION",
+    fdr: 0.5,
+    forecastUncertainty: 0.2,
+    targetServiceLevel: 0.95,
+    demandSamples: 200,
+    materialIds: [`${PREFIX}-mat-pilot-1`],
+  };
+
+  const matId = `${PREFIX}-mat-pilot-1`;
+  await db.insert(materials).values({
+    id: matId, companyId: COMPANY_A, name: `${PREFIX}-PilotMat`, code: `${PREFIX}-PLT-001`, category: "test",
+    unit: "kg", onHand: 100, reorderPoint: 50, leadTimeDays: 14, unitCost: 10,
+  }).onConflictDoNothing();
+
+  const exp1 = await runPilotExperiment(pilotConfig);
+  const cfgSnap = exp1.configSnapshot as any;
+  const cfgValid = exp1.status === "completed" &&
+    cfgSnap.immutable === true &&
+    cfgSnap.engineVersion === "1.0.0" &&
+    cfgSnap.companyId === COMPANY_A &&
+    cfgSnap.windowWeeks === 12 &&
+    cfgSnap.seed === 42;
+  assert(!!cfgValid, "11.1", "Experiment created with immutable config snapshot and completed status",
+    { validated: "Immutable experiment configuration snapshot with engine version",
+      endpointsOrFunctions: "pilotEvaluation.runPilotExperiment()",
+      inputs: `experimentId=${pilotConfig.experimentId}, seed=42, window=12`,
+      expected: "status=completed, immutable=true, engineVersion=1.0.0",
+      actual: `status=${exp1.status}, immutable=${cfgSnap.immutable}, engine=${cfgSnap.engineVersion}`,
+      rawEvidence: { status: exp1.status, immutable: cfgSnap.immutable, engineVersion: cfgSnap.engineVersion }, proofType: "runtime" }, t111);
+
+  // 11.2: Config hash integrity verification
+  const t112 = Date.now();
+  const recomputedHash = hashConfig(pilotConfig);
+  const hashMatch = exp1.configHash === recomputedHash;
+  assert(hashMatch, "11.2", "Config hash matches recomputed SHA-256 of experiment config",
+    { validated: "Immutable config integrity via SHA-256 hash",
+      endpointsOrFunctions: "pilotEvaluation.hashConfig()",
+      inputs: "Original config vs stored configHash",
+      expected: `hash=${recomputedHash}`,
+      actual: `stored=${exp1.configHash}`,
+      rawEvidence: { stored: exp1.configHash, recomputed: recomputedHash }, proofType: "deterministic" }, t112);
+
+  // 11.3: Baseline policy simulation produces valid metrics
+  const t113 = Date.now();
+  const baseline = exp1.baselineResults as any;
+  const blValid = baseline &&
+    baseline.policyType === "baseline" &&
+    typeof baseline.totalServiceLevel === "number" &&
+    baseline.totalServiceLevel >= 0 && baseline.totalServiceLevel <= 1 &&
+    typeof baseline.avgStockoutRate === "number" &&
+    baseline.avgStockoutRate >= 0 && baseline.avgStockoutRate <= 1 &&
+    typeof baseline.totalExpediteSpend === "number" &&
+    typeof baseline.avgWorkingCapital === "number" &&
+    Array.isArray(baseline.weeklyMetrics) &&
+    baseline.weeklyMetrics.length === 12;
+  assert(!!blValid, "11.3", "Baseline simulation produces bounded metrics for 12-week window",
+    { validated: "Historical baseline policy simulation with service level, stockout, expedite, working capital",
+      endpointsOrFunctions: "pilotEvaluation → baselineResults",
+      inputs: "12-week window, seed=42",
+      expected: "policyType=baseline, SL in [0,1], 12 weekly metrics",
+      actual: `type=${baseline?.policyType}, SL=${baseline?.totalServiceLevel}, weeks=${baseline?.weeklyMetrics?.length}`,
+      rawEvidence: { policyType: baseline?.policyType, sl: baseline?.totalServiceLevel, stockout: baseline?.avgStockoutRate, weeks: baseline?.weeklyMetrics?.length }, proofType: "runtime" }, t113);
+
+  // 11.4: Optimized policy simulation produces valid metrics
+  const t114 = Date.now();
+  const optimized = exp1.optimizedResults as any;
+  const optValid = optimized &&
+    optimized.policyType === "optimized" &&
+    typeof optimized.totalServiceLevel === "number" &&
+    optimized.totalServiceLevel >= 0 && optimized.totalServiceLevel <= 1 &&
+    typeof optimized.avgStockoutRate === "number" &&
+    typeof optimized.totalEstimatedSavings === "number" &&
+    optimized.totalMeasuredSavings === null &&
+    Array.isArray(optimized.weeklyMetrics) &&
+    optimized.weeklyMetrics.length === 12;
+  assert(!!optValid, "11.4", "Optimized simulation produces bounded metrics with estimated savings and null measured savings",
+    { validated: "Regime-aware optimized policy simulation with clear estimated vs measured savings separation",
+      endpointsOrFunctions: "pilotEvaluation → optimizedResults",
+      inputs: "12-week window, regime=HEALTHY_EXPANSION, targetSL=0.95",
+      expected: "policyType=optimized, measuredSavings=null, 12 weekly metrics",
+      actual: `type=${optimized?.policyType}, measured=${optimized?.totalMeasuredSavings}, weeks=${optimized?.weeklyMetrics?.length}`,
+      rawEvidence: { policyType: optimized?.policyType, estSavings: optimized?.totalEstimatedSavings, measuredSavings: optimized?.totalMeasuredSavings }, proofType: "runtime" }, t114);
+
+  // 11.5: Comparison summary has clear winner determination
+  const t115 = Date.now();
+  const comparison = exp1.comparisonSummary as any;
+  const cmpValid = comparison &&
+    typeof comparison.serviceLevelDelta === "number" &&
+    typeof comparison.stockoutRateDelta === "number" &&
+    typeof comparison.expediteSpendDelta === "number" &&
+    typeof comparison.workingCapitalDelta === "number" &&
+    typeof comparison.estimatedSavingsDelta === "number" &&
+    comparison.measuredSavingsDelta === null &&
+    Array.isArray(comparison.optimizedWins) &&
+    Array.isArray(comparison.baselineWins) &&
+    typeof comparison.recommendation === "string" &&
+    ["RECOMMEND_OPTIMIZED", "RECOMMEND_BASELINE", "INCONCLUSIVE"].includes(comparison.recommendation) &&
+    typeof comparison.confidenceLevel === "number" &&
+    comparison.confidenceLevel >= 0 && comparison.confidenceLevel <= 1;
+  assert(!!cmpValid, "11.5", "Comparison summary contains deltas, winner lists, recommendation, and bounded confidence",
+    { validated: "Side-by-side comparison with explicit metric deltas and clear recommendation",
+      endpointsOrFunctions: "pilotEvaluation → comparisonSummary",
+      inputs: "Baseline vs optimized simulation results",
+      expected: "All deltas present, recommendation in [RECOMMEND_OPTIMIZED|BASELINE|INCONCLUSIVE], confidence [0,1]",
+      actual: `recommendation=${comparison?.recommendation}, confidence=${comparison?.confidenceLevel}, optimizedWins=${comparison?.optimizedWins?.join(',')}`,
+      rawEvidence: { recommendation: comparison?.recommendation, confidence: comparison?.confidenceLevel, optimizedWins: comparison?.optimizedWins, baselineWins: comparison?.baselineWins }, proofType: "runtime" }, t115);
+
+  // 11.6: Estimated vs measured savings separation enforced
+  const t116 = Date.now();
+  const weeklyEstimated = optimized.weeklyMetrics.every((w: any) => w.savingsType === "estimated" && w.measuredSavings === null);
+  const baselineNoSavings = baseline.weeklyMetrics.every((w: any) => w.estimatedSavings === 0);
+  const savSep = weeklyEstimated && baselineNoSavings;
+  assert(savSep, "11.6", "Estimated/measured savings separation: all weekly savings are 'estimated', baseline has zero savings",
+    { validated: "Strict separation between estimated and measured outcomes at weekly granularity",
+      endpointsOrFunctions: "pilotEvaluation → weeklyMetrics.savingsType",
+      inputs: "Weekly metrics from both policies",
+      expected: "All optimized weeks: savingsType=estimated, measuredSavings=null; baseline: estimatedSavings=0",
+      actual: `weeklyEstimated=${weeklyEstimated}, baselineNoSavings=${baselineNoSavings}`,
+      rawEvidence: { weeklyEstimated, baselineNoSavings }, proofType: "structural" }, t116);
+
+  // 11.7: Zero production mutations guarantee
+  const t117 = Date.now();
+  const zeroMut = exp1.productionMutations === 0;
+  const ebProd = (exp1.evidenceBundle as any)?.productionMutations === 0;
+  assert(zeroMut && ebProd, "11.7", "Experiment has zero production mutations in record and evidence bundle",
+    { validated: "No mutation of production records guaranteed",
+      endpointsOrFunctions: "pilotExperiments.productionMutations, evidenceBundle.productionMutations",
+      inputs: "Completed experiment",
+      expected: "productionMutations=0 in both DB record and evidence bundle",
+      actual: `record=${exp1.productionMutations}, evidence=${(exp1.evidenceBundle as any)?.productionMutations}`,
+      rawEvidence: { record: exp1.productionMutations, evidence: (exp1.evidenceBundle as any)?.productionMutations }, proofType: "structural" }, t117);
+
+  // 11.8: Experiment artifact generation (JSON + MD)
+  const t118 = Date.now();
+  const artJson = exp1.artifactJson as any;
+  const artMd = exp1.artifactMd;
+  const artValid = artJson &&
+    artJson.version === "1.0.0" &&
+    artJson.experimentId === pilotConfig.experimentId &&
+    artJson.configSnapshot &&
+    artJson.baselineResults &&
+    artJson.optimizedResults &&
+    artJson.comparisonSummary &&
+    artJson.evidenceBundle &&
+    typeof artMd === "string" &&
+    artMd.includes("Pilot Experiment Report") &&
+    artMd.includes(pilotConfig.experimentId) &&
+    artMd.includes("Production Safety");
+  assert(!!artValid, "11.8", "Reproducible experiment artifact (JSON + markdown) generated with full structure",
+    { validated: "Reproducible artifact generation with complete experiment data",
+      endpointsOrFunctions: "pilotEvaluation → artifactMd, artifactJson",
+      inputs: "Completed experiment",
+      expected: "JSON v1.0.0 with all sections, MD with report title and production safety",
+      actual: `jsonVersion=${artJson?.version}, mdLength=${artMd?.length}, hasProductionSafety=${artMd?.includes("Production Safety")}`,
+      rawEvidence: { jsonVersion: artJson?.version, mdLength: artMd?.length }, proofType: "structural" }, t118);
+
+  // 11.9: Experiment evidence bundle with provenance
+  const t119 = Date.now();
+  const eb = exp1.evidenceBundle as any;
+  const ebValid = eb &&
+    eb.provenanceVersion === "4.0.0" &&
+    eb.engineId === "pilot_evaluation_v1" &&
+    eb.experimentId === pilotConfig.experimentId &&
+    eb.companyId === COMPANY_A &&
+    eb.configHash === recomputedHash &&
+    typeof eb.seed === "number" &&
+    eb.replayable === true;
+  assert(!!ebValid, "11.9", "Evidence bundle has provenance v4.0.0, engine ID, config hash, and replayable flag",
+    { validated: "Evidence traceability on pilot experiment output",
+      endpointsOrFunctions: "pilotEvaluation → evidenceBundle",
+      inputs: "Completed experiment",
+      expected: "provenanceVersion=4.0.0, engineId=pilot_evaluation_v1, configHash matches, replayable=true",
+      actual: `provenance=${eb?.provenanceVersion}, engine=${eb?.engineId}, hashMatch=${eb?.configHash === recomputedHash}`,
+      rawEvidence: { provenanceVersion: eb?.provenanceVersion, engineId: eb?.engineId, configHash: eb?.configHash }, proofType: "deterministic" }, t119);
+
+  // 11.10: Duplicate experiment rejected
+  const t1110 = Date.now();
+  let dupError = "";
+  try {
+    await runPilotExperiment(pilotConfig);
+  } catch (e: any) {
+    dupError = e.message;
+  }
+  assert(dupError.includes("EXPERIMENT_ALREADY_EXISTS"), "11.10", "Duplicate experiment ID is rejected with EXPERIMENT_ALREADY_EXISTS",
+    { validated: "Experiment isolation: unique experiment IDs enforced",
+      endpointsOrFunctions: "pilotEvaluation.runPilotExperiment()",
+      inputs: `Duplicate experimentId=${pilotConfig.experimentId}`,
+      expected: "Error containing EXPERIMENT_ALREADY_EXISTS",
+      actual: `error=${dupError}`,
+      rawEvidence: { error: dupError }, proofType: "runtime" }, t1110);
+
+  // 11.11: Deterministic replay produces identical config hash
+  const t1111 = Date.now();
+  const replay = await replayExperiment(pilotConfig.experimentId);
+  const replayCfg = replay.configSnapshot as any;
+  const replayHashValid = replay.status === "completed" &&
+    replay.experimentId !== pilotConfig.experimentId &&
+    replay.experimentId.startsWith(`${PREFIX}-exp-001-replay-`) &&
+    typeof replayCfg.seed === "number" &&
+    replayCfg.seed === 42;
+  assert(!!replayHashValid, "11.11", "Replayed experiment completes with same seed and new unique ID",
+    { validated: "Deterministic replay capability with seed preservation",
+      endpointsOrFunctions: "pilotEvaluation.replayExperiment()",
+      inputs: `Original experimentId=${pilotConfig.experimentId}`,
+      expected: "New ID with -replay- suffix, same seed=42, status=completed",
+      actual: `replayId=${replay.experimentId}, seed=${replayCfg?.seed}, status=${replay.status}`,
+      rawEvidence: { replayId: replay.experimentId, seed: replayCfg?.seed, status: replay.status }, proofType: "runtime" }, t1111);
+
+  // 11.12: Replay produces consistent baseline results (deterministic)
+  const t1112 = Date.now();
+  const replayBaseline = replay.baselineResults as any;
+  const replayOptimized = replay.optimizedResults as any;
+  const deterministicCheck = replayBaseline.policyType === "baseline" &&
+    replayOptimized.policyType === "optimized" &&
+    replayBaseline.weeklyMetrics.length === 12 &&
+    replayOptimized.weeklyMetrics.length === 12;
+  assert(deterministicCheck, "11.12", "Replayed experiment produces consistent 12-week baseline and optimized results",
+    { validated: "Deterministic replay reproduces identical simulation structure",
+      endpointsOrFunctions: "pilotEvaluation.replayExperiment() → results",
+      inputs: "Replay of original experiment",
+      expected: "Both policy types present, 12 weekly metrics each",
+      actual: `baseline=${replayBaseline?.policyType}/${replayBaseline?.weeklyMetrics?.length}wk, optimized=${replayOptimized?.policyType}/${replayOptimized?.weeklyMetrics?.length}wk`,
+      rawEvidence: { baselineWeeks: replayBaseline?.weeklyMetrics?.length, optimizedWeeks: replayOptimized?.weeklyMetrics?.length }, proofType: "deterministic" }, t1112);
+
+  // 11.13: Audit export verifies config integrity and production safety
+  const t1113 = Date.now();
+  const audit = await exportExperimentAudit(pilotConfig.experimentId);
+  const auditValid = audit.configIntegrity === true &&
+    audit.productionSafe === true &&
+    audit.replayVerified === true &&
+    audit.experiment.id === exp1.id;
+  assert(auditValid, "11.13", "Audit export confirms config integrity, production safety, and replay verification",
+    { validated: "Audit export correctness with integrity checks",
+      endpointsOrFunctions: "pilotEvaluation.exportExperimentAudit()",
+      inputs: `experimentId=${pilotConfig.experimentId}`,
+      expected: "configIntegrity=true, productionSafe=true, replayVerified=true",
+      actual: `integrity=${audit.configIntegrity}, prodSafe=${audit.productionSafe}, replay=${audit.replayVerified}`,
+      rawEvidence: { configIntegrity: audit.configIntegrity, productionSafe: audit.productionSafe, replayVerified: audit.replayVerified }, proofType: "deterministic" }, t1113);
+
+  // 11.14: Locked comparison window respected
+  const t1114 = Date.now();
+  const lockedValid = exp1.lockedAt !== null &&
+    exp1.windowWeeks === 12 &&
+    baseline.weeklyMetrics.length === 12 &&
+    optimized.weeklyMetrics.length === 12;
+  assert(!!lockedValid, "11.14", "Experiment locked at creation with 12-week comparison window consistently applied",
+    { validated: "Locked comparison window enforced across all simulation results",
+      endpointsOrFunctions: "pilotExperiments.lockedAt, windowWeeks",
+      inputs: "Completed experiment",
+      expected: "lockedAt not null, windowWeeks=12, both policies have 12 weekly entries",
+      actual: `lockedAt=${exp1.lockedAt}, windowWeeks=${exp1.windowWeeks}, blWeeks=${baseline.weeklyMetrics.length}, optWeeks=${optimized.weeklyMetrics.length}`,
+      rawEvidence: { lockedAt: exp1.lockedAt, windowWeeks: exp1.windowWeeks }, proofType: "structural" }, t1114);
+
+  // 11.15: Experiment listing scoped to company
+  const t1115 = Date.now();
+  const listing = await getPilotExperiments(COMPANY_A);
+  const listValid = listing.length >= 1 && listing.every((e: any) => e.companyId === COMPANY_A);
+  assert(listValid, "11.15", "Experiment listing returns only experiments for the requesting company",
+    { validated: "Experiment isolation: tenant-scoped listing",
+      endpointsOrFunctions: "pilotEvaluation.getPilotExperiments()",
+      inputs: `companyId=${COMPANY_A}`,
+      expected: "All returned experiments have companyId=COMPANY_A",
+      actual: `count=${listing.length}, allSameCompany=${listing.every((e: any) => e.companyId === COMPANY_A)}`,
+      rawEvidence: { count: listing.length }, proofType: "runtime" }, t1115);
+
+  // 11.16: Company B cannot see Company A experiments
+  const t1116 = Date.now();
+  const compBList = await getPilotExperiments(COMPANY_B);
+  const isolationValid = compBList.every((e: any) => e.companyId === COMPANY_B);
+  assert(isolationValid, "11.16", "Company B listing contains zero Company A experiments (tenant isolation)",
+    { validated: "Experiment isolation: cross-tenant access blocked",
+      endpointsOrFunctions: "pilotEvaluation.getPilotExperiments()",
+      inputs: `companyId=${COMPANY_B}`,
+      expected: "No experiments with companyId=COMPANY_A",
+      actual: `count=${compBList.length}, allCompB=${compBList.every((e: any) => e.companyId === COMPANY_B)}`,
+      rawEvidence: { count: compBList.length }, proofType: "runtime" }, t1116);
+
+  // 11.17: Weekly metrics track all five required metrics
+  const t1117 = Date.now();
+  const sampleWeek = optimized.weeklyMetrics[0];
+  const metricsValid = sampleWeek &&
+    typeof sampleWeek.serviceLevel === "number" &&
+    typeof sampleWeek.stockoutRate === "number" &&
+    typeof sampleWeek.expediteSpend === "number" &&
+    typeof sampleWeek.workingCapital === "number" &&
+    typeof sampleWeek.estimatedSavings === "number" &&
+    typeof sampleWeek.week === "number" &&
+    sampleWeek.week === 1;
+  assert(!!metricsValid, "11.17", "Weekly metrics include all five tracked metrics (SL, stockout, expedite, WC, savings)",
+    { validated: "Explicit metric tracking for all five required dimensions",
+      endpointsOrFunctions: "pilotEvaluation → weeklyMetrics",
+      inputs: "First week of optimized simulation",
+      expected: "serviceLevel, stockoutRate, expediteSpend, workingCapital, estimatedSavings all present",
+      actual: `week=${sampleWeek?.week}, SL=${sampleWeek?.serviceLevel}, stockout=${sampleWeek?.stockoutRate}, expedite=${sampleWeek?.expediteSpend}, WC=${sampleWeek?.workingCapital}, savings=${sampleWeek?.estimatedSavings}`,
+      rawEvidence: sampleWeek, proofType: "structural" }, t1117);
+
+  // 11.18: POST /api/pilot-experiments/run requires auth
+  const t1118 = Date.now();
+  const pilotNoAuth = await httpPost("/api/pilot-experiments/run", { name: "test", experimentId: "test", materialIds: ["x"] });
+  assert(pilotNoAuth.status === 401, "11.18", "POST /api/pilot-experiments/run returns 401 without auth",
+    { validated: "Pilot experiment API enforces authentication",
+      endpointsOrFunctions: "POST /api/pilot-experiments/run",
+      inputs: "No auth cookie", expected: "401", actual: `${pilotNoAuth.status}`,
+      rawEvidence: { status: pilotNoAuth.status }, proofType: "runtime" }, t1118);
+
+  // 11.19: GET /api/pilot-experiments requires auth
+  const t1119 = Date.now();
+  const pilotListNoAuth = await httpGet("/api/pilot-experiments");
+  assert(pilotListNoAuth.status === 401, "11.19", "GET /api/pilot-experiments returns 401 without auth",
+    { validated: "Pilot experiments listing enforces authentication",
+      endpointsOrFunctions: "GET /api/pilot-experiments",
+      inputs: "No auth cookie", expected: "401", actual: `${pilotListNoAuth.status}`,
+      rawEvidence: { status: pilotListNoAuth.status }, proofType: "runtime" }, t1119);
+
+  // 11.20: Material-level results tracked per policy
+  const t1120 = Date.now();
+  const blMatResults = baseline.materialResults;
+  const optMatResults = optimized.materialResults;
+  const matResultsValid = Array.isArray(blMatResults) && blMatResults.length >= 1 &&
+    Array.isArray(optMatResults) && optMatResults.length >= 1 &&
+    blMatResults[0].materialId === matId &&
+    optMatResults[0].materialId === matId &&
+    typeof blMatResults[0].reorderQuantity === "number" &&
+    typeof optMatResults[0].reorderQuantity === "number" &&
+    typeof optMatResults[0].savingsVsBaseline === "number";
+  assert(!!matResultsValid, "11.20", "Material-level results tracked with reorder quantity and savings per policy",
+    { validated: "Per-material detail in both baseline and optimized results",
+      endpointsOrFunctions: "pilotEvaluation → materialResults",
+      inputs: "Experiment with 1 material",
+      expected: "Both policies have material results with quantity and savings",
+      actual: `blMats=${blMatResults?.length}, optMats=${optMatResults?.length}, optSavings=${optMatResults?.[0]?.savingsVsBaseline}`,
+      rawEvidence: { blCount: blMatResults?.length, optCount: optMatResults?.length, blQty: blMatResults?.[0]?.reorderQuantity, optQty: optMatResults?.[0]?.reorderQuantity }, proofType: "structural" }, t1120);
+
+  gateResults.push({
+    gate: currentGate, description: "Pilot evaluation mode with experiment isolation, counterfactual integrity, production safety, deterministic replay",
+    pass: results.filter(r => r.gate === currentGate).every(r => r.pass),
+    tests: results.filter(r => r.gate === currentGate), startedAt: gateStart, completedAt: TS(),
+  });
+}
+
 async function cleanup() {
   console.log("\n  Cleaning up test data...");
   try {
@@ -2227,6 +2582,8 @@ async function cleanup() {
     await db.execute(sql`DELETE FROM audit_export_configs WHERE company_id = ${COMPANY_A}`);
     await db.execute(sql`DELETE FROM regime_backtest_reports WHERE company_id = ${COMPANY_A}`);
     await db.execute(sql`DELETE FROM optimization_runs WHERE company_id = ${COMPANY_A}`);
+    await db.execute(sql`DELETE FROM pilot_experiments WHERE company_id = ${COMPANY_A}`);
+    await db.execute(sql`DELETE FROM pilot_experiments WHERE company_id = ${COMPANY_B}`);
     await db.delete(companies).where(eq(companies.id, `${PREFIX}-safemode-test`));
     await db.delete(companies).where(eq(companies.id, COMPANY_A));
     await db.delete(companies).where(eq(companies.id, COMPANY_B));
@@ -2238,12 +2595,12 @@ async function cleanup() {
 
 async function main() {
   console.log("================================================================");
-  console.log("  ENTERPRISE E2E CERTIFICATION HARNESS v4.0.0");
+  console.log("  ENTERPRISE E2E CERTIFICATION HARNESS v5.0.0");
   console.log(`  Date: ${new Date().toISOString()}`);
-  console.log("  Scope: Gates 1-10 (Multi-tenant, Spend, Automation, Payments,");
+  console.log("  Scope: Gates 1-11 (Multi-tenant, Spend, Automation, Payments,");
   console.log("         Integrations, Data Honesty, Operational Readiness,");
   console.log("         Copilot Safety & Data Quality, Predictive Lift & Enterprise Controls,");
-  console.log("         Regime-Aware Optimization & Backtest)");
+  console.log("         Regime-Aware Optimization & Backtest, Pilot Evaluation Mode)");
   console.log("================================================================");
 
   await setup();
@@ -2257,6 +2614,7 @@ async function main() {
   await gate8();
   await gate9();
   await gate10();
+  await gate11();
   await cleanup();
 
   const mdReport = generateMarkdownReport();

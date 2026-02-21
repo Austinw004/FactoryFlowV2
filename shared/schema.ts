@@ -8969,3 +8969,37 @@ export const optimizationRuns = pgTable("optimization_runs", {
 export const insertOptimizationRunSchema = createInsertSchema(optimizationRuns).omit({ id: true, createdAt: true });
 export type OptimizationRun = typeof optimizationRuns.$inferSelect;
 export type InsertOptimizationRun = z.infer<typeof insertOptimizationRunSchema>;
+
+// ============================================================
+// Milestone 4: Pilot Evaluation Mode
+// ============================================================
+
+export const pilotExperiments = pgTable("pilot_experiments", {
+  id: serial("id").primaryKey(),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  experimentId: varchar("experiment_id", { length: 128 }).notNull().unique(),
+  name: varchar("name", { length: 256 }).notNull(),
+  status: varchar("status", { length: 32 }).notNull().default("created"),
+  windowWeeks: integer("window_weeks").notNull().default(12),
+  configSnapshot: jsonb("config_snapshot").notNull(),
+  configHash: varchar("config_hash", { length: 64 }).notNull(),
+  baselineResults: jsonb("baseline_results"),
+  optimizedResults: jsonb("optimized_results"),
+  comparisonSummary: jsonb("comparison_summary"),
+  evidenceBundle: jsonb("evidence_bundle"),
+  artifactMd: text("artifact_md"),
+  artifactJson: jsonb("artifact_json"),
+  seed: integer("seed").notNull().default(42),
+  replayable: boolean("replayable").notNull().default(true),
+  productionMutations: integer("production_mutations").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+  lockedAt: timestamp("locked_at"),
+}, (table) => [
+  index("pe_company_idx").on(table.companyId),
+  index("pe_experiment_idx").on(table.experimentId),
+]);
+
+export const insertPilotExperimentSchema = createInsertSchema(pilotExperiments).omit({ id: true, createdAt: true });
+export type PilotExperiment = typeof pilotExperiments.$inferSelect;
+export type InsertPilotExperiment = z.infer<typeof insertPilotExperimentSchema>;

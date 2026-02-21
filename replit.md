@@ -49,7 +49,7 @@ The system is a multi-tenant application with robust data isolation per company.
 - **Durable Stripe Webhook Processing**: Enterprise-grade webhook handling with atomic locking, state transition guards, stale lock recovery, and full audit logging.
 - **Structured Observability**: Enterprise-grade JSON logging with secret redaction and database persistence.
 - **RBAC for Automation**: Comprehensive RBAC permissions for automation features.
-- **Enterprise E2E Certification Harness**: A multi-gate certification process with numerous tests for enterprise readiness.
+- **Enterprise E2E Certification Harness v5.0.0**: 11-gate certification with 156 tests for enterprise readiness.
 - **Offline Evaluation & Calibration**: Harness for historical data evaluation and calibration of forecasts and allocations.
 - **AI Copilot (Insight-Only)**: Read-only DB query with evidence-first responses and draft-only action system requiring approval.
 - **Decision Intelligence**: Policy layer translates data into recommended parameters with what-if simulations and logged decision overrides.
@@ -61,6 +61,7 @@ The system is a multi-tenant application with robust data isolation per company.
 - **Auditable Counterfactual Savings**: Immutable savings evidence records with strict estimated vs measured savings separation.
 - **Copilot Evidence Traceability**: Evidence bundles attached to all copilot responses and action drafts for auditability.
 - **Enterprise Identity & Access**: SSO/SAML configuration, SCIM provisioning stubs, and audit export with redaction and retention controls.
+- **Pilot Evaluation Mode**: Side-by-side controlled experimentation with baseline vs regime-aware optimized policy simulation. Locked comparison windows, 5-metric tracking (service level, stockout rate, expedite spend, working capital, realized savings), strict estimated/measured savings separation, immutable config snapshots with SHA-256 hash integrity, reproducible JSON+MD artifacts, deterministic replay, and zero production mutation guarantee. API: POST /api/pilot-experiments/run, GET /api/pilot-experiments, replay, audit.
 
 ### System Design Choices
 

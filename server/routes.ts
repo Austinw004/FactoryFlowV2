@@ -18955,6 +18955,86 @@ You'll receive emails for:
   });
 
   // ============================================================
+  // Pilot Experiment Routes
+  // ============================================================
+
+  app.post("/api/pilot-experiments/run", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { name, experimentId, windowWeeks, seed, regime, fdr, forecastUncertainty, targetServiceLevel, demandSamples, materialIds, baselinePolicyOverrides } = req.body;
+      if (!name || !experimentId) return res.status(400).json({ error: "name and experimentId required" });
+      if (!materialIds || !Array.isArray(materialIds) || materialIds.length === 0) return res.status(400).json({ error: "materialIds array required" });
+      const { runPilotExperiment } = await import("./lib/pilotEvaluation");
+      const result = await runPilotExperiment({
+        companyId: user.companyId,
+        name,
+        experimentId,
+        windowWeeks: windowWeeks || 12,
+        seed: seed || 42,
+        regime: regime || "HEALTHY_EXPANSION",
+        fdr: fdr || 0.5,
+        forecastUncertainty: forecastUncertainty || 0.2,
+        targetServiceLevel: targetServiceLevel || 0.95,
+        demandSamples: demandSamples || 500,
+        materialIds,
+        baselinePolicyOverrides,
+      });
+      res.json(result);
+    } catch (error: any) {
+      if (error.message?.includes("EXPERIMENT_ALREADY_EXISTS")) return res.status(409).json({ error: error.message });
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/pilot-experiments", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { getPilotExperiments } = await import("./lib/pilotEvaluation");
+      const experiments = await getPilotExperiments(user.companyId);
+      res.json(experiments);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/pilot-experiments/:experimentId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { getPilotExperimentById } = await import("./lib/pilotEvaluation");
+      const exp = await getPilotExperimentById(req.params.experimentId);
+      if (!exp) return res.status(404).json({ error: "Experiment not found" });
+      if (exp.companyId !== req.user.companyId) return res.status(403).json({ error: "Forbidden" });
+      res.json(exp);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/pilot-experiments/:experimentId/replay", isAuthenticated, async (req: any, res) => {
+    try {
+      const { replayExperiment, getPilotExperimentById } = await import("./lib/pilotEvaluation");
+      const existing = await getPilotExperimentById(req.params.experimentId);
+      if (!existing) return res.status(404).json({ error: "Experiment not found" });
+      if (existing.companyId !== req.user.companyId) return res.status(403).json({ error: "Forbidden" });
+      const result = await replayExperiment(req.params.experimentId);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/pilot-experiments/:experimentId/audit", isAuthenticated, async (req: any, res) => {
+    try {
+      const { exportExperimentAudit } = await import("./lib/pilotEvaluation");
+      const audit = await exportExperimentAudit(req.params.experimentId);
+      if (audit.experiment.companyId !== req.user.companyId) return res.status(403).json({ error: "Forbidden" });
+      res.json(audit);
+    } catch (error: any) {
+      if (error.message?.includes("EXPERIMENT_NOT_FOUND")) return res.status(404).json({ error: error.message });
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============================================================
   // Decision Intelligence Routes
   // ============================================================
 
