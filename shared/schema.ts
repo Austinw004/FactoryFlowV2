@@ -8616,3 +8616,207 @@ export const INTEGRATION_CAPABILITIES = [
   "import", "export", "bidirectional", "webhooks", "batch", "file_edi", "real_time",
 ] as const;
 export type IntegrationCapability = typeof INTEGRATION_CAPABILITIES[number];
+
+// ============================================================
+// Track D: Data Foundation - Lead-time distributions, MOQ, capacity, data quality
+// ============================================================
+
+export const dataQualityScores = pgTable("data_quality_scores", {
+  id: serial("id").primaryKey(),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  entityType: varchar("entity_type", { length: 64 }).notNull(),
+  entityId: varchar("entity_id", { length: 255 }),
+  missingness: real("missingness").notNull().default(0),
+  staleness: real("staleness").notNull().default(0),
+  outlierScore: real("outlier_score").notNull().default(0),
+  overallScore: real("overall_score").notNull().default(0),
+  details: jsonb("details"),
+  scoredAt: timestamp("scored_at").defaultNow().notNull(),
+}, (table) => [
+  index("dqs_company_idx").on(table.companyId),
+  index("dqs_entity_idx").on(table.companyId, table.entityType, table.entityId),
+]);
+
+export const insertDataQualityScoreSchema = createInsertSchema(dataQualityScores).omit({ id: true });
+export type DataQualityScore = typeof dataQualityScores.$inferSelect;
+export type InsertDataQualityScore = z.infer<typeof insertDataQualityScoreSchema>;
+
+export const leadTimeDistributions = pgTable("lead_time_distributions", {
+  id: serial("id").primaryKey(),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  supplierId: varchar("supplier_id").notNull().references(() => suppliers.id, { onDelete: "cascade" }),
+  materialId: varchar("material_id").notNull().references(() => materials.id, { onDelete: "cascade" }),
+  meanDays: real("mean_days").notNull(),
+  stddevDays: real("stddev_days").notNull().default(0),
+  p50Days: real("p50_days"),
+  p90Days: real("p90_days"),
+  p95Days: real("p95_days"),
+  sampleSize: integer("sample_size").notNull().default(0),
+  lastUpdated: timestamp("last_updated").defaultNow().notNull(),
+}, (table) => [
+  index("ltd_company_idx").on(table.companyId),
+  index("ltd_supplier_material_idx").on(table.supplierId, table.materialId),
+]);
+
+export const insertLeadTimeDistributionSchema = createInsertSchema(leadTimeDistributions).omit({ id: true });
+export type LeadTimeDistribution = typeof leadTimeDistributions.$inferSelect;
+export type InsertLeadTimeDistribution = z.infer<typeof insertLeadTimeDistributionSchema>;
+
+export const materialConstraints = pgTable("material_constraints", {
+  id: serial("id").primaryKey(),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  materialId: varchar("material_id").notNull().references(() => materials.id, { onDelete: "cascade" }),
+  moq: real("moq"),
+  packSize: real("pack_size"),
+  maxCapacityPerPeriod: real("max_capacity_per_period"),
+  safetyStockDays: real("safety_stock_days"),
+  reorderPointUnits: real("reorder_point_units"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("mc_company_idx").on(table.companyId),
+  uniqueIndex("mc_company_material_unique").on(table.companyId, table.materialId),
+]);
+
+export const insertMaterialConstraintSchema = createInsertSchema(materialConstraints).omit({ id: true });
+export type MaterialConstraint = typeof materialConstraints.$inferSelect;
+export type InsertMaterialConstraint = z.infer<typeof insertMaterialConstraintSchema>;
+
+// ============================================================
+// Track B: AI Copilot - Draft-only action system
+// ============================================================
+
+export const COPILOT_DRAFT_STATUSES = ["draft", "pending_approval", "approved", "rejected", "expired"] as const;
+export type CopilotDraftStatus = typeof COPILOT_DRAFT_STATUSES[number];
+
+export const COPILOT_DRAFT_TYPES = ["purchase_order", "rfq", "safety_stock_adjustment", "inventory_rebalance"] as const;
+export type CopilotDraftType = typeof COPILOT_DRAFT_TYPES[number];
+
+export const copilotActionDrafts = pgTable("copilot_action_drafts", {
+  id: serial("id").primaryKey(),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  draftType: varchar("draft_type", { length: 64 }).notNull(),
+  status: varchar("status", { length: 32 }).notNull().default("draft"),
+  title: text("title").notNull(),
+  reasoning: text("reasoning"),
+  evidence: jsonb("evidence"),
+  draftPayload: jsonb("draft_payload").notNull(),
+  createdBy: varchar("created_by", { length: 255 }),
+  approvedBy: varchar("approved_by", { length: 255 }),
+  approvedAt: timestamp("approved_at"),
+  rejectedBy: varchar("rejected_by", { length: 255 }),
+  rejectedAt: timestamp("rejected_at"),
+  rejectionReason: text("rejection_reason"),
+  executedAt: timestamp("executed_at"),
+  executionResult: jsonb("execution_result"),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("cad_company_idx").on(table.companyId),
+  index("cad_status_idx").on(table.companyId, table.status),
+]);
+
+export const insertCopilotActionDraftSchema = createInsertSchema(copilotActionDrafts).omit({ id: true, createdAt: true });
+export type CopilotActionDraft = typeof copilotActionDrafts.$inferSelect;
+export type InsertCopilotActionDraft = z.infer<typeof insertCopilotActionDraftSchema>;
+
+export const copilotQueryLog = pgTable("copilot_query_log", {
+  id: serial("id").primaryKey(),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  userId: varchar("user_id", { length: 255 }),
+  query: text("query").notNull(),
+  responseText: text("response_text"),
+  evidenceRefs: jsonb("evidence_refs"),
+  durationMs: integer("duration_ms"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("cql_company_idx").on(table.companyId),
+]);
+
+export const insertCopilotQueryLogSchema = createInsertSchema(copilotQueryLog).omit({ id: true, createdAt: true });
+export type CopilotQueryLog = typeof copilotQueryLog.$inferSelect;
+export type InsertCopilotQueryLog = z.infer<typeof insertCopilotQueryLogSchema>;
+
+// ============================================================
+// Track A: Offline Evaluation & Calibration
+// ============================================================
+
+export const evaluationRuns = pgTable("evaluation_runs", {
+  id: serial("id").primaryKey(),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  version: varchar("version", { length: 32 }).notNull(),
+  status: varchar("status", { length: 32 }).notNull().default("running"),
+  startedAt: timestamp("started_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+  config: jsonb("config"),
+  summary: jsonb("summary"),
+  artifactPath: text("artifact_path"),
+}, (table) => [
+  index("er_company_idx").on(table.companyId),
+]);
+
+export const insertEvaluationRunSchema = createInsertSchema(evaluationRuns).omit({ id: true });
+export type EvaluationRun = typeof evaluationRuns.$inferSelect;
+export type InsertEvaluationRun = z.infer<typeof insertEvaluationRunSchema>;
+
+export const evaluationMetrics = pgTable("evaluation_metrics", {
+  id: serial("id").primaryKey(),
+  runId: integer("run_id").notNull().references(() => evaluationRuns.id, { onDelete: "cascade" }),
+  category: varchar("category", { length: 64 }).notNull(),
+  metricName: varchar("metric_name", { length: 128 }).notNull(),
+  value: real("value").notNull(),
+  details: jsonb("details"),
+}, (table) => [
+  index("em_run_idx").on(table.runId),
+]);
+
+export const insertEvaluationMetricSchema = createInsertSchema(evaluationMetrics).omit({ id: true });
+export type EvaluationMetric = typeof evaluationMetrics.$inferSelect;
+export type InsertEvaluationMetric = z.infer<typeof insertEvaluationMetricSchema>;
+
+// ============================================================
+// Track C: Decision Intelligence - Recommendations & What-If
+// ============================================================
+
+export const decisionRecommendations = pgTable("decision_recommendations", {
+  id: serial("id").primaryKey(),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  recommendationType: varchar("recommendation_type", { length: 64 }).notNull(),
+  materialId: varchar("material_id").references(() => materials.id),
+  supplierId: varchar("supplier_id").references(() => suppliers.id),
+  regime: varchar("regime", { length: 32 }),
+  recommendedQuantity: real("recommended_quantity"),
+  recommendedTiming: varchar("recommended_timing", { length: 128 }),
+  confidence: real("confidence"),
+  reasoning: text("reasoning"),
+  inputs: jsonb("inputs"),
+  policyVersion: varchar("policy_version", { length: 32 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("dr_company_idx").on(table.companyId),
+]);
+
+export const insertDecisionRecommendationSchema = createInsertSchema(decisionRecommendations).omit({ id: true, createdAt: true });
+export type DecisionRecommendation = typeof decisionRecommendations.$inferSelect;
+export type InsertDecisionRecommendation = z.infer<typeof insertDecisionRecommendationSchema>;
+
+export const decisionOverrides = pgTable("decision_overrides", {
+  id: serial("id").primaryKey(),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  recommendationId: integer("recommendation_id").references(() => decisionRecommendations.id),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  overriddenField: varchar("overridden_field", { length: 128 }).notNull(),
+  originalValue: text("original_value"),
+  newValue: text("new_value"),
+  reason: text("reason"),
+  regime: varchar("regime", { length: 32 }),
+  forecastUncertainty: real("forecast_uncertainty"),
+  dataQualityScore: real("data_quality_score"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("do_company_idx").on(table.companyId),
+  index("do_recommendation_idx").on(table.recommendationId),
+]);
+
+export const insertDecisionOverrideSchema = createInsertSchema(decisionOverrides).omit({ id: true, createdAt: true });
+export type DecisionOverride = typeof decisionOverrides.$inferSelect;
+export type InsertDecisionOverride = z.infer<typeof insertDecisionOverrideSchema>;

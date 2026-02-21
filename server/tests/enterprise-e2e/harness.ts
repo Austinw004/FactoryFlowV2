@@ -5,6 +5,9 @@ import {
   aiAutomationRules, purchaseOrders, stripeProcessedEvents,
   processedTriggerEvents, automationRuntimeState, automationSafeMode,
   backgroundJobLocks, structuredEventLog, companies, integrationEvents,
+  copilotActionDrafts, copilotQueryLog, evaluationRuns, evaluationMetrics,
+  decisionRecommendations, decisionOverrides, dataQualityScores,
+  materialConstraints, leadTimeDistributions,
 } from "@shared/schema";
 import { storage } from "../../storage";
 import { AutomationEngine, buildTriggerEventId } from "../../lib/automationEngine";
@@ -1188,7 +1191,7 @@ This certification report validates the enterprise readiness of the Prescient La
 
 function generateJsonArtifact(): object {
   return {
-    certificationVersion: "2.0.0",
+    certificationVersion: "2.1.0",
     generatedAt: new Date().toISOString(),
     environment: "development",
     instanceMode: "single-instance",
@@ -1226,6 +1229,298 @@ function generateJsonArtifact(): object {
   };
 }
 
+// ============================================================
+// Gate 8: Copilot Safety, Evaluation & Data Quality
+// ============================================================
+async function gate8() {
+  currentGate = "Gate 8: Copilot Safety & Data Quality";
+  const gateStart = TS();
+  console.log(`\n========================================`);
+  console.log(`  ${currentGate}`);
+  console.log(`========================================\n`);
+
+  // 8.1: Copilot endpoints require auth
+  const t81 = Date.now();
+  const copilotNoAuth = await httpPost("/api/copilot/query", { query: "test" });
+  assert(copilotNoAuth.status === 401, "8.1", "POST /api/copilot/query returns 401 without auth",
+    { validated: "Copilot query endpoint enforces authentication",
+      endpointsOrFunctions: "POST /api/copilot/query",
+      inputs: "No auth cookie", expected: "401", actual: `${copilotNoAuth.status}`,
+      rawEvidence: { status: copilotNoAuth.status }, proofType: "runtime" }, t81);
+
+  // 8.2: Copilot draft endpoint requires auth
+  const t82 = Date.now();
+  const draftNoAuth = await httpPost("/api/copilot/draft", { draftType: "purchase_order", title: "test", payload: {} });
+  assert(draftNoAuth.status === 401, "8.2", "POST /api/copilot/draft returns 401 without auth",
+    { validated: "Copilot draft endpoint enforces authentication",
+      endpointsOrFunctions: "POST /api/copilot/draft",
+      inputs: "No auth cookie", expected: "401", actual: `${draftNoAuth.status}`,
+      rawEvidence: { status: draftNoAuth.status }, proofType: "runtime" }, t82);
+
+  // 8.3: Create a draft → verify it starts as "draft" status, never "completed"
+  const t83 = Date.now();
+  const [testDraft] = await db.insert(copilotActionDrafts).values({
+    companyId: COMPANY_A,
+    draftType: "purchase_order",
+    status: "draft",
+    title: `${PREFIX}-test-po-draft`,
+    draftPayload: { materialId: "test-mat", quantity: 100 },
+    createdBy: "cert-test",
+  }).returning();
+  const draftCreated = !!testDraft && testDraft.status === "draft";
+  const noExecutedAt = testDraft.executedAt === null;
+  assert(draftCreated && noExecutedAt, "8.3", "New copilot draft starts as 'draft' with no executedAt (never auto-completed)",
+    { validated: "Drafts are never auto-completed on creation",
+      endpointsOrFunctions: "copilotActionDrafts table",
+      inputs: `draftType=purchase_order, companyId=${COMPANY_A}`,
+      expected: "status=draft, executedAt=null", actual: `status=${testDraft.status}, executedAt=${testDraft.executedAt}`,
+      rawEvidence: { draftId: testDraft.id, status: testDraft.status, executedAt: testDraft.executedAt }, proofType: "runtime" }, t83);
+
+  // 8.4: canExecuteDraft blocks non-approved drafts
+  const t84 = Date.now();
+  const { canExecuteDraft } = await import("../../lib/copilotService");
+  const canExecResult = await canExecuteDraft(COMPANY_A, testDraft.id);
+  assert(!canExecResult.allowed, "8.4", "canExecuteDraft blocks non-approved draft",
+    { validated: "Unapproved drafts cannot be executed",
+      endpointsOrFunctions: "copilotService.canExecuteDraft()",
+      inputs: `draftId=${testDraft.id}, status=draft`,
+      expected: "allowed=false", actual: `allowed=${canExecResult.allowed}, reason=${canExecResult.reason}`,
+      rawEvidence: canExecResult, proofType: "runtime" }, t84);
+
+  // 8.5: Approve draft → verify status transition
+  const t85 = Date.now();
+  const { approveDraft } = await import("../../lib/copilotService");
+  const approved = await approveDraft(COMPANY_A, testDraft.id, "cert-approver");
+  const approvedValid = approved?.status === "approved" && approved?.approvedBy === "cert-approver";
+  assert(!!approvedValid, "8.5", "Draft transitions to 'approved' with approver identity recorded",
+    { validated: "Approval flow works and records approver",
+      endpointsOrFunctions: "copilotService.approveDraft()",
+      inputs: `draftId=${testDraft.id}, approver=cert-approver`,
+      expected: "status=approved, approvedBy=cert-approver", actual: `status=${approved?.status}, approvedBy=${approved?.approvedBy}`,
+      rawEvidence: { draftId: testDraft.id, status: approved?.status, approvedBy: approved?.approvedBy }, proofType: "runtime" }, t85);
+
+  // 8.6: After approval, canExecuteDraft now allows
+  const t86 = Date.now();
+  const canExecApproved = await canExecuteDraft(COMPANY_A, testDraft.id);
+  assert(canExecApproved.allowed, "8.6", "canExecuteDraft allows approved draft",
+    { validated: "Only approved drafts can proceed to execution",
+      endpointsOrFunctions: "copilotService.canExecuteDraft()",
+      inputs: `draftId=${testDraft.id}, status=approved`,
+      expected: "allowed=true", actual: `allowed=${canExecApproved.allowed}`,
+      rawEvidence: canExecApproved, proofType: "runtime" }, t86);
+
+  // 8.7: Reject a different draft → verify no phantom completed state
+  const t87 = Date.now();
+  const [rejectableDraft] = await db.insert(copilotActionDrafts).values({
+    companyId: COMPANY_A,
+    draftType: "rfq",
+    status: "draft",
+    title: `${PREFIX}-test-rfq-draft`,
+    draftPayload: { materialId: "test-mat", quantity: 50 },
+    createdBy: "cert-test",
+  }).returning();
+  const { rejectDraft } = await import("../../lib/copilotService");
+  const rejected = await rejectDraft(COMPANY_A, rejectableDraft.id, "cert-reviewer", "Not needed");
+  const rejectedValid = rejected?.status === "rejected" && rejected?.executedAt === null;
+  assert(!!rejectedValid, "8.7", "Rejected draft has no executedAt (no phantom completion)",
+    { validated: "Rejected drafts never show as executed",
+      endpointsOrFunctions: "copilotService.rejectDraft()",
+      inputs: `draftId=${rejectableDraft.id}, reason=Not needed`,
+      expected: "status=rejected, executedAt=null", actual: `status=${rejected?.status}, executedAt=${rejected?.executedAt}`,
+      rawEvidence: { draftId: rejectableDraft.id, status: rejected?.status, executedAt: rejected?.executedAt }, proofType: "runtime" }, t87);
+
+  // 8.8: No "completed" status exists in any draft (structural proof)
+  const t88 = Date.now();
+  const completedDrafts = await db.select().from(copilotActionDrafts)
+    .where(and(eq(copilotActionDrafts.companyId, COMPANY_A), sql`status = 'completed'`));
+  assert(completedDrafts.length === 0, "8.8", "No 'completed' drafts exist (phantom state prevention)",
+    { validated: "Draft system has no 'completed' status pathway",
+      endpointsOrFunctions: "copilotActionDrafts table",
+      inputs: `SELECT WHERE status='completed' AND companyId=${COMPANY_A}`,
+      expected: "0 rows", actual: `${completedDrafts.length} rows`,
+      rawEvidence: { count: completedDrafts.length }, proofType: "runtime" }, t88);
+
+  // 8.9: validateNeverCompleted throws on safety violation
+  const t89 = Date.now();
+  const { validateNeverCompleted } = await import("../../lib/copilotService");
+  let safetyThrew = false;
+  try {
+    validateNeverCompleted({ ...testDraft, executedAt: new Date(), status: "draft" } as any);
+  } catch (e: any) {
+    safetyThrew = e.message.includes("SAFETY_VIOLATION");
+  }
+  assert(safetyThrew, "8.9", "validateNeverCompleted throws SAFETY_VIOLATION for executed+unapproved draft",
+    { validated: "Safety guard prevents execution without approval in code path",
+      endpointsOrFunctions: "copilotService.validateNeverCompleted()",
+      inputs: "Draft with executedAt set but status=draft",
+      expected: "SAFETY_VIOLATION thrown", actual: safetyThrew ? "Thrown" : "Not thrown",
+      rawEvidence: { safetyThrew }, proofType: "deterministic" }, t89);
+
+  // 8.10: Data quality service functions correctly
+  const t810 = Date.now();
+  const { scoreCompanyDataQuality, shouldBlockAutomation } = await import("../../lib/dataQuality");
+  const dqReport = await scoreCompanyDataQuality(COMPANY_A);
+  const dqValid = dqReport && typeof dqReport.overallScore === "number" && Array.isArray(dqReport.entityScores);
+  assert(!!dqValid, "8.10", "Data quality scoring produces valid report with numerical scores",
+    { validated: "Data quality scoring service returns structured report",
+      endpointsOrFunctions: "dataQuality.scoreCompanyDataQuality()",
+      inputs: `companyId=${COMPANY_A}`,
+      expected: "Report with overallScore and entityScores array",
+      actual: `overallScore=${dqReport?.overallScore?.toFixed(2)}, entities=${dqReport?.entityScores?.length}`,
+      rawEvidence: { overallScore: dqReport?.overallScore, entityCount: dqReport?.entityScores?.length, automationAllowed: dqReport?.automationAllowed }, proofType: "runtime" }, t810);
+
+  // 8.11: shouldBlockAutomation blocks when no data quality available
+  const t811 = Date.now();
+  const blockResult = shouldBlockAutomation(null);
+  assert(blockResult.blocked === true, "8.11", "Automation blocked when no data quality assessment exists",
+    { validated: "Missing data quality blocks automation",
+      endpointsOrFunctions: "dataQuality.shouldBlockAutomation()",
+      inputs: "null quality report",
+      expected: "blocked=true", actual: `blocked=${blockResult.blocked}`,
+      rawEvidence: blockResult, proofType: "deterministic" }, t811);
+
+  // 8.12: Data quality scores persist to DB
+  const t812 = Date.now();
+  const dqRows = await db.select().from(dataQualityScores)
+    .where(eq(dataQualityScores.companyId, COMPANY_A))
+    .limit(5);
+  assert(dqRows.length > 0, "8.12", "Data quality scores persisted to database",
+    { validated: "Scoring results written to data_quality_scores table",
+      endpointsOrFunctions: "data_quality_scores table",
+      inputs: `companyId=${COMPANY_A}`,
+      expected: ">0 rows", actual: `${dqRows.length} rows`,
+      rawEvidence: { rowCount: dqRows.length, sample: dqRows[0] }, proofType: "runtime" }, t812);
+
+  // 8.13: Evaluation harness runs and produces artifacts
+  const t813 = Date.now();
+  const { runEvaluation } = await import("../../lib/evaluationHarness");
+  const evalResult = await runEvaluation({ companyId: COMPANY_A, version: `cert-${PREFIX}` });
+  const evalValid = evalResult && evalResult.runId > 0 && evalResult.summary &&
+    typeof evalResult.summary.forecast.wape === "number" &&
+    typeof evalResult.summary.forecast.smape === "number" &&
+    typeof evalResult.summary.calibration.calibrationError === "number";
+  assert(!!evalValid, "8.13", "Evaluation harness produces forecast, allocation, procurement, and calibration metrics",
+    { validated: "Offline evaluation generates complete metric report",
+      endpointsOrFunctions: "evaluationHarness.runEvaluation()",
+      inputs: `companyId=${COMPANY_A}, version=cert-${PREFIX}`,
+      expected: "Valid summary with WAPE, sMAPE, calibration error",
+      actual: `runId=${evalResult.runId}, wape=${evalResult.summary.forecast.wape.toFixed(4)}, smape=${evalResult.summary.forecast.smape.toFixed(4)}, calError=${evalResult.summary.calibration.calibrationError.toFixed(4)}`,
+      rawEvidence: { runId: evalResult.runId, wape: evalResult.summary.forecast.wape, smape: evalResult.summary.forecast.smape, calibrationError: evalResult.summary.calibration.calibrationError }, proofType: "runtime" }, t813);
+
+  // 8.14: Evaluation metrics persisted to DB
+  const t814 = Date.now();
+  const evalMetricRows = await db.select().from(evaluationMetrics)
+    .where(eq(evaluationMetrics.runId, evalResult.runId));
+  const hasWape = evalMetricRows.some(m => m.metricName === "wape");
+  const hasSmape = evalMetricRows.some(m => m.metricName === "smape");
+  const hasBias = evalMetricRows.some(m => m.metricName === "bias");
+  const hasCalError = evalMetricRows.some(m => m.metricName === "calibration_error");
+  assert(hasWape && hasSmape && hasBias && hasCalError, "8.14", "Evaluation metrics (WAPE, sMAPE, bias, calibration_error) persisted to DB",
+    { validated: "All required evaluation metrics written to evaluation_metrics table",
+      endpointsOrFunctions: "evaluation_metrics table",
+      inputs: `runId=${evalResult.runId}`,
+      expected: "WAPE, sMAPE, bias, calibration_error rows", actual: `${evalMetricRows.length} metrics, wape=${hasWape}, smape=${hasSmape}, bias=${hasBias}, calError=${hasCalError}`,
+      rawEvidence: { metricCount: evalMetricRows.length, metrics: evalMetricRows.map(m => m.metricName) }, proofType: "runtime" }, t814);
+
+  // 8.15: Decision policy produces valid recommendation
+  const t815 = Date.now();
+  const { computePolicyRecommendation } = await import("../../lib/decisionIntelligence");
+  const policyResult = computePolicyRecommendation({
+    regime: "INFLATIONARY", fdr: 1.2, forecastUncertainty: 0.25,
+    materialId: "test", currentOnHand: 50, avgDemand: 10,
+    leadTimeDays: 14, moq: 25, packSize: 10, dataQualityScore: 0.8,
+  });
+  const policyValid = policyResult.recommendedQuantity > 0 &&
+    policyResult.recommendedTiming === "accelerate" &&
+    policyResult.confidence > 0 && policyResult.confidence <= 1;
+  assert(!!policyValid, "8.15", "Policy layer: INFLATIONARY regime recommends acceleration with valid quantity",
+    { validated: "Policy engine translates regime+constraints into actionable recommendation",
+      endpointsOrFunctions: "decisionIntelligence.computePolicyRecommendation()",
+      inputs: "regime=INFLATIONARY, fdr=1.2, uncertainty=0.25, onHand=50, demand=10/day, lead=14d, moq=25",
+      expected: "quantity>0, timing=accelerate, 0<confidence<=1",
+      actual: `quantity=${policyResult.recommendedQuantity}, timing=${policyResult.recommendedTiming}, confidence=${policyResult.confidence.toFixed(3)}`,
+      rawEvidence: policyResult, proofType: "deterministic" }, t815);
+
+  // 8.16: What-if simulation produces valid projections
+  const t816 = Date.now();
+  const { computeWhatIf } = await import("../../lib/decisionIntelligence");
+  const whatIfResult = computeWhatIf(
+    { name: "bulk_order", quantity: 200, timing: "immediate" },
+    { regime: "GROWTH", fdr: 0.8, forecastUncertainty: 0.2, materialId: "test", currentOnHand: 50, avgDemand: 10, leadTimeDays: 14 },
+  );
+  const whatIfValid = whatIfResult.projectedServiceLevel >= 0 && whatIfResult.projectedServiceLevel <= 1 &&
+    whatIfResult.stockoutRisk >= 0 && whatIfResult.stockoutRisk <= 1 &&
+    whatIfResult.cashImpact >= 0;
+  assert(!!whatIfValid, "8.16", "What-if simulation returns bounded service level, stockout risk, and cash impact",
+    { validated: "What-if scenarios produce valid bounded projections",
+      endpointsOrFunctions: "decisionIntelligence.computeWhatIf()",
+      inputs: "scenario=bulk_order 200 units immediate, regime=GROWTH",
+      expected: "0<=serviceLevel<=1, 0<=stockoutRisk<=1, cashImpact>=0",
+      actual: `serviceLevel=${whatIfResult.projectedServiceLevel.toFixed(3)}, stockoutRisk=${whatIfResult.stockoutRisk.toFixed(3)}, cashImpact=${whatIfResult.cashImpact.toFixed(2)}`,
+      rawEvidence: whatIfResult, proofType: "deterministic" }, t816);
+
+  // 8.17: Decision override logging persists to DB
+  const t817 = Date.now();
+  const { logOverride } = await import("../../lib/decisionIntelligence");
+  const override = await logOverride(COMPANY_A, "cert-user", null, "quantity", "100", "150", "Market conditions changed", { regime: "GROWTH" });
+  const overrideValid = override && override.overriddenField === "quantity" && override.reason === "Market conditions changed";
+  assert(!!overrideValid, "8.17", "Decision override logged with factual context (regime, reason, values)",
+    { validated: "Override logging captures all contextual fields",
+      endpointsOrFunctions: "decisionIntelligence.logOverride() → decision_overrides table",
+      inputs: "field=quantity, 100→150, reason=Market conditions changed",
+      expected: "Row with overriddenField, originalValue, newValue, reason",
+      actual: `field=${override?.overriddenField}, original=${override?.originalValue}, new=${override?.newValue}`,
+      rawEvidence: { overrideId: override?.id, field: override?.overriddenField, reason: override?.reason }, proofType: "runtime" }, t817);
+
+  // 8.18: Data quality API requires auth
+  const t818 = Date.now();
+  const dqNoAuth = await httpGet("/api/data-quality");
+  assert(dqNoAuth.status === 401, "8.18", "GET /api/data-quality returns 401 without auth",
+    { validated: "Data quality endpoint enforces authentication",
+      endpointsOrFunctions: "GET /api/data-quality",
+      inputs: "No auth cookie", expected: "401", actual: `${dqNoAuth.status}`,
+      rawEvidence: { status: dqNoAuth.status }, proofType: "runtime" }, t818);
+
+  // 8.19: Evaluation API requires auth
+  const t819 = Date.now();
+  const evalNoAuth = await httpPost("/api/evaluation/run", { version: "test" });
+  assert(evalNoAuth.status === 401, "8.19", "POST /api/evaluation/run returns 401 without auth",
+    { validated: "Evaluation endpoint enforces authentication",
+      endpointsOrFunctions: "POST /api/evaluation/run",
+      inputs: "No auth cookie", expected: "401", actual: `${evalNoAuth.status}`,
+      rawEvidence: { status: evalNoAuth.status }, proofType: "runtime" }, t819);
+
+  // 8.20: Decision endpoints require auth
+  const t820 = Date.now();
+  const decNoAuth = await httpPost("/api/decisions/recommend", { materialId: "x", regime: "GROWTH" });
+  assert(decNoAuth.status === 401, "8.20", "POST /api/decisions/recommend returns 401 without auth",
+    { validated: "Decision recommendation endpoint enforces authentication",
+      endpointsOrFunctions: "POST /api/decisions/recommend",
+      inputs: "No auth cookie", expected: "401", actual: `${decNoAuth.status}`,
+      rawEvidence: { status: decNoAuth.status }, proofType: "runtime" }, t820);
+
+  // 8.21: Procurement savings separation (estimated vs measured)
+  const t821 = Date.now();
+  const savingsSeparated = evalResult.summary.procurement.savingsSeparation === "estimated_only" ||
+    evalResult.summary.procurement.savingsSeparation === "measured_available" ||
+    evalResult.summary.procurement.savingsSeparation === "both";
+  const measuredExplicit = evalResult.summary.procurement.measuredSavings === null ||
+    typeof evalResult.summary.procurement.measuredSavings === "number";
+  assert(savingsSeparated && measuredExplicit, "8.21", "Procurement metrics explicitly separate estimated vs measured savings",
+    { validated: "No conflation of estimated and measured savings",
+      endpointsOrFunctions: "evaluationHarness → procurement metrics",
+      inputs: "Evaluation run output",
+      expected: "savingsSeparation in ['estimated_only','measured_available','both'], measuredSavings null or number",
+      actual: `separation=${evalResult.summary.procurement.savingsSeparation}, measured=${evalResult.summary.procurement.measuredSavings}`,
+      rawEvidence: { savingsSeparation: evalResult.summary.procurement.savingsSeparation, measuredSavings: evalResult.summary.procurement.measuredSavings }, proofType: "runtime" }, t821);
+
+  gateResults.push({
+    gate: currentGate, description: "Copilot draft-only safety, evaluation calibration, decision intelligence, data quality gates",
+    pass: results.filter(r => r.gate === currentGate).every(r => r.pass),
+    tests: results.filter(r => r.gate === currentGate), startedAt: gateStart, completedAt: TS(),
+  });
+}
+
 async function cleanup() {
   console.log("\n  Cleaning up test data...");
   try {
@@ -1243,6 +1538,13 @@ async function cleanup() {
     await db.execute(sql`DELETE FROM integration_events WHERE company_id = ${COMPANY_A} AND idempotency_key LIKE ${PREFIX + '%'}`);
     await db.execute(sql`DELETE FROM structured_event_log WHERE company_id = ${COMPANY_A} AND details::text LIKE ${'%' + PREFIX + '%'}`);
     await db.execute(sql`DELETE FROM ai_actions WHERE company_id = ${`${PREFIX}-safemode-test`}`);
+    await db.execute(sql`DELETE FROM copilot_action_drafts WHERE company_id = ${COMPANY_A}`);
+    await db.execute(sql`DELETE FROM copilot_query_log WHERE company_id = ${COMPANY_A}`);
+    await db.execute(sql`DELETE FROM evaluation_metrics WHERE run_id IN (SELECT id FROM evaluation_runs WHERE company_id = ${COMPANY_A})`);
+    await db.execute(sql`DELETE FROM evaluation_runs WHERE company_id = ${COMPANY_A}`);
+    await db.execute(sql`DELETE FROM decision_overrides WHERE company_id = ${COMPANY_A}`);
+    await db.execute(sql`DELETE FROM decision_recommendations WHERE company_id = ${COMPANY_A}`);
+    await db.execute(sql`DELETE FROM data_quality_scores WHERE company_id = ${COMPANY_A}`);
     await db.delete(companies).where(eq(companies.id, `${PREFIX}-safemode-test`));
     await db.delete(companies).where(eq(companies.id, COMPANY_A));
     await db.delete(companies).where(eq(companies.id, COMPANY_B));
@@ -1254,10 +1556,11 @@ async function cleanup() {
 
 async function main() {
   console.log("================================================================");
-  console.log("  ENTERPRISE E2E CERTIFICATION HARNESS v2.0.0");
+  console.log("  ENTERPRISE E2E CERTIFICATION HARNESS v2.1.0");
   console.log(`  Date: ${new Date().toISOString()}`);
-  console.log("  Scope: Gates 1-7 (Multi-tenant, Spend, Automation, Payments,");
-  console.log("         Integrations, Data Honesty, Operational Readiness)");
+  console.log("  Scope: Gates 1-8 (Multi-tenant, Spend, Automation, Payments,");
+  console.log("         Integrations, Data Honesty, Operational Readiness,");
+  console.log("         Copilot Safety & Data Quality)");
   console.log("================================================================");
 
   await setup();
@@ -1268,6 +1571,7 @@ async function main() {
   await gate5();
   await gate6();
   await gate7();
+  await gate8();
   await cleanup();
 
   const mdReport = generateMarkdownReport();

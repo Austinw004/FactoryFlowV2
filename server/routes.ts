@@ -18738,6 +18738,232 @@ You'll receive emails for:
     }
   });
 
+  // ============================================================
+  // Copilot Routes (read-only + draft-only, never executes)
+  // ============================================================
+
+  app.post("/api/copilot/query", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { query } = req.body;
+      if (!query || typeof query !== "string") return res.status(400).json({ error: "query is required" });
+      const { queryCopilot } = await import("./lib/copilotService");
+      const result = await queryCopilot(user.companyId, user.id, query);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/copilot/draft", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { draftType, title, payload, reasoning } = req.body;
+      if (!draftType || !title || !payload) return res.status(400).json({ error: "draftType, title, payload required" });
+      const validTypes = ["purchase_order", "rfq", "safety_stock_adjustment", "inventory_rebalance"];
+      if (!validTypes.includes(draftType)) return res.status(400).json({ error: `Invalid draftType. Must be one of: ${validTypes.join(", ")}` });
+      const { createDraft } = await import("./lib/copilotService");
+      const result = await createDraft(user.companyId, user.id, draftType, title, payload, reasoning);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/copilot/drafts", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const status = req.query.status as string | undefined;
+      const { getDrafts } = await import("./lib/copilotService");
+      const drafts = await getDrafts(user.companyId, status as any);
+      res.json(drafts);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/copilot/drafts/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const draftId = parseInt(req.params.id);
+      if (isNaN(draftId)) return res.status(400).json({ error: "Invalid draft ID" });
+      const { getDraftById } = await import("./lib/copilotService");
+      const draft = await getDraftById(user.companyId, draftId);
+      if (!draft) return res.status(404).json({ error: "Draft not found" });
+      res.json(draft);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/copilot/drafts/:id/approve", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const draftId = parseInt(req.params.id);
+      if (isNaN(draftId)) return res.status(400).json({ error: "Invalid draft ID" });
+      const { approveDraft } = await import("./lib/copilotService");
+      const draft = await approveDraft(user.companyId, draftId, user.id);
+      if (!draft) return res.status(404).json({ error: "Draft not found or not in approvable state" });
+      res.json(draft);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/copilot/drafts/:id/reject", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const draftId = parseInt(req.params.id);
+      if (isNaN(draftId)) return res.status(400).json({ error: "Invalid draft ID" });
+      const { rejectDraft } = await import("./lib/copilotService");
+      const draft = await rejectDraft(user.companyId, draftId, user.id, req.body.reason);
+      if (!draft) return res.status(404).json({ error: "Draft not found or not in rejectable state" });
+      res.json(draft);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/copilot/drafts/:id/can-execute", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const draftId = parseInt(req.params.id);
+      if (isNaN(draftId)) return res.status(400).json({ error: "Invalid draft ID" });
+      const { canExecuteDraft } = await import("./lib/copilotService");
+      const result = await canExecuteDraft(user.companyId, draftId);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============================================================
+  // Data Quality Routes
+  // ============================================================
+
+  app.post("/api/data-quality/score", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { scoreCompanyDataQuality } = await import("./lib/dataQuality");
+      const report = await scoreCompanyDataQuality(user.companyId);
+      res.json(report);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/data-quality", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { getLatestDataQuality } = await import("./lib/dataQuality");
+      const report = await getLatestDataQuality(user.companyId);
+      res.json(report || { overallScore: 0, entityScores: [], automationAllowed: false, blockReasons: ["No assessment run yet"] });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/data-quality/automation-check", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { getLatestDataQuality, shouldBlockAutomation } = await import("./lib/dataQuality");
+      const report = await getLatestDataQuality(user.companyId);
+      const result = shouldBlockAutomation(report);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============================================================
+  // Evaluation Routes
+  // ============================================================
+
+  app.post("/api/evaluation/run", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { version } = req.body;
+      const { runEvaluation } = await import("./lib/evaluationHarness");
+      const result = await runEvaluation({ companyId: user.companyId, version: version || "1.0.0" });
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============================================================
+  // Decision Intelligence Routes
+  // ============================================================
+
+  app.post("/api/decisions/recommend", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { materialId, regime, fdr, forecastUncertainty } = req.body;
+      if (!materialId || !regime) return res.status(400).json({ error: "materialId and regime required" });
+      const { generateRecommendation } = await import("./lib/decisionIntelligence");
+      const rec = await generateRecommendation(user.companyId, materialId, regime, fdr || 0, forecastUncertainty || 0.2);
+      res.json(rec);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/decisions/recommendations", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { getRecommendations } = await import("./lib/decisionIntelligence");
+      const recs = await getRecommendations(user.companyId);
+      res.json(recs);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/decisions/what-if", isAuthenticated, async (req: any, res) => {
+    try {
+      const { scenarios, materialId, regime, fdr, forecastUncertainty, currentOnHand, avgDemand, leadTimeDays } = req.body;
+      if (!scenarios || !Array.isArray(scenarios)) return res.status(400).json({ error: "scenarios array required" });
+      const { computeWhatIf } = await import("./lib/decisionIntelligence");
+      const inputs = {
+        regime: regime || "GROWTH", fdr: fdr || 0, forecastUncertainty: forecastUncertainty || 0.2,
+        materialId: materialId || "", currentOnHand: currentOnHand || 100, avgDemand: avgDemand || 10,
+        leadTimeDays: leadTimeDays || 14,
+      };
+      const results = scenarios.map((s: any) => computeWhatIf(s, inputs));
+      res.json({ results, inputs });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/decisions/override", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { recommendationId, field, originalValue, newValue, reason, regime, forecastUncertainty, dataQualityScore } = req.body;
+      if (!field || !newValue || !reason) return res.status(400).json({ error: "field, newValue, reason required" });
+      const { logOverride } = await import("./lib/decisionIntelligence");
+      const override = await logOverride(
+        user.companyId, user.id, recommendationId || null, field,
+        originalValue || "", newValue, reason,
+        { regime, forecastUncertainty, dataQualityScore },
+      );
+      res.json(override);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/decisions/overrides", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { getOverrides } = await import("./lib/decisionIntelligence");
+      const overrides = await getOverrides(user.companyId);
+      res.json(overrides);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   
   setupWebSocket(httpServer);
