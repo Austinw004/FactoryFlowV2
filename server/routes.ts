@@ -19035,6 +19035,89 @@ You'll receive emails for:
   });
 
   // ============================================================
+  // Adaptive Forecasting Routes
+  // ============================================================
+
+  app.post("/api/adaptive-forecast/analyze", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { version, seed, fdrSeries, forecastErrors, actualDemand, forecastedDemand, leadingIndicators, toleranceThreshold, rollingWindowSize, demandSamples, supplyDisruptionProbability } = req.body;
+      if (!fdrSeries || !Array.isArray(fdrSeries) || !forecastErrors || !Array.isArray(forecastErrors)) {
+        return res.status(400).json({ error: "fdrSeries and forecastErrors arrays required" });
+      }
+      const { runAdaptiveForecastAnalysis, generateStabilityReportMd, hashAdaptiveConfig } = await import("./lib/adaptiveForecasting");
+      const config = {
+        companyId: user.companyId,
+        version: version || "1.0.0",
+        seed: seed ?? 42,
+        fdrSeries,
+        forecastErrors,
+        actualDemand: actualDemand || fdrSeries.map(() => 100),
+        forecastedDemand: forecastedDemand || fdrSeries.map(() => 100),
+        leadingIndicators: leadingIndicators || [],
+        toleranceThreshold,
+        rollingWindowSize,
+        demandSamples,
+        supplyDisruptionProbability,
+      };
+      const report = runAdaptiveForecastAnalysis(config);
+      const md = generateStabilityReportMd(report);
+      const { predictiveStabilityReports } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const [saved] = await db.insert(predictiveStabilityReports).values({
+        companyId: user.companyId,
+        version: config.version,
+        engineVersion: report.engineVersion,
+        status: "completed",
+        configHash: report.configHash,
+        seed: config.seed,
+        reportData: report as any,
+        artifactMd: md,
+        artifactJson: report as any,
+        productionMutations: 0,
+        replayable: true,
+        completedAt: new Date(),
+      }).returning();
+      res.json({ report, reportId: saved.id });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/adaptive-forecast/reports", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { predictiveStabilityReports } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq, desc } = await import("drizzle-orm");
+      const reports = await db.select().from(predictiveStabilityReports)
+        .where(eq(predictiveStabilityReports.companyId, user.companyId))
+        .orderBy(desc(predictiveStabilityReports.createdAt))
+        .limit(20);
+      res.json(reports);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/adaptive-forecast/reports/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { predictiveStabilityReports } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      const [report] = await db.select().from(predictiveStabilityReports)
+        .where(eq(predictiveStabilityReports.id, parseInt(req.params.id)))
+        .limit(1);
+      if (!report) return res.status(404).json({ error: "Report not found" });
+      if (report.companyId !== user.companyId) return res.status(403).json({ error: "Forbidden" });
+      res.json(report);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============================================================
   // Decision Intelligence Routes
   // ============================================================
 

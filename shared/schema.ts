@@ -9003,3 +9003,31 @@ export const pilotExperiments = pgTable("pilot_experiments", {
 export const insertPilotExperimentSchema = createInsertSchema(pilotExperiments).omit({ id: true, createdAt: true });
 export type PilotExperiment = typeof pilotExperiments.$inferSelect;
 export type InsertPilotExperiment = z.infer<typeof insertPilotExperimentSchema>;
+
+// ============================================================
+// Predictive Stability Reports (Adaptive Forecasting Layer)
+// ============================================================
+
+export const predictiveStabilityReports = pgTable("predictive_stability_reports", {
+  id: serial("id").primaryKey(),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  version: varchar("version", { length: 64 }).notNull(),
+  engineVersion: varchar("engine_version", { length: 32 }).notNull(),
+  status: varchar("status", { length: 32 }).notNull().default("created"),
+  configHash: varchar("config_hash", { length: 64 }).notNull(),
+  seed: integer("seed").notNull().default(42),
+  reportData: jsonb("report_data"),
+  artifactMd: text("artifact_md"),
+  artifactJson: jsonb("artifact_json"),
+  productionMutations: integer("production_mutations").notNull().default(0),
+  replayable: boolean("replayable").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+}, (table) => [
+  index("psr_company_idx").on(table.companyId),
+  index("psr_version_idx").on(table.version),
+]);
+
+export const insertPredictiveStabilityReportSchema = createInsertSchema(predictiveStabilityReports).omit({ id: true, createdAt: true });
+export type PredictiveStabilityReport = typeof predictiveStabilityReports.$inferSelect;
+export type InsertPredictiveStabilityReport = z.infer<typeof insertPredictiveStabilityReportSchema>;

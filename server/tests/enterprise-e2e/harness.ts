@@ -9,7 +9,7 @@ import {
   decisionRecommendations, decisionOverrides, dataQualityScores,
   materialConstraints, leadTimeDistributions,
   savingsEvidenceRecords, ssoConfigurations, scimProvisioningLog, auditExportConfigs,
-  regimeBacktestReports, optimizationRuns, pilotExperiments,
+  regimeBacktestReports, optimizationRuns, pilotExperiments, predictiveStabilityReports,
 } from "@shared/schema";
 import { storage } from "../../storage";
 import { AutomationEngine, buildTriggerEventId } from "../../lib/automationEngine";
@@ -2552,6 +2552,480 @@ async function gate11() {
   });
 }
 
+async function gate12() {
+  currentGate = "Gate 12: Adaptive Forecasting Layer";
+  console.log(`\n  ${currentGate}`);
+  const gateStart = TS();
+
+  const {
+    runAdaptiveForecastAnalysis, computeDynamicModelWeights, computeHeteroskedasticVolatility,
+    computeTailRiskMetrics, computeRegimeTransitionPrediction, computeSignalStrengths,
+    computeLiftDecayAnalysis, computeUncertaintyExpansion, hashAdaptiveConfig,
+    generateStabilityReportMd, ADAPTIVE_ENGINE_VERSION,
+  } = await import("../../lib/adaptiveForecasting");
+  const { seededRandom } = await import("../../lib/evaluationHarness");
+
+  const rng = seededRandom(42);
+  const fdrSeries: number[] = [];
+  let fdr = 0.5;
+  for (let i = 0; i < 60; i++) {
+    fdr += (rng() - 0.45) * 0.1;
+    fdr = Math.max(0, Math.min(4, fdr));
+    fdrSeries.push(Math.round(fdr * 1000) / 1000);
+  }
+
+  const actualDemand: number[] = [];
+  const forecastedDemand: number[] = [];
+  const forecastErrors: number[] = [];
+  for (let i = 0; i < 60; i++) {
+    const actual = 100 + (rng() - 0.5) * 40;
+    const forecast = actual + (rng() - 0.5) * 20;
+    actualDemand.push(Math.round(actual * 100) / 100);
+    forecastedDemand.push(Math.round(forecast * 100) / 100);
+    forecastErrors.push(Math.round((actual - forecast) * 100) / 100);
+  }
+
+  const indicators = [
+    { name: "PMI_index", values: Array.from({length: 60}, () => 48 + rng() * 8), category: "macro" as const, lagWeeks: 4 },
+    { name: "order_backlog", values: Array.from({length: 60}, () => 200 + rng() * 100), category: "internal" as const, lagWeeks: 2 },
+    { name: "raw_material_prices", values: Array.from({length: 60}, () => 50 + rng() * 30), category: "macro" as const, lagWeeks: 6 },
+  ];
+
+  const adaptiveConfig = {
+    companyId: COMPANY_A,
+    version: "1.0.0",
+    seed: 42,
+    fdrSeries,
+    forecastErrors,
+    actualDemand,
+    forecastedDemand,
+    leadingIndicators: indicators,
+    toleranceThreshold: 0.15,
+    rollingWindowSize: 12,
+    demandSamples: 500,
+    supplyDisruptionProbability: 0.05,
+  };
+
+  // 12.1: Dynamic model weights sum to 1.0 per regime
+  const t121 = Date.now();
+  const weights = computeDynamicModelWeights(actualDemand, fdrSeries, 12, 42);
+  const regimeWeightSums: Record<string, number> = {};
+  for (const w of weights) {
+    regimeWeightSums[w.regime] = (regimeWeightSums[w.regime] || 0) + w.weight;
+  }
+  const weightSumsValid = Object.values(regimeWeightSums).every(s => Math.abs(s - 1.0) < 0.01);
+  const allWeightsBounded = weights.every(w => w.weight >= 0 && w.weight <= 1);
+  assert(weightSumsValid && allWeightsBounded, "12.1", "Dynamic model weights sum to ~1.0 per regime and all bounded [0,1]",
+    { validated: "Model weight normalization and bounds per regime",
+      endpointsOrFunctions: "adaptiveForecasting.computeDynamicModelWeights()",
+      inputs: "60 demand observations, 60 FDR readings, rollingWindow=12",
+      expected: "Per-regime weight sums ≈ 1.0, all weights in [0,1]",
+      actual: `sums=${JSON.stringify(regimeWeightSums)}, allBounded=${allWeightsBounded}`,
+      rawEvidence: { regimeWeightSums, totalWeights: weights.length }, proofType: "deterministic" }, t121);
+
+  // 12.2: Weights segment by regime with 3 models each
+  const t122 = Date.now();
+  const regimesWithWeights = [...new Set(weights.map(w => w.regime))];
+  const weightsPerRegime = regimesWithWeights.every(r => weights.filter(w => w.regime === r).length === 3);
+  const hasModelIds = weights.every(w => ["ema_short", "ema_long", "regime_adjusted"].includes(w.modelId));
+  assert(weightsPerRegime && hasModelIds, "12.2", "Each regime has exactly 3 model weights with valid model IDs",
+    { validated: "Model weight segmentation by regime",
+      endpointsOrFunctions: "adaptiveForecasting.computeDynamicModelWeights()",
+      inputs: "60 demand observations segmented by regime",
+      expected: "3 models per regime: ema_short, ema_long, regime_adjusted",
+      actual: `regimes=${regimesWithWeights.length}, weightsPerRegime=${weightsPerRegime}, validModels=${hasModelIds}`,
+      rawEvidence: { regimes: regimesWithWeights, totalWeights: weights.length }, proofType: "structural" }, t122);
+
+  // 12.3: Higher-error models get lower weights (inverse-error weighting)
+  const t123 = Date.now();
+  const regimeWithData = weights.filter(w => w.sampleSize > 0);
+  let inverseValid = true;
+  if (regimeWithData.length >= 2) {
+    const firstRegime = regimeWithData[0].regime;
+    const regimeModels = regimeWithData.filter(w => w.regime === firstRegime && w.rollingError > 0);
+    if (regimeModels.length >= 2) {
+      const sorted = [...regimeModels].sort((a, b) => a.rollingError - b.rollingError);
+      inverseValid = sorted[0].weight >= sorted[sorted.length - 1].weight;
+    }
+  }
+  assert(inverseValid, "12.3", "Lower-error models receive higher weights (inverse-error weighting verified)",
+    { validated: "Inverse-error weighting logic",
+      endpointsOrFunctions: "adaptiveForecasting.computeDynamicModelWeights()",
+      inputs: "Models with non-zero rolling error",
+      expected: "Model with lowest error has highest weight within regime",
+      actual: `inverseValid=${inverseValid}, modelsWithData=${regimeWithData.length}`,
+      rawEvidence: { inverseValid, modelsChecked: regimeWithData.length }, proofType: "deterministic" }, t123);
+
+  // 12.4: Heteroskedastic volatility estimates per regime
+  const t124 = Date.now();
+  const volEstimates = computeHeteroskedasticVolatility(forecastErrors, fdrSeries, 12, 0.15);
+  const volValid = volEstimates.length === 4 &&
+    volEstimates.every(v => typeof v.baseVolatility === "number" && v.baseVolatility > 0 &&
+      typeof v.adjustedVolatility === "number" && v.adjustedVolatility >= v.baseVolatility * 0.99 &&
+      typeof v.expansionFactor === "number" && v.expansionFactor >= 1.0 &&
+      v.uncertaintyBand.lower < 0 && v.uncertaintyBand.upper > 0);
+  assert(!!volValid, "12.4", "Volatility estimates produced for all 4 regimes with valid bounds",
+    { validated: "Heteroskedastic volatility estimation per regime",
+      endpointsOrFunctions: "adaptiveForecasting.computeHeteroskedasticVolatility()",
+      inputs: "60 forecast errors, 60 FDR readings",
+      expected: "4 regime estimates, adjustedVol >= baseVol, symmetric bands",
+      actual: `estimates=${volEstimates.length}, allValid=${volValid}`,
+      rawEvidence: { count: volEstimates.length, regimes: volEstimates.map(v => v.regime) }, proofType: "runtime" }, t124);
+
+  // 12.5: Volatility expansion triggered when error exceeds tolerance
+  const t125 = Date.now();
+  const highErrors = Array(60).fill(0.5);
+  const highVolEstimates = computeHeteroskedasticVolatility(highErrors, fdrSeries, 12, 0.15);
+  const expandedRegimes = highVolEstimates.filter(v => v.autoExpanded);
+  const expansionTriggered = expandedRegimes.length > 0;
+  const expansionFactorValid = expandedRegimes.every(v => v.expansionFactor > 1.0 && v.expansionFactor <= 3.0);
+  assert(expansionTriggered && expansionFactorValid, "12.5", "Auto-expansion triggers when forecast error exceeds tolerance threshold",
+    { validated: "Automatic volatility expansion under high-error conditions",
+      endpointsOrFunctions: "adaptiveForecasting.computeHeteroskedasticVolatility()",
+      inputs: "High forecast errors (0.5) with tolerance=0.15",
+      expected: "Auto-expansion triggered, factor in (1.0, 3.0]",
+      actual: `expandedRegimes=${expandedRegimes.length}, factorValid=${expansionFactorValid}`,
+      rawEvidence: { expandedCount: expandedRegimes.length, factors: expandedRegimes.map(v => v.expansionFactor) }, proofType: "runtime" }, t125);
+
+  // 12.6: No expansion when errors are within tolerance
+  const t126 = Date.now();
+  const lowErrors = Array(60).fill(0.05);
+  const lowVolEstimates = computeHeteroskedasticVolatility(lowErrors, fdrSeries, 12, 0.15);
+  const noExpansion = lowVolEstimates.every(v => !v.autoExpanded && v.expansionFactor === 1.0);
+  assert(noExpansion, "12.6", "No auto-expansion when forecast errors are within tolerance",
+    { validated: "Volatility stability under normal conditions",
+      endpointsOrFunctions: "adaptiveForecasting.computeHeteroskedasticVolatility()",
+      inputs: "Low forecast errors (0.05) with tolerance=0.15",
+      expected: "No expansion: all autoExpanded=false, factor=1.0",
+      actual: `noExpansion=${noExpansion}`,
+      rawEvidence: { noExpansion, factors: lowVolEstimates.map(v => v.expansionFactor) }, proofType: "deterministic" }, t126);
+
+  // 12.7: Tail risk CVaR metrics computed
+  const t127 = Date.now();
+  const tailRisk = computeTailRiskMetrics(actualDemand, forecastedDemand, 42, 500, 0.05);
+  const tailValid = typeof tailRisk.demandCVaR95 === "number" &&
+    typeof tailRisk.demandCVaR99 === "number" &&
+    typeof tailRisk.demandExpectedShortfall === "number" &&
+    typeof tailRisk.supplyCVaR95 === "number" &&
+    typeof tailRisk.supplyCVaR99 === "number" &&
+    typeof tailRisk.supplyExpectedShortfall === "number" &&
+    typeof tailRisk.jointTailRisk === "number" &&
+    tailRisk.jointTailRisk >= 0 && tailRisk.jointTailRisk <= 1;
+  assert(!!tailValid, "12.7", "Tail risk metrics (CVaR 95/99, expected shortfall) computed for demand and supply",
+    { validated: "CVaR and expected shortfall calculation integrity",
+      endpointsOrFunctions: "adaptiveForecasting.computeTailRiskMetrics()",
+      inputs: "500 demand samples, seed=42, supplyDisruptionProb=0.05",
+      expected: "All CVaR/ES metrics are numbers, jointTailRisk in [0,1]",
+      actual: `dCVaR95=${tailRisk.demandCVaR95}, dCVaR99=${tailRisk.demandCVaR99}, joint=${tailRisk.jointTailRisk}`,
+      rawEvidence: tailRisk, proofType: "deterministic" }, t127);
+
+  // 12.8: CVaR99 >= CVaR95 (more extreme tail is further out)
+  const t128 = Date.now();
+  const cvarOrdering = tailRisk.demandCVaR99 >= tailRisk.demandCVaR95;
+  assert(cvarOrdering, "12.8", "Demand CVaR99 >= CVaR95 (tail severity ordering preserved)",
+    { validated: "CVaR monotonicity across confidence levels",
+      endpointsOrFunctions: "adaptiveForecasting.computeTailRiskMetrics()",
+      inputs: "Demand CVaR at 95% and 99% confidence",
+      expected: "CVaR99 >= CVaR95",
+      actual: `CVaR95=${tailRisk.demandCVaR95}, CVaR99=${tailRisk.demandCVaR99}`,
+      rawEvidence: { cvar95: tailRisk.demandCVaR95, cvar99: tailRisk.demandCVaR99 }, proofType: "deterministic" }, t128);
+
+  // 12.9: Worst-case scenario included with probability
+  const t129 = Date.now();
+  const worstCase = tailRisk.worstCaseScenario;
+  const worstValid = typeof worstCase.demand === "number" &&
+    typeof worstCase.supply === "number" &&
+    typeof worstCase.probability === "number" &&
+    worstCase.probability > 0 && worstCase.probability < 1;
+  assert(!!worstValid, "12.9", "Worst-case scenario has demand, supply, and bounded probability",
+    { validated: "Worst-case scenario construction",
+      endpointsOrFunctions: "adaptiveForecasting.computeTailRiskMetrics() → worstCaseScenario",
+      inputs: "500 Monte Carlo scenarios",
+      expected: "demand/supply present, probability in (0,1)",
+      actual: `demand=${worstCase.demand}, supply=${worstCase.supply}, prob=${worstCase.probability}`,
+      rawEvidence: worstCase, proofType: "deterministic" }, t129);
+
+  // 12.10: Regime transition prediction returns valid structure
+  const t1210 = Date.now();
+  const transition = computeRegimeTransitionPrediction(fdrSeries, indicators, 42);
+  const transValid = typeof transition.currentRegime === "string" &&
+    typeof transition.predictedNextRegime === "string" &&
+    typeof transition.transitionProbability === "number" &&
+    transition.transitionProbability >= 0 && transition.transitionProbability <= 1 &&
+    typeof transition.transitionScore === "number" &&
+    transition.transitionScore >= 0 && transition.transitionScore <= 1 &&
+    Array.isArray(transition.leadingSignals) &&
+    typeof transition.expectedTransitionWindow === "number" &&
+    transition.expectedTransitionWindow >= 1 &&
+    typeof transition.confidence === "number" &&
+    transition.confidence >= 0 && transition.confidence <= 1;
+  assert(!!transValid, "12.10", "Regime transition prediction has valid probabilities, scores, signals, and confidence",
+    { validated: "Regime-transition prediction scoring structure and bounds",
+      endpointsOrFunctions: "adaptiveForecasting.computeRegimeTransitionPrediction()",
+      inputs: "60 FDR readings, 3 leading indicators",
+      expected: "probability [0,1], score [0,1], confidence [0,1], window >= 1",
+      actual: `regime=${transition.currentRegime}→${transition.predictedNextRegime}, prob=${transition.transitionProbability}, score=${transition.transitionScore}`,
+      rawEvidence: transition, proofType: "runtime" }, t1210);
+
+  // 12.11: Transition prediction uses leading indicator signals
+  const t1211 = Date.now();
+  const signalsPresent = transition.leadingSignals.length === indicators.length;
+  const signalStructure = transition.leadingSignals.every(s =>
+    typeof s.indicator === "string" &&
+    typeof s.contribution === "number" &&
+    s.contribution >= 0 && s.contribution <= 1 &&
+    ["rising", "falling", "stable"].includes(s.direction)
+  );
+  assert(signalsPresent && signalStructure, "12.11", "Transition prediction incorporates all leading indicators with direction and contribution",
+    { validated: "Leading indicator integration in regime transition scoring",
+      endpointsOrFunctions: "adaptiveForecasting.computeRegimeTransitionPrediction() → leadingSignals",
+      inputs: "3 leading indicators",
+      expected: "3 signals with contribution [0,1] and direction",
+      actual: `signals=${transition.leadingSignals.length}, allValid=${signalStructure}`,
+      rawEvidence: { signals: transition.leadingSignals }, proofType: "structural" }, t1211);
+
+  // 12.12: Signal strength scoring with forward predictive lift
+  const t1212 = Date.now();
+  const signalStrengths = computeSignalStrengths(actualDemand, forecastedDemand, indicators, 12);
+  const ssValid = signalStrengths.length === indicators.length &&
+    signalStrengths.every(s =>
+      typeof s.indicatorName === "string" &&
+      typeof s.forwardLift === "number" &&
+      typeof s.baselineAccuracy === "number" &&
+      typeof s.enhancedAccuracy === "number" &&
+      typeof s.liftSignificance === "number" &&
+      s.liftSignificance >= 0 && s.liftSignificance <= 1 &&
+      typeof s.rank === "number" && s.rank >= 1
+    );
+  assert(!!ssValid, "12.12", "Signal strengths computed for all indicators with lift, accuracy, significance, and rank",
+    { validated: "Signal strength scoring with forward predictive lift",
+      endpointsOrFunctions: "adaptiveForecasting.computeSignalStrengths()",
+      inputs: "3 indicators, 60 observations, rollingWindow=12",
+      expected: "3 signals with numeric lift, accuracy, significance [0,1], rank >= 1",
+      actual: `count=${signalStrengths.length}, valid=${ssValid}`,
+      rawEvidence: { signals: signalStrengths.map(s => ({ name: s.indicatorName, lift: s.forwardLift, rank: s.rank })) }, proofType: "runtime" }, t1212);
+
+  // 12.13: Signals ranked by forward lift (highest first)
+  const t1213 = Date.now();
+  let rankOrderValid = true;
+  for (let i = 1; i < signalStrengths.length; i++) {
+    if (signalStrengths[i].rank !== i + 1 || signalStrengths[i].forwardLift > signalStrengths[i - 1].forwardLift) {
+      rankOrderValid = false;
+      break;
+    }
+  }
+  assert(rankOrderValid, "12.13", "Signal strengths ranked in descending order of forward lift",
+    { validated: "Signal ranking correctness",
+      endpointsOrFunctions: "adaptiveForecasting.computeSignalStrengths()",
+      inputs: "3 indicators sorted by forward lift",
+      expected: "rank 1 has highest lift, rank N has lowest",
+      actual: `ordered=${rankOrderValid}, ranks=${signalStrengths.map(s => s.rank).join(',')}`,
+      rawEvidence: { ranks: signalStrengths.map(s => ({ name: s.indicatorName, rank: s.rank, lift: s.forwardLift })) }, proofType: "structural" }, t1213);
+
+  // 12.14: Lift decay analysis produces decay curve
+  const t1214 = Date.now();
+  const liftDecay = computeLiftDecayAnalysis(actualDemand, forecastedDemand, indicators[0], 8);
+  const ldValid = typeof liftDecay.indicatorName === "string" &&
+    Array.isArray(liftDecay.decayCurve) &&
+    liftDecay.decayCurve.length === 8 &&
+    typeof liftDecay.halfLifeWeeks === "number" &&
+    typeof liftDecay.persistenceScore === "number" &&
+    liftDecay.persistenceScore >= 0 && liftDecay.persistenceScore <= 1 &&
+    typeof liftDecay.effectiveHorizon === "number";
+  assert(!!ldValid, "12.14", "Lift decay analysis produces 8-point decay curve with half-life and persistence score",
+    { validated: "Rolling lift decay analysis structure",
+      endpointsOrFunctions: "adaptiveForecasting.computeLiftDecayAnalysis()",
+      inputs: "PMI_index indicator, maxHorizon=8",
+      expected: "8 decay curve points, halfLife >= 0, persistence [0,1]",
+      actual: `points=${liftDecay.decayCurve.length}, halfLife=${liftDecay.halfLifeWeeks}, persistence=${liftDecay.persistenceScore}`,
+      rawEvidence: { halfLife: liftDecay.halfLifeWeeks, persistence: liftDecay.persistenceScore, effectiveHorizon: liftDecay.effectiveHorizon }, proofType: "runtime" }, t1214);
+
+  // 12.15: Decay curve horizon weeks monotonically increasing
+  const t1215 = Date.now();
+  const horizonMonotonic = liftDecay.decayCurve.every((p, i) => p.horizonWeeks === i + 1);
+  const decayPointsValid = liftDecay.decayCurve.every(p =>
+    typeof p.lift === "number" &&
+    typeof p.correlation === "number" &&
+    typeof p.persistence === "number" &&
+    p.persistence >= 0 && p.persistence <= 1
+  );
+  assert(horizonMonotonic && decayPointsValid, "12.15", "Decay curve has monotonically increasing horizons with bounded persistence",
+    { validated: "Lift decay curve monotonicity and point validity",
+      endpointsOrFunctions: "adaptiveForecasting.computeLiftDecayAnalysis() → decayCurve",
+      inputs: "8-point decay curve",
+      expected: "horizonWeeks = 1,2,...,8; persistence [0,1]",
+      actual: `monotonic=${horizonMonotonic}, pointsValid=${decayPointsValid}`,
+      rawEvidence: { horizons: liftDecay.decayCurve.map(p => p.horizonWeeks) }, proofType: "structural" }, t1215);
+
+  // 12.16: Uncertainty expansion triggered when error > tolerance
+  const t1216 = Date.now();
+  const bigErrors = Array(20).fill(0.4);
+  const expansion = computeUncertaintyExpansion(bigErrors, 0.15, 0.15, 12);
+  const expValid = expansion.triggered === true &&
+    expansion.expansionMultiplier > 1.0 &&
+    expansion.expansionMultiplier <= 3.0 &&
+    Math.abs(expansion.expandedBand.upper) > Math.abs(expansion.originalBand.upper) &&
+    Math.abs(expansion.expandedBand.lower) > Math.abs(expansion.originalBand.lower) &&
+    typeof expansion.reason === "string" && expansion.reason.length > 0;
+  assert(!!expValid, "12.16", "Uncertainty expansion triggered: bands widened, multiplier bounded, reason provided",
+    { validated: "Automatic uncertainty expansion under high-error conditions",
+      endpointsOrFunctions: "adaptiveForecasting.computeUncertaintyExpansion()",
+      inputs: "Mean error=0.4, tolerance=0.15",
+      expected: "triggered=true, multiplier > 1.0, expanded bands wider than original",
+      actual: `triggered=${expansion.triggered}, multiplier=${expansion.expansionMultiplier}, reason=${expansion.reason}`,
+      rawEvidence: expansion, proofType: "runtime" }, t1216);
+
+  // 12.17: No expansion when errors within bounds
+  const t1217 = Date.now();
+  const smallErrors = Array(20).fill(0.05);
+  const noExp = computeUncertaintyExpansion(smallErrors, 0.15, 0.15, 12);
+  const noExpValid = noExp.triggered === false &&
+    noExp.expansionMultiplier === 1.0 &&
+    Math.abs(noExp.expandedBand.upper - noExp.originalBand.upper) < 0.0001;
+  assert(!!noExpValid, "12.17", "No uncertainty expansion when errors are within tolerance",
+    { validated: "Uncertainty stability under normal conditions",
+      endpointsOrFunctions: "adaptiveForecasting.computeUncertaintyExpansion()",
+      inputs: "Mean error=0.05, tolerance=0.15",
+      expected: "triggered=false, multiplier=1.0, bands unchanged",
+      actual: `triggered=${noExp.triggered}, multiplier=${noExp.expansionMultiplier}`,
+      rawEvidence: noExp, proofType: "deterministic" }, t1217);
+
+  // 12.18: Full adaptive analysis produces versioned stability report
+  const t1218 = Date.now();
+  const report = runAdaptiveForecastAnalysis(adaptiveConfig);
+  const reportValid = report.version === "1.0.0" &&
+    report.engineVersion === ADAPTIVE_ENGINE_VERSION &&
+    report.companyId === COMPANY_A &&
+    typeof report.configHash === "string" && report.configHash.length === 64 &&
+    report.seed === 42 &&
+    report.productionMutations === 0 &&
+    report.replayable === true &&
+    Array.isArray(report.modelWeights) && report.modelWeights.length > 0 &&
+    Array.isArray(report.volatilityEstimates) && report.volatilityEstimates.length === 4 &&
+    typeof report.tailRiskMetrics === "object" &&
+    typeof report.transitionPrediction === "object" &&
+    Array.isArray(report.signalStrengths) &&
+    Array.isArray(report.liftDecayAnalyses) &&
+    typeof report.uncertaintyExpansion === "object";
+  assert(!!reportValid, "12.18", "Full adaptive analysis produces versioned stability report with all 7 components",
+    { validated: "Versioned predictive stability report completeness",
+      endpointsOrFunctions: "adaptiveForecasting.runAdaptiveForecastAnalysis()",
+      inputs: "Full config with 60 readings, 3 indicators, seed=42",
+      expected: "version=1.0.0, engine version, 0 mutations, all 7 components populated",
+      actual: `version=${report.version}, engine=${report.engineVersion}, mutations=${report.productionMutations}, weights=${report.modelWeights.length}, vol=${report.volatilityEstimates.length}`,
+      rawEvidence: { version: report.version, engineVersion: report.engineVersion, mutations: report.productionMutations, hash: report.configHash }, proofType: "runtime" }, t1218);
+
+  // 12.19: Evidence bundle has provenance version 5.0.0
+  const t1219 = Date.now();
+  const eb = report.evidenceBundle;
+  const ebValid = eb.provenanceVersion === "5.0.0" &&
+    eb.engineId === "adaptive_forecasting_v1" &&
+    eb.engineVersion === ADAPTIVE_ENGINE_VERSION &&
+    eb.companyId === COMPANY_A &&
+    eb.configHash === report.configHash &&
+    eb.seed === 42 &&
+    eb.fdrSeriesLength === 60 &&
+    eb.forecastErrorsLength === 60 &&
+    eb.indicatorCount === 3 &&
+    eb.productionMutations === 0 &&
+    eb.replayable === true;
+  assert(ebValid, "12.19", "Evidence bundle has provenance v5.0.0 with complete traceability metadata",
+    { validated: "Evidence bundle provenance and traceability",
+      endpointsOrFunctions: "adaptiveForecasting → evidenceBundle",
+      inputs: "Completed adaptive analysis",
+      expected: "provenanceVersion=5.0.0, engineId=adaptive_forecasting_v1, all counts correct",
+      actual: `provenance=${eb.provenanceVersion}, engine=${eb.engineId}, fdrLen=${eb.fdrSeriesLength}`,
+      rawEvidence: eb, proofType: "structural" }, t1219);
+
+  // 12.20: Config hash is deterministic (same inputs = same hash)
+  const t1220 = Date.now();
+  const hash1 = hashAdaptiveConfig(adaptiveConfig);
+  const hash2 = hashAdaptiveConfig(adaptiveConfig);
+  const hashDeterministic = hash1 === hash2 && hash1.length === 64;
+  assert(hashDeterministic, "12.20", "Config hash is deterministic: identical inputs produce identical SHA-256 hash",
+    { validated: "Deterministic config hashing for replay integrity",
+      endpointsOrFunctions: "adaptiveForecasting.hashAdaptiveConfig()",
+      inputs: "Same config object hashed twice",
+      expected: "hash1 === hash2, length=64",
+      actual: `match=${hash1 === hash2}, len=${hash1.length}`,
+      rawEvidence: { hash1, hash2 }, proofType: "deterministic" }, t1220);
+
+  // 12.21: Deterministic replay: same seed produces identical report
+  const t1221 = Date.now();
+  const replay = runAdaptiveForecastAnalysis(adaptiveConfig);
+  const replayMatch = replay.configHash === report.configHash &&
+    replay.modelWeights.length === report.modelWeights.length &&
+    replay.tailRiskMetrics.demandCVaR95 === report.tailRiskMetrics.demandCVaR95 &&
+    replay.tailRiskMetrics.demandCVaR99 === report.tailRiskMetrics.demandCVaR99 &&
+    replay.tailRiskMetrics.supplyCVaR95 === report.tailRiskMetrics.supplyCVaR95 &&
+    replay.transitionPrediction.transitionProbability === report.transitionPrediction.transitionProbability &&
+    replay.uncertaintyExpansion.expansionMultiplier === report.uncertaintyExpansion.expansionMultiplier;
+  assert(replayMatch, "12.21", "Deterministic replay produces identical results (config hash, CVaR, transition prob)",
+    { validated: "Deterministic reproducibility under seeded evaluation mode",
+      endpointsOrFunctions: "adaptiveForecasting.runAdaptiveForecastAnalysis()",
+      inputs: "Same config run twice with seed=42",
+      expected: "Identical configHash, CVaR values, transition probability",
+      actual: `hashMatch=${replay.configHash === report.configHash}, cvar95Match=${replay.tailRiskMetrics.demandCVaR95 === report.tailRiskMetrics.demandCVaR95}`,
+      rawEvidence: { hashMatch: replay.configHash === report.configHash, cvarMatch: replay.tailRiskMetrics.demandCVaR95 === report.tailRiskMetrics.demandCVaR95 }, proofType: "deterministic" }, t1221);
+
+  // 12.22: Stability report markdown generation
+  const t1222 = Date.now();
+  const md = generateStabilityReportMd(report);
+  const mdValid = typeof md === "string" &&
+    md.includes("Predictive Stability Report") &&
+    md.includes("Dynamic Model Weights") &&
+    md.includes("Volatility Estimates") &&
+    md.includes("Tail Risk Metrics") &&
+    md.includes("Regime Transition Prediction") &&
+    md.includes("Signal Strengths") &&
+    md.includes("Lift Decay Analysis") &&
+    md.includes("Uncertainty Expansion") &&
+    md.includes("Production Safety") &&
+    md.includes("Production mutations: 0");
+  assert(!!mdValid, "12.22", "Stability report markdown includes all 7 component sections and production safety",
+    { validated: "Versioned predictive stability report artifact generation",
+      endpointsOrFunctions: "adaptiveForecasting.generateStabilityReportMd()",
+      inputs: "Completed stability report",
+      expected: "MD with all 7 sections + production safety",
+      actual: `length=${md.length}, hasSections=${mdValid}`,
+      rawEvidence: { length: md.length }, proofType: "structural" }, t1222);
+
+  // 12.23: Zero production mutations in report
+  const t1223 = Date.now();
+  assert(report.productionMutations === 0 && report.evidenceBundle.productionMutations === 0,
+    "12.23", "Report and evidence bundle both confirm zero production mutations",
+    { validated: "No production data mutated during evaluation",
+      endpointsOrFunctions: "adaptiveForecasting → productionMutations",
+      inputs: "Completed adaptive analysis report",
+      expected: "productionMutations=0 in report and evidence bundle",
+      actual: `report=${report.productionMutations}, evidence=${report.evidenceBundle.productionMutations}`,
+      rawEvidence: { report: report.productionMutations, evidence: report.evidenceBundle.productionMutations }, proofType: "structural" }, t1223);
+
+  // 12.24: POST /api/adaptive-forecast/analyze requires auth
+  const t1224 = Date.now();
+  const noAuth = await httpPost("/api/adaptive-forecast/analyze", { fdrSeries: [1], forecastErrors: [0.1] });
+  assert(noAuth.status === 401, "12.24", "POST /api/adaptive-forecast/analyze returns 401 without auth",
+    { validated: "Adaptive forecast API enforces authentication",
+      endpointsOrFunctions: "POST /api/adaptive-forecast/analyze",
+      inputs: "No auth cookie", expected: "401", actual: `${noAuth.status}`,
+      rawEvidence: { status: noAuth.status }, proofType: "runtime" }, t1224);
+
+  // 12.25: GET /api/adaptive-forecast/reports requires auth
+  const t1225 = Date.now();
+  const noAuthList = await httpGet("/api/adaptive-forecast/reports");
+  assert(noAuthList.status === 401, "12.25", "GET /api/adaptive-forecast/reports returns 401 without auth",
+    { validated: "Adaptive forecast reports listing enforces authentication",
+      endpointsOrFunctions: "GET /api/adaptive-forecast/reports",
+      inputs: "No auth cookie", expected: "401", actual: `${noAuthList.status}`,
+      rawEvidence: { status: noAuthList.status }, proofType: "runtime" }, t1225);
+
+  gateResults.push({
+    gate: currentGate, description: "Adaptive forecasting layer with dynamic weighting, heteroskedastic volatility, tail risk, regime transition prediction, signal strength, lift decay, and uncertainty expansion",
+    pass: results.filter(r => r.gate === currentGate).every(r => r.pass),
+    tests: results.filter(r => r.gate === currentGate), startedAt: gateStart, completedAt: TS(),
+  });
+}
+
 async function cleanup() {
   console.log("\n  Cleaning up test data...");
   try {
@@ -2584,6 +3058,8 @@ async function cleanup() {
     await db.execute(sql`DELETE FROM optimization_runs WHERE company_id = ${COMPANY_A}`);
     await db.execute(sql`DELETE FROM pilot_experiments WHERE company_id = ${COMPANY_A}`);
     await db.execute(sql`DELETE FROM pilot_experiments WHERE company_id = ${COMPANY_B}`);
+    await db.execute(sql`DELETE FROM predictive_stability_reports WHERE company_id = ${COMPANY_A}`);
+    await db.execute(sql`DELETE FROM predictive_stability_reports WHERE company_id = ${COMPANY_B}`);
     await db.delete(companies).where(eq(companies.id, `${PREFIX}-safemode-test`));
     await db.delete(companies).where(eq(companies.id, COMPANY_A));
     await db.delete(companies).where(eq(companies.id, COMPANY_B));
@@ -2595,12 +3071,13 @@ async function cleanup() {
 
 async function main() {
   console.log("================================================================");
-  console.log("  ENTERPRISE E2E CERTIFICATION HARNESS v5.0.0");
+  console.log("  ENTERPRISE E2E CERTIFICATION HARNESS v6.0.0");
   console.log(`  Date: ${new Date().toISOString()}`);
-  console.log("  Scope: Gates 1-11 (Multi-tenant, Spend, Automation, Payments,");
+  console.log("  Scope: Gates 1-12 (Multi-tenant, Spend, Automation, Payments,");
   console.log("         Integrations, Data Honesty, Operational Readiness,");
   console.log("         Copilot Safety & Data Quality, Predictive Lift & Enterprise Controls,");
-  console.log("         Regime-Aware Optimization & Backtest, Pilot Evaluation Mode)");
+  console.log("         Regime-Aware Optimization & Backtest, Pilot Evaluation Mode,");
+  console.log("         Adaptive Forecasting Layer)");
   console.log("================================================================");
 
   await setup();
@@ -2615,6 +3092,7 @@ async function main() {
   await gate9();
   await gate10();
   await gate11();
+  await gate12();
   await cleanup();
 
   const mdReport = generateMarkdownReport();

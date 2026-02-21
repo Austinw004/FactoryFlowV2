@@ -1,0 +1,336 @@
+{
+  "version": "1.0.0",
+  "experimentId": "cert-1771709891697-exp-001-replay-1771709895048",
+  "configSnapshot": {
+    "fdr": 0.5,
+    "name": "cert-1771709891697-pilot-test (Replay)",
+    "seed": 42,
+    "regime": "HEALTHY_EXPANSION",
+    "companyId": "cert-1771709891697-co-alpha",
+    "createdAt": "2026-02-21T21:38:15.050Z",
+    "immutable": true,
+    "configHash": "b93489f6a6868b2913cea0347c29b86d0b5c3b4b960ad37d854399c65661c716",
+    "materialIds": [
+      "cert-1771709891697-mat-pilot-1"
+    ],
+    "windowWeeks": 12,
+    "experimentId": "cert-1771709891697-exp-001-replay-1771709895048",
+    "demandSamples": 200,
+    "engineVersion": "1.0.0",
+    "targetServiceLevel": 0.95,
+    "forecastUncertainty": 0.2
+  },
+  "baselineResults": {
+    "policyType": "baseline",
+    "totalServiceLevel": 1,
+    "avgStockoutRate": 0,
+    "totalExpediteSpend": 0,
+    "avgWorkingCapital": 16716.06,
+    "totalEstimatedSavings": 0,
+    "totalMeasuredSavings": null,
+    "weeklyMetrics": [
+      {
+        "week": 1,
+        "serviceLevel": 1,
+        "stockoutRate": 0,
+        "expediteSpend": 0,
+        "workingCapital": 3500,
+        "estimatedSavings": 0,
+        "measuredSavings": null,
+        "savingsType": "estimated"
+      },
+      {
+        "week": 2,
+        "serviceLevel": 1,
+        "stockoutRate": 0,
+        "expediteSpend": 0,
+        "workingCapital": 5899.81,
+        "estimatedSavings": 0,
+        "measuredSavings": null,
+        "savingsType": "estimated"
+      },
+      {
+        "week": 3,
+        "serviceLevel": 1,
+        "stockoutRate": 0,
+        "expediteSpend": 0,
+        "workingCapital": 8312.76,
+        "estimatedSavings": 0,
+        "measuredSavings": null,
+        "savingsType": "estimated"
+      },
+      {
+        "week": 4,
+        "serviceLevel": 1,
+        "stockoutRate": 0,
+        "expediteSpend": 0,
+        "workingCapital": 10726.58,
+        "estimatedSavings": 0,
+        "measuredSavings": null,
+        "savingsType": "estimated"
+      },
+      {
+        "week": 5,
+        "serviceLevel": 1,
+        "stockoutRate": 0,
+        "expediteSpend": 0,
+        "workingCapital": 13128.78,
+        "estimatedSavings": 0,
+        "measuredSavings": null,
+        "savingsType": "estimated"
+      },
+      {
+        "week": 6,
+        "serviceLevel": 1,
+        "stockoutRate": 0,
+        "expediteSpend": 0,
+        "workingCapital": 15518.72,
+        "estimatedSavings": 0,
+        "measuredSavings": null,
+        "savingsType": "estimated"
+      },
+      {
+        "week": 7,
+        "serviceLevel": 1,
+        "stockoutRate": 0,
+        "expediteSpend": 0,
+        "workingCapital": 17936.67,
+        "estimatedSavings": 0,
+        "measuredSavings": null,
+        "savingsType": "estimated"
+      },
+      {
+        "week": 8,
+        "serviceLevel": 1,
+        "stockoutRate": 0,
+        "expediteSpend": 0,
+        "workingCapital": 20320.89,
+        "estimatedSavings": 0,
+        "measuredSavings": null,
+        "savingsType": "estimated"
+      },
+      {
+        "week": 9,
+        "serviceLevel": 1,
+        "stockoutRate": 0,
+        "expediteSpend": 0,
+        "workingCapital": 22731.41,
+        "estimatedSavings": 0,
+        "measuredSavings": null,
+        "savingsType": "estimated"
+      },
+      {
+        "week": 10,
+        "serviceLevel": 1,
+        "stockoutRate": 0,
+        "expediteSpend": 0,
+        "workingCapital": 25121.51,
+        "estimatedSavings": 0,
+        "measuredSavings": null,
+        "savingsType": "estimated"
+      },
+      {
+        "week": 11,
+        "serviceLevel": 1,
+        "stockoutRate": 0,
+        "expediteSpend": 0,
+        "workingCapital": 27501.93,
+        "estimatedSavings": 0,
+        "measuredSavings": null,
+        "savingsType": "estimated"
+      },
+      {
+        "week": 12,
+        "serviceLevel": 1,
+        "stockoutRate": 0,
+        "expediteSpend": 0,
+        "workingCapital": 29893.68,
+        "estimatedSavings": 0,
+        "measuredSavings": null,
+        "savingsType": "estimated"
+      }
+    ],
+    "materialResults": [
+      {
+        "materialId": "cert-1771709891697-mat-pilot-1",
+        "reorderQuantity": 250,
+        "serviceLevel": 1,
+        "stockoutRisk": 0,
+        "cost": 30000,
+        "savingsVsBaseline": 0
+      }
+    ]
+  },
+  "optimizedResults": {
+    "policyType": "optimized",
+    "totalServiceLevel": 1,
+    "avgStockoutRate": 0,
+    "totalExpediteSpend": 0,
+    "avgWorkingCapital": 5926.06,
+    "totalEstimatedSavings": 19920,
+    "totalMeasuredSavings": null,
+    "weeklyMetrics": [
+      {
+        "week": 1,
+        "serviceLevel": 1,
+        "stockoutRate": 0,
+        "expediteSpend": 0,
+        "workingCapital": 1840,
+        "estimatedSavings": 1660,
+        "measuredSavings": null,
+        "savingsType": "estimated"
+      },
+      {
+        "week": 2,
+        "serviceLevel": 1,
+        "stockoutRate": 0,
+        "expediteSpend": 0,
+        "workingCapital": 2579.81,
+        "estimatedSavings": 1660,
+        "measuredSavings": null,
+        "savingsType": "estimated"
+      },
+      {
+        "week": 3,
+        "serviceLevel": 1,
+        "stockoutRate": 0,
+        "expediteSpend": 0,
+        "workingCapital": 3332.76,
+        "estimatedSavings": 1660,
+        "measuredSavings": null,
+        "savingsType": "estimated"
+      },
+      {
+        "week": 4,
+        "serviceLevel": 1,
+        "stockoutRate": 0,
+        "expediteSpend": 0,
+        "workingCapital": 4086.58,
+        "estimatedSavings": 1660,
+        "measuredSavings": null,
+        "savingsType": "estimated"
+      },
+      {
+        "week": 5,
+        "serviceLevel": 1,
+        "stockoutRate": 0,
+        "expediteSpend": 0,
+        "workingCapital": 4828.78,
+        "estimatedSavings": 1660,
+        "measuredSavings": null,
+        "savingsType": "estimated"
+      },
+      {
+        "week": 6,
+        "serviceLevel": 1,
+        "stockoutRate": 0,
+        "expediteSpend": 0,
+        "workingCapital": 5558.72,
+        "estimatedSavings": 1660,
+        "measuredSavings": null,
+        "savingsType": "estimated"
+      },
+      {
+        "week": 7,
+        "serviceLevel": 1,
+        "stockoutRate": 0,
+        "expediteSpend": 0,
+        "workingCapital": 6316.67,
+        "estimatedSavings": 1660,
+        "measuredSavings": null,
+        "savingsType": "estimated"
+      },
+      {
+        "week": 8,
+        "serviceLevel": 1,
+        "stockoutRate": 0,
+        "expediteSpend": 0,
+        "workingCapital": 7040.89,
+        "estimatedSavings": 1660,
+        "measuredSavings": null,
+        "savingsType": "estimated"
+      },
+      {
+        "week": 9,
+        "serviceLevel": 1,
+        "stockoutRate": 0,
+        "expediteSpend": 0,
+        "workingCapital": 7791.41,
+        "estimatedSavings": 1660,
+        "measuredSavings": null,
+        "savingsType": "estimated"
+      },
+      {
+        "week": 10,
+        "serviceLevel": 1,
+        "stockoutRate": 0,
+        "expediteSpend": 0,
+        "workingCapital": 8521.51,
+        "estimatedSavings": 1660,
+        "measuredSavings": null,
+        "savingsType": "estimated"
+      },
+      {
+        "week": 11,
+        "serviceLevel": 1,
+        "stockoutRate": 0,
+        "expediteSpend": 0,
+        "workingCapital": 9241.93,
+        "estimatedSavings": 1660,
+        "measuredSavings": null,
+        "savingsType": "estimated"
+      },
+      {
+        "week": 12,
+        "serviceLevel": 1,
+        "stockoutRate": 0,
+        "expediteSpend": 0,
+        "workingCapital": 9973.68,
+        "estimatedSavings": 1660,
+        "measuredSavings": null,
+        "savingsType": "estimated"
+      }
+    ],
+    "materialResults": [
+      {
+        "materialId": "cert-1771709891697-mat-pilot-1",
+        "reorderQuantity": 84,
+        "serviceLevel": 1,
+        "stockoutRisk": 0,
+        "cost": 10080,
+        "savingsVsBaseline": 19920
+      }
+    ]
+  },
+  "comparisonSummary": {
+    "serviceLevelDelta": 0,
+    "stockoutRateDelta": 0,
+    "expediteSpendDelta": 0,
+    "workingCapitalDelta": -10790,
+    "estimatedSavingsDelta": 19920,
+    "measuredSavingsDelta": null,
+    "optimizedWins": [
+      "working_capital",
+      "estimated_savings"
+    ],
+    "baselineWins": [],
+    "recommendation": "RECOMMEND_OPTIMIZED",
+    "confidenceLevel": 0.52
+  },
+  "evidenceBundle": {
+    "provenanceVersion": "4.0.0",
+    "engineId": "pilot_evaluation_v1",
+    "experimentId": "cert-1771709891697-exp-001-replay-1771709895048",
+    "companyId": "cert-1771709891697-co-alpha",
+    "configHash": "b93489f6a6868b2913cea0347c29b86d0b5c3b4b960ad37d854399c65661c716",
+    "regime": "HEALTHY_EXPANSION",
+    "fdr": 0.5,
+    "seed": 42,
+    "windowWeeks": 12,
+    "materialCount": 1,
+    "timestamp": "2026-02-21T21:38:15.065Z",
+    "productionMutations": 0,
+    "replayable": true
+  },
+  "generatedAt": "2026-02-21T21:38:15.065Z"
+}
