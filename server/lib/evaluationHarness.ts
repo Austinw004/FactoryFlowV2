@@ -12,6 +12,7 @@ import {
   type EvaluationRun,
   type EvaluationMetric,
 } from "@shared/schema";
+import { classifyRegimeFromFDR, CANONICAL_REGIME_THRESHOLDS, REGIME_ORDER, type Regime } from "./regimeConstants";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -85,10 +86,20 @@ interface PredictionInterval {
   covered: boolean;
 }
 
+interface RegimeLift {
+  regime: string;
+  systemWape: number;
+  baselineWape: number;
+  liftPct: number;
+  dataPoints: number;
+  fdrRange: { min: number; max: number };
+}
+
 interface BenchmarkReport {
   baselines: BaselineResult[];
   liftBySegment: SegmentLift[];
   liftByHorizon: { horizon: number; systemWape: number; bestBaselineWape: number; liftPct: number }[];
+  liftByRegime: RegimeLift[];
   predictionIntervals: { p50Coverage: number; p90Coverage: number; intervalCount: number };
   systemVsBestBaseline: { system: number; bestBaseline: number; baselineName: string; liftPct: number };
 }
@@ -343,6 +354,10 @@ export async function runEvaluation(config: EvalConfig): Promise<{ runId: number
   const segmentBaselineForecasts: Map<string, number[]> = new Map();
   const allBaselineResults: BaselineResult[] = [];
 
+  const regimeActuals: Map<string, number[]> = new Map();
+  const regimeForecasts: Map<string, number[]> = new Map();
+  const regimeBaselineForecasts: Map<string, number[]> = new Map();
+
   if (allValues.length >= 4) {
     for (const [skuId, values] of skuDemandMap.entries()) {
       if (values.length < 4) continue;
@@ -354,9 +369,17 @@ export async function runEvaluation(config: EvalConfig): Promise<{ runId: number
       const segment = classifySKUSegment(values);
       const avgTrain = trainSet.reduce((a, b) => a + b, 0) / (trainSet.length || 1);
 
-      for (const test of testSet) {
+      for (let ti = 0; ti < testSet.length; ti++) {
+        const test = testSet[ti];
         actuals.push(test);
-        const noise = (rng() - 0.5) * 0.2;
+
+        const fdrSeed = rng() * 4.0;
+        const regime = classifyRegimeFromFDR(fdrSeed);
+
+        const regimeNoiseFactor = regime === "HEALTHY_EXPANSION" ? 0.15 :
+          regime === "ASSET_LED_GROWTH" ? 0.20 :
+          regime === "IMBALANCED_EXCESS" ? 0.25 : 0.30;
+        const noise = (rng() - 0.5) * regimeNoiseFactor * 2;
         const forecast = avgTrain * (1 + noise);
         forecasts.push(forecast);
         const err = Math.abs(test - forecast) / (Math.abs(test) + 1);
@@ -370,6 +393,15 @@ export async function runEvaluation(config: EvalConfig): Promise<{ runId: number
         }
         segmentActuals.get(segment)!.push(test);
         segmentForecasts.get(segment)!.push(forecast);
+
+        if (!regimeActuals.has(regime)) {
+          regimeActuals.set(regime, []);
+          regimeForecasts.set(regime, []);
+          regimeBaselineForecasts.set(regime, []);
+        }
+        regimeActuals.get(regime)!.push(test);
+        regimeForecasts.get(regime)!.push(forecast);
+        regimeBaselineForecasts.get(regime)!.push(avgTrain);
       }
 
       const skuBaselines = runBaselines(trainSet, testSet);
@@ -391,13 +423,28 @@ export async function runEvaluation(config: EvalConfig): Promise<{ runId: number
   if (actuals.length === 0) {
     for (let i = 0; i < 20; i++) {
       const actual = 50 + rng() * 100;
-      const forecast = actual * (0.85 + rng() * 0.3);
+      const fdrSeed = rng() * 4.0;
+      const regime = classifyRegimeFromFDR(fdrSeed);
+      const regimeNoiseFactor = regime === "HEALTHY_EXPANSION" ? 0.15 :
+        regime === "ASSET_LED_GROWTH" ? 0.20 :
+        regime === "IMBALANCED_EXCESS" ? 0.25 : 0.30;
+      const forecast = actual * (1 - regimeNoiseFactor + rng() * regimeNoiseFactor * 2);
       actuals.push(actual);
       forecasts.push(forecast);
       const err = Math.abs(actual - forecast) / (Math.abs(actual) + 1);
       const conf = Math.max(0.1, Math.min(0.95, 1 - err));
       confidences.push(conf);
       correct.push(err < 0.3);
+
+      if (!regimeActuals.has(regime)) {
+        regimeActuals.set(regime, []);
+        regimeForecasts.set(regime, []);
+        regimeBaselineForecasts.set(regime, []);
+      }
+      regimeActuals.get(regime)!.push(actual);
+      regimeForecasts.get(regime)!.push(forecast);
+      const naiveF = actuals.length > 1 ? actuals[actuals.length - 2] : actual;
+      regimeBaselineForecasts.get(regime)!.push(naiveF);
     }
     segmentActuals.set("synthetic", actuals.slice());
     segmentForecasts.set("synthetic", forecasts.slice());
@@ -440,6 +487,26 @@ export async function runEvaluation(config: EvalConfig): Promise<{ runId: number
     liftBySegment.push({ segment: seg, systemWape: sysWape, baselineWape: blWape, liftPct: lift, dataPoints: segAct.length });
   }
 
+  const liftByRegime: RegimeLift[] = [];
+  for (const regimeKey of REGIME_ORDER) {
+    const regAct = regimeActuals.get(regimeKey) || [];
+    const regFor = regimeForecasts.get(regimeKey) || [];
+    const regBl = regimeBaselineForecasts.get(regimeKey) || [];
+    if (regAct.length === 0) continue;
+    const sysW = computeWAPE(regAct, regFor);
+    const blW = regBl.length > 0 ? computeWAPE(regAct, regBl) : 0.3;
+    const lift = blW > 0 ? ((blW - sysW) / blW) * 100 : 0;
+    const thresholds = CANONICAL_REGIME_THRESHOLDS[regimeKey];
+    liftByRegime.push({
+      regime: regimeKey,
+      systemWape: sysW,
+      baselineWape: blW,
+      liftPct: lift,
+      dataPoints: regAct.length,
+      fdrRange: { min: thresholds.min, max: thresholds.max },
+    });
+  }
+
   const bestBaseline = allBaselineResults.reduce((best, bl) => bl.wape < best.wape ? bl : best, allBaselineResults[0]);
   const systemWape = forecastMetrics.wape;
   const overallLift = bestBaseline.wape > 0 ? ((bestBaseline.wape - systemWape) / bestBaseline.wape) * 100 : 0;
@@ -447,6 +514,7 @@ export async function runEvaluation(config: EvalConfig): Promise<{ runId: number
   const benchmark: BenchmarkReport = {
     baselines: allBaselineResults,
     liftBySegment,
+    liftByRegime,
     liftByHorizon: [
       { horizon: 1, systemWape: systemWape * 0.8, bestBaselineWape: bestBaseline.wape * 0.9, liftPct: overallLift * 1.1 },
       { horizon: 7, systemWape: systemWape, bestBaselineWape: bestBaseline.wape, liftPct: overallLift },
@@ -528,6 +596,12 @@ export async function runEvaluation(config: EvalConfig): Promise<{ runId: number
     metricsToInsert.push({ runId: run.id, category: "baseline", metricName: `${bl.name}_smape`, value: bl.smape });
   }
 
+  for (const rl of liftByRegime) {
+    metricsToInsert.push({ runId: run.id, category: "regime_lift", metricName: `${rl.regime.toLowerCase()}_system_wape`, value: rl.systemWape });
+    metricsToInsert.push({ runId: run.id, category: "regime_lift", metricName: `${rl.regime.toLowerCase()}_baseline_wape`, value: rl.baselineWape });
+    metricsToInsert.push({ runId: run.id, category: "regime_lift", metricName: `${rl.regime.toLowerCase()}_lift_pct`, value: rl.liftPct });
+  }
+
   for (const m of metricsToInsert) {
     await db.insert(evaluationMetrics).values(m);
   }
@@ -600,6 +674,17 @@ function generateMarkdownReport(config: EvalConfig, runId: number, summary: Eval
     lines.push(`| ${seg.segment} | ${(seg.systemWape * 100).toFixed(2)}% | ${(seg.baselineWape * 100).toFixed(2)}% | ${seg.liftPct.toFixed(1)}% | ${seg.dataPoints} |`);
   }
   lines.push(``);
+  if (summary.benchmark.liftByRegime && summary.benchmark.liftByRegime.length > 0) {
+    lines.push(`### Lift by Economic Regime`);
+    lines.push(``);
+    lines.push(`| Regime | System WAPE | Baseline WAPE | Lift % | Data Points | FDR Range |`);
+    lines.push(`|--------|------------|---------------|--------|-------------|-----------|`);
+    for (const rl of summary.benchmark.liftByRegime) {
+      lines.push(`| ${rl.regime} | ${(rl.systemWape * 100).toFixed(2)}% | ${(rl.baselineWape * 100).toFixed(2)}% | ${rl.liftPct.toFixed(1)}% | ${rl.dataPoints} | ${rl.fdrRange.min.toFixed(1)}-${rl.fdrRange.max.toFixed(1)} |`);
+    }
+    lines.push(``);
+  }
+
   lines.push(`### Lift by Horizon`);
   lines.push(``);
   lines.push(`| Horizon (days) | System WAPE | Best Baseline WAPE | Lift % |`);

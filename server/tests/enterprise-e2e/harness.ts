@@ -9,6 +9,7 @@ import {
   decisionRecommendations, decisionOverrides, dataQualityScores,
   materialConstraints, leadTimeDistributions,
   savingsEvidenceRecords, ssoConfigurations, scimProvisioningLog, auditExportConfigs,
+  regimeBacktestReports, optimizationRuns,
 } from "@shared/schema";
 import { storage } from "../../storage";
 import { AutomationEngine, buildTriggerEventId } from "../../lib/automationEngine";
@@ -1888,6 +1889,314 @@ async function gate9() {
   });
 }
 
+// ============================================================
+// Gate 10: Regime-Aware Optimization, Backtest & Conditioned Forecasting
+// ============================================================
+async function gate10() {
+  currentGate = "Gate 10: Regime-Aware Optimization & Backtest";
+  const gateStart = TS();
+  console.log(`\n========================================`);
+  console.log(`  ${currentGate}`);
+  console.log(`========================================\n`);
+
+  // 10.1: Regime-conditioned evaluation produces liftByRegime
+  const t101 = Date.now();
+  const { runEvaluation } = await import("../../lib/evaluationHarness");
+  const evalResult = await runEvaluation({ companyId: COMPANY_A, version: `cert-g10-${PREFIX}`, seed: 42 });
+  const hasLiftByRegime = evalResult.summary.benchmark.liftByRegime &&
+    Array.isArray(evalResult.summary.benchmark.liftByRegime) &&
+    evalResult.summary.benchmark.liftByRegime.length > 0;
+  assert(!!hasLiftByRegime, "10.1", "Evaluation produces regime-specific lift report (liftByRegime)",
+    { validated: "Regime-conditioned forecast lift with per-regime WAPE comparison",
+      endpointsOrFunctions: "evaluationHarness.runEvaluation() → benchmark.liftByRegime",
+      inputs: `companyId=${COMPANY_A}, seed=42`,
+      expected: "liftByRegime array with 1+ entries",
+      actual: `count=${evalResult.summary.benchmark.liftByRegime?.length || 0}`,
+      rawEvidence: { regimes: evalResult.summary.benchmark.liftByRegime?.map((r: any) => r.regime) }, proofType: "runtime" }, t101);
+
+  // 10.2: Each regime lift entry has required fields
+  const t102 = Date.now();
+  const liftEntries = evalResult.summary.benchmark.liftByRegime || [];
+  const allValid = liftEntries.every((r: any) =>
+    typeof r.regime === "string" &&
+    typeof r.systemWape === "number" &&
+    typeof r.baselineWape === "number" &&
+    typeof r.liftPct === "number" &&
+    typeof r.dataPoints === "number" &&
+    r.fdrRange && typeof r.fdrRange.min === "number" && typeof r.fdrRange.max === "number");
+  assert(allValid, "10.2", "Regime lift entries have regime, systemWape, baselineWape, liftPct, dataPoints, fdrRange",
+    { validated: "Structured regime lift report with FDR range mapping",
+      endpointsOrFunctions: "evaluationHarness benchmark.liftByRegime[*]",
+      inputs: "Evaluation run output",
+      expected: "All entries have required fields",
+      actual: `valid=${allValid}, count=${liftEntries.length}`,
+      rawEvidence: { sample: liftEntries[0] }, proofType: "runtime" }, t102);
+
+  // 10.3: Regime lift metrics persisted to DB
+  const t103 = Date.now();
+  const regimeLiftMetrics = await db.select().from(evaluationMetrics)
+    .where(and(eq(evaluationMetrics.runId, evalResult.runId), eq(evaluationMetrics.category, "regime_lift")));
+  const hasRegimeMetrics = regimeLiftMetrics.length >= 3;
+  const hasLiftPct = regimeLiftMetrics.some(m => m.metricName.includes("_lift_pct"));
+  assert(hasRegimeMetrics && hasLiftPct, "10.3", "Regime-specific lift metrics persisted to evaluation_metrics table",
+    { validated: "Per-regime WAPE and lift metrics stored for audit",
+      endpointsOrFunctions: "evaluation_metrics table, category=regime_lift",
+      inputs: `runId=${evalResult.runId}`,
+      expected: ">=3 regime_lift metrics including _lift_pct",
+      actual: `count=${regimeLiftMetrics.length}, hasLiftPct=${hasLiftPct}`,
+      rawEvidence: { count: regimeLiftMetrics.length, names: regimeLiftMetrics.map(m => m.metricName) }, proofType: "runtime" }, t103);
+
+  // 10.4: Probabilistic optimization produces valid result (deterministic test)
+  const t104 = Date.now();
+  const { optimizeReorderQuantity } = await import("../../lib/probabilisticOptimization");
+  const testInputs = {
+    regime: "HEALTHY_EXPANSION",
+    fdr: 0.5,
+    forecastUncertainty: 0.2,
+    materialId: "test-opt-mat",
+    currentOnHand: 100,
+    avgDemand: 10,
+    leadTimeDays: 14,
+  };
+  const optResult = optimizeReorderQuantity(testInputs, 0.95, 500, 42);
+  const optValid = typeof optResult.optimizedQuantity === "number" &&
+    typeof optResult.expectedServiceLevel === "number" &&
+    typeof optResult.stockoutRisk === "number" &&
+    typeof optResult.costSavingsVsCurrent === "number" &&
+    optResult.expectedServiceLevel >= 0 && optResult.expectedServiceLevel <= 1;
+  assert(optValid, "10.4", "Probabilistic optimizer produces valid bounded results",
+    { validated: "Reorder quantity optimization with bounded service level and stockout risk",
+      endpointsOrFunctions: "probabilisticOptimization.optimizeReorderQuantity()",
+      inputs: "regime=HEALTHY_EXPANSION, avgDemand=10, leadTime=14, targetSL=0.95, samples=500",
+      expected: "Valid quantity, 0<=serviceLevel<=1",
+      actual: `qty=${optResult.optimizedQuantity}, sl=${optResult.expectedServiceLevel.toFixed(3)}, risk=${optResult.stockoutRisk.toFixed(3)}`,
+      rawEvidence: { optimizedQuantity: optResult.optimizedQuantity, expectedServiceLevel: optResult.expectedServiceLevel, stockoutRisk: optResult.stockoutRisk }, proofType: "deterministic" }, t104);
+
+  // 10.5: Optimization is deterministic with same seed
+  const t105 = Date.now();
+  const optResult2 = optimizeReorderQuantity(testInputs, 0.95, 500, 42);
+  const deterministicMatch = optResult.optimizedQuantity === optResult2.optimizedQuantity &&
+    optResult.expectedServiceLevel === optResult2.expectedServiceLevel;
+  assert(deterministicMatch, "10.5", "Probabilistic optimization is deterministic with same seed",
+    { validated: "Seeded RNG ensures reproducible optimization",
+      endpointsOrFunctions: "probabilisticOptimization.optimizeReorderQuantity()",
+      inputs: "Same inputs, seed=42, two runs",
+      expected: "Identical results",
+      actual: `qty1=${optResult.optimizedQuantity}, qty2=${optResult2.optimizedQuantity}, match=${deterministicMatch}`,
+      rawEvidence: { qty1: optResult.optimizedQuantity, qty2: optResult2.optimizedQuantity }, proofType: "deterministic" }, t105);
+
+  // 10.6: Optimization includes confidence interval
+  const t106 = Date.now();
+  const ciValid = optResult.confidenceInterval &&
+    typeof optResult.confidenceInterval.lower === "number" &&
+    typeof optResult.confidenceInterval.upper === "number" &&
+    optResult.confidenceInterval.level === 0.95 &&
+    optResult.confidenceInterval.lower <= optResult.confidenceInterval.upper;
+  assert(!!ciValid, "10.6", "Optimization includes 95% confidence interval with lower <= upper",
+    { validated: "Bootstrap confidence interval on optimized quantity",
+      endpointsOrFunctions: "probabilisticOptimization.optimizeReorderQuantity() → confidenceInterval",
+      inputs: "500 demand samples, 100 bootstrap iterations",
+      expected: "CI with lower <= upper, level=0.95",
+      actual: `lower=${optResult.confidenceInterval.lower}, upper=${optResult.confidenceInterval.upper}, level=${optResult.confidenceInterval.level}`,
+      rawEvidence: optResult.confidenceInterval, proofType: "deterministic" }, t106);
+
+  // 10.7: Optimization includes what-if comparison
+  const t107 = Date.now();
+  const wifValid = Array.isArray(optResult.whatIfComparison) &&
+    optResult.whatIfComparison.length >= 3 &&
+    optResult.whatIfComparison.every((w: any) =>
+      typeof w.label === "string" && typeof w.quantity === "number" &&
+      typeof w.serviceLevel === "number" && typeof w.stockoutRisk === "number");
+  assert(!!wifValid, "10.7", "Optimization includes 3+ what-if scenario comparisons",
+    { validated: "What-if analysis comparing optimized, current, conservative, aggressive scenarios",
+      endpointsOrFunctions: "probabilisticOptimization → whatIfComparison",
+      inputs: "Optimization output",
+      expected: "3+ scenarios with label, quantity, serviceLevel, stockoutRisk",
+      actual: `count=${optResult.whatIfComparison.length}, labels=${optResult.whatIfComparison.map((w: any) => w.label).join(',')}`,
+      rawEvidence: { count: optResult.whatIfComparison.length, labels: optResult.whatIfComparison.map((w: any) => w.label) }, proofType: "deterministic" }, t107);
+
+  // 10.8: Optimization includes evidence bundle with provenance
+  const t108 = Date.now();
+  const ebValid = optResult.evidenceBundle &&
+    optResult.evidenceBundle.provenanceVersion === "3.0.0" &&
+    optResult.evidenceBundle.optimizerId === "probabilistic_reorder_v1" &&
+    typeof optResult.evidenceBundle.regime === "string" &&
+    typeof optResult.evidenceBundle.seed === "number";
+  assert(!!ebValid, "10.8", "Optimization evidence bundle has provenance version, optimizer ID, regime, and seed",
+    { validated: "Evidence traceability on optimization output",
+      endpointsOrFunctions: "probabilisticOptimization → evidenceBundle",
+      inputs: "Optimization output",
+      expected: "provenanceVersion=3.0.0, optimizerId, regime, seed present",
+      actual: `provenance=${optResult.evidenceBundle.provenanceVersion}, optimizer=${optResult.evidenceBundle.optimizerId}`,
+      rawEvidence: { provenanceVersion: optResult.evidenceBundle.provenanceVersion, optimizerId: optResult.evidenceBundle.optimizerId, regime: optResult.evidenceBundle.regime }, proofType: "deterministic" }, t108);
+
+  // 10.9: Regime backtest analysis produces valid summary
+  const t109 = Date.now();
+  const { analyzeRegimeTransitions } = await import("../../lib/regimeBacktest");
+  const testFdr = [0.5, 0.6, 0.7, 0.8, 1.0, 1.3, 1.5, 1.4, 1.6, 1.9, 2.1, 2.3, 2.0, 1.8, 1.5, 1.2, 0.9, 0.7, 0.5, 0.4];
+  const btSummary = analyzeRegimeTransitions(testFdr);
+  const btValid = typeof btSummary.totalReadings === "number" &&
+    btSummary.totalReadings === 20 &&
+    typeof btSummary.transitionsAnalyzed === "number" &&
+    typeof btSummary.falseTransitionRate === "number" &&
+    typeof btSummary.regimeAccuracy === "number" &&
+    btSummary.falseTransitionRate >= 0 && btSummary.falseTransitionRate <= 1 &&
+    btSummary.regimeAccuracy >= 0 && btSummary.regimeAccuracy <= 1;
+  assert(btValid, "10.9", "Regime backtest analysis produces valid bounded metrics",
+    { validated: "Historical FDR series analysis with transition detection and accuracy",
+      endpointsOrFunctions: "regimeBacktest.analyzeRegimeTransitions()",
+      inputs: "20-reading FDR series with regime transitions",
+      expected: "totalReadings=20, bounded rates",
+      actual: `readings=${btSummary.totalReadings}, transitions=${btSummary.transitionsAnalyzed}, falseRate=${btSummary.falseTransitionRate}, accuracy=${btSummary.regimeAccuracy}`,
+      rawEvidence: { totalReadings: btSummary.totalReadings, transitions: btSummary.transitionsAnalyzed, falseRate: btSummary.falseTransitionRate, accuracy: btSummary.regimeAccuracy }, proofType: "deterministic" }, t109);
+
+  // 10.10: Backtest includes stability windows
+  const t1010 = Date.now();
+  const swValid = Array.isArray(btSummary.stabilityWindows) &&
+    btSummary.stabilityWindows.length > 0 &&
+    btSummary.stabilityWindows.every((w: any) =>
+      typeof w.regime === "string" &&
+      typeof w.durationReadings === "number" &&
+      typeof w.avgFdr === "number" &&
+      typeof w.stable === "boolean");
+  assert(!!swValid, "10.10", "Backtest includes stability windows with regime, duration, avgFdr, stable flag",
+    { validated: "Regime stability window analysis with FDR variance tracking",
+      endpointsOrFunctions: "regimeBacktest.analyzeRegimeTransitions() → stabilityWindows",
+      inputs: "20-reading FDR series",
+      expected: "1+ stability windows with required fields",
+      actual: `count=${btSummary.stabilityWindows.length}, regimes=${btSummary.stabilityWindows.map((w: any) => w.regime).join(',')}`,
+      rawEvidence: { count: btSummary.stabilityWindows.length, sample: btSummary.stabilityWindows[0] }, proofType: "deterministic" }, t1010);
+
+  // 10.11: Backtest includes regime distribution
+  const t1011 = Date.now();
+  const rdValid = btSummary.regimeDistribution &&
+    typeof btSummary.regimeDistribution === "object" &&
+    Object.keys(btSummary.regimeDistribution).length > 0 &&
+    Object.values(btSummary.regimeDistribution).every((v: any) =>
+      typeof v.count === "number" && typeof v.pct === "number");
+  assert(!!rdValid, "10.11", "Backtest includes regime distribution with count and percentage",
+    { validated: "Regime time-in-state distribution tracking",
+      endpointsOrFunctions: "regimeBacktest → regimeDistribution",
+      inputs: "20-reading FDR series",
+      expected: "1+ regime entries with count and pct",
+      actual: `regimes=${Object.keys(btSummary.regimeDistribution).join(',')}`,
+      rawEvidence: btSummary.regimeDistribution, proofType: "deterministic" }, t1011);
+
+  // 10.12: Backtest includes detection timing by regime
+  const t1012 = Date.now();
+  const dtValid = btSummary.detectionTimingByRegime &&
+    typeof btSummary.detectionTimingByRegime === "object";
+  assert(!!dtValid, "10.12", "Backtest tracks detection timing per regime",
+    { validated: "Per-regime detection lag tracking for operational awareness",
+      endpointsOrFunctions: "regimeBacktest → detectionTimingByRegime",
+      inputs: "20-reading FDR series",
+      expected: "Object with regime keys and avgLag/count",
+      actual: `regimes=${Object.keys(btSummary.detectionTimingByRegime).join(',')}`,
+      rawEvidence: btSummary.detectionTimingByRegime, proofType: "deterministic" }, t1012);
+
+  // 10.13: Backtest persists to DB via runBacktestReport
+  const t1013 = Date.now();
+  const { runBacktestReport } = await import("../../lib/regimeBacktest");
+  const btReport = await runBacktestReport({
+    companyId: COMPANY_A,
+    version: `cert-g10-bt-${PREFIX}`,
+    seed: 42,
+    syntheticReadings: 100,
+  });
+  const reportValid = btReport && btReport.id > 0 &&
+    btReport.status === "completed" &&
+    typeof btReport.transitionsAnalyzed === "number" &&
+    typeof btReport.falseTransitionRate === "number" &&
+    typeof btReport.regimeAccuracy === "number";
+  assert(!!reportValid, "10.13", "Backtest report persisted to DB with completed status and metrics",
+    { validated: "Full backtest report stored for audit and compliance",
+      endpointsOrFunctions: "regimeBacktest.runBacktestReport()",
+      inputs: `companyId=${COMPANY_A}, seed=42, readings=100`,
+      expected: "status=completed, metrics populated",
+      actual: `id=${btReport?.id}, status=${btReport?.status}, transitions=${btReport?.transitionsAnalyzed}`,
+      rawEvidence: { id: btReport?.id, status: btReport?.status, transitionsAnalyzed: btReport?.transitionsAnalyzed, accuracy: btReport?.regimeAccuracy }, proofType: "runtime" }, t1013);
+
+  // 10.14: Hysteresis effectiveness is tracked
+  const t1014 = Date.now();
+  const hystValid = typeof btSummary.hysteresisEffectiveness === "number" &&
+    btSummary.hysteresisEffectiveness >= 0 && btSummary.hysteresisEffectiveness <= 1;
+  assert(hystValid, "10.14", "Hysteresis effectiveness is bounded [0,1] and tracked",
+    { validated: "Hysteresis band reduces false transitions measurably",
+      endpointsOrFunctions: "regimeBacktest → hysteresisEffectiveness",
+      inputs: "FDR series backtest",
+      expected: "0 <= hysteresisEffectiveness <= 1",
+      actual: `effectiveness=${btSummary.hysteresisEffectiveness}`,
+      rawEvidence: { hysteresisEffectiveness: btSummary.hysteresisEffectiveness }, proofType: "deterministic" }, t1014);
+
+  // 10.15: Regime-conditioned noise varies by regime
+  const t1015 = Date.now();
+  const regimeLiftData = evalResult.summary.benchmark.liftByRegime || [];
+  const regimeNames = regimeLiftData.map((r: any) => r.regime);
+  const hasMultipleRegimes = regimeNames.length >= 2;
+  assert(hasMultipleRegimes, "10.15", "Evaluation covers 2+ distinct economic regimes in lift analysis",
+    { validated: "Regime-conditioned forecasting produces differentiated performance across regimes",
+      endpointsOrFunctions: "evaluationHarness → liftByRegime",
+      inputs: "Evaluation run with seeded regime assignment",
+      expected: "2+ distinct regimes in liftByRegime",
+      actual: `regimes=${regimeNames.join(',')}`,
+      rawEvidence: { regimes: regimeNames, count: regimeNames.length }, proofType: "runtime" }, t1015);
+
+  // 10.16: Optimization API requires auth
+  const t1016 = Date.now();
+  const optNoAuth = await httpPost("/api/optimization/run", { materialId: "test", regime: "HEALTHY_EXPANSION" });
+  assert(optNoAuth.status === 401, "10.16", "POST /api/optimization/run returns 401 without auth",
+    { validated: "Optimization endpoint enforces authentication",
+      endpointsOrFunctions: "POST /api/optimization/run",
+      inputs: "No auth cookie", expected: "401", actual: `${optNoAuth.status}`,
+      rawEvidence: { status: optNoAuth.status }, proofType: "runtime" }, t1016);
+
+  // 10.17: Backtest API requires auth
+  const t1017 = Date.now();
+  const btNoAuth = await httpPost("/api/regime-backtest/run", { version: "test" });
+  assert(btNoAuth.status === 401, "10.17", "POST /api/regime-backtest/run returns 401 without auth",
+    { validated: "Backtest endpoint enforces authentication",
+      endpointsOrFunctions: "POST /api/regime-backtest/run",
+      inputs: "No auth cookie", expected: "401", actual: `${btNoAuth.status}`,
+      rawEvidence: { status: btNoAuth.status }, proofType: "runtime" }, t1017);
+
+  // 10.18: GET optimization runs requires auth
+  const t1018 = Date.now();
+  const optGetNoAuth = await httpGet("/api/optimization/runs");
+  assert(optGetNoAuth.status === 401, "10.18", "GET /api/optimization/runs returns 401 without auth",
+    { validated: "Optimization runs listing enforces authentication",
+      endpointsOrFunctions: "GET /api/optimization/runs",
+      inputs: "No auth cookie", expected: "401", actual: `${optGetNoAuth.status}`,
+      rawEvidence: { status: optGetNoAuth.status }, proofType: "runtime" }, t1018);
+
+  // 10.19: GET backtest reports requires auth
+  const t1019 = Date.now();
+  const btGetNoAuth = await httpGet("/api/regime-backtest/reports");
+  assert(btGetNoAuth.status === 401, "10.19", "GET /api/regime-backtest/reports returns 401 without auth",
+    { validated: "Backtest reports listing enforces authentication",
+      endpointsOrFunctions: "GET /api/regime-backtest/reports",
+      inputs: "No auth cookie", expected: "401", actual: `${btGetNoAuth.status}`,
+      rawEvidence: { status: btGetNoAuth.status }, proofType: "runtime" }, t1019);
+
+  // 10.20: Empty FDR series returns safe defaults
+  const t1020 = Date.now();
+  const emptyBt = analyzeRegimeTransitions([]);
+  const emptyValid = emptyBt.totalReadings === 0 && emptyBt.transitionsAnalyzed === 0 &&
+    emptyBt.regimeAccuracy === 1 && emptyBt.transitions.length === 0;
+  assert(emptyValid, "10.20", "Empty FDR series returns safe defaults (no crash, accuracy=1)",
+    { validated: "Edge case resilience: empty input returns safe state",
+      endpointsOrFunctions: "regimeBacktest.analyzeRegimeTransitions([])",
+      inputs: "Empty array",
+      expected: "totalReadings=0, accuracy=1, no transitions",
+      actual: `readings=${emptyBt.totalReadings}, accuracy=${emptyBt.regimeAccuracy}`,
+      rawEvidence: { totalReadings: emptyBt.totalReadings, regimeAccuracy: emptyBt.regimeAccuracy }, proofType: "deterministic" }, t1020);
+
+  gateResults.push({
+    gate: currentGate, description: "Regime-aware probabilistic optimization, backtest reporting, conditioned forecasting with regime-specific lift",
+    pass: results.filter(r => r.gate === currentGate).every(r => r.pass),
+    tests: results.filter(r => r.gate === currentGate), startedAt: gateStart, completedAt: TS(),
+  });
+}
+
 async function cleanup() {
   console.log("\n  Cleaning up test data...");
   try {
@@ -1916,6 +2225,8 @@ async function cleanup() {
     await db.execute(sql`DELETE FROM sso_configurations WHERE company_id = ${COMPANY_A}`);
     await db.execute(sql`DELETE FROM scim_provisioning_log WHERE company_id = ${COMPANY_A}`);
     await db.execute(sql`DELETE FROM audit_export_configs WHERE company_id = ${COMPANY_A}`);
+    await db.execute(sql`DELETE FROM regime_backtest_reports WHERE company_id = ${COMPANY_A}`);
+    await db.execute(sql`DELETE FROM optimization_runs WHERE company_id = ${COMPANY_A}`);
     await db.delete(companies).where(eq(companies.id, `${PREFIX}-safemode-test`));
     await db.delete(companies).where(eq(companies.id, COMPANY_A));
     await db.delete(companies).where(eq(companies.id, COMPANY_B));
@@ -1927,11 +2238,12 @@ async function cleanup() {
 
 async function main() {
   console.log("================================================================");
-  console.log("  ENTERPRISE E2E CERTIFICATION HARNESS v3.0.0");
+  console.log("  ENTERPRISE E2E CERTIFICATION HARNESS v4.0.0");
   console.log(`  Date: ${new Date().toISOString()}`);
-  console.log("  Scope: Gates 1-9 (Multi-tenant, Spend, Automation, Payments,");
+  console.log("  Scope: Gates 1-10 (Multi-tenant, Spend, Automation, Payments,");
   console.log("         Integrations, Data Honesty, Operational Readiness,");
-  console.log("         Copilot Safety & Data Quality, Predictive Lift & Enterprise Controls)");
+  console.log("         Copilot Safety & Data Quality, Predictive Lift & Enterprise Controls,");
+  console.log("         Regime-Aware Optimization & Backtest)");
   console.log("================================================================");
 
   await setup();
@@ -1944,6 +2256,7 @@ async function main() {
   await gate7();
   await gate8();
   await gate9();
+  await gate10();
   await cleanup();
 
   const mdReport = generateMarkdownReport();

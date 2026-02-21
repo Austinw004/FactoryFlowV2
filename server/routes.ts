@@ -18892,6 +18892,69 @@ You'll receive emails for:
   });
 
   // ============================================================
+  // Probabilistic Optimization Routes
+  // ============================================================
+
+  app.post("/api/optimization/run", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { materialId, regime, fdr, forecastUncertainty, targetServiceLevel, demandSamples, seed } = req.body;
+      if (!materialId || !regime) return res.status(400).json({ error: "materialId and regime required" });
+      const { runOptimization } = await import("./lib/probabilisticOptimization");
+      const result = await runOptimization({
+        companyId: user.companyId, materialId, regime,
+        fdr: fdr || 0, forecastUncertainty: forecastUncertainty || 0.2,
+        targetServiceLevel, demandSamples, seed,
+      });
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/optimization/runs", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { getOptimizationRuns } = await import("./lib/probabilisticOptimization");
+      const runs = await getOptimizationRuns(user.companyId);
+      res.json(runs);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============================================================
+  // Regime Backtest Routes
+  // ============================================================
+
+  app.post("/api/regime-backtest/run", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { version, fdrSeries, seed, syntheticReadings } = req.body;
+      const { runBacktestReport } = await import("./lib/regimeBacktest");
+      const result = await runBacktestReport({
+        companyId: user.companyId,
+        version: version || "1.0.0",
+        fdrSeries, seed, syntheticReadings,
+      });
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/regime-backtest/reports", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { getBacktestReports } = await import("./lib/regimeBacktest");
+      const reports = await getBacktestReports(user.companyId);
+      res.json(reports);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============================================================
   // Decision Intelligence Routes
   // ============================================================
 
