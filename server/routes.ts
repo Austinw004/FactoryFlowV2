@@ -18964,6 +18964,162 @@ You'll receive emails for:
     }
   });
 
+  app.post("/api/savings-evidence", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { createSavingsEvidence } = await import("./lib/savingsEvidence");
+      const record = await createSavingsEvidence({ ...req.body, companyId: user.companyId });
+      res.status(201).json(record);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/savings-evidence", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { getSavingsEvidence } = await import("./lib/savingsEvidence");
+      const records = await getSavingsEvidence(user.companyId);
+      res.json(records);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/savings-evidence/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { getSavingsEvidenceById } = await import("./lib/savingsEvidence");
+      const record = await getSavingsEvidenceById(user.companyId, parseInt(req.params.id));
+      if (!record) return res.status(404).json({ error: "Not found" });
+      res.json(record);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/savings-evidence/:id/measured", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { measuredSavings, outcomeRef } = req.body;
+      if (measuredSavings === undefined || !outcomeRef) return res.status(400).json({ error: "measuredSavings and outcomeRef required" });
+      const { recordMeasuredSavings } = await import("./lib/savingsEvidence");
+      const record = await recordMeasuredSavings(user.companyId, parseInt(req.params.id), measuredSavings, outcomeRef);
+      if (!record) return res.status(404).json({ error: "Not found" });
+      res.json(record);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/sso/config", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { getSsoConfig } = await import("./lib/enterpriseIdentity");
+      const configs = await getSsoConfig(user.companyId);
+      res.json(configs);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/sso/config", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { provider, ...config } = req.body;
+      if (!provider) return res.status(400).json({ error: "provider required" });
+      const { upsertSsoConfig } = await import("./lib/enterpriseIdentity");
+      const ssoConfig = await upsertSsoConfig(user.companyId, provider, config);
+      res.json(ssoConfig);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/sso/config/:provider", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { deleteSsoConfig } = await import("./lib/enterpriseIdentity");
+      await deleteSsoConfig(user.companyId, req.params.provider);
+      res.json({ deleted: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/scim/users", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { externalId, ...userData } = req.body;
+      if (!externalId) return res.status(400).json({ error: "externalId required" });
+      const { scimProvisionUser } = await import("./lib/enterpriseIdentity");
+      const result = await scimProvisionUser(user.companyId, externalId, userData);
+      res.status(201).json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/scim/users/:externalId", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { scimDeprovisionUser } = await import("./lib/enterpriseIdentity");
+      const result = await scimDeprovisionUser(user.companyId, req.params.externalId);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/scim/logs", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { getScimLogs } = await import("./lib/enterpriseIdentity");
+      const logs = await getScimLogs(user.companyId);
+      res.json(logs);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/audit/export", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { exportAuditLogs } = await import("./lib/enterpriseIdentity");
+      const filters: any = { companyId: user.companyId };
+      if (req.query.startTime) filters.startTime = new Date(req.query.startTime as string);
+      if (req.query.endTime) filters.endTime = new Date(req.query.endTime as string);
+      if (req.query.category) filters.category = req.query.category;
+      if (req.query.limit) filters.limit = parseInt(req.query.limit as string);
+      const logs = await exportAuditLogs(filters);
+      res.json({ count: logs.length, logs, exportedAt: new Date().toISOString() });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/audit/config", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { getAuditExportConfig } = await import("./lib/enterpriseIdentity");
+      const config = await getAuditExportConfig(user.companyId);
+      res.json(config || { retentionDays: 365, exportFormat: "json", redactionEnabled: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/audit/config", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { upsertAuditExportConfig } = await import("./lib/enterpriseIdentity");
+      const config = await upsertAuditExportConfig(user.companyId, req.body);
+      res.json(config);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   
   setupWebSocket(httpServer);

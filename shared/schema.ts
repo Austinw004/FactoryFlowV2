@@ -8699,6 +8699,7 @@ export const copilotActionDrafts = pgTable("copilot_action_drafts", {
   title: text("title").notNull(),
   reasoning: text("reasoning"),
   evidence: jsonb("evidence"),
+  evidenceBundle: jsonb("evidence_bundle"),
   draftPayload: jsonb("draft_payload").notNull(),
   createdBy: varchar("created_by", { length: 255 }),
   approvedBy: varchar("approved_by", { length: 255 }),
@@ -8726,6 +8727,7 @@ export const copilotQueryLog = pgTable("copilot_query_log", {
   query: text("query").notNull(),
   responseText: text("response_text"),
   evidenceRefs: jsonb("evidence_refs"),
+  evidenceBundle: jsonb("evidence_bundle"),
   durationMs: integer("duration_ms"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [
@@ -8820,3 +8822,97 @@ export const decisionOverrides = pgTable("decision_overrides", {
 export const insertDecisionOverrideSchema = createInsertSchema(decisionOverrides).omit({ id: true, createdAt: true });
 export type DecisionOverride = typeof decisionOverrides.$inferSelect;
 export type InsertDecisionOverride = z.infer<typeof insertDecisionOverrideSchema>;
+
+// ============================================================
+// Milestone 2 - Track 2: Auditable Counterfactual Savings
+// ============================================================
+
+export const savingsEvidenceRecords = pgTable("savings_evidence_records", {
+  id: serial("id").primaryKey(),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  savingsType: varchar("savings_type", { length: 64 }).notNull(),
+  actionContext: jsonb("action_context").notNull(),
+  counterfactualDefinition: varchar("counterfactual_definition", { length: 128 }).notNull(),
+  assumptions: jsonb("assumptions").notNull(),
+  scenarioInputs: jsonb("scenario_inputs"),
+  computationMethod: varchar("computation_method", { length: 128 }).notNull(),
+  estimatedSavings: real("estimated_savings").notNull(),
+  measuredSavings: real("measured_savings"),
+  measuredOutcomeRef: jsonb("measured_outcome_ref"),
+  entityRefs: jsonb("entity_refs").notNull(),
+  regime: varchar("regime", { length: 32 }),
+  policyVersion: varchar("policy_version", { length: 32 }),
+  immutable: boolean("immutable").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  measuredAt: timestamp("measured_at"),
+}, (table) => [
+  index("ser_company_idx").on(table.companyId),
+  index("ser_type_idx").on(table.companyId, table.savingsType),
+]);
+
+export const insertSavingsEvidenceRecordSchema = createInsertSchema(savingsEvidenceRecords).omit({ id: true, createdAt: true });
+export type SavingsEvidenceRecord = typeof savingsEvidenceRecords.$inferSelect;
+export type InsertSavingsEvidenceRecord = z.infer<typeof insertSavingsEvidenceRecordSchema>;
+
+// ============================================================
+// Milestone 2 - Track 4: Enterprise Identity & Access
+// ============================================================
+
+export const ssoConfigurations = pgTable("sso_configurations", {
+  id: serial("id").primaryKey(),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  provider: varchar("provider", { length: 64 }).notNull(),
+  entityId: varchar("entity_id", { length: 512 }),
+  ssoUrl: varchar("sso_url", { length: 1024 }),
+  certificate: text("certificate"),
+  metadataUrl: varchar("metadata_url", { length: 1024 }),
+  enabled: boolean("enabled").notNull().default(false),
+  enforced: boolean("enforced").notNull().default(false),
+  allowedDomains: text("allowed_domains").array(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("sso_company_provider_unique").on(table.companyId, table.provider),
+]);
+
+export const insertSsoConfigurationSchema = createInsertSchema(ssoConfigurations).omit({ id: true, createdAt: true, updatedAt: true });
+export type SsoConfiguration = typeof ssoConfigurations.$inferSelect;
+export type InsertSsoConfiguration = z.infer<typeof insertSsoConfigurationSchema>;
+
+export const scimProvisioningLog = pgTable("scim_provisioning_log", {
+  id: serial("id").primaryKey(),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  operation: varchar("operation", { length: 32 }).notNull(),
+  resourceType: varchar("resource_type", { length: 64 }).notNull(),
+  externalId: varchar("external_id", { length: 512 }),
+  internalUserId: varchar("internal_user_id", { length: 255 }),
+  requestPayload: jsonb("request_payload"),
+  responseStatus: integer("response_status"),
+  success: boolean("success").notNull().default(true),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("spl_company_idx").on(table.companyId),
+  index("spl_external_idx").on(table.companyId, table.externalId),
+]);
+
+export const insertScimProvisioningLogSchema = createInsertSchema(scimProvisioningLog).omit({ id: true, createdAt: true });
+export type ScimProvisioningLog = typeof scimProvisioningLog.$inferSelect;
+export type InsertScimProvisioningLog = z.infer<typeof insertScimProvisioningLogSchema>;
+
+export const auditExportConfigs = pgTable("audit_export_configs", {
+  id: serial("id").primaryKey(),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  retentionDays: integer("retention_days").notNull().default(365),
+  exportFormat: varchar("export_format", { length: 32 }).notNull().default("json"),
+  redactionEnabled: boolean("redaction_enabled").notNull().default(true),
+  allowedCategories: text("allowed_categories").array(),
+  lastExportAt: timestamp("last_export_at"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("aec_company_unique").on(table.companyId),
+]);
+
+export const insertAuditExportConfigSchema = createInsertSchema(auditExportConfigs).omit({ id: true });
+export type AuditExportConfig = typeof auditExportConfigs.$inferSelect;
+export type InsertAuditExportConfig = z.infer<typeof insertAuditExportConfigSchema>;

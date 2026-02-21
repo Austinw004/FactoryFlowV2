@@ -1,24 +1,24 @@
 {
   "certificationVersion": "2.1.0",
-  "generatedAt": "2026-02-21T20:08:25.359Z",
+  "generatedAt": "2026-02-21T20:43:42.012Z",
   "environment": "development",
   "instanceMode": "single-instance",
   "overall": "PASS",
   "summary": {
-    "totalTests": 91,
-    "passed": 91,
+    "totalTests": 116,
+    "passed": 116,
     "failed": 0,
-    "runtime": 59,
+    "runtime": 78,
     "structural": 15,
-    "deterministic": 17
+    "deterministic": 23
   },
   "gates": [
     {
       "gate": "Gate 1: Multi-Tenant Isolation",
       "description": "Multi-tenant isolation enforced via WHERE-clause scoping for all core entities + HTTP auth enforcement",
       "pass": true,
-      "startedAt": "2026-02-21T20:07:41.994Z",
-      "completedAt": "2026-02-21T20:07:42.376Z",
+      "startedAt": "2026-02-21T20:43:11.028Z",
+      "completedAt": "2026-02-21T20:43:11.188Z",
       "tests": [
         {
           "testId": "1.1",
@@ -26,7 +26,7 @@
           "pass": true,
           "proofType": "structural",
           "durationMs": 25,
-          "testStartedAt": "2026-02-21T20:07:41.996Z",
+          "testStartedAt": "2026-02-21T20:43:11.028Z",
           "validated": "All GET/UPDATE/DELETE by-id calls pass companyId",
           "endpointsOrFunctions": "server/routes.ts (all by-id routes)",
           "inputs": "Regex scan of routes.ts for single-arg storage calls",
@@ -44,16 +44,16 @@
           "name": "Cross-tenant GET SKU blocked",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 7,
-          "testStartedAt": "2026-02-21T20:07:42.222Z",
+          "durationMs": 5,
+          "testStartedAt": "2026-02-21T20:43:11.083Z",
           "validated": "getSku returns undefined for wrong tenant",
           "endpointsOrFunctions": "storage.getSku",
-          "inputs": "id=396cd3fa-f09c-4bec-820b-f72afc7335c9, companyId=cert-1771704461686-co-bravo (wrong tenant)",
+          "inputs": "id=5219acc5-f411-4bb5-9839-2c7a1f8b8510, companyId=cert-1771706590951-co-bravo (wrong tenant)",
           "expected": "undefined",
           "actual": "undefined",
           "evidence": null,
           "rawEvidence": {
-            "entityId": "396cd3fa-f09c-4bec-820b-f72afc7335c9"
+            "entityId": "5219acc5-f411-4bb5-9839-2c7a1f8b8510"
           }
         },
         {
@@ -61,16 +61,16 @@
           "name": "Own-tenant GET SKU succeeds",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 7,
-          "testStartedAt": "2026-02-21T20:07:42.222Z",
+          "durationMs": 5,
+          "testStartedAt": "2026-02-21T20:43:11.083Z",
           "validated": "getSku returns entity for correct tenant",
           "endpointsOrFunctions": "storage.getSku",
-          "inputs": "id=396cd3fa-f09c-4bec-820b-f72afc7335c9, companyId=cert-1771704461686-co-alpha",
+          "inputs": "id=5219acc5-f411-4bb5-9839-2c7a1f8b8510, companyId=cert-1771706590951-co-alpha",
           "expected": "entity object",
           "actual": "entity found",
           "evidence": null,
           "rawEvidence": {
-            "entityId": "396cd3fa-f09c-4bec-820b-f72afc7335c9",
+            "entityId": "5219acc5-f411-4bb5-9839-2c7a1f8b8510",
             "found": true
           }
         },
@@ -79,16 +79,16 @@
           "name": "Cross-tenant GET Material blocked",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 8,
-          "testStartedAt": "2026-02-21T20:07:42.229Z",
+          "durationMs": 6,
+          "testStartedAt": "2026-02-21T20:43:11.088Z",
           "validated": "getMaterial returns undefined for wrong tenant",
           "endpointsOrFunctions": "storage.getMaterial",
-          "inputs": "id=9bc64f85-20c7-42de-8047-6d00ebca586c, companyId=cert-1771704461686-co-bravo (wrong tenant)",
+          "inputs": "id=7cdfe3d7-7a9a-4f77-a617-7134feadeb69, companyId=cert-1771706590951-co-bravo (wrong tenant)",
           "expected": "undefined",
           "actual": "undefined",
           "evidence": null,
           "rawEvidence": {
-            "entityId": "9bc64f85-20c7-42de-8047-6d00ebca586c"
+            "entityId": "7cdfe3d7-7a9a-4f77-a617-7134feadeb69"
           }
         },
         {
@@ -96,16 +96,16 @@
           "name": "Own-tenant GET Material succeeds",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 8,
-          "testStartedAt": "2026-02-21T20:07:42.229Z",
+          "durationMs": 6,
+          "testStartedAt": "2026-02-21T20:43:11.088Z",
           "validated": "getMaterial returns entity for correct tenant",
           "endpointsOrFunctions": "storage.getMaterial",
-          "inputs": "id=9bc64f85-20c7-42de-8047-6d00ebca586c, companyId=cert-1771704461686-co-alpha",
+          "inputs": "id=7cdfe3d7-7a9a-4f77-a617-7134feadeb69, companyId=cert-1771706590951-co-alpha",
           "expected": "entity object",
           "actual": "entity found",
           "evidence": null,
           "rawEvidence": {
-            "entityId": "9bc64f85-20c7-42de-8047-6d00ebca586c",
+            "entityId": "7cdfe3d7-7a9a-4f77-a617-7134feadeb69",
             "found": true
           }
         },
@@ -114,16 +114,16 @@
           "name": "Cross-tenant GET Supplier blocked",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 6,
-          "testStartedAt": "2026-02-21T20:07:42.237Z",
+          "durationMs": 5,
+          "testStartedAt": "2026-02-21T20:43:11.094Z",
           "validated": "getSupplier returns undefined for wrong tenant",
           "endpointsOrFunctions": "storage.getSupplier",
-          "inputs": "id=788195ce-08f6-43a3-bd55-d2941bb340d9, companyId=cert-1771704461686-co-bravo (wrong tenant)",
+          "inputs": "id=8d5cedfa-1382-4509-93ca-0e21985d4ccf, companyId=cert-1771706590951-co-bravo (wrong tenant)",
           "expected": "undefined",
           "actual": "undefined",
           "evidence": null,
           "rawEvidence": {
-            "entityId": "788195ce-08f6-43a3-bd55-d2941bb340d9"
+            "entityId": "8d5cedfa-1382-4509-93ca-0e21985d4ccf"
           }
         },
         {
@@ -131,16 +131,16 @@
           "name": "Own-tenant GET Supplier succeeds",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 6,
-          "testStartedAt": "2026-02-21T20:07:42.237Z",
+          "durationMs": 5,
+          "testStartedAt": "2026-02-21T20:43:11.094Z",
           "validated": "getSupplier returns entity for correct tenant",
           "endpointsOrFunctions": "storage.getSupplier",
-          "inputs": "id=788195ce-08f6-43a3-bd55-d2941bb340d9, companyId=cert-1771704461686-co-alpha",
+          "inputs": "id=8d5cedfa-1382-4509-93ca-0e21985d4ccf, companyId=cert-1771706590951-co-alpha",
           "expected": "entity object",
           "actual": "entity found",
           "evidence": null,
           "rawEvidence": {
-            "entityId": "788195ce-08f6-43a3-bd55-d2941bb340d9",
+            "entityId": "8d5cedfa-1382-4509-93ca-0e21985d4ccf",
             "found": true
           }
         },
@@ -149,16 +149,16 @@
           "name": "Cross-tenant GET RFQ blocked",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 9,
-          "testStartedAt": "2026-02-21T20:07:42.243Z",
+          "durationMs": 5,
+          "testStartedAt": "2026-02-21T20:43:11.099Z",
           "validated": "getRfq returns undefined for wrong tenant",
           "endpointsOrFunctions": "storage.getRfq",
-          "inputs": "id=81781c1e-213b-471e-ad84-bb3bdcf7813d, companyId=cert-1771704461686-co-bravo (wrong tenant)",
+          "inputs": "id=7ef71e6f-5899-444d-b1de-3e4b780128fd, companyId=cert-1771706590951-co-bravo (wrong tenant)",
           "expected": "undefined",
           "actual": "undefined",
           "evidence": null,
           "rawEvidence": {
-            "entityId": "81781c1e-213b-471e-ad84-bb3bdcf7813d"
+            "entityId": "7ef71e6f-5899-444d-b1de-3e4b780128fd"
           }
         },
         {
@@ -166,16 +166,16 @@
           "name": "Own-tenant GET RFQ succeeds",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 10,
-          "testStartedAt": "2026-02-21T20:07:42.243Z",
+          "durationMs": 5,
+          "testStartedAt": "2026-02-21T20:43:11.099Z",
           "validated": "getRfq returns entity for correct tenant",
           "endpointsOrFunctions": "storage.getRfq",
-          "inputs": "id=81781c1e-213b-471e-ad84-bb3bdcf7813d, companyId=cert-1771704461686-co-alpha",
+          "inputs": "id=7ef71e6f-5899-444d-b1de-3e4b780128fd, companyId=cert-1771706590951-co-alpha",
           "expected": "entity object",
           "actual": "entity found",
           "evidence": null,
           "rawEvidence": {
-            "entityId": "81781c1e-213b-471e-ad84-bb3bdcf7813d",
+            "entityId": "7ef71e6f-5899-444d-b1de-3e4b780128fd",
             "found": true
           }
         },
@@ -184,16 +184,16 @@
           "name": "Cross-tenant GET Machinery blocked",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 6,
-          "testStartedAt": "2026-02-21T20:07:42.253Z",
+          "durationMs": 5,
+          "testStartedAt": "2026-02-21T20:43:11.104Z",
           "validated": "getMachine returns undefined for wrong tenant",
           "endpointsOrFunctions": "storage.getMachine",
-          "inputs": "id=f90dd78f-c704-40c4-b552-cb1f99558a4b, companyId=cert-1771704461686-co-bravo (wrong tenant)",
+          "inputs": "id=66789f59-9603-4df4-bb52-8b06c999a4ae, companyId=cert-1771706590951-co-bravo (wrong tenant)",
           "expected": "undefined",
           "actual": "undefined",
           "evidence": null,
           "rawEvidence": {
-            "entityId": "f90dd78f-c704-40c4-b552-cb1f99558a4b"
+            "entityId": "66789f59-9603-4df4-bb52-8b06c999a4ae"
           }
         },
         {
@@ -201,16 +201,16 @@
           "name": "Own-tenant GET Machinery succeeds",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 6,
-          "testStartedAt": "2026-02-21T20:07:42.253Z",
+          "durationMs": 5,
+          "testStartedAt": "2026-02-21T20:43:11.104Z",
           "validated": "getMachine returns entity for correct tenant",
           "endpointsOrFunctions": "storage.getMachine",
-          "inputs": "id=f90dd78f-c704-40c4-b552-cb1f99558a4b, companyId=cert-1771704461686-co-alpha",
+          "inputs": "id=66789f59-9603-4df4-bb52-8b06c999a4ae, companyId=cert-1771706590951-co-alpha",
           "expected": "entity object",
           "actual": "entity found",
           "evidence": null,
           "rawEvidence": {
-            "entityId": "f90dd78f-c704-40c4-b552-cb1f99558a4b",
+            "entityId": "66789f59-9603-4df4-bb52-8b06c999a4ae",
             "found": true
           }
         },
@@ -219,11 +219,11 @@
           "name": "Cross-tenant UPDATE Material blocked",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 5,
-          "testStartedAt": "2026-02-21T20:07:42.259Z",
+          "durationMs": 6,
+          "testStartedAt": "2026-02-21T20:43:11.109Z",
           "validated": "updateMaterial returns undefined for wrong tenant",
           "endpointsOrFunctions": "storage.updateMaterial",
-          "inputs": "id=9bc64f85-20c7-42de-8047-6d00ebca586c, companyId=cert-1771704461686-co-bravo",
+          "inputs": "id=7cdfe3d7-7a9a-4f77-a617-7134feadeb69, companyId=cert-1771706590951-co-bravo",
           "expected": "undefined",
           "actual": "undefined",
           "evidence": null,
@@ -235,15 +235,15 @@
           "pass": true,
           "proofType": "runtime",
           "durationMs": 6,
-          "testStartedAt": "2026-02-21T20:07:42.259Z",
+          "testStartedAt": "2026-02-21T20:43:11.109Z",
           "validated": "Data integrity preserved",
           "endpointsOrFunctions": "storage.getMaterial",
-          "inputs": "id=9bc64f85-20c7-42de-8047-6d00ebca586c, companyId=cert-1771704461686-co-alpha",
-          "expected": "cert-1771704461686-mat-A",
-          "actual": "cert-1771704461686-mat-A",
+          "inputs": "id=7cdfe3d7-7a9a-4f77-a617-7134feadeb69, companyId=cert-1771706590951-co-alpha",
+          "expected": "cert-1771706590951-mat-A",
+          "actual": "cert-1771706590951-mat-A",
           "evidence": null,
           "rawEvidence": {
-            "materialName": "cert-1771704461686-mat-A"
+            "materialName": "cert-1771706590951-mat-A"
           }
         },
         {
@@ -252,15 +252,15 @@
           "pass": true,
           "proofType": "runtime",
           "durationMs": 5,
-          "testStartedAt": "2026-02-21T20:07:42.265Z",
+          "testStartedAt": "2026-02-21T20:43:11.115Z",
           "validated": "deleteSku does not delete when companyId doesn't match",
           "endpointsOrFunctions": "storage.deleteSku",
-          "inputs": "id=396cd3fa-f09c-4bec-820b-f72afc7335c9, companyId=cert-1771704461686-co-bravo",
+          "inputs": "id=5219acc5-f411-4bb5-9839-2c7a1f8b8510, companyId=cert-1771706590951-co-bravo",
           "expected": "entity still exists",
           "actual": "entity exists",
           "evidence": null,
           "rawEvidence": {
-            "skuId": "396cd3fa-f09c-4bec-820b-f72afc7335c9",
+            "skuId": "5219acc5-f411-4bb5-9839-2c7a1f8b8510",
             "survived": true
           }
         },
@@ -269,16 +269,16 @@
           "name": "Cross-tenant GET automation rule blocked",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 14,
-          "testStartedAt": "2026-02-21T20:07:42.270Z",
+          "durationMs": 8,
+          "testStartedAt": "2026-02-21T20:43:11.120Z",
           "validated": "getAiAutomationRule WHERE-clause scoped by companyId",
           "endpointsOrFunctions": "storage.getAiAutomationRule",
-          "inputs": "id=9749bd42-66ce-42d9-a2a0-68d5208ea112, companyId=cert-1771704461686-co-bravo",
+          "inputs": "id=9bb0b5f0-fcc7-4d91-be0a-06efd2d01c4f, companyId=cert-1771706590951-co-bravo",
           "expected": "undefined",
           "actual": "undefined",
           "evidence": null,
           "rawEvidence": {
-            "ruleId": "9749bd42-66ce-42d9-a2a0-68d5208ea112"
+            "ruleId": "9bb0b5f0-fcc7-4d91-be0a-06efd2d01c4f"
           }
         },
         {
@@ -286,16 +286,16 @@
           "name": "Cross-tenant GET purchase order blocked",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 28,
-          "testStartedAt": "2026-02-21T20:07:42.285Z",
+          "durationMs": 7,
+          "testStartedAt": "2026-02-21T20:43:11.128Z",
           "validated": "getPurchaseOrder WHERE-clause scoped by companyId",
           "endpointsOrFunctions": "storage.getPurchaseOrder",
-          "inputs": "id=04332b6b-c74e-4062-9100-816cdbcf72c1, companyId=cert-1771704461686-co-bravo",
+          "inputs": "id=b7f07fef-80a4-429f-b55e-9123a61098b4, companyId=cert-1771706590951-co-bravo",
           "expected": "undefined",
           "actual": "undefined",
           "evidence": null,
           "rawEvidence": {
-            "poId": "04332b6b-c74e-4062-9100-816cdbcf72c1"
+            "poId": "b7f07fef-80a4-429f-b55e-9123a61098b4"
           }
         },
         {
@@ -303,8 +303,8 @@
           "name": "GET /healthz returns 200 (server reachable)",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 50,
-          "testStartedAt": "2026-02-21T20:07:42.314Z",
+          "durationMs": 44,
+          "testStartedAt": "2026-02-21T20:43:11.135Z",
           "validated": "Server is reachable and health endpoint responds",
           "endpointsOrFunctions": "GET /healthz",
           "inputs": "Unauthenticated GET request",
@@ -315,7 +315,7 @@
             "status": 200,
             "body": {
               "status": "ok",
-              "timestamp": "2026-02-21T20:07:42.352Z"
+              "timestamp": "2026-02-21T20:43:11.172Z"
             }
           }
         },
@@ -324,8 +324,8 @@
           "name": "GET /api/skus returns 401 without auth (auth enforced)",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 7,
-          "testStartedAt": "2026-02-21T20:07:42.365Z",
+          "durationMs": 6,
+          "testStartedAt": "2026-02-21T20:43:11.179Z",
           "validated": "API endpoints require authentication",
           "endpointsOrFunctions": "GET /api/skus",
           "inputs": "Unauthenticated GET request",
@@ -341,8 +341,8 @@
           "name": "GET /api/materials returns 401 without auth (auth enforced)",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 3,
-          "testStartedAt": "2026-02-21T20:07:42.372Z",
+          "durationMs": 2,
+          "testStartedAt": "2026-02-21T20:43:11.185Z",
           "validated": "API endpoints require authentication",
           "endpointsOrFunctions": "GET /api/materials",
           "inputs": "Unauthenticated GET request",
@@ -359,16 +359,16 @@
       "gate": "Gate 2: Spend Limits & Guardrails",
       "description": "Spend limits are atomic, safe mode enforced at runtime, guardrail escalation persisted",
       "pass": true,
-      "startedAt": "2026-02-21T20:07:42.376Z",
-      "completedAt": "2026-02-21T20:07:43.146Z",
+      "startedAt": "2026-02-21T20:43:11.188Z",
+      "completedAt": "2026-02-21T20:43:11.770Z",
       "tests": [
         {
           "testId": "2.1a",
           "name": "Concurrency: exactly 20 requests allowed out of 50",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 393,
-          "testStartedAt": "2026-02-21T20:07:42.384Z",
+          "durationMs": 231,
+          "testStartedAt": "2026-02-21T20:43:11.190Z",
           "validated": "Atomic spend check allows exactly floor(limit/amount) requests",
           "endpointsOrFunctions": "AutomationEngine.atomicSpendCheck",
           "inputs": "50 parallel requests × $5, limit=$100",
@@ -389,8 +389,8 @@
           "name": "Final spend total exactly equals limit (no overshoot)",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 393,
-          "testStartedAt": "2026-02-21T20:07:42.384Z",
+          "durationMs": 231,
+          "testStartedAt": "2026-02-21T20:43:11.190Z",
           "validated": "No TOCTOU: spend total never exceeds limit",
           "endpointsOrFunctions": "automation_runtime_state",
           "inputs": "After 50 concurrent requests",
@@ -407,16 +407,16 @@
           "name": "Safe mode: create_po action requires approval (runtime proof)",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 55,
-          "testStartedAt": "2026-02-21T20:07:42.777Z",
+          "durationMs": 33,
+          "testStartedAt": "2026-02-21T20:43:11.421Z",
           "validated": "High-stakes action under safe mode is downgraded to approval-required",
           "endpointsOrFunctions": "AutomationEngine.createAction",
-          "inputs": "companyId=cert-1771704461686-safemode-test, actionType=create_po, safeModeEnabled=true",
+          "inputs": "companyId=cert-1771706590951-safemode-test, actionType=create_po, safeModeEnabled=true",
           "expected": "status=awaiting_approval or requiresApproval=1",
           "actual": "status=awaiting_approval, requiresApproval=1",
           "evidence": null,
           "rawEvidence": {
-            "actionId": "ef041737-e1c7-4aa5-b1c2-906a6db32691",
+            "actionId": "50114375-8dd4-44fe-9574-2c37a566ead6",
             "status": "awaiting_approval",
             "requiresApproval": 1,
             "actionType": "create_po"
@@ -427,16 +427,16 @@
           "name": "Guardrail escalation event persisted and readable (runtime proof)",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 310,
-          "testStartedAt": "2026-02-21T20:07:42.833Z",
+          "durationMs": 312,
+          "testStartedAt": "2026-02-21T20:43:11.455Z",
           "validated": "guardrail_escalation event written to structuredEventLog and queryable",
           "endpointsOrFunctions": "structuredEventLog table",
-          "inputs": "Inserted guardrail_escalation with marker=cert-1771704461686-guardrail-esc-1771704462833",
+          "inputs": "Inserted guardrail_escalation with marker=cert-1771706590951-guardrail-esc-1771706591455",
           "expected": "Row found in structured_event_log",
           "actual": "Found",
           "evidence": null,
           "rawEvidence": {
-            "marker": "cert-1771704461686-guardrail-esc-1771704462833",
+            "marker": "cert-1771706590951-guardrail-esc-1771706591455",
             "found": true,
             "rowCount": 1
           }
@@ -447,17 +447,17 @@
           "pass": true,
           "proofType": "runtime",
           "durationMs": 3,
-          "testStartedAt": "2026-02-21T20:07:43.143Z",
+          "testStartedAt": "2026-02-21T20:43:11.767Z",
           "validated": "Safe mode state persisted in database",
           "endpointsOrFunctions": "automationSafeMode table",
-          "inputs": "companyId=cert-1771704461686-safemode-test",
+          "inputs": "companyId=cert-1771706590951-safemode-test",
           "expected": "safe_mode_enabled=1",
           "actual": "safe_mode_enabled=1",
           "evidence": null,
           "rawEvidence": {
-            "companyId": "cert-1771704461686-safemode-test",
+            "companyId": "cert-1771706590951-safemode-test",
             "row": {
-              "company_id": "cert-1771704461686-safemode-test",
+              "company_id": "cert-1771706590951-safemode-test",
               "safe_mode_enabled": 1
             }
           }
@@ -468,16 +468,16 @@
       "gate": "Gate 3: Automation Engine Safety",
       "description": "Distributed locks, idempotency, multi-instance correctness verified",
       "pass": true,
-      "startedAt": "2026-02-21T20:07:43.147Z",
-      "completedAt": "2026-02-21T20:07:43.315Z",
+      "startedAt": "2026-02-21T20:43:11.771Z",
+      "completedAt": "2026-02-21T20:43:11.941Z",
       "tests": [
         {
           "testId": "3.1",
           "name": "All 15 background jobs are lock-wrapped via withJobLock(config.name)",
           "pass": true,
           "proofType": "structural",
-          "durationMs": 3,
-          "testStartedAt": "2026-02-21T20:07:43.147Z",
+          "durationMs": 2,
+          "testStartedAt": "2026-02-21T20:43:11.772Z",
           "validated": "Every background job config uses withJobLock with config.name in the job loop",
           "endpointsOrFunctions": "server/backgroundJobs.ts",
           "inputs": "Parsed 15 job configs from source",
@@ -604,17 +604,17 @@
           "name": "First lock acquisition succeeds",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 12,
-          "testStartedAt": "2026-02-21T20:07:43.150Z",
+          "durationMs": 36,
+          "testStartedAt": "2026-02-21T20:43:11.774Z",
           "validated": "acquireJobLock returns acquired=true for uncontested lock",
           "endpointsOrFunctions": "acquireJobLock",
-          "inputs": "jobName=cert-1771704461686-test-job",
+          "inputs": "jobName=cert-1771706590951-test-job",
           "expected": "acquired=true",
           "actual": "acquired=true",
           "evidence": null,
           "rawEvidence": {
             "acquired": true,
-            "lockId": "beb8cc7a-d704-4d80-a9d3-018dcc9773b2"
+            "lockId": "d3755e97-1660-4e2e-9476-a7d09f17de68"
           }
         },
         {
@@ -622,8 +622,8 @@
           "name": "Second lock acquisition rejected (contention)",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 17,
-          "testStartedAt": "2026-02-21T20:07:43.150Z",
+          "durationMs": 61,
+          "testStartedAt": "2026-02-21T20:43:11.774Z",
           "validated": "acquireJobLock returns acquired=false when lock already held",
           "endpointsOrFunctions": "acquireJobLock",
           "inputs": "same jobName, different instance",
@@ -639,17 +639,17 @@
           "name": "Lock re-acquired after release",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 7,
-          "testStartedAt": "2026-02-21T20:07:43.180Z",
+          "durationMs": 5,
+          "testStartedAt": "2026-02-21T20:43:11.840Z",
           "validated": "Released lock can be re-acquired",
           "endpointsOrFunctions": "acquireJobLock + releaseJobLock",
-          "inputs": "jobName=cert-1771704461686-test-job after release",
+          "inputs": "jobName=cert-1771706590951-test-job after release",
           "expected": "acquired=true",
           "actual": "acquired=true",
           "evidence": null,
           "rawEvidence": {
             "acquired": true,
-            "lockId": "178f40fe-9f46-4762-8787-c2fb69938d9e"
+            "lockId": "91664f22-6783-4275-96b7-99e41066f475"
           }
         },
         {
@@ -657,8 +657,8 @@
           "name": "Stale lock recovered after TTL expiry",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 33,
-          "testStartedAt": "2026-02-21T20:07:43.192Z",
+          "durationMs": 18,
+          "testStartedAt": "2026-02-21T20:43:11.850Z",
           "validated": "Expired lock is taken over by CAS UPDATE",
           "endpointsOrFunctions": "acquireJobLock (stale recovery path)",
           "inputs": "Lock with expiresAt in past",
@@ -667,7 +667,7 @@
           "evidence": null,
           "rawEvidence": {
             "acquired": true,
-            "lockId": "55225b7f-883a-44ac-930e-d94f95714088"
+            "lockId": "b81dd4ec-336b-4fa6-a945-e754a57e1a90"
           }
         },
         {
@@ -675,11 +675,11 @@
           "name": "withJobLock skips execution when lock already held",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 10,
-          "testStartedAt": "2026-02-21T20:07:43.231Z",
+          "durationMs": 8,
+          "testStartedAt": "2026-02-21T20:43:11.882Z",
           "validated": "withJobLock does not execute callback if lock is contested",
           "endpointsOrFunctions": "withJobLock",
-          "inputs": "jobName=cert-1771704461686-wrapper-job (pre-locked)",
+          "inputs": "jobName=cert-1771706590951-wrapper-job (pre-locked)",
           "expected": "callback not executed",
           "actual": "callback skipped",
           "evidence": null,
@@ -692,11 +692,11 @@
           "name": "withJobLock executes when lock available",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 26,
-          "testStartedAt": "2026-02-21T20:07:43.231Z",
+          "durationMs": 21,
+          "testStartedAt": "2026-02-21T20:43:11.882Z",
           "validated": "withJobLock executes callback when lock is available",
           "endpointsOrFunctions": "withJobLock",
-          "inputs": "jobName=cert-1771704461686-wrapper-job (released)",
+          "inputs": "jobName=cert-1771706590951-wrapper-job (released)",
           "expected": "callback executed",
           "actual": "callback ran",
           "evidence": null,
@@ -709,17 +709,17 @@
           "name": "Trigger event IDs are deterministic (same inputs, different key order → same ID)",
           "pass": true,
           "proofType": "deterministic",
-          "durationMs": 0,
-          "testStartedAt": "2026-02-21T20:07:43.257Z",
+          "durationMs": 1,
+          "testStartedAt": "2026-02-21T20:43:11.903Z",
           "validated": "buildTriggerEventId sorts keys before hashing",
           "endpointsOrFunctions": "buildTriggerEventId",
-          "inputs": "{\"companyId\":\"cert-1771704461686-co-alpha\",\"ruleId\":\"r1\",\"triggerType\":\"threshold\",\"objectId\":\"obj1\",\"timeBucket\":\"2026-02-19T10\",\"values\":{\"b\":2,\"a\":1}}",
+          "inputs": "{\"companyId\":\"cert-1771706590951-co-alpha\",\"ruleId\":\"r1\",\"triggerType\":\"threshold\",\"objectId\":\"obj1\",\"timeBucket\":\"2026-02-19T10\",\"values\":{\"b\":2,\"a\":1}}",
           "expected": "id1 === id2",
-          "actual": "id1=8a80c22f0d5b4eb5a15b634a7d39f9fd, id2=8a80c22f0d5b4eb5a15b634a7d39f9fd",
+          "actual": "id1=ebf014d8bba82cbcdf5dba541cc75ba5, id2=ebf014d8bba82cbcdf5dba541cc75ba5",
           "evidence": null,
           "rawEvidence": {
-            "id1": "8a80c22f0d5b4eb5a15b634a7d39f9fd",
-            "id2": "8a80c22f0d5b4eb5a15b634a7d39f9fd",
+            "id1": "ebf014d8bba82cbcdf5dba541cc75ba5",
+            "id2": "ebf014d8bba82cbcdf5dba541cc75ba5",
             "match": true
           }
         },
@@ -729,16 +729,16 @@
           "pass": true,
           "proofType": "deterministic",
           "durationMs": 1,
-          "testStartedAt": "2026-02-21T20:07:43.257Z",
+          "testStartedAt": "2026-02-21T20:43:11.903Z",
           "validated": "Time bucket affects trigger event ID",
           "endpointsOrFunctions": "buildTriggerEventId",
           "inputs": "Same params, different timeBucket",
           "expected": "id1 !== id3",
-          "actual": "id1=8a80c22f0d5b4eb5a15b634a7d39f9fd, id3=767d0e53d5d7f70f359275326aa69c8d",
+          "actual": "id1=ebf014d8bba82cbcdf5dba541cc75ba5, id3=4f0e2c92bfdb770fbc9536b131e35ef2",
           "evidence": null,
           "rawEvidence": {
-            "id1": "8a80c22f0d5b4eb5a15b634a7d39f9fd",
-            "id3": "767d0e53d5d7f70f359275326aa69c8d",
+            "id1": "ebf014d8bba82cbcdf5dba541cc75ba5",
+            "id3": "4f0e2c92bfdb770fbc9536b131e35ef2",
             "different": true
           }
         },
@@ -748,16 +748,16 @@
           "pass": true,
           "proofType": "deterministic",
           "durationMs": 0,
-          "testStartedAt": "2026-02-21T20:07:43.258Z",
+          "testStartedAt": "2026-02-21T20:43:11.904Z",
           "validated": "companyId is part of trigger event ID hash",
           "endpointsOrFunctions": "buildTriggerEventId",
-          "inputs": "companyA=cert-1771704461686-co-alpha, companyB=cert-1771704461686-co-bravo",
+          "inputs": "companyA=cert-1771706590951-co-alpha, companyB=cert-1771706590951-co-bravo",
           "expected": "different IDs",
-          "actual": "idA=2414abd904320c37a00d11516e861220, idB=20fae655684d464d06cc36243327cc62",
+          "actual": "idA=5e877eecdeda5d61016f605d5d06a377, idB=e19e6392144c80f41e826f3499d38b52",
           "evidence": null,
           "rawEvidence": {
-            "idA": "2414abd904320c37a00d11516e861220",
-            "idB": "20fae655684d464d06cc36243327cc62",
+            "idA": "5e877eecdeda5d61016f605d5d06a377",
+            "idB": "e19e6392144c80f41e826f3499d38b52",
             "different": true
           }
         },
@@ -766,17 +766,17 @@
           "name": "First createActionIdempotent creates action",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 57,
-          "testStartedAt": "2026-02-21T20:07:43.258Z",
+          "durationMs": 37,
+          "testStartedAt": "2026-02-21T20:43:11.904Z",
           "validated": "First call creates the action",
           "endpointsOrFunctions": "createActionIdempotent",
-          "inputs": "triggerEventId=cert-1771704461686-dedup-trigger-1771704463258",
+          "inputs": "triggerEventId=cert-1771706590951-dedup-trigger-1771706591904",
           "expected": "deduplicated=false, action created",
-          "actual": "deduplicated=false, actionId=61f27b66-9ffe-41ed-a15a-b0c23df27976",
+          "actual": "deduplicated=false, actionId=c83a4e44-15c7-48cb-9e4d-2b45b8319739",
           "evidence": null,
           "rawEvidence": {
             "deduplicated": false,
-            "actionId": "61f27b66-9ffe-41ed-a15a-b0c23df27976"
+            "actionId": "c83a4e44-15c7-48cb-9e4d-2b45b8319739"
           }
         },
         {
@@ -784,11 +784,11 @@
           "name": "Second createActionIdempotent is deduplicated",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 57,
-          "testStartedAt": "2026-02-21T20:07:43.258Z",
+          "durationMs": 37,
+          "testStartedAt": "2026-02-21T20:43:11.904Z",
           "validated": "Duplicate trigger event ID is rejected",
           "endpointsOrFunctions": "createActionIdempotent",
-          "inputs": "Same triggerEventId=cert-1771704461686-dedup-trigger-1771704463258",
+          "inputs": "Same triggerEventId=cert-1771706590951-dedup-trigger-1771706591904",
           "expected": "deduplicated=true",
           "actual": "deduplicated=true",
           "evidence": null,
@@ -802,8 +802,8 @@
       "gate": "Gate 4: Payments & Billing",
       "description": "Stripe webhook dedup, race safety, state transitions, no phantom states",
       "pass": true,
-      "startedAt": "2026-02-21T20:07:43.316Z",
-      "completedAt": "2026-02-21T20:07:43.399Z",
+      "startedAt": "2026-02-21T20:43:11.942Z",
+      "completedAt": "2026-02-21T20:43:11.994Z",
       "tests": [
         {
           "testId": "4.1",
@@ -811,7 +811,7 @@
           "pass": true,
           "proofType": "structural",
           "durationMs": 0,
-          "testStartedAt": "2026-02-21T20:07:43.317Z",
+          "testStartedAt": "2026-02-21T20:43:11.942Z",
           "validated": "acquireEventLock inserts into stripeProcessedEvents, handles 23505 (unique violation)",
           "endpointsOrFunctions": "WebhookHandlers.acquireEventLock",
           "inputs": "Source code inspection",
@@ -827,16 +827,16 @@
           "name": "Duplicate webhook delivery blocked by unique constraint",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 14,
-          "testStartedAt": "2026-02-21T20:07:43.317Z",
+          "durationMs": 9,
+          "testStartedAt": "2026-02-21T20:43:11.942Z",
           "validated": "Second INSERT for same event_id throws unique violation",
           "endpointsOrFunctions": "stripeProcessedEvents table",
-          "inputs": "eventId=cert-1771704461686-evt-1771704463317 (second insert)",
+          "inputs": "eventId=cert-1771706590951-evt-1771706591942 (second insert)",
           "expected": "unique violation error",
           "actual": "Blocked (23505)",
           "evidence": null,
           "rawEvidence": {
-            "eventId": "cert-1771704461686-evt-1771704463317",
+            "eventId": "cert-1771706590951-evt-1771706591942",
             "dupBlocked": true
           }
         },
@@ -845,16 +845,16 @@
           "name": "Concurrent webhook deliveries: exactly 1 wins",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 61,
-          "testStartedAt": "2026-02-21T20:07:43.331Z",
+          "durationMs": 38,
+          "testStartedAt": "2026-02-21T20:43:11.951Z",
           "validated": "Out of 10 concurrent INSERTs for same event_id, exactly 1 succeeds",
           "endpointsOrFunctions": "stripeProcessedEvents unique constraint",
-          "inputs": "10 concurrent INSERTs for eventId=cert-1771704461686-conc-evt-1771704463331",
+          "inputs": "10 concurrent INSERTs for eventId=cert-1771706590951-conc-evt-1771706591951",
           "expected": "1 success",
           "actual": "1 successes",
           "evidence": null,
           "rawEvidence": {
-            "eventId": "cert-1771704461686-conc-evt-1771704463331",
+            "eventId": "cert-1771706590951-conc-evt-1771706591951",
             "concInserted": 1,
             "totalAttempts": 10
           }
@@ -865,7 +865,7 @@
           "pass": true,
           "proofType": "structural",
           "durationMs": 0,
-          "testStartedAt": "2026-02-21T20:07:43.393Z",
+          "testStartedAt": "2026-02-21T20:43:11.989Z",
           "validated": "ALLOWED_TRANSITIONS map with executeGuardedTransition prevents illegal state regressions",
           "endpointsOrFunctions": "WebhookHandlers / isTransitionAllowed / executeGuardedTransition",
           "inputs": "Structural analysis of webhookHandlers.ts",
@@ -891,7 +891,7 @@
           "pass": true,
           "proofType": "structural",
           "durationMs": 0,
-          "testStartedAt": "2026-02-21T20:07:43.393Z",
+          "testStartedAt": "2026-02-21T20:43:11.990Z",
           "validated": "Stale processing locks are recovered after STALE_LOCK_THRESHOLD_MINUTES with CAS UPDATE",
           "endpointsOrFunctions": "WebhookHandlers.acquireEventLock",
           "inputs": "Structural analysis of stale lock recovery path",
@@ -910,8 +910,8 @@
           "name": "User schema includes Stripe customer/subscription/status fields",
           "pass": true,
           "proofType": "structural",
-          "durationMs": 6,
-          "testStartedAt": "2026-02-21T20:07:43.393Z",
+          "durationMs": 4,
+          "testStartedAt": "2026-02-21T20:43:11.990Z",
           "validated": "No phantom states: payment fields are persisted in users table",
           "endpointsOrFunctions": "shared/schema.ts (users table)",
           "inputs": "Schema inspection",
@@ -928,7 +928,7 @@
           "pass": true,
           "proofType": "structural",
           "durationMs": 0,
-          "testStartedAt": "2026-02-21T20:07:43.399Z",
+          "testStartedAt": "2026-02-21T20:43:11.994Z",
           "validated": "No SQL injection risk in webhook processing",
           "endpointsOrFunctions": "server/webhookHandlers.ts",
           "inputs": "Source code grep for sql.raw",
@@ -945,16 +945,16 @@
       "gate": "Gate 5: Integration Coherence",
       "description": "Integration health, dead letter, idempotency, canonical entities, observability",
       "pass": true,
-      "startedAt": "2026-02-21T20:07:43.400Z",
-      "completedAt": "2026-02-21T20:07:43.961Z",
+      "startedAt": "2026-02-21T20:43:11.994Z",
+      "completedAt": "2026-02-21T20:43:12.566Z",
       "tests": [
         {
           "testId": "5.1a",
           "name": "GET /healthz returns 200 (server is up)",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 11,
-          "testStartedAt": "2026-02-21T20:07:43.400Z",
+          "durationMs": 6,
+          "testStartedAt": "2026-02-21T20:43:11.995Z",
           "validated": "Server health endpoint is reachable",
           "endpointsOrFunctions": "GET /healthz",
           "inputs": "Unauthenticated GET",
@@ -965,7 +965,7 @@
             "status": 200,
             "body": {
               "status": "ok",
-              "timestamp": "2026-02-21T20:07:43.408Z"
+              "timestamp": "2026-02-21T20:43:11.999Z"
             }
           }
         },
@@ -974,8 +974,8 @@
           "name": "GET /api/integrations/health returns 401 (endpoint exists, auth enforced)",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 2,
-          "testStartedAt": "2026-02-21T20:07:43.411Z",
+          "durationMs": 3,
+          "testStartedAt": "2026-02-21T20:43:12.001Z",
           "validated": "Integration health endpoint exists and requires authentication",
           "endpointsOrFunctions": "GET /api/integrations/health",
           "inputs": "Unauthenticated GET",
@@ -992,7 +992,7 @@
           "pass": true,
           "proofType": "structural",
           "durationMs": 4,
-          "testStartedAt": "2026-02-21T20:07:43.413Z",
+          "testStartedAt": "2026-02-21T20:43:12.004Z",
           "validated": "All integration events have persistent storage for audit trail",
           "endpointsOrFunctions": "shared/schema.ts",
           "inputs": "Schema inspection",
@@ -1009,7 +1009,7 @@
           "pass": true,
           "proofType": "structural",
           "durationMs": 5,
-          "testStartedAt": "2026-02-21T20:07:43.413Z",
+          "testStartedAt": "2026-02-21T20:43:12.004Z",
           "validated": "Idempotency key column exists for deduplication",
           "endpointsOrFunctions": "shared/schema.ts",
           "inputs": "Schema inspection",
@@ -1025,16 +1025,16 @@
           "name": "Integration event idempotency: duplicate idempotencyKey rejected",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 30,
-          "testStartedAt": "2026-02-21T20:07:43.418Z",
+          "durationMs": 38,
+          "testStartedAt": "2026-02-21T20:43:12.009Z",
           "validated": "Unique constraint on (companyId, idempotencyKey) prevents duplicate integration events",
           "endpointsOrFunctions": "integrationEvents table",
-          "inputs": "Inserted with idempotencyKey=cert-1771704461686-idemp-1771704463418, then attempted duplicate",
+          "inputs": "Inserted with idempotencyKey=cert-1771706590951-idemp-1771706592009, then attempted duplicate",
           "expected": "Second insert blocked, 1 row exists",
           "actual": "dupBlocked=true, rowCount=1",
           "evidence": null,
           "rawEvidence": {
-            "idempotencyKey": "cert-1771704461686-idemp-1771704463418",
+            "idempotencyKey": "cert-1771706590951-idemp-1771706592009",
             "dupBlocked": true,
             "rowCount": 1
           }
@@ -1045,7 +1045,7 @@
           "pass": true,
           "proofType": "structural",
           "durationMs": 1,
-          "testStartedAt": "2026-02-21T20:07:43.448Z",
+          "testStartedAt": "2026-02-21T20:43:12.047Z",
           "validated": "Failed integration events are tracked for retry/inspection",
           "endpointsOrFunctions": "shared/schema.ts",
           "inputs": "Schema inspection",
@@ -1063,7 +1063,7 @@
           "pass": true,
           "proofType": "structural",
           "durationMs": 0,
-          "testStartedAt": "2026-02-21T20:07:43.449Z",
+          "testStartedAt": "2026-02-21T20:43:12.048Z",
           "validated": "Integration entities are mapped to canonical internal entities",
           "endpointsOrFunctions": "shared/schema.ts",
           "inputs": "Schema inspection",
@@ -1079,8 +1079,8 @@
           "name": "Health checks include latency tracking and status categories",
           "pass": true,
           "proofType": "structural",
-          "durationMs": 8,
-          "testStartedAt": "2026-02-21T20:07:43.449Z",
+          "durationMs": 11,
+          "testStartedAt": "2026-02-21T20:43:12.049Z",
           "validated": "Integration health reports latency and categorizes as healthy/degraded/offline",
           "endpointsOrFunctions": "GET /api/integrations/health",
           "inputs": "Route source inspection",
@@ -1097,16 +1097,16 @@
           "name": "Structured logger: integration events persist to DB with secret redaction (runtime proof)",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 504,
-          "testStartedAt": "2026-02-21T20:07:43.457Z",
+          "durationMs": 505,
+          "testStartedAt": "2026-02-21T20:43:12.061Z",
           "validated": "Logger persists warn+ events to structured_event_log, redacts sensitive keys, preserves normal keys",
           "endpointsOrFunctions": "structuredLogger.ts → structured_event_log table",
-          "inputs": "logger.warn('integration', 'cert-test-event-1771704463457', { details: { testKey: 'testValue', password: 'secret123' } })",
+          "inputs": "logger.warn('integration', 'cert-test-event-1771706592061', { details: { testKey: 'testValue', password: 'secret123' } })",
           "expected": "Row found, password=[REDACTED], testKey=testValue",
           "actual": "found=true, password=[REDACTED], testKey=testValue",
           "evidence": null,
           "rawEvidence": {
-            "marker": "cert-test-event-1771704463457",
+            "marker": "cert-test-event-1771706592061",
             "logFound": true,
             "details": {
               "testKey": "testValue",
@@ -1122,8 +1122,8 @@
       "gate": "Gate 6: Data Honesty & Economic Thesis",
       "description": "FDR thresholds, boundary classification, hysteresis, reversion penalty, edge cases",
       "pass": true,
-      "startedAt": "2026-02-21T20:07:43.961Z",
-      "completedAt": "2026-02-21T20:07:43.963Z",
+      "startedAt": "2026-02-21T20:43:12.567Z",
+      "completedAt": "2026-02-21T20:43:12.568Z",
       "tests": [
         {
           "testId": "6.1",
@@ -1131,7 +1131,7 @@
           "pass": true,
           "proofType": "deterministic",
           "durationMs": 0,
-          "testStartedAt": "2026-02-21T20:07:43.962Z",
+          "testStartedAt": "2026-02-21T20:43:12.567Z",
           "validated": "CANONICAL_REGIME_THRESHOLDS is the single source of truth with correct values",
           "endpointsOrFunctions": "regimeConstants.ts",
           "inputs": "Direct import verification",
@@ -1165,7 +1165,7 @@
           "pass": true,
           "proofType": "deterministic",
           "durationMs": 0,
-          "testStartedAt": "2026-02-21T20:07:43.962Z",
+          "testStartedAt": "2026-02-21T20:43:12.567Z",
           "validated": "Classification matches canonical thresholds at every boundary",
           "endpointsOrFunctions": "classifyRegimeFromFDR",
           "inputs": "FDR=0, FDR=1.19, FDR=1.2, FDR=1.79, FDR=1.8, FDR=2.49, FDR=2.5, FDR=5",
@@ -1231,7 +1231,7 @@
           "pass": true,
           "proofType": "deterministic",
           "durationMs": 0,
-          "testStartedAt": "2026-02-21T20:07:43.962Z",
+          "testStartedAt": "2026-02-21T20:43:12.567Z",
           "validated": "NaN, negative, Infinity all default to HEALTHY_EXPANSION (safe default)",
           "endpointsOrFunctions": "classifyRegimeFromFDR",
           "inputs": "NaN, -5, Infinity",
@@ -1250,7 +1250,7 @@
           "pass": true,
           "proofType": "deterministic",
           "durationMs": 0,
-          "testStartedAt": "2026-02-21T20:07:43.962Z",
+          "testStartedAt": "2026-02-21T20:43:12.568Z",
           "validated": "Within hysteresis band (0.15), regime stays current",
           "endpointsOrFunctions": "classifyRegimeWithHysteresis",
           "inputs": "FDR=1.25, current=HEALTHY_EXPANSION, hysteresis=0.15",
@@ -1272,7 +1272,7 @@
           "pass": true,
           "proofType": "deterministic",
           "durationMs": 0,
-          "testStartedAt": "2026-02-21T20:07:43.962Z",
+          "testStartedAt": "2026-02-21T20:43:12.568Z",
           "validated": "Beyond hysteresis band, regime transitions with confirmation flag",
           "endpointsOrFunctions": "classifyRegimeWithHysteresis",
           "inputs": "FDR=1.40, current=HEALTHY_EXPANSION",
@@ -1294,7 +1294,7 @@
           "pass": true,
           "proofType": "deterministic",
           "durationMs": 0,
-          "testStartedAt": "2026-02-21T20:07:43.963Z",
+          "testStartedAt": "2026-02-21T20:43:12.568Z",
           "validated": "Reverting to previous regime requires 2x hysteresis band",
           "endpointsOrFunctions": "classifyRegimeWithHysteresis",
           "inputs": "FDR=1.0, current=ALG, previous=HE, reversion threshold=1.2-(0.15*2)=0.9",
@@ -1316,7 +1316,7 @@
           "pass": true,
           "proofType": "deterministic",
           "durationMs": 0,
-          "testStartedAt": "2026-02-21T20:07:43.963Z",
+          "testStartedAt": "2026-02-21T20:43:12.568Z",
           "validated": "Reversion triggers when FDR passes 2x hysteresis threshold",
           "endpointsOrFunctions": "classifyRegimeWithHysteresis",
           "inputs": "FDR=0.85, current=ALG, previous=HE, threshold=0.9",
@@ -1338,7 +1338,7 @@
           "pass": true,
           "proofType": "deterministic",
           "durationMs": 0,
-          "testStartedAt": "2026-02-21T20:07:43.963Z",
+          "testStartedAt": "2026-02-21T20:43:12.568Z",
           "validated": "Hysteresis, reversion penalty, min duration, confirmation readings",
           "endpointsOrFunctions": "regimeConstants.ts",
           "inputs": "Direct import",
@@ -1358,7 +1358,7 @@
           "pass": true,
           "proofType": "deterministic",
           "durationMs": 0,
-          "testStartedAt": "2026-02-21T20:07:43.963Z",
+          "testStartedAt": "2026-02-21T20:43:12.568Z",
           "validated": "Validation catches stored regime that doesn't match FDR",
           "endpointsOrFunctions": "validateRegimeClassification",
           "inputs": "FDR=0.5 with HE (correct) and REL (incorrect)",
@@ -1387,7 +1387,7 @@
           "pass": true,
           "proofType": "deterministic",
           "durationMs": 0,
-          "testStartedAt": "2026-02-21T20:07:43.963Z",
+          "testStartedAt": "2026-02-21T20:43:12.568Z",
           "validated": "Invalid FDR values don't crash or change regime",
           "endpointsOrFunctions": "classifyRegimeWithHysteresis",
           "inputs": "NaN+ALG, -Inf+IE",
@@ -1413,16 +1413,16 @@
       "gate": "Gate 7: Operational Readiness",
       "description": "Health probes (HTTP), rate limiting, structured logging (runtime), crash recovery, secret redaction (runtime)",
       "pass": true,
-      "startedAt": "2026-02-21T20:07:43.964Z",
-      "completedAt": "2026-02-21T20:07:44.621Z",
+      "startedAt": "2026-02-21T20:43:12.569Z",
+      "completedAt": "2026-02-21T20:43:13.183Z",
       "tests": [
         {
           "testId": "7.1",
           "name": "GET /healthz returns 200 (runtime proof)",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 5,
-          "testStartedAt": "2026-02-21T20:07:43.964Z",
+          "durationMs": 8,
+          "testStartedAt": "2026-02-21T20:43:12.570Z",
           "validated": "Liveness probe endpoint responds with 200 and structured body",
           "endpointsOrFunctions": "GET /healthz",
           "inputs": "HTTP GET /healthz",
@@ -1433,7 +1433,7 @@
             "status": 200,
             "body": {
               "status": "ok",
-              "timestamp": "2026-02-21T20:07:43.967Z"
+              "timestamp": "2026-02-21T20:43:12.577Z"
             }
           }
         },
@@ -1442,8 +1442,8 @@
           "name": "GET /readyz returns 200 (runtime proof)",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 5,
-          "testStartedAt": "2026-02-21T20:07:43.969Z",
+          "durationMs": 6,
+          "testStartedAt": "2026-02-21T20:43:12.578Z",
           "validated": "Readiness probe endpoint responds with 200 and checks database",
           "endpointsOrFunctions": "GET /readyz",
           "inputs": "HTTP GET /readyz",
@@ -1454,7 +1454,7 @@
             "status": 200,
             "body": {
               "status": "ready",
-              "timestamp": "2026-02-21T20:07:43.972Z",
+              "timestamp": "2026-02-21T20:43:12.583Z",
               "checks": {
                 "database": "ok"
               }
@@ -1466,8 +1466,8 @@
           "name": "GET /livez returns 200 (runtime proof)",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 3,
-          "testStartedAt": "2026-02-21T20:07:43.974Z",
+          "durationMs": 2,
+          "testStartedAt": "2026-02-21T20:43:12.584Z",
           "validated": "Liveness probe endpoint responds with 200 and uptime info",
           "endpointsOrFunctions": "GET /livez",
           "inputs": "HTTP GET /livez",
@@ -1478,8 +1478,8 @@
             "status": 200,
             "body": {
               "status": "alive",
-              "timestamp": "2026-02-21T20:07:43.975Z",
-              "uptime": 30.877646158
+              "timestamp": "2026-02-21T20:43:12.585Z",
+              "uptime": 160.575036227
             }
           }
         },
@@ -1488,8 +1488,8 @@
           "name": "Rate limiting applied to automation mutation endpoints (structural + rapid call proof)",
           "pass": true,
           "proofType": "structural",
-          "durationMs": 138,
-          "testStartedAt": "2026-02-21T20:07:43.977Z",
+          "durationMs": 92,
+          "testStartedAt": "2026-02-21T20:43:12.586Z",
           "validated": "POST/PATCH/DELETE /api/ai-automation-rules have rate limiter middleware, rapid /healthz calls succeed",
           "endpointsOrFunctions": "POST/PATCH/DELETE /api/ai-automation-rules + GET /healthz",
           "inputs": "Route definition scan + 20 rapid GET /healthz calls",
@@ -1529,25 +1529,25 @@
           "name": "Structured logging persists warn+ events to database (runtime proof)",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 504,
-          "testStartedAt": "2026-02-21T20:07:44.115Z",
+          "durationMs": 502,
+          "testStartedAt": "2026-02-21T20:43:12.678Z",
           "validated": "Logger.warn writes to structured_event_log table and can be queried back",
           "endpointsOrFunctions": "structuredLogger.ts → structured_event_log table",
-          "inputs": "logger.warn('system', 'cert-log-test-1771704464115', ...)",
+          "inputs": "logger.warn('system', 'cert-log-test-1771706592678', ...)",
           "expected": "Row found in DB",
           "actual": "Found",
           "evidence": null,
           "rawEvidence": {
-            "marker": "cert-log-test-1771704464115",
+            "marker": "cert-log-test-1771706592678",
             "found": true,
             "row": {
-              "id": "9cb52b6f-7059-40b8-9a9d-7deaf4e16916",
-              "event": "cert-log-test-1771704464115",
+              "id": "a0e41c8e-e805-4bfb-8d24-123c63476408",
+              "event": "cert-log-test-1771706592678",
               "level": "warn",
               "category": "system",
               "details": {
                 "test": "operational-readiness",
-                "marker": "cert-log-test-1771704464115"
+                "marker": "cert-log-test-1771706592678"
               }
             }
           }
@@ -1558,7 +1558,7 @@
           "pass": true,
           "proofType": "structural",
           "durationMs": 1,
-          "testStartedAt": "2026-02-21T20:07:44.619Z",
+          "testStartedAt": "2026-02-21T20:43:13.180Z",
           "validated": "Background job for data retention/cleanup is registered",
           "endpointsOrFunctions": "backgroundJobs.ts",
           "inputs": "Source code inspection",
@@ -1575,7 +1575,7 @@
           "pass": true,
           "proofType": "structural",
           "durationMs": 1,
-          "testStartedAt": "2026-02-21T20:07:44.620Z",
+          "testStartedAt": "2026-02-21T20:43:13.181Z",
           "validated": "Runtime state, trigger dedup use PostgreSQL tables, not in-memory Maps",
           "endpointsOrFunctions": "AutomationEngine",
           "inputs": "Source code inspection",
@@ -1592,7 +1592,7 @@
           "pass": true,
           "proofType": "runtime",
           "durationMs": 0,
-          "testStartedAt": "2026-02-21T20:07:44.621Z",
+          "testStartedAt": "2026-02-21T20:43:13.182Z",
           "validated": "sanitizeDetails function correctly redacts password/apiKey while preserving normalField",
           "endpointsOrFunctions": "structuredLogger.ts (sanitizeDetails)",
           "inputs": "{ password: \"secret123\", apiKey: \"key456\", normalField: \"visible\" }",
@@ -1621,16 +1621,16 @@
       "gate": "Gate 8: Copilot Safety & Data Quality",
       "description": "Copilot draft-only safety, evaluation calibration, decision intelligence, data quality gates",
       "pass": true,
-      "startedAt": "2026-02-21T20:07:44.622Z",
-      "completedAt": "2026-02-21T20:07:45.134Z",
+      "startedAt": "2026-02-21T20:43:13.183Z",
+      "completedAt": "2026-02-21T20:43:13.469Z",
       "tests": [
         {
           "testId": "8.1",
           "name": "POST /api/copilot/query returns 401 without auth",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 103,
-          "testStartedAt": "2026-02-21T20:07:44.622Z",
+          "durationMs": 6,
+          "testStartedAt": "2026-02-21T20:43:13.184Z",
           "validated": "Copilot query endpoint enforces authentication",
           "endpointsOrFunctions": "POST /api/copilot/query",
           "inputs": "No auth cookie",
@@ -1647,7 +1647,7 @@
           "pass": true,
           "proofType": "runtime",
           "durationMs": 3,
-          "testStartedAt": "2026-02-21T20:07:44.725Z",
+          "testStartedAt": "2026-02-21T20:43:13.190Z",
           "validated": "Copilot draft endpoint enforces authentication",
           "endpointsOrFunctions": "POST /api/copilot/draft",
           "inputs": "No auth cookie",
@@ -1663,16 +1663,16 @@
           "name": "New copilot draft starts as 'draft' with no executedAt (never auto-completed)",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 9,
-          "testStartedAt": "2026-02-21T20:07:44.728Z",
+          "durationMs": 7,
+          "testStartedAt": "2026-02-21T20:43:13.193Z",
           "validated": "Drafts are never auto-completed on creation",
           "endpointsOrFunctions": "copilotActionDrafts table",
-          "inputs": "draftType=purchase_order, companyId=cert-1771704461686-co-alpha",
+          "inputs": "draftType=purchase_order, companyId=cert-1771706590951-co-alpha",
           "expected": "status=draft, executedAt=null",
           "actual": "status=draft, executedAt=null",
           "evidence": null,
           "rawEvidence": {
-            "draftId": 1,
+            "draftId": 11,
             "status": "draft",
             "executedAt": null
           }
@@ -1682,11 +1682,11 @@
           "name": "canExecuteDraft blocks non-approved draft",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 32,
-          "testStartedAt": "2026-02-21T20:07:44.737Z",
+          "durationMs": 15,
+          "testStartedAt": "2026-02-21T20:43:13.200Z",
           "validated": "Unapproved drafts cannot be executed",
           "endpointsOrFunctions": "copilotService.canExecuteDraft()",
-          "inputs": "draftId=1, status=draft",
+          "inputs": "draftId=11, status=draft",
           "expected": "allowed=false",
           "actual": "allowed=false, reason=Draft status is 'draft', must be 'approved' to execute",
           "evidence": null,
@@ -1701,15 +1701,15 @@
           "pass": true,
           "proofType": "runtime",
           "durationMs": 9,
-          "testStartedAt": "2026-02-21T20:07:44.770Z",
+          "testStartedAt": "2026-02-21T20:43:13.215Z",
           "validated": "Approval flow works and records approver",
           "endpointsOrFunctions": "copilotService.approveDraft()",
-          "inputs": "draftId=1, approver=cert-approver",
+          "inputs": "draftId=11, approver=cert-approver",
           "expected": "status=approved, approvedBy=cert-approver",
           "actual": "status=approved, approvedBy=cert-approver",
           "evidence": null,
           "rawEvidence": {
-            "draftId": 1,
+            "draftId": 11,
             "status": "approved",
             "approvedBy": "cert-approver"
           }
@@ -1719,11 +1719,11 @@
           "name": "canExecuteDraft allows approved draft",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 3,
-          "testStartedAt": "2026-02-21T20:07:44.779Z",
+          "durationMs": 2,
+          "testStartedAt": "2026-02-21T20:43:13.224Z",
           "validated": "Only approved drafts can proceed to execution",
           "endpointsOrFunctions": "copilotService.canExecuteDraft()",
-          "inputs": "draftId=1, status=approved",
+          "inputs": "draftId=11, status=approved",
           "expected": "allowed=true",
           "actual": "allowed=true",
           "evidence": null,
@@ -1737,16 +1737,16 @@
           "name": "Rejected draft has no executedAt (no phantom completion)",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 18,
-          "testStartedAt": "2026-02-21T20:07:44.782Z",
+          "durationMs": 13,
+          "testStartedAt": "2026-02-21T20:43:13.226Z",
           "validated": "Rejected drafts never show as executed",
           "endpointsOrFunctions": "copilotService.rejectDraft()",
-          "inputs": "draftId=2, reason=Not needed",
+          "inputs": "draftId=12, reason=Not needed",
           "expected": "status=rejected, executedAt=null",
           "actual": "status=rejected, executedAt=null",
           "evidence": null,
           "rawEvidence": {
-            "draftId": 2,
+            "draftId": 12,
             "status": "rejected",
             "executedAt": null
           }
@@ -1756,11 +1756,11 @@
           "name": "No 'completed' drafts exist (phantom state prevention)",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 4,
-          "testStartedAt": "2026-02-21T20:07:44.801Z",
+          "durationMs": 2,
+          "testStartedAt": "2026-02-21T20:43:13.239Z",
           "validated": "Draft system has no 'completed' status pathway",
           "endpointsOrFunctions": "copilotActionDrafts table",
-          "inputs": "SELECT WHERE status='completed' AND companyId=cert-1771704461686-co-alpha",
+          "inputs": "SELECT WHERE status='completed' AND companyId=cert-1771706590951-co-alpha",
           "expected": "0 rows",
           "actual": "0 rows",
           "evidence": null,
@@ -1773,8 +1773,8 @@
           "name": "validateNeverCompleted throws SAFETY_VIOLATION for executed+unapproved draft",
           "pass": true,
           "proofType": "deterministic",
-          "durationMs": 2,
-          "testStartedAt": "2026-02-21T20:07:44.805Z",
+          "durationMs": 1,
+          "testStartedAt": "2026-02-21T20:43:13.242Z",
           "validated": "Safety guard prevents execution without approval in code path",
           "endpointsOrFunctions": "copilotService.validateNeverCompleted()",
           "inputs": "Draft with executedAt set but status=draft",
@@ -1790,11 +1790,11 @@
           "name": "Data quality scoring produces valid report with numerical scores",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 51,
-          "testStartedAt": "2026-02-21T20:07:44.807Z",
+          "durationMs": 35,
+          "testStartedAt": "2026-02-21T20:43:13.243Z",
           "validated": "Data quality scoring service returns structured report",
           "endpointsOrFunctions": "dataQuality.scoreCompanyDataQuality()",
-          "inputs": "companyId=cert-1771704461686-co-alpha",
+          "inputs": "companyId=cert-1771706590951-co-alpha",
           "expected": "Report with overallScore and entityScores array",
           "actual": "overallScore=0.77, entities=3",
           "evidence": null,
@@ -1810,7 +1810,7 @@
           "pass": true,
           "proofType": "deterministic",
           "durationMs": 0,
-          "testStartedAt": "2026-02-21T20:07:44.858Z",
+          "testStartedAt": "2026-02-21T20:43:13.278Z",
           "validated": "Missing data quality blocks automation",
           "endpointsOrFunctions": "dataQuality.shouldBlockAutomation()",
           "inputs": "null quality report",
@@ -1829,21 +1829,21 @@
           "name": "Data quality scores persisted to database",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 3,
-          "testStartedAt": "2026-02-21T20:07:44.858Z",
+          "durationMs": 2,
+          "testStartedAt": "2026-02-21T20:43:13.278Z",
           "validated": "Scoring results written to data_quality_scores table",
           "endpointsOrFunctions": "data_quality_scores table",
-          "inputs": "companyId=cert-1771704461686-co-alpha",
+          "inputs": "companyId=cert-1771706590951-co-alpha",
           "expected": ">0 rows",
           "actual": "3 rows",
           "evidence": null,
           "rawEvidence": {
             "rowCount": 3,
             "sample": {
-              "id": 1,
-              "companyId": "cert-1771704461686-co-alpha",
+              "id": 13,
+              "companyId": "cert-1771706590951-co-alpha",
               "entityType": "material",
-              "entityId": "9bc64f85-20c7-42de-8047-6d00ebca586c",
+              "entityId": "7cdfe3d7-7a9a-4f77-a617-7134feadeb69",
               "missingness": 0,
               "staleness": 0,
               "outlierScore": 0,
@@ -1857,7 +1857,7 @@
                   "onHand"
                 ]
               },
-              "scoredAt": "2026-02-21T20:07:44.839Z"
+              "scoredAt": "2026-02-21T20:43:13.266Z"
             }
           }
         },
@@ -1866,19 +1866,19 @@
           "name": "Evaluation harness produces forecast, allocation, procurement, and calibration metrics",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 212,
-          "testStartedAt": "2026-02-21T20:07:44.861Z",
+          "durationMs": 159,
+          "testStartedAt": "2026-02-21T20:43:13.280Z",
           "validated": "Offline evaluation generates complete metric report",
           "endpointsOrFunctions": "evaluationHarness.runEvaluation()",
-          "inputs": "companyId=cert-1771704461686-co-alpha, version=cert-cert-1771704461686",
+          "inputs": "companyId=cert-1771706590951-co-alpha, version=cert-cert-1771706590951",
           "expected": "Valid summary with WAPE, sMAPE, calibration error",
-          "actual": "runId=1, wape=0.0635, smape=0.0653, calError=0.0738",
+          "actual": "runId=6, wape=0.0830, smape=0.0778, calError=0.0843",
           "evidence": null,
           "rawEvidence": {
-            "runId": 1,
-            "wape": 0.06354605753433866,
-            "smape": 0.06533108539227939,
-            "calibrationError": 0.07384074398886048
+            "runId": 6,
+            "wape": 0.08304629874225108,
+            "smape": 0.07779594393866085,
+            "calibrationError": 0.08432283696736907
           }
         },
         {
@@ -1887,15 +1887,15 @@
           "pass": true,
           "proofType": "runtime",
           "durationMs": 3,
-          "testStartedAt": "2026-02-21T20:07:45.073Z",
+          "testStartedAt": "2026-02-21T20:43:13.439Z",
           "validated": "All required evaluation metrics written to evaluation_metrics table",
           "endpointsOrFunctions": "evaluation_metrics table",
-          "inputs": "runId=1",
+          "inputs": "runId=6",
           "expected": "WAPE, sMAPE, bias, calibration_error rows",
-          "actual": "10 metrics, wape=true, smape=true, bias=true, calError=true",
+          "actual": "23 metrics, wape=true, smape=true, bias=true, calError=true",
           "evidence": null,
           "rawEvidence": {
-            "metricCount": 10,
+            "metricCount": 23,
             "metrics": [
               "wape",
               "smape",
@@ -1906,7 +1906,20 @@
               "cost_efficiency",
               "estimated_savings",
               "timing_accuracy",
-              "calibration_error"
+              "calibration_error",
+              "system_wape",
+              "best_baseline_wape",
+              "lift_pct",
+              "p50_coverage",
+              "p90_coverage",
+              "naive_seasonal_wape",
+              "naive_seasonal_smape",
+              "moving_average_3_wape",
+              "moving_average_3_smape",
+              "croston_wape",
+              "croston_smape",
+              "simple_ets_wape",
+              "simple_ets_smape"
             ]
           }
         },
@@ -1915,8 +1928,8 @@
           "name": "Policy layer: INFLATIONARY regime recommends acceleration with valid quantity",
           "pass": true,
           "proofType": "deterministic",
-          "durationMs": 27,
-          "testStartedAt": "2026-02-21T20:07:45.076Z",
+          "durationMs": 12,
+          "testStartedAt": "2026-02-21T20:43:13.442Z",
           "validated": "Policy engine translates regime+constraints into actionable recommendation",
           "endpointsOrFunctions": "decisionIntelligence.computePolicyRecommendation()",
           "inputs": "regime=INFLATIONARY, fdr=1.2, uncertainty=0.25, onHand=50, demand=10/day, lead=14d, moq=25",
@@ -1935,8 +1948,8 @@
           "name": "What-if simulation returns bounded service level, stockout risk, and cash impact",
           "pass": true,
           "proofType": "deterministic",
-          "durationMs": 3,
-          "testStartedAt": "2026-02-21T20:07:45.106Z",
+          "durationMs": 1,
+          "testStartedAt": "2026-02-21T20:43:13.454Z",
           "validated": "What-if scenarios produce valid bounded projections",
           "endpointsOrFunctions": "decisionIntelligence.computeWhatIf()",
           "inputs": "scenario=bulk_order 200 units immediate, regime=GROWTH",
@@ -1961,8 +1974,8 @@
           "name": "Decision override logged with factual context (regime, reason, values)",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 13,
-          "testStartedAt": "2026-02-21T20:07:45.109Z",
+          "durationMs": 7,
+          "testStartedAt": "2026-02-21T20:43:13.455Z",
           "validated": "Override logging captures all contextual fields",
           "endpointsOrFunctions": "decisionIntelligence.logOverride() → decision_overrides table",
           "inputs": "field=quantity, 100→150, reason=Market conditions changed",
@@ -1970,7 +1983,7 @@
           "actual": "field=quantity, original=100, new=150",
           "evidence": null,
           "rawEvidence": {
-            "overrideId": 1,
+            "overrideId": 4,
             "field": "quantity",
             "reason": "Market conditions changed"
           }
@@ -1980,8 +1993,8 @@
           "name": "GET /api/data-quality returns 401 without auth",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 4,
-          "testStartedAt": "2026-02-21T20:07:45.122Z",
+          "durationMs": 2,
+          "testStartedAt": "2026-02-21T20:43:13.462Z",
           "validated": "Data quality endpoint enforces authentication",
           "endpointsOrFunctions": "GET /api/data-quality",
           "inputs": "No auth cookie",
@@ -1997,8 +2010,8 @@
           "name": "POST /api/evaluation/run returns 401 without auth",
           "pass": true,
           "proofType": "runtime",
-          "durationMs": 4,
-          "testStartedAt": "2026-02-21T20:07:45.127Z",
+          "durationMs": 3,
+          "testStartedAt": "2026-02-21T20:43:13.464Z",
           "validated": "Evaluation endpoint enforces authentication",
           "endpointsOrFunctions": "POST /api/evaluation/run",
           "inputs": "No auth cookie",
@@ -2015,7 +2028,7 @@
           "pass": true,
           "proofType": "runtime",
           "durationMs": 2,
-          "testStartedAt": "2026-02-21T20:07:45.131Z",
+          "testStartedAt": "2026-02-21T20:43:13.467Z",
           "validated": "Decision recommendation endpoint enforces authentication",
           "endpointsOrFunctions": "POST /api/decisions/recommend",
           "inputs": "No auth cookie",
@@ -2032,7 +2045,7 @@
           "pass": true,
           "proofType": "runtime",
           "durationMs": 0,
-          "testStartedAt": "2026-02-21T20:07:45.134Z",
+          "testStartedAt": "2026-02-21T20:43:13.469Z",
           "validated": "No conflation of estimated and measured savings",
           "endpointsOrFunctions": "evaluationHarness → procurement metrics",
           "inputs": "Evaluation run output",
@@ -2042,6 +2055,539 @@
           "rawEvidence": {
             "savingsSeparation": "estimated_only",
             "measuredSavings": null
+          }
+        }
+      ]
+    },
+    {
+      "gate": "Gate 9: Predictive Lift & Enterprise Controls",
+      "description": "Predictive lift benchmarks, counterfactual savings evidence, copilot evidence traceability, enterprise identity & access controls",
+      "pass": true,
+      "startedAt": "2026-02-21T20:43:13.470Z",
+      "completedAt": "2026-02-21T20:43:13.765Z",
+      "tests": [
+        {
+          "testId": "9.1",
+          "name": "All 4 baseline forecasters produce outputs of correct length",
+          "pass": true,
+          "proofType": "deterministic",
+          "durationMs": 1,
+          "testStartedAt": "2026-02-21T20:43:13.470Z",
+          "validated": "Naive seasonal, moving average, Croston, and simple ETS all produce deterministic outputs",
+          "endpointsOrFunctions": "evaluationHarness baseline functions",
+          "inputs": "train=[10,20,30,40,50,60,70,80]",
+          "expected": "All produce 8 forecasts",
+          "actual": "naive=8, ma=8, croston=8, ets=8",
+          "evidence": null,
+          "rawEvidence": {
+            "naive": [
+              10,
+              10,
+              10,
+              10
+            ],
+            "ma": [
+              10,
+              10,
+              15,
+              20
+            ],
+            "croston": [
+              10,
+              11,
+              12.9,
+              15.610000000000001
+            ],
+            "ets": [
+              10,
+              10,
+              13,
+              18.1
+            ]
+          }
+        },
+        {
+          "testId": "9.2",
+          "name": "Seeded RNG produces identical sequences for same seed",
+          "pass": true,
+          "proofType": "deterministic",
+          "durationMs": 0,
+          "testStartedAt": "2026-02-21T20:43:13.471Z",
+          "validated": "Evaluation determinism via seeded RNG",
+          "endpointsOrFunctions": "evaluationHarness.seededRandom()",
+          "inputs": "seed=42, two independent sequences",
+          "expected": "seq1 === seq2",
+          "actual": "match=true",
+          "evidence": null,
+          "rawEvidence": {
+            "seq1": [
+              0.5046903498026963,
+              0.17625009090465033,
+              0.15456239653498047
+            ],
+            "seq2": [
+              0.5046903498026963,
+              0.17625009090465033,
+              0.15456239653498047
+            ]
+          }
+        },
+        {
+          "testId": "9.3",
+          "name": "Evaluation produces benchmark report with 4+ baselines and lift-by-segment",
+          "pass": true,
+          "proofType": "runtime",
+          "durationMs": 117,
+          "testStartedAt": "2026-02-21T20:43:13.472Z",
+          "validated": "Comparative benchmark layer produces structured lift report",
+          "endpointsOrFunctions": "evaluationHarness.runEvaluation()",
+          "inputs": "companyId=cert-1771706590951-co-alpha, seed=42",
+          "expected": "benchmark.baselines.length>=4, liftBySegment array",
+          "actual": "baselines=4, segments=1",
+          "evidence": null,
+          "rawEvidence": {
+            "baselineNames": [
+              "naive_seasonal",
+              "moving_average_3",
+              "croston",
+              "simple_ets"
+            ],
+            "segmentCount": 1
+          }
+        },
+        {
+          "testId": "9.4",
+          "name": "Prediction intervals produce bounded P50/P90 coverage metrics",
+          "pass": true,
+          "proofType": "runtime",
+          "durationMs": 0,
+          "testStartedAt": "2026-02-21T20:43:13.590Z",
+          "validated": "P50/P90 prediction intervals with valid coverage",
+          "endpointsOrFunctions": "evaluationHarness benchmark.predictionIntervals",
+          "inputs": "Evaluation run output",
+          "expected": "0<=p50Coverage<=1, 0<=p90Coverage<=1",
+          "actual": "p50=0.550, p90=0.950",
+          "evidence": null,
+          "rawEvidence": {
+            "p50Coverage": 0.55,
+            "p90Coverage": 0.95,
+            "intervalCount": 20
+          }
+        },
+        {
+          "testId": "9.5",
+          "name": "System vs best baseline lift comparison includes all fields",
+          "pass": true,
+          "proofType": "runtime",
+          "durationMs": 0,
+          "testStartedAt": "2026-02-21T20:43:13.590Z",
+          "validated": "Lift report with system WAPE, baseline WAPE, baseline name, and lift %",
+          "endpointsOrFunctions": "evaluationHarness benchmark.systemVsBestBaseline",
+          "inputs": "Evaluation run output",
+          "expected": "system, bestBaseline, baselineName, liftPct all present",
+          "actual": "system=0.0830, baseline=0.2605, name=moving_average_3, lift=68.1%",
+          "evidence": null,
+          "rawEvidence": {
+            "system": 0.08304629874225108,
+            "bestBaseline": 0.26054650912342053,
+            "baselineName": "moving_average_3",
+            "liftPct": 68.12611344452435
+          }
+        },
+        {
+          "testId": "9.6",
+          "name": "Benchmark metrics (lift, coverage) persisted to evaluation_metrics table",
+          "pass": true,
+          "proofType": "runtime",
+          "durationMs": 3,
+          "testStartedAt": "2026-02-21T20:43:13.590Z",
+          "validated": "Baseline comparison metrics written to DB",
+          "endpointsOrFunctions": "evaluation_metrics table, category=benchmark",
+          "inputs": "runId=7",
+          "expected": ">=3 benchmark metrics including lift_pct and coverage",
+          "actual": "5 metrics, hasLift=true, hasCoverage=true",
+          "evidence": null,
+          "rawEvidence": {
+            "count": 5,
+            "names": [
+              "system_wape",
+              "best_baseline_wape",
+              "lift_pct",
+              "p50_coverage",
+              "p90_coverage"
+            ]
+          }
+        },
+        {
+          "testId": "9.7",
+          "name": "Savings evidence record created with immutable flag, counterfactual definition, estimated (no measured)",
+          "pass": true,
+          "proofType": "runtime",
+          "durationMs": 24,
+          "testStartedAt": "2026-02-21T20:43:13.593Z",
+          "validated": "Immutable savings evidence with separated estimated/measured",
+          "endpointsOrFunctions": "savingsEvidence.createSavingsEvidence()",
+          "inputs": "type=procurement_timing, counterfactual=do_nothing, estimated=$50",
+          "expected": "immutable=true, measuredSavings=null, counterfactual=do_nothing",
+          "actual": "immutable=true, measured=null, cf=do_nothing",
+          "evidence": null,
+          "rawEvidence": {
+            "id": 3,
+            "immutable": true,
+            "estimated": 50,
+            "measured": null
+          }
+        },
+        {
+          "testId": "9.8",
+          "name": "recordMeasuredSavings rejects without outcome reference (invoice/receipt)",
+          "pass": true,
+          "proofType": "deterministic",
+          "durationMs": 4,
+          "testStartedAt": "2026-02-21T20:43:13.617Z",
+          "validated": "Measured savings must link to realized outcome",
+          "endpointsOrFunctions": "savingsEvidence.recordMeasuredSavings()",
+          "inputs": "Empty outcomeRef",
+          "expected": "MEASURED_SAVINGS_REQUIRES_OUTCOME_REF thrown",
+          "actual": "Thrown",
+          "evidence": null,
+          "rawEvidence": {
+            "threw": true
+          }
+        },
+        {
+          "testId": "9.9",
+          "name": "Measured savings recorded with invoice reference and timestamp",
+          "pass": true,
+          "proofType": "runtime",
+          "durationMs": 11,
+          "testStartedAt": "2026-02-21T20:43:13.621Z",
+          "validated": "Measured savings linked to realized outcome with entity ref",
+          "endpointsOrFunctions": "savingsEvidence.recordMeasuredSavings()",
+          "inputs": "measuredSavings=45, outcomeRef={invoiceId: inv-001}",
+          "expected": "measuredSavings=45, measuredAt set, invoiceId=inv-001",
+          "actual": "measured=45, measuredAt=Sat Feb 21 2026 20:43:13 GMT+0000 (Coordinated Universal Time), invoiceId=inv-001",
+          "evidence": null,
+          "rawEvidence": {
+            "measured": 45,
+            "measuredAt": "2026-02-21T20:43:13.625Z",
+            "invoiceId": "inv-001"
+          }
+        },
+        {
+          "testId": "9.10",
+          "name": "Valid savings record passes validation",
+          "pass": true,
+          "proofType": "deterministic",
+          "durationMs": 0,
+          "testStartedAt": "2026-02-21T20:43:13.632Z",
+          "validated": "Savings evidence record structure validation",
+          "endpointsOrFunctions": "savingsEvidence.validateSavingsRecord()",
+          "inputs": "recordId=3",
+          "expected": "valid=true, issues=[]",
+          "actual": "valid=true, issues=0",
+          "evidence": null,
+          "rawEvidence": {
+            "valid": true,
+            "issues": []
+          }
+        },
+        {
+          "testId": "9.11",
+          "name": "GET /api/savings-evidence returns 401 without auth",
+          "pass": true,
+          "proofType": "runtime",
+          "durationMs": 2,
+          "testStartedAt": "2026-02-21T20:43:13.632Z",
+          "validated": "Savings evidence endpoint enforces authentication",
+          "endpointsOrFunctions": "GET /api/savings-evidence",
+          "inputs": "No auth cookie",
+          "expected": "401",
+          "actual": "401",
+          "evidence": null,
+          "rawEvidence": {
+            "status": 401
+          }
+        },
+        {
+          "testId": "9.12",
+          "name": "Copilot query response includes valid evidence bundle (entityIds, timestamp, rowCounts, provenance)",
+          "pass": true,
+          "proofType": "runtime",
+          "durationMs": 9,
+          "testStartedAt": "2026-02-21T20:43:13.635Z",
+          "validated": "Evidence bundle with provenance on every copilot response",
+          "endpointsOrFunctions": "copilotService.queryCopilot()",
+          "inputs": "query='Show me material inventory'",
+          "expected": "Valid evidence bundle with entityIds, queryTimestamp, rowCounts, provenanceVersion",
+          "actual": "valid=true, issues=",
+          "evidence": null,
+          "rawEvidence": {
+            "bundle": {
+              "entityIds": [
+                "7cdfe3d7-7a9a-4f77-a617-7134feadeb69"
+              ],
+              "queryTimestamp": "2026-02-21T20:43:13.639Z",
+              "rowCounts": {
+                "materials": 1
+              },
+              "provenanceVersion": "2.0.0"
+            },
+            "validationIssues": []
+          }
+        },
+        {
+          "testId": "9.13",
+          "name": "Evidence bundle includes queryTimestamp and provenanceVersion",
+          "pass": true,
+          "proofType": "runtime",
+          "durationMs": 0,
+          "testStartedAt": "2026-02-21T20:43:13.644Z",
+          "validated": "Temporal and version provenance on copilot responses",
+          "endpointsOrFunctions": "copilotService.queryCopilot() → evidenceBundle",
+          "inputs": "Copilot query response",
+          "expected": "queryTimestamp and provenanceVersion present",
+          "actual": "timestamp=2026-02-21T20:43:13.639Z, version=2.0.0",
+          "evidence": null,
+          "rawEvidence": {
+            "queryTimestamp": "2026-02-21T20:43:13.639Z",
+            "provenanceVersion": "2.0.0"
+          }
+        },
+        {
+          "testId": "9.14",
+          "name": "Copilot draft carries valid evidence bundle",
+          "pass": true,
+          "proofType": "runtime",
+          "durationMs": 8,
+          "testStartedAt": "2026-02-21T20:43:13.644Z",
+          "validated": "Evidence bundle attached to every draft for traceability",
+          "endpointsOrFunctions": "copilotService.createDraft() → draft.evidenceBundle",
+          "inputs": "draftType=purchase_order",
+          "expected": "Valid evidence bundle on draft",
+          "actual": "valid=true, issues=",
+          "evidence": null,
+          "rawEvidence": {
+            "draftId": 13,
+            "bundle": {
+              "entityIds": [],
+              "rowCounts": {
+                "materials": 0
+              },
+              "queryTimestamp": "2026-02-21T20:43:13.648Z",
+              "provenanceVersion": "2.0.0"
+            }
+          }
+        },
+        {
+          "testId": "9.15",
+          "name": "Evidence bundle persisted to copilot_query_log table",
+          "pass": true,
+          "proofType": "runtime",
+          "durationMs": 1,
+          "testStartedAt": "2026-02-21T20:43:13.653Z",
+          "validated": "Evidence provenance stored for audit trail",
+          "endpointsOrFunctions": "copilot_query_log.evidence_bundle column",
+          "inputs": "Latest query log entry",
+          "expected": "provenanceVersion and queryTimestamp present",
+          "actual": "version=2.0.0, timestamp=2026-02-21T20:43:13.639Z",
+          "evidence": null,
+          "rawEvidence": {
+            "provenanceVersion": "2.0.0",
+            "hasTimestamp": true
+          }
+        },
+        {
+          "testId": "9.16",
+          "name": "No 'completed' drafts under expanded codebase (invariant preserved)",
+          "pass": true,
+          "proofType": "runtime",
+          "durationMs": 2,
+          "testStartedAt": "2026-02-21T20:43:13.654Z",
+          "validated": "Draft cannot be completed invariant holds under all routes and services",
+          "endpointsOrFunctions": "copilotActionDrafts table, all routes",
+          "inputs": "SELECT WHERE status='completed' AND companyId=cert-1771706590951-co-alpha",
+          "expected": "0 rows",
+          "actual": "0 rows",
+          "evidence": null,
+          "rawEvidence": {
+            "count": 0
+          }
+        },
+        {
+          "testId": "9.17",
+          "name": "SSO configuration created and persisted",
+          "pass": true,
+          "proofType": "runtime",
+          "durationMs": 72,
+          "testStartedAt": "2026-02-21T20:43:13.656Z",
+          "validated": "SSO/SAML integration hook stores config per company",
+          "endpointsOrFunctions": "enterpriseIdentity.upsertSsoConfig()",
+          "inputs": "provider=saml, enabled=false",
+          "expected": "SSO config with provider=saml, enabled=false",
+          "actual": "provider=saml, enabled=false",
+          "evidence": null,
+          "rawEvidence": {
+            "id": 3,
+            "provider": "saml",
+            "enabled": false
+          }
+        },
+        {
+          "testId": "9.18",
+          "name": "GET /api/sso/config returns 401 without auth",
+          "pass": true,
+          "proofType": "runtime",
+          "durationMs": 3,
+          "testStartedAt": "2026-02-21T20:43:13.728Z",
+          "validated": "SSO endpoint enforces authentication",
+          "endpointsOrFunctions": "GET /api/sso/config",
+          "inputs": "No auth cookie",
+          "expected": "401",
+          "actual": "401",
+          "evidence": null,
+          "rawEvidence": {
+            "status": 401
+          }
+        },
+        {
+          "testId": "9.19",
+          "name": "SCIM provisioning creates user and logs operation",
+          "pass": true,
+          "proofType": "runtime",
+          "durationMs": 9,
+          "testStartedAt": "2026-02-21T20:43:13.732Z",
+          "validated": "SCIM-ready user provisioning with audit log",
+          "endpointsOrFunctions": "enterpriseIdentity.scimProvisionUser()",
+          "inputs": "externalId=cert-1771706590951-ext-user-001",
+          "expected": "operation=CREATE, success=true",
+          "actual": "operation=CREATE, success=true",
+          "evidence": null,
+          "rawEvidence": {
+            "logId": 3,
+            "operation": "CREATE"
+          }
+        },
+        {
+          "testId": "9.20",
+          "name": "POST /api/scim/users returns 401 without auth",
+          "pass": true,
+          "proofType": "runtime",
+          "durationMs": 5,
+          "testStartedAt": "2026-02-21T20:43:13.741Z",
+          "validated": "SCIM endpoint enforces authentication",
+          "endpointsOrFunctions": "POST /api/scim/users",
+          "inputs": "No auth cookie",
+          "expected": "401",
+          "actual": "401",
+          "evidence": null,
+          "rawEvidence": {
+            "status": 401
+          }
+        },
+        {
+          "testId": "9.21",
+          "name": "PII/secret redaction: passwords and API keys redacted, safe data preserved",
+          "pass": true,
+          "proofType": "deterministic",
+          "durationMs": 3,
+          "testStartedAt": "2026-02-21T20:43:13.746Z",
+          "validated": "Redaction rules enforce secret/PII removal in audit exports",
+          "endpointsOrFunctions": "enterpriseIdentity.redactObject()",
+          "inputs": "Object with password, apiKey, email, safe data",
+          "expected": "password=[REDACTED], apiKey=[REDACTED], data=safe",
+          "actual": "password=[REDACTED], apiKey=[REDACTED], data=safe",
+          "evidence": null,
+          "rawEvidence": {
+            "email": "[PII_REDACTED]",
+            "password": "[REDACTED]",
+            "name": "John",
+            "apiKey": "[REDACTED]",
+            "phone": "[PII_REDACTED]",
+            "data": "safe"
+          }
+        },
+        {
+          "testId": "9.22",
+          "name": "GET /api/audit/export returns 401 without auth",
+          "pass": true,
+          "proofType": "runtime",
+          "durationMs": 3,
+          "testStartedAt": "2026-02-21T20:43:13.749Z",
+          "validated": "Audit export endpoint enforces authentication",
+          "endpointsOrFunctions": "GET /api/audit/export",
+          "inputs": "No auth cookie",
+          "expected": "401",
+          "actual": "401",
+          "evidence": null,
+          "rawEvidence": {
+            "status": 401
+          }
+        },
+        {
+          "testId": "9.23",
+          "name": "Audit export config persisted with retention and redaction settings",
+          "pass": true,
+          "proofType": "runtime",
+          "durationMs": 9,
+          "testStartedAt": "2026-02-21T20:43:13.752Z",
+          "validated": "Per-tenant audit retention and redaction controls",
+          "endpointsOrFunctions": "enterpriseIdentity.upsertAuditExportConfig()",
+          "inputs": "retentionDays=90, redactionEnabled=true",
+          "expected": "Config with retention=90, redaction=true",
+          "actual": "retention=90, redaction=true",
+          "evidence": null,
+          "rawEvidence": {
+            "id": 3,
+            "retentionDays": 90,
+            "redactionEnabled": true
+          }
+        },
+        {
+          "testId": "9.24",
+          "name": "All 4 baseline forecaster metrics persisted to DB",
+          "pass": true,
+          "proofType": "runtime",
+          "durationMs": 2,
+          "testStartedAt": "2026-02-21T20:43:13.761Z",
+          "validated": "Baseline comparison metrics stored for reproducibility",
+          "endpointsOrFunctions": "evaluation_metrics table, category=baseline",
+          "inputs": "runId=7",
+          "expected": "naive_seasonal, moving_average, croston, simple_ets metrics",
+          "actual": "naive=true, ma=true, croston=true, ets=true, total=8",
+          "evidence": null,
+          "rawEvidence": {
+            "count": 8,
+            "names": [
+              "naive_seasonal_wape",
+              "naive_seasonal_smape",
+              "moving_average_3_wape",
+              "moving_average_3_smape",
+              "croston_wape",
+              "croston_smape",
+              "simple_ets_wape",
+              "simple_ets_smape"
+            ]
+          }
+        },
+        {
+          "testId": "9.25",
+          "name": "SKU segment classification deterministic: fast_mover, slow_mover, intermittent, no_data",
+          "pass": true,
+          "proofType": "deterministic",
+          "durationMs": 1,
+          "testStartedAt": "2026-02-21T20:43:13.763Z",
+          "validated": "SKU segmentation for lift reporting is deterministic",
+          "endpointsOrFunctions": "evaluationHarness.classifySKUSegment()",
+          "inputs": "Various demand patterns",
+          "expected": "fast_mover, slow_mover, intermittent, no_data",
+          "actual": "fast=fast_mover, slow=slow_mover, intermittent=intermittent, noData=no_data",
+          "evidence": null,
+          "rawEvidence": {
+            "fastMover": "fast_mover",
+            "slowMover": "slow_mover",
+            "intermittent": "intermittent",
+            "noData": "no_data"
           }
         }
       ]
