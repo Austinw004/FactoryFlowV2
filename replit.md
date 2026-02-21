@@ -63,6 +63,7 @@ The system is a multi-tenant application with data isolation per company. Core t
 - **Durable Stripe Webhook Processing**: webhookHandlers.ts implements enterprise-grade webhook hardening with atomic insert-first locking (stripeProcessedEvents table as single source of truth), deterministic subscription state transition guards (monotonic ALLOWED_TRANSITIONS map preventing illegal regressions like active→incomplete), stale lock recovery (5-minute timeout with CAS takeover), parameterized SQL throughout (no sql.raw), and full audit logging for every transition, refund, and failure. All handlers are replay-safe, concurrent-safe, and horizontally scalable.
 - **Structured Observability**: Enterprise-grade JSON logging (structuredLogger.ts) with automatic secret redaction (20+ sensitive keys) and database persistence for warn+ events to structured_event_log table.
 - **RBAC for Automation**: Permissions for VIEW_AUTOMATION, EDIT_AUTOMATION, APPROVE_AUTOMATION, MANAGE_SAFE_MODE added to RBAC system. Admin and Procurement Manager roles include automation permissions.
+- **Enterprise E2E Certification Harness v2.0.0**: 7-gate certification with 70 tests (42 runtime, 15 structural, 13 deterministic). Generates ENTERPRISE_E2E_CERTIFICATION.md and JSON artifact. Gates: multi-tenant isolation, spend limits, automation safety, payments, integration coherence, data honesty, operational readiness. Run via `npx tsx server/tests/enterprise-e2e/harness.ts`.
 
 ### System Design Choices
 
