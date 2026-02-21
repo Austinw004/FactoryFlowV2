@@ -8916,3 +8916,56 @@ export const auditExportConfigs = pgTable("audit_export_configs", {
 export const insertAuditExportConfigSchema = createInsertSchema(auditExportConfigs).omit({ id: true });
 export type AuditExportConfig = typeof auditExportConfigs.$inferSelect;
 export type InsertAuditExportConfig = z.infer<typeof insertAuditExportConfigSchema>;
+
+// ============================================================
+// Milestone 3: Regime-Aware Optimization & Backtest
+// ============================================================
+
+export const regimeBacktestReports = pgTable("regime_backtest_reports", {
+  id: serial("id").primaryKey(),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  version: varchar("version", { length: 64 }).notNull(),
+  status: varchar("status", { length: 32 }).notNull().default("running"),
+  transitionsAnalyzed: integer("transitions_analyzed").notNull().default(0),
+  avgDetectionLagDays: real("avg_detection_lag_days"),
+  avgStabilityDurationDays: real("avg_stability_duration_days"),
+  falseTransitionRate: real("false_transition_rate"),
+  totalReadings: integer("total_readings").notNull().default(0),
+  regimeAccuracy: real("regime_accuracy"),
+  summary: jsonb("summary"),
+  config: jsonb("config"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+}, (table) => [
+  index("rbr_company_idx").on(table.companyId),
+]);
+
+export const insertRegimeBacktestReportSchema = createInsertSchema(regimeBacktestReports).omit({ id: true, createdAt: true });
+export type RegimeBacktestReport = typeof regimeBacktestReports.$inferSelect;
+export type InsertRegimeBacktestReport = z.infer<typeof insertRegimeBacktestReportSchema>;
+
+export const optimizationRuns = pgTable("optimization_runs", {
+  id: serial("id").primaryKey(),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  materialId: varchar("material_id").references(() => materials.id),
+  regime: varchar("regime", { length: 32 }),
+  optimizedQuantity: real("optimized_quantity"),
+  currentPolicyQuantity: real("current_policy_quantity"),
+  expectedServiceLevel: real("expected_service_level"),
+  expectedCost: real("expected_cost"),
+  stockoutRisk: real("stockout_risk"),
+  costSavingsVsCurrent: real("cost_savings_vs_current"),
+  serviceLevelDelta: real("service_level_delta"),
+  confidenceInterval: jsonb("confidence_interval"),
+  evidenceBundle: jsonb("evidence_bundle"),
+  whatIfComparison: jsonb("what_if_comparison"),
+  policyInputs: jsonb("policy_inputs"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("or_company_idx").on(table.companyId),
+  index("or_material_idx").on(table.companyId, table.materialId),
+]);
+
+export const insertOptimizationRunSchema = createInsertSchema(optimizationRuns).omit({ id: true, createdAt: true });
+export type OptimizationRun = typeof optimizationRuns.$inferSelect;
+export type InsertOptimizationRun = z.infer<typeof insertOptimizationRunSchema>;
