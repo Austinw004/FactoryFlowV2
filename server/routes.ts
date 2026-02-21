@@ -19118,6 +19118,92 @@ You'll receive emails for:
   });
 
   // ============================================================
+  // Stress Testing & Robustness Routes
+  // ============================================================
+
+  app.post("/api/stress-test/run", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { version, seed, baselineDemand, baselineForecast, baselineFdrSeries, baselineForecastErrors, toleranceThreshold, rollingWindowSize, demandSamples, supplyDisruptionProbability, scenarios } = req.body;
+      if (!baselineDemand || !Array.isArray(baselineDemand) || !baselineFdrSeries || !Array.isArray(baselineFdrSeries)) {
+        return res.status(400).json({ error: "baselineDemand and baselineFdrSeries arrays required" });
+      }
+      const { runStressTest, generateRobustnessReportMd } = await import("./lib/stressTesting");
+      const config = {
+        companyId: user.companyId,
+        version: version || "1.0.0",
+        seed: seed ?? 42,
+        baselineDemand,
+        baselineForecast: baselineForecast || baselineDemand.map(() => 100),
+        baselineFdrSeries,
+        baselineForecastErrors: baselineForecastErrors || baselineDemand.map(() => 0.1),
+        toleranceThreshold,
+        rollingWindowSize,
+        demandSamples,
+        supplyDisruptionProbability,
+        scenarios,
+      };
+      const report = runStressTest(config);
+      const md = generateRobustnessReportMd(report);
+      const { stressTestReports } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const [saved] = await db.insert(stressTestReports).values({
+        companyId: user.companyId,
+        version: config.version,
+        engineVersion: report.engineVersion,
+        status: "completed",
+        configHash: report.configHash,
+        seed: config.seed,
+        reportData: report as any,
+        artifactMd: md,
+        artifactJson: report as any,
+        productionMutations: 0,
+        replayable: true,
+        overallRating: report.aggregateSummary.overallRating,
+        scenarioCount: report.scenarioResults.length,
+        robustnessScore: report.aggregateSummary.overallRobustnessScore,
+        completedAt: new Date(),
+      }).returning();
+      res.json({ report, reportId: saved.id });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/stress-test/reports", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { stressTestReports } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq, desc } = await import("drizzle-orm");
+      const reports = await db.select().from(stressTestReports)
+        .where(eq(stressTestReports.companyId, user.companyId))
+        .orderBy(desc(stressTestReports.createdAt))
+        .limit(20);
+      res.json(reports);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/stress-test/reports/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { stressTestReports } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      const [report] = await db.select().from(stressTestReports)
+        .where(eq(stressTestReports.id, parseInt(req.params.id)))
+        .limit(1);
+      if (!report) return res.status(404).json({ error: "Report not found" });
+      if (report.companyId !== user.companyId) return res.status(403).json({ error: "Forbidden" });
+      res.json(report);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============================================================
   // Decision Intelligence Routes
   // ============================================================
 

@@ -1,0 +1,156 @@
+{
+  "backtestVersion": "cert-g10-bt-cert-1771710940718",
+  "reportId": 6,
+  "companyId": "cert-1771710940718-co-alpha",
+  "generatedAt": "2026-02-21T21:55:44.485Z",
+  "summary": {
+    "totalReadings": 100,
+    "transitionsAnalyzed": 5,
+    "avgDetectionLagDays": 3,
+    "avgStabilityDurationDays": 16.67,
+    "falseTransitionRate": 0.1667,
+    "regimeAccuracy": 1,
+    "transitions": [
+      {
+        "fromRegime": "HEALTHY_EXPANSION",
+        "toRegime": "ASSET_LED_GROWTH",
+        "fdrAtTransition": 1.365,
+        "readingIndex": 42,
+        "dateLabel": "2025-12-25",
+        "detectionLagReadings": 3,
+        "isReversion": false,
+        "confirmed": true
+      },
+      {
+        "fromRegime": "ASSET_LED_GROWTH",
+        "toRegime": "IMBALANCED_EXCESS",
+        "fdrAtTransition": 2.008,
+        "readingIndex": 57,
+        "dateLabel": "2026-01-09",
+        "detectionLagReadings": 3,
+        "isReversion": true,
+        "confirmed": true
+      },
+      {
+        "fromRegime": "IMBALANCED_EXCESS",
+        "toRegime": "REAL_ECONOMY_LEAD",
+        "fdrAtTransition": 2.672,
+        "readingIndex": 74,
+        "dateLabel": "2026-01-26",
+        "detectionLagReadings": 6,
+        "isReversion": false,
+        "confirmed": true
+      },
+      {
+        "fromRegime": "REAL_ECONOMY_LEAD",
+        "toRegime": "IMBALANCED_EXCESS",
+        "fdrAtTransition": 2.121,
+        "readingIndex": 87,
+        "dateLabel": "2026-02-08",
+        "detectionLagReadings": 2,
+        "isReversion": true,
+        "confirmed": true
+      },
+      {
+        "fromRegime": "IMBALANCED_EXCESS",
+        "toRegime": "ASSET_LED_GROWTH",
+        "fdrAtTransition": 1.576,
+        "readingIndex": 93,
+        "dateLabel": "2026-02-14",
+        "detectionLagReadings": 1,
+        "isReversion": false,
+        "confirmed": true
+      }
+    ],
+    "stabilityWindows": [
+      {
+        "regime": "HEALTHY_EXPANSION",
+        "startIndex": 0,
+        "endIndex": 41,
+        "durationReadings": 42,
+        "avgFdr": 0.8,
+        "fdrVariance": 0.0398,
+        "stable": true
+      },
+      {
+        "regime": "ASSET_LED_GROWTH",
+        "startIndex": 42,
+        "endIndex": 56,
+        "durationReadings": 15,
+        "avgFdr": 1.649,
+        "fdrVariance": 0.0288,
+        "stable": true
+      },
+      {
+        "regime": "IMBALANCED_EXCESS",
+        "startIndex": 57,
+        "endIndex": 73,
+        "durationReadings": 17,
+        "avgFdr": 2.338,
+        "fdrVariance": 0.0465,
+        "stable": true
+      },
+      {
+        "regime": "REAL_ECONOMY_LEAD",
+        "startIndex": 74,
+        "endIndex": 86,
+        "durationReadings": 13,
+        "avgFdr": 2.693,
+        "fdrVariance": 0.0414,
+        "stable": true
+      },
+      {
+        "regime": "IMBALANCED_EXCESS",
+        "startIndex": 87,
+        "endIndex": 92,
+        "durationReadings": 6,
+        "avgFdr": 1.944,
+        "fdrVariance": 0.0196,
+        "stable": true
+      },
+      {
+        "regime": "ASSET_LED_GROWTH",
+        "startIndex": 93,
+        "endIndex": 99,
+        "durationReadings": 7,
+        "avgFdr": 1.335,
+        "fdrVariance": 0.0283,
+        "stable": true
+      }
+    ],
+    "regimeDistribution": {
+      "HEALTHY_EXPANSION": {
+        "count": 42,
+        "pct": 42
+      },
+      "ASSET_LED_GROWTH": {
+        "count": 22,
+        "pct": 22
+      },
+      "IMBALANCED_EXCESS": {
+        "count": 23,
+        "pct": 23
+      },
+      "REAL_ECONOMY_LEAD": {
+        "count": 13,
+        "pct": 13
+      }
+    },
+    "hysteresisEffectiveness": 0.1667,
+    "detectionTimingByRegime": {
+      "ASSET_LED_GROWTH": {
+        "avgLag": 2,
+        "count": 2
+      },
+      "IMBALANCED_EXCESS": {
+        "avgLag": 2.5,
+        "count": 2
+      },
+      "REAL_ECONOMY_LEAD": {
+        "avgLag": 6,
+        "count": 1
+      }
+    }
+  },
+  "fdrSeriesLength": 100
+}

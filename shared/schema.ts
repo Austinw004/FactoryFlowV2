@@ -9031,3 +9031,34 @@ export const predictiveStabilityReports = pgTable("predictive_stability_reports"
 export const insertPredictiveStabilityReportSchema = createInsertSchema(predictiveStabilityReports).omit({ id: true, createdAt: true });
 export type PredictiveStabilityReport = typeof predictiveStabilityReports.$inferSelect;
 export type InsertPredictiveStabilityReport = z.infer<typeof insertPredictiveStabilityReportSchema>;
+
+// ============================================================
+// Stress Test Reports (Stress Testing & Robustness Module)
+// ============================================================
+
+export const stressTestReports = pgTable("stress_test_reports", {
+  id: serial("id").primaryKey(),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  version: varchar("version", { length: 64 }).notNull(),
+  engineVersion: varchar("engine_version", { length: 32 }).notNull(),
+  status: varchar("status", { length: 32 }).notNull().default("created"),
+  configHash: varchar("config_hash", { length: 64 }).notNull(),
+  seed: integer("seed").notNull().default(42),
+  reportData: jsonb("report_data"),
+  artifactMd: text("artifact_md"),
+  artifactJson: jsonb("artifact_json"),
+  productionMutations: integer("production_mutations").notNull().default(0),
+  replayable: boolean("replayable").notNull().default(true),
+  overallRating: varchar("overall_rating", { length: 32 }),
+  scenarioCount: integer("scenario_count").notNull().default(0),
+  robustnessScore: real("robustness_score"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+}, (table) => [
+  index("str_company_idx").on(table.companyId),
+  index("str_version_idx").on(table.version),
+]);
+
+export const insertStressTestReportSchema = createInsertSchema(stressTestReports).omit({ id: true, createdAt: true });
+export type StressTestReport = typeof stressTestReports.$inferSelect;
+export type InsertStressTestReport = z.infer<typeof insertStressTestReportSchema>;

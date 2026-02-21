@@ -1,11 +1,11 @@
 # Enterprise E2E Certification Report
 
-**Generated**: 2026-02-21T21:40:53.166Z  
+**Generated**: 2026-02-21T21:58:20.052Z  
 **Certification Version**: 2.0.0  
 **Instance**: single-instance (development)  
 **Overall**: ALL GATES PASS  
-**Tests**: 181 passed, 0 failed, 181 total  
-**Proof Breakdown**: 106 runtime, 28 structural, 47 deterministic
+**Tests**: 211 passed, 0 failed, 211 total  
+**Proof Breakdown**: 123 runtime, 35 structural, 53 deterministic
 
 ---
 
@@ -33,13 +33,14 @@ This certification report validates the enterprise readiness of the Prescient La
 | Gate 10: Regime-Aware Optimization & Backtest | Regime-aware probabilistic optimization, backtest reporting, conditioned forecasting with regime-specific lift | PASS | 20/20 |
 | Gate 11: Pilot Evaluation Mode | Pilot evaluation mode with experiment isolation, counterfactual integrity, production safety, deterministic replay | PASS | 20/20 |
 | Gate 12: Adaptive Forecasting Layer | Adaptive forecasting layer with dynamic weighting, heteroskedastic volatility, tail risk, regime transition prediction, signal strength, lift decay, and uncertainty expansion | PASS | 25/25 |
+| Gate 13: Stress Testing & Robustness | Stress testing and robustness module with demand spikes, supplier outages, price shocks, lead-time disruptions, optimization stability, uncertainty expansion, CVaR tracking, automation downgrade, and safe-mode escalation | PASS | 30/30 |
 
 ---
 
 ## Gate 1: Multi-Tenant Isolation
 
-**Started**: 2026-02-21T21:40:16.028Z  
-**Completed**: 2026-02-21T21:40:16.196Z  
+**Started**: 2026-02-21T21:57:40.393Z  
+**Completed**: 2026-02-21T21:57:40.554Z  
 **Result**: PASS
 
 | ID | Test | Proof Type | Result | Duration |
@@ -49,20 +50,20 @@ This certification report validates the enterprise readiness of the Prescient La
 | 1.2b | Own-tenant GET SKU succeeds | runtime | PASS | 7ms |
 | 1.3a | Cross-tenant GET Material blocked | runtime | PASS | 5ms |
 | 1.3b | Own-tenant GET Material succeeds | runtime | PASS | 5ms |
-| 1.4a | Cross-tenant GET Supplier blocked | runtime | PASS | 9ms |
-| 1.4b | Own-tenant GET Supplier succeeds | runtime | PASS | 9ms |
-| 1.5a | Cross-tenant GET RFQ blocked | runtime | PASS | 8ms |
-| 1.5b | Own-tenant GET RFQ succeeds | runtime | PASS | 9ms |
-| 1.6a | Cross-tenant GET Machinery blocked | runtime | PASS | 8ms |
-| 1.6b | Own-tenant GET Machinery succeeds | runtime | PASS | 8ms |
-| 1.7a | Cross-tenant UPDATE Material blocked | runtime | PASS | 6ms |
+| 1.4a | Cross-tenant GET Supplier blocked | runtime | PASS | 6ms |
+| 1.4b | Own-tenant GET Supplier succeeds | runtime | PASS | 6ms |
+| 1.5a | Cross-tenant GET RFQ blocked | runtime | PASS | 5ms |
+| 1.5b | Own-tenant GET RFQ succeeds | runtime | PASS | 5ms |
+| 1.6a | Cross-tenant GET Machinery blocked | runtime | PASS | 6ms |
+| 1.6b | Own-tenant GET Machinery succeeds | runtime | PASS | 7ms |
+| 1.7a | Cross-tenant UPDATE Material blocked | runtime | PASS | 5ms |
 | 1.7b | Material name unchanged after cross-tenant update | runtime | PASS | 6ms |
 | 1.8 | Cross-tenant DELETE SKU blocked (entity survives) | runtime | PASS | 5ms |
-| 1.9 | Cross-tenant GET automation rule blocked | runtime | PASS | 10ms |
+| 1.9 | Cross-tenant GET automation rule blocked | runtime | PASS | 7ms |
 | 1.10 | Cross-tenant GET purchase order blocked | runtime | PASS | 9ms |
 | 1.11 | GET /healthz returns 200 (server reachable) | runtime | PASS | 38ms |
 | 1.12 | GET /api/skus returns 401 without auth (auth enforced) | runtime | PASS | 6ms |
-| 1.13 | GET /api/materials returns 401 without auth (auth enforced) | runtime | PASS | 3ms |
+| 1.13 | GET /api/materials returns 401 without auth (auth enforced) | runtime | PASS | 4ms |
 
 ### Evidence Details
 
@@ -85,7 +86,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: getSku returns undefined for wrong tenant
 - **Proof Type**: runtime
 - **Endpoints/Functions**: storage.getSku
-- **Inputs**: id=ccae486d-b0c3-4808-8b6f-649a446d5cd6, companyId=cert-1771710015956-co-bravo (wrong tenant)
+- **Inputs**: id=0051575c-fd19-4858-8c5d-16cc334954e7, companyId=cert-1771711060265-co-bravo (wrong tenant)
 - **Expected**: undefined
 - **Actual**: undefined
 
@@ -97,7 +98,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: getSku returns entity for correct tenant
 - **Proof Type**: runtime
 - **Endpoints/Functions**: storage.getSku
-- **Inputs**: id=ccae486d-b0c3-4808-8b6f-649a446d5cd6, companyId=cert-1771710015956-co-alpha
+- **Inputs**: id=0051575c-fd19-4858-8c5d-16cc334954e7, companyId=cert-1771711060265-co-alpha
 - **Expected**: entity object
 - **Actual**: entity found
 
@@ -109,7 +110,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: getMaterial returns undefined for wrong tenant
 - **Proof Type**: runtime
 - **Endpoints/Functions**: storage.getMaterial
-- **Inputs**: id=a6d15d11-1853-4b08-8cfb-1d131487977d, companyId=cert-1771710015956-co-bravo (wrong tenant)
+- **Inputs**: id=db37b0fa-1022-4deb-8aa9-3564bc3f3bed, companyId=cert-1771711060265-co-bravo (wrong tenant)
 - **Expected**: undefined
 - **Actual**: undefined
 
@@ -121,7 +122,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: getMaterial returns entity for correct tenant
 - **Proof Type**: runtime
 - **Endpoints/Functions**: storage.getMaterial
-- **Inputs**: id=a6d15d11-1853-4b08-8cfb-1d131487977d, companyId=cert-1771710015956-co-alpha
+- **Inputs**: id=db37b0fa-1022-4deb-8aa9-3564bc3f3bed, companyId=cert-1771711060265-co-alpha
 - **Expected**: entity object
 - **Actual**: entity found
 
@@ -133,7 +134,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: getSupplier returns undefined for wrong tenant
 - **Proof Type**: runtime
 - **Endpoints/Functions**: storage.getSupplier
-- **Inputs**: id=b82bb32e-f376-401b-862f-381d90fc782d, companyId=cert-1771710015956-co-bravo (wrong tenant)
+- **Inputs**: id=7927766e-ab94-49d5-b80a-41243b2555e4, companyId=cert-1771711060265-co-bravo (wrong tenant)
 - **Expected**: undefined
 - **Actual**: undefined
 
@@ -145,7 +146,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: getSupplier returns entity for correct tenant
 - **Proof Type**: runtime
 - **Endpoints/Functions**: storage.getSupplier
-- **Inputs**: id=b82bb32e-f376-401b-862f-381d90fc782d, companyId=cert-1771710015956-co-alpha
+- **Inputs**: id=7927766e-ab94-49d5-b80a-41243b2555e4, companyId=cert-1771711060265-co-alpha
 - **Expected**: entity object
 - **Actual**: entity found
 
@@ -157,7 +158,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: getRfq returns undefined for wrong tenant
 - **Proof Type**: runtime
 - **Endpoints/Functions**: storage.getRfq
-- **Inputs**: id=2905d407-079a-48f2-93e8-4ee83ed2fbc9, companyId=cert-1771710015956-co-bravo (wrong tenant)
+- **Inputs**: id=71e67f4c-5953-4ea1-99bf-affaa95ee32d, companyId=cert-1771711060265-co-bravo (wrong tenant)
 - **Expected**: undefined
 - **Actual**: undefined
 
@@ -169,7 +170,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: getRfq returns entity for correct tenant
 - **Proof Type**: runtime
 - **Endpoints/Functions**: storage.getRfq
-- **Inputs**: id=2905d407-079a-48f2-93e8-4ee83ed2fbc9, companyId=cert-1771710015956-co-alpha
+- **Inputs**: id=71e67f4c-5953-4ea1-99bf-affaa95ee32d, companyId=cert-1771711060265-co-alpha
 - **Expected**: entity object
 - **Actual**: entity found
 
@@ -181,7 +182,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: getMachine returns undefined for wrong tenant
 - **Proof Type**: runtime
 - **Endpoints/Functions**: storage.getMachine
-- **Inputs**: id=7cb905e5-15b2-413c-9e8a-cb1fb00d01e8, companyId=cert-1771710015956-co-bravo (wrong tenant)
+- **Inputs**: id=9a47e898-9bb4-418f-aa74-c3312abdc2d1, companyId=cert-1771711060265-co-bravo (wrong tenant)
 - **Expected**: undefined
 - **Actual**: undefined
 
@@ -193,7 +194,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: getMachine returns entity for correct tenant
 - **Proof Type**: runtime
 - **Endpoints/Functions**: storage.getMachine
-- **Inputs**: id=7cb905e5-15b2-413c-9e8a-cb1fb00d01e8, companyId=cert-1771710015956-co-alpha
+- **Inputs**: id=9a47e898-9bb4-418f-aa74-c3312abdc2d1, companyId=cert-1771711060265-co-alpha
 - **Expected**: entity object
 - **Actual**: entity found
 
@@ -205,7 +206,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: updateMaterial returns undefined for wrong tenant
 - **Proof Type**: runtime
 - **Endpoints/Functions**: storage.updateMaterial
-- **Inputs**: id=a6d15d11-1853-4b08-8cfb-1d131487977d, companyId=cert-1771710015956-co-bravo
+- **Inputs**: id=db37b0fa-1022-4deb-8aa9-3564bc3f3bed, companyId=cert-1771711060265-co-bravo
 - **Expected**: undefined
 - **Actual**: undefined
 
@@ -217,9 +218,9 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: Data integrity preserved
 - **Proof Type**: runtime
 - **Endpoints/Functions**: storage.getMaterial
-- **Inputs**: id=a6d15d11-1853-4b08-8cfb-1d131487977d, companyId=cert-1771710015956-co-alpha
-- **Expected**: cert-1771710015956-mat-A
-- **Actual**: cert-1771710015956-mat-A
+- **Inputs**: id=db37b0fa-1022-4deb-8aa9-3564bc3f3bed, companyId=cert-1771711060265-co-alpha
+- **Expected**: cert-1771711060265-mat-A
+- **Actual**: cert-1771711060265-mat-A
 
 </details>
 
@@ -229,7 +230,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: deleteSku does not delete when companyId doesn't match
 - **Proof Type**: runtime
 - **Endpoints/Functions**: storage.deleteSku
-- **Inputs**: id=ccae486d-b0c3-4808-8b6f-649a446d5cd6, companyId=cert-1771710015956-co-bravo
+- **Inputs**: id=0051575c-fd19-4858-8c5d-16cc334954e7, companyId=cert-1771711060265-co-bravo
 - **Expected**: entity still exists
 - **Actual**: entity exists
 
@@ -241,7 +242,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: getAiAutomationRule WHERE-clause scoped by companyId
 - **Proof Type**: runtime
 - **Endpoints/Functions**: storage.getAiAutomationRule
-- **Inputs**: id=8e471baa-4aeb-4177-9246-d9d6f1577ad9, companyId=cert-1771710015956-co-bravo
+- **Inputs**: id=5c591d50-3e0e-42a5-b17d-8f367e289b3e, companyId=cert-1771711060265-co-bravo
 - **Expected**: undefined
 - **Actual**: undefined
 
@@ -253,7 +254,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: getPurchaseOrder WHERE-clause scoped by companyId
 - **Proof Type**: runtime
 - **Endpoints/Functions**: storage.getPurchaseOrder
-- **Inputs**: id=1b4afa38-7ff3-4abf-97d7-9d388e70fafc, companyId=cert-1771710015956-co-bravo
+- **Inputs**: id=01b3460b-4fed-4398-b2ef-1296e2d082af, companyId=cert-1771711060265-co-bravo
 - **Expected**: undefined
 - **Actual**: undefined
 
@@ -299,16 +300,16 @@ This certification report validates the enterprise readiness of the Prescient La
 
 ## Gate 2: Spend Limits & Guardrails
 
-**Started**: 2026-02-21T21:40:16.196Z  
-**Completed**: 2026-02-21T21:40:16.877Z  
+**Started**: 2026-02-21T21:57:40.554Z  
+**Completed**: 2026-02-21T21:57:41.162Z  
 **Result**: PASS
 
 | ID | Test | Proof Type | Result | Duration |
 |-----|------|------------|--------|----------|
-| 2.1a | Concurrency: exactly 20 requests allowed out of 50 | runtime | PASS | 343ms |
-| 2.1b | Final spend total exactly equals limit (no overshoot) | runtime | PASS | 343ms |
-| 2.2 | Safe mode: create_po action requires approval (runtime proof) | runtime | PASS | 26ms |
-| 2.3 | Guardrail escalation event persisted and readable (runtime proof) | runtime | PASS | 307ms |
+| 2.1a | Concurrency: exactly 20 requests allowed out of 50 | runtime | PASS | 267ms |
+| 2.1b | Final spend total exactly equals limit (no overshoot) | runtime | PASS | 267ms |
+| 2.2 | Safe mode: create_po action requires approval (runtime proof) | runtime | PASS | 28ms |
+| 2.3 | Guardrail escalation event persisted and readable (runtime proof) | runtime | PASS | 308ms |
 | 2.4 | automationSafeMode table has expected row after enabling (runtime proof) | runtime | PASS | 2ms |
 
 ### Evidence Details
@@ -344,7 +345,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: High-stakes action under safe mode is downgraded to approval-required
 - **Proof Type**: runtime
 - **Endpoints/Functions**: AutomationEngine.createAction
-- **Inputs**: companyId=cert-1771710015956-safemode-test, actionType=create_po, safeModeEnabled=true
+- **Inputs**: companyId=cert-1771711060265-safemode-test, actionType=create_po, safeModeEnabled=true
 - **Expected**: status=awaiting_approval or requiresApproval=1
 - **Actual**: status=awaiting_approval, requiresApproval=1
 
@@ -356,7 +357,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: guardrail_escalation event written to structuredEventLog and queryable
 - **Proof Type**: runtime
 - **Endpoints/Functions**: structuredEventLog table
-- **Inputs**: Inserted guardrail_escalation with marker=cert-1771710015956-guardrail-esc-1771710016568
+- **Inputs**: Inserted guardrail_escalation with marker=cert-1771711060265-guardrail-esc-1771711060852
 - **Expected**: Row found in structured_event_log
 - **Actual**: Found
 
@@ -368,7 +369,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: Safe mode state persisted in database
 - **Proof Type**: runtime
 - **Endpoints/Functions**: automationSafeMode table
-- **Inputs**: companyId=cert-1771710015956-safemode-test
+- **Inputs**: companyId=cert-1771711060265-safemode-test
 - **Expected**: safe_mode_enabled=1
 - **Actual**: safe_mode_enabled=1
 
@@ -378,24 +379,24 @@ This certification report validates the enterprise readiness of the Prescient La
 
 ## Gate 3: Automation Engine Safety
 
-**Started**: 2026-02-21T21:40:16.878Z  
-**Completed**: 2026-02-21T21:40:16.996Z  
+**Started**: 2026-02-21T21:57:41.163Z  
+**Completed**: 2026-02-21T21:57:41.265Z  
 **Result**: PASS
 
 | ID | Test | Proof Type | Result | Duration |
 |-----|------|------------|--------|----------|
-| 3.1 | All 15 background jobs are lock-wrapped via withJobLock(config.name) | structural | PASS | 3ms |
+| 3.1 | All 15 background jobs are lock-wrapped via withJobLock(config.name) | structural | PASS | 2ms |
 | 3.2a | First lock acquisition succeeds | runtime | PASS | 6ms |
-| 3.2b | Second lock acquisition rejected (contention) | runtime | PASS | 10ms |
-| 3.3 | Lock re-acquired after release | runtime | PASS | 4ms |
-| 3.4 | Stale lock recovered after TTL expiry | runtime | PASS | 17ms |
-| 3.5a | withJobLock skips execution when lock already held | runtime | PASS | 10ms |
+| 3.2b | Second lock acquisition rejected (contention) | runtime | PASS | 9ms |
+| 3.3 | Lock re-acquired after release | runtime | PASS | 5ms |
+| 3.4 | Stale lock recovered after TTL expiry | runtime | PASS | 13ms |
+| 3.5a | withJobLock skips execution when lock already held | runtime | PASS | 8ms |
 | 3.5b | withJobLock executes when lock available | runtime | PASS | 21ms |
-| 3.6a | Trigger event IDs are deterministic (same inputs, different key order → same ID) | deterministic | PASS | 1ms |
-| 3.6b | Different time bucket → different ID | deterministic | PASS | 1ms |
+| 3.6a | Trigger event IDs are deterministic (same inputs, different key order → same ID) | deterministic | PASS | 0ms |
+| 3.6b | Different time bucket → different ID | deterministic | PASS | 0ms |
 | 3.7 | Same rule, different companies → different trigger IDs | deterministic | PASS | 0ms |
-| 3.8a | First createActionIdempotent creates action | runtime | PASS | 44ms |
-| 3.8b | Second createActionIdempotent is deduplicated | runtime | PASS | 44ms |
+| 3.8a | First createActionIdempotent creates action | runtime | PASS | 39ms |
+| 3.8b | Second createActionIdempotent is deduplicated | runtime | PASS | 39ms |
 
 ### Evidence Details
 
@@ -418,7 +419,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: acquireJobLock returns acquired=true for uncontested lock
 - **Proof Type**: runtime
 - **Endpoints/Functions**: acquireJobLock
-- **Inputs**: jobName=cert-1771710015956-test-job
+- **Inputs**: jobName=cert-1771711060265-test-job
 - **Expected**: acquired=true
 - **Actual**: acquired=true
 
@@ -442,7 +443,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: Released lock can be re-acquired
 - **Proof Type**: runtime
 - **Endpoints/Functions**: acquireJobLock + releaseJobLock
-- **Inputs**: jobName=cert-1771710015956-test-job after release
+- **Inputs**: jobName=cert-1771711060265-test-job after release
 - **Expected**: acquired=true
 - **Actual**: acquired=true
 
@@ -466,7 +467,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: withJobLock does not execute callback if lock is contested
 - **Proof Type**: runtime
 - **Endpoints/Functions**: withJobLock
-- **Inputs**: jobName=cert-1771710015956-wrapper-job (pre-locked)
+- **Inputs**: jobName=cert-1771711060265-wrapper-job (pre-locked)
 - **Expected**: callback not executed
 - **Actual**: callback skipped
 
@@ -478,7 +479,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: withJobLock executes callback when lock is available
 - **Proof Type**: runtime
 - **Endpoints/Functions**: withJobLock
-- **Inputs**: jobName=cert-1771710015956-wrapper-job (released)
+- **Inputs**: jobName=cert-1771711060265-wrapper-job (released)
 - **Expected**: callback executed
 - **Actual**: callback ran
 
@@ -490,9 +491,9 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: buildTriggerEventId sorts keys before hashing
 - **Proof Type**: deterministic
 - **Endpoints/Functions**: buildTriggerEventId
-- **Inputs**: {"companyId":"cert-1771710015956-co-alpha","ruleId":"r1","triggerType":"threshold","objectId":"obj1","timeBucket":"2026-02-19T10","values":{"b":2,"a":1}}
+- **Inputs**: {"companyId":"cert-1771711060265-co-alpha","ruleId":"r1","triggerType":"threshold","objectId":"obj1","timeBucket":"2026-02-19T10","values":{"b":2,"a":1}}
 - **Expected**: id1 === id2
-- **Actual**: id1=b93b05fe271ebd2b6d30b951a9ebfe75, id2=b93b05fe271ebd2b6d30b951a9ebfe75
+- **Actual**: id1=9387bc4b7c9725d366eb91aa47c5447b, id2=9387bc4b7c9725d366eb91aa47c5447b
 
 </details>
 
@@ -504,7 +505,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Endpoints/Functions**: buildTriggerEventId
 - **Inputs**: Same params, different timeBucket
 - **Expected**: id1 !== id3
-- **Actual**: id1=b93b05fe271ebd2b6d30b951a9ebfe75, id3=baed0b280e3ef1e16057c46799e7cea0
+- **Actual**: id1=9387bc4b7c9725d366eb91aa47c5447b, id3=87efb2a24133c7dfab19087c9359363e
 
 </details>
 
@@ -514,9 +515,9 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: companyId is part of trigger event ID hash
 - **Proof Type**: deterministic
 - **Endpoints/Functions**: buildTriggerEventId
-- **Inputs**: companyA=cert-1771710015956-co-alpha, companyB=cert-1771710015956-co-bravo
+- **Inputs**: companyA=cert-1771711060265-co-alpha, companyB=cert-1771711060265-co-bravo
 - **Expected**: different IDs
-- **Actual**: idA=172b7bc652c83ff5bdf83af2ee18b0fb, idB=a230632a29f244b359d021479cbc65d5
+- **Actual**: idA=62c74f4fb990021ed3d81c6dbab5cc36, idB=b28dd2054523dc652a6dfffff6bb4ba6
 
 </details>
 
@@ -526,9 +527,9 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: First call creates the action
 - **Proof Type**: runtime
 - **Endpoints/Functions**: createActionIdempotent
-- **Inputs**: triggerEventId=cert-1771710015956-dedup-trigger-1771710016951
+- **Inputs**: triggerEventId=cert-1771711060265-dedup-trigger-1771711061226
 - **Expected**: deduplicated=false, action created
-- **Actual**: deduplicated=false, actionId=e70ffae3-a129-496a-a689-fe9be563cb79
+- **Actual**: deduplicated=false, actionId=042d7ece-2783-4285-9a45-c4d1c7a2c105
 
 </details>
 
@@ -538,7 +539,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: Duplicate trigger event ID is rejected
 - **Proof Type**: runtime
 - **Endpoints/Functions**: createActionIdempotent
-- **Inputs**: Same triggerEventId=cert-1771710015956-dedup-trigger-1771710016951
+- **Inputs**: Same triggerEventId=cert-1771711060265-dedup-trigger-1771711061226
 - **Expected**: deduplicated=true
 - **Actual**: deduplicated=true
 
@@ -548,18 +549,18 @@ This certification report validates the enterprise readiness of the Prescient La
 
 ## Gate 4: Payments & Billing
 
-**Started**: 2026-02-21T21:40:16.996Z  
-**Completed**: 2026-02-21T21:40:17.053Z  
+**Started**: 2026-02-21T21:57:41.266Z  
+**Completed**: 2026-02-21T21:57:41.325Z  
 **Result**: PASS
 
 | ID | Test | Proof Type | Result | Duration |
 |-----|------|------------|--------|----------|
 | 4.1 | Stripe webhook dedup uses insert-first DB locking | structural | PASS | 0ms |
-| 4.2 | Duplicate webhook delivery blocked by unique constraint | runtime | PASS | 9ms |
-| 4.3 | Concurrent webhook deliveries: exactly 1 wins | runtime | PASS | 42ms |
+| 4.2 | Duplicate webhook delivery blocked by unique constraint | runtime | PASS | 7ms |
+| 4.3 | Concurrent webhook deliveries: exactly 1 wins | runtime | PASS | 47ms |
 | 4.4 | Subscription state transitions use monotonic guard map (structural proof) | structural | PASS | 0ms |
 | 4.5 | Webhook stale lock recovery with CAS takeover (structural proof) | structural | PASS | 0ms |
-| 4.6 | User schema includes Stripe customer/subscription/status fields | structural | PASS | 4ms |
+| 4.6 | User schema includes Stripe customer/subscription/status fields | structural | PASS | 5ms |
 | 4.7 | Webhook handlers use only parameterized SQL (no sql.raw) | structural | PASS | 0ms |
 
 ### Evidence Details
@@ -582,7 +583,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: Second INSERT for same event_id throws unique violation
 - **Proof Type**: runtime
 - **Endpoints/Functions**: stripeProcessedEvents table
-- **Inputs**: eventId=cert-1771710015956-evt-1771710016997 (second insert)
+- **Inputs**: eventId=cert-1771711060265-evt-1771711061266 (second insert)
 - **Expected**: unique violation error
 - **Actual**: Blocked (23505)
 
@@ -594,7 +595,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: Out of 10 concurrent INSERTs for same event_id, exactly 1 succeeds
 - **Proof Type**: runtime
 - **Endpoints/Functions**: stripeProcessedEvents unique constraint
-- **Inputs**: 10 concurrent INSERTs for eventId=cert-1771710015956-conc-evt-1771710017006
+- **Inputs**: 10 concurrent INSERTs for eventId=cert-1771711060265-conc-evt-1771711061273
 - **Expected**: 1 success
 - **Actual**: 1 successes
 
@@ -652,21 +653,21 @@ This certification report validates the enterprise readiness of the Prescient La
 
 ## Gate 5: Integration Coherence
 
-**Started**: 2026-02-21T21:40:17.053Z  
-**Completed**: 2026-02-21T21:40:17.605Z  
+**Started**: 2026-02-21T21:57:41.325Z  
+**Completed**: 2026-02-21T21:57:41.889Z  
 **Result**: PASS
 
 | ID | Test | Proof Type | Result | Duration |
 |-----|------|------------|--------|----------|
-| 5.1a | GET /healthz returns 200 (server is up) | runtime | PASS | 5ms |
+| 5.1a | GET /healthz returns 200 (server is up) | runtime | PASS | 7ms |
 | 5.1b | GET /api/integrations/health returns 401 (endpoint exists, auth enforced) | runtime | PASS | 2ms |
-| 5.2a | Integration events table exists for provenance tracking | structural | PASS | 5ms |
-| 5.2b | Integration events support idempotency keys | structural | PASS | 5ms |
-| 5.2c | Integration event idempotency: duplicate idempotencyKey rejected | runtime | PASS | 29ms |
-| 5.3 | Dead letter / retry mechanism exists | structural | PASS | 1ms |
+| 5.2a | Integration events table exists for provenance tracking | structural | PASS | 4ms |
+| 5.2b | Integration events support idempotency keys | structural | PASS | 4ms |
+| 5.2c | Integration event idempotency: duplicate idempotencyKey rejected | runtime | PASS | 34ms |
+| 5.3 | Dead letter / retry mechanism exists | structural | PASS | 0ms |
 | 5.4 | Canonical entity mapping exists | structural | PASS | 0ms |
-| 5.5 | Health checks include latency tracking and status categories | structural | PASS | 7ms |
-| 5.6 | Structured logger: integration events persist to DB with secret redaction (runtime proof) | runtime | PASS | 503ms |
+| 5.5 | Health checks include latency tracking and status categories | structural | PASS | 11ms |
+| 5.6 | Structured logger: integration events persist to DB with secret redaction (runtime proof) | runtime | PASS | 504ms |
 
 ### Evidence Details
 
@@ -724,7 +725,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: Unique constraint on (companyId, idempotencyKey) prevents duplicate integration events
 - **Proof Type**: runtime
 - **Endpoints/Functions**: integrationEvents table
-- **Inputs**: Inserted with idempotencyKey=cert-1771710015956-idemp-1771710017065, then attempted duplicate
+- **Inputs**: Inserted with idempotencyKey=cert-1771711060265-idemp-1771711061340, then attempted duplicate
 - **Expected**: Second insert blocked, 1 row exists
 - **Actual**: dupBlocked=true, rowCount=1
 
@@ -772,7 +773,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: Logger persists warn+ events to structured_event_log, redacts sensitive keys, preserves normal keys
 - **Proof Type**: runtime
 - **Endpoints/Functions**: structuredLogger.ts → structured_event_log table
-- **Inputs**: logger.warn('integration', 'cert-test-event-1771710017102', { details: { testKey: 'testValue', password: 'secret123' } })
+- **Inputs**: logger.warn('integration', 'cert-test-event-1771711061385', { details: { testKey: 'testValue', password: 'secret123' } })
 - **Expected**: Row found, password=[REDACTED], testKey=testValue
 - **Actual**: found=true, password=[REDACTED], testKey=testValue
 
@@ -782,8 +783,8 @@ This certification report validates the enterprise readiness of the Prescient La
 
 ## Gate 6: Data Honesty & Economic Thesis
 
-**Started**: 2026-02-21T21:40:17.605Z  
-**Completed**: 2026-02-21T21:40:17.608Z  
+**Started**: 2026-02-21T21:57:41.890Z  
+**Completed**: 2026-02-21T21:57:41.892Z  
 **Result**: PASS
 
 | ID | Test | Proof Type | Result | Duration |
@@ -792,11 +793,11 @@ This certification report validates the enterprise readiness of the Prescient La
 | 6.2 | classifyRegimeFromFDR correct at all boundary values | deterministic | PASS | 0ms |
 | 6.3 | Edge case FDR values produce safe defaults | deterministic | PASS | 0ms |
 | 6.4a | Hysteresis: FDR slightly above boundary doesn't trigger transition | deterministic | PASS | 0ms |
-| 6.4b | Hysteresis: FDR well above boundary triggers transition with confirmation | deterministic | PASS | 1ms |
+| 6.4b | Hysteresis: FDR well above boundary triggers transition with confirmation | deterministic | PASS | 0ms |
 | 6.5a | Reversion penalty: 2x hysteresis prevents premature reversion | deterministic | PASS | 0ms |
 | 6.5b | Reversion occurs when past 2x hysteresis band | deterministic | PASS | 0ms |
 | 6.6 | Regime constants match documented values | deterministic | PASS | 0ms |
-| 6.7 | validateRegimeClassification detects mismatches | deterministic | PASS | 0ms |
+| 6.7 | validateRegimeClassification detects mismatches | deterministic | PASS | 1ms |
 | 6.8 | Hysteresis safe under NaN/Infinity (stays current) | deterministic | PASS | 0ms |
 
 ### Evidence Details
@@ -925,20 +926,20 @@ This certification report validates the enterprise readiness of the Prescient La
 
 ## Gate 7: Operational Readiness
 
-**Started**: 2026-02-21T21:40:17.608Z  
-**Completed**: 2026-02-21T21:40:18.193Z  
+**Started**: 2026-02-21T21:57:41.893Z  
+**Completed**: 2026-02-21T21:57:42.485Z  
 **Result**: PASS
 
 | ID | Test | Proof Type | Result | Duration |
 |-----|------|------------|--------|----------|
-| 7.1 | GET /healthz returns 200 (runtime proof) | runtime | PASS | 5ms |
+| 7.1 | GET /healthz returns 200 (runtime proof) | runtime | PASS | 4ms |
 | 7.2 | GET /readyz returns 200 (runtime proof) | runtime | PASS | 5ms |
-| 7.3 | GET /livez returns 200 (runtime proof) | runtime | PASS | 1ms |
-| 7.4 | Rate limiting applied to automation mutation endpoints (structural + rapid call proof) | structural | PASS | 68ms |
-| 7.5 | Structured logging persists warn+ events to database (runtime proof) | runtime | PASS | 503ms |
+| 7.3 | GET /livez returns 200 (runtime proof) | runtime | PASS | 2ms |
+| 7.4 | Rate limiting applied to automation mutation endpoints (structural + rapid call proof) | structural | PASS | 72ms |
+| 7.5 | Structured logging persists warn+ events to database (runtime proof) | runtime | PASS | 505ms |
 | 7.6 | Data retention cleanup job exists | structural | PASS | 1ms |
 | 7.7 | Automation state is database-backed (crash-recoverable) | structural | PASS | 1ms |
-| 7.8 | sanitizeDetails redacts sensitive keys, preserves normal keys (runtime proof) | runtime | PASS | 0ms |
+| 7.8 | sanitizeDetails redacts sensitive keys, preserves normal keys (runtime proof) | runtime | PASS | 1ms |
 
 ### Evidence Details
 
@@ -997,7 +998,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: Logger.warn writes to structured_event_log table and can be queried back
 - **Proof Type**: runtime
 - **Endpoints/Functions**: structuredLogger.ts → structured_event_log table
-- **Inputs**: logger.warn('system', 'cert-log-test-1771710017688', ...)
+- **Inputs**: logger.warn('system', 'cert-log-test-1771711061976', ...)
 - **Expected**: Row found in DB
 - **Actual**: Found
 
@@ -1043,32 +1044,32 @@ This certification report validates the enterprise readiness of the Prescient La
 
 ## Gate 8: Copilot Safety & Data Quality
 
-**Started**: 2026-02-21T21:40:18.194Z  
-**Completed**: 2026-02-21T21:40:18.548Z  
+**Started**: 2026-02-21T21:57:42.487Z  
+**Completed**: 2026-02-21T21:57:42.854Z  
 **Result**: PASS
 
 | ID | Test | Proof Type | Result | Duration |
 |-----|------|------------|--------|----------|
 | 8.1 | POST /api/copilot/query returns 401 without auth | runtime | PASS | 11ms |
 | 8.2 | POST /api/copilot/draft returns 401 without auth | runtime | PASS | 3ms |
-| 8.3 | New copilot draft starts as 'draft' with no executedAt (never auto-completed) | runtime | PASS | 6ms |
-| 8.4 | canExecuteDraft blocks non-approved draft | runtime | PASS | 27ms |
+| 8.3 | New copilot draft starts as 'draft' with no executedAt (never auto-completed) | runtime | PASS | 8ms |
+| 8.4 | canExecuteDraft blocks non-approved draft | runtime | PASS | 20ms |
 | 8.5 | Draft transitions to 'approved' with approver identity recorded | runtime | PASS | 10ms |
-| 8.6 | canExecuteDraft allows approved draft | runtime | PASS | 3ms |
-| 8.7 | Rejected draft has no executedAt (no phantom completion) | runtime | PASS | 15ms |
-| 8.8 | No 'completed' drafts exist (phantom state prevention) | runtime | PASS | 1ms |
-| 8.9 | validateNeverCompleted throws SAFETY_VIOLATION for executed+unapproved draft | deterministic | PASS | 2ms |
-| 8.10 | Data quality scoring produces valid report with numerical scores | runtime | PASS | 46ms |
+| 8.6 | canExecuteDraft allows approved draft | runtime | PASS | 2ms |
+| 8.7 | Rejected draft has no executedAt (no phantom completion) | runtime | PASS | 13ms |
+| 8.8 | No 'completed' drafts exist (phantom state prevention) | runtime | PASS | 2ms |
+| 8.9 | validateNeverCompleted throws SAFETY_VIOLATION for executed+unapproved draft | deterministic | PASS | 1ms |
+| 8.10 | Data quality scoring produces valid report with numerical scores | runtime | PASS | 37ms |
 | 8.11 | Automation blocked when no data quality assessment exists | deterministic | PASS | 0ms |
-| 8.12 | Data quality scores persisted to database | runtime | PASS | 2ms |
-| 8.13 | Evaluation harness produces forecast, allocation, procurement, and calibration metrics | runtime | PASS | 193ms |
-| 8.14 | Evaluation metrics (WAPE, sMAPE, bias, calibration_error) persisted to DB | runtime | PASS | 2ms |
-| 8.15 | Policy layer: INFLATIONARY regime recommends acceleration with valid quantity | deterministic | PASS | 13ms |
-| 8.16 | What-if simulation returns bounded service level, stockout risk, and cash impact | deterministic | PASS | 1ms |
+| 8.12 | Data quality scores persisted to database | runtime | PASS | 3ms |
+| 8.13 | Evaluation harness produces forecast, allocation, procurement, and calibration metrics | runtime | PASS | 192ms |
+| 8.14 | Evaluation metrics (WAPE, sMAPE, bias, calibration_error) persisted to DB | runtime | PASS | 5ms |
+| 8.15 | Policy layer: INFLATIONARY regime recommends acceleration with valid quantity | deterministic | PASS | 17ms |
+| 8.16 | What-if simulation returns bounded service level, stockout risk, and cash impact | deterministic | PASS | 3ms |
 | 8.17 | Decision override logged with factual context (regime, reason, values) | runtime | PASS | 7ms |
-| 8.18 | GET /api/data-quality returns 401 without auth | runtime | PASS | 2ms |
-| 8.19 | POST /api/evaluation/run returns 401 without auth | runtime | PASS | 3ms |
-| 8.20 | POST /api/decisions/recommend returns 401 without auth | runtime | PASS | 3ms |
+| 8.18 | GET /api/data-quality returns 401 without auth | runtime | PASS | 8ms |
+| 8.19 | POST /api/evaluation/run returns 401 without auth | runtime | PASS | 4ms |
+| 8.20 | POST /api/decisions/recommend returns 401 without auth | runtime | PASS | 14ms |
 | 8.21 | Procurement metrics explicitly separate estimated vs measured savings | runtime | PASS | 0ms |
 
 ### Evidence Details
@@ -1103,7 +1104,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: Drafts are never auto-completed on creation
 - **Proof Type**: runtime
 - **Endpoints/Functions**: copilotActionDrafts table
-- **Inputs**: draftType=purchase_order, companyId=cert-1771710015956-co-alpha
+- **Inputs**: draftType=purchase_order, companyId=cert-1771711060265-co-alpha
 - **Expected**: status=draft, executedAt=null
 - **Actual**: status=draft, executedAt=null
 
@@ -1115,7 +1116,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: Unapproved drafts cannot be executed
 - **Proof Type**: runtime
 - **Endpoints/Functions**: copilotService.canExecuteDraft()
-- **Inputs**: draftId=26, status=draft
+- **Inputs**: draftId=35, status=draft
 - **Expected**: allowed=false
 - **Actual**: allowed=false, reason=Draft status is 'draft', must be 'approved' to execute
 
@@ -1127,7 +1128,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: Approval flow works and records approver
 - **Proof Type**: runtime
 - **Endpoints/Functions**: copilotService.approveDraft()
-- **Inputs**: draftId=26, approver=cert-approver
+- **Inputs**: draftId=35, approver=cert-approver
 - **Expected**: status=approved, approvedBy=cert-approver
 - **Actual**: status=approved, approvedBy=cert-approver
 
@@ -1139,7 +1140,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: Only approved drafts can proceed to execution
 - **Proof Type**: runtime
 - **Endpoints/Functions**: copilotService.canExecuteDraft()
-- **Inputs**: draftId=26, status=approved
+- **Inputs**: draftId=35, status=approved
 - **Expected**: allowed=true
 - **Actual**: allowed=true
 
@@ -1151,7 +1152,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: Rejected drafts never show as executed
 - **Proof Type**: runtime
 - **Endpoints/Functions**: copilotService.rejectDraft()
-- **Inputs**: draftId=27, reason=Not needed
+- **Inputs**: draftId=36, reason=Not needed
 - **Expected**: status=rejected, executedAt=null
 - **Actual**: status=rejected, executedAt=null
 
@@ -1163,7 +1164,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: Draft system has no 'completed' status pathway
 - **Proof Type**: runtime
 - **Endpoints/Functions**: copilotActionDrafts table
-- **Inputs**: SELECT WHERE status='completed' AND companyId=cert-1771710015956-co-alpha
+- **Inputs**: SELECT WHERE status='completed' AND companyId=cert-1771711060265-co-alpha
 - **Expected**: 0 rows
 - **Actual**: 0 rows
 
@@ -1187,7 +1188,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: Data quality scoring service returns structured report
 - **Proof Type**: runtime
 - **Endpoints/Functions**: dataQuality.scoreCompanyDataQuality()
-- **Inputs**: companyId=cert-1771710015956-co-alpha
+- **Inputs**: companyId=cert-1771711060265-co-alpha
 - **Expected**: Report with overallScore and entityScores array
 - **Actual**: overallScore=0.77, entities=3
 
@@ -1211,7 +1212,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: Scoring results written to data_quality_scores table
 - **Proof Type**: runtime
 - **Endpoints/Functions**: data_quality_scores table
-- **Inputs**: companyId=cert-1771710015956-co-alpha
+- **Inputs**: companyId=cert-1771711060265-co-alpha
 - **Expected**: >0 rows
 - **Actual**: 3 rows
 
@@ -1223,9 +1224,9 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: Offline evaluation generates complete metric report
 - **Proof Type**: runtime
 - **Endpoints/Functions**: evaluationHarness.runEvaluation()
-- **Inputs**: companyId=cert-1771710015956-co-alpha, version=cert-cert-1771710015956
+- **Inputs**: companyId=cert-1771711060265-co-alpha, version=cert-cert-1771711060265
 - **Expected**: Valid summary with WAPE, sMAPE, calibration error
-- **Actual**: runId=20, wape=0.1514, smape=0.1466, calError=0.1481
+- **Actual**: runId=29, wape=0.1514, smape=0.1466, calError=0.1481
 
 </details>
 
@@ -1235,7 +1236,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: All required evaluation metrics written to evaluation_metrics table
 - **Proof Type**: runtime
 - **Endpoints/Functions**: evaluation_metrics table
-- **Inputs**: runId=20
+- **Inputs**: runId=29
 - **Expected**: WAPE, sMAPE, bias, calibration_error rows
 - **Actual**: 35 metrics, wape=true, smape=true, bias=true, calError=true
 
@@ -1329,37 +1330,37 @@ This certification report validates the enterprise readiness of the Prescient La
 
 ## Gate 9: Predictive Lift & Enterprise Controls
 
-**Started**: 2026-02-21T21:40:18.549Z  
-**Completed**: 2026-02-21T21:40:19.115Z  
+**Started**: 2026-02-21T21:57:42.856Z  
+**Completed**: 2026-02-21T21:57:43.159Z  
 **Result**: PASS
 
 | ID | Test | Proof Type | Result | Duration |
 |-----|------|------------|--------|----------|
-| 9.1 | All 4 baseline forecasters produce outputs of correct length | deterministic | PASS | 1ms |
+| 9.1 | All 4 baseline forecasters produce outputs of correct length | deterministic | PASS | 4ms |
 | 9.2 | Seeded RNG produces identical sequences for same seed | deterministic | PASS | 0ms |
-| 9.3 | Evaluation produces benchmark report with 4+ baselines and lift-by-segment | runtime | PASS | 434ms |
+| 9.3 | Evaluation produces benchmark report with 4+ baselines and lift-by-segment | runtime | PASS | 183ms |
 | 9.4 | Prediction intervals produce bounded P50/P90 coverage metrics | runtime | PASS | 0ms |
 | 9.5 | System vs best baseline lift comparison includes all fields | runtime | PASS | 0ms |
 | 9.6 | Benchmark metrics (lift, coverage) persisted to evaluation_metrics table | runtime | PASS | 2ms |
-| 9.7 | Savings evidence record created with immutable flag, counterfactual definition, estimated (no measured) | runtime | PASS | 23ms |
+| 9.7 | Savings evidence record created with immutable flag, counterfactual definition, estimated (no measured) | runtime | PASS | 18ms |
 | 9.8 | recordMeasuredSavings rejects without outcome reference (invoice/receipt) | deterministic | PASS | 4ms |
-| 9.9 | Measured savings recorded with invoice reference and timestamp | runtime | PASS | 8ms |
+| 9.9 | Measured savings recorded with invoice reference and timestamp | runtime | PASS | 6ms |
 | 9.10 | Valid savings record passes validation | deterministic | PASS | 0ms |
-| 9.11 | GET /api/savings-evidence returns 401 without auth | runtime | PASS | 3ms |
-| 9.12 | Copilot query response includes valid evidence bundle (entityIds, timestamp, rowCounts, provenance) | runtime | PASS | 11ms |
+| 9.11 | GET /api/savings-evidence returns 401 without auth | runtime | PASS | 2ms |
+| 9.12 | Copilot query response includes valid evidence bundle (entityIds, timestamp, rowCounts, provenance) | runtime | PASS | 9ms |
 | 9.13 | Evidence bundle includes queryTimestamp and provenanceVersion | runtime | PASS | 0ms |
-| 9.14 | Copilot draft carries valid evidence bundle | runtime | PASS | 10ms |
-| 9.15 | Evidence bundle persisted to copilot_query_log table | runtime | PASS | 3ms |
+| 9.14 | Copilot draft carries valid evidence bundle | runtime | PASS | 8ms |
+| 9.15 | Evidence bundle persisted to copilot_query_log table | runtime | PASS | 4ms |
 | 9.16 | No 'completed' drafts under expanded codebase (invariant preserved) | runtime | PASS | 2ms |
-| 9.17 | SSO configuration created and persisted | runtime | PASS | 29ms |
+| 9.17 | SSO configuration created and persisted | runtime | PASS | 24ms |
 | 9.18 | GET /api/sso/config returns 401 without auth | runtime | PASS | 3ms |
-| 9.19 | SCIM provisioning creates user and logs operation | runtime | PASS | 7ms |
-| 9.20 | POST /api/scim/users returns 401 without auth | runtime | PASS | 3ms |
-| 9.21 | PII/secret redaction: passwords and API keys redacted, safe data preserved | deterministic | PASS | 2ms |
+| 9.19 | SCIM provisioning creates user and logs operation | runtime | PASS | 8ms |
+| 9.20 | POST /api/scim/users returns 401 without auth | runtime | PASS | 4ms |
+| 9.21 | PII/secret redaction: passwords and API keys redacted, safe data preserved | deterministic | PASS | 4ms |
 | 9.22 | GET /api/audit/export returns 401 without auth | runtime | PASS | 2ms |
-| 9.23 | Audit export config persisted with retention and redaction settings | runtime | PASS | 11ms |
+| 9.23 | Audit export config persisted with retention and redaction settings | runtime | PASS | 8ms |
 | 9.24 | All 4 baseline forecaster metrics persisted to DB | runtime | PASS | 3ms |
-| 9.25 | SKU segment classification deterministic: fast_mover, slow_mover, intermittent, no_data | deterministic | PASS | 1ms |
+| 9.25 | SKU segment classification deterministic: fast_mover, slow_mover, intermittent, no_data | deterministic | PASS | 2ms |
 
 ### Evidence Details
 
@@ -1393,7 +1394,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: Comparative benchmark layer produces structured lift report
 - **Proof Type**: runtime
 - **Endpoints/Functions**: evaluationHarness.runEvaluation()
-- **Inputs**: companyId=cert-1771710015956-co-alpha, seed=42
+- **Inputs**: companyId=cert-1771711060265-co-alpha, seed=42
 - **Expected**: benchmark.baselines.length>=4, liftBySegment array
 - **Actual**: baselines=4, segments=1
 
@@ -1429,7 +1430,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: Baseline comparison metrics written to DB
 - **Proof Type**: runtime
 - **Endpoints/Functions**: evaluation_metrics table, category=benchmark
-- **Inputs**: runId=21
+- **Inputs**: runId=30
 - **Expected**: >=3 benchmark metrics including lift_pct and coverage
 - **Actual**: 5 metrics, hasLift=true, hasCoverage=true
 
@@ -1467,7 +1468,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Endpoints/Functions**: savingsEvidence.recordMeasuredSavings()
 - **Inputs**: measuredSavings=45, outcomeRef={invoiceId: inv-001}
 - **Expected**: measuredSavings=45, measuredAt set, invoiceId=inv-001
-- **Actual**: measured=45, measuredAt=Sat Feb 21 2026 21:40:19 GMT+0000 (Coordinated Universal Time), invoiceId=inv-001
+- **Actual**: measured=45, measuredAt=Sat Feb 21 2026 21:57:43 GMT+0000 (Coordinated Universal Time), invoiceId=inv-001
 
 </details>
 
@@ -1477,7 +1478,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: Savings evidence record structure validation
 - **Proof Type**: deterministic
 - **Endpoints/Functions**: savingsEvidence.validateSavingsRecord()
-- **Inputs**: recordId=8
+- **Inputs**: recordId=11
 - **Expected**: valid=true, issues=[]
 - **Actual**: valid=true, issues=0
 
@@ -1515,7 +1516,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Endpoints/Functions**: copilotService.queryCopilot() → evidenceBundle
 - **Inputs**: Copilot query response
 - **Expected**: queryTimestamp and provenanceVersion present
-- **Actual**: timestamp=2026-02-21T21:40:19.030Z, version=2.0.0
+- **Actual**: timestamp=2026-02-21T21:57:43.081Z, version=2.0.0
 
 </details>
 
@@ -1539,7 +1540,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Endpoints/Functions**: copilot_query_log.evidence_bundle column
 - **Inputs**: Latest query log entry
 - **Expected**: provenanceVersion and queryTimestamp present
-- **Actual**: version=2.0.0, timestamp=2026-02-21T21:40:19.030Z
+- **Actual**: version=2.0.0, timestamp=2026-02-21T21:57:43.081Z
 
 </details>
 
@@ -1549,7 +1550,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: Draft cannot be completed invariant holds under all routes and services
 - **Proof Type**: runtime
 - **Endpoints/Functions**: copilotActionDrafts table, all routes
-- **Inputs**: SELECT WHERE status='completed' AND companyId=cert-1771710015956-co-alpha
+- **Inputs**: SELECT WHERE status='completed' AND companyId=cert-1771711060265-co-alpha
 - **Expected**: 0 rows
 - **Actual**: 0 rows
 
@@ -1585,7 +1586,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: SCIM-ready user provisioning with audit log
 - **Proof Type**: runtime
 - **Endpoints/Functions**: enterpriseIdentity.scimProvisionUser()
-- **Inputs**: externalId=cert-1771710015956-ext-user-001
+- **Inputs**: externalId=cert-1771711060265-ext-user-001
 - **Expected**: operation=CREATE, success=true
 - **Actual**: operation=CREATE, success=true
 
@@ -1645,7 +1646,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: Baseline comparison metrics stored for reproducibility
 - **Proof Type**: runtime
 - **Endpoints/Functions**: evaluation_metrics table, category=baseline
-- **Inputs**: runId=21
+- **Inputs**: runId=30
 - **Expected**: naive_seasonal, moving_average, croston, simple_ets metrics
 - **Actual**: naive=true, ma=true, croston=true, ets=true, total=8
 
@@ -1667,21 +1668,21 @@ This certification report validates the enterprise readiness of the Prescient La
 
 ## Gate 10: Regime-Aware Optimization & Backtest
 
-**Started**: 2026-02-21T21:40:19.116Z  
-**Completed**: 2026-02-21T21:40:19.402Z  
+**Started**: 2026-02-21T21:57:43.161Z  
+**Completed**: 2026-02-21T21:57:43.438Z  
 **Result**: PASS
 
 | ID | Test | Proof Type | Result | Duration |
 |-----|------|------------|--------|----------|
-| 10.1 | Evaluation produces regime-specific lift report (liftByRegime) | runtime | PASS | 172ms |
+| 10.1 | Evaluation produces regime-specific lift report (liftByRegime) | runtime | PASS | 167ms |
 | 10.2 | Regime lift entries have regime, systemWape, baselineWape, liftPct, dataPoints, fdrRange | runtime | PASS | 0ms |
 | 10.3 | Regime-specific lift metrics persisted to evaluation_metrics table | runtime | PASS | 3ms |
-| 10.4 | Probabilistic optimizer produces valid bounded results | deterministic | PASS | 40ms |
-| 10.5 | Probabilistic optimization is deterministic with same seed | deterministic | PASS | 21ms |
+| 10.4 | Probabilistic optimizer produces valid bounded results | deterministic | PASS | 35ms |
+| 10.5 | Probabilistic optimization is deterministic with same seed | deterministic | PASS | 17ms |
 | 10.6 | Optimization includes 95% confidence interval with lower <= upper | deterministic | PASS | 0ms |
 | 10.7 | Optimization includes 3+ what-if scenario comparisons | deterministic | PASS | 0ms |
 | 10.8 | Optimization evidence bundle has provenance version, optimizer ID, regime, and seed | deterministic | PASS | 0ms |
-| 10.9 | Regime backtest analysis produces valid bounded metrics | deterministic | PASS | 25ms |
+| 10.9 | Regime backtest analysis produces valid bounded metrics | deterministic | PASS | 27ms |
 | 10.10 | Backtest includes stability windows with regime, duration, avgFdr, stable flag | deterministic | PASS | 0ms |
 | 10.11 | Backtest includes regime distribution with count and percentage | deterministic | PASS | 0ms |
 | 10.12 | Backtest tracks detection timing per regime | deterministic | PASS | 0ms |
@@ -1689,9 +1690,9 @@ This certification report validates the enterprise readiness of the Prescient La
 | 10.14 | Hysteresis effectiveness is bounded [0,1] and tracked | deterministic | PASS | 0ms |
 | 10.15 | Evaluation covers 2+ distinct economic regimes in lift analysis | runtime | PASS | 0ms |
 | 10.16 | POST /api/optimization/run returns 401 without auth | runtime | PASS | 3ms |
-| 10.17 | POST /api/regime-backtest/run returns 401 without auth | runtime | PASS | 2ms |
-| 10.18 | GET /api/optimization/runs returns 401 without auth | runtime | PASS | 2ms |
-| 10.19 | GET /api/regime-backtest/reports returns 401 without auth | runtime | PASS | 1ms |
+| 10.17 | POST /api/regime-backtest/run returns 401 without auth | runtime | PASS | 3ms |
+| 10.18 | GET /api/optimization/runs returns 401 without auth | runtime | PASS | 1ms |
+| 10.19 | GET /api/regime-backtest/reports returns 401 without auth | runtime | PASS | 3ms |
 | 10.20 | Empty FDR series returns safe defaults (no crash, accuracy=1) | deterministic | PASS | 0ms |
 
 ### Evidence Details
@@ -1702,7 +1703,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: Regime-conditioned forecast lift with per-regime WAPE comparison
 - **Proof Type**: runtime
 - **Endpoints/Functions**: evaluationHarness.runEvaluation() → benchmark.liftByRegime
-- **Inputs**: companyId=cert-1771710015956-co-alpha, seed=42
+- **Inputs**: companyId=cert-1771711060265-co-alpha, seed=42
 - **Expected**: liftByRegime array with 1+ entries
 - **Actual**: count=4
 
@@ -1726,7 +1727,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: Per-regime WAPE and lift metrics stored for audit
 - **Proof Type**: runtime
 - **Endpoints/Functions**: evaluation_metrics table, category=regime_lift
-- **Inputs**: runId=22
+- **Inputs**: runId=31
 - **Expected**: >=3 regime_lift metrics including _lift_pct
 - **Actual**: count=12, hasLiftPct=true
 
@@ -1846,9 +1847,9 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: Full backtest report stored for audit and compliance
 - **Proof Type**: runtime
 - **Endpoints/Functions**: regimeBacktest.runBacktestReport()
-- **Inputs**: companyId=cert-1771710015956-co-alpha, seed=42, readings=100
+- **Inputs**: companyId=cert-1771711060265-co-alpha, seed=42, readings=100
 - **Expected**: status=completed, metrics populated
-- **Actual**: id=5, status=completed, transitions=5
+- **Actual**: id=8, status=completed, transitions=5
 
 </details>
 
@@ -1940,32 +1941,32 @@ This certification report validates the enterprise readiness of the Prescient La
 
 ## Gate 11: Pilot Evaluation Mode
 
-**Started**: 2026-02-21T21:40:19.402Z  
-**Completed**: 2026-02-21T21:40:19.514Z  
+**Started**: 2026-02-21T21:57:43.439Z  
+**Completed**: 2026-02-21T21:57:43.582Z  
 **Result**: PASS
 
 | ID | Test | Proof Type | Result | Duration |
 |-----|------|------------|--------|----------|
-| 11.1 | Experiment created with immutable config snapshot and completed status | runtime | PASS | 30ms |
+| 11.1 | Experiment created with immutable config snapshot and completed status | runtime | PASS | 39ms |
 | 11.2 | Config hash matches recomputed SHA-256 of experiment config | deterministic | PASS | 0ms |
 | 11.3 | Baseline simulation produces bounded metrics for 12-week window | runtime | PASS | 0ms |
 | 11.4 | Optimized simulation produces bounded metrics with estimated savings and null measured savings | runtime | PASS | 0ms |
 | 11.5 | Comparison summary contains deltas, winner lists, recommendation, and bounded confidence | runtime | PASS | 0ms |
-| 11.6 | Estimated/measured savings separation: all weekly savings are 'estimated', baseline has zero savings | structural | PASS | 1ms |
+| 11.6 | Estimated/measured savings separation: all weekly savings are 'estimated', baseline has zero savings | structural | PASS | 0ms |
 | 11.7 | Experiment has zero production mutations in record and evidence bundle | structural | PASS | 0ms |
 | 11.8 | Reproducible experiment artifact (JSON + markdown) generated with full structure | structural | PASS | 0ms |
 | 11.9 | Evidence bundle has provenance v4.0.0, engine ID, config hash, and replayable flag | deterministic | PASS | 0ms |
 | 11.10 | Duplicate experiment ID is rejected with EXPERIMENT_ALREADY_EXISTS | runtime | PASS | 3ms |
-| 11.11 | Replayed experiment completes with same seed and new unique ID | runtime | PASS | 30ms |
+| 11.11 | Replayed experiment completes with same seed and new unique ID | runtime | PASS | 44ms |
 | 11.12 | Replayed experiment produces consistent 12-week baseline and optimized results | deterministic | PASS | 0ms |
-| 11.13 | Audit export confirms config integrity, production safety, and replay verification | deterministic | PASS | 3ms |
+| 11.13 | Audit export confirms config integrity, production safety, and replay verification | deterministic | PASS | 6ms |
 | 11.14 | Experiment locked at creation with 12-week comparison window consistently applied | structural | PASS | 0ms |
-| 11.15 | Experiment listing returns only experiments for the requesting company | runtime | PASS | 3ms |
-| 11.16 | Company B listing contains zero Company A experiments (tenant isolation) | runtime | PASS | 2ms |
+| 11.15 | Experiment listing returns only experiments for the requesting company | runtime | PASS | 4ms |
+| 11.16 | Company B listing contains zero Company A experiments (tenant isolation) | runtime | PASS | 3ms |
 | 11.17 | Weekly metrics include all five tracked metrics (SL, stockout, expedite, WC, savings) | structural | PASS | 0ms |
-| 11.18 | POST /api/pilot-experiments/run returns 401 without auth | runtime | PASS | 2ms |
-| 11.19 | GET /api/pilot-experiments returns 401 without auth | runtime | PASS | 2ms |
-| 11.20 | Material-level results tracked with reorder quantity and savings per policy | structural | PASS | 0ms |
+| 11.18 | POST /api/pilot-experiments/run returns 401 without auth | runtime | PASS | 3ms |
+| 11.19 | GET /api/pilot-experiments returns 401 without auth | runtime | PASS | 3ms |
+| 11.20 | Material-level results tracked with reorder quantity and savings per policy | structural | PASS | 1ms |
 
 ### Evidence Details
 
@@ -1975,7 +1976,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: Immutable experiment configuration snapshot with engine version
 - **Proof Type**: runtime
 - **Endpoints/Functions**: pilotEvaluation.runPilotExperiment()
-- **Inputs**: experimentId=cert-1771710015956-exp-001, seed=42, window=12
+- **Inputs**: experimentId=cert-1771711060265-exp-001, seed=42, window=12
 - **Expected**: status=completed, immutable=true, engineVersion=1.0.0
 - **Actual**: status=completed, immutable=true, engine=1.0.0
 
@@ -1988,8 +1989,8 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Proof Type**: deterministic
 - **Endpoints/Functions**: pilotEvaluation.hashConfig()
 - **Inputs**: Original config vs stored configHash
-- **Expected**: hash=4910271b367f4fc672554f36baf8ef8c8c51a52a84710dbf54f106d885f530be
-- **Actual**: stored=4910271b367f4fc672554f36baf8ef8c8c51a52a84710dbf54f106d885f530be
+- **Expected**: hash=75654fafc42d01707100527ea668af685e54efaed10126ccdae13fe09d1d38cd
+- **Actual**: stored=75654fafc42d01707100527ea668af685e54efaed10126ccdae13fe09d1d38cd
 
 </details>
 
@@ -2083,9 +2084,9 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: Experiment isolation: unique experiment IDs enforced
 - **Proof Type**: runtime
 - **Endpoints/Functions**: pilotEvaluation.runPilotExperiment()
-- **Inputs**: Duplicate experimentId=cert-1771710015956-exp-001
+- **Inputs**: Duplicate experimentId=cert-1771711060265-exp-001
 - **Expected**: Error containing EXPERIMENT_ALREADY_EXISTS
-- **Actual**: error=EXPERIMENT_ALREADY_EXISTS: cert-1771710015956-exp-001
+- **Actual**: error=EXPERIMENT_ALREADY_EXISTS: cert-1771711060265-exp-001
 
 </details>
 
@@ -2095,9 +2096,9 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: Deterministic replay capability with seed preservation
 - **Proof Type**: runtime
 - **Endpoints/Functions**: pilotEvaluation.replayExperiment()
-- **Inputs**: Original experimentId=cert-1771710015956-exp-001
+- **Inputs**: Original experimentId=cert-1771711060265-exp-001
 - **Expected**: New ID with -replay- suffix, same seed=42, status=completed
-- **Actual**: replayId=cert-1771710015956-exp-001-replay-1771710019473, seed=42, status=completed
+- **Actual**: replayId=cert-1771711060265-exp-001-replay-1771711063522, seed=42, status=completed
 
 </details>
 
@@ -2119,7 +2120,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: Audit export correctness with integrity checks
 - **Proof Type**: deterministic
 - **Endpoints/Functions**: pilotEvaluation.exportExperimentAudit()
-- **Inputs**: experimentId=cert-1771710015956-exp-001
+- **Inputs**: experimentId=cert-1771711060265-exp-001
 - **Expected**: configIntegrity=true, productionSafe=true, replayVerified=true
 - **Actual**: integrity=true, prodSafe=true, replay=true
 
@@ -2133,7 +2134,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Endpoints/Functions**: pilotExperiments.lockedAt, windowWeeks
 - **Inputs**: Completed experiment
 - **Expected**: lockedAt not null, windowWeeks=12, both policies have 12 weekly entries
-- **Actual**: lockedAt=Sat Feb 21 2026 21:40:19 GMT+0000 (Coordinated Universal Time), windowWeeks=12, blWeeks=12, optWeeks=12
+- **Actual**: lockedAt=Sat Feb 21 2026 21:57:43 GMT+0000 (Coordinated Universal Time), windowWeeks=12, blWeeks=12, optWeeks=12
 
 </details>
 
@@ -2143,7 +2144,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: Experiment isolation: tenant-scoped listing
 - **Proof Type**: runtime
 - **Endpoints/Functions**: pilotEvaluation.getPilotExperiments()
-- **Inputs**: companyId=cert-1771710015956-co-alpha
+- **Inputs**: companyId=cert-1771711060265-co-alpha
 - **Expected**: All returned experiments have companyId=COMPANY_A
 - **Actual**: count=2, allSameCompany=true
 
@@ -2155,7 +2156,7 @@ This certification report validates the enterprise readiness of the Prescient La
 - **Validated**: Experiment isolation: cross-tenant access blocked
 - **Proof Type**: runtime
 - **Endpoints/Functions**: pilotEvaluation.getPilotExperiments()
-- **Inputs**: companyId=cert-1771710015956-co-bravo
+- **Inputs**: companyId=cert-1771711060265-co-bravo
 - **Expected**: No experiments with companyId=COMPANY_A
 - **Actual**: count=0, allCompB=true
 
@@ -2213,8 +2214,8 @@ This certification report validates the enterprise readiness of the Prescient La
 
 ## Gate 12: Adaptive Forecasting Layer
 
-**Started**: 2026-02-21T21:40:19.515Z  
-**Completed**: 2026-02-21T21:40:19.565Z  
+**Started**: 2026-02-21T21:57:43.583Z  
+**Completed**: 2026-02-21T21:57:43.624Z  
 **Result**: PASS
 
 | ID | Test | Proof Type | Result | Duration |
@@ -2222,7 +2223,7 @@ This certification report validates the enterprise readiness of the Prescient La
 | 12.1 | Dynamic model weights sum to ~1.0 per regime and all bounded [0,1] | deterministic | PASS | 1ms |
 | 12.2 | Each regime has exactly 3 model weights with valid model IDs | structural | PASS | 0ms |
 | 12.3 | Lower-error models receive higher weights (inverse-error weighting verified) | deterministic | PASS | 0ms |
-| 12.4 | Volatility estimates produced for all 4 regimes with valid bounds | runtime | PASS | 0ms |
+| 12.4 | Volatility estimates produced for all 4 regimes with valid bounds | runtime | PASS | 1ms |
 | 12.5 | Auto-expansion triggers when forecast error exceeds tolerance threshold | runtime | PASS | 0ms |
 | 12.6 | No auto-expansion when forecast errors are within tolerance | deterministic | PASS | 0ms |
 | 12.7 | Tail risk metrics (CVaR 95/99, expected shortfall) computed for demand and supply | deterministic | PASS | 0ms |
@@ -2233,17 +2234,17 @@ This certification report validates the enterprise readiness of the Prescient La
 | 12.12 | Signal strengths computed for all indicators with lift, accuracy, significance, and rank | runtime | PASS | 1ms |
 | 12.13 | Signal strengths ranked in descending order of forward lift | structural | PASS | 0ms |
 | 12.14 | Lift decay analysis produces 8-point decay curve with half-life and persistence score | runtime | PASS | 1ms |
-| 12.15 | Decay curve has monotonically increasing horizons with bounded persistence | structural | PASS | 1ms |
-| 12.16 | Uncertainty expansion triggered: bands widened, multiplier bounded, reason provided | runtime | PASS | 0ms |
+| 12.15 | Decay curve has monotonically increasing horizons with bounded persistence | structural | PASS | 0ms |
+| 12.16 | Uncertainty expansion triggered: bands widened, multiplier bounded, reason provided | runtime | PASS | 1ms |
 | 12.17 | No uncertainty expansion when errors are within tolerance | deterministic | PASS | 0ms |
-| 12.18 | Full adaptive analysis produces versioned stability report with all 7 components | runtime | PASS | 3ms |
-| 12.19 | Evidence bundle has provenance v5.0.0 with complete traceability metadata | structural | PASS | 1ms |
+| 12.18 | Full adaptive analysis produces versioned stability report with all 7 components | runtime | PASS | 4ms |
+| 12.19 | Evidence bundle has provenance v5.0.0 with complete traceability metadata | structural | PASS | 0ms |
 | 12.20 | Config hash is deterministic: identical inputs produce identical SHA-256 hash | deterministic | PASS | 0ms |
-| 12.21 | Deterministic replay produces identical results (config hash, CVaR, transition prob) | deterministic | PASS | 3ms |
-| 12.22 | Stability report markdown includes all 7 component sections and production safety | structural | PASS | 0ms |
+| 12.21 | Deterministic replay produces identical results (config hash, CVaR, transition prob) | deterministic | PASS | 4ms |
+| 12.22 | Stability report markdown includes all 7 component sections and production safety | structural | PASS | 1ms |
 | 12.23 | Report and evidence bundle both confirm zero production mutations | structural | PASS | 0ms |
-| 12.24 | POST /api/adaptive-forecast/analyze returns 401 without auth | runtime | PASS | 4ms |
-| 12.25 | GET /api/adaptive-forecast/reports returns 401 without auth | runtime | PASS | 1ms |
+| 12.24 | POST /api/adaptive-forecast/analyze returns 401 without auth | runtime | PASS | 5ms |
+| 12.25 | GET /api/adaptive-forecast/reports returns 401 without auth | runtime | PASS | 2ms |
 
 ### Evidence Details
 
@@ -2549,9 +2550,412 @@ This certification report validates the enterprise readiness of the Prescient La
 
 ---
 
+## Gate 13: Stress Testing & Robustness
+
+**Started**: 2026-02-21T21:57:43.626Z  
+**Completed**: 2026-02-21T21:57:43.723Z  
+**Result**: PASS
+
+| ID | Test | Proof Type | Result | Duration |
+|-----|------|------------|--------|----------|
+| 13.1 | Stress test produces report with 6 default scenarios and zero production mutations | runtime | PASS | 0ms |
+| 13.2 | Extreme demand spike scenario multiplies demand by ≥3.5x with stressed values exceeding 2x baseline average | runtime | PASS | 0ms |
+| 13.3 | Supplier outage scenario has supply disruption probability ≥30% and elevated lead times | runtime | PASS | 0ms |
+| 13.4 | Price shock scenario has price shock factor ≥1.5x | runtime | PASS | 0ms |
+| 13.5 | Lead-time disruption scenario has lead time multiplier ≥2.5x | runtime | PASS | 0ms |
+| 13.6 | Compound crisis scenario combines elevated demand, supply disruption, price shock, and lead time | runtime | PASS | 0ms |
+| 13.7 | Optimization stability correctly measures service level degradation and stockout risk increase under extreme demand | runtime | PASS | 0ms |
+| 13.8 | Moderate stress produces less degradation than extreme stress (severity ordering preserved) | deterministic | PASS | 0ms |
+| 13.9 | Uncertainty expansion triggers for at least one extreme scenario with multiplier in [1.0, 3.0] | runtime | PASS | 0ms |
+| 13.10 | Expanded uncertainty bands are strictly wider than original bands for all triggered scenarios | deterministic | PASS | 0ms |
+| 13.11 | CVaR delta metrics computed for all scenarios with non-negative tail risk amplification | runtime | PASS | 1ms |
+| 13.12 | Extreme scenarios produce higher average demand CVaR99 than moderate scenarios | deterministic | PASS | 0ms |
+| 13.13 | At least one extreme scenario triggers automation downgrade | runtime | PASS | 0ms |
+| 13.14 | At least one extreme scenario triggers emergency_halt or manual_only downgrade | runtime | PASS | 0ms |
+| 13.15 | Safe mode recommended for at least one scenario including at least one extreme | runtime | PASS | 0ms |
+| 13.16 | Escalation required for at least one high-risk stress scenario | runtime | PASS | 0ms |
+| 13.17 | All downgraded scenarios have non-empty trigger reasons explaining the downgrade | structural | PASS | 0ms |
+| 13.18 | All stress scenarios produce volatility estimates for all 4 regimes | structural | PASS | 0ms |
+| 13.19 | All stress scenarios produce model weight computations | structural | PASS | 0ms |
+| 13.20 | Aggregate summary has correct tallies, robustness score ∈ [0,1], and valid overall rating | runtime | PASS | 0ms |
+| 13.21 | Aggregate downgrade/safeMode/halt counts match individual scenario results | deterministic | PASS | 0ms |
+| 13.22 | Evidence bundle has provenance v6.0.0 with stress testing traceability metadata | structural | PASS | 0ms |
+| 13.23 | Config hash is deterministic: identical inputs produce identical SHA-256 hash | deterministic | PASS | 0ms |
+| 13.24 | Deterministic replay produces identical stress test results (hash, CVaR, stability, robustness score) | deterministic | PASS | 7ms |
+| 13.25 | Robustness report markdown includes all required sections and production safety | structural | PASS | 1ms |
+| 13.26 | Report and evidence bundle both confirm zero production mutations | structural | PASS | 0ms |
+| 13.27 | POST /api/stress-test/run returns 401 without auth | runtime | PASS | 3ms |
+| 13.28 | GET /api/stress-test/reports returns 401 without auth | runtime | PASS | 2ms |
+| 13.29 | Custom scenario specs produce targeted stress test with only specified scenarios | runtime | PASS | 2ms |
+| 13.30 | Baseline metrics include tail risk, 4-regime volatility, and uncertainty expansion state | structural | PASS | 0ms |
+
+### Evidence Details
+
+<details>
+<summary>13.1: Stress test produces report with 6 default scenarios and zero production mutations — PASS (runtime)</summary>
+
+- **Validated**: Report structure and default scenario count
+- **Proof Type**: runtime
+- **Endpoints/Functions**: stressTesting.runStressTest()
+- **Inputs**: 60-point baseline demand, 6 default scenarios, seed=42
+- **Expected**: 6 scenarios, 0 mutations, replayable=true, version=1.0.0
+- **Actual**: scenarios=6, mutations=0, replayable=true
+
+</details>
+
+<details>
+<summary>13.2: Extreme demand spike scenario multiplies demand by ≥3.5x with stressed values exceeding 2x baseline average — PASS (runtime)</summary>
+
+- **Validated**: Demand spike simulation correctness
+- **Proof Type**: runtime
+- **Endpoints/Functions**: stressTesting → demand_spike extreme
+- **Inputs**: Baseline avg demand ≈100, extreme spike multiplier
+- **Expected**: Demand multiplier ≥3.5, stressed avg > 2x baseline avg
+- **Actual**: multiplier=4, baselineAvg=100.5, stressedAvg=408.5
+
+</details>
+
+<details>
+<summary>13.3: Supplier outage scenario has supply disruption probability ≥30% and elevated lead times — PASS (runtime)</summary>
+
+- **Validated**: Supplier outage simulation parameters
+- **Proof Type**: runtime
+- **Endpoints/Functions**: stressTesting → supplier_outage severe
+- **Inputs**: Severe supplier outage scenario
+- **Expected**: supplyDisruptionProb ≥0.30, leadTimeMultiplier >1.0
+- **Actual**: supplyDisruptionProb=0.35, leadTimeMult=1.3
+
+</details>
+
+<details>
+<summary>13.4: Price shock scenario has price shock factor ≥1.5x — PASS (runtime)</summary>
+
+- **Validated**: Price shock simulation parameters
+- **Proof Type**: runtime
+- **Endpoints/Functions**: stressTesting → price_shock severe
+- **Inputs**: Severe price shock scenario
+- **Expected**: priceShockFactor ≥1.5
+- **Actual**: priceShockFactor=1.8
+
+</details>
+
+<details>
+<summary>13.5: Lead-time disruption scenario has lead time multiplier ≥2.5x — PASS (runtime)</summary>
+
+- **Validated**: Lead-time disruption simulation parameters
+- **Proof Type**: runtime
+- **Endpoints/Functions**: stressTesting → lead_time_disruption extreme
+- **Inputs**: Extreme lead-time disruption scenario
+- **Expected**: leadTimeMultiplier ≥2.5
+- **Actual**: leadTimeMultiplier=4
+
+</details>
+
+<details>
+<summary>13.6: Compound crisis scenario combines elevated demand, supply disruption, price shock, and lead time — PASS (runtime)</summary>
+
+- **Validated**: Compound multi-factor stress simulation
+- **Proof Type**: runtime
+- **Endpoints/Functions**: stressTesting → compound extreme
+- **Inputs**: Extreme compound scenario
+- **Expected**: All four multipliers elevated above baseline
+- **Actual**: demand=3.2, supply=0.54, price=2.0999999999999996, lead=2.8
+
+</details>
+
+<details>
+<summary>13.7: Optimization stability correctly measures service level degradation and stockout risk increase under extreme demand — PASS (runtime)</summary>
+
+- **Validated**: Optimization stability metrics under stress
+- **Proof Type**: runtime
+- **Endpoints/Functions**: stressTesting → optimizationStability
+- **Inputs**: Extreme demand spike scenario
+- **Expected**: Degradation >0, stressed SL < baseline SL, stabilityScore ∈ [0,1]
+- **Actual**: degradation=0.2778, stressedSL=0.658, score=0.1025
+
+</details>
+
+<details>
+<summary>13.8: Moderate stress produces less degradation than extreme stress (severity ordering preserved) — PASS (deterministic)</summary>
+
+- **Validated**: Severity ordering consistency
+- **Proof Type**: deterministic
+- **Endpoints/Functions**: stressTesting → optimization stability ordering
+- **Inputs**: Moderate vs extreme demand spike scenarios
+- **Expected**: moderateDegradation ≤ extremeDegradation
+- **Actual**: moderate=0.0801, extreme=0.2778
+
+</details>
+
+<details>
+<summary>13.9: Uncertainty expansion triggers for at least one extreme scenario with multiplier in [1.0, 3.0] — PASS (runtime)</summary>
+
+- **Validated**: Uncertainty expansion under extreme stress
+- **Proof Type**: runtime
+- **Endpoints/Functions**: stressTesting → uncertaintyExpansionUnderStress
+- **Inputs**: 3 extreme scenarios
+- **Expected**: At least one triggered, all multipliers ∈ [1.0, 3.0]
+- **Actual**: triggered=2/3, allValid=true
+
+</details>
+
+<details>
+<summary>13.10: Expanded uncertainty bands are strictly wider than original bands for all triggered scenarios — PASS (deterministic)</summary>
+
+- **Validated**: Uncertainty band widening correctness
+- **Proof Type**: deterministic
+- **Endpoints/Functions**: stressTesting → uncertainty band comparison
+- **Inputs**: 3 scenarios with triggered expansion
+- **Expected**: expandedWidth > originalWidth for all triggered
+- **Actual**: allWidened=true, count=3
+
+</details>
+
+<details>
+<summary>13.11: CVaR delta metrics computed for all scenarios with non-negative tail risk amplification — PASS (runtime)</summary>
+
+- **Validated**: CVaR delta metric structure and validity
+- **Proof Type**: runtime
+- **Endpoints/Functions**: stressTesting → cvarDelta
+- **Inputs**: All 6 stress scenarios
+- **Expected**: All CVaR deltas numeric, tailRiskAmplification ≥ 0
+- **Actual**: allValid=true, scenarios=6
+
+</details>
+
+<details>
+<summary>13.12: Extreme scenarios produce higher average demand CVaR99 than moderate scenarios — PASS (deterministic)</summary>
+
+- **Validated**: CVaR severity ordering
+- **Proof Type**: deterministic
+- **Endpoints/Functions**: stressTesting → tailRiskUnderStress.demandCVaR99
+- **Inputs**: 1 moderate, 3 extreme scenarios
+- **Expected**: avgExtremeCVaR99 ≥ avgModerateCVaR99
+- **Actual**: avgModerate=188.0900, avgExtreme=355.9800
+
+</details>
+
+<details>
+<summary>13.13: At least one extreme scenario triggers automation downgrade — PASS (runtime)</summary>
+
+- **Validated**: Automation downgrade under extreme stress
+- **Proof Type**: runtime
+- **Endpoints/Functions**: stressTesting → automationDowngrade
+- **Inputs**: 3 extreme scenarios
+- **Expected**: ≥1 extreme scenario triggers downgrade
+- **Actual**: downgraded=3/3
+
+</details>
+
+<details>
+<summary>13.14: At least one extreme scenario triggers emergency_halt or manual_only downgrade — PASS (runtime)</summary>
+
+- **Validated**: Downgrade severity escalation for extreme stress
+- **Proof Type**: runtime
+- **Endpoints/Functions**: stressTesting → automationDowngrade.downgradeSeverity
+- **Inputs**: Extreme severity scenarios
+- **Expected**: At least one emergency_halt or manual_only
+- **Actual**: severities=["emergency_halt","emergency_halt","emergency_halt"]
+
+</details>
+
+<details>
+<summary>13.15: Safe mode recommended for at least one scenario including at least one extreme — PASS (runtime)</summary>
+
+- **Validated**: Safe mode recommendation under stress
+- **Proof Type**: runtime
+- **Endpoints/Functions**: stressTesting → automationDowngrade.safeModeRecommended
+- **Inputs**: All scenarios
+- **Expected**: ≥1 safe mode recommendation, including extreme
+- **Actual**: total=5, extremeSafeMode=true
+
+</details>
+
+<details>
+<summary>13.16: Escalation required for at least one high-risk stress scenario — PASS (runtime)</summary>
+
+- **Validated**: Escalation requirement under extreme stress
+- **Proof Type**: runtime
+- **Endpoints/Functions**: stressTesting → automationDowngrade.escalationRequired
+- **Inputs**: All scenarios
+- **Expected**: ≥1 escalation required
+- **Actual**: escalated=5
+
+</details>
+
+<details>
+<summary>13.17: All downgraded scenarios have non-empty trigger reasons explaining the downgrade — PASS (structural)</summary>
+
+- **Validated**: Downgrade explainability
+- **Proof Type**: structural
+- **Endpoints/Functions**: stressTesting → automationDowngrade.triggerReasons
+- **Inputs**: All downgraded scenarios
+- **Expected**: triggerReasons.length > 0 for all downgraded
+- **Actual**: allHaveReasons=true
+
+</details>
+
+<details>
+<summary>13.18: All stress scenarios produce volatility estimates for all 4 regimes — PASS (structural)</summary>
+
+- **Validated**: Volatility estimation under stress
+- **Proof Type**: structural
+- **Endpoints/Functions**: stressTesting → volatilityUnderStress
+- **Inputs**: 6 stress scenarios
+- **Expected**: 4 volatility estimates per scenario
+- **Actual**: allHave4=true
+
+</details>
+
+<details>
+<summary>13.19: All stress scenarios produce model weight computations — PASS (structural)</summary>
+
+- **Validated**: Model weight recomputation under stress
+- **Proof Type**: structural
+- **Endpoints/Functions**: stressTesting → modelWeightsUnderStress
+- **Inputs**: 6 stress scenarios
+- **Expected**: Non-empty model weights array per scenario
+- **Actual**: allHaveWeights=true
+
+</details>
+
+<details>
+<summary>13.20: Aggregate summary has correct tallies, robustness score ∈ [0,1], and valid overall rating — PASS (runtime)</summary>
+
+- **Validated**: Aggregate summary correctness
+- **Proof Type**: runtime
+- **Endpoints/Functions**: stressTesting → aggregateSummary
+- **Inputs**: 6 scenarios
+- **Expected**: total=6, score ∈ [0,1], rating ∈ {robust,acceptable,fragile,critical}
+- **Actual**: total=6, score=0.3724, rating=fragile
+
+</details>
+
+<details>
+<summary>13.21: Aggregate downgrade/safeMode/halt counts match individual scenario results — PASS (deterministic)</summary>
+
+- **Validated**: Aggregate summary consistency with scenario results
+- **Proof Type**: deterministic
+- **Endpoints/Functions**: stressTesting → aggregateSummary vs scenarioResults
+- **Inputs**: 6 scenarios
+- **Expected**: Summary counts match individual scenario tallies
+- **Actual**: downgrades=5/5, safeMode=5, halts=5
+
+</details>
+
+<details>
+<summary>13.22: Evidence bundle has provenance v6.0.0 with stress testing traceability metadata — PASS (structural)</summary>
+
+- **Validated**: Evidence bundle provenance and traceability
+- **Proof Type**: structural
+- **Endpoints/Functions**: stressTesting → evidenceBundle
+- **Inputs**: Completed stress test
+- **Expected**: provenanceVersion=6.0.0, engineId=stress_testing_v1, all counts correct
+- **Actual**: provenance=6.0.0, engine=stress_testing_v1, scenarios=6
+
+</details>
+
+<details>
+<summary>13.23: Config hash is deterministic: identical inputs produce identical SHA-256 hash — PASS (deterministic)</summary>
+
+- **Validated**: Deterministic config hashing
+- **Proof Type**: deterministic
+- **Endpoints/Functions**: stressTesting.hashStressTestConfig()
+- **Inputs**: Same config twice
+- **Expected**: hash1 === hash2 === report.configHash
+- **Actual**: match=true, matchReport=true
+
+</details>
+
+<details>
+<summary>13.24: Deterministic replay produces identical stress test results (hash, CVaR, stability, robustness score) — PASS (deterministic)</summary>
+
+- **Validated**: Deterministic replay integrity
+- **Proof Type**: deterministic
+- **Endpoints/Functions**: stressTesting.runStressTest() × 2
+- **Inputs**: Same config, seed=42
+- **Expected**: All key metrics identical across runs
+- **Actual**: hashMatch=true, cvarMatch=true
+
+</details>
+
+<details>
+<summary>13.25: Robustness report markdown includes all required sections and production safety — PASS (structural)</summary>
+
+- **Validated**: Report artifact generation
+- **Proof Type**: structural
+- **Endpoints/Functions**: stressTesting.generateRobustnessReportMd()
+- **Inputs**: Completed robustness report
+- **Expected**: MD with all sections: Baseline, Scenarios, Stability, CVaR, Downgrade, Expansion, Aggregate, Safety
+- **Actual**: length=7308, hasSections=true
+
+</details>
+
+<details>
+<summary>13.26: Report and evidence bundle both confirm zero production mutations — PASS (structural)</summary>
+
+- **Validated**: Production safety guarantee
+- **Proof Type**: structural
+- **Endpoints/Functions**: stressTesting → productionMutations
+- **Inputs**: Completed stress test
+- **Expected**: report.productionMutations=0, evidence.productionMutations=0
+- **Actual**: report=0, evidence=0
+
+</details>
+
+<details>
+<summary>13.27: POST /api/stress-test/run returns 401 without auth — PASS (runtime)</summary>
+
+- **Validated**: Auth enforcement on stress test API
+- **Proof Type**: runtime
+- **Endpoints/Functions**: POST /api/stress-test/run
+- **Inputs**: No auth cookie
+- **Expected**: 401
+- **Actual**: 401
+
+</details>
+
+<details>
+<summary>13.28: GET /api/stress-test/reports returns 401 without auth — PASS (runtime)</summary>
+
+- **Validated**: Auth enforcement on stress test reports list
+- **Proof Type**: runtime
+- **Endpoints/Functions**: GET /api/stress-test/reports
+- **Inputs**: No auth cookie
+- **Expected**: 401
+- **Actual**: 401
+
+</details>
+
+<details>
+<summary>13.29: Custom scenario specs produce targeted stress test with only specified scenarios — PASS (runtime)</summary>
+
+- **Validated**: Custom scenario specification
+- **Proof Type**: runtime
+- **Endpoints/Functions**: stressTesting.runStressTest() with custom scenarios
+- **Inputs**: 2 custom scenarios: severe demand_spike, extreme supplier_outage
+- **Expected**: 2 scenario results matching specs
+- **Actual**: count=2, types=demand_spike,supplier_outage
+
+</details>
+
+<details>
+<summary>13.30: Baseline metrics include tail risk, 4-regime volatility, and uncertainty expansion state — PASS (structural)</summary>
+
+- **Validated**: Baseline metrics completeness
+- **Proof Type**: structural
+- **Endpoints/Functions**: stressTesting → baselineMetrics
+- **Inputs**: 60-point baseline data
+- **Expected**: Tail risk CVaR values, 4 volatility estimates, uncertainty expansion state
+- **Actual**: cvar95=107.8000, volCount=4, expansionTriggered=false
+
+</details>
+
+---
+
 ## Safe for Beta Recommendations
 
-All 181 tests across 12 gates passed. The platform is recommended as **safe for beta** under the following conditions:
+All 211 tests across 13 gates passed. The platform is recommended as **safe for beta** under the following conditions:
 
 1. **Single-instance deployment**: Distributed locks are implemented and ready for multi-instance but have been verified in single-instance mode.
 2. **Stripe webhook endpoint**: Must be registered before express.json() middleware to receive raw Buffer payloads.

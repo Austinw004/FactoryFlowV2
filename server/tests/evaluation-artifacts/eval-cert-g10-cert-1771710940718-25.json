@@ -1,0 +1,434 @@
+{
+  "evaluationVersion": "cert-g10-cert-1771710940718",
+  "runId": 25,
+  "companyId": "cert-1771710940718-co-alpha",
+  "generatedAt": "2026-02-21T21:55:44.384Z",
+  "summary": {
+    "forecast": {
+      "wape": 0.15141169772524216,
+      "smape": 0.1466292836034998,
+      "bias": -0.9073564784003189,
+      "mase": null,
+      "intermittentDemandRatio": 0,
+      "bucketedAccuracy": [
+        {
+          "confidenceBucket": "70-80%",
+          "predictedProbability": 0.7485055194870672,
+          "observedFrequency": 1,
+          "count": 6
+        },
+        {
+          "confidenceBucket": "80-90%",
+          "predictedProbability": 0.8589654461031215,
+          "observedFrequency": 1,
+          "count": 8
+        },
+        {
+          "confidenceBucket": "90-100%",
+          "predictedProbability": 0.9460401138195199,
+          "observedFrequency": 1,
+          "count": 6
+        }
+      ],
+      "reliabilityCurve": [
+        {
+          "binCenter": 0.75,
+          "observedFrequency": 1,
+          "count": 6
+        },
+        {
+          "binCenter": 0.8500000000000001,
+          "observedFrequency": 1,
+          "count": 8
+        },
+        {
+          "binCenter": 0.95,
+          "observedFrequency": 1,
+          "count": 6
+        }
+      ]
+    },
+    "allocation": {
+      "fillRate": 0,
+      "backorderReduction": 0,
+      "costEfficiency": 0.85,
+      "totalAllocated": 0,
+      "totalDemand": 0
+    },
+    "procurement": {
+      "estimatedSavings": 0,
+      "measuredSavings": null,
+      "savingsSeparation": "estimated_only",
+      "timingAccuracy": 0.72,
+      "ordersEvaluated": 1
+    },
+    "calibration": {
+      "reliabilityCurve": [
+        {
+          "binCenter": 0.75,
+          "observedFrequency": 1,
+          "count": 6
+        },
+        {
+          "binCenter": 0.8500000000000001,
+          "observedFrequency": 1,
+          "count": 8
+        },
+        {
+          "binCenter": 0.95,
+          "observedFrequency": 1,
+          "count": 6
+        }
+      ],
+      "bucketedAccuracy": [
+        {
+          "confidenceBucket": "70-80%",
+          "predictedProbability": 0.7485055194870672,
+          "observedFrequency": 1,
+          "count": 6
+        },
+        {
+          "confidenceBucket": "80-90%",
+          "predictedProbability": 0.8589654461031215,
+          "observedFrequency": 1,
+          "count": 8
+        },
+        {
+          "confidenceBucket": "90-100%",
+          "predictedProbability": 0.9460401138195199,
+          "observedFrequency": 1,
+          "count": 6
+        }
+      ],
+      "calibrationError": 0.14805013156677527
+    },
+    "benchmark": {
+      "baselines": [
+        {
+          "name": "naive_seasonal",
+          "wape": 0.14908226564464214,
+          "smape": 0.15139312676340722,
+          "bias": 6.739374574100722
+        },
+        {
+          "name": "moving_average_3",
+          "wape": 0.17432595221766461,
+          "smape": 0.177406583105686,
+          "bias": -0.9694635174095035
+        },
+        {
+          "name": "croston",
+          "wape": 0.17432595221766461,
+          "smape": 0.17682937796869516,
+          "bias": 8.56935404906219
+        },
+        {
+          "name": "simple_ets",
+          "wape": 0.17432595221766461,
+          "smape": 0.17682937796869516,
+          "bias": 8.56935404906219
+        }
+      ],
+      "liftBySegment": [
+        {
+          "segment": "synthetic",
+          "systemWape": 0.15141169772524216,
+          "baselineWape": 0.14908226564464214,
+          "liftPct": -1.5625145422410853,
+          "dataPoints": 20
+        }
+      ],
+      "liftByRegime": [
+        {
+          "regime": "HEALTHY_EXPANSION",
+          "systemWape": 0.06108172372442522,
+          "baselineWape": 0.3108188058216047,
+          "liftPct": 80.3481248301677,
+          "dataPoints": 6,
+          "fdrRange": {
+            "min": 0,
+            "max": 1.2
+          }
+        },
+        {
+          "regime": "ASSET_LED_GROWTH",
+          "systemWape": 0.09976309217948308,
+          "baselineWape": 0.5498751830157782,
+          "liftPct": 81.85713862692718,
+          "dataPoints": 3,
+          "fdrRange": {
+            "min": 1.2,
+            "max": 1.8
+          }
+        },
+        {
+          "regime": "IMBALANCED_EXCESS",
+          "systemWape": 0.15627952800424746,
+          "baselineWape": 0.0771210112446471,
+          "liftPct": -102.64195902267126,
+          "dataPoints": 1,
+          "fdrRange": {
+            "min": 1.8,
+            "max": 2.5
+          }
+        },
+        {
+          "regime": "REAL_ECONOMY_LEAD",
+          "systemWape": 0.207424465398145,
+          "baselineWape": 0.29497702574712104,
+          "liftPct": 29.681145549292175,
+          "dataPoints": 10,
+          "fdrRange": {
+            "min": 2.5,
+            "max": 10
+          }
+        }
+      ],
+      "liftByHorizon": [
+        {
+          "horizon": 1,
+          "systemWape": 0.12112935818019373,
+          "bestBaselineWape": 0.13417403908017791,
+          "liftPct": -1.718765996465194
+        },
+        {
+          "horizon": 7,
+          "systemWape": 0.15141169772524216,
+          "bestBaselineWape": 0.14908226564464214,
+          "liftPct": -1.5625145422410853
+        },
+        {
+          "horizon": 30,
+          "systemWape": 0.18169403727029057,
+          "bestBaselineWape": 0.16399049220910636,
+          "liftPct": -1.2500116337928684
+        }
+      ],
+      "predictionIntervals": {
+        "p50Coverage": 0.55,
+        "p90Coverage": 0.95,
+        "intervalCount": 20
+      },
+      "systemVsBestBaseline": {
+        "system": 0.15141169772524216,
+        "bestBaseline": 0.14908226564464214,
+        "baselineName": "naive_seasonal",
+        "liftPct": -1.5625145422410853
+      }
+    },
+    "dataPoints": 20,
+    "evaluatedAt": "2026-02-21T21:55:43.985Z"
+  },
+  "metrics": [
+    {
+      "runId": 25,
+      "category": "forecast",
+      "metricName": "wape",
+      "value": 0.15141169772524216
+    },
+    {
+      "runId": 25,
+      "category": "forecast",
+      "metricName": "smape",
+      "value": 0.1466292836034998
+    },
+    {
+      "runId": 25,
+      "category": "forecast",
+      "metricName": "bias",
+      "value": -0.9073564784003189
+    },
+    {
+      "runId": 25,
+      "category": "forecast",
+      "metricName": "intermittent_demand_ratio",
+      "value": 0
+    },
+    {
+      "runId": 25,
+      "category": "allocation",
+      "metricName": "fill_rate",
+      "value": 0
+    },
+    {
+      "runId": 25,
+      "category": "allocation",
+      "metricName": "backorder_reduction",
+      "value": 0
+    },
+    {
+      "runId": 25,
+      "category": "allocation",
+      "metricName": "cost_efficiency",
+      "value": 0.85
+    },
+    {
+      "runId": 25,
+      "category": "procurement",
+      "metricName": "estimated_savings",
+      "value": 0
+    },
+    {
+      "runId": 25,
+      "category": "procurement",
+      "metricName": "timing_accuracy",
+      "value": 0.72
+    },
+    {
+      "runId": 25,
+      "category": "calibration",
+      "metricName": "calibration_error",
+      "value": 0.14805013156677527
+    },
+    {
+      "runId": 25,
+      "category": "benchmark",
+      "metricName": "system_wape",
+      "value": 0.15141169772524216
+    },
+    {
+      "runId": 25,
+      "category": "benchmark",
+      "metricName": "best_baseline_wape",
+      "value": 0.14908226564464214
+    },
+    {
+      "runId": 25,
+      "category": "benchmark",
+      "metricName": "lift_pct",
+      "value": -1.5625145422410853
+    },
+    {
+      "runId": 25,
+      "category": "benchmark",
+      "metricName": "p50_coverage",
+      "value": 0.55
+    },
+    {
+      "runId": 25,
+      "category": "benchmark",
+      "metricName": "p90_coverage",
+      "value": 0.95
+    },
+    {
+      "runId": 25,
+      "category": "baseline",
+      "metricName": "naive_seasonal_wape",
+      "value": 0.14908226564464214
+    },
+    {
+      "runId": 25,
+      "category": "baseline",
+      "metricName": "naive_seasonal_smape",
+      "value": 0.15139312676340722
+    },
+    {
+      "runId": 25,
+      "category": "baseline",
+      "metricName": "moving_average_3_wape",
+      "value": 0.17432595221766461
+    },
+    {
+      "runId": 25,
+      "category": "baseline",
+      "metricName": "moving_average_3_smape",
+      "value": 0.177406583105686
+    },
+    {
+      "runId": 25,
+      "category": "baseline",
+      "metricName": "croston_wape",
+      "value": 0.17432595221766461
+    },
+    {
+      "runId": 25,
+      "category": "baseline",
+      "metricName": "croston_smape",
+      "value": 0.17682937796869516
+    },
+    {
+      "runId": 25,
+      "category": "baseline",
+      "metricName": "simple_ets_wape",
+      "value": 0.17432595221766461
+    },
+    {
+      "runId": 25,
+      "category": "baseline",
+      "metricName": "simple_ets_smape",
+      "value": 0.17682937796869516
+    },
+    {
+      "runId": 25,
+      "category": "regime_lift",
+      "metricName": "healthy_expansion_system_wape",
+      "value": 0.06108172372442522
+    },
+    {
+      "runId": 25,
+      "category": "regime_lift",
+      "metricName": "healthy_expansion_baseline_wape",
+      "value": 0.3108188058216047
+    },
+    {
+      "runId": 25,
+      "category": "regime_lift",
+      "metricName": "healthy_expansion_lift_pct",
+      "value": 80.3481248301677
+    },
+    {
+      "runId": 25,
+      "category": "regime_lift",
+      "metricName": "asset_led_growth_system_wape",
+      "value": 0.09976309217948308
+    },
+    {
+      "runId": 25,
+      "category": "regime_lift",
+      "metricName": "asset_led_growth_baseline_wape",
+      "value": 0.5498751830157782
+    },
+    {
+      "runId": 25,
+      "category": "regime_lift",
+      "metricName": "asset_led_growth_lift_pct",
+      "value": 81.85713862692718
+    },
+    {
+      "runId": 25,
+      "category": "regime_lift",
+      "metricName": "imbalanced_excess_system_wape",
+      "value": 0.15627952800424746
+    },
+    {
+      "runId": 25,
+      "category": "regime_lift",
+      "metricName": "imbalanced_excess_baseline_wape",
+      "value": 0.0771210112446471
+    },
+    {
+      "runId": 25,
+      "category": "regime_lift",
+      "metricName": "imbalanced_excess_lift_pct",
+      "value": -102.64195902267126
+    },
+    {
+      "runId": 25,
+      "category": "regime_lift",
+      "metricName": "real_economy_lead_system_wape",
+      "value": 0.207424465398145
+    },
+    {
+      "runId": 25,
+      "category": "regime_lift",
+      "metricName": "real_economy_lead_baseline_wape",
+      "value": 0.29497702574712104
+    },
+    {
+      "runId": 25,
+      "category": "regime_lift",
+      "metricName": "real_economy_lead_lift_pct",
+      "value": 29.681145549292175
+    }
+  ]
+}

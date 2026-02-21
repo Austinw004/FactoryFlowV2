@@ -10,6 +10,7 @@ import {
   materialConstraints, leadTimeDistributions,
   savingsEvidenceRecords, ssoConfigurations, scimProvisioningLog, auditExportConfigs,
   regimeBacktestReports, optimizationRuns, pilotExperiments, predictiveStabilityReports,
+  stressTestReports,
 } from "@shared/schema";
 import { storage } from "../../storage";
 import { AutomationEngine, buildTriggerEventId } from "../../lib/automationEngine";
@@ -3026,6 +3027,485 @@ async function gate12() {
   });
 }
 
+async function gate13() {
+  currentGate = "Gate 13: Stress Testing & Robustness";
+  console.log(`\n  ${currentGate}`);
+  const gateStart = TS();
+
+  const stressModule = await import("../../lib/stressTesting");
+  const { runStressTest, generateRobustnessReportMd, hashStressTestConfig, STRESS_ENGINE_VERSION } = stressModule;
+
+  const baselineDemand = Array.from({ length: 60 }, (_, i) => 100 + Math.sin(i * 0.3) * 20);
+  const baselineForecast = Array.from({ length: 60 }, (_, i) => 100 + Math.sin(i * 0.3) * 15);
+  const baselineFdrSeries = Array.from({ length: 60 }, (_, i) => 0.4 + Math.sin(i * 0.1) * 0.3);
+  const baselineForecastErrors = baselineDemand.map((d, i) => Math.abs(d - baselineForecast[i]) / Math.max(baselineForecast[i], 1));
+
+  const config: StressTestConfig = {
+    companyId: COMPANY_A,
+    version: "1.0.0",
+    seed: 42,
+    baselineDemand,
+    baselineForecast,
+    baselineFdrSeries,
+    baselineForecastErrors,
+    toleranceThreshold: 0.15,
+    rollingWindowSize: 12,
+    demandSamples: 500,
+    supplyDisruptionProbability: 0.05,
+  };
+
+  const report = runStressTest(config);
+
+  // 13.1: Report has correct structure with all default scenarios (6)
+  const t131 = Date.now();
+  const hasStructure = report.version === "1.0.0" &&
+    report.engineVersion === STRESS_ENGINE_VERSION &&
+    report.companyId === COMPANY_A &&
+    report.seed === 42 &&
+    report.scenarioResults.length === 6 &&
+    report.productionMutations === 0 &&
+    report.replayable === true;
+  assert(!!hasStructure, "13.1", "Stress test produces report with 6 default scenarios and zero production mutations",
+    { validated: "Report structure and default scenario count",
+      endpointsOrFunctions: "stressTesting.runStressTest()",
+      inputs: "60-point baseline demand, 6 default scenarios, seed=42",
+      expected: "6 scenarios, 0 mutations, replayable=true, version=1.0.0",
+      actual: `scenarios=${report.scenarioResults.length}, mutations=${report.productionMutations}, replayable=${report.replayable}`,
+      rawEvidence: { version: report.version, engine: report.engineVersion, scenarios: report.scenarioResults.length }, proofType: "runtime" }, t131);
+
+  // 13.2: Demand spike scenario produces stressed demand higher than baseline
+  const t132 = Date.now();
+  const demandSpike = report.scenarioResults.find(r => r.type === "demand_spike" && r.severity === "extreme");
+  const spikeValid = !!demandSpike &&
+    demandSpike.multipliers.demandMultiplier >= 3.5 &&
+    demandSpike.stressedDemand.length === 60;
+  const avgBaseline = baselineDemand.reduce((a, b) => a + b, 0) / 60;
+  const avgStressed = demandSpike ? demandSpike.stressedDemand.reduce((a, b) => a + b, 0) / 60 : 0;
+  const spikeHigher = avgStressed > avgBaseline * 2;
+  assert(!!spikeValid && spikeHigher, "13.2", "Extreme demand spike scenario multiplies demand by ≥3.5x with stressed values exceeding 2x baseline average",
+    { validated: "Demand spike simulation correctness",
+      endpointsOrFunctions: "stressTesting → demand_spike extreme",
+      inputs: "Baseline avg demand ≈100, extreme spike multiplier",
+      expected: "Demand multiplier ≥3.5, stressed avg > 2x baseline avg",
+      actual: `multiplier=${demandSpike?.multipliers.demandMultiplier}, baselineAvg=${avgBaseline.toFixed(1)}, stressedAvg=${avgStressed.toFixed(1)}`,
+      rawEvidence: { multiplier: demandSpike?.multipliers.demandMultiplier, ratio: avgStressed / avgBaseline }, proofType: "runtime" }, t132);
+
+  // 13.3: Supplier outage scenario has elevated supply disruption probability
+  const t133 = Date.now();
+  const supplierOutage = report.scenarioResults.find(r => r.type === "supplier_outage");
+  const outageValid = !!supplierOutage &&
+    supplierOutage.multipliers.supplyDisruptionProb >= 0.3 &&
+    supplierOutage.multipliers.leadTimeMultiplier > 1.0;
+  assert(!!outageValid, "13.3", "Supplier outage scenario has supply disruption probability ≥30% and elevated lead times",
+    { validated: "Supplier outage simulation parameters",
+      endpointsOrFunctions: "stressTesting → supplier_outage severe",
+      inputs: "Severe supplier outage scenario",
+      expected: "supplyDisruptionProb ≥0.30, leadTimeMultiplier >1.0",
+      actual: `supplyDisruptionProb=${supplierOutage?.multipliers.supplyDisruptionProb}, leadTimeMult=${supplierOutage?.multipliers.leadTimeMultiplier}`,
+      rawEvidence: supplierOutage?.multipliers, proofType: "runtime" }, t133);
+
+  // 13.4: Price shock scenario has elevated price shock factor
+  const t134 = Date.now();
+  const priceShock = report.scenarioResults.find(r => r.type === "price_shock");
+  const priceValid = !!priceShock &&
+    priceShock.multipliers.priceShockFactor >= 1.5;
+  assert(!!priceValid, "13.4", "Price shock scenario has price shock factor ≥1.5x",
+    { validated: "Price shock simulation parameters",
+      endpointsOrFunctions: "stressTesting → price_shock severe",
+      inputs: "Severe price shock scenario",
+      expected: "priceShockFactor ≥1.5",
+      actual: `priceShockFactor=${priceShock?.multipliers.priceShockFactor}`,
+      rawEvidence: priceShock?.multipliers, proofType: "runtime" }, t134);
+
+  // 13.5: Lead-time disruption scenario has extreme lead time multiplier
+  const t135 = Date.now();
+  const leadTimeDisruption = report.scenarioResults.find(r => r.type === "lead_time_disruption");
+  const ltValid = !!leadTimeDisruption &&
+    leadTimeDisruption.multipliers.leadTimeMultiplier >= 2.5;
+  assert(!!ltValid, "13.5", "Lead-time disruption scenario has lead time multiplier ≥2.5x",
+    { validated: "Lead-time disruption simulation parameters",
+      endpointsOrFunctions: "stressTesting → lead_time_disruption extreme",
+      inputs: "Extreme lead-time disruption scenario",
+      expected: "leadTimeMultiplier ≥2.5",
+      actual: `leadTimeMultiplier=${leadTimeDisruption?.multipliers.leadTimeMultiplier}`,
+      rawEvidence: leadTimeDisruption?.multipliers, proofType: "runtime" }, t135);
+
+  // 13.6: Compound scenario combines all stress factors simultaneously
+  const t136 = Date.now();
+  const compound = report.scenarioResults.find(r => r.type === "compound");
+  const compoundValid = !!compound &&
+    compound.multipliers.demandMultiplier > 1.5 &&
+    compound.multipliers.supplyDisruptionProb > 0.2 &&
+    compound.multipliers.priceShockFactor > 1.3 &&
+    compound.multipliers.leadTimeMultiplier > 1.5;
+  assert(!!compoundValid, "13.6", "Compound crisis scenario combines elevated demand, supply disruption, price shock, and lead time",
+    { validated: "Compound multi-factor stress simulation",
+      endpointsOrFunctions: "stressTesting → compound extreme",
+      inputs: "Extreme compound scenario",
+      expected: "All four multipliers elevated above baseline",
+      actual: `demand=${compound?.multipliers.demandMultiplier}, supply=${compound?.multipliers.supplyDisruptionProb}, price=${compound?.multipliers.priceShockFactor}, lead=${compound?.multipliers.leadTimeMultiplier}`,
+      rawEvidence: compound?.multipliers, proofType: "runtime" }, t136);
+
+  // 13.7: Optimization stability measures service level degradation under stress
+  const t137 = Date.now();
+  const extremeSpike = report.scenarioResults.find(r => r.type === "demand_spike" && r.severity === "extreme");
+  const stabValid = !!extremeSpike &&
+    extremeSpike.optimizationStability.serviceLevelDegradation > 0 &&
+    extremeSpike.optimizationStability.stressedServiceLevel < extremeSpike.optimizationStability.baselineServiceLevel &&
+    extremeSpike.optimizationStability.stockoutRiskIncrease >= 0 &&
+    extremeSpike.optimizationStability.stabilityScore >= 0 &&
+    extremeSpike.optimizationStability.stabilityScore <= 1;
+  assert(!!stabValid, "13.7", "Optimization stability correctly measures service level degradation and stockout risk increase under extreme demand",
+    { validated: "Optimization stability metrics under stress",
+      endpointsOrFunctions: "stressTesting → optimizationStability",
+      inputs: "Extreme demand spike scenario",
+      expected: "Degradation >0, stressed SL < baseline SL, stabilityScore ∈ [0,1]",
+      actual: `degradation=${extremeSpike?.optimizationStability.serviceLevelDegradation}, stressedSL=${extremeSpike?.optimizationStability.stressedServiceLevel}, score=${extremeSpike?.optimizationStability.stabilityScore}`,
+      rawEvidence: extremeSpike?.optimizationStability, proofType: "runtime" }, t137);
+
+  // 13.8: Moderate scenario has less degradation than extreme
+  const t138 = Date.now();
+  const moderateSpike = report.scenarioResults.find(r => r.type === "demand_spike" && r.severity === "moderate");
+  const sevOrdering = !!moderateSpike && !!extremeSpike &&
+    moderateSpike.optimizationStability.serviceLevelDegradation <= extremeSpike.optimizationStability.serviceLevelDegradation;
+  assert(!!sevOrdering, "13.8", "Moderate stress produces less degradation than extreme stress (severity ordering preserved)",
+    { validated: "Severity ordering consistency",
+      endpointsOrFunctions: "stressTesting → optimization stability ordering",
+      inputs: "Moderate vs extreme demand spike scenarios",
+      expected: "moderateDegradation ≤ extremeDegradation",
+      actual: `moderate=${moderateSpike?.optimizationStability.serviceLevelDegradation}, extreme=${extremeSpike?.optimizationStability.serviceLevelDegradation}`,
+      rawEvidence: { moderate: moderateSpike?.optimizationStability.serviceLevelDegradation, extreme: extremeSpike?.optimizationStability.serviceLevelDegradation }, proofType: "deterministic" }, t138);
+
+  // 13.9: Uncertainty expansion triggers under extreme stress errors
+  const t139 = Date.now();
+  const extremeScenarios = report.scenarioResults.filter(r => r.severity === "extreme");
+  const anyUncertaintyExpanded = extremeScenarios.some(r => r.uncertaintyExpansionUnderStress.triggered);
+  const allExpansionsValid = extremeScenarios.every(r =>
+    r.uncertaintyExpansionUnderStress.expansionMultiplier >= 1.0 &&
+    r.uncertaintyExpansionUnderStress.expansionMultiplier <= 3.0
+  );
+  assert(anyUncertaintyExpanded && allExpansionsValid, "13.9", "Uncertainty expansion triggers for at least one extreme scenario with multiplier in [1.0, 3.0]",
+    { validated: "Uncertainty expansion under extreme stress",
+      endpointsOrFunctions: "stressTesting → uncertaintyExpansionUnderStress",
+      inputs: `${extremeScenarios.length} extreme scenarios`,
+      expected: "At least one triggered, all multipliers ∈ [1.0, 3.0]",
+      actual: `triggered=${extremeScenarios.filter(r => r.uncertaintyExpansionUnderStress.triggered).length}/${extremeScenarios.length}, allValid=${allExpansionsValid}`,
+      rawEvidence: extremeScenarios.map(r => ({ type: r.type, triggered: r.uncertaintyExpansionUnderStress.triggered, mult: r.uncertaintyExpansionUnderStress.expansionMultiplier })), proofType: "runtime" }, t139);
+
+  // 13.10: Uncertainty bands widen (expanded band wider than original) when triggered
+  const t1310 = Date.now();
+  const expandedScenarios = report.scenarioResults.filter(r => r.uncertaintyExpansionUnderStress.triggered);
+  const bandsWidened = expandedScenarios.every(r => {
+    const orig = r.uncertaintyExpansionUnderStress.originalBand;
+    const exp = r.uncertaintyExpansionUnderStress.expandedBand;
+    return (exp.upper - exp.lower) > (orig.upper - orig.lower);
+  });
+  assert(expandedScenarios.length > 0 && bandsWidened, "13.10", "Expanded uncertainty bands are strictly wider than original bands for all triggered scenarios",
+    { validated: "Uncertainty band widening correctness",
+      endpointsOrFunctions: "stressTesting → uncertainty band comparison",
+      inputs: `${expandedScenarios.length} scenarios with triggered expansion`,
+      expected: "expandedWidth > originalWidth for all triggered",
+      actual: `allWidened=${bandsWidened}, count=${expandedScenarios.length}`,
+      rawEvidence: expandedScenarios.map(r => ({ type: r.type, origWidth: r.uncertaintyExpansionUnderStress.originalBand.upper - r.uncertaintyExpansionUnderStress.originalBand.lower, expWidth: r.uncertaintyExpansionUnderStress.expandedBand.upper - r.uncertaintyExpansionUnderStress.expandedBand.lower })), proofType: "deterministic" }, t1310);
+
+  // 13.11: CVaR delta tracks tail risk amplification under stress
+  const t1311 = Date.now();
+  const cvarValid = report.scenarioResults.every(r =>
+    typeof r.cvarDelta.baselineDemandCVaR95 === "number" &&
+    typeof r.cvarDelta.stressedDemandCVaR95 === "number" &&
+    typeof r.cvarDelta.tailRiskAmplification === "number" &&
+    r.cvarDelta.tailRiskAmplification >= 0
+  );
+  assert(cvarValid, "13.11", "CVaR delta metrics computed for all scenarios with non-negative tail risk amplification",
+    { validated: "CVaR delta metric structure and validity",
+      endpointsOrFunctions: "stressTesting → cvarDelta",
+      inputs: "All 6 stress scenarios",
+      expected: "All CVaR deltas numeric, tailRiskAmplification ≥ 0",
+      actual: `allValid=${cvarValid}, scenarios=${report.scenarioResults.length}`,
+      rawEvidence: report.scenarioResults.map(r => ({ type: r.type, amp: r.cvarDelta.tailRiskAmplification })), proofType: "runtime" }, t1311);
+
+  // 13.12: Extreme scenarios have higher CVaR99 than moderate scenarios
+  const t1312 = Date.now();
+  const moderateResults = report.scenarioResults.filter(r => r.severity === "moderate");
+  const extremeResults = report.scenarioResults.filter(r => r.severity === "extreme");
+  const avgModCVaR = moderateResults.length > 0 ? moderateResults.reduce((a, r) => a + r.tailRiskUnderStress.demandCVaR99, 0) / moderateResults.length : 0;
+  const avgExtCVaR = extremeResults.length > 0 ? extremeResults.reduce((a, r) => a + r.tailRiskUnderStress.demandCVaR99, 0) / extremeResults.length : 0;
+  const cvarOrdering = moderateResults.length === 0 || avgExtCVaR >= avgModCVaR;
+  assert(cvarOrdering, "13.12", "Extreme scenarios produce higher average demand CVaR99 than moderate scenarios",
+    { validated: "CVaR severity ordering",
+      endpointsOrFunctions: "stressTesting → tailRiskUnderStress.demandCVaR99",
+      inputs: `${moderateResults.length} moderate, ${extremeResults.length} extreme scenarios`,
+      expected: "avgExtremeCVaR99 ≥ avgModerateCVaR99",
+      actual: `avgModerate=${avgModCVaR.toFixed(4)}, avgExtreme=${avgExtCVaR.toFixed(4)}`,
+      rawEvidence: { avgModCVaR, avgExtCVaR }, proofType: "deterministic" }, t1312);
+
+  // 13.13: Automation downgrade triggers for extreme scenarios
+  const t1313 = Date.now();
+  const extremeDowngrades = extremeResults.filter(r => r.automationDowngrade.shouldDowngrade);
+  const extremeDowngraded = extremeDowngrades.length >= 1;
+  assert(extremeDowngraded, "13.13", "At least one extreme scenario triggers automation downgrade",
+    { validated: "Automation downgrade under extreme stress",
+      endpointsOrFunctions: "stressTesting → automationDowngrade",
+      inputs: `${extremeResults.length} extreme scenarios`,
+      expected: "≥1 extreme scenario triggers downgrade",
+      actual: `downgraded=${extremeDowngrades.length}/${extremeResults.length}`,
+      rawEvidence: extremeResults.map(r => ({ type: r.type, downgrade: r.automationDowngrade.shouldDowngrade, severity: r.automationDowngrade.downgradeSeverity })), proofType: "runtime" }, t1313);
+
+  // 13.14: Downgrade severity is appropriate (extreme → emergency_halt or manual_only)
+  const t1314 = Date.now();
+  const extremeDowngradeSeverities = extremeResults.map(r => r.automationDowngrade.downgradeSeverity);
+  const hasStrongDowngrade = extremeDowngradeSeverities.some(s => s === "emergency_halt" || s === "manual_only");
+  assert(hasStrongDowngrade, "13.14", "At least one extreme scenario triggers emergency_halt or manual_only downgrade",
+    { validated: "Downgrade severity escalation for extreme stress",
+      endpointsOrFunctions: "stressTesting → automationDowngrade.downgradeSeverity",
+      inputs: "Extreme severity scenarios",
+      expected: "At least one emergency_halt or manual_only",
+      actual: `severities=${JSON.stringify(extremeDowngradeSeverities)}`,
+      rawEvidence: { severities: extremeDowngradeSeverities }, proofType: "runtime" }, t1314);
+
+  // 13.15: Safe-mode recommended for high-risk scenarios
+  const t1315 = Date.now();
+  const safeModeRecommended = report.scenarioResults.filter(r => r.automationDowngrade.safeModeRecommended);
+  const safeModeForExtreme = extremeResults.some(r => r.automationDowngrade.safeModeRecommended);
+  assert(safeModeRecommended.length >= 1 && safeModeForExtreme, "13.15", "Safe mode recommended for at least one scenario including at least one extreme",
+    { validated: "Safe mode recommendation under stress",
+      endpointsOrFunctions: "stressTesting → automationDowngrade.safeModeRecommended",
+      inputs: "All scenarios",
+      expected: "≥1 safe mode recommendation, including extreme",
+      actual: `total=${safeModeRecommended.length}, extremeSafeMode=${safeModeForExtreme}`,
+      rawEvidence: { total: safeModeRecommended.length, forExtreme: safeModeForExtreme }, proofType: "runtime" }, t1315);
+
+  // 13.16: Escalation required for highest-risk scenarios
+  const t1316 = Date.now();
+  const escalated = report.scenarioResults.filter(r => r.automationDowngrade.escalationRequired);
+  const anyEscalated = escalated.length >= 1;
+  assert(anyEscalated, "13.16", "Escalation required for at least one high-risk stress scenario",
+    { validated: "Escalation requirement under extreme stress",
+      endpointsOrFunctions: "stressTesting → automationDowngrade.escalationRequired",
+      inputs: "All scenarios",
+      expected: "≥1 escalation required",
+      actual: `escalated=${escalated.length}`,
+      rawEvidence: escalated.map(r => ({ type: r.type, riskScore: r.automationDowngrade.riskScore })), proofType: "runtime" }, t1316);
+
+  // 13.17: Downgrade trigger reasons are non-empty for downgraded scenarios
+  const t1317 = Date.now();
+  const downgradedWithReasons = report.scenarioResults
+    .filter(r => r.automationDowngrade.shouldDowngrade)
+    .every(r => r.automationDowngrade.triggerReasons.length > 0);
+  assert(downgradedWithReasons, "13.17", "All downgraded scenarios have non-empty trigger reasons explaining the downgrade",
+    { validated: "Downgrade explainability",
+      endpointsOrFunctions: "stressTesting → automationDowngrade.triggerReasons",
+      inputs: "All downgraded scenarios",
+      expected: "triggerReasons.length > 0 for all downgraded",
+      actual: `allHaveReasons=${downgradedWithReasons}`,
+      rawEvidence: report.scenarioResults.filter(r => r.automationDowngrade.shouldDowngrade).map(r => ({ type: r.type, reasons: r.automationDowngrade.triggerReasons.length })), proofType: "structural" }, t1317);
+
+  // 13.18: Volatility estimates exist under stress for all scenarios
+  const t1318 = Date.now();
+  const allHaveVol = report.scenarioResults.every(r =>
+    Array.isArray(r.volatilityUnderStress) && r.volatilityUnderStress.length === 4
+  );
+  assert(allHaveVol, "13.18", "All stress scenarios produce volatility estimates for all 4 regimes",
+    { validated: "Volatility estimation under stress",
+      endpointsOrFunctions: "stressTesting → volatilityUnderStress",
+      inputs: "6 stress scenarios",
+      expected: "4 volatility estimates per scenario",
+      actual: `allHave4=${allHaveVol}`,
+      rawEvidence: report.scenarioResults.map(r => ({ type: r.type, volCount: r.volatilityUnderStress.length })), proofType: "structural" }, t1318);
+
+  // 13.19: Model weights computed under stress for all scenarios
+  const t1319 = Date.now();
+  const allHaveWeights = report.scenarioResults.every(r =>
+    Array.isArray(r.modelWeightsUnderStress) && r.modelWeightsUnderStress.length > 0
+  );
+  assert(allHaveWeights, "13.19", "All stress scenarios produce model weight computations",
+    { validated: "Model weight recomputation under stress",
+      endpointsOrFunctions: "stressTesting → modelWeightsUnderStress",
+      inputs: "6 stress scenarios",
+      expected: "Non-empty model weights array per scenario",
+      actual: `allHaveWeights=${allHaveWeights}`,
+      rawEvidence: report.scenarioResults.map(r => ({ type: r.type, weightCount: r.modelWeightsUnderStress.length })), proofType: "structural" }, t1319);
+
+  // 13.20: Aggregate summary correctly tallies scenarios
+  const t1320 = Date.now();
+  const summary = report.aggregateSummary;
+  const summaryValid = summary.totalScenarios === 6 &&
+    summary.scenariosPassed + summary.scenariosFailed === 6 &&
+    typeof summary.worstCaseScenario === "string" && summary.worstCaseScenario.length > 0 &&
+    typeof summary.worstCaseCVaR99 === "number" &&
+    typeof summary.overallRobustnessScore === "number" &&
+    summary.overallRobustnessScore >= 0 && summary.overallRobustnessScore <= 1 &&
+    ["robust", "acceptable", "fragile", "critical"].includes(summary.overallRating);
+  assert(!!summaryValid, "13.20", "Aggregate summary has correct tallies, robustness score ∈ [0,1], and valid overall rating",
+    { validated: "Aggregate summary correctness",
+      endpointsOrFunctions: "stressTesting → aggregateSummary",
+      inputs: "6 scenarios",
+      expected: "total=6, score ∈ [0,1], rating ∈ {robust,acceptable,fragile,critical}",
+      actual: `total=${summary.totalScenarios}, score=${summary.overallRobustnessScore}, rating=${summary.overallRating}`,
+      rawEvidence: summary, proofType: "runtime" }, t1320);
+
+  // 13.21: Aggregate summary automation downgrade count matches scenario results
+  const t1321 = Date.now();
+  const actualDowngrades = report.scenarioResults.filter(r => r.automationDowngrade.shouldDowngrade).length;
+  const summaryMatches = summary.automationDowngradesTriggered === actualDowngrades &&
+    summary.safeModeRecommendations === report.scenarioResults.filter(r => r.automationDowngrade.safeModeRecommended).length &&
+    summary.emergencyHalts === report.scenarioResults.filter(r => r.automationDowngrade.downgradeSeverity === "emergency_halt").length;
+  assert(summaryMatches, "13.21", "Aggregate downgrade/safeMode/halt counts match individual scenario results",
+    { validated: "Aggregate summary consistency with scenario results",
+      endpointsOrFunctions: "stressTesting → aggregateSummary vs scenarioResults",
+      inputs: "6 scenarios",
+      expected: "Summary counts match individual scenario tallies",
+      actual: `downgrades=${summary.automationDowngradesTriggered}/${actualDowngrades}, safeMode=${summary.safeModeRecommendations}, halts=${summary.emergencyHalts}`,
+      rawEvidence: { summaryDowngrades: summary.automationDowngradesTriggered, actualDowngrades }, proofType: "deterministic" }, t1321);
+
+  // 13.22: Evidence bundle has provenance v6.0.0
+  const t1322 = Date.now();
+  const eb = report.evidenceBundle;
+  const ebValid = eb.provenanceVersion === "6.0.0" &&
+    eb.engineId === "stress_testing_v1" &&
+    eb.engineVersion === STRESS_ENGINE_VERSION &&
+    eb.companyId === COMPANY_A &&
+    eb.configHash === report.configHash &&
+    eb.seed === 42 &&
+    eb.scenarioCount === 6 &&
+    eb.baselineDemandLength === 60 &&
+    eb.baselineFdrLength === 60 &&
+    eb.productionMutations === 0 &&
+    eb.replayable === true;
+  assert(ebValid, "13.22", "Evidence bundle has provenance v6.0.0 with stress testing traceability metadata",
+    { validated: "Evidence bundle provenance and traceability",
+      endpointsOrFunctions: "stressTesting → evidenceBundle",
+      inputs: "Completed stress test",
+      expected: "provenanceVersion=6.0.0, engineId=stress_testing_v1, all counts correct",
+      actual: `provenance=${eb.provenanceVersion}, engine=${eb.engineId}, scenarios=${eb.scenarioCount}`,
+      rawEvidence: eb, proofType: "structural" }, t1322);
+
+  // 13.23: Config hash is deterministic
+  const t1323 = Date.now();
+  const hash1 = hashStressTestConfig(config);
+  const hash2 = hashStressTestConfig(config);
+  assert(hash1 === hash2 && hash1 === report.configHash, "13.23", "Config hash is deterministic: identical inputs produce identical SHA-256 hash",
+    { validated: "Deterministic config hashing",
+      endpointsOrFunctions: "stressTesting.hashStressTestConfig()",
+      inputs: "Same config twice",
+      expected: "hash1 === hash2 === report.configHash",
+      actual: `match=${hash1 === hash2}, matchReport=${hash1 === report.configHash}`,
+      rawEvidence: { hash1, hash2, reportHash: report.configHash }, proofType: "deterministic" }, t1323);
+
+  // 13.24: Deterministic replay produces identical results
+  const t1324 = Date.now();
+  const report2 = runStressTest(config);
+  const replayMatch = report2.configHash === report.configHash &&
+    report2.scenarioResults.length === report.scenarioResults.length &&
+    report2.scenarioResults[0].cvarDelta.stressedDemandCVaR95 === report.scenarioResults[0].cvarDelta.stressedDemandCVaR95 &&
+    report2.scenarioResults[0].optimizationStability.stabilityScore === report.scenarioResults[0].optimizationStability.stabilityScore &&
+    report2.aggregateSummary.overallRobustnessScore === report.aggregateSummary.overallRobustnessScore;
+  assert(replayMatch, "13.24", "Deterministic replay produces identical stress test results (hash, CVaR, stability, robustness score)",
+    { validated: "Deterministic replay integrity",
+      endpointsOrFunctions: "stressTesting.runStressTest() × 2",
+      inputs: "Same config, seed=42",
+      expected: "All key metrics identical across runs",
+      actual: `hashMatch=${report2.configHash === report.configHash}, cvarMatch=${report2.scenarioResults[0].cvarDelta.stressedDemandCVaR95 === report.scenarioResults[0].cvarDelta.stressedDemandCVaR95}`,
+      rawEvidence: { hash1: report.configHash, hash2: report2.configHash, robustness1: report.aggregateSummary.overallRobustnessScore, robustness2: report2.aggregateSummary.overallRobustnessScore }, proofType: "deterministic" }, t1324);
+
+  // 13.25: Robustness report markdown has all required sections
+  const t1325 = Date.now();
+  const md = generateRobustnessReportMd(report);
+  const mdValid = md.length > 1000 &&
+    md.includes("Robustness & Stability Report") &&
+    md.includes("Baseline Metrics") &&
+    md.includes("Stress Scenario Results") &&
+    md.includes("Optimization Stability") &&
+    md.includes("CVaR Delta") &&
+    md.includes("Automation Downgrade") &&
+    md.includes("Uncertainty Expansion") &&
+    md.includes("Aggregate Summary") &&
+    md.includes("Production Safety") &&
+    md.includes("Production mutations: 0");
+  assert(!!mdValid, "13.25", "Robustness report markdown includes all required sections and production safety",
+    { validated: "Report artifact generation",
+      endpointsOrFunctions: "stressTesting.generateRobustnessReportMd()",
+      inputs: "Completed robustness report",
+      expected: "MD with all sections: Baseline, Scenarios, Stability, CVaR, Downgrade, Expansion, Aggregate, Safety",
+      actual: `length=${md.length}, hasSections=${mdValid}`,
+      rawEvidence: { length: md.length }, proofType: "structural" }, t1325);
+
+  // 13.26: Zero production mutations in report and evidence
+  const t1326 = Date.now();
+  const zeroMutations = report.productionMutations === 0 && report.evidenceBundle.productionMutations === 0;
+  assert(zeroMutations, "13.26", "Report and evidence bundle both confirm zero production mutations",
+    { validated: "Production safety guarantee",
+      endpointsOrFunctions: "stressTesting → productionMutations",
+      inputs: "Completed stress test",
+      expected: "report.productionMutations=0, evidence.productionMutations=0",
+      actual: `report=${report.productionMutations}, evidence=${report.evidenceBundle.productionMutations}`,
+      rawEvidence: { reportMutations: report.productionMutations, evidenceMutations: report.evidenceBundle.productionMutations }, proofType: "structural" }, t1326);
+
+  // 13.27: POST /api/stress-test/run returns 401 without auth
+  const t1327 = Date.now();
+  const noAuth = await httpPost("/api/stress-test/run", { baselineDemand: [100], baselineFdrSeries: [0.5] });
+  assert(noAuth.status === 401, "13.27", "POST /api/stress-test/run returns 401 without auth",
+    { validated: "Auth enforcement on stress test API",
+      endpointsOrFunctions: "POST /api/stress-test/run",
+      inputs: "No auth cookie",
+      expected: "401",
+      actual: `${noAuth.status}`,
+      rawEvidence: { status: noAuth.status }, proofType: "runtime" }, t1327);
+
+  // 13.28: GET /api/stress-test/reports returns 401 without auth
+  const t1328 = Date.now();
+  const noAuthList = await httpGet("/api/stress-test/reports");
+  assert(noAuthList.status === 401, "13.28", "GET /api/stress-test/reports returns 401 without auth",
+    { validated: "Auth enforcement on stress test reports list",
+      endpointsOrFunctions: "GET /api/stress-test/reports",
+      inputs: "No auth cookie",
+      expected: "401",
+      actual: `${noAuthList.status}`,
+      rawEvidence: { status: noAuthList.status }, proofType: "runtime" }, t1328);
+
+  // 13.29: Custom scenario spec produces targeted stress test
+  const t1329 = Date.now();
+  const customConfig: StressTestConfig = {
+    ...config,
+    scenarios: [
+      { type: "demand_spike", severity: "severe", label: "Custom severe spike" },
+      { type: "supplier_outage", severity: "extreme", label: "Custom extreme outage" },
+    ],
+  };
+  const customReport = runStressTest(customConfig);
+  const customValid = customReport.scenarioResults.length === 2 &&
+    customReport.scenarioResults[0].type === "demand_spike" &&
+    customReport.scenarioResults[1].type === "supplier_outage" &&
+    customReport.aggregateSummary.totalScenarios === 2;
+  assert(!!customValid, "13.29", "Custom scenario specs produce targeted stress test with only specified scenarios",
+    { validated: "Custom scenario specification",
+      endpointsOrFunctions: "stressTesting.runStressTest() with custom scenarios",
+      inputs: "2 custom scenarios: severe demand_spike, extreme supplier_outage",
+      expected: "2 scenario results matching specs",
+      actual: `count=${customReport.scenarioResults.length}, types=${customReport.scenarioResults.map(r => r.type).join(",")}`,
+      rawEvidence: { count: customReport.scenarioResults.length, types: customReport.scenarioResults.map(r => r.type) }, proofType: "runtime" }, t1329);
+
+  // 13.30: Baseline metrics are populated in the report
+  const t1330 = Date.now();
+  const baselineValid = typeof report.baselineMetrics.tailRisk.demandCVaR95 === "number" &&
+    typeof report.baselineMetrics.tailRisk.demandCVaR99 === "number" &&
+    Array.isArray(report.baselineMetrics.volatility) && report.baselineMetrics.volatility.length === 4 &&
+    typeof report.baselineMetrics.uncertaintyExpansion.triggered === "boolean";
+  assert(!!baselineValid, "13.30", "Baseline metrics include tail risk, 4-regime volatility, and uncertainty expansion state",
+    { validated: "Baseline metrics completeness",
+      endpointsOrFunctions: "stressTesting → baselineMetrics",
+      inputs: "60-point baseline data",
+      expected: "Tail risk CVaR values, 4 volatility estimates, uncertainty expansion state",
+      actual: `cvar95=${report.baselineMetrics.tailRisk.demandCVaR95.toFixed(4)}, volCount=${report.baselineMetrics.volatility.length}, expansionTriggered=${report.baselineMetrics.uncertaintyExpansion.triggered}`,
+      rawEvidence: { cvar95: report.baselineMetrics.tailRisk.demandCVaR95, volCount: report.baselineMetrics.volatility.length }, proofType: "structural" }, t1330);
+
+  gateResults.push({
+    gate: currentGate, description: "Stress testing and robustness module with demand spikes, supplier outages, price shocks, lead-time disruptions, optimization stability, uncertainty expansion, CVaR tracking, automation downgrade, and safe-mode escalation",
+    pass: results.filter(r => r.gate === currentGate).every(r => r.pass),
+    tests: results.filter(r => r.gate === currentGate), startedAt: gateStart, completedAt: TS(),
+  });
+}
+
 async function cleanup() {
   console.log("\n  Cleaning up test data...");
   try {
@@ -3060,6 +3540,8 @@ async function cleanup() {
     await db.execute(sql`DELETE FROM pilot_experiments WHERE company_id = ${COMPANY_B}`);
     await db.execute(sql`DELETE FROM predictive_stability_reports WHERE company_id = ${COMPANY_A}`);
     await db.execute(sql`DELETE FROM predictive_stability_reports WHERE company_id = ${COMPANY_B}`);
+    await db.execute(sql`DELETE FROM stress_test_reports WHERE company_id = ${COMPANY_A}`);
+    await db.execute(sql`DELETE FROM stress_test_reports WHERE company_id = ${COMPANY_B}`);
     await db.delete(companies).where(eq(companies.id, `${PREFIX}-safemode-test`));
     await db.delete(companies).where(eq(companies.id, COMPANY_A));
     await db.delete(companies).where(eq(companies.id, COMPANY_B));
@@ -3071,13 +3553,13 @@ async function cleanup() {
 
 async function main() {
   console.log("================================================================");
-  console.log("  ENTERPRISE E2E CERTIFICATION HARNESS v6.0.0");
+  console.log("  ENTERPRISE E2E CERTIFICATION HARNESS v7.0.0");
   console.log(`  Date: ${new Date().toISOString()}`);
-  console.log("  Scope: Gates 1-12 (Multi-tenant, Spend, Automation, Payments,");
+  console.log("  Scope: Gates 1-13 (Multi-tenant, Spend, Automation, Payments,");
   console.log("         Integrations, Data Honesty, Operational Readiness,");
   console.log("         Copilot Safety & Data Quality, Predictive Lift & Enterprise Controls,");
   console.log("         Regime-Aware Optimization & Backtest, Pilot Evaluation Mode,");
-  console.log("         Adaptive Forecasting Layer)");
+  console.log("         Adaptive Forecasting Layer, Stress Testing & Robustness)");
   console.log("================================================================");
 
   await setup();
@@ -3093,6 +3575,7 @@ async function main() {
   await gate10();
   await gate11();
   await gate12();
+  await gate13();
   await cleanup();
 
   const mdReport = generateMarkdownReport();
