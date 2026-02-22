@@ -12,6 +12,7 @@ import {
   Plug,
   Webhook,
   AlertTriangle,
+  BarChart3,
 } from "lucide-react";
 import {
   Sidebar,
@@ -28,57 +29,78 @@ import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "wouter";
 import { SidebarTour } from "@/components/GuidedTour";
 import { useUnifiedData } from "@/contexts/UnifiedDataContext";
+import { useQuery } from "@tanstack/react-query";
 
-const mainMenuItems = [
+const roiFocusedItems = [
   {
     title: "Dashboard",
     url: "/dashboard",
     icon: LayoutDashboard,
     testId: "sidebar-dashboard",
+    landingMode: true,
+  },
+  {
+    title: "Pilot Revenue",
+    url: "/pilot-revenue",
+    icon: BarChart3,
+    testId: "sidebar-pilot-revenue",
+    landingMode: true,
   },
   {
     title: "Agentic AI",
     url: "/agentic-ai",
     icon: Bot,
     testId: "sidebar-agentic-ai",
+    landingMode: true,
   },
+];
+
+const advancedItems = [
   {
     title: "Strategy & Insights",
     url: "/strategy",
     icon: Lightbulb,
     testId: "sidebar-strategy",
+    landingMode: false,
   },
   {
     title: "Event Monitoring",
     url: "/event-monitoring",
     icon: AlertTriangle,
     testId: "sidebar-event-monitoring",
+    landingMode: false,
   },
   {
     title: "Demand & Forecasting",
     url: "/demand",
     icon: TrendingUp,
     testId: "sidebar-demand",
+    landingMode: false,
   },
   {
     title: "Supply Chain",
     url: "/supply-chain",
     icon: Network,
     testId: "sidebar-supply-chain",
+    landingMode: false,
   },
   {
     title: "Procurement",
     url: "/procurement",
     icon: ShoppingCart,
     testId: "sidebar-procurement",
+    landingMode: false,
   },
   {
     title: "Operations",
     url: "/operations",
     icon: Wrench,
     testId: "sidebar-operations",
+    landingMode: false,
   },
 ];
+
+const mainMenuItems = [...roiFocusedItems, ...advancedItems];
 
 const bottomMenuItems = [
   {
@@ -111,9 +133,18 @@ export function AppSidebar() {
   const [location] = useLocation();
   const { inventory, suppliers, commodities, isLoading } = useUnifiedData();
 
+  const { data: landingMode } = useQuery<{ enabled: boolean }>({
+    queryKey: ["/api/landing-mode"],
+  });
+  const isLandingMode = landingMode?.enabled ?? false;
+
+  const visibleMenuItems = isLandingMode
+    ? roiFocusedItems
+    : mainMenuItems;
+
   const agenticRoutes = ["/agentic-ai"];
   const strategyRoutes = ["/strategy", "/digital-twin", "/strategic-analysis", "/scenario-simulation", "/ma-intelligence", "/peer-benchmarking"];
-  const dashboardRoutes = ["/", "/dashboard", "/roi-dashboard", "/reports"];
+  const dashboardRoutes = ["/", "/dashboard", "/roi-dashboard", "/reports", "/pilot-revenue"];
   
   const isActive = (url: string) => {
     if (url === "/agentic-ai") return agenticRoutes.includes(location) || location.startsWith("/agentic-ai");
@@ -172,7 +203,7 @@ export function AppSidebar() {
         <SidebarGroup className="flex-1">
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainMenuItems.map((item) => (
+              {visibleMenuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild

@@ -19035,6 +19035,129 @@ You'll receive emails for:
   });
 
   // ============================================================
+  // Pilot Revenue Dashboard & Executive Report Routes
+  // ============================================================
+
+  const execReportRateLimits = new Map<string, { count: number; windowStart: number }>();
+
+  app.get("/api/pilot/revenue-dashboard", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { getPilotRevenueDashboard } = await import("./lib/executiveReportGenerator");
+      const metrics = await getPilotRevenueDashboard(user.companyId);
+      res.json(metrics);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/pilot/revenue-dashboard/:experimentId", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { getPilotRevenueDashboardByExperiment } = await import("./lib/executiveReportGenerator");
+      const metrics = await getPilotRevenueDashboardByExperiment(user.companyId, req.params.experimentId);
+      if (!metrics) return res.status(404).json({ error: "Experiment not found" });
+      res.json(metrics);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/pilot/generate-executive-report", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { experimentId } = req.body;
+      if (!experimentId) return res.status(400).json({ error: "experimentId required" });
+
+      const now = Date.now();
+      const key = user.companyId;
+      const rl = execReportRateLimits.get(key);
+      if (rl && now - rl.windowStart < 60000) {
+        if (rl.count >= 5) {
+          return res.status(429).json({ error: "Rate limit exceeded. Max 5 executive reports per minute." });
+        }
+        rl.count++;
+      } else {
+        execReportRateLimits.set(key, { count: 1, windowStart: now });
+      }
+
+      const { generateExecutiveReport } = await import("./lib/executiveReportGenerator");
+      const report = await generateExecutiveReport(user.companyId, experimentId);
+      res.json(report);
+    } catch (error: any) {
+      if (error.message === "EXPERIMENT_NOT_FOUND") return res.status(404).json({ error: "Experiment not found" });
+      if (error.message === "EXPERIMENT_NOT_COMPLETED") return res.status(400).json({ error: "Experiment not yet completed" });
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/pilot/executive-reports", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { getExecutiveReports } = await import("./lib/executiveReportGenerator");
+      const reports = await getExecutiveReports(user.companyId);
+      res.json(reports);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/pilot/executive-reports/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { getExecutiveReportById } = await import("./lib/executiveReportGenerator");
+      const report = await getExecutiveReportById(parseInt(req.params.id), user.companyId);
+      if (!report) return res.status(404).json({ error: "Report not found" });
+      res.json(report);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============================================================
+  // Landing Mode Configuration Routes
+  // ============================================================
+
+  app.get("/api/landing-mode", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { landingModeConfig } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      const [config] = await db.select().from(landingModeConfig)
+        .where(eq(landingModeConfig.companyId, user.companyId))
+        .limit(1);
+      res.json({ enabled: config?.enabled ?? false });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/landing-mode", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { enabled } = req.body;
+      if (typeof enabled !== "boolean") return res.status(400).json({ error: "enabled boolean required" });
+      const { landingModeConfig } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      const existing = await db.select().from(landingModeConfig)
+        .where(eq(landingModeConfig.companyId, user.companyId))
+        .limit(1);
+      if (existing.length > 0) {
+        await db.update(landingModeConfig)
+          .set({ enabled, updatedAt: new Date() })
+          .where(eq(landingModeConfig.companyId, user.companyId));
+      } else {
+        await db.insert(landingModeConfig).values({ companyId: user.companyId, enabled });
+      }
+      res.json({ enabled });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============================================================
   // Adaptive Forecasting Routes
   // ============================================================
 

@@ -1,0 +1,65 @@
+We are now in ARR execution mode. The system architecture is complete (211+ tests, 13 gates, adaptive forecasting, stress testing, pilot mode). The priority is revenue velocity, pilot conversion, and frictionless enterprise adoption.
+
+Implement and verify a Revenue-Optimized Execution Layer focused on three goals:
+1) Clear measurable ROI
+2) Frictionless pilot onboarding
+3) Conversion-ready executive reporting
+
+First, create a “Pilot Revenue Dashboard” that surfaces only five metrics:
+- Service Level Improvement (% delta vs baseline)
+- Stockout Reduction (% delta)
+- Expedite Spend Reduction ($ and %)
+- Working Capital Impact ($ change)
+- Realized Savings (strictly measured only)
+
+Ensure:
+- Estimated savings are clearly labeled as estimated
+- Measured savings cannot populate unless tied to realized invoices/receipts
+- No phantom completions
+- All metrics are tenant-scoped and authenticated
+
+Second, implement a “Pilot Conversion Report Generator” endpoint:
+- POST /api/pilot/generate-executive-report
+The report must include:
+- Baseline vs optimized comparison window
+- Stress resilience summary
+- Tail-risk containment metrics (CVaR)
+- Regime exposure summary
+- Clear ROI summary page
+- Immutable experiment hash
+- Deterministic replay ID
+
+The output must be:
+- JSON artifact
+- Markdown summary
+- Executive PDF-ready structure
+
+Third, run a Revenue Integrity Validation Pass:
+Add a Gate 14 certification layer that verifies:
+- Pilot runs do not mutate production data
+- Revenue dashboard metrics reconcile with experiment artifacts
+- No missing data silently inflates ROI
+- All savings claims link to evidence bundles
+- Authentication and tenant isolation hold on all pilot endpoints
+- Rate limiting protects executive report generation
+- Executive reports cannot be generated for another tenant
+
+Fourth, simplify application posture:
+Create a Landing Mode configuration flag that:
+- Hides advanced macro configuration panels
+- Surfaces only ROI-focused dashboards
+- Keeps regime/advanced controls available but secondary
+
+Finally:
+Re-run the full Enterprise E2E Certification Harness and confirm:
+- All prior 13 gates pass without regression
+- Gate 14 passes
+- All pilot metrics reconcile
+- No unsafe execution paths exist
+- Stress test module remains isolated
+- Deterministic replay still functions
+
+Output:
+- Updated harness summary
+- Confirmation of zero regression
+- Confirmation that the application is revenue-ready

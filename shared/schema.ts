@@ -9062,3 +9062,45 @@ export const stressTestReports = pgTable("stress_test_reports", {
 export const insertStressTestReportSchema = createInsertSchema(stressTestReports).omit({ id: true, createdAt: true });
 export type StressTestReport = typeof stressTestReports.$inferSelect;
 export type InsertStressTestReport = z.infer<typeof insertStressTestReportSchema>;
+
+// ============================================================
+// Executive Reports (Revenue-Optimized Execution Layer)
+// ============================================================
+
+export const executiveReports = pgTable("executive_reports", {
+  id: serial("id").primaryKey(),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  experimentId: varchar("experiment_id", { length: 128 }).notNull(),
+  reportType: varchar("report_type", { length: 64 }).notNull().default("pilot_conversion"),
+  configHash: varchar("config_hash", { length: 64 }).notNull(),
+  replayId: varchar("replay_id", { length: 128 }).notNull(),
+  roiSummary: jsonb("roi_summary").notNull(),
+  stressResilienceSummary: jsonb("stress_resilience_summary"),
+  regimeExposureSummary: jsonb("regime_exposure_summary"),
+  tailRiskMetrics: jsonb("tail_risk_metrics"),
+  reportJson: jsonb("report_json").notNull(),
+  reportMd: text("report_md").notNull(),
+  productionMutations: integer("production_mutations").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("exec_rpt_company_idx").on(table.companyId),
+  index("exec_rpt_experiment_idx").on(table.experimentId),
+]);
+
+export const insertExecutiveReportSchema = createInsertSchema(executiveReports).omit({ id: true, createdAt: true });
+export type ExecutiveReport = typeof executiveReports.$inferSelect;
+export type InsertExecutiveReport = z.infer<typeof insertExecutiveReportSchema>;
+
+// ============================================================
+// Landing Mode Configuration
+// ============================================================
+
+export const landingModeConfig = pgTable("landing_mode_config", {
+  id: serial("id").primaryKey(),
+  companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }).unique(),
+  enabled: boolean("enabled").notNull().default(false),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertLandingModeConfigSchema = createInsertSchema(landingModeConfig).omit({ id: true });
+export type LandingModeConfig = typeof landingModeConfig.$inferSelect;

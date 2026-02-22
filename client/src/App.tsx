@@ -42,6 +42,7 @@ import Integrations from "@/pages/Integrations";
 import WebhookIntegrations from "@/pages/WebhookIntegrations";
 import Allocation from "@/pages/Allocation";
 import EventMonitoring from "@/pages/EventMonitoring";
+import PilotRevenueDashboard from "@/pages/PilotRevenueDashboard";
 
 // Dashboard Hub routes
 const DashboardOverviewRoute = () => <DashboardHub initialTab="overview" />;
@@ -196,6 +197,9 @@ function Router() {
       <Route path="/internal/poa" component={PlatformOwnerAnalytics} />
       <Route path="/integrations" component={Integrations} />
       <Route path="/webhook-integrations" component={WebhookIntegrations} />
+      
+      {/* Pilot Revenue Dashboard */}
+      <Route path="/pilot-revenue" component={PilotRevenueDashboard} />
       
       {/* Agentic AI route */}
       <Route path="/agentic-ai" component={AgenticAI} />
