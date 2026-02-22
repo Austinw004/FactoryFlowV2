@@ -1,0 +1,557 @@
+{
+  "reportType": "texas_pilot_readiness_verification",
+  "version": "1.0.0",
+  "timestamp": "2026-02-22T21:04:13.936Z",
+  "platform": "Prescient Labs Manufacturing Intelligence",
+  "harnessVersion": "Enterprise E2E Certification v8.0.0",
+  "pilotType": "mid-market manufacturing (read-only + draft-only; zero production mutations)",
+  "enterpriseCertification": {
+    "gates": 14,
+    "gatesPassed": 14,
+    "tests": 241,
+    "testsPassed": 241,
+    "status": "ALL_PASS"
+  },
+  "pilotReadiness": {
+    "totalTests": 47,
+    "passed": 47,
+    "failed": 0,
+    "status": "READY_FOR_PILOT"
+  },
+  "sections": [
+    {
+      "name": "Section 2: Copilot Draft-Only Safety",
+      "passed": 6,
+      "total": 6,
+      "tests": [
+        {
+          "testId": "2.1",
+          "description": "New copilot action starts in draft status",
+          "pass": true,
+          "durationMs": 14,
+          "rawEvidence": {
+            "status": "draft",
+            "draftId": 46
+          }
+        },
+        {
+          "testId": "2.2",
+          "description": "Draft cannot execute without approval (canExecuteDraft blocks)",
+          "pass": true,
+          "durationMs": 7,
+          "rawEvidence": {
+            "allowed": false,
+            "reason": "Draft status is 'draft', must be 'approved' to execute"
+          }
+        },
+        {
+          "testId": "2.3",
+          "description": "validateNeverCompleted raises SAFETY_VIOLATION when bypassing approval",
+          "pass": true,
+          "durationMs": 1,
+          "rawEvidence": {
+            "safetyViolation": true,
+            "errorTriggered": true
+          }
+        },
+        {
+          "testId": "2.4",
+          "description": "Approved draft can execute (approval unlocks execution)",
+          "pass": true,
+          "durationMs": 19,
+          "rawEvidence": {
+            "allowed": true
+          }
+        },
+        {
+          "testId": "2.5",
+          "description": "validateNeverCompleted passes for properly approved + executed draft",
+          "pass": true,
+          "durationMs": 4,
+          "rawEvidence": {
+            "passes": true
+          }
+        },
+        {
+          "testId": "2.6",
+          "description": "SAFETY_VIOLATION raised for rejected draft with executedAt (bypass attempt)",
+          "pass": true,
+          "durationMs": 0,
+          "rawEvidence": {
+            "rejViolation": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Section 3: Multi-Tenant Isolation",
+      "passed": 16,
+      "total": 16,
+      "tests": [
+        {
+          "testId": "3.1",
+          "description": "Cross-tenant read blocked: materials (B cannot read A's data)",
+          "pass": true,
+          "durationMs": 5,
+          "rawEvidence": {
+            "entity": "materials",
+            "aCount": 2,
+            "bReadACount": 0
+          }
+        },
+        {
+          "testId": "3.2",
+          "description": "Cross-tenant read blocked: suppliers (B cannot read A's data)",
+          "pass": true,
+          "durationMs": 6,
+          "rawEvidence": {
+            "entity": "suppliers",
+            "aCount": 1,
+            "bReadACount": 0
+          }
+        },
+        {
+          "testId": "3.3",
+          "description": "Cross-tenant read blocked: skus (B cannot read A's data)",
+          "pass": true,
+          "durationMs": 8,
+          "rawEvidence": {
+            "entity": "skus",
+            "aCount": 1,
+            "bReadACount": 0
+          }
+        },
+        {
+          "testId": "3.4",
+          "description": "Cross-tenant read blocked: rfqs (B cannot read A's data)",
+          "pass": true,
+          "durationMs": 10,
+          "rawEvidence": {
+            "entity": "rfqs",
+            "aCount": 1,
+            "bReadACount": 0
+          }
+        },
+        {
+          "testId": "3.5",
+          "description": "Cross-tenant read blocked: purchaseOrders (B cannot read A's data)",
+          "pass": true,
+          "durationMs": 7,
+          "rawEvidence": {
+            "entity": "purchaseOrders",
+            "aCount": 1,
+            "bReadACount": 0
+          }
+        },
+        {
+          "testId": "3.6",
+          "description": "Cross-tenant read blocked: allocations (B cannot read A's data)",
+          "pass": true,
+          "durationMs": 7,
+          "rawEvidence": {
+            "entity": "allocations",
+            "aCount": 1,
+            "bReadACount": 0
+          }
+        },
+        {
+          "testId": "3.7",
+          "description": "No data leakage in scoped query: materials (B's query has no A IDs)",
+          "pass": true,
+          "durationMs": 6,
+          "rawEvidence": {
+            "entity": "materials",
+            "bCount": 2,
+            "leakedCount": 0
+          }
+        },
+        {
+          "testId": "3.8",
+          "description": "No data leakage in scoped query: suppliers (B's query has no A IDs)",
+          "pass": true,
+          "durationMs": 5,
+          "rawEvidence": {
+            "entity": "suppliers",
+            "bCount": 1,
+            "leakedCount": 0
+          }
+        },
+        {
+          "testId": "3.9",
+          "description": "No data leakage in scoped query: skus (B's query has no A IDs)",
+          "pass": true,
+          "durationMs": 5,
+          "rawEvidence": {
+            "entity": "skus",
+            "bCount": 1,
+            "leakedCount": 0
+          }
+        },
+        {
+          "testId": "3.10",
+          "description": "No data leakage in scoped query: rfqs (B's query has no A IDs)",
+          "pass": true,
+          "durationMs": 4,
+          "rawEvidence": {
+            "entity": "rfqs",
+            "bCount": 1,
+            "leakedCount": 0
+          }
+        },
+        {
+          "testId": "3.11",
+          "description": "No data leakage in scoped query: purchaseOrders (B's query has no A IDs)",
+          "pass": true,
+          "durationMs": 7,
+          "rawEvidence": {
+            "entity": "purchaseOrders",
+            "bCount": 1,
+            "leakedCount": 0
+          }
+        },
+        {
+          "testId": "3.12",
+          "description": "No data leakage in scoped query: allocations (B's query has no A IDs)",
+          "pass": true,
+          "durationMs": 14,
+          "rawEvidence": {
+            "entity": "allocations",
+            "bCount": 1,
+            "leakedCount": 0
+          }
+        },
+        {
+          "testId": "3.13",
+          "description": "Cross-tenant UPDATE blocked: B cannot update A's material",
+          "pass": true,
+          "durationMs": 3,
+          "rawEvidence": {
+            "updatedRows": 0
+          }
+        },
+        {
+          "testId": "3.14",
+          "description": "Cross-tenant DELETE blocked: B cannot delete A's material",
+          "pass": true,
+          "durationMs": 5,
+          "rawEvidence": {
+            "deletedRows": 0
+          }
+        },
+        {
+          "testId": "3.15",
+          "description": "A's material intact after B's cross-tenant delete attempt",
+          "pass": true,
+          "durationMs": 5,
+          "rawEvidence": {
+            "exists": true,
+            "name": "Steel-A"
+          }
+        },
+        {
+          "testId": "3.16",
+          "description": "API-level tenant isolation: unauthenticated request returns 401",
+          "pass": true,
+          "durationMs": 98,
+          "rawEvidence": {
+            "status": 401
+          }
+        }
+      ]
+    },
+    {
+      "name": "Section 4: Atomic Spend Limits",
+      "passed": 4,
+      "total": 4,
+      "tests": [
+        {
+          "testId": "4.1",
+          "description": "Concurrency test: exactly 50 of 50 requests allowed ($10 x 50 = $500)",
+          "pass": true,
+          "durationMs": 377,
+          "rawEvidence": {
+            "allowed": 50,
+            "blocked": 0,
+            "expectedAllowed": 50,
+            "spendLimit": 500
+          }
+        },
+        {
+          "testId": "4.2",
+          "description": "Final spend exactly equals limit: $500 == $500",
+          "pass": true,
+          "durationMs": 3,
+          "rawEvidence": {
+            "finalSpend": 500,
+            "spendLimit": 500
+          }
+        },
+        {
+          "testId": "4.3",
+          "description": "Additional request blocked after limit reached",
+          "pass": true,
+          "durationMs": 5,
+          "rawEvidence": {
+            "allowed": false,
+            "currentSpend": 500
+          }
+        },
+        {
+          "testId": "4.4",
+          "description": "No over-spend under concurrency: $500 <= $500",
+          "pass": true,
+          "durationMs": 0,
+          "rawEvidence": {
+            "finalSpend": 500,
+            "spendLimit": 500,
+            "safe": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Section 5: Distributed Locks",
+      "passed": 5,
+      "total": 5,
+      "tests": [
+        {
+          "testId": "5.1",
+          "description": "Worker 1 acquires lock successfully",
+          "pass": true,
+          "durationMs": 6,
+          "rawEvidence": {
+            "acquired": true,
+            "lockId": "197e8153"
+          }
+        },
+        {
+          "testId": "5.2",
+          "description": "Worker 2 blocked while Worker 1 holds lock",
+          "pass": true,
+          "durationMs": 4,
+          "rawEvidence": {
+            "acquired": false
+          }
+        },
+        {
+          "testId": "5.3",
+          "description": "Worker 3 acquires lock after Worker 1 releases",
+          "pass": true,
+          "durationMs": 10,
+          "rawEvidence": {
+            "acquired": true
+          }
+        },
+        {
+          "testId": "5.4",
+          "description": "Stale lock recovered after TTL expiry",
+          "pass": true,
+          "durationMs": 21,
+          "rawEvidence": {
+            "acquired": true,
+            "lockId": "2afadaba"
+          }
+        },
+        {
+          "testId": "5.5",
+          "description": "Company-scoped locks are independent (A and B both acquire)",
+          "pass": true,
+          "durationMs": 29,
+          "rawEvidence": {
+            "aAcquired": true,
+            "bAcquired": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Section 6: Idempotency & Trigger Deduplication",
+      "passed": 4,
+      "total": 4,
+      "tests": [
+        {
+          "testId": "6.1",
+          "description": "Same trigger event deduplicated: first claims lock, second is blocked",
+          "pass": true,
+          "durationMs": 30,
+          "rawEvidence": {
+            "firstAcquired": true,
+            "secondAcquired": false
+          }
+        },
+        {
+          "testId": "6.2",
+          "description": "JSON key order does not affect trigger event ID (deterministic hash)",
+          "pass": true,
+          "durationMs": 0,
+          "rawEvidence": {
+            "id1": "907f708ec5c4e863da7eb40c47cff835",
+            "id2": "907f708ec5c4e863da7eb40c47cff835",
+            "match": true
+          }
+        },
+        {
+          "testId": "6.3",
+          "description": "Different trigger values produce different event IDs",
+          "pass": true,
+          "durationMs": 0,
+          "rawEvidence": {
+            "id1": "907f708ec5c4e863da7eb40c47cff835",
+            "idDiff": "5a5e8fcd69c522391c8be4d8d3a04752",
+            "different": true
+          }
+        },
+        {
+          "testId": "6.4",
+          "description": "createActionIdempotent: first creates action, second is deduplicated",
+          "pass": true,
+          "durationMs": 49,
+          "rawEvidence": {
+            "first": {
+              "deduplicated": false,
+              "hasAction": true
+            },
+            "second": {
+              "deduplicated": true,
+              "hasAction": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Section 7: WebSocket Tenant Isolation",
+      "passed": 5,
+      "total": 5,
+      "tests": [
+        {
+          "testId": "7.1",
+          "description": "broadcastUpdate blocks dispatch when companyId is missing (source-verified guard)",
+          "pass": true,
+          "durationMs": 0,
+          "rawEvidence": {
+            "hasBlockGuard": true,
+            "sourceLines": "L138-L141 in websocket.ts"
+          }
+        },
+        {
+          "testId": "7.2",
+          "description": "broadcastUpdate filters clients by companyId - cross-tenant messages not delivered",
+          "pass": true,
+          "durationMs": 0,
+          "rawEvidence": {
+            "hasCompanyIdFilter": true
+          }
+        },
+        {
+          "testId": "7.3",
+          "description": "Unauthenticated clients (no companyId) are skipped in broadcast",
+          "pass": true,
+          "durationMs": 0,
+          "rawEvidence": {
+            "hasUnauthSkip": true
+          }
+        },
+        {
+          "testId": "7.4",
+          "description": "BroadcastMessage TypeScript type requires companyId (compile-time safety)",
+          "pass": true,
+          "durationMs": 0,
+          "rawEvidence": {
+            "typeRequiresCompanyId": true
+          }
+        },
+        {
+          "testId": "7.5",
+          "description": "WebSocket connection requires session authentication (unauthenticated clients disconnected)",
+          "pass": true,
+          "durationMs": 0,
+          "rawEvidence": {
+            "hasAuthCheck": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Section 8: Pilot Zero-Mutation Guarantee",
+      "passed": 7,
+      "total": 7,
+      "tests": [
+        {
+          "testId": "8.1",
+          "description": "Pilot experiment reports zero production mutations",
+          "pass": true,
+          "durationMs": 51,
+          "rawEvidence": {
+            "productionMutations": 0,
+            "experimentId": "texas-pilot-zeromu-exp-001"
+          }
+        },
+        {
+          "testId": "8.2",
+          "description": "Material onHand unchanged after pilot: 500 → 500",
+          "pass": true,
+          "durationMs": 1,
+          "rawEvidence": {
+            "before": 500,
+            "after": 500
+          }
+        },
+        {
+          "testId": "8.3",
+          "description": "No production purchase orders created by pilot experiment",
+          "pass": true,
+          "durationMs": 4,
+          "rawEvidence": {
+            "pilotPOCount": 0
+          }
+        },
+        {
+          "testId": "8.4",
+          "description": "Executive report confirms zero production mutations",
+          "pass": true,
+          "durationMs": 17,
+          "rawEvidence": {
+            "reportMutations": 0,
+            "reportId": 4
+          }
+        },
+        {
+          "testId": "8.5",
+          "description": "Revenue dashboard confirms zero production mutations for experiment",
+          "pass": true,
+          "durationMs": 4,
+          "rawEvidence": {
+            "dashboardMutations": 0
+          }
+        },
+        {
+          "testId": "8.6",
+          "description": "Source scan: pilot code has no write paths to materials, suppliers, or POs",
+          "pass": true,
+          "durationMs": 1,
+          "rawEvidence": {
+            "hasZeroMutations": true,
+            "noInsertMaterials": true,
+            "noUpdateMaterials": true,
+            "noInsertPO": true
+          }
+        },
+        {
+          "testId": "8.7",
+          "description": "Experiment stored in isolated pilot_experiments table",
+          "pass": true,
+          "durationMs": 4,
+          "rawEvidence": {
+            "stored": true,
+            "tableName": "pilot_experiments"
+          }
+        }
+      ]
+    }
+  ],
+  "reRunCommands": [
+    "npx tsx server/tests/enterprise-e2e/harness.ts",
+    "npx tsx server/tests/texas-pilot-readiness.ts"
+  ]
+}

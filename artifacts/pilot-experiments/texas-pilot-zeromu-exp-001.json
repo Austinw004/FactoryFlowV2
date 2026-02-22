@@ -1,0 +1,176 @@
+{
+  "version": "1.0.0",
+  "experimentId": "texas-pilot-zeromu-exp-001",
+  "configSnapshot": {
+    "companyId": "texas-pilot-company-alpha",
+    "name": "texas-pilot-zero-mu-pilot",
+    "experimentId": "texas-pilot-zeromu-exp-001",
+    "windowWeeks": 4,
+    "seed": 42,
+    "regime": "HEALTHY_EXPANSION",
+    "fdr": 0.45,
+    "forecastUncertainty": 0.15,
+    "targetServiceLevel": 0.95,
+    "demandSamples": 100,
+    "materialIds": [
+      "texas-pilot-mat-A-1"
+    ],
+    "configHash": "0063f0fac34d5b34623e6db0ebc16417167d3911ee9bb0579d648fc3c02cb9cc",
+    "createdAt": "2026-02-22T21:04:13.821Z",
+    "engineVersion": "1.0.0",
+    "immutable": true
+  },
+  "baselineResults": {
+    "policyType": "baseline",
+    "totalServiceLevel": 1,
+    "avgStockoutRate": 0,
+    "totalExpediteSpend": 0,
+    "avgWorkingCapital": 35548.94,
+    "totalEstimatedSavings": 0,
+    "totalMeasuredSavings": null,
+    "weeklyMetrics": [
+      {
+        "week": 1,
+        "serviceLevel": 1,
+        "stockoutRate": 0,
+        "expediteSpend": 0,
+        "workingCapital": 17500,
+        "estimatedSavings": 0,
+        "measuredSavings": null,
+        "savingsType": "estimated"
+      },
+      {
+        "week": 2,
+        "serviceLevel": 1,
+        "stockoutRate": 0,
+        "expediteSpend": 0,
+        "workingCapital": 29499.06,
+        "estimatedSavings": 0,
+        "measuredSavings": null,
+        "savingsType": "estimated"
+      },
+      {
+        "week": 3,
+        "serviceLevel": 1,
+        "stockoutRate": 0,
+        "expediteSpend": 0,
+        "workingCapital": 41563.81,
+        "estimatedSavings": 0,
+        "measuredSavings": null,
+        "savingsType": "estimated"
+      },
+      {
+        "week": 4,
+        "serviceLevel": 1,
+        "stockoutRate": 0,
+        "expediteSpend": 0,
+        "workingCapital": 53632.9,
+        "estimatedSavings": 0,
+        "measuredSavings": null,
+        "savingsType": "estimated"
+      }
+    ],
+    "materialResults": [
+      {
+        "materialId": "texas-pilot-mat-A-1",
+        "reorderQuantity": 1250,
+        "serviceLevel": 1,
+        "stockoutRisk": 0,
+        "cost": 50000,
+        "savingsVsBaseline": 0
+      }
+    ]
+  },
+  "optimizedResults": {
+    "policyType": "optimized",
+    "totalServiceLevel": 1,
+    "avgStockoutRate": 0,
+    "totalExpediteSpend": 0,
+    "avgWorkingCapital": 13473.94,
+    "totalEstimatedSavings": 35320,
+    "totalMeasuredSavings": null,
+    "weeklyMetrics": [
+      {
+        "week": 1,
+        "serviceLevel": 1,
+        "stockoutRate": 0,
+        "expediteSpend": 0,
+        "workingCapital": 8670,
+        "estimatedSavings": 8830,
+        "measuredSavings": null,
+        "savingsType": "estimated"
+      },
+      {
+        "week": 2,
+        "serviceLevel": 1,
+        "stockoutRate": 0,
+        "expediteSpend": 0,
+        "workingCapital": 11839.06,
+        "estimatedSavings": 8830,
+        "measuredSavings": null,
+        "savingsType": "estimated"
+      },
+      {
+        "week": 3,
+        "serviceLevel": 1,
+        "stockoutRate": 0,
+        "expediteSpend": 0,
+        "workingCapital": 15073.81,
+        "estimatedSavings": 8830,
+        "measuredSavings": null,
+        "savingsType": "estimated"
+      },
+      {
+        "week": 4,
+        "serviceLevel": 1,
+        "stockoutRate": 0,
+        "expediteSpend": 0,
+        "workingCapital": 18312.9,
+        "estimatedSavings": 8830,
+        "measuredSavings": null,
+        "savingsType": "estimated"
+      }
+    ],
+    "materialResults": [
+      {
+        "materialId": "texas-pilot-mat-A-1",
+        "reorderQuantity": 367,
+        "serviceLevel": 1,
+        "stockoutRisk": 0,
+        "cost": 14680,
+        "savingsVsBaseline": 35320
+      }
+    ]
+  },
+  "comparisonSummary": {
+    "serviceLevelDelta": 0,
+    "stockoutRateDelta": 0,
+    "expediteSpendDelta": 0,
+    "workingCapitalDelta": -22075,
+    "estimatedSavingsDelta": 35320,
+    "measuredSavingsDelta": null,
+    "optimizedWins": [
+      "working_capital",
+      "estimated_savings"
+    ],
+    "baselineWins": [],
+    "recommendation": "RECOMMEND_OPTIMIZED",
+    "confidenceLevel": 0.52
+  },
+  "evidenceBundle": {
+    "provenanceVersion": "4.0.0",
+    "engineId": "pilot_evaluation_v1",
+    "experimentId": "texas-pilot-zeromu-exp-001",
+    "companyId": "texas-pilot-company-alpha",
+    "configHash": "0063f0fac34d5b34623e6db0ebc16417167d3911ee9bb0579d648fc3c02cb9cc",
+    "regime": "HEALTHY_EXPANSION",
+    "fdr": 0.45,
+    "seed": 42,
+    "windowWeeks": 4,
+    "materialCount": 1,
+    "timestamp": "2026-02-22T21:04:13.852Z",
+    "productionMutations": 0,
+    "replayable": true
+  },
+  "generatedAt": "2026-02-22T21:04:13.853Z"
+}
