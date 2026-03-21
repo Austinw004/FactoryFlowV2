@@ -8616,7 +8616,7 @@ export const INTEGRATION_CAPABILITIES = [
   "import", "export", "bidirectional", "webhooks", "batch", "file_edi", "real_time",
 ] as const;
 export type IntegrationCapability = typeof INTEGRATION_CAPABILITIES[number];
-
+  
 // ============================================================
 // Track D: Data Foundation - Lead-time distributions, MOQ, capacity, data quality
 // ============================================================

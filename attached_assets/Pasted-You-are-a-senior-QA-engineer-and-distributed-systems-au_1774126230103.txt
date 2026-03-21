@@ -1,0 +1,92 @@
+You are a senior QA engineer and distributed systems auditor. Your task is to perform a full live validation of my enterprise manufacturing intelligence platform. Assume this system controls automation, forecasting, optimization, and financial decision support. You must aggressively test correctness, safety, isolation, and predictive validity.
+
+Execute the following validation checklist and produce structured output with PASS/FAIL and evidence for each section.
+
+SECTION 1: SYSTEM HEALTH & BOOT VALIDATION
+
+* Verify all services start without errors
+* Confirm database connectivity and schema integrity
+* Validate all environment variables are present and correctly typed
+* Check that feature flags (safe mode, execute gates) default to safe states
+* Output: service status, missing configs, startup errors
+
+SECTION 2: AUTHENTICATION & TENANT ISOLATION
+
+* Attempt cross-tenant access for all core entities (SKU, material, supplier, RFQ, automation rules, purchase orders)
+* Validate all queries enforce WHERE company_id scoping
+* Attempt unauthorized mutations (PATCH/DELETE) across tenants
+* Output: blocked vs allowed matrix with evidence
+
+SECTION 3: AUTOMATION SAFETY & EXECUTION GUARDS
+
+* Verify execute endpoints are disabled without explicit environment variable
+* Simulate high-stakes actions under safe mode (create_po, rebalance, supplier switch)
+* Confirm actions require approval and never execute directly
+* Validate no path exists for draft → completed without approval
+* Output: action lifecycle traces and violations
+
+SECTION 4: CONCURRENCY & SPEND LIMIT ATOMICITY
+
+* Simulate 50–100 concurrent requests against spend limits
+* Validate atomic UPDATE pattern prevents overspend
+* Confirm final spend equals limit exactly
+* Output: allowed vs blocked counts and final totals
+
+SECTION 5: IDEMPOTENCY & DUPLICATE PREVENTION
+
+* Trigger identical automation events multiple times
+* Validate deterministic event ID generation (hash consistency)
+* Confirm duplicate actions are deduplicated
+* Output: event IDs, deduplication results
+
+SECTION 6: FORECASTING & PREDICTIVE VALIDATION
+
+* Run forecasts across SKU segments (fast, slow, intermittent, no-data)
+* Compare against baseline models (naive, moving average, Croston, ETS)
+* Compute WAPE, sMAPE, bias
+* Validate prediction interval coverage (P50/P90)
+* Output: lift vs baseline and calibration metrics
+
+SECTION 7: OPTIMIZATION & DECISION OUTPUTS
+
+* Run reorder optimization under multiple scenarios
+* Validate outputs stay within logical bounds (no negative inventory, no extreme orders)
+* Compare optimized vs conservative vs aggressive strategies
+* Output: service level, stockout risk, working capital impact
+
+SECTION 8: STRESS TESTING & FAILURE MODES
+
+* Simulate demand spikes, supplier outages, price shocks, and lead-time disruptions
+* Validate system degrades gracefully (no crashes, safe fallbacks)
+* Confirm escalation levels trigger correctly
+* Output: stability metrics and failure handling
+
+SECTION 9: DATA QUALITY & BLOCKING LOGIC
+
+* Introduce missing, stale, and outlier data
+* Validate data quality scoring updates correctly
+* Confirm automation is blocked when quality < threshold
+* Output: scores and enforcement behavior
+
+SECTION 10: AUDITABILITY & EVIDENCE TRACEABILITY
+
+* Verify all decisions include evidence bundles (entity IDs, timestamps, provenance version)
+* Confirm logs persist with redaction of sensitive fields
+* Validate reproducibility via deterministic replay
+* Output: audit trail completeness
+
+SECTION 11: API & ENDPOINT VALIDATION
+
+* Hit all critical endpoints (healthz, readyz, livez, automation, forecasting, optimization)
+* Validate response structure, latency, and error handling
+* Output: endpoint status and anomalies
+
+FINAL OUTPUT REQUIREMENTS
+
+* Summary table of all sections with PASS/FAIL
+* List of CRITICAL failures (must fix before production)
+* List of WARNING issues (non-blocking but risky)
+* Confidence score (0–100%) in system readiness
+* Explicit statement: “SAFE FOR PILOT”, “SAFE FOR LIMITED PROD”, or “NOT SAFE”
+
+Be strict. Assume this system will be trusted with real money and operational decisions. Do not pass any section without concrete evidence.

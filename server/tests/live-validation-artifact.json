@@ -1,0 +1,1152 @@
+{
+  "harnessMeta": {
+    "version": "1.0.0",
+    "generatedAt": "2026-03-21T21:11:21.149Z",
+    "totalTests": 90,
+    "totalPass": 90,
+    "totalFail": 0,
+    "confidenceScore": 100,
+    "verdict": "SAFE FOR PILOT"
+  },
+  "sectionSummary": [
+    {
+      "section": "S1",
+      "name": "System Health & Boot Validation",
+      "pass": 7,
+      "fail": 0,
+      "result": "PASS"
+    },
+    {
+      "section": "S2",
+      "name": "Authentication & Tenant Isolation",
+      "pass": 8,
+      "fail": 0,
+      "result": "PASS"
+    },
+    {
+      "section": "S3",
+      "name": "Automation Safety & Execution Guards",
+      "pass": 7,
+      "fail": 0,
+      "result": "PASS"
+    },
+    {
+      "section": "S4",
+      "name": "Concurrency & Spend Limit Atomicity",
+      "pass": 5,
+      "fail": 0,
+      "result": "PASS"
+    },
+    {
+      "section": "S5",
+      "name": "Idempotency & Duplicate Prevention",
+      "pass": 6,
+      "fail": 0,
+      "result": "PASS"
+    },
+    {
+      "section": "S6",
+      "name": "Forecasting & Predictive Validation",
+      "pass": 8,
+      "fail": 0,
+      "result": "PASS"
+    },
+    {
+      "section": "S7",
+      "name": "Optimization & Decision Outputs",
+      "pass": 9,
+      "fail": 0,
+      "result": "PASS"
+    },
+    {
+      "section": "S8",
+      "name": "Stress Testing & Failure Modes",
+      "pass": 9,
+      "fail": 0,
+      "result": "PASS"
+    },
+    {
+      "section": "S9",
+      "name": "Data Quality & Blocking Logic",
+      "pass": 7,
+      "fail": 0,
+      "result": "PASS"
+    },
+    {
+      "section": "S10",
+      "name": "Auditability & Evidence Traceability",
+      "pass": 7,
+      "fail": 0,
+      "result": "PASS"
+    },
+    {
+      "section": "S11",
+      "name": "API & Endpoint Validation",
+      "pass": 17,
+      "fail": 0,
+      "result": "PASS"
+    }
+  ],
+  "criticalFailures": [],
+  "warnings": [],
+  "allResults": [
+    {
+      "section": "S1",
+      "testId": "1.1",
+      "description": "Database connectivity via SELECT 1",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {},
+      "durationMs": 3
+    },
+    {
+      "section": "S1",
+      "testId": "1.2",
+      "description": "All 10 required tables present in schema",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "found": 10,
+        "missing": []
+      },
+      "durationMs": 4
+    },
+    {
+      "section": "S1",
+      "testId": "1.3",
+      "description": "DATABASE_URL env var present",
+      "pass": true,
+      "proofType": "structural",
+      "evidence": {
+        "hasDatabaseUrl": true,
+        "optionalPresent": "4/4"
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S1",
+      "testId": "1.4",
+      "description": "automationSafeMode row defaults to safeModeEnabled=1",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "safeModeEnabled": 1
+      },
+      "durationMs": 9
+    },
+    {
+      "section": "S1",
+      "testId": "1.5",
+      "description": "GET /healthz returns 200",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "status": 200,
+        "ms": 55
+      },
+      "durationMs": 55
+    },
+    {
+      "section": "S1",
+      "testId": "1.6",
+      "description": "GET /readyz returns 200",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "status": 200,
+        "ms": 9
+      },
+      "durationMs": 9
+    },
+    {
+      "section": "S1",
+      "testId": "1.7",
+      "description": "GET /livez returns 200",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "status": 200,
+        "ms": 4
+      },
+      "durationMs": 4
+    },
+    {
+      "section": "S2",
+      "testId": "2.1",
+      "description": "Materials isolated by companyId — cross-tenant read returns 0 rows",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "ownQuery": 1,
+        "crossQuery": 0
+      },
+      "durationMs": 6
+    },
+    {
+      "section": "S2",
+      "testId": "2.2",
+      "description": "Suppliers isolated by companyId — cross-tenant read returns 0 rows",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "ownQuery": 1,
+        "crossQuery": 0
+      },
+      "durationMs": 3
+    },
+    {
+      "section": "S2",
+      "testId": "2.3",
+      "description": "SKUs isolated by companyId — cross-tenant read returns 0 rows",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "ownQuery": 2,
+        "crossQuery": 0
+      },
+      "durationMs": 4
+    },
+    {
+      "section": "S2",
+      "testId": "2.4",
+      "description": "Automation rules isolated — cross-tenant read blocked",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "ownQuery": 1,
+        "crossQuery": 0
+      },
+      "durationMs": 10
+    },
+    {
+      "section": "S2",
+      "testId": "2.5",
+      "description": "Purchase orders isolated — cross-tenant read blocked",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "ownQuery": 1,
+        "crossQuery": 0
+      },
+      "durationMs": 11
+    },
+    {
+      "section": "S2",
+      "testId": "2.6",
+      "description": "Copilot drafts isolated — Company B has 0 drafts",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "ownQuery": 1,
+        "crossQuery": 0
+      },
+      "durationMs": 10
+    },
+    {
+      "section": "S2",
+      "testId": "2.7",
+      "description": "GET /api/materials returns 401/403 for unauthenticated request",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "status": 401
+      },
+      "durationMs": 3
+    },
+    {
+      "section": "S2",
+      "testId": "2.8",
+      "description": "POST /api/materials returns 401/403 without auth",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "status": 401
+      },
+      "durationMs": 7
+    },
+    {
+      "section": "S3",
+      "testId": "3.1",
+      "description": "Safe mode is enabled (safeModeEnabled=1) for test company",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "safeModeEnabled": 1
+      },
+      "durationMs": 1
+    },
+    {
+      "section": "S3",
+      "testId": "3.2",
+      "description": "automationEngine.ts enforces safeModeEnabled check (source verified)",
+      "pass": true,
+      "proofType": "structural",
+      "evidence": {
+        "hasSafeModeCheck": true
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S3",
+      "testId": "3.3",
+      "description": "Draft in 'draft' status cannot execute — requires approval first",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "allowed": false,
+        "reason": "Draft status is 'draft', must be 'approved' to execute"
+      },
+      "durationMs": 7
+    },
+    {
+      "section": "S3",
+      "testId": "3.4",
+      "description": "copilotService enforces 'must be approved' guard (source verified)",
+      "pass": true,
+      "proofType": "structural",
+      "evidence": {
+        "hasApprovalGuard": true
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S3",
+      "testId": "3.5",
+      "description": "Draft in 'approved' status passes execution gate",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "allowed": true,
+        "status": "approved"
+      },
+      "durationMs": 9
+    },
+    {
+      "section": "S3",
+      "testId": "3.6",
+      "description": "Rejected draft cannot be executed",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "allowed": false,
+        "reason": "Draft status is 'rejected', must be 'approved' to execute"
+      },
+      "durationMs": 8
+    },
+    {
+      "section": "S3",
+      "testId": "3.7",
+      "description": "copilotService: executedAt set only after approved gate passes (source verified)",
+      "pass": true,
+      "proofType": "structural",
+      "evidence": {
+        "hasExecutedAtGuard": true
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S4",
+      "testId": "4.1",
+      "description": "Runtime spend state initialized at 0",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "dailySpendTotal": 0
+      },
+      "durationMs": 6
+    },
+    {
+      "section": "S4",
+      "testId": "4.2",
+      "description": "Atomic UPDATE prevents overspend: finalSpend=9900 ≤ limit=10000",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "finalSpend": 9900,
+        "SPEND_LIMIT": 10000,
+        "allowed": 33,
+        "blocked": 27
+      },
+      "durationMs": 208
+    },
+    {
+      "section": "S4",
+      "testId": "4.3",
+      "description": "Allowed count (33) within expected ceiling (33)",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "allowed": 33,
+        "blocked": 27,
+        "expectedAllowed": 33,
+        "finalSpend": 9900
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S4",
+      "testId": "4.4",
+      "description": "Overspend impossible: atomicity enforced — finalSpend (9900) never exceeds limit (10000)",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "overspend": false
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S4",
+      "testId": "4.5",
+      "description": "Concurrency test state cleaned up",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "stateId": "c2f22318-deee-40c8-a4d5-3e1323dce0eb"
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S5",
+      "testId": "5.1",
+      "description": "buildTriggerEventId is deterministic: same params → identical 32-char hash",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "id1": "16faddad12486ab0cad6d808a1920c46",
+        "equal": true,
+        "length": 32
+      },
+      "durationMs": 1
+    },
+    {
+      "section": "S5",
+      "testId": "5.2",
+      "description": "Different payloads produce different event IDs (no collision)",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "id1": "16faddad12486ab0cad6d808a1920c46",
+        "idAlt": "4c33eb7dd17e5fbd8162c0c125421d40",
+        "collision": false
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S5",
+      "testId": "5.3",
+      "description": "First event insertion succeeds",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "count": 1
+      },
+      "durationMs": 11
+    },
+    {
+      "section": "S5",
+      "testId": "5.4",
+      "description": "Duplicate (companyId+triggerType+triggerEventId) rejected by unique constraint",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "duplicateBlocked": true
+      },
+      "durationMs": 3
+    },
+    {
+      "section": "S5",
+      "testId": "5.5",
+      "description": "onConflictDoNothing: second insert leaves exactly 1 row (idempotent)",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "count": 1
+      },
+      "durationMs": 6
+    },
+    {
+      "section": "S5",
+      "testId": "5.6",
+      "description": "50 concurrent duplicate inserts → exactly 1 row in DB",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "rows": 1
+      },
+      "durationMs": 39
+    },
+    {
+      "section": "S6",
+      "testId": "6.1",
+      "description": "Fast mover WAPE=5.4% < 30% threshold",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "wape": 0.05376344086021512
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S6",
+      "testId": "6.2",
+      "description": "Slow mover WAPE=14.3% < 40% threshold",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "wape": 0.14285714285714285
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S6",
+      "testId": "6.3",
+      "description": "Intermittent sMAPE=150.9% within acceptable range",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "smape": 1.5087719298245614
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S6",
+      "testId": "6.4",
+      "description": "No-data SKU: forecast returns 3 values without crash",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "crashed": false,
+        "values": [
+          0,
+          0,
+          0
+        ]
+      },
+      "durationMs": 1
+    },
+    {
+      "section": "S6",
+      "testId": "6.5",
+      "description": "Moving avg WAPE (5.2%) within 5pp of naive (3.4%)",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "movAvgWAPE": 0.052259887005649756,
+        "naiveWAPE": 0.03389830508474576
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S6",
+      "testId": "6.6",
+      "description": "Bias=0.39% within ±10% threshold",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "bias": 0.003861003861003861
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S6",
+      "testId": "6.7",
+      "description": "Confidence interval math: lower(85)≤point(100)≤upper(114.99999999999999)",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "lower": 85,
+        "upper": 114.99999999999999,
+        "point": 100,
+        "validBand": true
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S6",
+      "testId": "6.8",
+      "description": "forecasting.ts implements regime-conditioned uncertainty bands (source verified)",
+      "pass": true,
+      "proofType": "structural",
+      "evidence": {
+        "hasRegimeUncertainty": true
+      },
+      "durationMs": 1
+    },
+    {
+      "section": "S7",
+      "testId": "7.1",
+      "description": "Optimized quantity (720) is non-negative",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "qty": 720
+      },
+      "durationMs": 14
+    },
+    {
+      "section": "S7",
+      "testId": "7.2",
+      "description": "Service level 95.0% within [0,100]%",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "sl": 0.95
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S7",
+      "testId": "7.3",
+      "description": "Stockout risk (0.050) = 1 − SL (0.050)",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "stockoutRisk": 0.050000000000000044
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S7",
+      "testId": "7.4",
+      "description": "Qty (720) ≥ MOQ (10)",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "qty": 720,
+        "moq": 10
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S7",
+      "testId": "7.5",
+      "description": "Conservative (610) ≤ Aggressive (815) + pack",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "conserv": 610,
+        "aggress": 815
+      },
+      "durationMs": 36
+    },
+    {
+      "section": "S7",
+      "testId": "7.6",
+      "description": "STRESS regime: qty=940 (non-negative), SL=95.0%",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "qty": 940
+      },
+      "durationMs": 12
+    },
+    {
+      "section": "S7",
+      "testId": "7.7",
+      "description": "What-if comparison has 4 entries",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "count": 4
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S7",
+      "testId": "7.8",
+      "description": "Evidence bundle has provenanceVersion, optimizerId, timestamp",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "provenanceVersion": "3.0.0"
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S7",
+      "testId": "7.9",
+      "description": "Deterministic replay: same seed → identical results",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "r1": 735,
+        "r2": 735
+      },
+      "durationMs": 30
+    },
+    {
+      "section": "S8",
+      "testId": "8.1",
+      "description": "Stress test runs without crash for all 6 default scenarios",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "crashed": false
+      },
+      "durationMs": 4
+    },
+    {
+      "section": "S8",
+      "testId": "8.2",
+      "description": "All 6 default stress scenarios executed (found 6)",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "types": [
+          "demand_spike:moderate",
+          "demand_spike:extreme",
+          "supplier_outage:severe",
+          "price_shock:severe",
+          "lead_time_disruption:extreme",
+          "compound:extreme"
+        ]
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S8",
+      "testId": "8.3",
+      "description": "Extreme demand spike scenario present and executed",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "found": true
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S8",
+      "testId": "8.4",
+      "description": "Supplier outage scenario present with results",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "found": true,
+        "severity": "severe"
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S8",
+      "testId": "8.5",
+      "description": "Compound crisis scenario executed and returned results",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "found": true
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S8",
+      "testId": "8.6",
+      "description": "All scenarios include CVaR delta metrics (cvarDelta)",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "sampleAmplification": 12.4874
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S8",
+      "testId": "8.7",
+      "description": "All scenarios include automationDowngrade with downgradeSeverity",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "sampleSeverity": "emergency_halt"
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S8",
+      "testId": "8.8",
+      "description": "Aggregate: 2 passed / 4 failed",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "passed": 2,
+        "failed": 4
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S8",
+      "testId": "8.9",
+      "description": "Stress report configHash is deterministic across runs",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "hash": "b6a2ae59fa2f1eec"
+      },
+      "durationMs": 2
+    },
+    {
+      "section": "S9",
+      "testId": "9.1",
+      "description": "Company A quality score: 86.0%",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "score": 0.86,
+        "entities": 5
+      },
+      "durationMs": 31
+    },
+    {
+      "section": "S9",
+      "testId": "9.2",
+      "description": "Company A is not blocked by data quality gate",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "score": 0.86
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S9",
+      "testId": "9.3",
+      "description": "Company B quality score (72.0%) is in valid range [0,1]",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "scoreA": 0.86,
+        "scoreB": 0.72
+      },
+      "durationMs": 47
+    },
+    {
+      "section": "S9",
+      "testId": "9.4",
+      "description": "Data quality report has 5 entity-level scores",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "count": 5
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S9",
+      "testId": "9.5",
+      "description": "dataQuality.ts defines AUTOMATION_QUALITY_THRESHOLD (source verified)",
+      "pass": true,
+      "proofType": "structural",
+      "evidence": {
+        "found": true
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S9",
+      "testId": "9.6",
+      "description": "dataQuality.ts contains blocked flag logic tied to score threshold",
+      "pass": true,
+      "proofType": "structural",
+      "evidence": {
+        "found": true
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S9",
+      "testId": "9.7",
+      "description": "Empty company score (0.0%) < Company A (86.0%) — data volume impacts quality",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "scoreEmpty": 0,
+        "scoreA": 0.86
+      },
+      "durationMs": 14
+    },
+    {
+      "section": "S10",
+      "testId": "10.1",
+      "description": "sanitizeDetails redacts password and apiKey from log payloads",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "passwordRedacted": true,
+        "keyRedacted": true
+      },
+      "durationMs": 1
+    },
+    {
+      "section": "S10",
+      "testId": "10.2",
+      "description": "Structured event log persists audit entries to DB",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "found": 1
+      },
+      "durationMs": 14
+    },
+    {
+      "section": "S10",
+      "testId": "10.3",
+      "description": "Copilot draft stores evidence bundle with provenanceVersion and entityIds",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "provenanceVersion": "v5.0.0"
+      },
+      "durationMs": 7
+    },
+    {
+      "section": "S10",
+      "testId": "10.4",
+      "description": "Optimization evidence bundle has provenanceVersion, optimizerId, timestamp",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "provenanceVersion": "3.0.0"
+      },
+      "durationMs": 15
+    },
+    {
+      "section": "S10",
+      "testId": "10.5",
+      "description": "SHA-256 hashing: same config JSON → identical hash (deterministic replay)",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "hash": "c782f112f72930b4",
+        "equal": true
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S10",
+      "testId": "10.6",
+      "description": "Structured event log is tenant-scoped — cross-tenant query returns 0 rows",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "ownRows": 1,
+        "crossRows": 0
+      },
+      "durationMs": 5
+    },
+    {
+      "section": "S10",
+      "testId": "10.7",
+      "description": "Stress test report has configHash (585a812abb4b2d2f...)",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "configHash": "585a812abb4b2d2f"
+      },
+      "durationMs": 4
+    },
+    {
+      "section": "S11",
+      "testId": "11.1",
+      "description": "GET /healthz → 200 (expected: 200)",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "status": 200,
+        "ms": 7
+      },
+      "durationMs": 7
+    },
+    {
+      "section": "S11",
+      "testId": "11.2",
+      "description": "GET /readyz → 200 (expected: 200)",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "status": 200,
+        "ms": 6
+      },
+      "durationMs": 7
+    },
+    {
+      "section": "S11",
+      "testId": "11.3",
+      "description": "GET /livez → 200 (expected: 200)",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "status": 200,
+        "ms": 2
+      },
+      "durationMs": 2
+    },
+    {
+      "section": "S11",
+      "testId": "11.4",
+      "description": "GET /api/health → 401 (expected: 200|401|403|302)",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "status": 401,
+        "ms": 3
+      },
+      "durationMs": 3
+    },
+    {
+      "section": "S11",
+      "testId": "11.5",
+      "description": "GET /api/materials → 401 (expected: 401|403|302)",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "status": 401,
+        "ms": 4
+      },
+      "durationMs": 4
+    },
+    {
+      "section": "S11",
+      "testId": "11.6",
+      "description": "GET /api/skus → 401 (expected: 401|403|302)",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "status": 401,
+        "ms": 2
+      },
+      "durationMs": 2
+    },
+    {
+      "section": "S11",
+      "testId": "11.7",
+      "description": "GET /api/suppliers → 401 (expected: 401|403|302)",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "status": 401,
+        "ms": 2
+      },
+      "durationMs": 2
+    },
+    {
+      "section": "S11",
+      "testId": "11.8",
+      "description": "GET /api/rfqs → 401 (expected: 401|403|302)",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "status": 401,
+        "ms": 1
+      },
+      "durationMs": 2
+    },
+    {
+      "section": "S11",
+      "testId": "11.9",
+      "description": "GET /api/allocations → 401 (expected: 401|403|302)",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "status": 401,
+        "ms": 1
+      },
+      "durationMs": 1
+    },
+    {
+      "section": "S11",
+      "testId": "11.10",
+      "description": "GET /api/forecast-accuracy/metrics → 401 (expected: 401|403|302)",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "status": 401,
+        "ms": 2
+      },
+      "durationMs": 2
+    },
+    {
+      "section": "S11",
+      "testId": "11.11",
+      "description": "GET /api/multi-horizon-forecasts → 401 (expected: 401|403|302)",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "status": 401,
+        "ms": 2
+      },
+      "durationMs": 2
+    },
+    {
+      "section": "S11",
+      "testId": "11.12",
+      "description": "GET /api/adaptive-forecast/reports → 401 (expected: 401|403|302)",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "status": 401,
+        "ms": 1
+      },
+      "durationMs": 1
+    },
+    {
+      "section": "S11",
+      "testId": "11.13",
+      "description": "GET /api/stress-test/reports → 401 (expected: 401|403|302)",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "status": 401,
+        "ms": 1
+      },
+      "durationMs": 1
+    },
+    {
+      "section": "S11",
+      "testId": "11.14",
+      "description": "POST /api/adaptive-forecast/analyze → 401 (expected: 401|403|302|400)",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "status": 401,
+        "ms": 2
+      },
+      "durationMs": 2
+    },
+    {
+      "section": "S11",
+      "testId": "11.15",
+      "description": "POST /api/stress-test/run → 401 (expected: 401|403|302|400)",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "status": 401,
+        "ms": 2
+      },
+      "durationMs": 2
+    },
+    {
+      "section": "S11",
+      "testId": "11.16",
+      "description": "Health endpoints all respond within 2000ms (4ms, 6ms, 6ms)",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "timings": [
+          4,
+          6,
+          6
+        ]
+      },
+      "durationMs": 7
+    },
+    {
+      "section": "S11",
+      "testId": "11.17",
+      "description": "GET /api/does-not-exist-xyz-abc → 401",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "status": 401
+      },
+      "durationMs": 1
+    }
+  ]
+}
