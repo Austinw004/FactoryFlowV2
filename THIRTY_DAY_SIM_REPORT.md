@@ -1,103 +1,61 @@
-# 30-Day Operational Simulation Report
-**Prescient Labs Manufacturing Intelligence Platform**
+# 30-Day Operational Simulation — Prescient Labs
+**Replay Hash:** `2e40ccf816123878`
 
-Simulation: 30 days | 100 SKUs | 8 suppliers
-Replay Hash: `1eb45b37b652525b`
+## Service Level by Week
+| Week | Regime | SL% |
+|------|--------|-----|
+| 1 | HEALTHY_EXPANSION | 100% |
+| 2 | MILD_CONTRACTION  | 100% |
+| 3 | STRESS            | 97.34% |
+| 4 | RECOVERY          | 85.14% |
+| **30-Day Avg** | — | **94.92%** |
 
-## Service Level Trends
-
-| Week | Regime | Service Level |
-|------|--------|--------------|
-| 1 | HEALTHY_EXPANSION | NaN% |
-| 2 | MILD_CONTRACTION  | NaN% |
-| 3 | STRESS            | NaN% |
-| 4 | RECOVERY          | NaN% |
-| **30-Day Avg** | — | **NaN%** |
-
-## Stockout & Backorder Analysis
-
-- Total stockout SKU-days: **461**
-- Avg stockouts per day: **15.4**
-- Total backorder units: **16,339**
-- Critical SKU stockout-days: **45**
+## Stockouts
+- SKU-days in stockout: **145**
+- Backorder units: **5,280**
+- Critical-SKU stockout-days: **0**
 
 ## Working Capital
+- Baseline: $3.52M
+- Peak: $4.76M (+35.5%)
+- Day 30: $2.66M
 
-- Baseline: $3.53M
-- Peak: $NaNM (+NaN%)
-- Day 30: $NaNM (NaN%)
-
-## Automation Actions
-
-- Proposed: **762**
-- Approved: **519** (68.1%)
-- Rejected: **32**
+## Automation
+- Proposed: **84**, Approved: **81** (96.4%)
 
 ## Safety Flags
-
-- ⚠️ [Day 22] CRITICAL SKU SKU-SL-060 has been in stockout for 3 consecutive days
-- ⚠️ [Day 23] CRITICAL SKU SKU-SL-060 has been in stockout for 4 consecutive days
-- ⚠️ [Day 24] CRITICAL SKU SKU-FA-010 has been in stockout for 3 consecutive days
-- ⚠️ [Day 24] CRITICAL SKU SKU-SL-060 has been in stockout for 5 consecutive days
-- ⚠️ [Day 25] CRITICAL SKU SKU-FA-010 has been in stockout for 4 consecutive days
-- ⚠️ [Day 25] CRITICAL SKU SKU-SL-060 has been in stockout for 6 consecutive days
-- ⚠️ [Day 26] CRITICAL SKU SKU-FA-010 has been in stockout for 5 consecutive days
-- ⚠️ [Day 26] CRITICAL SKU SKU-FA-020 has been in stockout for 3 consecutive days
-- ⚠️ [Day 26] CRITICAL SKU SKU-SL-060 has been in stockout for 7 consecutive days
-- ⚠️ [Day 26] CRITICAL SKU SKU-SL-070 has been in stockout for 3 consecutive days
-- ⚠️ [Day 27] CRITICAL SKU SKU-FA-010 has been in stockout for 6 consecutive days
-- ⚠️ [Day 27] CRITICAL SKU SKU-FA-020 has been in stockout for 4 consecutive days
-- ⚠️ [Day 27] CRITICAL SKU SKU-SL-050 has been in stockout for 3 consecutive days
-- ⚠️ [Day 27] CRITICAL SKU SKU-SL-060 has been in stockout for 8 consecutive days
-- ⚠️ [Day 27] CRITICAL SKU SKU-SL-070 has been in stockout for 4 consecutive days
-- ⚠️ [Day 28] CRITICAL SKU SKU-FA-010 has been in stockout for 7 consecutive days
-- ⚠️ [Day 28] CRITICAL SKU SKU-FA-020 has been in stockout for 5 consecutive days
-- ⚠️ [Day 28] CRITICAL SKU SKU-SL-050 has been in stockout for 4 consecutive days
-- ⚠️ [Day 28] CRITICAL SKU SKU-SL-060 has been in stockout for 9 consecutive days
-- ⚠️ [Day 28] CRITICAL SKU SKU-SL-070 has been in stockout for 5 consecutive days
-- ⚠️ [Day 29] CRITICAL SKU SKU-FA-010 has been in stockout for 8 consecutive days
-- ⚠️ [Day 29] CRITICAL SKU SKU-FA-020 has been in stockout for 6 consecutive days
-- ⚠️ [Day 29] CRITICAL SKU SKU-FA-030 has been in stockout for 3 consecutive days
-- ⚠️ [Day 29] CRITICAL SKU SKU-SL-050 has been in stockout for 5 consecutive days
-- ⚠️ [Day 29] CRITICAL SKU SKU-SL-060 has been in stockout for 10 consecutive days
-- ⚠️ [Day 29] CRITICAL SKU SKU-SL-070 has been in stockout for 6 consecutive days
-- ⚠️ [Day 30] CRITICAL SKU SKU-FA-010 has been in stockout for 9 consecutive days
-- ⚠️ [Day 30] CRITICAL SKU SKU-FA-020 has been in stockout for 7 consecutive days
-- ⚠️ [Day 30] CRITICAL SKU SKU-FA-030 has been in stockout for 4 consecutive days
-- ⚠️ [Day 30] CRITICAL SKU SKU-SL-050 has been in stockout for 6 consecutive days
-- ⚠️ [Day 30] CRITICAL SKU SKU-SL-060 has been in stockout for 11 consecutive days
+_None._
 
 ## Daily Snapshot
-
 | Day | Regime | SL% | Stockouts | WC $M | Proposed | Approved | DQ% |
 |-----|--------|-----|-----------|-------|----------|----------|-----|
-| 1 | HEALTHY_EXPANSION | 100 | 0 | NaN | 1 | 1 | 94 |
-| 2 | HEALTHY_EXPANSION | 100 | 0 | NaN | 1 | 0 | 88 |
-| 3 | HEALTHY_EXPANSION | 99.97 | 1 | NaN | 1 | 1 | 88 |
-| 4 | HEALTHY_EXPANSION | 100 | 0 | NaN | 1 | 1 | 91 |
-| 5 | HEALTHY_EXPANSION | 100 | 0 | NaN | 1 | 0 | 82 |
-| 6 | HEALTHY_EXPANSION | 100 | 0 | NaN | 1 | 1 | 64 |
-| 7 | HEALTHY_EXPANSION | NaN | 0 | NaN | 1 | 1 | 61 |
-| 8 | MILD_CONTRACTION | NaN | 0 | NaN | 1 | 1 | 46 |
-| 9 | MILD_CONTRACTION | NaN | 0 | NaN | 1 | 1 | 40 |
-| 10 | MILD_CONTRACTION | NaN | 0 | NaN | 1 | 1 | 28 |
-| 11 | MILD_CONTRACTION | NaN | 0 | NaN | 1 | 1 | 22 |
-| 12 | MILD_CONTRACTION | NaN | 0 | NaN | 1 | 1 | 19 |
-| 13 | MILD_CONTRACTION | NaN | 0 | NaN | 1 | 0 | 22 |
-| 14 | MILD_CONTRACTION | NaN | 0 | NaN | 1 | 0 | 7 |
-| 15 | STRESS | NaN | 0 | NaN | 1 | 1 | 0 |
-| 16 | STRESS | NaN | 0 | NaN | 1 | 0 | 0 |
-| 17 | STRESS | NaN | 0 | NaN | 9 | 8 | 4 |
-| 18 | STRESS | NaN | 1 | NaN | 17 | 5 | 0 |
-| 19 | STRESS | NaN | 11 | NaN | 31 | 10 | 0 |
-| 20 | STRESS | NaN | 17 | NaN | 34 | 12 | 0 |
-| 21 | STRESS | NaN | 18 | NaN | 38 | 17 | 0 |
-| 22 | RECOVERY | NaN | 27 | NaN | 49 | 37 | 0 |
-| 23 | RECOVERY | NaN | 38 | NaN | 59 | 35 | 0 |
-| 24 | RECOVERY | NaN | 47 | NaN | 65 | 53 | 0 |
-| 25 | RECOVERY | NaN | 55 | NaN | 69 | 52 | 0 |
-| 26 | RECOVERY | NaN | 58 | NaN | 72 | 56 | 0 |
-| 27 | RECOVERY | NaN | 55 | NaN | 74 | 57 | 0 |
-| 28 | HEALTHY_EXPANSION | NaN | 52 | NaN | 75 | 56 | 0 |
-| 29 | HEALTHY_EXPANSION | NaN | 42 | NaN | 77 | 55 | 0 |
-| 30 | HEALTHY_EXPANSION | NaN | 39 | NaN | 77 | 55 | 0 |
+| 1 | HEALTHY_EXPANSION | 100 | 0 | 3.37 | 0 | 0 | 99 |
+| 2 | HEALTHY_EXPANSION | 100 | 0 | 3.2 | 0 | 0 | 100 |
+| 3 | HEALTHY_EXPANSION | 100 | 0 | 3.01 | 0 | 0 | 99 |
+| 4 | HEALTHY_EXPANSION | 100 | 0 | 2.83 | 0 | 0 | 99 |
+| 5 | HEALTHY_EXPANSION | 100 | 0 | 2.65 | 0 | 0 | 98 |
+| 6 | HEALTHY_EXPANSION | 100 | 0 | 2.56 | 0 | 0 | 99 |
+| 7 | HEALTHY_EXPANSION | 100 | 0 | 2.52 | 0 | 0 | 99 |
+| 8 | MILD_CONTRACTION | 100 | 0 | 2.66 | 10 | 10 | 99 |
+| 9 | MILD_CONTRACTION | 100 | 0 | 2.51 | 0 | 0 | 100 |
+| 10 | MILD_CONTRACTION | 100 | 0 | 2.35 | 0 | 0 | 99 |
+| 11 | MILD_CONTRACTION | 100 | 0 | 2.19 | 0 | 0 | 99 |
+| 12 | MILD_CONTRACTION | 100 | 0 | 2.04 | 0 | 0 | 97 |
+| 13 | MILD_CONTRACTION | 100 | 0 | 1.96 | 0 | 0 | 97 |
+| 14 | MILD_CONTRACTION | 100 | 0 | 1.88 | 0 | 0 | 96 |
+| 15 | STRESS | 100 | 0 | 4.76 | 68 | 68 | 97 |
+| 16 | STRESS | 100 | 0 | 4.53 | 0 | 0 | 99 |
+| 17 | STRESS | 100 | 0 | 4.29 | 0 | 0 | 99 |
+| 18 | STRESS | 99.96 | 1 | 4.06 | 0 | 0 | 99 |
+| 19 | STRESS | 96.91 | 5 | 3.86 | 0 | 0 | 98 |
+| 20 | STRESS | 93.54 | 7 | 3.75 | 0 | 0 | 100 |
+| 21 | STRESS | 90.99 | 9 | 3.93 | 0 | 0 | 98 |
+| 22 | RECOVERY | 88.56 | 14 | 3.78 | 0 | 0 | 99 |
+| 23 | RECOVERY | 83.3 | 19 | 3.62 | 1 | 0 | 100 |
+| 24 | RECOVERY | 70.42 | 27 | 3.48 | 2 | 1 | 98 |
+| 25 | RECOVERY | 76.23 | 20 | 3.32 | 1 | 0 | 97 |
+| 26 | RECOVERY | 78.57 | 17 | 3.19 | 1 | 1 | 94 |
+| 27 | RECOVERY | 85.96 | 10 | 3.1 | 1 | 1 | 97 |
+| 28 | HEALTHY_EXPANSION | 90.9 | 7 | 2.99 | 0 | 0 | 99 |
+| 29 | HEALTHY_EXPANSION | 95.91 | 4 | 2.84 | 0 | 0 | 99 |
+| 30 | HEALTHY_EXPANSION | 96.46 | 5 | 2.66 | 0 | 0 | 99 |

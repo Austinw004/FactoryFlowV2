@@ -3,298 +3,252 @@
     "days": 30,
     "skuCount": 100,
     "supplierCount": 8,
-    "replayHash": "1eb45b37b652525b"
+    "replayHash": "2e40ccf816123878"
   },
   "serviceLevelTrends": {
     "week1": {
       "regime": "HEALTHY_EXPANSION",
-      "serviceLevelPct": null
+      "pct": 100
     },
     "week2": {
       "regime": "MILD_CONTRACTION",
-      "serviceLevelPct": null
+      "pct": 100
     },
     "week3": {
       "regime": "STRESS",
-      "serviceLevelPct": null
+      "pct": 97.34
     },
     "week4": {
       "regime": "RECOVERY",
-      "serviceLevelPct": null
+      "pct": 85.14
     },
-    "overall30DayAvg": null
+    "overall": 94.92
   },
-  "stockoutAnalysis": {
-    "totalStockoutSkuDays": 461,
-    "stockoutsPerDay": 15.4,
-    "totalBackorderUnits": 16339,
-    "criticalSkuStockoutDays": 45,
-    "worstPerformingSkus": [
+  "stockouts": {
+    "totalStockoutSKUDays": 145,
+    "avgPerDay": 4.8,
+    "totalBackorderUnits": 5280,
+    "criticalSkuStockoutDays": 0,
+    "worstSkus": [
       {
-        "id": "SKU-FA-023",
+        "id": "SKU-SM-069",
+        "category": "slow_mover",
+        "isCritical": false,
+        "stockoutDays": 12,
+        "backorderUnits": 160
+      },
+      {
+        "id": "SKU-SM-062",
+        "category": "slow_mover",
+        "isCritical": false,
+        "stockoutDays": 9,
+        "backorderUnits": 131
+      },
+      {
+        "id": "SKU-FM-002",
         "category": "fast_mover",
-        "stockoutDays": 12,
-        "backorderUnits": 964,
-        "isCritical": false
+        "isCritical": false,
+        "stockoutDays": 8,
+        "backorderUnits": 737
       },
       {
-        "id": "SKU-SL-063",
-        "category": "slow_mover",
-        "stockoutDays": 12,
-        "backorderUnits": 151,
-        "isCritical": false
-      },
-      {
-        "id": "SKU-SL-073",
-        "category": "slow_mover",
-        "stockoutDays": 12,
-        "backorderUnits": 127,
-        "isCritical": false
-      },
-      {
-        "id": "SKU-SL-060",
-        "category": "slow_mover",
-        "stockoutDays": 11,
-        "backorderUnits": 155,
-        "isCritical": true
-      },
-      {
-        "id": "SKU-FA-015",
+        "id": "SKU-FM-034",
         "category": "fast_mover",
-        "stockoutDays": 10,
-        "backorderUnits": 590,
-        "isCritical": false
+        "isCritical": false,
+        "stockoutDays": 8,
+        "backorderUnits": 522
+      },
+      {
+        "id": "SKU-SM-052",
+        "category": "slow_mover",
+        "isCritical": false,
+        "stockoutDays": 8,
+        "backorderUnits": 42
       }
     ]
   },
   "workingCapital": {
-    "baselineMillion": 3.53,
-    "startMillion": null,
-    "endMillion": null,
-    "peakMillion": null,
-    "troughMillion": null,
-    "peakVsBaselinePct": null,
-    "endVsBaselinePct": null
+    "baselineM": 3.52,
+    "day1M": 3.37,
+    "day30M": 2.66,
+    "peakM": 4.76,
+    "troughM": 1.88,
+    "peakVsBaselinePct": 35.5,
+    "endVsBaselinePct": -24.2
   },
-  "automationActions": {
-    "totalProposed": 762,
-    "totalApproved": 519,
-    "totalRejected": 32,
-    "pendingDraft": 211,
-    "approvalRatePct": 68.1,
+  "automation": {
+    "totalProposed": 84,
+    "totalApproved": 81,
+    "totalRejected": 3,
+    "totalDraft": 0,
+    "approvalRatePct": 96.4,
+    "avgDailyProposals": 2.8,
     "byRegime": {
       "HEALTHY_EXPANSION": {
-        "proposed": 236,
-        "approved": 171
+        "proposed": 0,
+        "approved": 0
       },
       "MILD_CONTRACTION": {
-        "proposed": 7,
-        "approved": 5
+        "proposed": 10,
+        "approved": 10
       },
       "STRESS": {
-        "proposed": 131,
-        "approved": 53
+        "proposed": 68,
+        "approved": 68
       },
       "RECOVERY": {
-        "proposed": 388,
-        "approved": 290
+        "proposed": 6,
+        "approved": 3
       }
-    },
-    "avgDailyProposals": 25.4
+    }
   },
   "dataQuality": {
-    "averageScorePct": 25.2,
-    "daysBelow80Pct": 25,
-    "totalIssueEvents": 85
+    "averagePct": 98.4,
+    "daysBelow90Pct": 0,
+    "totalNewIssueEvents": 34
   },
-  "supplierDisruptions": {
-    "scheduledOutages": [
-      {
-        "supplier": "SUP-2",
-        "days": "8–11",
-        "duration": 4
-      }
+  "supplierEvents": {
+    "outages": [
+      "SUP-2 full outage days 8–11"
     ],
-    "scheduledDelays": [
-      {
-        "supplier": "SUP-4",
-        "days": "15–17"
-      },
-      {
-        "supplier": "SUP-6",
-        "days": "22–24"
-      }
+    "delays": [
+      "SUP-4 delays days 15–17",
+      "SUP-6 delays days 22–24"
     ],
-    "priceVolatilityEvents": [
+    "priceVolatility": [
       {
         "day": 7,
-        "supplier": "SUP-3",
-        "changePct": 18
+        "label": "steel +18%"
       },
       {
         "day": 14,
-        "supplier": "SUP-1",
-        "changePct": -12
+        "label": "resin −12%"
       },
       {
         "day": 21,
-        "supplier": "SUP-5",
-        "changePct": 24
+        "label": "copper +24%"
       },
       {
         "day": 28,
-        "supplier": "SUP-7",
-        "changePct": -15
+        "label": "aluminium −15%"
       }
     ]
   },
-  "safetyAnalysis": {
-    "totalUnsafeFlags": 31,
-    "flags": [
-      "[Day 22] CRITICAL SKU SKU-SL-060 has been in stockout for 3 consecutive days",
-      "[Day 23] CRITICAL SKU SKU-SL-060 has been in stockout for 4 consecutive days",
-      "[Day 24] CRITICAL SKU SKU-FA-010 has been in stockout for 3 consecutive days",
-      "[Day 24] CRITICAL SKU SKU-SL-060 has been in stockout for 5 consecutive days",
-      "[Day 25] CRITICAL SKU SKU-FA-010 has been in stockout for 4 consecutive days",
-      "[Day 25] CRITICAL SKU SKU-SL-060 has been in stockout for 6 consecutive days",
-      "[Day 26] CRITICAL SKU SKU-FA-010 has been in stockout for 5 consecutive days",
-      "[Day 26] CRITICAL SKU SKU-FA-020 has been in stockout for 3 consecutive days",
-      "[Day 26] CRITICAL SKU SKU-SL-060 has been in stockout for 7 consecutive days",
-      "[Day 26] CRITICAL SKU SKU-SL-070 has been in stockout for 3 consecutive days",
-      "[Day 27] CRITICAL SKU SKU-FA-010 has been in stockout for 6 consecutive days",
-      "[Day 27] CRITICAL SKU SKU-FA-020 has been in stockout for 4 consecutive days",
-      "[Day 27] CRITICAL SKU SKU-SL-050 has been in stockout for 3 consecutive days",
-      "[Day 27] CRITICAL SKU SKU-SL-060 has been in stockout for 8 consecutive days",
-      "[Day 27] CRITICAL SKU SKU-SL-070 has been in stockout for 4 consecutive days",
-      "[Day 28] CRITICAL SKU SKU-FA-010 has been in stockout for 7 consecutive days",
-      "[Day 28] CRITICAL SKU SKU-FA-020 has been in stockout for 5 consecutive days",
-      "[Day 28] CRITICAL SKU SKU-SL-050 has been in stockout for 4 consecutive days",
-      "[Day 28] CRITICAL SKU SKU-SL-060 has been in stockout for 9 consecutive days",
-      "[Day 28] CRITICAL SKU SKU-SL-070 has been in stockout for 5 consecutive days",
-      "[Day 29] CRITICAL SKU SKU-FA-010 has been in stockout for 8 consecutive days",
-      "[Day 29] CRITICAL SKU SKU-FA-020 has been in stockout for 6 consecutive days",
-      "[Day 29] CRITICAL SKU SKU-FA-030 has been in stockout for 3 consecutive days",
-      "[Day 29] CRITICAL SKU SKU-SL-050 has been in stockout for 5 consecutive days",
-      "[Day 29] CRITICAL SKU SKU-SL-060 has been in stockout for 10 consecutive days",
-      "[Day 29] CRITICAL SKU SKU-SL-070 has been in stockout for 6 consecutive days",
-      "[Day 30] CRITICAL SKU SKU-FA-010 has been in stockout for 9 consecutive days",
-      "[Day 30] CRITICAL SKU SKU-FA-020 has been in stockout for 7 consecutive days",
-      "[Day 30] CRITICAL SKU SKU-FA-030 has been in stockout for 4 consecutive days",
-      "[Day 30] CRITICAL SKU SKU-SL-050 has been in stockout for 6 consecutive days",
-      "[Day 30] CRITICAL SKU SKU-SL-060 has been in stockout for 11 consecutive days"
-    ]
+  "safety": {
+    "totalFlags": 0,
+    "flags": []
   },
   "dailySnapshots": [
     {
       "day": 1,
       "regime": "HEALTHY_EXPANSION",
-      "serviceLevelPct": 100,
+      "slPct": 100,
       "stockouts": 0,
       "backorderUnits": 0,
-      "workingCapitalMillion": null,
-      "actionsProposed": 1,
-      "actionsApproved": 1,
-      "dataQualityScorePct": 94,
+      "wcM": 3.37,
+      "proposed": 0,
+      "approved": 0,
+      "dqPct": 99,
       "priceEvent": false,
-      "supplierOutages": [],
+      "outages": [],
       "unsafeFlags": 0
     },
     {
       "day": 2,
       "regime": "HEALTHY_EXPANSION",
-      "serviceLevelPct": 100,
+      "slPct": 100,
       "stockouts": 0,
       "backorderUnits": 0,
-      "workingCapitalMillion": null,
-      "actionsProposed": 1,
-      "actionsApproved": 0,
-      "dataQualityScorePct": 88,
+      "wcM": 3.2,
+      "proposed": 0,
+      "approved": 0,
+      "dqPct": 100,
       "priceEvent": false,
-      "supplierOutages": [],
+      "outages": [],
       "unsafeFlags": 0
     },
     {
       "day": 3,
       "regime": "HEALTHY_EXPANSION",
-      "serviceLevelPct": 99.97,
-      "stockouts": 1,
-      "backorderUnits": 1,
-      "workingCapitalMillion": null,
-      "actionsProposed": 1,
-      "actionsApproved": 1,
-      "dataQualityScorePct": 88,
+      "slPct": 100,
+      "stockouts": 0,
+      "backorderUnits": 0,
+      "wcM": 3.01,
+      "proposed": 0,
+      "approved": 0,
+      "dqPct": 99,
       "priceEvent": false,
-      "supplierOutages": [],
+      "outages": [],
       "unsafeFlags": 0
     },
     {
       "day": 4,
       "regime": "HEALTHY_EXPANSION",
-      "serviceLevelPct": 100,
+      "slPct": 100,
       "stockouts": 0,
       "backorderUnits": 0,
-      "workingCapitalMillion": null,
-      "actionsProposed": 1,
-      "actionsApproved": 1,
-      "dataQualityScorePct": 91,
+      "wcM": 2.83,
+      "proposed": 0,
+      "approved": 0,
+      "dqPct": 99,
       "priceEvent": false,
-      "supplierOutages": [],
+      "outages": [],
       "unsafeFlags": 0
     },
     {
       "day": 5,
       "regime": "HEALTHY_EXPANSION",
-      "serviceLevelPct": 100,
+      "slPct": 100,
       "stockouts": 0,
       "backorderUnits": 0,
-      "workingCapitalMillion": null,
-      "actionsProposed": 1,
-      "actionsApproved": 0,
-      "dataQualityScorePct": 82,
+      "wcM": 2.65,
+      "proposed": 0,
+      "approved": 0,
+      "dqPct": 98,
       "priceEvent": false,
-      "supplierOutages": [],
+      "outages": [],
       "unsafeFlags": 0
     },
     {
       "day": 6,
       "regime": "HEALTHY_EXPANSION",
-      "serviceLevelPct": 100,
+      "slPct": 100,
       "stockouts": 0,
       "backorderUnits": 0,
-      "workingCapitalMillion": null,
-      "actionsProposed": 1,
-      "actionsApproved": 1,
-      "dataQualityScorePct": 64,
+      "wcM": 2.56,
+      "proposed": 0,
+      "approved": 0,
+      "dqPct": 99,
       "priceEvent": false,
-      "supplierOutages": [],
+      "outages": [],
       "unsafeFlags": 0
     },
     {
       "day": 7,
       "regime": "HEALTHY_EXPANSION",
-      "serviceLevelPct": null,
+      "slPct": 100,
       "stockouts": 0,
       "backorderUnits": 0,
-      "workingCapitalMillion": null,
-      "actionsProposed": 1,
-      "actionsApproved": 1,
-      "dataQualityScorePct": 61,
+      "wcM": 2.52,
+      "proposed": 0,
+      "approved": 0,
+      "dqPct": 99,
       "priceEvent": true,
-      "supplierOutages": [],
+      "outages": [],
       "unsafeFlags": 0
     },
     {
       "day": 8,
       "regime": "MILD_CONTRACTION",
-      "serviceLevelPct": null,
+      "slPct": 100,
       "stockouts": 0,
       "backorderUnits": 0,
-      "workingCapitalMillion": null,
-      "actionsProposed": 1,
-      "actionsApproved": 1,
-      "dataQualityScorePct": 46,
+      "wcM": 2.66,
+      "proposed": 10,
+      "approved": 10,
+      "dqPct": 99,
       "priceEvent": false,
-      "supplierOutages": [
+      "outages": [
         "Supplier 2"
       ],
       "unsafeFlags": 0
@@ -302,15 +256,15 @@
     {
       "day": 9,
       "regime": "MILD_CONTRACTION",
-      "serviceLevelPct": null,
+      "slPct": 100,
       "stockouts": 0,
       "backorderUnits": 0,
-      "workingCapitalMillion": null,
-      "actionsProposed": 1,
-      "actionsApproved": 1,
-      "dataQualityScorePct": 40,
+      "wcM": 2.51,
+      "proposed": 0,
+      "approved": 0,
+      "dqPct": 100,
       "priceEvent": false,
-      "supplierOutages": [
+      "outages": [
         "Supplier 2"
       ],
       "unsafeFlags": 0
@@ -318,15 +272,15 @@
     {
       "day": 10,
       "regime": "MILD_CONTRACTION",
-      "serviceLevelPct": null,
+      "slPct": 100,
       "stockouts": 0,
       "backorderUnits": 0,
-      "workingCapitalMillion": null,
-      "actionsProposed": 1,
-      "actionsApproved": 1,
-      "dataQualityScorePct": 28,
+      "wcM": 2.35,
+      "proposed": 0,
+      "approved": 0,
+      "dqPct": 99,
       "priceEvent": false,
-      "supplierOutages": [
+      "outages": [
         "Supplier 2"
       ],
       "unsafeFlags": 0
@@ -334,15 +288,15 @@
     {
       "day": 11,
       "regime": "MILD_CONTRACTION",
-      "serviceLevelPct": null,
+      "slPct": 100,
       "stockouts": 0,
       "backorderUnits": 0,
-      "workingCapitalMillion": null,
-      "actionsProposed": 1,
-      "actionsApproved": 1,
-      "dataQualityScorePct": 22,
+      "wcM": 2.19,
+      "proposed": 0,
+      "approved": 0,
+      "dqPct": 99,
       "priceEvent": false,
-      "supplierOutages": [
+      "outages": [
         "Supplier 2"
       ],
       "unsafeFlags": 0
@@ -350,268 +304,268 @@
     {
       "day": 12,
       "regime": "MILD_CONTRACTION",
-      "serviceLevelPct": null,
+      "slPct": 100,
       "stockouts": 0,
       "backorderUnits": 0,
-      "workingCapitalMillion": null,
-      "actionsProposed": 1,
-      "actionsApproved": 1,
-      "dataQualityScorePct": 19,
+      "wcM": 2.04,
+      "proposed": 0,
+      "approved": 0,
+      "dqPct": 97,
       "priceEvent": false,
-      "supplierOutages": [],
+      "outages": [],
       "unsafeFlags": 0
     },
     {
       "day": 13,
       "regime": "MILD_CONTRACTION",
-      "serviceLevelPct": null,
+      "slPct": 100,
       "stockouts": 0,
       "backorderUnits": 0,
-      "workingCapitalMillion": null,
-      "actionsProposed": 1,
-      "actionsApproved": 0,
-      "dataQualityScorePct": 22,
+      "wcM": 1.96,
+      "proposed": 0,
+      "approved": 0,
+      "dqPct": 97,
       "priceEvent": false,
-      "supplierOutages": [],
+      "outages": [],
       "unsafeFlags": 0
     },
     {
       "day": 14,
       "regime": "MILD_CONTRACTION",
-      "serviceLevelPct": null,
+      "slPct": 100,
       "stockouts": 0,
       "backorderUnits": 0,
-      "workingCapitalMillion": null,
-      "actionsProposed": 1,
-      "actionsApproved": 0,
-      "dataQualityScorePct": 7,
+      "wcM": 1.88,
+      "proposed": 0,
+      "approved": 0,
+      "dqPct": 96,
       "priceEvent": true,
-      "supplierOutages": [],
+      "outages": [],
       "unsafeFlags": 0
     },
     {
       "day": 15,
       "regime": "STRESS",
-      "serviceLevelPct": null,
+      "slPct": 100,
       "stockouts": 0,
       "backorderUnits": 0,
-      "workingCapitalMillion": null,
-      "actionsProposed": 1,
-      "actionsApproved": 1,
-      "dataQualityScorePct": 0,
+      "wcM": 4.76,
+      "proposed": 68,
+      "approved": 68,
+      "dqPct": 97,
       "priceEvent": false,
-      "supplierOutages": [],
+      "outages": [],
       "unsafeFlags": 0
     },
     {
       "day": 16,
       "regime": "STRESS",
-      "serviceLevelPct": null,
+      "slPct": 100,
       "stockouts": 0,
       "backorderUnits": 0,
-      "workingCapitalMillion": null,
-      "actionsProposed": 1,
-      "actionsApproved": 0,
-      "dataQualityScorePct": 0,
+      "wcM": 4.53,
+      "proposed": 0,
+      "approved": 0,
+      "dqPct": 99,
       "priceEvent": false,
-      "supplierOutages": [],
+      "outages": [],
       "unsafeFlags": 0
     },
     {
       "day": 17,
       "regime": "STRESS",
-      "serviceLevelPct": null,
+      "slPct": 100,
       "stockouts": 0,
       "backorderUnits": 0,
-      "workingCapitalMillion": null,
-      "actionsProposed": 9,
-      "actionsApproved": 8,
-      "dataQualityScorePct": 4,
+      "wcM": 4.29,
+      "proposed": 0,
+      "approved": 0,
+      "dqPct": 99,
       "priceEvent": false,
-      "supplierOutages": [],
+      "outages": [],
       "unsafeFlags": 0
     },
     {
       "day": 18,
       "regime": "STRESS",
-      "serviceLevelPct": null,
+      "slPct": 99.96,
       "stockouts": 1,
       "backorderUnits": 2,
-      "workingCapitalMillion": null,
-      "actionsProposed": 17,
-      "actionsApproved": 5,
-      "dataQualityScorePct": 0,
+      "wcM": 4.06,
+      "proposed": 0,
+      "approved": 0,
+      "dqPct": 99,
       "priceEvent": false,
-      "supplierOutages": [],
+      "outages": [],
       "unsafeFlags": 0
     },
     {
       "day": 19,
       "regime": "STRESS",
-      "serviceLevelPct": null,
-      "stockouts": 11,
-      "backorderUnits": 559,
-      "workingCapitalMillion": null,
-      "actionsProposed": 31,
-      "actionsApproved": 10,
-      "dataQualityScorePct": 0,
+      "slPct": 96.91,
+      "stockouts": 5,
+      "backorderUnits": 147,
+      "wcM": 3.86,
+      "proposed": 0,
+      "approved": 0,
+      "dqPct": 98,
       "priceEvent": false,
-      "supplierOutages": [],
+      "outages": [],
       "unsafeFlags": 0
     },
     {
       "day": 20,
       "regime": "STRESS",
-      "serviceLevelPct": null,
-      "stockouts": 17,
-      "backorderUnits": 601,
-      "workingCapitalMillion": null,
-      "actionsProposed": 34,
-      "actionsApproved": 12,
-      "dataQualityScorePct": 0,
+      "slPct": 93.54,
+      "stockouts": 7,
+      "backorderUnits": 177,
+      "wcM": 3.75,
+      "proposed": 0,
+      "approved": 0,
+      "dqPct": 100,
       "priceEvent": false,
-      "supplierOutages": [],
+      "outages": [],
       "unsafeFlags": 0
     },
     {
       "day": 21,
       "regime": "STRESS",
-      "serviceLevelPct": null,
-      "stockouts": 18,
-      "backorderUnits": 318,
-      "workingCapitalMillion": null,
-      "actionsProposed": 38,
-      "actionsApproved": 17,
-      "dataQualityScorePct": 0,
+      "slPct": 90.99,
+      "stockouts": 9,
+      "backorderUnits": 120,
+      "wcM": 3.93,
+      "proposed": 0,
+      "approved": 0,
+      "dqPct": 98,
       "priceEvent": true,
-      "supplierOutages": [],
+      "outages": [],
       "unsafeFlags": 0
     },
     {
       "day": 22,
       "regime": "RECOVERY",
-      "serviceLevelPct": null,
-      "stockouts": 27,
-      "backorderUnits": 851,
-      "workingCapitalMillion": null,
-      "actionsProposed": 49,
-      "actionsApproved": 37,
-      "dataQualityScorePct": 0,
+      "slPct": 88.56,
+      "stockouts": 14,
+      "backorderUnits": 391,
+      "wcM": 3.78,
+      "proposed": 0,
+      "approved": 0,
+      "dqPct": 99,
       "priceEvent": false,
-      "supplierOutages": [],
-      "unsafeFlags": 1
+      "outages": [],
+      "unsafeFlags": 0
     },
     {
       "day": 23,
       "regime": "RECOVERY",
-      "serviceLevelPct": null,
-      "stockouts": 38,
-      "backorderUnits": 1566,
-      "workingCapitalMillion": null,
-      "actionsProposed": 59,
-      "actionsApproved": 35,
-      "dataQualityScorePct": 0,
+      "slPct": 83.3,
+      "stockouts": 19,
+      "backorderUnits": 670,
+      "wcM": 3.62,
+      "proposed": 1,
+      "approved": 0,
+      "dqPct": 100,
       "priceEvent": false,
-      "supplierOutages": [],
-      "unsafeFlags": 1
+      "outages": [],
+      "unsafeFlags": 0
     },
     {
       "day": 24,
       "regime": "RECOVERY",
-      "serviceLevelPct": null,
-      "stockouts": 47,
-      "backorderUnits": 2119,
-      "workingCapitalMillion": null,
-      "actionsProposed": 65,
-      "actionsApproved": 53,
-      "dataQualityScorePct": 0,
+      "slPct": 70.42,
+      "stockouts": 27,
+      "backorderUnits": 1262,
+      "wcM": 3.48,
+      "proposed": 2,
+      "approved": 1,
+      "dqPct": 98,
       "priceEvent": false,
-      "supplierOutages": [],
-      "unsafeFlags": 2
+      "outages": [],
+      "unsafeFlags": 0
     },
     {
       "day": 25,
       "regime": "RECOVERY",
-      "serviceLevelPct": null,
-      "stockouts": 55,
-      "backorderUnits": 2496,
-      "workingCapitalMillion": null,
-      "actionsProposed": 69,
-      "actionsApproved": 52,
-      "dataQualityScorePct": 0,
+      "slPct": 76.23,
+      "stockouts": 20,
+      "backorderUnits": 1009,
+      "wcM": 3.32,
+      "proposed": 1,
+      "approved": 0,
+      "dqPct": 97,
       "priceEvent": false,
-      "supplierOutages": [],
-      "unsafeFlags": 2
+      "outages": [],
+      "unsafeFlags": 0
     },
     {
       "day": 26,
       "regime": "RECOVERY",
-      "serviceLevelPct": null,
-      "stockouts": 58,
-      "backorderUnits": 2610,
-      "workingCapitalMillion": null,
-      "actionsProposed": 72,
-      "actionsApproved": 56,
-      "dataQualityScorePct": 0,
+      "slPct": 78.57,
+      "stockouts": 17,
+      "backorderUnits": 820,
+      "wcM": 3.19,
+      "proposed": 1,
+      "approved": 1,
+      "dqPct": 94,
       "priceEvent": false,
-      "supplierOutages": [],
-      "unsafeFlags": 4
+      "outages": [],
+      "unsafeFlags": 0
     },
     {
       "day": 27,
       "regime": "RECOVERY",
-      "serviceLevelPct": null,
-      "stockouts": 55,
-      "backorderUnits": 1433,
-      "workingCapitalMillion": null,
-      "actionsProposed": 74,
-      "actionsApproved": 57,
-      "dataQualityScorePct": 0,
+      "slPct": 85.96,
+      "stockouts": 10,
+      "backorderUnits": 312,
+      "wcM": 3.1,
+      "proposed": 1,
+      "approved": 1,
+      "dqPct": 97,
       "priceEvent": false,
-      "supplierOutages": [],
-      "unsafeFlags": 5
+      "outages": [],
+      "unsafeFlags": 0
     },
     {
       "day": 28,
       "regime": "HEALTHY_EXPANSION",
-      "serviceLevelPct": null,
-      "stockouts": 52,
-      "backorderUnits": 705,
-      "workingCapitalMillion": null,
-      "actionsProposed": 75,
-      "actionsApproved": 56,
-      "dataQualityScorePct": 0,
+      "slPct": 90.9,
+      "stockouts": 7,
+      "backorderUnits": 93,
+      "wcM": 2.99,
+      "proposed": 0,
+      "approved": 0,
+      "dqPct": 99,
       "priceEvent": true,
-      "supplierOutages": [],
-      "unsafeFlags": 5
+      "outages": [],
+      "unsafeFlags": 0
     },
     {
       "day": 29,
       "regime": "HEALTHY_EXPANSION",
-      "serviceLevelPct": null,
-      "stockouts": 42,
-      "backorderUnits": 1539,
-      "workingCapitalMillion": null,
-      "actionsProposed": 77,
-      "actionsApproved": 55,
-      "dataQualityScorePct": 0,
+      "slPct": 95.91,
+      "stockouts": 4,
+      "backorderUnits": 135,
+      "wcM": 2.84,
+      "proposed": 0,
+      "approved": 0,
+      "dqPct": 99,
       "priceEvent": false,
-      "supplierOutages": [],
-      "unsafeFlags": 6
+      "outages": [],
+      "unsafeFlags": 0
     },
     {
       "day": 30,
       "regime": "HEALTHY_EXPANSION",
-      "serviceLevelPct": null,
-      "stockouts": 39,
-      "backorderUnits": 1539,
-      "workingCapitalMillion": null,
-      "actionsProposed": 77,
-      "actionsApproved": 55,
-      "dataQualityScorePct": 0,
+      "slPct": 96.46,
+      "stockouts": 5,
+      "backorderUnits": 142,
+      "wcM": 2.66,
+      "proposed": 0,
+      "approved": 0,
+      "dqPct": 99,
       "priceEvent": false,
-      "supplierOutages": [],
-      "unsafeFlags": 5
+      "outages": [],
+      "unsafeFlags": 0
     }
   ]
 }
