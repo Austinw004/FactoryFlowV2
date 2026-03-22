@@ -1,9 +1,9 @@
 {
   "harnessMeta": {
-    "version": "1.0.0",
-    "generatedAt": "2026-03-22T20:35:42.366Z",
-    "totalTests": 90,
-    "totalPass": 90,
+    "version": "2.0.0",
+    "generatedAt": "2026-03-22T21:00:26.570Z",
+    "totalTests": 104,
+    "totalPass": 104,
     "totalFail": 0,
     "confidenceScore": 100,
     "verdict": "SAFE FOR PILOT"
@@ -85,6 +85,13 @@
       "pass": 17,
       "fail": 0,
       "result": "PASS"
+    },
+    {
+      "section": "S12",
+      "name": "Gate 14 — Economic Truth Validation",
+      "pass": 14,
+      "fail": 0,
+      "result": "PASS"
     }
   ],
   "criticalFailures": [],
@@ -109,7 +116,7 @@
         "found": 10,
         "missing": []
       },
-      "durationMs": 6
+      "durationMs": 13
     },
     {
       "section": "S1",
@@ -132,7 +139,7 @@
       "evidence": {
         "safeModeEnabled": 1
       },
-      "durationMs": 16
+      "durationMs": 6
     },
     {
       "section": "S1",
@@ -142,9 +149,9 @@
       "proofType": "runtime",
       "evidence": {
         "status": 200,
-        "ms": 53
+        "ms": 38
       },
-      "durationMs": 53
+      "durationMs": 39
     },
     {
       "section": "S1",
@@ -154,9 +161,9 @@
       "proofType": "runtime",
       "evidence": {
         "status": 200,
-        "ms": 9
+        "ms": 7
       },
-      "durationMs": 9
+      "durationMs": 7
     },
     {
       "section": "S1",
@@ -166,9 +173,9 @@
       "proofType": "runtime",
       "evidence": {
         "status": 200,
-        "ms": 4
+        "ms": 2
       },
-      "durationMs": 4
+      "durationMs": 2
     },
     {
       "section": "S2",
@@ -180,7 +187,7 @@
         "ownQuery": 1,
         "crossQuery": 0
       },
-      "durationMs": 5
+      "durationMs": 4
     },
     {
       "section": "S2",
@@ -216,7 +223,7 @@
         "ownQuery": 1,
         "crossQuery": 0
       },
-      "durationMs": 14
+      "durationMs": 10
     },
     {
       "section": "S2",
@@ -228,7 +235,7 @@
         "ownQuery": 1,
         "crossQuery": 0
       },
-      "durationMs": 17
+      "durationMs": 10
     },
     {
       "section": "S2",
@@ -240,7 +247,7 @@
         "ownQuery": 1,
         "crossQuery": 0
       },
-      "durationMs": 22
+      "durationMs": 9
     },
     {
       "section": "S2",
@@ -251,7 +258,7 @@
       "evidence": {
         "status": 401
       },
-      "durationMs": 3
+      "durationMs": 2
     },
     {
       "section": "S2",
@@ -262,7 +269,7 @@
       "evidence": {
         "status": 401
       },
-      "durationMs": 17
+      "durationMs": 6
     },
     {
       "section": "S3",
@@ -273,7 +280,7 @@
       "evidence": {
         "safeModeEnabled": 1
       },
-      "durationMs": 2
+      "durationMs": 3
     },
     {
       "section": "S3",
@@ -296,7 +303,7 @@
         "allowed": false,
         "reason": "Draft status is 'draft', must be 'approved' to execute"
       },
-      "durationMs": 6
+      "durationMs": 7
     },
     {
       "section": "S3",
@@ -307,7 +314,7 @@
       "evidence": {
         "hasApprovalGuard": true
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S3",
@@ -319,7 +326,7 @@
         "allowed": true,
         "status": "approved"
       },
-      "durationMs": 8
+      "durationMs": 5
     },
     {
       "section": "S3",
@@ -342,7 +349,7 @@
       "evidence": {
         "hasExecutedAtGuard": true
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S4",
@@ -353,7 +360,7 @@
       "evidence": {
         "dailySpendTotal": 0
       },
-      "durationMs": 15
+      "durationMs": 16
     },
     {
       "section": "S4",
@@ -367,7 +374,7 @@
         "allowed": 33,
         "blocked": 27
       },
-      "durationMs": 238
+      "durationMs": 305
     },
     {
       "section": "S4",
@@ -401,7 +408,7 @@
       "pass": true,
       "proofType": "runtime",
       "evidence": {
-        "stateId": "1b3791f4-a152-470a-b63e-f2ecd0f5169d"
+        "stateId": "0adad642-cf8d-46fe-bd71-db4d649cb189"
       },
       "durationMs": 0
     },
@@ -412,7 +419,7 @@
       "pass": true,
       "proofType": "deterministic",
       "evidence": {
-        "id1": "51f0433365d80806131ad7bdd5c25945",
+        "id1": "59dd1414f3611c4ed38302fa9635c14d",
         "equal": true,
         "length": 32
       },
@@ -425,11 +432,11 @@
       "pass": true,
       "proofType": "deterministic",
       "evidence": {
-        "id1": "51f0433365d80806131ad7bdd5c25945",
-        "idAlt": "ef44bb52e4f4a0ded8de05d43daa7108",
+        "id1": "59dd1414f3611c4ed38302fa9635c14d",
+        "idAlt": "fa7fff7ae106a695b8a2aa75a721241f",
         "collision": false
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S5",
@@ -440,7 +447,7 @@
       "evidence": {
         "count": 1
       },
-      "durationMs": 8
+      "durationMs": 5
     },
     {
       "section": "S5",
@@ -451,7 +458,7 @@
       "evidence": {
         "duplicateBlocked": true
       },
-      "durationMs": 3
+      "durationMs": 2
     },
     {
       "section": "S5",
@@ -473,7 +480,7 @@
       "evidence": {
         "rows": 1
       },
-      "durationMs": 45
+      "durationMs": 72
     },
     {
       "section": "S6",
@@ -522,7 +529,7 @@
           0
         ]
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S6",
@@ -570,7 +577,7 @@
       "evidence": {
         "hasRegimeUncertainty": true
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S7",
@@ -581,7 +588,7 @@
       "evidence": {
         "qty": 720
       },
-      "durationMs": 18
+      "durationMs": 17
     },
     {
       "section": "S7",
@@ -627,7 +634,7 @@
         "conserv": 610,
         "aggress": 815
       },
-      "durationMs": 32
+      "durationMs": 29
     },
     {
       "section": "S7",
@@ -638,7 +645,7 @@
       "evidence": {
         "qty": 940
       },
-      "durationMs": 16
+      "durationMs": 12
     },
     {
       "section": "S7",
@@ -672,7 +679,7 @@
         "r1": 735,
         "r2": 735
       },
-      "durationMs": 29
+      "durationMs": 23
     },
     {
       "section": "S8",
@@ -683,7 +690,7 @@
       "evidence": {
         "crashed": false
       },
-      "durationMs": 6
+      "durationMs": 5
     },
     {
       "section": "S8",
@@ -769,7 +776,7 @@
         "passed": 2,
         "failed": 4
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S8",
@@ -778,9 +785,9 @@
       "pass": true,
       "proofType": "deterministic",
       "evidence": {
-        "hash": "4435a8c885e6b35d"
+        "hash": "b80f1e1ae3b92653"
       },
-      "durationMs": 4
+      "durationMs": 2
     },
     {
       "section": "S9",
@@ -792,7 +799,7 @@
         "score": 0.86,
         "entities": 5
       },
-      "durationMs": 51
+      "durationMs": 30
     },
     {
       "section": "S9",
@@ -815,7 +822,7 @@
         "scoreA": 0.86,
         "scoreB": 0.72
       },
-      "durationMs": 39
+      "durationMs": 31
     },
     {
       "section": "S9",
@@ -837,7 +844,7 @@
       "evidence": {
         "found": true
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S9",
@@ -860,7 +867,7 @@
         "scoreEmpty": 0,
         "scoreA": 0.86
       },
-      "durationMs": 14
+      "durationMs": 11
     },
     {
       "section": "S10",
@@ -883,7 +890,7 @@
       "evidence": {
         "found": 1
       },
-      "durationMs": 18
+      "durationMs": 10
     },
     {
       "section": "S10",
@@ -905,7 +912,7 @@
       "evidence": {
         "provenanceVersion": "4.0.0"
       },
-      "durationMs": 10
+      "durationMs": 15
     },
     {
       "section": "S10",
@@ -929,18 +936,18 @@
         "ownRows": 1,
         "crossRows": 0
       },
-      "durationMs": 3
+      "durationMs": 4
     },
     {
       "section": "S10",
       "testId": "10.7",
-      "description": "Stress test report has configHash (0c57d3027a64c5a5...)",
+      "description": "Stress test report has configHash (10fdd3a0e8e4e895...)",
       "pass": true,
       "proofType": "deterministic",
       "evidence": {
-        "configHash": "0c57d3027a64c5a5"
+        "configHash": "10fdd3a0e8e4e895"
       },
-      "durationMs": 4
+      "durationMs": 5
     },
     {
       "section": "S11",
@@ -950,9 +957,9 @@
       "proofType": "runtime",
       "evidence": {
         "status": 200,
-        "ms": 8
+        "ms": 7
       },
-      "durationMs": 8
+      "durationMs": 7
     },
     {
       "section": "S11",
@@ -974,9 +981,9 @@
       "proofType": "runtime",
       "evidence": {
         "status": 200,
-        "ms": 1
+        "ms": 2
       },
-      "durationMs": 1
+      "durationMs": 2
     },
     {
       "section": "S11",
@@ -1010,9 +1017,9 @@
       "proofType": "runtime",
       "evidence": {
         "status": 401,
-        "ms": 2
+        "ms": 1
       },
-      "durationMs": 2
+      "durationMs": 1
     },
     {
       "section": "S11",
@@ -1034,7 +1041,7 @@
       "proofType": "runtime",
       "evidence": {
         "status": 401,
-        "ms": 1
+        "ms": 2
       },
       "durationMs": 2
     },
@@ -1070,9 +1077,9 @@
       "proofType": "runtime",
       "evidence": {
         "status": 401,
-        "ms": 1
+        "ms": 2
       },
-      "durationMs": 1
+      "durationMs": 2
     },
     {
       "section": "S11",
@@ -1082,9 +1089,9 @@
       "proofType": "runtime",
       "evidence": {
         "status": 401,
-        "ms": 2
+        "ms": 1
       },
-      "durationMs": 2
+      "durationMs": 1
     },
     {
       "section": "S11",
@@ -1094,9 +1101,9 @@
       "proofType": "runtime",
       "evidence": {
         "status": 401,
-        "ms": 1
+        "ms": 2
       },
-      "durationMs": 1
+      "durationMs": 2
     },
     {
       "section": "S11",
@@ -1125,17 +1132,17 @@
     {
       "section": "S11",
       "testId": "11.16",
-      "description": "Health endpoints all respond within 2000ms (4ms, 7ms, 6ms)",
+      "description": "Health endpoints all respond within 2000ms (4ms, 7ms, 5ms)",
       "pass": true,
       "proofType": "runtime",
       "evidence": {
         "timings": [
           4,
           7,
-          6
+          5
         ]
       },
-      "durationMs": 8
+      "durationMs": 7
     },
     {
       "section": "S11",
@@ -1146,7 +1153,183 @@
       "evidence": {
         "status": 401
       },
+      "durationMs": 2
+    },
+    {
+      "section": "S12",
+      "testId": "12.1",
+      "description": "ERP reconciliation: forecast-vs-actual error ≤50% [forecast=120.9 actual=130.8 error=7.6%]",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "forecastError": 0.07558386411889605,
+        "detail": "forecast=120.9 actual=130.8 error=7.6%"
+      },
+      "durationMs": 2
+    },
+    {
+      "section": "S12",
+      "testId": "12.2",
+      "description": "Cost reality check: max cost drift 5.7% ≤ 20% across 1 materials",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "maxDrift": 0.05660377358490566,
+        "checked": 1,
+        "worstMat": "synthetic"
+      },
       "durationMs": 1
+    },
+    {
+      "section": "S12",
+      "testId": "12.3",
+      "description": "Savings traceability: schema has measuredOutcomeRef (true) and entityRefs (true) for invoice linking",
+      "pass": true,
+      "proofType": "structural",
+      "evidence": {
+        "measuredRows": 0,
+        "hasMeasuredOutcomeRef": true,
+        "hasEntityRefs": true
+      },
+      "durationMs": 6
+    },
+    {
+      "section": "S12",
+      "testId": "12.4",
+      "description": "Missing data defense: avgDemand=0 throws INSUFFICIENT_DEMAND_DATA (threw=true, correct=true)",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "threw": true,
+        "message": "INSUFFICIENT_DEMAND_DATA: avgDemand=0 is not a positive finite number"
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S12",
+      "testId": "12.4b",
+      "description": "Missing data defense: avgDemand=NaN also throws",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "threw": true
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S12",
+      "testId": "12.5",
+      "description": "Extreme values: optimizedQty=18541 ≤ unboundedLimit=140000 (500×28×10)",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "optimizedQty": 18541,
+        "limit": 140000,
+        "demand": 500
+      },
+      "durationMs": 10
+    },
+    {
+      "section": "S12",
+      "testId": "12.6",
+      "description": "Contradictory signals: SIGNAL_INCONSISTENCY flag present (flags=[\"SIGNAL_INCONSISTENCY\"])",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "flags": [
+          "SIGNAL_INCONSISTENCY"
+        ]
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S12",
+      "testId": "12.7",
+      "description": "Explainability: evidenceBundle=true keyDrivers=5 riskFactors=1",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "hasEvidenceBundle": true,
+        "keyDriversCount": 5,
+        "riskFactorsCount": 1,
+        "sampleKeyDriver": "Economic regime: HEALTHY_EXPANSION (safetyMultiplier=1.20)"
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S12",
+      "testId": "12.8",
+      "description": "Counterfactual: baseline=true optimized=true delta=true deltaServiceLevel=0.095",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "baselineSL": 0.7619047619047619,
+        "optimizedSL": 0.8571428571428571,
+        "deltaSlDelta": 0.09523809523809523
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S12",
+      "testId": "12.9",
+      "description": "Trust score present: policy=0.849 optimization=0.938",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "policyTrustScore": 0.84875,
+        "optTrustScore": 0.9375
+      },
+      "durationMs": 4
+    },
+    {
+      "section": "S12",
+      "testId": "12.9b",
+      "description": "computeTrustScore math: perfect=1.0, zero=0.0, mid=0.5 (got 1, 0, 0.500)",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "ts1": 1,
+        "ts0": 0,
+        "tsMid": 0.5
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S12",
+      "testId": "12.10",
+      "description": "Automation block: trustScore=0.411 automationBlocked=true requiresApproval=true",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "trustScore": 0.4115,
+        "automationBlocked": true,
+        "requiresApproval": true
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S12",
+      "testId": "12.10b",
+      "description": "applyTrustGuard throws LOW_TRUST_BLOCKED_DECISION for trustScore=0.35 (threw=true)",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "threw": true,
+        "message": "LOW_TRUST_BLOCKED_DECISION: trustScore=0.350"
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S12",
+      "testId": "12.10c",
+      "description": "applyTrustGuard sets automationBlocked=true for trustScore=0.52, no throw (blocked=true)",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "threw": false,
+        "automationBlocked": true
+      },
+      "durationMs": 0
     }
   ]
 }

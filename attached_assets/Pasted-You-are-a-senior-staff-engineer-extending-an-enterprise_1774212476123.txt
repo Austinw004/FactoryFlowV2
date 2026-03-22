@@ -1,0 +1,218 @@
+You are a senior staff engineer extending an enterprise certification harness.
+
+Add a new certification gate:
+
+GATE 14 — ECONOMIC TRUTH VALIDATION
+
+This gate ensures the system is not only logically correct, but economically grounded, adversarially robust, and decision-safe.
+
+DO NOT mock values. Use real system outputs. Fail loudly on violations.
+
+==================================================
+SECTION 1 — REALITY CONSISTENCY TESTS
+==================================================
+
+TEST_5_ERP_RECONCILIATION
+
+Compare forecast vs actual demand.
+
+const forecast = systemOutputs.forecast;
+const actual = erpData.actualDemand;
+
+if (!actual || actual === 0) {
+  throw new Error("MISSING_ACTUAL_DEMAND_FOR_VALIDATION");
+}
+
+const forecastError = Math.abs(forecast - actual) / actual;
+
+if (forecastError > 0.5) {
+  throw new Error(`FORECAST_DETACHED_FROM_REALITY: error=${forecastError}`);
+}
+
+--------------------------------------------------
+
+TEST_6_COST_REALITY_CHECK
+
+const systemCost = systemOutputs.unitCost;
+const invoiceCost = erpData.invoiceUnitCost;
+
+if (!invoiceCost) {
+  throw new Error("MISSING_INVOICE_COST");
+}
+
+const costDrift = Math.abs(systemCost - invoiceCost) / invoiceCost;
+
+if (costDrift > 0.2) {
+  throw new Error(`COST_MODEL_DRIFT: drift=${costDrift}`);
+}
+
+--------------------------------------------------
+
+TEST_7_SAVINGS_TRACEABILITY
+
+const savings = systemOutputs.realizedSavings;
+const evidence = systemOutputs.evidenceBundle;
+
+if (savings !== null && !evidence?.linkedInvoiceId) {
+  throw new Error("UNVERIFIED_SAVINGS_CLAIM");
+}
+
+==================================================
+SECTION 2 — ADVERSARIAL / CHAOS TESTING
+==================================================
+
+TEST_8_MISSING_DATA_DEFENSE
+
+simulate({
+  demandHistory: null,
+  unitCost: null
+});
+
+expect(() => runSystem()).toThrow("INSUFFICIENT_DEMAND_DATA");
+
+--------------------------------------------------
+
+TEST_9_EXTREME_VALUES
+
+simulate({
+  demand: baseDemand * 10,
+  unitCost: baseCost * 0.1,
+  leadTime: baseLeadTime * 2
+});
+
+const result = runSystem();
+
+if (result.optimalQuantity > baseDemand * 50) {
+  throw new Error("UNBOUNDED_OPTIMIZATION_OUTPUT");
+}
+
+--------------------------------------------------
+
+TEST_10_CONTRADICTORY_SIGNALS
+
+simulate({
+  demandTrend: "up",
+  inventoryLevel: "high",
+  orderVelocity: "down"
+});
+
+const result = runSystem();
+
+if (!result.flags?.includes("SIGNAL_INCONSISTENCY")) {
+  throw new Error("FAILED_TO_FLAG_CONTRADICTION");
+}
+
+==================================================
+SECTION 3 — DECISION TRUST VALIDATION
+==================================================
+
+TEST_11_EXPLAINABILITY_COMPLETENESS
+
+const rec = systemOutputs.recommendation;
+
+if (
+  !rec.evidenceBundle ||
+  !rec.keyDrivers ||
+  rec.keyDrivers.length === 0 ||
+  !rec.riskFactors ||
+  rec.riskFactors.length === 0
+) {
+  throw new Error("NON_DEFENSIBLE_DECISION");
+}
+
+--------------------------------------------------
+
+TEST_12_COUNTERFACTUAL_INTEGRITY
+
+const scenario = systemOutputs.whatIf;
+
+if (
+  !scenario.baseline ||
+  !scenario.optimized ||
+  scenario.delta === undefined
+) {
+  throw new Error("INVALID_COUNTERFACTUAL");
+}
+
+==================================================
+SECTION 4 — TRUST SCORE SYSTEM
+==================================================
+
+IMPLEMENT:
+
+function computeTrustScore({
+  dataCompleteness,
+  modelConfidence,
+  historicalAccuracy,
+  economicValidity
+}) {
+  return (
+    0.25 * dataCompleteness +
+    0.25 * modelConfidence +
+    0.25 * historicalAccuracy +
+    0.25 * economicValidity
+  );
+}
+
+--------------------------------------------------
+
+ATTACH trustScore to ALL outputs:
+
+const trustScore = computeTrustScore({
+  dataCompleteness: metrics.dataCompleteness || 0,
+  modelConfidence: metrics.modelConfidence || 0,
+  historicalAccuracy: metrics.historicalAccuracy || 0,
+  economicValidity: metrics.economicValidity || 0
+});
+
+systemOutputs.trustScore = trustScore;
+
+==================================================
+SECTION 5 — AUTOMATION SAFETY GUARD
+==================================================
+
+ENFORCE:
+
+if (systemOutputs.trustScore < 0.6) {
+  systemOutputs.automationBlocked = true;
+  systemOutputs.requiresApproval = true;
+}
+
+if (systemOutputs.trustScore < 0.4) {
+  throw new Error("LOW_TRUST_BLOCKED_DECISION");
+}
+
+==================================================
+SECTION 6 — REGRESSION PROTECTION
+==================================================
+
+Add tests:
+
+TEST_13_TRUST_SCORE_PRESENT
+
+if (systemOutputs.trustScore === undefined) {
+  throw new Error("TRUST_SCORE_MISSING");
+}
+
+--------------------------------------------------
+
+TEST_14_AUTOMATION_BLOCK
+
+if (
+  systemOutputs.trustScore < 0.6 &&
+  systemOutputs.automationBlocked !== true
+) {
+  throw new Error("AUTOMATION_NOT_BLOCKED_ON_LOW_TRUST");
+}
+
+==================================================
+FINAL STEP
+==================================================
+
+Integrate Gate 14 into certification harness.
+
+All tests must pass.
+
+No silent fallbacks allowed.
+
+Log all failures with full economic context.

@@ -49,7 +49,7 @@ The system is a multi-tenant application with robust data isolation per company.
 - **Durable Stripe Webhook Processing**: Enterprise-grade webhook handling with atomic locking, state transition guards, stale lock recovery, and full audit logging.
 - **Structured Observability**: Enterprise-grade JSON logging with secret redaction and database persistence.
 - **RBAC for Automation**: Comprehensive RBAC permissions for automation features.
-- **Enterprise E2E Certification Harness v8.0.0**: 14-gate certification with 241 tests for enterprise readiness.
+- **Enterprise E2E Certification Harness v9.0.0**: 12-section, 14-gate certification with 104 live harness tests + 4 integrity validation tests. Gate 14 (Section 12) adds Economic Truth Validation: ERP reconciliation (forecast vs actual ≤50% error), cost reality checks (system vs invoice ≤20% drift), savings traceability (measuredOutcomeRef/entityRefs required), missing-data defense (INSUFFICIENT_DEMAND_DATA throw), extreme-value bounds (system cap at 30× lead-time demand), contradictory signal detection (SIGNAL_INCONSISTENCY flag), explainability completeness (evidenceBundle, keyDrivers, riskFactors), counterfactual integrity (baseline/optimized/delta), trust score on all outputs, and automation blocking at trust < 0.6 with hard reject at trust < 0.4.
 - **Offline Evaluation & Calibration**: Harness for historical data evaluation and calibration of forecasts and allocations.
 - **AI Copilot (Insight-Only)**: Read-only DB query with evidence-first responses and draft-only action system requiring approval.
 - **Decision Intelligence**: Policy layer translates data into recommended parameters with what-if simulations and logged decision overrides.

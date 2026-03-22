@@ -31,7 +31,98 @@ export interface PolicyInputs {
   packSize?: number;
   maxCapacity?: number;
   dataQualityScore?: number;
+  // GATE 14 — signal consistency inputs
+  demandTrend?: "up" | "down" | "flat";
+  inventoryLevel?: "low" | "medium" | "high";
+  orderVelocity?: "up" | "down" | "flat";
 }
+
+// ─── GATE 14: Trust Score ───────────────────────────────────────────────────
+
+export interface TrustScoreInputs {
+  dataCompleteness: number;    // [0,1]: presence of demand history and unit cost
+  modelConfidence: number;     // [0,1]: forecast model confidence
+  historicalAccuracy: number;  // [0,1]: 1 - forecastUncertainty
+  economicValidity: number;    // [0,1]: unit cost present and regime valid
+}
+
+/** Weighted equal-blend trust score. Returns [0,1]. */
+export function computeTrustScore(inputs: TrustScoreInputs): number {
+  const { dataCompleteness, modelConfidence, historicalAccuracy, economicValidity } = inputs;
+  return (
+    0.25 * Math.max(0, Math.min(1, dataCompleteness)) +
+    0.25 * Math.max(0, Math.min(1, modelConfidence)) +
+    0.25 * Math.max(0, Math.min(1, historicalAccuracy)) +
+    0.25 * Math.max(0, Math.min(1, economicValidity))
+  );
+}
+
+/**
+ * Trust guard: sets automationBlocked/requiresApproval flags and throws for
+ * critically low trust scores. Call AFTER building a system output object.
+ */
+export function applyTrustGuard(output: { trustScore: number; automationBlocked: boolean; requiresApproval: boolean }): void {
+  if (output.trustScore < 0.6) {
+    output.automationBlocked = true;
+    output.requiresApproval = true;
+    console.warn(`[TrustGuard] AUTOMATION_BLOCKED trustScore=${output.trustScore.toFixed(3)} < 0.6`);
+  }
+  if (output.trustScore < 0.4) {
+    console.error(`[TrustGuard] LOW_TRUST_BLOCKED_DECISION trustScore=${output.trustScore.toFixed(3)} < 0.4 — refusing to produce decision`);
+    throw new Error(`LOW_TRUST_BLOCKED_DECISION: trustScore=${output.trustScore.toFixed(3)}`);
+  }
+}
+
+// ─── Policy Evidence Bundle ──────────────────────────────────────────────────
+
+export interface PolicyEvidenceBundle {
+  policyVersion: string;
+  regime: string;
+  safetyMultiplier: number;
+  reorderPoint: number;
+  safetyStock: number;
+  avgDemand: number;
+  currentOnHand: number;
+  leadTimeDays: number;
+  forecastUncertainty: number;
+  unitCost: number | null;
+  timestamp: string;
+}
+
+// ─── Counterfactual ──────────────────────────────────────────────────────────
+
+export interface CounterfactualResult {
+  baseline: WhatIfResult;
+  optimized: WhatIfResult;
+  delta: {
+    serviceLevel: number;
+    stockoutRisk: number;
+    cashImpact: number;
+  };
+}
+
+export function computeCounterfactual(
+  inputs: PolicyInputs,
+  optimizedQuantity: number,
+): CounterfactualResult {
+  const baselineQty = Math.round(inputs.avgDemand * inputs.leadTimeDays);
+  const baselineScenario: WhatIfScenario = { name: "baseline", quantity: baselineQty, timing: "standard" };
+  const optimizedScenario: WhatIfScenario = { name: "optimized", quantity: optimizedQuantity, timing: "standard" };
+  const baseline = computeWhatIf(baselineScenario, inputs);
+  const optimized = computeWhatIf(optimizedScenario, inputs);
+  return {
+    baseline,
+    optimized,
+    delta: {
+      serviceLevel: optimized.projectedServiceLevel - baseline.projectedServiceLevel,
+      stockoutRisk: optimized.stockoutRisk - baseline.stockoutRisk,
+      cashImpact: isFinite(optimized.cashImpact) && isFinite(baseline.cashImpact)
+        ? optimized.cashImpact - baseline.cashImpact : NaN,
+    },
+  };
+}
+
+// ─── Policy Recommendation ──────────────────────────────────────────────────
 
 export interface PolicyRecommendation {
   recommendedQuantity: number;
@@ -39,6 +130,14 @@ export interface PolicyRecommendation {
   preferredSupplierId?: string;
   confidence: number;
   reasoning: string;
+  // GATE 14 fields
+  trustScore: number;
+  automationBlocked: boolean;
+  requiresApproval: boolean;
+  keyDrivers: string[];
+  riskFactors: string[];
+  evidenceBundle: PolicyEvidenceBundle;
+  flags: string[];
 }
 
 export interface WhatIfScenario {
@@ -80,6 +179,11 @@ export function assertEconomicValidity({
 
 export function computePolicyRecommendation(inputs: PolicyInputs): PolicyRecommendation {
   const { regime, forecastUncertainty, currentOnHand, avgDemand, leadTimeDays, moq, packSize, dataQualityScore } = inputs;
+
+  // GATE 14 — TEST_8: Guard against missing/zero demand before computing anything
+  if (!avgDemand || avgDemand <= 0 || !isFinite(avgDemand)) {
+    throw new Error(`INSUFFICIENT_DEMAND_DATA: avgDemand=${avgDemand} is not a positive finite number`);
+  }
 
   // FIX 3 (SF-002): Correct regime labels mapped to actual FDR regime vocabulary.
   // Previous code used DEFLATIONARY/INFLATIONARY/CRISIS which do not exist in this system.
@@ -127,6 +231,63 @@ export function computePolicyRecommendation(inputs: PolicyInputs): PolicyRecomme
     confidence *= Math.max(0.3, dataQualityScore);
   }
   if (forecastUncertainty > 0.4) confidence *= 0.7;
+  confidence = Math.max(0.1, Math.min(0.95, confidence));
+
+  // ── GATE 14: Signal consistency check ────────────────────────────────────
+  const flags: string[] = [];
+  if (
+    inputs.demandTrend === "up" &&
+    inputs.inventoryLevel === "high" &&
+    inputs.orderVelocity === "down"
+  ) {
+    flags.push("SIGNAL_INCONSISTENCY");
+    console.warn(`[DecisionIntelligence:AUDIT] SIGNAL_INCONSISTENCY detected materialId=${inputs.materialId}: demandTrend=up but inventoryLevel=high and orderVelocity=down — possible bull-whip effect or data anomaly`);
+  }
+
+  // ── GATE 14: Key drivers ─────────────────────────────────────────────────
+  const keyDrivers: string[] = [
+    `Economic regime: ${regime} (safetyMultiplier=${safetyMultiplier.toFixed(2)})`,
+    `Reorder point: ${reorderPoint.toFixed(1)} units = avgDemand(${avgDemand}/d) × leadTime(${leadTimeDays}d) + safetyStock(${safetyStock.toFixed(1)})`,
+    `Current on-hand: ${currentOnHand} units — ${currentOnHand < reorderPoint ? "BELOW reorder point, order required" : "above reorder point, defer available"}`,
+    `Timing: ${timing}`,
+  ];
+  if (inputs.unitCost) keyDrivers.push(`Unit cost: $${inputs.unitCost.toFixed(2)} — order value = $${(Math.round(rawQuantity) * inputs.unitCost).toFixed(2)}`);
+
+  // ── GATE 14: Risk factors ────────────────────────────────────────────────
+  const riskFactors: string[] = [];
+  if (forecastUncertainty > 0.3) riskFactors.push(`High forecast uncertainty: ${(forecastUncertainty * 100).toFixed(0)}% — safety buffer inflated ×1.2`);
+  if (forecastUncertainty > 0.5) riskFactors.push("Very high uncertainty: confidence materially degraded");
+  if (dataQualityScore !== undefined && dataQualityScore < 0.6) riskFactors.push(`Low data quality score: ${(dataQualityScore * 100).toFixed(0)}% — recommendation confidence reduced`);
+  if (!inputs.unitCost) riskFactors.push("Missing unit cost: cash impact cannot be computed — economic ROI unknown");
+  if (regime === "IMBALANCED_EXCESS") riskFactors.push("IMBALANCED_EXCESS regime: elevated commodity price and supply volatility");
+  if (regime === "REAL_ECONOMY_LEAD") riskFactors.push("REAL_ECONOMY_LEAD regime: accelerate procurement to capture counter-cyclical pricing");
+  if (flags.includes("SIGNAL_INCONSISTENCY")) riskFactors.push("SIGNAL_INCONSISTENCY: contradictory demand/inventory/order signals — verify data sources before acting");
+  if (riskFactors.length === 0) riskFactors.push("No significant risk factors identified at current data quality and regime");
+
+  // ── GATE 14: Evidence bundle ─────────────────────────────────────────────
+  const evidenceBundle: PolicyEvidenceBundle = {
+    policyVersion: POLICY_VERSION,
+    regime,
+    safetyMultiplier,
+    reorderPoint,
+    safetyStock,
+    avgDemand,
+    currentOnHand,
+    leadTimeDays,
+    forecastUncertainty,
+    unitCost: inputs.unitCost ?? null,
+    timestamp: new Date().toISOString(),
+  };
+
+  // ── GATE 14: Trust score ─────────────────────────────────────────────────
+  const dataCompleteness = (avgDemand > 0 ? 0.6 : 0) + (inputs.unitCost ? 0.4 : 0.1);
+  const modelConfidence = confidence;
+  const historicalAccuracy = Math.max(0, 1 - forecastUncertainty);
+  const economicValidity = inputs.unitCost ? 1.0 : 0.5;
+
+  const trustScore = computeTrustScore({ dataCompleteness, modelConfidence, historicalAccuracy, economicValidity });
+  const automationBlocked = trustScore < 0.6;
+  const requiresApproval = trustScore < 0.6;
 
   // FIX 8: Audit log for every policy computation
   console.log(JSON.stringify({
@@ -139,19 +300,30 @@ export function computePolicyRecommendation(inputs: PolicyInputs): PolicyRecomme
     timing,
     reorderPoint: +reorderPoint.toFixed(2),
     optimalQuantity: Math.round(rawQuantity),
+    trustScore: +trustScore.toFixed(4),
+    automationBlocked,
+    flags,
     timestamp: new Date().toISOString(),
   }));
 
   const reasoning = `Regime=${regime}, safety_multiplier=${safetyMultiplier.toFixed(2)}, ` +
     `reorder_point=${reorderPoint.toFixed(1)}, safety_stock=${safetyStock.toFixed(1)}, ` +
     `current_onHand=${currentOnHand}, avg_demand=${avgDemand}/day, ` +
-    `lead_time=${leadTimeDays}d, forecast_uncertainty=${(forecastUncertainty * 100).toFixed(0)}%`;
+    `lead_time=${leadTimeDays}d, forecast_uncertainty=${(forecastUncertainty * 100).toFixed(0)}%, ` +
+    `trust_score=${(trustScore * 100).toFixed(0)}%`;
 
   return {
     recommendedQuantity: Math.round(rawQuantity),
     recommendedTiming: timing,
-    confidence: Math.max(0.1, Math.min(0.95, confidence)),
+    confidence,
     reasoning,
+    trustScore,
+    automationBlocked,
+    requiresApproval,
+    keyDrivers,
+    riskFactors,
+    evidenceBundle,
+    flags,
   };
 }
 

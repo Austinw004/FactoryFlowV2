@@ -11,7 +11,7 @@ import {
 } from "@shared/schema";
 import { classifyRegimeFromFDR, CANONICAL_REGIME_THRESHOLDS, type Regime } from "./regimeConstants";
 import { seededRandom } from "./evaluationHarness";
-import { computePolicyRecommendation, computeWhatIf, assertEconomicValidity, type PolicyInputs, type WhatIfScenario } from "./decisionIntelligence";
+import { computePolicyRecommendation, computeWhatIf, computeTrustScore, assertEconomicValidity, type PolicyInputs, type WhatIfScenario } from "./decisionIntelligence";
 import { DemandForecaster } from "./forecasting";
 
 export interface OptimizationConfig {
@@ -36,6 +36,10 @@ export interface OptimizationResult {
   confidenceInterval: { lower: number; upper: number; level: number };
   whatIfComparison: WhatIfComparisonEntry[];
   evidenceBundle: OptimizationEvidence;
+  // GATE 14 trust fields
+  trustScore: number;
+  automationBlocked: boolean;
+  requiresApproval: boolean;
 }
 
 interface WhatIfComparisonEntry {
@@ -110,6 +114,16 @@ export function optimizeReorderQuantity(
 
   if (moq && rawOptimal > 0 && rawOptimal < moq) rawOptimal = moq;
   if (packSize && rawOptimal > 0) rawOptimal = Math.ceil(rawOptimal / packSize) * packSize;
+
+  // GATE 14 (TEST_9): Hard cap — prevent unbounded algorithmic outputs.
+  // Cap at 30× lead-time demand (30 reorder cycles). This catches numeric runaway while
+  // still being economically rational under extreme demand stress.
+  const systemCap = avgDemand * leadTimeDays * 30;
+  if (rawOptimal > systemCap) {
+    console.warn(`[Optimization:AUDIT] SYSTEM_CAP_APPLIED materialId=${inputs.materialId} rawOptimal=${rawOptimal.toFixed(0)} cappedAt=${systemCap.toFixed(0)} (avgDemand=${avgDemand} × leadTime=${leadTimeDays} × 30)`);
+    rawOptimal = systemCap;
+  }
+
   const optimizedQuantity = Math.round(rawOptimal);
 
   const optServiceLevel = computeServiceLevel(optimizedQuantity, currentOnHand, demandSamples, leadTimeDays);
@@ -189,6 +203,19 @@ export function optimizeReorderQuantity(
     timestamp: new Date().toISOString(),
   }));
 
+  // GATE 14: Compute trust score for this optimization output
+  const dataCompleteness = (avgDemand > 0 ? 0.6 : 0) + (unitCost !== null ? 0.4 : 0.1);
+  const modelConfidence = optServiceLevel;
+  const historicalAccuracy = Math.max(0, 1 - inputs.forecastUncertainty);
+  const economicValidity = unitCost !== null ? 1.0 : 0.5;
+  const trustScore = computeTrustScore({ dataCompleteness, modelConfidence, historicalAccuracy, economicValidity });
+  const automationBlocked = trustScore < 0.6;
+  const requiresApproval = trustScore < 0.6;
+
+  if (automationBlocked) {
+    console.warn(`[Optimization:AUDIT] AUTOMATION_BLOCKED trustScore=${trustScore.toFixed(3)} materialId=${inputs.materialId}`);
+  }
+
   return {
     optimizedQuantity,
     currentPolicyQuantity: currentQuantity,
@@ -200,6 +227,9 @@ export function optimizeReorderQuantity(
     confidenceInterval: { lower: ciLower, upper: ciUpper, level: 0.95 },
     whatIfComparison,
     evidenceBundle,
+    trustScore,
+    automationBlocked,
+    requiresApproval,
   };
 }
 
