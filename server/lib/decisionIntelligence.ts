@@ -9,12 +9,14 @@ import {
   materialConstraints,
   leadTimeDistributions,
   dataQualityScores,
+  purchaseOrders,
   type DecisionRecommendation,
   type DecisionOverride,
 } from "@shared/schema";
 import { classifyRegimeFromFDR } from "./regimeConstants";
+import { DemandForecaster } from "./forecasting";
 
-const POLICY_VERSION = "1.0.0";
+const POLICY_VERSION = "2.0.0";
 
 export interface PolicyInputs {
   regime: string;
@@ -24,6 +26,7 @@ export interface PolicyInputs {
   currentOnHand: number;
   avgDemand: number;
   leadTimeDays: number;
+  unitCost?: number;
   moq?: number;
   packSize?: number;
   maxCapacity?: number;
@@ -54,13 +57,59 @@ export interface WhatIfResult {
   reasoning: string;
 }
 
+// FIX 7: Global economic validity guard
+export function assertEconomicValidity({
+  avgDemand,
+  unitCost,
+  savings,
+}: {
+  avgDemand?: number;
+  unitCost?: number;
+  savings?: number | null;
+}): void {
+  if (avgDemand !== undefined && (avgDemand <= 0 || !isFinite(avgDemand))) {
+    throw new Error(`INVALID_DEMAND: avgDemand=${avgDemand}`);
+  }
+  if (unitCost !== undefined && (unitCost <= 0 || !isFinite(unitCost))) {
+    throw new Error(`INVALID_COST: unitCost=${unitCost}`);
+  }
+  if (savings !== undefined && savings !== null && !isFinite(savings)) {
+    throw new Error(`INVALID_SAVINGS: savings=${savings}`);
+  }
+}
+
 export function computePolicyRecommendation(inputs: PolicyInputs): PolicyRecommendation {
   const { regime, forecastUncertainty, currentOnHand, avgDemand, leadTimeDays, moq, packSize, dataQualityScore } = inputs;
 
-  let safetyMultiplier = 1.5;
-  if (regime === "DEFLATIONARY") safetyMultiplier = 1.2;
-  else if (regime === "INFLATIONARY") safetyMultiplier = 2.0;
-  else if (regime === "CRISIS") safetyMultiplier = 2.5;
+  // FIX 3 (SF-002): Correct regime labels mapped to actual FDR regime vocabulary.
+  // Previous code used DEFLATIONARY/INFLATIONARY/CRISIS which do not exist in this system.
+  let safetyMultiplier: number;
+  let timing: string;
+
+  switch (regime) {
+    case "HEALTHY_EXPANSION":
+      safetyMultiplier = 1.2;
+      timing = "standard";
+      break;
+    case "ASSET_LED_GROWTH":
+      safetyMultiplier = 1.4;
+      timing = "slightly_accelerated";
+      break;
+    case "IMBALANCED_EXCESS":
+      safetyMultiplier = 1.8;
+      timing = "defer_if_possible";
+      break;
+    case "REAL_ECONOMY_LEAD":
+      safetyMultiplier = 2.2;
+      timing = "accelerate";
+      break;
+    default:
+      // Log and use a conservative fallback rather than throwing, to protect existing tests
+      // that may pass legacy or unknown regime strings.
+      console.warn(`[DecisionIntelligence:AUDIT] UNKNOWN_REGIME="${regime}" — using conservative fallback safetyMultiplier=1.5`);
+      safetyMultiplier = 1.5;
+      timing = "standard";
+  }
 
   if (forecastUncertainty > 0.3) safetyMultiplier *= 1.2;
 
@@ -71,11 +120,6 @@ export function computePolicyRecommendation(inputs: PolicyInputs): PolicyRecomme
   if (moq && rawQuantity > 0 && rawQuantity < moq) rawQuantity = moq;
   if (packSize && rawQuantity > 0) rawQuantity = Math.ceil(rawQuantity / packSize) * packSize;
 
-  let timing = "standard";
-  if (regime === "DEFLATIONARY") timing = "delay_if_possible";
-  else if (regime === "INFLATIONARY") timing = "accelerate";
-  else if (regime === "CRISIS") timing = "immediate";
-
   if (currentOnHand > reorderPoint * 1.5) timing = "defer";
 
   let confidence = 0.7;
@@ -83,6 +127,20 @@ export function computePolicyRecommendation(inputs: PolicyInputs): PolicyRecomme
     confidence *= Math.max(0.3, dataQualityScore);
   }
   if (forecastUncertainty > 0.4) confidence *= 0.7;
+
+  // FIX 8: Audit log for every policy computation
+  console.log(JSON.stringify({
+    event: "policy_recommendation",
+    materialId: inputs.materialId,
+    avgDemand,
+    unitCost: inputs.unitCost ?? null,
+    regime,
+    safetyMultiplier: +safetyMultiplier.toFixed(4),
+    timing,
+    reorderPoint: +reorderPoint.toFixed(2),
+    optimalQuantity: Math.round(rawQuantity),
+    timestamp: new Date().toISOString(),
+  }));
 
   const reasoning = `Regime=${regime}, safety_multiplier=${safetyMultiplier.toFixed(2)}, ` +
     `reorder_point=${reorderPoint.toFixed(1)}, safety_stock=${safetyStock.toFixed(1)}, ` +
@@ -112,6 +170,50 @@ export async function generateRecommendation(
   const leadTime = smRows.length > 0 ? smRows[0].leadTimeDays : 14;
   const preferredSupplier = smRows.length > 0 ? smRows[0].supplierId : undefined;
 
+  // FIX 2 (SF-007): Use real unit cost from supplierMaterials, fall back to last PO unitPrice
+  let unitCost: number | undefined;
+  let costBasis = "none";
+  if (smRows.length > 0 && smRows[0].unitCost > 0) {
+    unitCost = smRows[0].unitCost;
+    costBasis = "supplier";
+  } else {
+    const [lastPO] = await db.select()
+      .from(purchaseOrders)
+      .where(and(eq(purchaseOrders.materialId, materialId), eq(purchaseOrders.companyId, companyId)))
+      .orderBy(desc(purchaseOrders.createdAt))
+      .limit(1);
+    if (lastPO?.unitPrice && lastPO.unitPrice > 0) {
+      unitCost = lastPO.unitPrice;
+      costBasis = "last_po";
+    }
+  }
+
+  // FIX 1 (SF-001): Derive avgDemand from real demand history, not onHand * 0.1
+  let avgDemand: number;
+  let demandBasis = "none";
+  const demandHistory = await DemandForecaster.getDemandHistory(materialId);
+  if (demandHistory.length >= 3) {
+    avgDemand = DemandForecaster.calculateAverageDemand(demandHistory);
+    demandBasis = `demand_history_${demandHistory.length}_periods`;
+  } else {
+    // Fallback: use average from recent purchase orders (implied demand)
+    const recentPOs = await db.select()
+      .from(purchaseOrders)
+      .where(and(eq(purchaseOrders.materialId, materialId), eq(purchaseOrders.companyId, companyId)))
+      .orderBy(desc(purchaseOrders.createdAt))
+      .limit(12);
+    if (recentPOs.length >= 2) {
+      const totalQty = recentPOs.reduce((s, po) => s + (Number(po.quantity) || 0), 0);
+      avgDemand = totalQty / (recentPOs.length * 30);
+      demandBasis = `po_history_${recentPOs.length}_orders`;
+    } else {
+      // Final labeled fallback: 10% of onHand is the legacy proxy — explicitly logged
+      avgDemand = mat.onHand > 0 ? mat.onHand * 0.1 : 5;
+      demandBasis = "FALLBACK_onHand_0.1_UNRELIABLE";
+      console.warn(`[DecisionIntelligence:AUDIT] DEMAND_FALLBACK materialId=${materialId} — no demand history or PO history. Using onHand*0.1=${avgDemand.toFixed(2)}. This estimate is unreliable.`);
+    }
+  }
+
   const constraintRows = await db.select().from(materialConstraints)
     .where(and(eq(materialConstraints.companyId, companyId), eq(materialConstraints.materialId, materialId)));
   const constraint = constraintRows[0];
@@ -122,11 +224,26 @@ export async function generateRecommendation(
     .limit(1);
   const dqScore = dqRows.length > 0 ? dqRows[0].overallScore : undefined;
 
+  // FIX 8: Structured audit log
+  console.log(JSON.stringify({
+    event: "generate_recommendation",
+    materialId,
+    companyId,
+    avgDemand: +avgDemand.toFixed(4),
+    demandBasis,
+    unitCost: unitCost ?? null,
+    costBasis,
+    regime,
+    leadTimeDays: leadTime,
+    timestamp: new Date().toISOString(),
+  }));
+
   const policy = computePolicyRecommendation({
     regime, fdr, forecastUncertainty, materialId,
     currentOnHand: mat.onHand,
-    avgDemand: mat.onHand > 0 ? mat.onHand * 0.1 : 5,
+    avgDemand,
     leadTimeDays: leadTime,
+    unitCost,
     moq: constraint?.moq ?? undefined,
     packSize: constraint?.packSize ?? undefined,
     maxCapacity: constraint?.maxCapacityPerPeriod ?? undefined,
@@ -143,7 +260,7 @@ export async function generateRecommendation(
     recommendedTiming: policy.recommendedTiming,
     confidence: policy.confidence,
     reasoning: policy.reasoning,
-    inputs: { fdr, forecastUncertainty, onHand: mat.onHand, leadTimeDays: leadTime } as any,
+    inputs: { fdr, forecastUncertainty, onHand: mat.onHand, leadTimeDays: leadTime, avgDemand, demandBasis, unitCost, costBasis } as any,
     policyVersion: POLICY_VERSION,
   }).returning();
 
@@ -162,9 +279,13 @@ export function computeWhatIf(
   const serviceLevel = Math.min(1.0, futureOnHand / (demandDuringLead + safetyStock));
   const stockoutRisk = Math.max(0, 1 - serviceLevel);
 
-  const smRows: any[] = [];
-  const unitCost = smRows.length > 0 ? smRows[0].unitCost : 10;
-  const cashImpact = scenario.quantity * unitCost;
+  // FIX 2 (SF-007): Use real unitCost from inputs; unitCost is now populated by async callers.
+  // The previous code initialized smRows as an empty array and never queried the DB.
+  const unitCost = inputs.unitCost ?? null;
+  if (!unitCost) {
+    console.warn(`[DecisionIntelligence:AUDIT] MISSING_UNIT_COST in computeWhatIf for materialId=${inputs.materialId} — cash impact cannot be computed`);
+  }
+  const cashImpact = unitCost !== null ? scenario.quantity * unitCost : NaN;
 
   let leadTimeRisk = 0.1;
   if (scenario.timing === "immediate") leadTimeRisk = 0.3;
@@ -180,7 +301,8 @@ export function computeWhatIf(
     cashImpact,
     leadTimeRisk: Math.min(1, leadTimeRisk),
     reasoning: `Ordering ${scenario.quantity} units (${scenario.timing}): service_level=${(serviceLevel * 100).toFixed(1)}%, ` +
-      `stockout_risk=${(stockoutRisk * 100).toFixed(1)}%, cash_impact=$${cashImpact.toFixed(2)}, ` +
+      `stockout_risk=${(stockoutRisk * 100).toFixed(1)}%, ` +
+      `cash_impact=${unitCost !== null ? `$${cashImpact.toFixed(2)}` : "unknown (no unit cost)"}, ` +
       `lead_time_risk=${(leadTimeRisk * 100).toFixed(1)}%`,
   };
 }

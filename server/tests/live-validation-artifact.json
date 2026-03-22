@@ -1,7 +1,7 @@
 {
   "harnessMeta": {
     "version": "1.0.0",
-    "generatedAt": "2026-03-21T22:16:40.501Z",
+    "generatedAt": "2026-03-22T20:35:42.366Z",
     "totalTests": 90,
     "totalPass": 90,
     "totalFail": 0,
@@ -109,7 +109,7 @@
         "found": 10,
         "missing": []
       },
-      "durationMs": 4
+      "durationMs": 6
     },
     {
       "section": "S1",
@@ -132,7 +132,7 @@
       "evidence": {
         "safeModeEnabled": 1
       },
-      "durationMs": 11
+      "durationMs": 16
     },
     {
       "section": "S1",
@@ -142,9 +142,9 @@
       "proofType": "runtime",
       "evidence": {
         "status": 200,
-        "ms": 47
+        "ms": 53
       },
-      "durationMs": 47
+      "durationMs": 53
     },
     {
       "section": "S1",
@@ -154,9 +154,9 @@
       "proofType": "runtime",
       "evidence": {
         "status": 200,
-        "ms": 8
+        "ms": 9
       },
-      "durationMs": 8
+      "durationMs": 9
     },
     {
       "section": "S1",
@@ -166,9 +166,9 @@
       "proofType": "runtime",
       "evidence": {
         "status": 200,
-        "ms": 3
+        "ms": 4
       },
-      "durationMs": 3
+      "durationMs": 4
     },
     {
       "section": "S2",
@@ -192,7 +192,7 @@
         "ownQuery": 1,
         "crossQuery": 0
       },
-      "durationMs": 4
+      "durationMs": 5
     },
     {
       "section": "S2",
@@ -216,7 +216,7 @@
         "ownQuery": 1,
         "crossQuery": 0
       },
-      "durationMs": 12
+      "durationMs": 14
     },
     {
       "section": "S2",
@@ -228,7 +228,7 @@
         "ownQuery": 1,
         "crossQuery": 0
       },
-      "durationMs": 182
+      "durationMs": 17
     },
     {
       "section": "S2",
@@ -240,7 +240,7 @@
         "ownQuery": 1,
         "crossQuery": 0
       },
-      "durationMs": 20
+      "durationMs": 22
     },
     {
       "section": "S2",
@@ -251,7 +251,7 @@
       "evidence": {
         "status": 401
       },
-      "durationMs": 2
+      "durationMs": 3
     },
     {
       "section": "S2",
@@ -262,7 +262,7 @@
       "evidence": {
         "status": 401
       },
-      "durationMs": 65
+      "durationMs": 17
     },
     {
       "section": "S3",
@@ -273,7 +273,7 @@
       "evidence": {
         "safeModeEnabled": 1
       },
-      "durationMs": 3
+      "durationMs": 2
     },
     {
       "section": "S3",
@@ -296,7 +296,7 @@
         "allowed": false,
         "reason": "Draft status is 'draft', must be 'approved' to execute"
       },
-      "durationMs": 7
+      "durationMs": 6
     },
     {
       "section": "S3",
@@ -307,7 +307,7 @@
       "evidence": {
         "hasApprovalGuard": true
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S3",
@@ -353,7 +353,7 @@
       "evidence": {
         "dailySpendTotal": 0
       },
-      "durationMs": 13
+      "durationMs": 15
     },
     {
       "section": "S4",
@@ -367,7 +367,7 @@
         "allowed": 33,
         "blocked": 27
       },
-      "durationMs": 142
+      "durationMs": 238
     },
     {
       "section": "S4",
@@ -401,7 +401,7 @@
       "pass": true,
       "proofType": "runtime",
       "evidence": {
-        "stateId": "3d3e3f46-cc4a-4467-93ee-91d2ce83edce"
+        "stateId": "1b3791f4-a152-470a-b63e-f2ecd0f5169d"
       },
       "durationMs": 0
     },
@@ -412,7 +412,7 @@
       "pass": true,
       "proofType": "deterministic",
       "evidence": {
-        "id1": "e8c3f568937bc5c3677075d2fbacba56",
+        "id1": "51f0433365d80806131ad7bdd5c25945",
         "equal": true,
         "length": 32
       },
@@ -425,11 +425,11 @@
       "pass": true,
       "proofType": "deterministic",
       "evidence": {
-        "id1": "e8c3f568937bc5c3677075d2fbacba56",
-        "idAlt": "e5f8612bd659971ca4fcbce58fd4f7ee",
+        "id1": "51f0433365d80806131ad7bdd5c25945",
+        "idAlt": "ef44bb52e4f4a0ded8de05d43daa7108",
         "collision": false
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S5",
@@ -440,7 +440,7 @@
       "evidence": {
         "count": 1
       },
-      "durationMs": 17
+      "durationMs": 8
     },
     {
       "section": "S5",
@@ -451,7 +451,7 @@
       "evidence": {
         "duplicateBlocked": true
       },
-      "durationMs": 2
+      "durationMs": 3
     },
     {
       "section": "S5",
@@ -473,7 +473,7 @@
       "evidence": {
         "rows": 1
       },
-      "durationMs": 33
+      "durationMs": 45
     },
     {
       "section": "S6",
@@ -522,7 +522,7 @@
           0
         ]
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S6",
@@ -570,7 +570,7 @@
       "evidence": {
         "hasRegimeUncertainty": true
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S7",
@@ -581,7 +581,7 @@
       "evidence": {
         "qty": 720
       },
-      "durationMs": 15
+      "durationMs": 18
     },
     {
       "section": "S7",
@@ -627,7 +627,7 @@
         "conserv": 610,
         "aggress": 815
       },
-      "durationMs": 25
+      "durationMs": 32
     },
     {
       "section": "S7",
@@ -638,7 +638,7 @@
       "evidence": {
         "qty": 940
       },
-      "durationMs": 10
+      "durationMs": 16
     },
     {
       "section": "S7",
@@ -658,7 +658,7 @@
       "pass": true,
       "proofType": "deterministic",
       "evidence": {
-        "provenanceVersion": "3.0.0"
+        "provenanceVersion": "4.0.0"
       },
       "durationMs": 0
     },
@@ -672,7 +672,7 @@
         "r1": 735,
         "r2": 735
       },
-      "durationMs": 21
+      "durationMs": 29
     },
     {
       "section": "S8",
@@ -683,7 +683,7 @@
       "evidence": {
         "crashed": false
       },
-      "durationMs": 3
+      "durationMs": 6
     },
     {
       "section": "S8",
@@ -778,9 +778,9 @@
       "pass": true,
       "proofType": "deterministic",
       "evidence": {
-        "hash": "ae2535173e0b0bbe"
+        "hash": "4435a8c885e6b35d"
       },
-      "durationMs": 3
+      "durationMs": 4
     },
     {
       "section": "S9",
@@ -792,7 +792,7 @@
         "score": 0.86,
         "entities": 5
       },
-      "durationMs": 46
+      "durationMs": 51
     },
     {
       "section": "S9",
@@ -815,7 +815,7 @@
         "scoreA": 0.86,
         "scoreB": 0.72
       },
-      "durationMs": 32
+      "durationMs": 39
     },
     {
       "section": "S9",
@@ -837,7 +837,7 @@
       "evidence": {
         "found": true
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S9",
@@ -860,7 +860,7 @@
         "scoreEmpty": 0,
         "scoreA": 0.86
       },
-      "durationMs": 9
+      "durationMs": 14
     },
     {
       "section": "S10",
@@ -883,7 +883,7 @@
       "evidence": {
         "found": 1
       },
-      "durationMs": 12
+      "durationMs": 18
     },
     {
       "section": "S10",
@@ -894,7 +894,7 @@
       "evidence": {
         "provenanceVersion": "v5.0.0"
       },
-      "durationMs": 6
+      "durationMs": 8
     },
     {
       "section": "S10",
@@ -903,9 +903,9 @@
       "pass": true,
       "proofType": "deterministic",
       "evidence": {
-        "provenanceVersion": "3.0.0"
+        "provenanceVersion": "4.0.0"
       },
-      "durationMs": 11
+      "durationMs": 10
     },
     {
       "section": "S10",
@@ -934,11 +934,11 @@
     {
       "section": "S10",
       "testId": "10.7",
-      "description": "Stress test report has configHash (5fa4a24e9f3401a8...)",
+      "description": "Stress test report has configHash (0c57d3027a64c5a5...)",
       "pass": true,
       "proofType": "deterministic",
       "evidence": {
-        "configHash": "5fa4a24e9f3401a8"
+        "configHash": "0c57d3027a64c5a5"
       },
       "durationMs": 4
     },
@@ -950,9 +950,9 @@
       "proofType": "runtime",
       "evidence": {
         "status": 200,
-        "ms": 6
+        "ms": 8
       },
-      "durationMs": 6
+      "durationMs": 8
     },
     {
       "section": "S11",
@@ -962,9 +962,9 @@
       "proofType": "runtime",
       "evidence": {
         "status": 200,
-        "ms": 6
+        "ms": 7
       },
-      "durationMs": 6
+      "durationMs": 7
     },
     {
       "section": "S11",
@@ -974,9 +974,9 @@
       "proofType": "runtime",
       "evidence": {
         "status": 200,
-        "ms": 2
+        "ms": 1
       },
-      "durationMs": 2
+      "durationMs": 1
     },
     {
       "section": "S11",
@@ -998,9 +998,9 @@
       "proofType": "runtime",
       "evidence": {
         "status": 401,
-        "ms": 1
+        "ms": 2
       },
-      "durationMs": 1
+      "durationMs": 2
     },
     {
       "section": "S11",
@@ -1010,9 +1010,9 @@
       "proofType": "runtime",
       "evidence": {
         "status": 401,
-        "ms": 1
+        "ms": 2
       },
-      "durationMs": 1
+      "durationMs": 2
     },
     {
       "section": "S11",
@@ -1036,24 +1036,12 @@
         "status": 401,
         "ms": 1
       },
-      "durationMs": 1
+      "durationMs": 2
     },
     {
       "section": "S11",
       "testId": "11.9",
       "description": "GET /api/allocations → 401 (expected: 401|403|302)",
-      "pass": true,
-      "proofType": "runtime",
-      "evidence": {
-        "status": 401,
-        "ms": 2
-      },
-      "durationMs": 2
-    },
-    {
-      "section": "S11",
-      "testId": "11.10",
-      "description": "GET /api/forecast-accuracy/metrics → 401 (expected: 401|403|302)",
       "pass": true,
       "proofType": "runtime",
       "evidence": {
@@ -1064,8 +1052,8 @@
     },
     {
       "section": "S11",
-      "testId": "11.11",
-      "description": "GET /api/multi-horizon-forecasts → 401 (expected: 401|403|302)",
+      "testId": "11.10",
+      "description": "GET /api/forecast-accuracy/metrics → 401 (expected: 401|403|302)",
       "pass": true,
       "proofType": "runtime",
       "evidence": {
@@ -1076,15 +1064,27 @@
     },
     {
       "section": "S11",
+      "testId": "11.11",
+      "description": "GET /api/multi-horizon-forecasts → 401 (expected: 401|403|302)",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "status": 401,
+        "ms": 1
+      },
+      "durationMs": 1
+    },
+    {
+      "section": "S11",
       "testId": "11.12",
       "description": "GET /api/adaptive-forecast/reports → 401 (expected: 401|403|302)",
       "pass": true,
       "proofType": "runtime",
       "evidence": {
         "status": 401,
-        "ms": 3
+        "ms": 2
       },
-      "durationMs": 3
+      "durationMs": 2
     },
     {
       "section": "S11",
@@ -1125,17 +1125,17 @@
     {
       "section": "S11",
       "testId": "11.16",
-      "description": "Health endpoints all respond within 2000ms (4ms, 6ms, 5ms)",
+      "description": "Health endpoints all respond within 2000ms (4ms, 7ms, 6ms)",
       "pass": true,
       "proofType": "runtime",
       "evidence": {
         "timings": [
           4,
-          6,
-          5
+          7,
+          6
         ]
       },
-      "durationMs": 7
+      "durationMs": 8
     },
     {
       "section": "S11",

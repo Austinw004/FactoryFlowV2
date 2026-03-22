@@ -1,0 +1,202 @@
+You are a senior staff engineer performing a critical production integrity fix.
+
+Apply the following changes across the codebase. Do NOT mock data. Do NOT fallback to constants unless explicitly defined. All outputs must be economically grounded and auditable.
+
+========================
+GLOBAL RULES (ENFORCE)
+========================
+1. No hardcoded economic values (cost, demand, savings)
+2. All calculations must trace to real data sources or explicitly labeled fallbacks
+3. Throw errors instead of silently defaulting in critical financial paths
+4. Add logging for all corrected fields
+5. Preserve existing interfaces and tests
+
+========================
+FIX 1 — DEMAND PROXY (SF-001)
+========================
+File: server/lib/probabilisticOptimization.ts
+File: server/lib/decisionIntelligence.ts
+
+REPLACE any:
+  avgDemand = onHand * 0.1
+
+WITH:
+  const demandHistory = await DemandForecaster.getDemandHistory(sku);
+  if (!demandHistory || demandHistory.length < 3) {
+    throw new Error(`INSUFFICIENT_DEMAND_DATA for SKU ${sku}`);
+  }
+  const avgDemand = DemandForecaster.calculateAverageDemand(demandHistory);
+
+Ensure optimizer and decision engine BOTH use this same value.
+
+========================
+FIX 2 — REAL UNIT COST (SF-006, SF-007)
+========================
+File: server/lib/probabilisticOptimization.ts
+File: server/lib/decisionIntelligence.ts
+
+REMOVE:
+  const unitCost = 10;
+
+REPLACE WITH:
+  const supplierData = await db.query.supplierMaterials.findFirst({
+    where: eq(supplierMaterials.sku, sku)
+  });
+
+  const lastPO = await db.query.purchaseOrders.findFirst({
+    where: eq(purchaseOrders.sku, sku),
+    orderBy: desc(purchaseOrders.createdAt)
+  });
+
+  const unitCost =
+    supplierData?.unitCost ||
+    lastPO?.unitCost ||
+    null;
+
+  if (!unitCost) {
+    throw new Error(`MISSING_UNIT_COST for SKU ${sku}`);
+  }
+
+Apply this to:
+- optimization cost calculations
+- what-if cash impact
+
+========================
+FIX 3 — REGIME MAPPING (SF-002)
+========================
+File: server/lib/decisionIntelligence.ts
+
+REPLACE invalid regimes:
+  DEFLATIONARY / INFLATIONARY / CRISIS
+
+WITH:
+
+switch (regime) {
+  case "HEALTHY_EXPANSION":
+    safetyMultiplier = 1.2;
+    timing = "standard";
+    break;
+
+  case "ASSET_LED_GROWTH":
+    safetyMultiplier = 1.4;
+    timing = "slightly_accelerated";
+    break;
+
+  case "IMBALANCED_EXCESS":
+    safetyMultiplier = 1.8;
+    timing = "defer_if_possible";
+    break;
+
+  case "REAL_ECONOMY_LEAD":
+    safetyMultiplier = 2.2;
+    timing = "accelerate";
+    break;
+
+  default:
+    throw new Error(`UNKNOWN_REGIME ${regime}`);
+}
+
+LOG safetyMultiplier + timing for audit.
+
+========================
+FIX 4 — ROI TIMING CORRECTION (SF-010)
+========================
+File: server/lib/roiCalculation.ts
+
+REPLACE:
+  currentRegime
+
+WITH:
+  rfq.regimeAtCreation
+
+If missing:
+  throw new Error(`MISSING_RFQ_REGIME_CONTEXT ${rfq.id}`);
+
+Ensure savings are computed ONLY based on regime at decision time.
+
+========================
+FIX 5 — INVENTORY OPTIMIZATION BUG (SF-013)
+========================
+File: server/lib/roiCalculation.ts
+
+REMOVE impossible condition:
+  onHand < reorderPoint * 2
+
+REPLACE WITH:
+
+const optimalLevel = material.optimalStockLevel || reorderPoint;
+
+const deviation = Math.abs(onHand - optimalLevel) / Math.max(optimalLevel, 1);
+
+if (deviation < 0.25) {
+  optimizedMaterials++;
+  result.inventoryOptimizationSavings += estimatedValue * 0.05;
+}
+
+========================
+FIX 6 — CONFIDENCE INTERVALS (SF-003)
+========================
+File: server/lib/forecasting.ts
+
+REPLACE:
+  ±15% logic
+
+WITH:
+
+const mape = calculateMAPE(actuals, forecasts);
+const errorFactor = Math.max(mape, 0.05);
+
+lowerBounds = forecasts.map(f => f * (1 - errorFactor));
+upperBounds = forecasts.map(f => f * (1 + errorFactor));
+
+========================
+FIX 7 — ADD VALIDATION GUARDS
+========================
+
+Add global validation function:
+
+function assertEconomicValidity({ avgDemand, unitCost, savings }) {
+  if (avgDemand <= 0) throw new Error("INVALID_DEMAND");
+  if (unitCost <= 0) throw new Error("INVALID_COST");
+  if (savings === null || savings === undefined) {
+    throw new Error("INVALID_SAVINGS");
+  }
+}
+
+Call this in:
+- optimization outputs
+- ROI calculations
+- what-if scenarios
+
+========================
+FIX 8 — AUDIT LOGGING
+========================
+
+Log the following per run:
+
+{
+  sku,
+  avgDemand,
+  unitCost,
+  regime,
+  safetyMultiplier,
+  reorderPoint,
+  optimalQuantity,
+  costBasis: "supplier | po | fallback",
+  timestamp
+}
+
+========================
+FINAL STEP
+========================
+
+Run full test suite.
+Add 3 new tests:
+
+1. Demand must NOT correlate with onHand (R² < 0.3)
+2. unitCost must NOT equal constant across SKUs
+3. ROI must differ when regimeAtCreation changes
+
+========================
+
+Do not skip steps. Apply changes atomically and verify no silent fallbacks remain.
