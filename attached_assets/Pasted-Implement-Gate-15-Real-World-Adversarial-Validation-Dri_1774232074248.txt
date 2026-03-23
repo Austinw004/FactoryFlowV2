@@ -1,0 +1,128 @@
+Implement Gate 15 — Real-World Adversarial Validation & Drift Detection
+
+Objective:
+Ensure the system remains correct, stable, and trustworthy under real-world conditions including data drift, partial data, adversarial inputs, and changing economic environments.
+
+Add a new validation section (Section 13) to the certification harness.
+
+----------------------------------------
+SECTION 13 — ADVERSARIAL + DRIFT VALIDATION
+----------------------------------------
+
+Test 13.1 — Data Drift Detection
+- Simulate demand distribution shift (mean +50%, variance +100%)
+- Verify:
+  - Drift score is computed (e.g., KL divergence or population stability index)
+  - System flags DRIFT_DETECTED when threshold exceeded
+  - trustScore is reduced appropriately
+  - automationBlocked = true when drift is severe
+
+Test 13.2 — Partial Data Degradation
+- Remove 30–60% of demand history randomly
+- Verify:
+  - Forecast still runs (no crash)
+  - trustScore degrades proportionally
+  - INSUFFICIENT_DATA warnings logged
+  - No silent fallback to default values
+
+Test 13.3 — Adversarial Input Injection
+- Inject:
+  - Negative demand
+  - Extreme outliers (100x normal)
+  - Null / undefined fields
+- Verify:
+  - assertEconomicValidity blocks invalid inputs
+  - No NaN outputs propagate
+  - System throws SAFETY_VIOLATION where appropriate
+
+Test 13.4 — Regime Flip Shock
+- Simulate abrupt regime transition (e.g., HEALTHY_EXPANSION → IMBALANCED_EXCESS)
+- Verify:
+  - PolicyRecommendation changes direction (timing, safety stock)
+  - trustScore temporarily reduced during transition window
+  - SIGNAL_INCONSISTENCY triggered if signals conflict
+
+Test 13.5 — Forecast vs Reality Degradation Over Time
+- Feed sequential forecast vs actual data with worsening error
+- Verify:
+  - historicalAccuracy component of trustScore declines
+  - adaptive layer responds (model expansion or fallback)
+  - No stale confidence retained
+
+Test 13.6 — Cost Drift / Supplier Volatility
+- Simulate unit cost changes ±40%
+- Verify:
+  - Optimization reflects updated cost
+  - ROI calculations adjust accordingly
+  - No hardcoded constants used
+
+Test 13.7 — Silent Failure Detection
+- Force conditions similar to prior SF failures:
+  - avgDemand = onHand * k
+  - unitCost constant
+- Verify:
+  - Integrity validation suite detects and fails immediately
+  - System cannot pass harness with these regressions
+
+Test 13.8 — Long-Running Stability
+- Simulate 10,000 sequential decisions
+- Verify:
+  - No memory leak (heap growth bounded)
+  - Cache refresh logic works
+  - No degradation in response correctness
+
+----------------------------------------
+NEW SYSTEM CAPABILITIES REQUIRED
+----------------------------------------
+
+1. computeDriftScore()
+- Compare historical vs recent demand distributions
+- Output normalized drift score [0–1]
+
+2. applyDriftGuard()
+- If driftScore > threshold:
+  - Reduce trustScore
+  - Block automation if severe
+
+3. dataCompletenessScore()
+- % of required fields present
+- Integrated into trustScore
+
+4. anomalyDetector()
+- Detect outliers using z-score or IQR
+- Flag ANOMALOUS_INPUT
+
+5. rollingBacktestMonitor()
+- Track forecast error over rolling window
+- Feed into historicalAccuracy
+
+----------------------------------------
+HARNESS REQUIREMENTS
+----------------------------------------
+
+- Add section13() to certification harness
+- Update final report:
+  - Include driftScore distribution
+  - Include anomaly counts
+  - Include trustScore degradation scenarios
+- Update version to v9.0.0
+
+----------------------------------------
+PASS CONDITIONS
+----------------------------------------
+
+- All tests must pass deterministically
+- No silent fallbacks allowed
+- All failures must be explicit (throw or flag)
+- trustScore must respond dynamically to:
+  - data quality
+  - drift
+  - accuracy degradation
+
+----------------------------------------
+GOAL
+----------------------------------------
+
+This gate ensures the system is not just correct in ideal conditions, but resilient in real-world, messy, adversarial environments.
+
+No “looks correct” outputs allowed — only economically valid, explainable, and stress-tested decisions.
