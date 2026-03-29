@@ -1,0 +1,207 @@
+SYSTEM DIRECTIVE: IMPLEMENT PERFORMANCE-BASED BILLING (ROI-LINKED MODEL)
+
+GOAL:
+Introduce a pricing model where customers pay a low base fee plus a percentage of VERIFIED, MEASURED savings.
+
+This system must be:
+- Economically honest
+- Fully auditable
+- Impossible to exploit or fabricate
+- Strictly separated from estimated savings
+
+========================================================
+SECTION 1 — PRICING MODEL (UPDATED)
+========================================================
+
+PLAN NAME: PERFORMANCE PLAN
+
+PRICING:
+- Base fee: $100/month
+- Variable fee: 10–20% of VERIFIED savings
+
+RULE:
+- Base fee always charged monthly
+- Performance fee ONLY applies after savings are verified
+
+========================================================
+SECTION 2 — CORE BILLING PRINCIPLE
+========================================================
+
+NEVER charge on:
+- estimatedSavings
+- projectedSavings
+- simulated outcomes
+
+ONLY charge on:
+- measuredSavings (real-world, verified outcomes)
+
+IF measuredSavings is NULL:
+→ performance fee = $0
+→ only charge $100 base
+
+========================================================
+SECTION 3 — DATA MODEL (REQUIRED)
+========================================================
+
+USE existing table: savingsEvidenceRecords
+
+REQUIRED FIELDS:
+
+- id
+- companyId
+- estimatedSavings
+- measuredSavings (nullable)
+- counterfactualDefinition
+- measuredOutcomeRef (invoice, PO, receipt)
+- entityRefs
+- verifiedAt
+
+ADD TABLE: performanceBilling
+
+- id
+- companyId
+- savingsRecordId
+- measuredSavings
+- feePercentage
+- feeAmount
+- status (pending, invoiced, paid)
+- createdAt
+
+========================================================
+SECTION 4 — BILLING LOGIC
+========================================================
+
+FUNCTION: computePerformanceFee(savingsRecord)
+
+IF:
+- measuredSavings is NULL → RETURN 0
+- measuredSavings <= 0 → RETURN 0
+
+ELSE:
+- fee = measuredSavings × feePercentage
+
+TOTAL MONTHLY BILL:
+- total = $100 base + SUM(all verified performance fees)
+
+========================================================
+SECTION 5 — VERIFICATION REQUIREMENTS
+========================================================
+
+A savings record is BILLABLE ONLY IF:
+
+✔ measuredSavings exists
+✔ measuredOutcomeRef exists (invoice, PO, receipt)
+✔ entityRefs link to real system decisions
+✔ verifiedAt timestamp is present
+✔ no duplicate billing exists
+
+IF ANY FAIL:
+→ mark as NON-BILLABLE
+→ DO NOT CHARGE
+
+========================================================
+SECTION 6 — TRUST + SAFETY GUARDS
+========================================================
+
+Before billing:
+
+1. trustScore validation:
+   - trustScore < 0.6 → require approval
+   - trustScore < 0.4 → BLOCK billing
+
+2. anomaly detection:
+   - savings spike > 5x historical → flag
+
+3. enforce:
+   - no duplicate billing
+   - no circular logic
+   - no missing evidence
+
+========================================================
+SECTION 7 — INVOICE INTEGRATION
+========================================================
+
+Invoices MUST include:
+
+LINE ITEMS:
+- "Platform Fee" → $100
+- "Performance Fee (X% of Verified Savings)"
+
+DISPLAY CLEARLY:
+- Verified Savings
+- Fee %
+- Fee Amount
+
+EXAMPLE:
+- Platform Fee: $100
+- Verified Savings: $80,000
+- Fee (15%): $12,000
+- Total: $12,100
+
+========================================================
+SECTION 8 — DASHBOARD DISPLAY
+========================================================
+
+SHOW SEPARATELY:
+
+- Estimated Savings (forecast)
+- Measured Savings (verified)
+- Billable Savings
+- Fees Charged
+
+RULE:
+NEVER mix estimated and measured values
+
+========================================================
+SECTION 9 — EDGE CASES
+========================================================
+
+HANDLE:
+
+- Negative savings → no performance fee
+- Partial realization → charge partial
+- Delayed verification → defer billing
+- Disputes → mark "under review" (no charge)
+
+========================================================
+SECTION 10 — TESTING (MANDATORY)
+========================================================
+
+TEST CASES:
+
+✔ No measuredSavings → only $100 charged
+✔ Valid savings → correct % fee applied
+✔ Missing evidence → blocked
+✔ Duplicate billing → prevented
+✔ Negative savings → $0 performance fee
+
+========================================================
+SECTION 11 — UI PRICING DISPLAY
+========================================================
+
+UPDATE pricing page:
+
+CARD TITLE: "Performance-Based"
+
+DISPLAY:
+- "$100/month + % of savings"
+- "Only pay when value is delivered"
+
+CTA:
+- "Start Pilot"
+- "Talk to Sales"
+
+DISCLAIMER:
+- "Performance fees apply only to verified, realized savings"
+
+========================================================
+FINAL RULES
+========================================================
+
+- NEVER fabricate savings
+- NEVER bill estimated outcomes
+- ALWAYS require evidence
+- If uncertain → DO NOT BILL
+
+OUTPUT:
+Full implementation with no placeholders.

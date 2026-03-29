@@ -1,0 +1,271 @@
+SYSTEM DIRECTIVE: IMPLEMENT END-TO-END PROCUREMENT EXECUTION + BILLING + PAYMENT SYSTEM
+
+GOAL:
+Allow users to approve a recommended purchase and immediately execute a real supplier transaction securely, with full auditability and enterprise-grade billing controls.
+
+This must:
+- Be secure (no raw card storage)
+- Be auditable (every action logged)
+- Be trust-guarded (no unsafe automation)
+- Support both direct payment and PO-based workflows
+
+========================================================
+SECTION 1 — USER FLOW (CRITICAL)
+========================================================
+
+FROM UI:
+Pending Actions Tab → Recommended Purchase → "Approve & Execute"
+
+FLOW:
+
+1. User clicks "Approve & Execute Purchase"
+2. System:
+   - validates trustScore >= 0.6
+   - checks dataQualityScore >= threshold
+   - ensures supplier + pricing exists
+
+3. If valid:
+   → create PurchaseIntent
+   → trigger payment OR PO flow
+   → log audit trail
+
+========================================================
+SECTION 2 — DATABASE TABLES
+========================================================
+
+CREATE purchaseIntents:
+
+- id
+- companyId
+- supplierId
+- materialId
+- quantity
+- unitPrice
+- totalAmount
+- status (draft, pending_approval, approved, executing, completed, failed)
+- paymentMethod (card, ach, invoice)
+- createdAt
+
+CREATE billingProfiles:
+
+- id
+- companyId
+- stripeCustomerId
+- defaultPaymentMethodId
+- billingEmail
+- companyName
+- address
+- taxId
+- createdAt
+
+CREATE transactions:
+
+- id
+- purchaseIntentId
+- stripePaymentIntentId
+- amount
+- fee
+- status
+- createdAt
+
+========================================================
+SECTION 3 — BILLING SETTINGS (SETTINGS TAB)
+========================================================
+
+ADD UI: Settings → Billing
+
+FIELDS:
+- Company Name
+- Billing Email
+- Address
+- Tax ID
+- Payment Method (Stripe Elements)
+
+SECURITY:
+- NEVER store raw card data
+- Use Stripe SetupIntent
+- Store ONLY:
+  - stripeCustomerId
+  - paymentMethodId
+
+ENDPOINTS:
+
+POST /api/billing/setup
+→ create Stripe customer
+→ attach payment method
+
+GET /api/billing/profile
+→ return billing info (redacted)
+
+========================================================
+SECTION 4 — PAYMENT EXECUTION (STRIPE)
+========================================================
+
+FUNCTION: executePurchase(purchaseIntentId)
+
+STEPS:
+
+1. Fetch purchaseIntent
+2. Fetch billingProfile
+3. Compute totalAmount
+
+4. FRAUD CHECK:
+   - run computeFraudScore()
+   - if >0.9 → BLOCK
+   - if >0.7 → require approval
+
+5. CREATE Stripe PaymentIntent:
+   - amount = totalAmount
+   - customer = stripeCustomerId
+   - payment_method = defaultPaymentMethodId
+   - confirm = true
+
+6. HANDLE RESULT:
+   - success → status = completed
+   - failure → status = failed
+
+7. STORE transaction record
+
+========================================================
+SECTION 5 — PURCHASE APPROVAL LOGIC
+========================================================
+
+FUNCTION: approveAndExecuteRecommendation(recommendationId)
+
+VALIDATIONS:
+
+- trustScore >= 0.6
+- NOT automationBlocked
+- supplier exists
+- unitCost exists (NOT NaN)
+- quantity > 0
+
+CREATE purchaseIntent:
+
+- status = approved
+- link to recommendation
+
+CALL:
+→ executePurchase()
+
+========================================================
+SECTION 6 — PO (PURCHASE ORDER) FALLBACK
+========================================================
+
+IF paymentMethod = "invoice" OR enterprise setting enabled:
+
+INSTEAD OF STRIPE:
+
+1. Generate Purchase Order PDF
+2. Send to supplier (email/log)
+3. status = pending_supplier_confirmation
+
+This supports:
+- Net-30 workflows
+- Enterprise procurement
+
+========================================================
+SECTION 7 — AUDIT + TRACEABILITY
+========================================================
+
+LOG EVERYTHING:
+
+audit_logs:
+
+- userId
+- action: "PURCHASE_EXECUTED"
+- purchaseIntentId
+- amount
+- supplierId
+- timestamp
+
+ATTACH evidenceBundle:
+
+- recommendationId
+- trustScore
+- unitCostSource
+- demandBasis
+- decisionTraceId
+
+========================================================
+SECTION 8 — FRAUD + TRUST GUARDS
+========================================================
+
+BEFORE EXECUTION:
+
+BLOCK IF:
+
+- trustScore < 0.6
+- unitCost is NaN
+- quantity unrealistic (>30× lead-time demand)
+- fraudScore > 0.9
+
+REQUIRE APPROVAL IF:
+
+- fraudScore > 0.7
+- trustScore between 0.4–0.6
+
+========================================================
+SECTION 9 — SECURITY REQUIREMENTS
+========================================================
+
+MANDATORY:
+
+- Use Stripe (no custom card handling)
+- Verify webhooks
+- Encrypt sensitive data
+- RBAC:
+  - only "operator" or "admin" can execute purchases
+
+- Redact logs:
+  - paymentMethod
+  - tokens
+  - personal info
+
+========================================================
+SECTION 10 — UI REQUIREMENTS
+========================================================
+
+PENDING ACTION CARD MUST SHOW:
+
+- Supplier
+- Material
+- Quantity
+- Total Cost
+- Trust Score
+- Risk Flags
+
+BUTTONS:
+
+- "Approve"
+- "Approve & Execute Purchase"
+
+SHOW:
+
+- confirmation modal:
+  "You are about to spend $X with Supplier Y"
+
+========================================================
+SECTION 11 — TESTING (MANDATORY)
+========================================================
+
+CREATE TESTS:
+
+✔ purchase executes successfully
+✔ failed payment handled correctly
+✔ fraud blocks transaction
+✔ trustScore blocks unsafe execution
+✔ billing profile required before purchase
+✔ PO flow works without Stripe
+
+========================================================
+FINAL RULES
+========================================================
+
+- NO fake payments
+- NO silent failures
+- ALL money movements auditable
+- NEVER execute without validation
+
+OUTPUT:
+Full implementation with production-safe logic.

@@ -9482,3 +9482,37 @@ export const fraudEvents = pgTable(
 );
 export const insertFraudEventSchema = createInsertSchema(fraudEvents).omit({ id: true, createdAt: true });
 export type FraudEvent = typeof fraudEvents.$inferSelect;
+
+// ============================================================
+// Performance-Based Billing
+// Tracks verified savings → fee computation → invoice audit
+// ============================================================
+
+export const performanceBilling = pgTable(
+  "performance_billing",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    savingsRecordId: integer("savings_record_id").notNull().references(() => savingsEvidenceRecords.id, { onDelete: "restrict" }),
+    measuredSavings: real("measured_savings").notNull(),   // dollars — must match evidence record
+    feePercentage: real("fee_percentage").notNull(),        // 0.10 – 0.20
+    feeAmount: real("fee_amount").notNull(),                // measuredSavings × feePercentage
+    status: text("status").notNull().default("pending"),    // pending | invoiced | paid | disputed | cancelled
+    billingPeriodStart: timestamp("billing_period_start"),
+    billingPeriodEnd: timestamp("billing_period_end"),
+    invoiceId: varchar("invoice_id").references(() => invoices.id, { onDelete: "set null" }),
+    notes: text("notes"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (t) => [
+    index("perf_billing_company_idx").on(t.companyId),
+    index("perf_billing_savings_record_idx").on(t.savingsRecordId),
+    index("perf_billing_status_idx").on(t.status),
+    uniqueIndex("perf_billing_savings_record_unique").on(t.savingsRecordId), // no duplicate billing per record
+  ],
+);
+
+export const insertPerformanceBillingSchema = createInsertSchema(performanceBilling).omit({ id: true, createdAt: true, updatedAt: true });
+export type PerformanceBilling = typeof performanceBilling.$inferSelect;
+export type InsertPerformanceBilling = z.infer<typeof insertPerformanceBillingSchema>;

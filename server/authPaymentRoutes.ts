@@ -46,10 +46,19 @@ import {
   computePlatformFee, type PlanId,
 } from "./lib/billingService";
 import { checkFraud, linkFraudEventToTransaction } from "./lib/fraudDetection";
+import {
+  computePerformanceFee, checkBillability, isDuplicateBilling,
+  validateTrustScore, createPerformanceBillingRecord,
+  computeMonthlyBill, getPerformanceSummary, listPerformanceBillingRecords,
+  PERFORMANCE_BASE_FEE, PERFORMANCE_FEE_DEFAULT,
+} from "./lib/performanceBillingService";
 import { getUncachableStripeClient } from "./stripeClient";
 import { db } from "./db";
-import { payments, supplierPayouts, transactions, invoices, subscriptions } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import {
+  payments, supplierPayouts, transactions, invoices, subscriptions,
+  savingsEvidenceRecords, performanceBilling,
+} from "@shared/schema";
+import { eq, and } from "drizzle-orm";
 
 // ─── Cookie config for HTTP-only refresh token (browser clients) ───────────────
 const REFRESH_COOKIE = "prescient_refresh";
@@ -403,6 +412,98 @@ export function registerAuthPaymentRoutes(app: Express): void {
       .where(eq(transactions.stripePaymentIntentId, paymentIntentId));
 
     res.json({ status, paymentIntentId, stripeStatus: pi.status });
+  }));
+
+  // ─── Performance Billing Routes ────────────────────────────────────────────────
+
+  /**
+   * GET /api/billing/performance/summary
+   * Returns estimated vs measured vs billable vs fees charged — strictly separated.
+   */
+  app.get("/api/billing/performance/summary", requireJwt, handle(async (req, res) => {
+    const authUser = getAuthUser(req);
+    if (!authUser) { apiError(res, 401, "UNAUTHORIZED", "Authentication required."); return; }
+    if (!authUser.companyId) { apiError(res, 400, "NO_COMPANY", "Company ID required for performance billing."); return; }
+
+    const summary = await getPerformanceSummary(authUser.companyId);
+    res.json({ summary, plan: { baseFee: PERFORMANCE_BASE_FEE, feePercentage: PERFORMANCE_FEE_DEFAULT } });
+  }));
+
+  /**
+   * GET /api/billing/performance/records
+   * Lists all performance billing records for the company.
+   */
+  app.get("/api/billing/performance/records", requireJwt, handle(async (req, res) => {
+    const authUser = getAuthUser(req);
+    if (!authUser) { apiError(res, 401, "UNAUTHORIZED", "Authentication required."); return; }
+    if (!authUser.companyId) { apiError(res, 400, "NO_COMPANY", "Company ID required."); return; }
+
+    const records = await listPerformanceBillingRecords(authUser.companyId);
+    res.json({ records });
+  }));
+
+  /**
+   * POST /api/billing/performance/compute
+   * Computes the monthly performance bill for the current period.
+   * Returns full line-item breakdown: $100 base + verified performance fees.
+   */
+  app.post("/api/billing/performance/compute", requireJwt, handle(async (req, res) => {
+    const authUser = getAuthUser(req);
+    if (!authUser) { apiError(res, 401, "UNAUTHORIZED", "Authentication required."); return; }
+    if (!authUser.companyId) { apiError(res, 400, "NO_COMPANY", "Company ID required."); return; }
+
+    const { periodStart, periodEnd } = z.object({
+      periodStart: z.string().optional(),
+      periodEnd:   z.string().optional(),
+    }).parse(req.body);
+
+    const now = new Date();
+    const start = periodStart ? new Date(periodStart) : new Date(now.getFullYear(), now.getMonth(), 1);
+    const end   = periodEnd   ? new Date(periodEnd)   : new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    const bill = await computeMonthlyBill(authUser.companyId, start, end);
+    res.json({ bill });
+  }));
+
+  /**
+   * POST /api/billing/performance/bill-record
+   * Creates a performance billing record for a specific verified savings record.
+   * Enforces all guards: billability, dedup, trust score, anomaly detection.
+   */
+  app.post("/api/billing/performance/bill-record", requireJwt, handle(async (req, res) => {
+    const authUser = getAuthUser(req);
+    if (!authUser) { apiError(res, 401, "UNAUTHORIZED", "Authentication required."); return; }
+    if (!authUser.companyId) { apiError(res, 400, "NO_COMPANY", "Company ID required."); return; }
+
+    const { savingsRecordId, feePercentage, trustScore, notes } = z.object({
+      savingsRecordId: z.number().int().positive(),
+      feePercentage:   z.number().min(0.10).max(0.20).optional(),
+      trustScore:      z.number().min(0).max(1).optional(),
+      notes:           z.string().max(500).optional(),
+    }).parse(req.body);
+
+    const result = await createPerformanceBillingRecord({
+      companyId:      authUser.companyId,
+      savingsRecordId,
+      feePercentage,
+      trustScore,
+      notes,
+    });
+
+    if (!result.success) {
+      const statusCode = result.blocked ? 403 : 422;
+      apiError(res, statusCode,
+        result.blocked ? "BILLING_BLOCKED" : "NOT_BILLABLE",
+        result.error ?? result.nonBillableReasons?.join("; ") ?? "Cannot create billing record"
+      );
+      return;
+    }
+
+    res.status(201).json({
+      record: result.record,
+      requiresApproval: result.requiresApproval,
+      anomalyFlagged: result.anomalyFlagged,
+    });
   }));
 
   /**

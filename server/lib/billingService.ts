@@ -79,6 +79,21 @@ export const BILLING_PLANS = {
     type:         "usage" as const,
     featureGating: false,
   },
+  performance: {
+    id:              "performance",
+    name:            "Performance-Based",
+    description:     "$100/month + 10–20% of verified, realized savings. Only pay when value is delivered.",
+    baseFeeCents:    10000,    // $100.00/month — always charged
+    feePercentageMin: 0.10,    // 10% of verified savings
+    feePercentageMax: 0.20,    // 20% of verified savings
+    feePercentageDefault: 0.15, // 15% default
+    currency:        "usd",
+    interval:        "month" as const,
+    type:            "performance" as const,
+    featureGating:   false,
+    disclaimer:      "Performance fees apply only to verified, realized savings",
+    cta:             ["Start Pilot", "Talk to Sales"],
+  },
 } as const;
 
 export type PlanId = keyof typeof BILLING_PLANS;
