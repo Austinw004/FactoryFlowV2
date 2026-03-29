@@ -1,0 +1,290 @@
+SYSTEM DIRECTIVE: IMPLEMENT ENTERPRISE AUTHENTICATION + PAYMENTS INFRASTRUCTURE
+
+GOAL:
+Build a secure, production-ready authentication and payments system comparable to modern SaaS platforms (e.g., Google login, password reset, subscription billing, transaction processing).
+
+ZERO SHORTCUTS. NO FAKE FLOWS. ALL DATA MUST BE REAL, VALIDATED, AND TRACEABLE.
+
+---
+
+############################
+## PART 1 — AUTHENTICATION ##
+############################
+
+TECH STACK:
+- Use JWT (access + refresh tokens)
+- Password hashing: bcrypt (salt rounds ≥ 10)
+- OAuth: Google Sign-In (use standard OAuth flow)
+- Session persistence: secure HTTP-only cookies
+
+DATABASE TABLES:
+
+users:
+- id (uuid)
+- email (unique, required)
+- username (unique, optional but recommended)
+- passwordHash (nullable for OAuth users)
+- googleId (nullable)
+- role (viewer, analyst, operator, admin)
+- createdAt
+- updatedAt
+
+passwordResetTokens:
+- id
+- userId
+- token (hashed)
+- expiresAt
+- used (boolean)
+
+---
+
+### 1. SIGN UP
+
+POST /api/auth/signup
+
+- Require email + password
+- Validate:
+  - email format
+  - password strength (min 8 chars, 1 number, 1 symbol)
+- Hash password with bcrypt
+- Store user
+- Return JWT
+
+---
+
+### 2. LOGIN (EMAIL + PASSWORD)
+
+POST /api/auth/login
+
+- Accept email or username + password
+- Compare bcrypt hash
+- Return:
+  - accessToken (short-lived)
+  - refreshToken (long-lived)
+
+---
+
+### 3. GOOGLE LOGIN (NO PASSWORD)
+
+POST /api/auth/google
+
+- Verify Google OAuth token
+- If user exists → login
+- Else → create account
+- Store googleId
+- Return JWT
+
+---
+
+### 4. FORGOT PASSWORD
+
+POST /api/auth/forgot-password
+
+- Input: email
+- Generate secure random token
+- Hash token before storing
+- Save with expiration (15 minutes)
+- Send reset link (log to console if no email service)
+
+---
+
+### 5. RESET PASSWORD
+
+POST /api/auth/reset-password
+
+- Input: token + new password
+- Validate token (not expired, not used)
+- Hash new password
+- Mark token as used
+
+---
+
+### 6. FORGOT USERNAME
+
+POST /api/auth/forgot-username
+
+- Input: email
+- Return masked username OR send via email
+
+---
+
+### 7. AUTH MIDDLEWARE
+
+- Verify JWT on all protected routes
+- Attach user to request
+- Enforce RBAC (role-based access control)
+
+---
+
+###########################
+## PART 2 — PAYMENTS CORE ##
+###########################
+
+USE STRIPE (industry standard)
+
+INSTALL:
+- stripe SDK
+
+ENV:
+- STRIPE_SECRET_KEY
+- STRIPE_WEBHOOK_SECRET
+
+DATABASE TABLES:
+
+subscriptions:
+- id
+- userId
+- stripeCustomerId
+- stripeSubscriptionId
+- status (active, canceled, past_due)
+- plan (starter, pro, enterprise)
+- currentPeriodEnd
+
+payments:
+- id
+- userId
+- amount
+- currency
+- status (pending, succeeded, failed)
+- stripePaymentIntentId
+- createdAt
+
+orders:
+- id
+- companyId
+- supplierId
+- totalAmount
+- status (draft, pending_payment, paid, fulfilled)
+- createdAt
+
+supplierPayouts:
+- id
+- supplierId
+- amount
+- status (pending, sent, failed)
+- stripeTransferId
+
+---
+
+### 8. SUBSCRIPTION BILLING
+
+POST /api/billing/create-subscription
+
+- Create Stripe customer
+- Attach payment method
+- Create subscription
+- Store stripeCustomerId + subscriptionId
+
+---
+
+### 9. HANDLE WEBHOOKS (CRITICAL)
+
+POST /api/webhooks/stripe
+
+Handle:
+- invoice.paid → mark subscription active
+- invoice.payment_failed → mark past_due
+- customer.subscription.deleted → cancel access
+
+VERIFY webhook signature (MANDATORY)
+
+---
+
+### 10. ONE-TIME PAYMENTS (ORDERS)
+
+POST /api/payments/create-intent
+
+- Input: orderId
+- Fetch order total
+- Create Stripe PaymentIntent
+- Return client secret
+
+---
+
+### 11. CONFIRM PAYMENT
+
+POST /api/payments/confirm
+
+- Verify payment success via Stripe
+- Update:
+  - payment.status = succeeded
+  - order.status = paid
+
+---
+
+### 12. SUPPLIER PAYOUTS
+
+Use Stripe Connect
+
+POST /api/payouts/send
+
+- Transfer funds to supplier account
+- Record transfer ID
+- Update supplierPayouts.status
+
+---
+
+###############################
+## PART 3 — SAFETY + CONTROLS ##
+###############################
+
+1. NEVER mark payment as success without Stripe verification
+2. NEVER trust client-side totals — always recalc server-side
+3. LOG all financial events (audit trail)
+4. VALIDATE:
+   - amount > 0
+   - currency valid
+   - user authorized
+
+---
+
+###############################
+## PART 4 — TESTING (REQUIRED) ##
+###############################
+
+Create tests:
+
+AUTH:
+- signup works
+- login works
+- invalid password fails
+- password reset flow works
+- google login creates user
+
+PAYMENTS:
+- subscription created
+- webhook updates status
+- payment intent succeeds
+- failed payment handled
+- payout recorded
+
+---
+
+###############################
+## SUCCESS CRITERIA ##
+###############################
+
+- Users can:
+  - sign up
+  - log in (email or Google)
+  - reset password
+  - recover username
+
+- Payments:
+  - subscriptions charge correctly
+  - orders process correctly
+  - suppliers receive payouts
+
+- System is:
+  - secure
+  - auditable
+  - production-ready
+
+FAIL CONDITIONS:
+- any hardcoded payment success
+- missing webhook verification
+- storing plain text passwords
+- skipping validation
+
+FINAL DIRECTIVE:
+This system must match real-world SaaS expectations. If unsure, fail safely — do not guess or simulate.

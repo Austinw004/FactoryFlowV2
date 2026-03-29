@@ -43,6 +43,7 @@ import { DataImportService } from "./lib/dataImport";
 import { createRfqGenerationService } from "./lib/rfqGeneration";
 import { stripeService } from "./stripeService";
 import { getStripePublishableKey } from "./stripeClient";
+import { registerAuthPaymentRoutes } from "./authPaymentRoutes";
 import multer from "multer";
 import { z } from "zod";
 import { sendTeamInvitation, sendMeetingInvitation } from "./lib/emailService";
@@ -479,6 +480,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Setup authentication
   await setupAuth(app);
+
+  // Register enterprise auth + payments routes (before isAuthenticated middleware)
+  registerAuthPaymentRoutes(app);
 
   // Initialize RBAC system on startup
   console.log("[RBAC] Initializing permissions...");

@@ -47,6 +47,11 @@ export const users = pgTable("users", {
   subscriptionTier: text("subscription_tier"), // "starter", "professional", "enterprise"
   trialEndsAt: timestamp("trial_ends_at"),
   onboardingComplete: integer("onboarding_complete").default(0), // 0 = needs onboarding, 1 = complete
+  // ── Email/password auth fields (null for pure SSO users) ─────────────────
+  passwordHash: text("password_hash"),
+  username: text("username").unique(),
+  role: text("role").default("viewer"), // viewer | analyst | operator | admin
+  googleId: text("google_id").unique(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -9195,3 +9200,82 @@ export const newsArticles = pgTable(
 
 export const insertNewsArticleSchema = createInsertSchema(newsArticles).omit({ id: true, ingestedAt: true });
 export type NewsArticleRow = typeof newsArticles.$inferSelect;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENTERPRISE AUTH + PAYMENTS TABLES
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Password Reset Tokens — secure hashed tokens with expiration + single-use flag
+export const passwordResetTokens = pgTable(
+  "password_reset_tokens",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull(),  // sha256 of the raw token
+    expiresAt: timestamp("expires_at").notNull(),
+    used: integer("used").notNull().default(0), // 0=unused, 1=used
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (t) => [
+    index("prt_user_idx").on(t.userId),
+    index("prt_expires_idx").on(t.expiresAt),
+  ],
+);
+
+export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTokens).omit({ id: true, createdAt: true });
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+
+// Payments — immutable payment event records (one per payment intent lifecycle)
+export const payments = pgTable(
+  "payments",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+    companyId: varchar("company_id").references(() => companies.id, { onDelete: "set null" }),
+    amount: integer("amount").notNull(),         // in cents
+    currency: text("currency").notNull().default("usd"),
+    status: text("status").notNull().default("pending"), // pending | succeeded | failed | refunded
+    stripePaymentIntentId: text("stripe_payment_intent_id").unique(),
+    stripeChargeId: text("stripe_charge_id"),
+    description: text("description"),
+    metadata: text("metadata"),                 // JSON string
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (t) => [
+    index("payments_user_idx").on(t.userId),
+    index("payments_company_idx").on(t.companyId),
+    index("payments_status_idx").on(t.status),
+    index("payments_created_idx").on(t.createdAt),
+  ],
+);
+
+export const insertPaymentSchema = createInsertSchema(payments).omit({ id: true, createdAt: true, updatedAt: true });
+export type Payment = typeof payments.$inferSelect;
+
+// Supplier Payouts — Stripe Connect transfer records
+export const supplierPayouts = pgTable(
+  "supplier_payouts",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    supplierId: varchar("supplier_id").references(() => suppliers.id, { onDelete: "set null" }),
+    companyId: varchar("company_id").references(() => companies.id, { onDelete: "set null" }),
+    amount: integer("amount").notNull(),         // in cents
+    currency: text("currency").notNull().default("usd"),
+    status: text("status").notNull().default("pending"), // pending | sent | failed
+    stripeTransferId: text("stripe_transfer_id").unique(),
+    stripeConnectedAccountId: text("stripe_connected_account_id"),
+    description: text("description"),
+    failureReason: text("failure_reason"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (t) => [
+    index("payouts_supplier_idx").on(t.supplierId),
+    index("payouts_company_idx").on(t.companyId),
+    index("payouts_status_idx").on(t.status),
+  ],
+);
+
+export const insertSupplierPayoutSchema = createInsertSchema(supplierPayouts).omit({ id: true, createdAt: true, updatedAt: true });
+export type SupplierPayout = typeof supplierPayouts.$inferSelect;
