@@ -11,93 +11,142 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Check, Zap, Building2, Rocket, Crown, ArrowRight, Shield,
   TrendingDown, DollarSign, Calculator, Target, Award, CheckCircle2,
-  BarChart3, Scale, Handshake, Percent, CreditCard, Loader2
+  BarChart3, Scale, Handshake, Percent, CreditCard, Loader2,
+  Activity, TrendingUp
 } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
 
-const subscriptionTiers = [
+// ─── Plan Data ────────────────────────────────────────────────────────────────
+
+const FEATURES_ALL = [
+  "Demand forecasting & regime intelligence",
+  "Material allocation & budget optimization",
+  "Real-time commodity pricing",
+  "Supply chain visibility & risk scoring",
+  "Automated RFQ generation",
+  "ERP integration templates",
+  "AI copilot & decision playbooks",
+  "ROI dashboard & savings tracking",
+  "Multi-tenant data isolation",
+  "SOC 2 audit trail",
+];
+
+const subscriptionPlans = [
   {
-    id: "professional",
-    name: "Professional",
-    description: "Complete platform access for growing manufacturers",
-    price: 1999,
-    period: "/month",
-    annualPrice: 1649,
+    id: "monthly_starter",
+    planId: "monthly_starter",
+    name: "Starter",
+    period: "monthly",
+    description: "Full platform access, billed monthly.",
+    price: 299,
+    annualEquiv: null,
+    icon: Zap,
+    color: "text-blue-500",
+    bgColor: "bg-blue-100 dark:bg-blue-900/30",
+    popular: false,
+  },
+  {
+    id: "monthly_growth",
+    planId: "monthly_growth",
+    name: "Growth",
+    period: "monthly",
+    description: "Scaled for larger operations, billed monthly.",
+    price: 799,
+    annualEquiv: null,
     icon: Rocket,
     color: "text-purple-500",
     bgColor: "bg-purple-100 dark:bg-purple-900/30",
     popular: true,
-    features: [
-      "Up to 250 SKUs"
-    ]
   },
   {
-    id: "enterprise",
-    name: "Enterprise",
-    description: "Unlimited scale with dedicated support",
-    price: null,
-    period: "",
-    annualPrice: null,
-    contactSales: true,
-    icon: Building2,
-    color: "text-amber-500",
-    bgColor: "bg-amber-100 dark:bg-amber-900/30",
-    features: [
-      "Unlimited SKUs & suppliers"
-    ]
-  }
+    id: "annual_starter",
+    planId: "annual_starter",
+    name: "Starter",
+    period: "annual",
+    description: "Full platform access, billed annually.",
+    price: 249,           // $2,990 / 12
+    annualTotal: 2990,
+    annualEquiv: 299,
+    icon: Zap,
+    color: "text-blue-500",
+    bgColor: "bg-blue-100 dark:bg-blue-900/30",
+    popular: false,
+  },
+  {
+    id: "annual_growth",
+    planId: "annual_growth",
+    name: "Growth",
+    period: "annual",
+    description: "Scaled for larger operations, billed annually.",
+    price: 666,           // $7,990 / 12
+    annualTotal: 7990,
+    annualEquiv: 799,
+    icon: Rocket,
+    color: "text-purple-500",
+    bgColor: "bg-purple-100 dark:bg-purple-900/30",
+    popular: false,
+  },
 ];
 
-const savingsBasedTiers = [
-  {
-    id: "strategic",
-    name: "Strategic Alliance",
-    description: "Enterprise-grade performance-based pricing tied to verified savings",
-    percentageRate: 2,
-    minimumSavings: 1000000,
-    platformFee: 2000,
-    icon: Handshake,
-    color: "text-amber-500",
-    bgColor: "bg-amber-100 dark:bg-amber-900/30",
-    popular: true,
-    features: [
-      "Unlimited SKUs & suppliers"
-    ],
-    competitorRate: "Varies by provider",
-    yourSavings: "Competitive pricing"
-  }
-];
+const usagePlan = {
+  id: "usage_based",
+  planId: "usage_based",
+  name: "Usage-Based",
+  description: "Low monthly base plus pay-as-you-go metered charges tied to actual platform usage.",
+  basePrice: 199,
+  icon: Activity,
+  color: "text-teal-500",
+  bgColor: "bg-teal-100 dark:bg-teal-900/30",
+  meterItems: [
+    "API calls beyond 10K/month",
+    "Forecast runs beyond 500/month",
+    "RFQ generations beyond 50/month",
+    "Automated PO executions",
+  ],
+};
+
+const performancePlan = {
+  id: "performance",
+  planId: "performance",
+  name: "Performance",
+  description: "Pay a small base fee plus 15% of verified, measured procurement savings only. Never charged on estimates.",
+  basePrice: 100,
+  feeRate: 15,
+  icon: TrendingUp,
+  color: "text-amber-500",
+  bgColor: "bg-amber-100 dark:bg-amber-900/30",
+  highlights: [
+    "Only verified, measured savings are billed",
+    "Full evidence chain required — no estimates",
+    "Trust score guard (< 0.4 blocked automatically)",
+    "Anomaly detection on savings spikes",
+    "Duplicate billing prevented at DB level",
+    "Complete audit trail on every charge",
+  ],
+};
 
 const competitorComparison = [
-  { name: "Prescient Labs", savingsShare: "2%", platformFee: "$2K/mo", approach: "Low savings share, transparent pricing", highlight: true },
+  { name: "Prescient Labs (Performance)", savingsShare: "15%", platformFee: "$100/mo", approach: "Only verified savings — never estimates", highlight: true },
+  { name: "Prescient Labs (Subscription)", savingsShare: "None", platformFee: "$299–$799/mo", approach: "Fixed fee, all features included", highlight: true },
   { name: "Coupa", savingsShare: "Varies", platformFee: "Contact for pricing", approach: "Savings share + platform fee" },
   { name: "SAP Ariba", savingsShare: "Varies", platformFee: "Contact for pricing", approach: "Per-supplier + transaction fees" },
   { name: "Jaggaer", savingsShare: "Varies", platformFee: "Contact for pricing", approach: "Module-based pricing" },
-  { name: "Fairmarkit", savingsShare: "Varies", platformFee: "Contact for pricing", approach: "Savings share model" }
+  { name: "Fairmarkit", savingsShare: "Varies", platformFee: "Contact for pricing", approach: "Savings share model" },
 ];
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function Pricing() {
   const [, setLocation] = useLocation();
-  const [estimatedSavings, setEstimatedSavings] = useState(500000);
-  const [pricingModel, setPricingModel] = useState<"subscription" | "performance">("performance");
+  const [pricingTab, setPricingTab] = useState<"subscription" | "variable">("subscription");
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("monthly");
+  const [estimatedSavings, setEstimatedSavings] = useState(500000);
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
-  const { user, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { toast } = useToast();
 
   const { data: stripeProducts } = useQuery<{ products: Array<{
-    id: string;
-    name: string;
-    description: string;
-    metadata: any;
-    prices: Array<{
-      id: string;
-      unit_amount: number;
-      currency: string;
-      recurring: any;
-      active: boolean;
-      metadata: any;
-    }>;
+    id: string; name: string; description: string; metadata: any;
+    prices: Array<{ id: string; unit_amount: number; currency: string; recurring: any; active: boolean; metadata: any }>;
   }> }>({
     queryKey: ["/api/stripe/products"],
   });
@@ -108,104 +157,82 @@ export default function Pricing() {
       return response.json();
     },
     onSuccess: (data) => {
-      if (data.url) {
-        window.location.href = data.url;
-      }
+      if (data.url) window.location.href = data.url;
     },
     onError: (error: Error) => {
-      toast({
-        title: "Checkout Error",
-        description: error.message || "Failed to start checkout. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Checkout Error", description: error.message || "Failed to start checkout.", variant: "destructive" });
       setCheckoutLoading(null);
     },
   });
 
-  const calculateYourCost = (tier: typeof savingsBasedTiers[0], savings: number) => {
-    const savingsShare = savings * (tier.percentageRate / 100);
-    const platformFee = tier.platformFee * 12;
-    return savingsShare + platformFee;
-  };
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(amount);
 
-  const getRecommendedTier = (savings: number) => {
-    return "strategic";
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount);
-  };
-
-  const findPriceForTier = (tierId: string): string | null => {
+  const findPriceForPlan = (planId: string): string | null => {
     if (!stripeProducts?.products) return null;
     for (const product of stripeProducts.products) {
-      const metadata = product.metadata as any;
-      if (metadata?.tier === tierId && product.prices.length > 0) {
-        const monthlyPrice = product.prices.find(p => p.recurring?.interval === 'month');
-        return monthlyPrice?.id || product.prices[0]?.id || null;
+      const meta = product.metadata as any;
+      if (meta?.planId === planId || meta?.tier === planId) {
+        const monthly = product.prices.find(p => p.recurring?.interval === "month");
+        return monthly?.id || product.prices[0]?.id || null;
       }
     }
     return null;
   };
 
-  const handleGetStarted = (tierId: string) => {
-    if (!isAuthenticated) {
-      window.location.href = "/api/login";
-      return;
-    }
+  const handleGetStarted = (planId: string) => {
+    if (!isAuthenticated) { window.location.href = "/api/login"; return; }
+    if (planId === "performance") { setLocation("/pilot-program"); return; }
 
-    if (tierId === "enterprise" || tierId === "strategic" || tierId === "transform") {
-      setLocation("/pilot-program");
-      return;
-    }
-
-    const priceId = findPriceForTier(tierId);
+    const priceId = findPriceForPlan(planId);
     if (!priceId) {
-      toast({
-        title: "Plan Not Available",
-        description: "This plan is not yet available for self-service checkout. Please contact sales.",
-        variant: "destructive",
-      });
+      toast({ title: "Plan Not Available", description: "This plan is not yet available for self-service checkout. Please contact sales.", variant: "destructive" });
       return;
     }
-
-    setCheckoutLoading(tierId);
+    setCheckoutLoading(planId);
     checkoutMutation.mutate({ priceId, withTrial: true });
   };
 
+  // Subscription plans filtered by billing period
+  const visibleSubPlans = subscriptionPlans.filter(p => p.period === billingPeriod);
+
+  // Performance calculator
+  const perfFee = estimatedSavings * 0.15;
+  const perfBase = 100 * 12; // annual base
+  const perfTotal = perfFee + perfBase;
+  const perfNet = estimatedSavings - perfTotal;
 
   return (
     <div className="min-h-screen bg-background">
       <div className="container max-w-7xl mx-auto px-4 py-12">
+
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4" data-testid="text-pricing-title">
             Simple, Transparent Pricing
           </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
-            Choose the pricing model that works best for your business. 
-            Fixed subscription rates OR performance-based pricing tied to your verified savings.
+            Six plans, all features included. Choose a flat subscription, metered usage, or let your savings drive what you pay.
           </p>
 
-          {/* Pricing Model Toggle */}
-          <Tabs value={pricingModel} onValueChange={(v) => setPricingModel(v as "subscription" | "performance")} className="w-full max-w-md mx-auto">
+          <Tabs value={pricingTab} onValueChange={(v) => setPricingTab(v as "subscription" | "variable")} className="w-full max-w-md mx-auto">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="subscription" className="flex items-center gap-2" data-testid="tab-subscription">
                 <CreditCard className="h-4 w-4" />
                 Fixed Subscription
               </TabsTrigger>
-              <TabsTrigger value="performance" className="flex items-center gap-2" data-testid="tab-performance">
+              <TabsTrigger value="variable" className="flex items-center gap-2" data-testid="tab-variable">
                 <Percent className="h-4 w-4" />
-                Performance-Based
+                Usage &amp; Performance
               </TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
 
-        {/* Subscription Pricing */}
-        {pricingModel === "subscription" && (
+        {/* ── Fixed Subscription Plans ── */}
+        {pricingTab === "subscription" && (
           <>
-            {/* Billing Toggle */}
+            {/* Monthly / Annual toggle */}
             <div className="flex items-center justify-center gap-4 mb-8">
               <span className={billingPeriod === "monthly" ? "font-medium" : "text-muted-foreground"}>Monthly</span>
               <button
@@ -213,29 +240,24 @@ export default function Pricing() {
                 className={`relative w-14 h-7 rounded-full transition-colors ${billingPeriod === "annual" ? "bg-primary" : "bg-muted"}`}
                 data-testid="toggle-billing-period"
               >
-                <span 
-                  className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${billingPeriod === "annual" ? "translate-x-8" : "translate-x-1"}`}
-                />
+                <span className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${billingPeriod === "annual" ? "translate-x-8" : "translate-x-1"}`} />
               </button>
               <span className={billingPeriod === "annual" ? "font-medium" : "text-muted-foreground"}>
                 Annual
-                <Badge variant="secondary" className="ml-2">Save 17%</Badge>
+                <Badge variant="secondary" className="ml-2">Save ~17%</Badge>
               </span>
             </div>
 
             <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto mb-16">
-              {subscriptionTiers.map((tier) => {
-                const Icon = tier.icon;
-                const isPopular = tier.popular;
-                const displayPrice = billingPeriod === "annual" ? tier.annualPrice : tier.price;
-
+              {visibleSubPlans.map((plan) => {
+                const Icon = plan.icon;
                 return (
                   <Card
-                    key={tier.id}
-                    className={`relative flex flex-col ${isPopular ? "border-primary shadow-lg scale-105" : ""}`}
-                    data-testid={`card-plan-${tier.id}`}
+                    key={plan.id}
+                    className={`relative flex flex-col ${plan.popular ? "border-primary shadow-lg scale-105" : ""}`}
+                    data-testid={`card-plan-${plan.id}`}
                   >
-                    {isPopular && (
+                    {plan.popular && (
                       <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                         <Badge className="bg-primary text-primary-foreground">
                           <Crown className="h-3 w-3 mr-1" />
@@ -245,40 +267,34 @@ export default function Pricing() {
                     )}
 
                     <CardHeader className="text-center pb-4">
-                      <div className={`w-12 h-12 mx-auto mb-4 rounded-xl ${tier.bgColor} flex items-center justify-center ${tier.color}`}>
+                      <div className={`w-12 h-12 mx-auto mb-4 rounded-xl ${plan.bgColor} flex items-center justify-center ${plan.color}`}>
                         <Icon className="h-6 w-6" />
                       </div>
-                      <CardTitle className="text-2xl">{tier.name}</CardTitle>
-                      <CardDescription className="min-h-[48px]">
-                        {tier.description}
-                      </CardDescription>
+                      <CardTitle className="text-2xl">{plan.name}</CardTitle>
+                      <CardDescription className="min-h-[40px]">{plan.description}</CardDescription>
                     </CardHeader>
 
                     <CardContent className="flex-1">
                       <div className="text-center mb-6">
-                        {tier.contactSales ? (
-                          <div className="flex items-baseline justify-center gap-1">
-                            <span className="text-3xl font-bold">Contact Sales</span>
-                          </div>
-                        ) : (
+                        <div className="flex items-baseline justify-center gap-1">
+                          <span className="text-4xl font-bold">${plan.price.toLocaleString()}</span>
+                          <span className="text-muted-foreground">/month</span>
+                        </div>
+                        {plan.period === "annual" && (plan as any).annualTotal && (
                           <>
-                            <div className="flex items-baseline justify-center gap-1">
-                              <span className="text-4xl font-bold">${displayPrice?.toLocaleString()}</span>
-                              <span className="text-muted-foreground">/month</span>
-                            </div>
-                            {billingPeriod === "annual" && tier.price && tier.annualPrice && (
-                              <p className="text-sm text-green-600 dark:text-green-400 mt-1">
-                                Save ${((tier.price - tier.annualPrice) * 12).toLocaleString()}/year
-                              </p>
-                            )}
+                            <p className="text-sm text-muted-foreground mt-1">
+                              ${(plan as any).annualTotal.toLocaleString()} billed annually
+                            </p>
+                            <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+                              Save ${(((plan as any).annualEquiv - plan.price) * 12).toLocaleString()}/year vs monthly
+                            </p>
                           </>
                         )}
                       </div>
 
-                      {/* Features */}
                       <ul className="space-y-2">
-                        {tier.features.map((feature, index) => (
-                          <li key={index} className="flex items-start gap-2">
+                        {FEATURES_ALL.map((feature, i) => (
+                          <li key={i} className="flex items-start gap-2">
                             <Check className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
                             <span className="text-sm">{feature}</span>
                           </li>
@@ -289,21 +305,15 @@ export default function Pricing() {
                     <CardFooter className="pt-4">
                       <Button
                         className="w-full"
-                        variant={isPopular ? "default" : "outline"}
-                        onClick={() => handleGetStarted(tier.id)}
-                        disabled={checkoutLoading === tier.id}
-                        data-testid={`button-subscribe-${tier.id}`}
+                        variant={plan.popular ? "default" : "outline"}
+                        onClick={() => handleGetStarted(plan.planId)}
+                        disabled={checkoutLoading === plan.planId}
+                        data-testid={`button-subscribe-${plan.id}`}
                       >
-                        {checkoutLoading === tier.id ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            Redirecting to checkout...
-                          </>
+                        {checkoutLoading === plan.planId ? (
+                          <><Loader2 className="h-4 w-4 animate-spin mr-2" />Redirecting…</>
                         ) : (
-                          <>
-                            {tier.contactSales ? "Contact Sales" : (isAuthenticated ? "Subscribe Now" : "Sign In to Subscribe")}
-                            <ArrowRight className="h-4 w-4 ml-2" />
-                          </>
+                          <>{isAuthenticated ? "Subscribe Now" : "Sign In to Subscribe"}<ArrowRight className="h-4 w-4 ml-2" /></>
                         )}
                       </Button>
                     </CardFooter>
@@ -311,47 +321,145 @@ export default function Pricing() {
                 );
               })}
             </div>
+
+            <p className="text-center text-sm text-muted-foreground -mt-8 mb-16">
+              All plans include every platform feature — no feature gating, no tiered access.
+            </p>
           </>
         )}
 
-        {/* Performance-Based Pricing */}
-        {pricingModel === "performance" && (
+        {/* ── Usage & Performance Plans ── */}
+        {pricingTab === "variable" && (
           <>
-            {/* Value Proposition Cards */}
-            <div className="grid md:grid-cols-3 gap-4 max-w-4xl mx-auto mb-8">
-              <div className="p-4 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
-                <DollarSign className="h-6 w-6 text-green-600 mx-auto mb-2" />
-                <div className="font-semibold text-green-700 dark:text-green-400">30-Day Free Pilot</div>
-                <p className="text-sm text-muted-foreground">Start free, pay only when you see real savings</p>
-              </div>
-              <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
-                <Percent className="h-6 w-6 text-blue-600 mx-auto mb-2" />
-                <div className="font-semibold text-blue-700 dark:text-blue-400">2% Savings Share</div>
-                <p className="text-sm text-muted-foreground">Transparent, competitive pricing</p>
-              </div>
-              <div className="p-4 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800">
-                <Scale className="h-6 w-6 text-purple-600 mx-auto mb-2" />
-                <div className="font-semibold text-purple-700 dark:text-purple-400">Verified Savings</div>
-                <p className="text-sm text-muted-foreground">Transparent methodology, no hidden fees</p>
-              </div>
+            <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto mb-12">
+
+              {/* Usage-Based Card */}
+              <Card className="flex flex-col" data-testid="card-plan-usage_based">
+                <CardHeader className="text-center pb-4">
+                  <div className={`w-12 h-12 mx-auto mb-4 rounded-xl ${usagePlan.bgColor} flex items-center justify-center ${usagePlan.color}`}>
+                    <Activity className="h-6 w-6" />
+                  </div>
+                  <CardTitle className="text-2xl">{usagePlan.name}</CardTitle>
+                  <CardDescription className="min-h-[40px]">{usagePlan.description}</CardDescription>
+                </CardHeader>
+
+                <CardContent className="flex-1">
+                  <div className="text-center mb-6">
+                    <div className="flex items-baseline justify-center gap-1">
+                      <span className="text-4xl font-bold">${usagePlan.basePrice}</span>
+                      <span className="text-muted-foreground">/month</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">+ metered overage charges</p>
+                  </div>
+
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Metered Items</p>
+                  <ul className="space-y-2 mb-6">
+                    {usagePlan.meterItems.map((item, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <Activity className="h-4 w-4 text-teal-500 shrink-0 mt-0.5" />
+                        <span className="text-sm">{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Includes All Features</p>
+                  <ul className="space-y-2">
+                    {FEATURES_ALL.slice(0, 5).map((feature, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <Check className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                        <span className="text-sm">{feature}</span>
+                      </li>
+                    ))}
+                    <li className="text-sm text-muted-foreground pl-6">+ {FEATURES_ALL.length - 5} more features</li>
+                  </ul>
+                </CardContent>
+
+                <CardFooter className="pt-4">
+                  <Button
+                    className="w-full"
+                    variant="outline"
+                    onClick={() => handleGetStarted(usagePlan.planId)}
+                    disabled={checkoutLoading === usagePlan.planId}
+                    data-testid="button-subscribe-usage_based"
+                  >
+                    {checkoutLoading === usagePlan.planId ? (
+                      <><Loader2 className="h-4 w-4 animate-spin mr-2" />Redirecting…</>
+                    ) : (
+                      <>{isAuthenticated ? "Get Started" : "Sign In to Subscribe"}<ArrowRight className="h-4 w-4 ml-2" /></>
+                    )}
+                  </Button>
+                </CardFooter>
+              </Card>
+
+              {/* Performance Card */}
+              <Card className="relative flex flex-col border-primary shadow-lg" data-testid="card-plan-performance">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <Badge className="bg-primary text-primary-foreground">
+                    <Handshake className="h-3 w-3 mr-1" />
+                    Pay on Results
+                  </Badge>
+                </div>
+
+                <CardHeader className="text-center pb-4">
+                  <div className={`w-12 h-12 mx-auto mb-4 rounded-xl ${performancePlan.bgColor} flex items-center justify-center ${performancePlan.color}`}>
+                    <TrendingUp className="h-6 w-6" />
+                  </div>
+                  <CardTitle className="text-2xl">{performancePlan.name}</CardTitle>
+                  <CardDescription className="min-h-[40px]">{performancePlan.description}</CardDescription>
+                </CardHeader>
+
+                <CardContent className="flex-1">
+                  <div className="text-center mb-6">
+                    <div className="flex items-baseline justify-center gap-1">
+                      <span className="text-4xl font-bold">${performancePlan.basePrice}</span>
+                      <span className="text-muted-foreground">/month</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      + <span className="font-semibold text-foreground">{performancePlan.feeRate}%</span> of verified procurement savings
+                    </p>
+                    <Badge variant="secondary" className="mt-2">Only charged on measured outcomes</Badge>
+                  </div>
+
+                  <ul className="space-y-2">
+                    {performancePlan.highlights.map((h, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <Shield className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                        <span className="text-sm">{h}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+
+                <CardFooter className="pt-4">
+                  <Button
+                    className="w-full"
+                    variant="default"
+                    onClick={() => handleGetStarted(performancePlan.planId)}
+                    data-testid="button-subscribe-performance"
+                  >
+                    Start Free Pilot
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </CardFooter>
+              </Card>
             </div>
 
             {/* Savings Calculator */}
-            <Card className="mb-12 border-2 border-primary/20" data-testid="card-savings-calculator">
+            <Card className="mb-16 max-w-4xl mx-auto border-2 border-primary/20" data-testid="card-savings-calculator">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Calculator className="h-5 w-5 text-primary" />
-                  Savings Calculator
+                  Performance Plan Calculator
                 </CardTitle>
                 <CardDescription>
-                  Estimate your costs based on projected annual procurement savings
+                  Estimate your annual cost on the performance plan based on projected verified savings
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <label className="font-medium">Estimated Annual Savings</label>
+                      <label className="font-medium">Estimated Annual Verified Savings</label>
                       <span className="text-2xl font-bold text-primary">{formatCurrency(estimatedSavings)}</span>
                     </div>
                     <input
@@ -365,136 +473,37 @@ export default function Pricing() {
                       data-testid="slider-savings-estimate"
                     />
                     <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                      <span>$50K</span>
-                      <span>$5M+</span>
+                      <span>$50K</span><span>$5M+</span>
                     </div>
                   </div>
 
-                  {savingsBasedTiers.map((tier) => {
-                    const yourCost = calculateYourCost(tier, estimatedSavings);
-                    const netSavings = estimatedSavings - yourCost;
+                  <div className="grid grid-cols-3 gap-4 p-4 rounded-lg border">
+                    <div className="text-center">
+                      <p className="text-xs text-muted-foreground mb-1">Base Fee (annual)</p>
+                      <p className="text-xl font-bold">{formatCurrency(perfBase)}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-muted-foreground mb-1">15% of Savings</p>
+                      <p className="text-xl font-bold text-primary">{formatCurrency(perfFee)}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-muted-foreground mb-1">Your Net Savings</p>
+                      <p className={`text-xl font-bold ${perfNet > 0 ? "text-green-600 dark:text-green-400" : "text-red-500"}`}>
+                        {formatCurrency(perfNet)}
+                      </p>
+                    </div>
+                  </div>
 
-                    return (
-                      <div 
-                        key={tier.id}
-                        className="p-6 rounded-lg border border-primary bg-primary/5 max-w-md mx-auto"
-                      >
-                        <div className="flex items-center justify-between mb-4">
-                          <span className="text-lg font-semibold">{tier.name}</span>
-                          <Badge>Performance-Based</Badge>
-                        </div>
-                        <div className="text-sm text-muted-foreground mb-2">
-                          {tier.percentageRate}% of savings + {formatCurrency(tier.platformFee)}/mo platform fee
-                        </div>
-                        <div className="grid grid-cols-2 gap-4 mt-4">
-                          <div>
-                            <div className="text-xs text-muted-foreground">Your Annual Cost</div>
-                            <div className="text-xl font-bold text-primary">{formatCurrency(yourCost)}</div>
-                          </div>
-                          <div>
-                            <div className="text-xs text-muted-foreground">Net Savings</div>
-                            <div className="text-xl font-bold text-green-600">{formatCurrency(netSavings)}</div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  <p className="text-xs text-center text-muted-foreground">
+                    The 15% fee is only charged on <strong>verified, measured</strong> savings with a full evidence chain. Estimates and projections are never billed.
+                  </p>
                 </div>
               </CardContent>
             </Card>
-
-            {/* Performance-Based Pricing Tier */}
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold text-center mb-2">Strategic Alliance</h2>
-              <p className="text-center text-muted-foreground mb-8">Enterprise partnership with 30-day free pilot. No credit card required.</p>
-            </div>
-
-            <div className="flex justify-center mb-16">
-              {savingsBasedTiers.map((tier) => {
-                const Icon = tier.icon;
-
-                return (
-                  <Card
-                    key={tier.id}
-                    className="relative flex flex-col border-primary shadow-lg max-w-md w-full"
-                    data-testid={`card-plan-${tier.id}`}
-                  >
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <Badge className="bg-primary text-primary-foreground">
-                        <Handshake className="h-3 w-3 mr-1" />
-                        Enterprise Partnership
-                      </Badge>
-                    </div>
-
-                    <CardHeader className="text-center pb-4">
-                      <div className={`w-12 h-12 mx-auto mb-4 rounded-xl ${tier.bgColor} flex items-center justify-center ${tier.color}`}>
-                        <Icon className="h-6 w-6" />
-                      </div>
-                      <CardTitle className="text-2xl">{tier.name}</CardTitle>
-                      <CardDescription className="min-h-[48px]">
-                        {tier.description}
-                      </CardDescription>
-                    </CardHeader>
-
-                    <CardContent className="flex-1">
-                      <div className="text-center mb-6">
-                        <div className="flex items-baseline justify-center gap-1">
-                          <span className="text-4xl font-bold">{tier.percentageRate}%</span>
-                          <span className="text-muted-foreground">of verified savings</span>
-                        </div>
-                        {tier.platformFee > 0 && (
-                          <p className="text-sm text-muted-foreground mt-1">
-                            + {formatCurrency(tier.platformFee)}/month platform fee
-                          </p>
-                        )}
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Min. {formatCurrency(tier.minimumSavings)} annual savings to qualify
-                        </p>
-                      </div>
-
-                      {/* Competitor Comparison */}
-                      <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 mb-4">
-                        <div className="flex items-center gap-2 text-sm">
-                          <TrendingDown className="h-4 w-4 text-green-600" />
-                          <span className="text-green-700 dark:text-green-400 font-medium">
-                            {tier.yourSavings}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Competitors charge {tier.competitorRate} for similar services
-                        </p>
-                      </div>
-
-                      {/* Features */}
-                      <ul className="space-y-2">
-                        {tier.features.map((feature, index) => (
-                          <li key={index} className="flex items-start gap-2">
-                            <Check className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
-                            <span className="text-sm">{feature}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-
-                    <CardFooter className="pt-4">
-                      <Button
-                        className="w-full"
-                        variant="default"
-                        onClick={() => handleGetStarted(tier.id)}
-                        data-testid={`button-subscribe-${tier.id}`}
-                      >
-                        Start Free Pilot
-                        <ArrowRight className="h-4 w-4 ml-2" />
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                );
-              })}
-            </div>
           </>
         )}
 
-        {/* Competitor Comparison Table */}
+        {/* Competitor Comparison */}
         <Card className="mb-16" data-testid="card-competitor-comparison">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -502,7 +511,7 @@ export default function Pricing() {
               How We Compare
             </CardTitle>
             <CardDescription>
-              See how Prescient Labs stacks up against traditional procurement platforms
+              Prescient Labs stacks up against traditional procurement platforms
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -517,26 +526,17 @@ export default function Pricing() {
                   </tr>
                 </thead>
                 <tbody>
-                  {competitorComparison.map((competitor, index) => (
-                    <tr 
-                      key={competitor.name} 
-                      className={`border-b ${competitor.highlight ? "bg-primary/5" : ""}`}
-                    >
+                  {competitorComparison.map((row) => (
+                    <tr key={row.name} className={`border-b ${row.highlight ? "bg-primary/5" : ""}`}>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2">
-                          {competitor.highlight && <Award className="h-4 w-4 text-primary" />}
-                          <span className={competitor.highlight ? "font-bold text-primary" : ""}>
-                            {competitor.name}
-                          </span>
+                          {row.highlight && <Award className="h-4 w-4 text-primary shrink-0" />}
+                          <span className={row.highlight ? "font-bold text-primary" : ""}>{row.name}</span>
                         </div>
                       </td>
-                      <td className="py-3 px-4">
-                        <Badge variant={competitor.highlight ? "default" : "secondary"}>
-                          {competitor.savingsShare}
-                        </Badge>
-                      </td>
-                      <td className="py-3 px-4 text-sm">{competitor.platformFee}</td>
-                      <td className="py-3 px-4 text-sm text-muted-foreground">{competitor.approach}</td>
+                      <td className="py-3 px-4 text-sm">{row.savingsShare}</td>
+                      <td className="py-3 px-4 text-sm">{row.platformFee}</td>
+                      <td className="py-3 px-4 text-sm text-muted-foreground">{row.approach}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -545,124 +545,44 @@ export default function Pricing() {
           </CardContent>
         </Card>
 
-        {/* How Savings Verification Works */}
-        <Card className="mb-16" data-testid="card-savings-verification">
+        {/* All Features Included */}
+        <Card className="mb-16">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-primary" />
-              How Savings Verification Works
+              <CheckCircle2 className="h-5 w-5 text-green-500" />
+              Everything Included — On Every Plan
             </CardTitle>
-            <CardDescription>
-              Transparent, auditable methodology for calculating your procurement savings
-            </CardDescription>
+            <CardDescription>No feature gating. No tiered access. All six plans unlock the full platform.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid md:grid-cols-4 gap-6">
-              <div className="text-center">
-                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                  <span className="text-xl font-bold text-blue-600">1</span>
+            <div className="grid md:grid-cols-2 gap-3">
+              {FEATURES_ALL.map((feature, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-500 shrink-0" />
+                  <span className="text-sm">{feature}</span>
                 </div>
-                <h4 className="font-semibold mb-2">Baseline Capture</h4>
-                <p className="text-sm text-muted-foreground">
-                  We establish your historical procurement costs and supplier pricing
-                </p>
-              </div>
-              <div className="text-center">
-                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                  <span className="text-xl font-bold text-purple-600">2</span>
-                </div>
-                <h4 className="font-semibold mb-2">Optimization Actions</h4>
-                <p className="text-sm text-muted-foreground">
-                  Our platform identifies and helps execute savings opportunities
-                </p>
-              </div>
-              <div className="text-center">
-                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                  <span className="text-xl font-bold text-green-600">3</span>
-                </div>
-                <h4 className="font-semibold mb-2">Savings Calculation</h4>
-                <p className="text-sm text-muted-foreground">
-                  Compare actual costs against baseline to calculate verified savings
-                </p>
-              </div>
-              <div className="text-center">
-                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                  <span className="text-xl font-bold text-amber-600">4</span>
-                </div>
-                <h4 className="font-semibold mb-2">Quarterly Billing</h4>
-                <p className="text-sm text-muted-foreground">
-                  Pay your savings share quarterly with full audit trail
-                </p>
-              </div>
+              ))}
             </div>
           </CardContent>
         </Card>
 
-        {/* Trust Indicators */}
-        <div className="grid md:grid-cols-3 gap-8 mb-16">
-          <div className="text-center">
-            <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-              <Shield className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-            </div>
-            <h3 className="font-semibold mb-2">Enterprise Security</h3>
-            <p className="text-sm text-muted-foreground">
-              SOC 2 Type II compliant with end-to-end encryption
-            </p>
-          </div>
-          <div className="text-center">
-            <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-green-100 dark:bg-green-900 flex items-center justify-center">
-              <Handshake className="h-6 w-6 text-green-600 dark:text-green-400" />
-            </div>
-            <h3 className="font-semibold mb-2">30-Day Free Pilot</h3>
-            <p className="text-sm text-muted-foreground">
-              Full platform access, see real savings before you pay
-            </p>
-          </div>
-          <div className="text-center">
-            <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
-              <Target className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-            </div>
-            <h3 className="font-semibold mb-2">Aligned Incentives</h3>
-            <p className="text-sm text-muted-foreground">
-              We only win when you save money - our success is tied to yours
-            </p>
+        {/* CTA */}
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-3">Ready to get started?</h2>
+          <p className="text-muted-foreground mb-6 max-w-xl mx-auto">
+            All plans include a 30-day free trial. No credit card required for the performance plan pilot.
+          </p>
+          <div className="flex items-center justify-center gap-4 flex-wrap">
+            <Button size="lg" onClick={() => setPricingTab("subscription")} data-testid="button-view-subscriptions">
+              View Subscriptions
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+            <Button size="lg" variant="outline" onClick={() => { setPricingTab("variable"); }} data-testid="button-view-performance">
+              Explore Performance Plan
+            </Button>
           </div>
         </div>
 
-        {/* Enterprise CTA */}
-        <Card className="bg-gradient-to-r from-slate-900 to-slate-800 text-white border-0">
-          <CardContent className="py-8">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-              <div>
-                <h3 className="text-2xl font-bold mb-2">Ready to Start Saving?</h3>
-                <p className="text-slate-300">
-                  Start your 30-day free pilot today.
-                </p>
-              </div>
-              <div className="flex gap-3">
-                <Button
-                  size="lg"
-                  variant="secondary"
-                  className="shrink-0"
-                  onClick={() => handleGetStarted("transform")}
-                  data-testid="button-start-pilot"
-                >
-                  Start Free Pilot
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="shrink-0 border-white/30 text-white hover:bg-white/10"
-                  onClick={() => window.location.href = "mailto:sales@prescientlabs.ai"}
-                  data-testid="button-contact-sales"
-                >
-                  Contact Sales
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

@@ -27,9 +27,9 @@ import { logger } from "./structuredLogger";
 
 export const PERFORMANCE_BASE_FEE = 100;           // $100/month, always charged
 export const PERFORMANCE_BASE_FEE_CENTS = 10000;
-export const PERFORMANCE_FEE_MIN = 0.10;           // 10%
-export const PERFORMANCE_FEE_MAX = 0.20;           // 20%
-export const PERFORMANCE_FEE_DEFAULT = 0.15;       // 15% default (midpoint)
+export const PERFORMANCE_FEE_MIN = 0.15;           // 15% (fixed rate)
+export const PERFORMANCE_FEE_MAX = 0.15;           // 15% (fixed rate)
+export const PERFORMANCE_FEE_DEFAULT = 0.15;       // 15% flat fee of verified savings
 export const ANOMALY_SPIKE_MULTIPLIER = 5;         // savings > 5× historical → flag
 
 // ─── Core fee computation ─────────────────────────────────────────────────────

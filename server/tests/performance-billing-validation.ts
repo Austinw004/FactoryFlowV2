@@ -120,22 +120,22 @@ assert("$80,000 × 15% = $12,000",
   fee80k === 12000,
   `got ${fee80k}`);
 
-const fee10k = computePerformanceFee(10000, 0.10);
-assert("$10,000 × 10% = $1,000",
-  fee10k === 1000,
+const fee10k = computePerformanceFee(10000, 0.15);
+assert("$10,000 × 15% = $1,500",
+  fee10k === 1500,
   `got ${fee10k}`);
 
-const fee50k = computePerformanceFee(50000, 0.20);
-assert("$50,000 × 20% = $10,000",
-  fee50k === 10000,
+const fee50k = computePerformanceFee(50000, 0.15);
+assert("$50,000 × 15% = $7,500",
+  fee50k === 7500,
   `got ${fee50k}`);
 
-assert("Fee percentage clamped at minimum 10%",
-  computePerformanceFee(10000, 0.05) === 1000,
+assert("Fee percentage clamped at flat 15% (below range)",
+  computePerformanceFee(10000, 0.05) === 1500,
   `got ${computePerformanceFee(10000, 0.05)}`);
 
-assert("Fee percentage clamped at maximum 20%",
-  computePerformanceFee(10000, 0.30) === 2000,
+assert("Fee percentage clamped at flat 15% (above range)",
+  computePerformanceFee(10000, 0.30) === 1500,
   `got ${computePerformanceFee(10000, 0.30)}`);
 
 assert("Base fee is $100",
