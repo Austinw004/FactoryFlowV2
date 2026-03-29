@@ -9163,7 +9163,7 @@ export const winRateSnapshots = pgTable(
 
 export const insertWinRateSnapshotSchema = createInsertSchema(winRateSnapshots).omit({ id: true, createdAt: true });
 export type WinRateSnapshot = typeof winRateSnapshots.$inferSelect;
-
+ 
 // ============================================================
 // News Articles — real RSS-ingested, validated, deduplicated
 // ============================================================
