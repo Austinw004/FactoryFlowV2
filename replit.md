@@ -39,6 +39,9 @@ The system is a multi-tenant application ensuring robust data isolation per comp
 - **Structural Confidence Display**: Shows decomposed confidence for economic regimes.
 - **Graceful Degradation**: API returns degraded responses for economic data during outages.
 - **Prediction Tracking**: Tracks predictions against actual outcomes with accuracy metrics.
+- **Enterprise Auth (Email/Password + JWT)**: Full email/password authentication layer (`server/lib/emailAuthService.ts`) alongside Replit Auth. Includes signup, login, forgot-password (SHA-256 hashed tokens, 15-min TTL, single-use), forgot-username, and username/email login. JWT access tokens (15 min) + refresh tokens (7 days) signed via `JWT_SECRET` (`server/lib/jwtAuth.ts`). `jwtMiddleware` reads Bearer header non-destructively alongside existing Replit sessions; `requireJwt` guard for JWT-only routes.
+- **Enterprise Payment Processing**: `server/lib/stripeWebhookHandler.ts` handles `invoice.paid/failed`, `customer.subscription.deleted/updated`, `payment_intent.succeeded/failed`, `transfer.created/failed` with fail-closed signature verification via `STRIPE_WEBHOOK_SECRET`. `/api/payments/create-intent` and `/api/payments/confirm` (server-side status verification only). `/api/payouts/send` for Stripe Connect supplier transfers.
+- **Enterprise Auth & Payment Routes**: `server/authPaymentRoutes.ts` registers all 9 new endpoints before the Replit `isAuthenticated` middleware so public auth routes are accessible. Stripe webhook route uses `express.raw()` for signature verification.
 - **Enterprise Automation Hardening**: Database-backed `AutomationEngine` with persistent storage, trigger deduplication, and safe mode.
 - **Atomic Integration Idempotency**: Ensures event processing idempotency.
 - **Tenant Isolation Hardening**: Enforces isolation across all critical operations.
