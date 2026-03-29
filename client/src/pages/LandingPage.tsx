@@ -17,6 +17,7 @@ import { useLocation } from "wouter";
 export default function LandingPage() {
   const [, setLocation] = useLocation();
   const [pricingModel, setPricingModel] = useState<"subscription" | "performance">("performance");
+  const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("monthly");
 
   const coreCapabilities = [
     {
@@ -110,19 +111,25 @@ export default function LandingPage() {
   const subscriptionPlans = [
     {
       name: "Starter",
-      price: "$299",
-      period: "/month",
+      monthlyPrice: "$299",
+      annualPrice: "$2,990",
+      monthlyPeriod: "/month",
+      annualPeriod: "/year",
+      annualNote: "$249/mo — save 17%",
+      skus: "500 SKUs",
       description: "Demand forecasting and procurement optimization for growing manufacturers",
-      features: ["Demand forecasting", "Procurement timing signals", "Live commodity price feeds", "Supplier risk scoring"],
       highlighted: false,
       icon: Rocket,
     },
     {
       name: "Growth",
-      price: "$799",
-      period: "/month",
+      monthlyPrice: "$799",
+      annualPrice: "$7,990",
+      monthlyPeriod: "/month",
+      annualPeriod: "/year",
+      annualNote: "$666/mo — save 17%",
+      skus: "Up to 5,000 SKUs",
       description: "Full platform access with advanced supply chain intelligence",
-      features: ["Everything in Starter", "Supply chain digital twin", "Multi-tier supplier mapping", "Automated RFQ generation"],
       highlighted: true,
       icon: Building2,
     },
@@ -134,7 +141,6 @@ export default function LandingPage() {
       price: "$199",
       period: "/month + metered",
       description: "Start low and scale — pay for exactly what you consume",
-      features: ["Full platform access", "Per-API call pricing", "No long-term commitment", "Volume discounts available"],
       highlighted: false,
       icon: Zap,
     },
@@ -143,7 +149,6 @@ export default function LandingPage() {
       price: "$100",
       period: "/month + 15% of savings",
       description: "Pay only on verified, measured savings — never on estimates",
-      features: ["Full platform access", "15% of verified savings only", "Strict evidence chain required", "Zero fee on projections"],
       highlighted: true,
       icon: DollarSign,
     },
@@ -250,49 +255,65 @@ export default function LandingPage() {
             
             {/* Subscription Plans */}
             {pricingModel === "subscription" && (
-              <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-                {subscriptionPlans.map((plan, idx) => (
-                  <Card 
-                    key={idx} 
-                    className={`p-5 flex flex-col text-left ${plan.highlighted ? 'border-primary shadow-lg ring-2 ring-primary/20' : ''}`}
-                    data-testid={`card-hero-plan-${plan.name.toLowerCase()}`}
+              <>
+                <div className="flex items-center justify-center gap-3 mb-5">
+                  <span className={`text-sm ${billingPeriod === "monthly" ? "font-semibold" : "text-muted-foreground"}`}>Monthly</span>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={billingPeriod === "annual"}
+                    onClick={() => setBillingPeriod(billingPeriod === "monthly" ? "annual" : "monthly")}
+                    data-testid="toggle-billing-period"
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${billingPeriod === "annual" ? "bg-primary" : "bg-muted"}`}
                   >
-                    {plan.highlighted && (
-                      <Badge className="mb-3 self-start">Most Popular</Badge>
-                    )}
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
-                        <plan.icon className="h-4 w-4 text-primary" />
-                      </div>
-                      <h3 className="text-xl font-bold">{plan.name}</h3>
-                    </div>
-                    <p className="text-xs text-muted-foreground mb-3">{plan.description}</p>
-                    <div className="mb-4">
-                      <span className="text-3xl font-bold">{plan.price}</span>
-                      <span className="text-muted-foreground text-sm">{plan.period}</span>
-                    </div>
-                    <ul className="space-y-2 mb-4 flex-1">
-                      {plan.features.slice(0, 4).map((feature, featureIdx) => (
-                        <li key={featureIdx} className="flex items-center gap-2 text-xs">
-                          <Check className="h-3 w-3 text-primary shrink-0" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                    <Button 
-                      className="w-full" 
-                      size="sm"
-                      variant={plan.highlighted ? "default" : "outline"}
-                      asChild
-                      data-testid={`button-hero-select-${plan.name.toLowerCase()}`}
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${billingPeriod === "annual" ? "translate-x-6" : "translate-x-1"}`} />
+                  </button>
+                  <span className={`text-sm ${billingPeriod === "annual" ? "font-semibold" : "text-muted-foreground"}`}>
+                    Annual <Badge className="ml-1 text-xs">Save 17%</Badge>
+                  </span>
+                </div>
+                <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+                  {subscriptionPlans.map((plan, idx) => (
+                    <Card 
+                      key={idx} 
+                      className={`p-5 flex flex-col text-left ${plan.highlighted ? 'border-primary shadow-lg ring-2 ring-primary/20' : ''}`}
+                      data-testid={`card-hero-plan-${plan.name.toLowerCase()}`}
                     >
-                      <a href={plan.name === "Enterprise" ? "mailto:sales@prescientlabs.ai" : "/api/login"}>
-                        {plan.name === "Enterprise" ? "Contact Sales" : "Start Free Trial"}
-                      </a>
-                    </Button>
-                  </Card>
-                ))}
-              </div>
+                      {plan.highlighted && (
+                        <Badge className="mb-3 self-start">Most Popular</Badge>
+                      )}
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
+                          <plan.icon className="h-4 w-4 text-primary" />
+                        </div>
+                        <h3 className="text-xl font-bold">{plan.name}</h3>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-3">{plan.description}</p>
+                      <div className="mb-1">
+                        <span className="text-3xl font-bold">{billingPeriod === "annual" ? plan.annualPrice : plan.monthlyPrice}</span>
+                        <span className="text-muted-foreground text-sm">{billingPeriod === "annual" ? plan.annualPeriod : plan.monthlyPeriod}</span>
+                      </div>
+                      {billingPeriod === "annual" && (
+                        <p className="text-xs text-muted-foreground mb-4">{plan.annualNote}</p>
+                      )}
+                      {billingPeriod === "monthly" && <div className="mb-4" />}
+                      <p className="flex items-center gap-2 text-sm font-medium mb-4 flex-1">
+                        <Check className="h-4 w-4 text-primary shrink-0" />
+                        {plan.skus}
+                      </p>
+                      <Button 
+                        className="w-full" 
+                        size="sm"
+                        variant={plan.highlighted ? "default" : "outline"}
+                        asChild
+                        data-testid={`button-hero-select-${plan.name.toLowerCase()}`}
+                      >
+                        <a href="/api/login">Start Free Trial</a>
+                      </Button>
+                    </Card>
+                  ))}
+                </div>
+              </>
             )}
             
             {/* Performance-Based Plans */}
@@ -318,14 +339,7 @@ export default function LandingPage() {
                       <span className="text-3xl font-bold">{plan.price}</span>
                       <span className="text-muted-foreground text-sm">{plan.period}</span>
                     </div>
-                    <ul className="space-y-2 mb-4 flex-1">
-                      {plan.features.slice(0, 4).map((feature, featureIdx) => (
-                        <li key={featureIdx} className="flex items-center gap-2 text-xs">
-                          <Check className="h-3 w-3 text-primary shrink-0" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
+                    <div className="flex-1" />
                     <Button 
                       className="w-full" 
                       size="sm"
