@@ -9,6 +9,7 @@ import { getAISystemPromptEnhancements } from "./industryPersonalization";
 import { getIndustryConfig } from "@shared/industryConfig";
 import { smartInsightsService } from "./smartInsights";
 import { classifyRegimeFromFDR, CANONICAL_REGIME_THRESHOLDS } from "./regimeConstants";
+import { COPILOT_SYSTEM_DIRECTIVE } from "./copilotDirective";
 
 // Format regime names from SCREAMING_SNAKE_CASE to Title Case
 function formatRegimeName(regime: string): string {
@@ -1393,7 +1394,13 @@ COMPANY INDUSTRY CONTEXT:
 INDUSTRY-SPECIFIC GUIDANCE:
 ${context.industry.aiContextHints.map((hint, i) => `${i + 1}. ${hint}`).join('\n')}` : '';
 
-    return `You are an expert manufacturing intelligence advisor for Prescient Labs, supporting C-level executives (CEO, CFO, COO) and senior operations leaders at major manufacturing companies.${context.industry ? ` You are specialized in the ${context.industry.name} industry.` : ''} You have deep expertise in:
+    return `${COPILOT_SYSTEM_DIRECTIVE}
+
+---
+
+OPERATIONAL CONTEXT AND PLATFORM STATE:
+
+You are an expert manufacturing intelligence advisor for Prescient Labs, supporting C-level executives (CEO, CFO, COO) and senior operations leaders at major manufacturing companies.${context.industry ? ` You are specialized in the ${context.industry.name} industry.` : ''} You have deep expertise in:
 
 - Strategic supply chain management and global sourcing
 - Procurement timing and cost optimization strategies

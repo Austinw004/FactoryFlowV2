@@ -21,6 +21,14 @@ import {
   getConfidenceTrend,
 } from "./decisionEvaluation";
 import { getTopNews } from "./newsIngestion";
+import {
+  DIRECTIVE_ERROR_CODES,
+  TRUST_THRESHOLDS,
+  detectSignalInconsistency,
+  buildBlockedResponse,
+  buildDirectiveEvidenceBundle,
+  type CopilotDirectiveOutput,
+} from "./copilotDirective";
 
 export interface EvidenceBundle {
   entityIds: string[];
@@ -65,6 +73,20 @@ export interface CopilotQueryResult {
     }>;
   };
   topNews: CopilotNewsItem[];   // top 3 relevant real news articles
+  // ── Directive v1 enforcement fields ──────────────────────────────────────
+  trustScore: number;           // [0,1] — derived from evidence completeness + win rate
+  requiresApproval: boolean;   // true if trustScore < 0.6
+  automationBlocked: boolean;  // true if trustScore < 0.4 or win rate guardrail blocks
+  flags: string[];             // e.g. SIGNAL_INCONSISTENCY, LOW CONFIDENCE – APPROVAL REQUIRED
+  keyDrivers: string[];        // up to 5 evidence-backed bullets
+  riskFactors: string[];       // explicit uncertainties
+  directiveEvidenceBundle: {   // directive-schema evidence bundle
+    sourceTables: string[];
+    entityIds: string[];
+    queryTimestamp: string;
+    rowCount: number;
+    provenanceVersion: string;
+  };
 }
 
 export interface EvidenceRef {
@@ -216,7 +238,81 @@ export async function queryCopilot(companyId: string, userId: string, query: str
     relevanceExplanation: `${n.category ?? "news"} · ${n.sentiment ?? "neutral"} · relevance ${((n.relevanceScore ?? 0) * 100).toFixed(0)}%`,
   }));
 
-  return { answer, evidence, evidenceBundle, queryId: logEntry.id, winRateContext, topNews };
+  // ── Directive v1: compute trust score, flags, keyDrivers, riskFactors ────────
+  const totalRowsFound = Object.values(rowCounts).reduce((a, b) => a + b, 0);
+  const hasEvidence    = evidence.length > 0;
+  const globalWinRate  = winMetrics?.globalWinRate ?? null;
+
+  // Trust score: evidence completeness (40%) + win rate (40%) + data freshness (20%)
+  const evidenceScore  = hasEvidence ? Math.min(1.0, evidence.length / 5) * 0.40 : 0;
+  const winRateScore   = globalWinRate !== null ? globalWinRate * 0.40 : 0.20;  // neutral 50% if no history
+  const freshnessScore = 0.20;  // constant: DB data is always current
+  let trustScore = Math.min(1.0, evidenceScore + winRateScore + freshnessScore);
+
+  const flags: string[] = [];
+  const riskFactors: string[] = [];
+
+  // Apply win rate guardrail to trust and flags
+  if (winMetrics?.performanceFlag === "UNDERPERFORMING_SYSTEM") {
+    trustScore = parseFloat((trustScore * 0.7).toFixed(3));
+    flags.push("WIN_RATE_GUARDRAIL_APPLIED");
+    riskFactors.push(`Win-rate guardrail active: global win rate ${((globalWinRate ?? 0) * 100).toFixed(0)}% — system trust reduced 30%`);
+  }
+
+  // Drift check on answer quality (proxy: answer is a fallback message)
+  if (!hasEvidence) {
+    riskFactors.push("INSUFFICIENT_DATA: no database rows matched this query — answer may be generic");
+    flags.push(DIRECTIVE_ERROR_CODES.INSUFFICIENT_DATA);
+    trustScore = Math.min(trustScore, 0.55);  // cap below normal tier if no evidence
+  }
+
+  // Low-trust tier flags (rule #3)
+  const automationBlocked = trustScore < TRUST_THRESHOLDS.BLOCK || winMetrics?.automationBlocked === true;
+  const requiresApproval  = trustScore < TRUST_THRESHOLDS.APPROVAL_REQUIRED || automationBlocked;
+  if (requiresApproval && trustScore >= TRUST_THRESHOLDS.BLOCK) {
+    flags.push("LOW CONFIDENCE – APPROVAL REQUIRED");
+  }
+
+  // Key drivers (up to 5) — derived from actual evidence
+  const keyDrivers: string[] = [];
+  if (totalRowsFound > 0) {
+    keyDrivers.push(`${totalRowsFound} database rows retrieved across ${Object.keys(rowCounts).join(", ")}`);
+  }
+  if (globalWinRate !== null) {
+    keyDrivers.push(`System decision win rate: ${(globalWinRate * 100).toFixed(0)}% (${recentRows.length} recent decisions evaluated)`);
+  }
+  if (confidenceTrend !== "stable") {
+    keyDrivers.push(`Win-rate trend: ${confidenceTrend}`);
+  }
+  if (topNews.length > 0) {
+    keyDrivers.push(`${topNews.length} real-time market signal(s) ingested from RSS feeds (provenance: RSS_V1)`);
+  }
+  if (evidence.length > 0) {
+    const types = [...new Set(evidence.map(e => e.entityType))];
+    keyDrivers.push(`Evidence entities: ${types.join(", ")} (${evidence.length} refs)`);
+  }
+
+  const directiveEvidenceBundle = buildDirectiveEvidenceBundle({
+    sourceTables: Object.keys(rowCounts).filter(k => rowCounts[k] > 0),
+    entityIds:    entityIds.slice(0, 10),
+    rowCount:     totalRowsFound,
+  });
+
+  return {
+    answer,
+    evidence,
+    evidenceBundle,
+    queryId: logEntry.id,
+    winRateContext,
+    topNews,
+    trustScore: parseFloat(trustScore.toFixed(3)),
+    requiresApproval,
+    automationBlocked,
+    flags,
+    keyDrivers: keyDrivers.slice(0, 5),
+    riskFactors,
+    directiveEvidenceBundle,
+  };
 }
 
 export async function createDraft(

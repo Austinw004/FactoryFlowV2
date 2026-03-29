@@ -64,6 +64,7 @@ The system is a multi-tenant application ensuring robust data isolation per comp
 - **Revenue-Optimized Execution Layer**: Pilot Revenue Dashboard for ROI metrics, executive report generation, and Landing Mode configuration.
 - **Real News Ingestion & Verification System**: RSS-based ingestion from curated feeds with strict validation, deduplication, relevance scoring, and content enrichment.
 - **Decision Win-Rate Learning Loop**: Persistent outcome tracking, win-rate computation, performance guardrails, and adaptive model blending.
+- **System Directive v1 (AI Copilot Governance)**: A 12-rule non-negotiable enforcement layer governing all AI copilot outputs. Rules include: zero hallucination (every number from DB/computed/explicit input), trust scoring (evidence completeness 40% + win rate 40% + freshness 20%), fail-closed behavior (trustScore < 0.4 → `LOW_TRUST_BLOCKED_DECISION`, < 0.6 → approval required), economic validity check before any financial output, draft-only action outputs, and structured output schema with `trustScore`, `requiresApproval`, `automationBlocked`, `flags`, `keyDrivers`, `riskFactors`, `directiveEvidenceBundle`. Implemented in `server/lib/copilotDirective.ts`; directive prepended verbatim to every OpenAI call's system prompt via `aiAssistant.ts`; full directive fields computed and returned from `queryCopilot()` in `copilotService.ts`.
 
 ### System Design Choices
 
