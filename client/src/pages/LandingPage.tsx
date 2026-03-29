@@ -115,8 +115,8 @@ export default function LandingPage() {
       annualPrice: "$2,990",
       monthlyPeriod: "/month",
       annualPeriod: "/year",
-      annualNote: "$249/mo — save 17%",
-      skus: "500 SKUs",
+      annualNote: "$249/mo",
+      skus: "Up to 500 SKUs",
       description: "Demand forecasting and procurement optimization for growing manufacturers",
       highlighted: false,
       icon: Rocket,
@@ -127,7 +127,7 @@ export default function LandingPage() {
       annualPrice: "$7,990",
       monthlyPeriod: "/month",
       annualPeriod: "/year",
-      annualNote: "$666/mo — save 17%",
+      annualNote: "$666/mo",
       skus: "Up to 5,000 SKUs",
       description: "Full platform access with advanced supply chain intelligence",
       highlighted: true,
@@ -269,7 +269,7 @@ export default function LandingPage() {
                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${billingPeriod === "annual" ? "translate-x-6" : "translate-x-1"}`} />
                   </button>
                   <span className={`text-sm ${billingPeriod === "annual" ? "font-semibold" : "text-muted-foreground"}`}>
-                    Annual <Badge className="ml-1 text-xs">Save 17%</Badge>
+                    Annual
                   </span>
                 </div>
                 <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
