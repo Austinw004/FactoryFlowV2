@@ -6,6 +6,25 @@ import type { Request } from "express";
  * Simplifies adding audit logs to any mutation endpoint
  */
 
+// ─── Sensitive key redaction ──────────────────────────────────────────────────
+
+const SENSITIVE_KEYS = ["password", "token", "apiKey", "secret"];
+
+function redact(obj: any): any {
+  if (!obj || typeof obj !== "object") return obj;
+  const copy: any = {};
+  for (const key in obj) {
+    if (SENSITIVE_KEYS.includes(key)) {
+      copy[key] = "[REDACTED]";
+    } else {
+      copy[key] = redact(obj[key]);
+    }
+  }
+  return copy;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 interface AuditContext {
   userId: string;
   companyId: string;
@@ -54,13 +73,15 @@ export async function logAudit(params: {
       return;
     }
 
+    const sanitizedChanges = redact(changes);
+
     await storage.createAuditLog({
       companyId: context.companyId,
       userId: context.userId,
       action,
       entityType,
       entityId,
-      changes: changes || notes ? JSON.stringify({ ...changes, notes }) : null,
+      changes: sanitizedChanges || notes ? JSON.stringify({ ...sanitizedChanges, notes }) : null,
       ipAddress: context.ipAddress,
       userAgent: context.userAgent,
     });
