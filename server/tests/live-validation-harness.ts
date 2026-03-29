@@ -39,6 +39,7 @@ import { enforceTrust }                           from "../lib/trustGuard";
 import { buildEvidenceBundle }                    from "../lib/evidenceBundle";
 import { assertEconomicValidity as assertGenericEconomicValidity } from "../lib/economicValidity";
 import { buildDecisionTrace }                     from "../lib/decisionTrace";
+import { validateNewsArticle }                    from "../lib/newsGuard";
 import { canExecuteDraft, approveDraft } from "../lib/copilotService";
 import { sanitizeDetails } from "../lib/structuredLogger";
 import { createHash, randomUUID } from "crypto";
@@ -2065,13 +2066,103 @@ async function section14() {
 }
 
 // ─────────────────────────────────────────────
+// SECTION 15 — News Guard (Gate 17)
+// ─────────────────────────────────────────────
+async function section15() {
+  const S = "S15";
+  console.log("\n─── Section 15: News Article Guard (Gate 17) ──────────────────────────────");
+
+  const t0 = Date.now();
+
+  // 15.1 — Valid article passes without error
+  {
+    const article = { title: "Steel prices surge", url: "https://reuters.com/steel", source: { name: "Reuters" } };
+    let passed = false;
+    try { validateNewsArticle(article); passed = true; } catch {}
+    assert(passed, S, "15.1",
+      "NEWS GUARD: valid article (title+url+source) passes without error",
+      "deterministic", { article }, t0);
+  }
+
+  // 15.2 — Missing title throws INVALID_NEWS_ARTICLE
+  {
+    const article = { url: "https://reuters.com/steel", source: { name: "Reuters" } };
+    let err = "";
+    try { validateNewsArticle(article); } catch (e: any) { err = e.message; }
+    assert(err === "INVALID_NEWS_ARTICLE", S, "15.2",
+      `NEWS GUARD: missing title throws INVALID_NEWS_ARTICLE (got: "${err}")`,
+      "deterministic", { err }, t0);
+  }
+
+  // 15.3 — Missing url throws INVALID_NEWS_ARTICLE
+  {
+    const article = { title: "Steel prices surge", source: { name: "Reuters" } };
+    let err = "";
+    try { validateNewsArticle(article); } catch (e: any) { err = e.message; }
+    assert(err === "INVALID_NEWS_ARTICLE", S, "15.3",
+      `NEWS GUARD: missing url throws INVALID_NEWS_ARTICLE (got: "${err}")`,
+      "deterministic", { err }, t0);
+  }
+
+  // 15.4 — Missing source throws INVALID_NEWS_ARTICLE
+  {
+    const article = { title: "Steel prices surge", url: "https://reuters.com/steel" };
+    let err = "";
+    try { validateNewsArticle(article); } catch (e: any) { err = e.message; }
+    assert(err === "INVALID_NEWS_ARTICLE", S, "15.4",
+      `NEWS GUARD: missing source throws INVALID_NEWS_ARTICLE (got: "${err}")`,
+      "deterministic", { err }, t0);
+  }
+
+  // 15.5 — example.com URL throws SYNTHETIC_NEWS_BLOCKED
+  {
+    const article = { title: "Steel prices surge", url: "https://example.com/steel", source: { name: "Reuters" } };
+    let err = "";
+    try { validateNewsArticle(article); } catch (e: any) { err = e.message; }
+    assert(err === "SYNTHETIC_NEWS_BLOCKED", S, "15.5",
+      `NEWS GUARD: example.com url throws SYNTHETIC_NEWS_BLOCKED (got: "${err}")`,
+      "deterministic", { err }, t0);
+  }
+
+  // 15.6 — localhost URL throws SYNTHETIC_NEWS_BLOCKED
+  {
+    const article = { title: "Steel prices surge", url: "http://localhost:3000/news", source: { name: "Internal" } };
+    let err = "";
+    try { validateNewsArticle(article); } catch (e: any) { err = e.message; }
+    assert(err === "SYNTHETIC_NEWS_BLOCKED", S, "15.6",
+      `NEWS GUARD: localhost url throws SYNTHETIC_NEWS_BLOCKED (got: "${err}")`,
+      "deterministic", { err }, t0);
+  }
+
+  // 15.7 — Non-http URL throws SYNTHETIC_NEWS_BLOCKED
+  {
+    const article = { title: "Steel prices surge", url: "ftp://feed.reuters.com/steel", source: { name: "Reuters" } };
+    let err = "";
+    try { validateNewsArticle(article); } catch (e: any) { err = e.message; }
+    assert(err === "SYNTHETIC_NEWS_BLOCKED", S, "15.7",
+      `NEWS GUARD: non-http url throws SYNTHETIC_NEWS_BLOCKED (got: "${err}")`,
+      "deterministic", { err }, t0);
+  }
+
+  // 15.8 — https URL is accepted (startsWith("http") covers https)
+  {
+    const article = { title: "Copper demand rises", url: "https://ft.com/copper-demand", source: "Financial Times" };
+    let passed = false;
+    try { validateNewsArticle(article); passed = true; } catch {}
+    assert(passed, S, "15.8",
+      "NEWS GUARD: https URL is accepted (startsWith http covers https)",
+      "deterministic", { url: article.url }, t0);
+  }
+}
+
+// ─────────────────────────────────────────────
 // MAIN
 // ─────────────────────────────────────────────
 async function main() {
   console.log("═".repeat(72));
   console.log("  LIVE VALIDATION HARNESS v3.0.0");
   console.log("  Prescient Labs — Enterprise Manufacturing Intelligence Platform");
-  console.log("  14 Sections | 16 Gates | Full-Stack Audit | SOC 2-Level Evidence");
+  console.log("  15 Sections | 17 Gates | Full-Stack Audit | SOC 2-Level Evidence");
   console.log("═".repeat(72));
 
   await setup();
@@ -2090,6 +2181,7 @@ async function main() {
   await section12();
   await section13();
   await section14();
+  await section15();
 
   await teardown();
 

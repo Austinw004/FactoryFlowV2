@@ -3,6 +3,7 @@ import { GeopoliticalRiskEngine, type GeopoliticalEvent } from "./geopoliticalRi
 import { storage as globalStorage } from "../storage";
 import type { IStorage } from "../storage";
 import { CredentialService } from "./credentialService";
+import { validateNewsArticle } from "./newsGuard";
 
 export interface NewsAlert {
   id: string;
@@ -374,6 +375,13 @@ export class NewsMonitoringService {
   }
 
   private async processArticle(article: NewsArticle, currentFDR: number): Promise<NewsAlert | null> {
+    try {
+      validateNewsArticle(article);
+    } catch (err: any) {
+      console.warn(`[NewsGuard] Article rejected: ${err.message} url=${article?.url}`);
+      return null;
+    }
+
     const text = `${article.title} ${article.description || ''} ${article.content || ''}`.toLowerCase();
     
     const category = this.detectCategory(text);
