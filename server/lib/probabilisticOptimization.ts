@@ -241,7 +241,17 @@ export async function runOptimization(config: OptimizationConfig): Promise<Optim
   if (!mat) throw new Error(`Material ${materialId} not found for company ${companyId}`);
 
   const smRows = await db.select().from(supplierMaterials).where(eq(supplierMaterials.materialId, materialId));
-  const leadTime = smRows.length > 0 ? smRows[0].leadTimeDays : 14;
+  const nominalLeadTime = smRows.length > 0 ? smRows[0].leadTimeDays : 14;
+  const deliveryVariance = smRows.length > 0 && smRows[0].deliveryVariance != null
+    ? smRows[0].deliveryVariance : 0;
+  // effectiveLeadTime = leadTime * (1 + supplierVariance) — propagates into reorder qty and safety stock
+  const leadTime = Math.max(1, Math.round(nominalLeadTime * (1 + deliveryVariance)));
+  if (deliveryVariance > 0) {
+    console.log(
+      `[Optimization:AUDIT] EFFECTIVE_LEAD_TIME materialId=${materialId} ` +
+      `nominal=${nominalLeadTime}d variance=${(deliveryVariance * 100).toFixed(1)}% effective=${leadTime}d`
+    );
+  }
 
   const constraintRows = await db.select().from(materialConstraints)
     .where(and(eq(materialConstraints.companyId, companyId), eq(materialConstraints.materialId, materialId)));

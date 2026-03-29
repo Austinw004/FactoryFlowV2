@@ -21,6 +21,57 @@ function exponentialSmoothing(series: number[], alpha: number = 0.4): number {
   return s;
 }
 
+// ─── Adaptive model weights ────────────────────────────────────────────────────
+// MAPE thresholds: if recent MAPE exceeds these, weight shifts to alternative models.
+const MAPE_THRESHOLD_MODERATE = 0.20;   // 20% — start diversifying
+const MAPE_THRESHOLD_HIGH     = 0.35;   // 35% — heavy diversification
+
+export interface ModelWeights {
+  ets: number;           // Exponential smoothing (default primary)
+  seasonal: number;      // Seasonal naïve (last-year same period)
+  croston: number;       // Croston's method proxy (for intermittent demand)
+}
+
+/**
+ * Compute adaptive model weights based on recent MAPE.
+ * When ETS is underperforming, weights shift to seasonal naive and Croston.
+ * Weights always sum to 1.0.
+ */
+export function computeAdaptiveWeights(recentMape: number): ModelWeights {
+  if (!isFinite(recentMape) || recentMape < 0) {
+    return { ets: 1.0, seasonal: 0.0, croston: 0.0 };
+  }
+  if (recentMape >= MAPE_THRESHOLD_HIGH) {
+    // Heavy underperformance: rely heavily on alternative models
+    return { ets: 0.40, seasonal: 0.35, croston: 0.25 };
+  }
+  if (recentMape >= MAPE_THRESHOLD_MODERATE) {
+    // Moderate underperformance: begin diversifying
+    return { ets: 0.65, seasonal: 0.25, croston: 0.10 };
+  }
+  // ETS performing well — keep it primary
+  return { ets: 0.90, seasonal: 0.08, croston: 0.02 };
+}
+
+/** Seasonal-naïve: return last year's same-period value or nearest available */
+function seasonalNaiveForecast(history: number[], monthsAhead: number): number[] {
+  if (history.length < 12) {
+    const base = history.length > 0 ? history[history.length - 1] : 0;
+    return Array.from({ length: monthsAhead }, () => base);
+  }
+  return Array.from({ length: monthsAhead }, (_, i) => {
+    const idx = history.length - 12 + (i % 12);
+    return Math.max(0, history[Math.max(0, idx)] ?? 0);
+  });
+}
+
+/** Croston-like: average of non-zero demand periods (simple proxy for intermittent) */
+function crostonForecast(history: number[], monthsAhead: number): number[] {
+  const nonZero = history.filter((v) => v > 0);
+  const avg = nonZero.length > 0 ? nonZero.reduce((a, b) => a + b, 0) / nonZero.length : 0;
+  return Array.from({ length: monthsAhead }, () => avg);
+}
+
 export function calculateMAPE(actuals: number[], forecasts: number[]): number {
   const pairs = actuals
     .map((a, i) => ({ actual: a, forecast: forecasts[i] }))
@@ -161,28 +212,55 @@ export class DemandForecaster {
     };
   }
 
-  forecast(sku: string, monthsAhead: number = 3, regime: Regime = "HEALTHY_EXPANSION"): number[] {
+  forecast(
+    sku: string,
+    monthsAhead: number = 3,
+    regime: Regime = "HEALTHY_EXPANSION",
+    recentMape: number = 0.15,
+  ): number[] {
     const history = this.historyBySku[sku] || [];
+    const weights = computeAdaptiveWeights(recentMape);
+
+    // ETS component
     const base = exponentialSmoothing(history, 0.45);
-
     const factor = this.getRegimeFactor(regime);
-
     const seasonality = movingAverage(history, 12);
     let seasonFactor = 1.0;
     if (seasonality > 0) {
-      // FIX (SF-005): raised cap from ±15% to ±40% to allow real seasonal amplitude
       seasonFactor = clamp(base / seasonality, 0.60, 1.40);
     }
+    const etsLevel = base * factor * seasonFactor;
+    const etsForecasts = Array.from({ length: monthsAhead }, (_, i) =>
+      Math.max(0, etsLevel * (1.0 - 0.06 * i)),
+    );
 
-    const forecasts: number[] = [];
-    const level = base * factor * seasonFactor;
+    // Alternative components (only computed when weight > 0 to avoid wasted work)
+    const seasonalForecasts =
+      weights.seasonal > 0
+        ? seasonalNaiveForecast(history, monthsAhead).map((v) => v * factor)
+        : etsForecasts;
 
-    for (let h = 1; h <= monthsAhead; h++) {
-      const damp = 1.0 - 0.06 * (h - 1);
-      forecasts.push(Math.max(0.0, level * damp));
+    const crostonForecasts =
+      weights.croston > 0
+        ? crostonForecast(history, monthsAhead).map((v) => v * factor)
+        : etsForecasts;
+
+    if (recentMape > MAPE_THRESHOLD_MODERATE) {
+      console.log(
+        `[Forecasting:AUDIT] ADAPTIVE_BLEND sku=${sku} recentMape=${(recentMape * 100).toFixed(1)}% ` +
+          `weights=ets:${weights.ets} seasonal:${weights.seasonal} croston:${weights.croston}`,
+      );
     }
 
-    return forecasts;
+    // Blend
+    return Array.from({ length: monthsAhead }, (_, h) =>
+      Math.max(
+        0,
+        etsForecasts[h] * weights.ets +
+          seasonalForecasts[h] * weights.seasonal +
+          crostonForecasts[h] * weights.croston,
+      ),
+    );
   }
 
   recordActualDemand(sku: string, predicted: number, actual: number, regime: Regime): void {

@@ -488,18 +488,24 @@ export class RegimeIntelligence {
       data.correct++;
     }
 
-    // FROZEN: Factor adjustment disabled pending audit review
-    // This prevents implicit learning from compounding
-    const enableLearning = process.env.ENABLE_REGIME_FACTOR_LEARNING === 'true';
-    
+    // Learning enabled by default; can be overridden with ENABLE_REGIME_FACTOR_LEARNING=false
+    const enableLearning = process.env.ENABLE_REGIME_FACTOR_LEARNING !== 'false';
+    const TARGET_ACCURACY = 0.90;
+
     if (enableLearning && data.predictions > 10) {
       const oldFactor = data.factor;
-      const adjustment = -error * 0.1;
-      data.factor = Math.max(0.8, Math.min(1.2, data.factor + adjustment));
-      
-      // Audit trail for factor changes when learning is enabled
-      if (oldFactor !== data.factor) {
-        console.log(`[RegimeIntelligence:AUDIT] Factor changed for ${regime}: ${oldFactor.toFixed(4)} -> ${data.factor.toFixed(4)} (error: ${error.toFixed(4)}, predictions: ${data.predictions})`);
+      const accuracy = data.predictions > 0 ? data.correct / data.predictions : 0;
+      // Directive formula: newFactor = oldFactor * (1 + (accuracy - targetAccuracy) * 0.1)
+      const newFactor = oldFactor * (1 + (accuracy - TARGET_ACCURACY) * 0.1);
+      data.factor = Math.max(0.8, Math.min(1.2, newFactor));
+
+      if (Math.abs(data.factor - oldFactor) > 0.0001) {
+        console.log(
+          `[RegimeIntelligence:AUDIT] FACTOR_UPDATED regime=${regime} ` +
+          `${oldFactor.toFixed(4)} → ${data.factor.toFixed(4)} ` +
+          `accuracy=${(accuracy * 100).toFixed(1)}% targetAccuracy=${(TARGET_ACCURACY * 100).toFixed(0)}% ` +
+          `predictions=${data.predictions}`
+        );
       }
     }
   }

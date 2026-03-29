@@ -515,6 +515,8 @@ export const supplierMaterials = pgTable("supplier_materials", {
     .references(() => materials.id, { onDelete: "cascade" }),
   unitCost: real("unit_cost").notNull(),
   leadTimeDays: integer("lead_time_days").notNull(),
+  onTimePct: real("on_time_pct"),        // 0.0–1.0 on-time delivery rate; null = no data
+  deliveryVariance: real("delivery_variance"), // fractional variance ≥ 0; null = no data
 });
 
 export const demandHistory = pgTable("demand_history", {
@@ -9104,3 +9106,60 @@ export const landingModeConfig = pgTable("landing_mode_config", {
 
 export const insertLandingModeConfigSchema = createInsertSchema(landingModeConfig).omit({ id: true });
 export type LandingModeConfig = typeof landingModeConfig.$inferSelect;
+
+// ============================================================
+// Decision Outcomes — win/loss tracking for every system decision
+// ============================================================
+
+export const decisionOutcomes = pgTable(
+  "decision_outcomes",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    decisionId: varchar("decision_id").notNull(),
+    skuId: varchar("sku_id"),
+    regime: text("regime"),
+    segment: text("segment"),     // "fast_mover" | "slow_mover" | "intermittent" | "no_data"
+    baselineDecision: jsonb("baseline_decision").notNull(),
+    systemDecision: jsonb("system_decision").notNull(),
+    actualOutcome: jsonb("actual_outcome").notNull(),
+    win: boolean("win").notNull(),
+    winType: text("win_type").notNull(),
+    deltaCost: real("delta_cost"),
+    deltaServiceLevel: real("delta_service_level"),
+    deltaStockout: real("delta_stockout"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [index("decision_outcomes_company_idx").on(t.companyId)],
+);
+
+export const insertDecisionOutcomeSchema = createInsertSchema(decisionOutcomes).omit({ id: true, createdAt: true });
+export type DecisionOutcomeRow = typeof decisionOutcomes.$inferSelect;
+
+// ============================================================
+// Win Rate Snapshots — daily aggregated performance metrics
+// ============================================================
+
+export const winRateSnapshots = pgTable(
+  "win_rate_snapshots",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    snapshotDate: text("snapshot_date").notNull(),   // "YYYY-MM-DD"
+    globalWinRate: real("global_win_rate").notNull(),
+    totalDecisions: integer("total_decisions").notNull(),
+    totalWins: integer("total_wins").notNull(),
+    winRateBySku: jsonb("win_rate_by_sku"),
+    winRateBySegment: jsonb("win_rate_by_segment"),
+    winRateByRegime: jsonb("win_rate_by_regime"),
+    performanceFlag: text("performance_flag"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    index("win_rate_snapshots_company_idx").on(t.companyId),
+    uniqueIndex("win_rate_snapshots_company_date_uniq").on(t.companyId, t.snapshotDate),
+  ],
+);
+
+export const insertWinRateSnapshotSchema = createInsertSchema(winRateSnapshots).omit({ id: true, createdAt: true });
+export type WinRateSnapshot = typeof winRateSnapshots.$inferSelect;

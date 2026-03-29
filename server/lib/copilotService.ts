@@ -15,6 +15,11 @@ import {
   type CopilotDraftStatus,
   type CopilotDraftType,
 } from "@shared/schema";
+import {
+  computeWinRateMetrics,
+  getRecentOutcomes,
+  getConfidenceTrend,
+} from "./decisionEvaluation";
 
 export interface EvidenceBundle {
   entityIds: string[];
@@ -36,6 +41,20 @@ export interface CopilotQueryResult {
   evidence: EvidenceRef[];
   evidenceBundle: EvidenceBundle;
   queryId: number;
+  winRateContext: {
+    globalWinRate: number;
+    skuWinRate: number | null;
+    confidenceTrend: "improving" | "degrading" | "stable";
+    performanceFlag: string | null;
+    recentOutcomes: Array<{
+      decisionId: string;
+      win: boolean;
+      winType: string;
+      deltaCost: number | null;
+      deltaServiceLevel: number | null;
+      deltaStockout: number | null;
+    }>;
+  };
 }
 
 export interface EvidenceRef {
@@ -135,18 +154,49 @@ export async function queryCopilot(companyId: string, userId: string, query: str
 
   const evidenceBundle = buildEvidenceBundle(entityIds, rowCounts);
 
-  const durationMs = Date.now() - startMs;
-  const [logEntry] = await db.insert(copilotQueryLog).values({
-    companyId,
-    userId,
-    query,
-    responseText: answer,
-    evidenceRefs: evidence as any,
-    evidenceBundle: evidenceBundle as any,
-    durationMs,
-  }).returning();
+  // Win rate intelligence — fetched in parallel with the log insert
+  const [logEntry, winMetrics, recentRows, confidenceTrend] = await Promise.all([
+    db.insert(copilotQueryLog).values({
+      companyId,
+      userId,
+      query,
+      responseText: answer,
+      evidenceRefs: evidence as any,
+      evidenceBundle: evidenceBundle as any,
+      durationMs: Date.now() - startMs,
+    }).returning().then((rows) => rows[0]),
+    computeWinRateMetrics(companyId).catch(() => null),
+    getRecentOutcomes(companyId, 5).catch(() => []),
+    getConfidenceTrend(companyId).catch(() => "stable" as const),
+  ]);
 
-  return { answer, evidence, evidenceBundle, queryId: logEntry.id };
+  // Derive SKU-specific win rate if the query mentions a specific SKU
+  let skuWinRate: number | null = null;
+  if (winMetrics) {
+    for (const [skuId, rate] of Object.entries(winMetrics.winRateBySku)) {
+      if (lowerQuery.includes(skuId.toLowerCase())) {
+        skuWinRate = rate;
+        break;
+      }
+    }
+  }
+
+  const winRateContext: CopilotQueryResult["winRateContext"] = {
+    globalWinRate: winMetrics?.globalWinRate ?? 0,
+    skuWinRate,
+    confidenceTrend,
+    performanceFlag: winMetrics?.performanceFlag ?? null,
+    recentOutcomes: recentRows.map((r) => ({
+      decisionId: r.decisionId,
+      win: r.win,
+      winType: r.winType,
+      deltaCost: r.deltaCost ?? null,
+      deltaServiceLevel: r.deltaServiceLevel ?? null,
+      deltaStockout: r.deltaStockout ?? null,
+    })),
+  };
+
+  return { answer, evidence, evidenceBundle, queryId: logEntry.id, winRateContext };
 }
 
 export async function createDraft(

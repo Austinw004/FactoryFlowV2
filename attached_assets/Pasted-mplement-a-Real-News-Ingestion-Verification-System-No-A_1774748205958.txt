@@ -1,0 +1,103 @@
+mplement a “Real News Ingestion & Verification System (No API Keys)” that replaces all synthetic/generated articles with real, verifiable, timestamped news.
+
+GOAL: Every news item must originate from a real external source, be traceable, deduplicated, relevance-scored, and auditable. Zero hallucinated or fabricated content allowed.
+
+Create a new module newsIngestion.ts.
+
+SOURCE STRATEGY (NO API KEYS):
+Use RSS feeds and public endpoints only. Ingest from a diversified set of trusted sources:
+
+Google News RSS (industry + economy queries)
+Reuters RSS
+Bloomberg (public RSS where available)
+Yahoo Finance RSS
+CNBC RSS
+Federal Reserve / economic releases RSS
+Industry-specific feeds (manufacturing, supply chain, commodities)
+
+Implement a function fetchNewsFeeds() that pulls from at least 8–12 RSS endpoints in parallel using fetch. Parse XML safely and extract: title, link, pubDate, source, description.
+
+VALIDATION LAYER:
+Create validateNewsItem(item) that enforces:
+
+title must be non-empty and > 20 characters
+link must be a valid URL (starts with http)
+pubDate must be within last 7 days (reject stale content)
+source must exist and be from approved domain list
+Reject any item that fails validation — DO NOT FALL BACK TO GENERATED CONTENT.
+
+DEDUPLICATION:
+Implement dedupeNews(items) using a hash of (normalized title + source). Remove near-duplicates using fuzzy match (>= 85% similarity). Ensure the same story from multiple sources is grouped or ranked but not repeated.
+
+RELEVANCE SCORING:
+Create scoreNews(item, context) that assigns a score [0–1] based on:
+
+keyword relevance (manufacturing, supply chain, inflation, commodities, logistics, labor)
+recency (more recent = higher score)
+source credibility weighting (Reuters > unknown blogs)
+entity matching (if tied to tracked SKUs, materials, or economic regime signals)
+Sort all news by score descending.
+
+ENRICHMENT:
+Add derived fields:
+
+category: {macro, supply_chain, commodities, manufacturing, geopolitics}
+sentiment: simple rule-based (positive, neutral, negative)
+region: inferred from source or keywords (US, global, etc.)
+relatedEntities: matched SKUs/materials if applicable
+
+PERSISTENCE:
+Store in newsArticles table:
+
+id (uuid)
+title
+link
+source
+pubDate
+description
+category
+sentiment
+relevanceScore
+ingestedAt
+hash (for dedupe)
+provenance: "RSS_V1"
+
+NO FAKE CONTENT GUARANTEE:
+Add a hard guard:
+If fetchNewsFeeds() returns 0 valid articles, THROW "NO_VALID_NEWS_SOURCES" — do not generate placeholders.
+
+REFRESH SYSTEM:
+Implement refreshNews() that runs ingestion + validation + dedupe + scoring + persistence. Cache results for 15 minutes. No request should trigger raw fetch unless cache expired.
+
+API ENDPOINTS:
+GET /api/news
+
+returns top N (default 20) sorted by relevanceScore
+supports filters: category, sentiment, timeframe
+
+GET /api/news/:id
+
+returns full article metadata + provenance
+
+GET /api/news/audit
+
+returns ingestion stats: total fetched, rejected, deduped, stored
+
+COPILOT INTEGRATION:
+Every copilot response must optionally include:
+
+top 3 relevant news items
+each with title, source, date, link
+short 1-line relevance explanation (derived, not generated creatively)
+
+CERTIFICATION TESTS (ADD NEW GATE):
+
+Test that all returned articles have valid URLs and real domains
+Test that no article is older than 7 days
+Test deduplication removes identical titles
+Test system throws when feeds fail (no fallback content)
+Test relevance scoring produces ordered results
+Test provenance field always present
+
+SUCCESS CRITERIA:
+All news is real, recent, deduplicated, relevance-ranked, and traceable. No hallucinated content appears anywhere in the system. The platform’s news layer becomes a trustworthy external signal input for decision-making.
