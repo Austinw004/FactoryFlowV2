@@ -33,6 +33,12 @@ import {
   anomalyDetector,
   rollingBacktestMonitor,
 } from "../lib/adversarialValidation";
+import { requireRole }                            from "../lib/accessControl";
+import { redact }                                 from "../lib/auditLogger";
+import { enforceTrust }                           from "../lib/trustGuard";
+import { buildEvidenceBundle }                    from "../lib/evidenceBundle";
+import { assertEconomicValidity as assertGenericEconomicValidity } from "../lib/economicValidity";
+import { buildDecisionTrace }                     from "../lib/decisionTrace";
 import { canExecuteDraft, approveDraft } from "../lib/copilotService";
 import { sanitizeDetails } from "../lib/structuredLogger";
 import { createHash, randomUUID } from "crypto";
@@ -1827,6 +1833,237 @@ async function section13() {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION 14 — SOC 2 CONTROLS (Gate 16)
+// Validates the cross-cutting security and integrity utility modules:
+//   accessControl · auditLogger · trustGuard · evidenceBundle
+//   economicValidity · decisionTrace · driftDetection
+// ─────────────────────────────────────────────────────────────────────────────
+async function section14() {
+  const S = "S14";
+  console.log("\n─── Section 14: SOC 2 Controls (Gate 16) ──────────────────────────────────");
+
+  // ──────────────────────────────────────────────────────────────────────
+  // 14.1  ACCESS CONTROL — requireRole enforces hierarchy
+  // ──────────────────────────────────────────────────────────────────────
+  {
+    const t0 = Date.now();
+
+    // Viewer cannot reach operator-level action
+    let threwViewer = false;
+    try { requireRole("viewer", "operator"); } catch (e: any) { threwViewer = e.message === "ACCESS_DENIED"; }
+    assert(threwViewer, S, "14.1a",
+      "ACCESS CONTROL: viewer blocked from operator action (ACCESS_DENIED)",
+      "deterministic", { threwViewer }, t0);
+
+    // Analyst cannot reach admin
+    let threwAnalyst = false;
+    try { requireRole("analyst", "admin"); } catch (e: any) { threwAnalyst = e.message === "ACCESS_DENIED"; }
+    assert(threwAnalyst, S, "14.1b",
+      "ACCESS CONTROL: analyst blocked from admin action (ACCESS_DENIED)",
+      "deterministic", { threwAnalyst }, t0);
+
+    // Operator can reach operator
+    let passedOperator = true;
+    try { requireRole("operator", "operator"); } catch { passedOperator = false; }
+    assert(passedOperator, S, "14.1c",
+      "ACCESS CONTROL: operator permitted for operator-level action",
+      "deterministic", { passedOperator }, t0);
+
+    // Admin can reach every level
+    let passedAdmin = true;
+    try {
+      requireRole("admin", "viewer");
+      requireRole("admin", "analyst");
+      requireRole("admin", "operator");
+      requireRole("admin", "admin");
+    } catch { passedAdmin = false; }
+    assert(passedAdmin, S, "14.1d",
+      "ACCESS CONTROL: admin permitted at all levels",
+      "deterministic", { passedAdmin }, t0);
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // 14.2  AUDIT LOG REDACTION — sensitive fields masked before persistence
+  // ──────────────────────────────────────────────────────────────────────
+  {
+    const t0 = Date.now();
+
+    const redacted = redact({ password: "hunter2", token: "abc123", user: "alice" });
+    assert(redacted.password === "[REDACTED]", S, "14.2a",
+      `REDACTION: password masked → "${redacted.password}"`,
+      "deterministic", { password: redacted.password }, t0);
+
+    assert(redacted.token === "[REDACTED]", S, "14.2b",
+      `REDACTION: token masked → "${redacted.token}"`,
+      "deterministic", { token: redacted.token }, t0);
+
+    // Non-sensitive field preserved
+    assert(redacted.user === "alice", S, "14.2c",
+      `REDACTION: non-sensitive field preserved → "${redacted.user}"`,
+      "deterministic", { user: redacted.user }, t0);
+
+    // Deep nesting redacted
+    const nested = redact({ config: { apiKey: "sk-secret", retries: 3 } });
+    assert(nested.config.apiKey === "[REDACTED]", S, "14.2d",
+      `REDACTION: nested apiKey masked → "${nested.config.apiKey}"`,
+      "deterministic", { apiKey: nested.config.apiKey }, t0);
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // 14.3  TRUST ENFORCEMENT — enforceTrust blocks and throws correctly
+  // ──────────────────────────────────────────────────────────────────────
+  {
+    const t0 = Date.now();
+
+    // Hard block at < 0.4
+    let threwLow = false;
+    try { enforceTrust(0.3); } catch (e: any) { threwLow = e.message === "LOW_TRUST_BLOCKED_DECISION"; }
+    assert(threwLow, S, "14.3a",
+      "TRUST ENFORCEMENT: trustScore=0.3 throws LOW_TRUST_BLOCKED_DECISION",
+      "deterministic", { threwLow }, t0);
+
+    // Approval required in [0.4, 0.6)
+    const midResult = enforceTrust(0.5);
+    assert(midResult.automationBlocked === true && midResult.requiresApproval === true, S, "14.3b",
+      `TRUST ENFORCEMENT: trustScore=0.5 → automationBlocked=${midResult.automationBlocked} requiresApproval=${midResult.requiresApproval}`,
+      "deterministic", { automationBlocked: midResult.automationBlocked, requiresApproval: midResult.requiresApproval }, t0);
+
+    // Clear pass at >= 0.6
+    const highResult = enforceTrust(0.85);
+    assert(highResult.automationBlocked === false && highResult.requiresApproval === false, S, "14.3c",
+      `TRUST ENFORCEMENT: trustScore=0.85 → automationBlocked=${highResult.automationBlocked} requiresApproval=${highResult.requiresApproval}`,
+      "deterministic", { automationBlocked: highResult.automationBlocked, requiresApproval: highResult.requiresApproval }, t0);
+
+    // Exact boundary: 0.4 should NOT throw (blocked but allowed with approval)
+    let boundaryOk = true;
+    try { enforceTrust(0.4); } catch { boundaryOk = false; }
+    assert(boundaryOk, S, "14.3d",
+      "TRUST ENFORCEMENT: trustScore=0.4 (boundary) does not throw — requires approval only",
+      "deterministic", { boundaryOk }, t0);
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // 14.4  EVIDENCE REQUIRED — buildEvidenceBundle rejects empty entityIds
+  // ──────────────────────────────────────────────────────────────────────
+  {
+    const t0 = Date.now();
+
+    // Empty entityIds must throw MISSING_EVIDENCE
+    let threwEmpty = false;
+    try {
+      buildEvidenceBundle({ entityIds: [], queryTimestamp: "", rowCount: 0, version: "1" });
+    } catch (e: any) { threwEmpty = e.message === "MISSING_EVIDENCE"; }
+    assert(threwEmpty, S, "14.4a",
+      "EVIDENCE: empty entityIds throws MISSING_EVIDENCE",
+      "deterministic", { threwEmpty }, t0);
+
+    // Valid bundle includes SHA-256 hash
+    const bundle = buildEvidenceBundle({
+      entityIds: ["mat-001", "sup-007"],
+      queryTimestamp: "2026-01-01T00:00:00.000Z",
+      rowCount: 2,
+      version: "v5.0.0",
+    });
+    assert(typeof bundle.hash === "string" && bundle.hash.length === 64, S, "14.4b",
+      `EVIDENCE: valid bundle has 64-char SHA-256 hash (got ${bundle.hash.length} chars)`,
+      "deterministic", { hashLength: bundle.hash.length, hashPrefix: bundle.hash.slice(0, 8) }, t0);
+
+    // Hash is deterministic: same input → same hash
+    const bundle2 = buildEvidenceBundle({
+      entityIds: ["mat-001", "sup-007"],
+      queryTimestamp: "2026-01-01T00:00:00.000Z",
+      rowCount: 2,
+      version: "v5.0.0",
+    });
+    assert(bundle.hash === bundle2.hash, S, "14.4c",
+      "EVIDENCE: hash is deterministic — same input produces same hash",
+      "deterministic", { match: bundle.hash === bundle2.hash }, t0);
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // 14.5  ECONOMIC VALIDITY — generic assertEconomicValidity rejects bad values
+  // ──────────────────────────────────────────────────────────────────────
+  {
+    const t0 = Date.now();
+
+    // NaN field throws
+    let threwNaN = false;
+    try { assertGenericEconomicValidity({ x: NaN }); } catch (e: any) { threwNaN = e.message.includes("INVALID_FIELD_x"); }
+    assert(threwNaN, S, "14.5a",
+      "ECONOMIC VALIDITY: NaN field throws INVALID_FIELD_x",
+      "deterministic", { threwNaN }, t0);
+
+    // Null field throws
+    let threwNull = false;
+    try { assertGenericEconomicValidity({ demand: null }); } catch (e: any) { threwNull = e.message.includes("INVALID_FIELD_demand"); }
+    assert(threwNull, S, "14.5b",
+      "ECONOMIC VALIDITY: null field throws INVALID_FIELD_demand",
+      "deterministic", { threwNull }, t0);
+
+    // Infinity throws NON_FINITE
+    let threwInf = false;
+    try { assertGenericEconomicValidity({ cost: Infinity }); } catch (e: any) { threwInf = e.message.includes("NON_FINITE_cost"); }
+    assert(threwInf, S, "14.5c",
+      "ECONOMIC VALIDITY: Infinity throws NON_FINITE_cost",
+      "deterministic", { threwInf }, t0);
+
+    // Null root input throws INVALID_INPUT
+    let threwRoot = false;
+    try { assertGenericEconomicValidity(null); } catch (e: any) { threwRoot = e.message === "INVALID_INPUT"; }
+    assert(threwRoot, S, "14.5d",
+      "ECONOMIC VALIDITY: null root input throws INVALID_INPUT",
+      "deterministic", { threwRoot }, t0);
+
+    // Valid object passes without throwing
+    let validPassed = true;
+    try { assertGenericEconomicValidity({ demand: 50, cost: 100 }); } catch { validPassed = false; }
+    assert(validPassed, S, "14.5e",
+      "ECONOMIC VALIDITY: valid object { demand: 50, cost: 100 } passes without error",
+      "deterministic", { validPassed }, t0);
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // 14.6  DECISION TRACE — buildDecisionTrace produces complete trace record
+  // ──────────────────────────────────────────────────────────────────────
+  {
+    const t0 = Date.now();
+
+    const trace = buildDecisionTrace({
+      recommendation: { quantity: 500, timing: "immediate" },
+      trustScore: 0.87,
+      evidence: { entityIds: ["mat-001"], version: "v5.0.0" },
+    });
+
+    // traceId is a valid UUID v4
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    assert(uuidPattern.test(trace.traceId), S, "14.6a",
+      `DECISION TRACE: traceId is valid UUID v4 (${trace.traceId})`,
+      "deterministic", { traceId: trace.traceId }, t0);
+
+    // timestamp is ISO 8601
+    const isISO = !isNaN(Date.parse(trace.timestamp));
+    assert(isISO, S, "14.6b",
+      `DECISION TRACE: timestamp is valid ISO 8601 (${trace.timestamp})`,
+      "deterministic", { timestamp: trace.timestamp }, t0);
+
+    // Input fields are preserved
+    assert(trace.trustScore === 0.87, S, "14.6c",
+      `DECISION TRACE: trustScore preserved in trace (${trace.trustScore})`,
+      "deterministic", { trustScore: trace.trustScore }, t0);
+
+    // Two traces for the same input have different traceIds (uniqueness)
+    const trace2 = buildDecisionTrace({
+      recommendation: { quantity: 500, timing: "immediate" },
+      trustScore: 0.87,
+      evidence: { entityIds: ["mat-001"], version: "v5.0.0" },
+    });
+    assert(trace.traceId !== trace2.traceId, S, "14.6d",
+      "DECISION TRACE: every trace has a unique traceId",
+      "deterministic", { trace1: trace.traceId, trace2: trace2.traceId }, t0);
+  }
+}
+
 // ─────────────────────────────────────────────
 // MAIN
 // ─────────────────────────────────────────────
@@ -1834,7 +2071,7 @@ async function main() {
   console.log("═".repeat(72));
   console.log("  LIVE VALIDATION HARNESS v3.0.0");
   console.log("  Prescient Labs — Enterprise Manufacturing Intelligence Platform");
-  console.log("  13 Sections | 15 Gates | Full-Stack Audit | Evidence-First");
+  console.log("  14 Sections | 16 Gates | Full-Stack Audit | SOC 2-Level Evidence");
   console.log("═".repeat(72));
 
   await setup();
@@ -1852,6 +2089,7 @@ async function main() {
   await section11();
   await section12();
   await section13();
+  await section14();
 
   await teardown();
 

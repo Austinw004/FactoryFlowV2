@@ -10,7 +10,7 @@ import type { Request } from "express";
 
 const SENSITIVE_KEYS = ["password", "token", "apiKey", "secret"];
 
-function redact(obj: any): any {
+export function redact(obj: any): any {
   if (!obj || typeof obj !== "object") return obj;
   const copy: any = {};
   for (const key in obj) {
