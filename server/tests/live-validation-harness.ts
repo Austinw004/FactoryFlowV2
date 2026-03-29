@@ -40,6 +40,7 @@ import { buildEvidenceBundle }                    from "../lib/evidenceBundle";
 import { assertEconomicValidity as assertGenericEconomicValidity } from "../lib/economicValidity";
 import { buildDecisionTrace }                     from "../lib/decisionTrace";
 import { validateNewsArticle }                    from "../lib/newsGuard";
+import { evaluateDecisionOutcome }               from "../lib/decisionOutcome";
 import { canExecuteDraft, approveDraft } from "../lib/copilotService";
 import { sanitizeDetails } from "../lib/structuredLogger";
 import { createHash, randomUUID } from "crypto";
@@ -2156,13 +2157,108 @@ async function section15() {
 }
 
 // ─────────────────────────────────────────────
+// SECTION 16 — Decision Outcome Evaluator (Gate 18)
+// ─────────────────────────────────────────────
+async function section16() {
+  const S = "S16";
+  console.log("\n─── Section 16: Decision Outcome Evaluator (Gate 18) ──────────────────────");
+
+  const t0 = Date.now();
+
+  const base = { cost: 10000, serviceLevel: 0.80, stockoutRate: 0.20 };
+
+  // 16.1 — Pure cost reduction
+  {
+    const r = evaluateDecisionOutcome({ baseline: base, actual: { cost: 8000, serviceLevel: 0.80, stockoutRate: 0.20 } });
+    assert(r.win === true && r.winType === "cost_reduction" && r.deltaCost === -2000, S, "16.1",
+      `OUTCOME: cost reduction → win=true winType=${r.winType} deltaCost=${r.deltaCost}`,
+      "deterministic", r, t0);
+  }
+
+  // 16.2 — Pure service level improvement
+  {
+    const r = evaluateDecisionOutcome({ baseline: base, actual: { cost: 10000, serviceLevel: 0.92, stockoutRate: 0.20 } });
+    assert(r.win === true && r.winType === "service_improvement" && r.deltaServiceLevel > 0, S, "16.2",
+      `OUTCOME: service improvement → win=true winType=${r.winType} deltaServiceLevel=${r.deltaServiceLevel.toFixed(2)}`,
+      "deterministic", r, t0);
+  }
+
+  // 16.3 — Pure stockout reduction
+  {
+    const r = evaluateDecisionOutcome({ baseline: base, actual: { cost: 10000, serviceLevel: 0.80, stockoutRate: 0.10 } });
+    assert(r.win === true && r.winType === "stockout_reduction" && r.deltaStockout === -0.10, S, "16.3",
+      `OUTCOME: stockout reduction → win=true winType=${r.winType} deltaStockout=${r.deltaStockout.toFixed(2)}`,
+      "deterministic", r, t0);
+  }
+
+  // 16.4 — Compound win (cost + service)
+  {
+    const r = evaluateDecisionOutcome({ baseline: base, actual: { cost: 8500, serviceLevel: 0.90, stockoutRate: 0.20 } });
+    assert(r.win === true && r.winType === "compound", S, "16.4",
+      `OUTCOME: two improvements → compound (got ${r.winType})`,
+      "deterministic", r, t0);
+  }
+
+  // 16.5 — Compound win (all three dimensions)
+  {
+    const r = evaluateDecisionOutcome({ baseline: base, actual: { cost: 7500, serviceLevel: 0.95, stockoutRate: 0.05 } });
+    assert(r.win === true && r.winType === "compound", S, "16.5",
+      `OUTCOME: all three improvements → compound (deltaCost=${r.deltaCost} deltaService=${r.deltaServiceLevel.toFixed(2)} deltaStockout=${r.deltaStockout.toFixed(2)})`,
+      "deterministic", r, t0);
+  }
+
+  // 16.6 — No improvement (all worse)
+  {
+    const r = evaluateDecisionOutcome({ baseline: base, actual: { cost: 12000, serviceLevel: 0.70, stockoutRate: 0.30 } });
+    assert(r.win === false && r.winType === "no_win", S, "16.6",
+      `OUTCOME: all worse → win=false winType=${r.winType}`,
+      "deterministic", r, t0);
+  }
+
+  // 16.7 — No change (exact baseline) → no_win
+  {
+    const r = evaluateDecisionOutcome({ baseline: base, actual: { ...base } });
+    assert(r.win === false && r.winType === "no_win" && r.deltaCost === 0 && r.deltaServiceLevel === 0 && r.deltaStockout === 0, S, "16.7",
+      `OUTCOME: identical actual vs baseline → win=false winType=${r.winType}`,
+      "deterministic", r, t0);
+  }
+
+  // 16.8 — NaN cost throws INVALID_OUTCOME_FIELD
+  {
+    let err = "";
+    try { evaluateDecisionOutcome({ baseline: { cost: NaN, serviceLevel: 0.8, stockoutRate: 0.2 }, actual: { ...base } }); } catch (e: any) { err = e.message; }
+    assert(err.startsWith("INVALID_OUTCOME_FIELD"), S, "16.8",
+      `OUTCOME: NaN baseline.cost throws INVALID_OUTCOME_FIELD (got: "${err}")`,
+      "deterministic", { err }, t0);
+  }
+
+  // 16.9 — serviceLevel > 1 throws INVALID_OUTCOME_FIELD
+  {
+    let err = "";
+    try { evaluateDecisionOutcome({ baseline: base, actual: { cost: 8000, serviceLevel: 1.5, stockoutRate: 0.1 } }); } catch (e: any) { err = e.message; }
+    assert(err.startsWith("INVALID_OUTCOME_FIELD"), S, "16.9",
+      `OUTCOME: serviceLevel=1.5 throws INVALID_OUTCOME_FIELD (got: "${err}")`,
+      "deterministic", { err }, t0);
+  }
+
+  // 16.10 — Infinity throws INVALID_OUTCOME_FIELD
+  {
+    let err = "";
+    try { evaluateDecisionOutcome({ baseline: base, actual: { cost: Infinity, serviceLevel: 0.9, stockoutRate: 0.1 } }); } catch (e: any) { err = e.message; }
+    assert(err.startsWith("INVALID_OUTCOME_FIELD"), S, "16.10",
+      `OUTCOME: Infinity actual.cost throws INVALID_OUTCOME_FIELD (got: "${err}")`,
+      "deterministic", { err }, t0);
+  }
+}
+
+// ─────────────────────────────────────────────
 // MAIN
 // ─────────────────────────────────────────────
 async function main() {
   console.log("═".repeat(72));
   console.log("  LIVE VALIDATION HARNESS v3.0.0");
   console.log("  Prescient Labs — Enterprise Manufacturing Intelligence Platform");
-  console.log("  15 Sections | 17 Gates | Full-Stack Audit | SOC 2-Level Evidence");
+  console.log("  16 Sections | 18 Gates | Full-Stack Audit | SOC 2-Level Evidence");
   console.log("═".repeat(72));
 
   await setup();
@@ -2182,6 +2278,7 @@ async function main() {
   await section13();
   await section14();
   await section15();
+  await section16();
 
   await teardown();
 

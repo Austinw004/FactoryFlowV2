@@ -1,0 +1,23 @@
+Implement a “Decision Win Rate + Learning Loop System” across the platform.
+
+GOAL: Prove the system outperforms baseline decisions and continuously improves over time with no static intelligence.
+
+Create a new module decisionEvaluation.ts that tracks decision outcomes. For every decision, persist: decisionId, skuId, baselineDecision (current policy or historical action), systemDecision, actualOutcome (service level, stockout, cost, timing), win (boolean), winType (cost, service_level, stockout, timing), and deltas (deltaCost, deltaServiceLevel, deltaStockout). Implement a function evaluateDecisionOutcome(input) that compares baselineDecision vs systemDecision against actualOutcome and returns win, winType, and deltas. Store all results in a decisionOutcomes table with no silent skips.
+
+Compute win rate metrics globally and dimensionally. Implement winRate = totalWins / totalDecisions and also compute winRateBySKU, winRateBySegment (fast_mover, slow_mover, intermittent, no_data), and winRateByRegime. Persist daily snapshots for all metrics.
+
+Close the learning loop by enabling adaptive behavior. In regimeIntelligence.ts, enable regime factor learning (treat ENABLE_REGIME_FACTOR_LEARNING as true) and update regime factors based on rolling accuracy using: newFactor = oldFactor * (1 + (accuracy - targetAccuracy) * 0.1). Persist updated factors and ensure they are actually used in downstream calculations.
+
+In the forecasting system, dynamically adjust model weights based on recent error. If recent MAPE exceeds a defined threshold, increase weight of alternative models (e.g., ETS, Croston, seasonal naive) and reduce reliance on underperforming models. This must affect future forecasts, not just logs.
+
+Implement supplier intelligence feedback. Track supplier reliability metrics (on-time percentage, fill rate, variance) and feed into optimization. Adjust effectiveLeadTime = leadTime * (1 + supplierVariance) and ensure this propagates into reorder quantity and safety stock calculations.
+
+Build a complete outcome feedback pipeline. After every completed order cycle or time window, compare forecast vs actual demand and recommendation vs outcome. Persist updates into predictionAccuracyMetrics and decisionOutcomes. All missing or invalid data must be explicitly logged — no silent fallbacks or defaults.
+
+Upgrade the copilot layer so every response includes: global winRate, SKU-specific winRate (if applicable), confidence trend (improving or degrading based on last 30 days), and a summary of the last 5 decision outcomes.
+
+Add strict guardrails tied to performance. If winRate < 0.5, flag UNDERPERFORMING_SYSTEM. If winRate < 0.4, reduce trustScore by 30 percent. If winRate < 0.3, block all automation by setting automationBlocked = true and requiring approval.
+
+Add a new certification section (Gate 15) with tests that verify: win rate is computed correctly, decision outcomes persist correctly, regime factors update over time, forecast weights adjust after error, and underperformance triggers trust reduction and automation blocking.
+
+SUCCESS CRITERIA: Every decision is tracked and evaluated, the system demonstrates measurable improvement over baseline, models adapt based on real outcomes, and no component remains static or disconnected from feedback.
