@@ -2,9 +2,7 @@
 
 ## Overview
 
-Prescient Labs is a manufacturing intelligence platform aimed at optimizing procurement, production, and supply chain management. It provides foresight through demand forecasting, material allocation, and proactive operational adjustments. The platform operates on a performance-based pricing model, taking a tiered percentage of verified procurement savings.
-
-Key capabilities include SKU demand forecasting, prioritized material allocation, counter-cyclical procurement timing, budget and inventory optimization, machinery lifecycle management, and real-time commodity pricing. Enterprise features extend to multi-tier supply chain network intelligence, automated purchase order execution, industry data consortium for benchmarking, M&A and regulatory compliance tracking, and real-time production KPI dashboards with automated bottleneck detection.
+Prescient Labs is a manufacturing intelligence platform designed to optimize procurement, production, and supply chain management. It delivers foresight through advanced demand forecasting, intelligent material allocation, and proactive operational adjustments. The platform aims to enhance efficiency and profitability for manufacturers by providing tools for budget and inventory optimization, machinery lifecycle management, and real-time commodity pricing. Enterprise features include multi-tier supply chain intelligence, automated purchasing, industry benchmarking, compliance tracking, and real-time production KPI dashboards with bottleneck detection. The business model is performance-based, with pricing tiered to verified procurement savings.
 
 ## User Preferences
 
@@ -14,69 +12,68 @@ Preferred communication style: Simple, everyday language.
 
 ### UI/UX Decisions
 
-The frontend is built with React and TypeScript, styled using `shadcn/ui` on Radix UI, adhering to Material Design principles with a minimalist aesthetic, and utilizing Tailwind CSS for styling. The interface is dashboard-centric, featuring KPI cards, data tables, charts, regime status widgets, and policy signals panels.
+The frontend is a dashboard-centric application built with React and TypeScript, leveraging `shadcn/ui` on Radix UI and styled with Tailwind CSS. It adheres to Material Design principles and a minimalist aesthetic, featuring KPI cards, data tables, charts, regime status widgets, and policy signals panels.
 
 ### Technical Implementations
 
-The system is a multi-tenant application with robust data isolation per company. Core technical features include:
+The system is a multi-tenant application ensuring robust data isolation per company. Key technical features include:
 - **Economic Regime Intelligence**: A "Dual-circuit FDR model" for economic regime determination and procurement timing signals.
 - **Demand Forecasting**: Regime-aware, multi-horizon forecasting with automated retraining and real-time MAPE tracking.
 - **Optimization Engines**: Constraint-based material allocation and budget optimization.
-- **Real-time Data**: Integration for real-time commodity pricing and production KPIs.
-- **Automated Processes**: Automated RFQ generation and bottleneck detection.
-- **Supply Chain Visibility**: Multi-tier supplier mapping, network graph visualization, and geopolitical/event monitoring.
+- **Real-time Data Integration**: For commodity pricing and production KPIs.
+- **Automated Processes**: RFQ generation and bottleneck detection.
+- **Supply Chain Visibility**: Multi-tier supplier mapping, network graph visualization, and geopolitical monitoring.
 - **Decision Support**: Prescriptive action playbooks, scenario simulation, and supplier risk scoring.
 - **Collaboration**: Collaborative S&OP workflows.
 - **Digital Twin**: Enterprise-grade supply chain digital twin with live snapshots and AI-powered natural language queries.
-- **AI Assistant**: Conversational AI interface with chat, proactive alerts, action automation, and context-aware insights, utilizing Replit AI Integrations (OpenAI) with graceful fallback and cross-module smart insights.
-- **Smart Insights Service**: Cross-module intelligence layer for prioritized insights and compound risk alerts.
+- **AI Assistant**: Conversational AI with chat, proactive alerts, action automation, and context-aware insights, utilizing Replit AI Integrations (OpenAI).
+- **Smart Insights Service**: Cross-module intelligence for prioritized insights and compound risk alerts.
 - **Peer Benchmarking System**: Anonymized cost-sharing for competitive intelligence.
 - **Demand Signal Repository**: Centralized hub for multi-source demand signals.
 - **ROI Dashboard**: Visualizes procurement savings and forecast accuracy.
 - **ERP Integration Templates**: Pre-built templates for major ERPs.
-- **Onboarding Wizard**: A 3-step wizard for new user setup.
-- **Integration Health Monitoring**: Live connectivity health checks for all configured integrations with status categorization and latency tracking.
-- **Data Freshness Indicators**: Dashboard displays real-time data freshness status for key modules.
-- **Inventory Status Check (Allocation Flow)**: Pre-allocation inventory verification with low stock highlights and acknowledgment requirements.
-- **Structural Confidence Display**: RegimeStatus component shows decomposed confidence for economic regimes.
-- **Graceful Degradation**: API returns degraded responses for economic data during outages to prevent 500 errors.
-- **Edge Case Resilience**: Robust handling for NaN, negative, and infinite FDR values in regime classification.
+- **Onboarding Wizard**: A 3-step setup process for new users.
+- **Integration Health Monitoring**: Live connectivity checks with status and latency tracking.
+- **Data Freshness Indicators**: Real-time status display for key modules.
+- **Inventory Status Check**: Pre-allocation verification with low stock highlights.
+- **Structural Confidence Display**: Shows decomposed confidence for economic regimes.
+- **Graceful Degradation**: API returns degraded responses for economic data during outages.
 - **Prediction Tracking**: Tracks predictions against actual outcomes with accuracy metrics.
-- **Enterprise Automation Hardening**: Database-backed `AutomationEngine` with persistent storage, trigger deduplication, and safe mode for high-stakes actions.
-- **Atomic Integration Idempotency**: Ensures event processing idempotency using unique constraints.
-- **Tenant Isolation Hardening**: Enforces tenant isolation across all critical operations and data structures.
-- **Guardrail Escalation Events**: Logs escalation events when guardrails block actions.
-- **Durable Stripe Webhook Processing**: Enterprise-grade webhook handling with atomic locking, state transition guards, stale lock recovery, and full audit logging.
+- **Enterprise Automation Hardening**: Database-backed `AutomationEngine` with persistent storage, trigger deduplication, and safe mode.
+- **Atomic Integration Idempotency**: Ensures event processing idempotency.
+- **Tenant Isolation Hardening**: Enforces isolation across all critical operations.
+- **Guardrail Escalation Events**: Logs events when guardrails block actions.
+- **Durable Stripe Webhook Processing**: Enterprise-grade webhook handling with atomic locking and audit logging.
 - **Structured Observability**: Enterprise-grade JSON logging with secret redaction and database persistence.
-- **RBAC for Automation**: Comprehensive RBAC permissions for automation features.
-- **Enterprise E2E Certification Harness v9.0.0**: 12-section, 14-gate certification with 104 live harness tests + 4 integrity validation tests. Gate 14 (Section 12) adds Economic Truth Validation: ERP reconciliation (forecast vs actual ≤50% error), cost reality checks (system vs invoice ≤20% drift), savings traceability (measuredOutcomeRef/entityRefs required), missing-data defense (INSUFFICIENT_DEMAND_DATA throw), extreme-value bounds (system cap at 30× lead-time demand), contradictory signal detection (SIGNAL_INCONSISTENCY flag), explainability completeness (evidenceBundle, keyDrivers, riskFactors), counterfactual integrity (baseline/optimized/delta), trust score on all outputs, and automation blocking at trust < 0.6 with hard reject at trust < 0.4.
-- **Enterprise E2E Certification Harness v3.0.0**: 17-section, 19-gate certification with 193 live harness tests. Gate 15 (Section 13) adds Real-World Adversarial Validation & Drift Detection. Gate 16 (Section 14) adds SOC 2 audit primitives. Gate 17 (Section 15) adds News Article Guard. Gate 18 (Section 16) adds Decision Outcome Evaluator. Gate 19 (Section 17) adds Decision Win-Rate Learning Loop: outcome persistence, global/SKU/segment/regime win rates, guardrail thresholds (blocked at <30%, trust×0.7 at <40%, flagged at <50%), confidence trend (improving/degrading/stable), adaptive ETS/Seasonal/Croston model weights by MAPE, regime factor learning formula, and daily snapshot persistence. All 193 tests pass (0 failures).
-- **Offline Evaluation & Calibration**: Harness for historical data evaluation and calibration of forecasts and allocations.
-- **AI Copilot (Insight-Only)**: Read-only DB query with evidence-first responses and draft-only action system requiring approval.
-- **Decision Intelligence**: Policy layer translates data into recommended parameters with what-if simulations and logged decision overrides.
-- **Data Quality Scoring**: Scores materials, suppliers, and SKU demand, blocking automation if quality thresholds are not met.
-- **Comparative Benchmark Layer**: Deterministic baseline forecasters for comparative analysis and lift reports.
-- **Regime-Conditioned Forecasting**: Forecast noise varies by economic regime for more accurate predictions.
-- **Probabilistic Decision Optimization**: Monte Carlo reorder quantity optimization with configurable demand samples and what-if scenarios.
-- **Regime Stability Backtest**: Historical FDR series analysis for regime transition detection and stability.
-- **Auditable Counterfactual Savings**: Immutable savings evidence records with strict estimated vs measured savings separation.
-- **Copilot Evidence Traceability**: Evidence bundles attached to all copilot responses and action drafts for auditability.
-- **Enterprise Identity & Access**: SSO/SAML configuration, SCIM provisioning stubs, and audit export with redaction and retention controls.
-- **Pilot Evaluation Mode**: Side-by-side controlled experimentation with baseline vs regime-aware optimized policy simulation. Locked comparison windows, 5-metric tracking (service level, stockout rate, expedite spend, working capital, realized savings), strict estimated/measured savings separation, immutable config snapshots with SHA-256 hash integrity, reproducible JSON+MD artifacts, deterministic replay, and zero production mutation guarantee. API: POST /api/pilot-experiments/run, GET /api/pilot-experiments, replay, audit.
-- **Adaptive Forecasting Layer**: Dynamic model weighting by regime with inverse-error normalization, heteroskedastic volatility modeling with regime-specific base volatility and auto-expansion, CVaR/expected shortfall tail-risk metrics for demand and supply, regime-transition prediction scoring with leading indicator integration, signal strength scoring with measured forward predictive lift, rolling lift decay analysis with half-life and persistence metrics, and automatic uncertainty band expansion when forecast error exceeds tolerance. Versioned predictive stability reports with provenance v5.0.0 evidence bundles. All deterministic under seeded evaluation. API: POST /api/adaptive-forecast/analyze, GET /api/adaptive-forecast/reports.
-- **Stress Testing & Robustness Module**: Simulates extreme demand spikes, supplier outages, price shocks, lead-time disruptions, and compound crises across moderate/severe/extreme severity levels. Measures optimization stability under stress (service level degradation, stockout risk increase), verifies uncertainty expansion and automation downgrade behavior (approval_required → manual_only → emergency_halt), tracks CVaR behavior during tail scenarios with tail risk amplification metrics, and generates versioned Robustness & Stability Reports with provenance v6.0.0 evidence bundles. Includes safe-mode escalation assessment and explainable downgrade trigger reasons. All deterministic under seeded evaluation with zero production mutations. API: POST /api/stress-test/run, GET /api/stress-test/reports.
-- **Revenue-Optimized Execution Layer**: Pilot Revenue Dashboard surfacing 5 key ROI metrics (Service Level Improvement, Stockout Reduction, Expedite Spend Reduction, Working Capital Impact, Realized Savings) with strict estimated vs measured savings separation. Executive report generator producing JSON artifacts, markdown summaries, and PDF-ready structure with baseline vs optimized comparison windows, stress resilience summaries, CVaR tail-risk containment, regime exposure summaries, immutable experiment hashes, and deterministic replay IDs. Rate-limited report generation with per-tenant counters. Landing Mode configuration for simplified ROI-focused UI posture. API: GET /api/pilot/revenue-dashboard, POST /api/pilot/generate-executive-report, GET /api/pilot/executive-reports, GET/POST /api/landing-mode.
-- **Decision Win-Rate Learning Loop**: Persistent outcome tracking via `decisionOutcomes` and `winRateSnapshots` DB tables. `recordDecisionOutcome()` evaluates and persists every system decision result. `computeWinRateMetrics()` aggregates global, SKU-level, segment-level, and regime-level win rates. Performance guardrails: winRate < 0.30 → UNDERPERFORMING_SYSTEM + automation blocked + trust×0.7; winRate < 0.40 → trust×0.7; winRate < 0.50 → flagged. `getConfidenceTrend()` compares last-15-day vs prior-15-day win rates (improving/degrading/stable). Adaptive ETS/Seasonal/Croston model blending: MAPE < 20% → 0.90/0.08/0.02; MAPE 20-35% → 0.65/0.25/0.10; MAPE ≥ 35% → 0.40/0.35/0.25. Regime factor learning: `newFactor = oldFactor * (1 + (accuracy − 0.90) * 0.1)` clamped [0.8, 1.2] (togglable via ENABLE_REGIME_FACTOR_LEARNING env). Supplier delivery variance → `effectiveLeadTime = nominal * (1 + variance)`. Copilot win-rate integration: `queryCopilot()` returns `winRateContext` with globalWinRate, skuWinRate, confidenceTrend, performanceFlag, and recent outcomes. Daily snapshot persistence with upsert idempotency.
+- **RBAC for Automation**: Comprehensive permissions for automation features.
+- **Enterprise E2E Certification Harness**: Extensive certification with live harness tests, including economic truth validation, adversarial validation, SOC 2 primitives, and real news ingestion.
+- **Offline Evaluation & Calibration**: Harness for historical data evaluation and calibration.
+- **AI Copilot (Insight-Only)**: Read-only DB query with evidence-first responses and draft-only action system.
+- **Decision Intelligence**: Policy layer translating data into recommended parameters with what-if simulations.
+- **Data Quality Scoring**: Scores materials, suppliers, and SKU demand, blocking automation if thresholds are not met.
+- **Comparative Benchmark Layer**: Deterministic baseline forecasters for comparative analysis.
+- **Regime-Conditioned Forecasting**: Forecast noise varies by economic regime.
+- **Probabilistic Decision Optimization**: Monte Carlo reorder quantity optimization.
+- **Regime Stability Backtest**: Historical FDR series analysis for regime transition detection.
+- **Auditable Counterfactual Savings**: Immutable savings evidence records.
+- **Copilot Evidence Traceability**: Evidence bundles attached to all copilot responses.
+- **Enterprise Identity & Access**: SSO/SAML configuration, SCIM provisioning, and audit export.
+- **Pilot Evaluation Mode**: Side-by-side controlled experimentation with baseline vs. optimized policy simulation, tracking 5 key metrics.
+- **Adaptive Forecasting Layer**: Dynamic model weighting by regime, heteroskedastic volatility modeling, tail-risk metrics, and uncertainty band expansion.
+- **Stress Testing & Robustness Module**: Simulates extreme scenarios to measure optimization stability and verify automation downgrade behavior.
+- **Revenue-Optimized Execution Layer**: Pilot Revenue Dashboard for ROI metrics, executive report generation, and Landing Mode configuration.
+- **Real News Ingestion & Verification System**: RSS-based ingestion from curated feeds with strict validation, deduplication, relevance scoring, and content enrichment.
+- **Decision Win-Rate Learning Loop**: Persistent outcome tracking, win-rate computation, performance guardrails, and adaptive model blending.
 
 ### System Design Choices
 
-The frontend is built with React, TypeScript, and Vite, using `wouter` for routing and TanStack Query for server state management. The backend is an Express.js application with TypeScript, providing RESTful APIs. Drizzle ORM with Neon serverless PostgreSQL is used for multi-tenant database management and data isolation. Authentication is handled via Replit Auth (OpenID Connect) with Express sessions. The system employs background polling services for data updates and WebSockets for live UI updates, including daily automated forecast retraining, real-time forecast accuracy tracking, automated RFQ generation, and peer benchmarking aggregation services.
+The frontend uses React, TypeScript, and Vite, with `wouter` for routing and TanStack Query for server state management. The backend is an Express.js application with TypeScript, providing RESTful APIs. Drizzle ORM with Neon serverless PostgreSQL handles multi-tenant database management. Authentication is managed via Replit Auth (OpenID Connect) with Express sessions. The system uses background polling services and WebSockets for real-time data updates, forecast retraining, RFQ generation, and peer benchmarking aggregation.
 
 ## External Dependencies
 
 -   **Database**: Neon Serverless PostgreSQL
 -   **Authentication**: Replit Auth (OpenID Connect)
--   **Economic Data APIs**: FRED, Alpha Vantage, DBnomics, World Bank API, IMF Data API, OECD Stats API, Trading Economics, News API, Metals.Dev, and an internal economic fallback API (`https://api.factoryofthefuture.ai/economic-indicators`).
+-   **Economic Data APIs**: FRED, Alpha Vantage, DBnomics, World Bank API, IMF Data API, OECD Stats API, Trading Economics, News API, Metals.Dev, and an internal economic fallback API.
 -   **Email Service**: SendPulse
 -   **Payment Processing**: Stripe
 -   **Communication & CRM**: Slack, Twilio, Microsoft Teams, HubSpot CRM, Salesforce CRM

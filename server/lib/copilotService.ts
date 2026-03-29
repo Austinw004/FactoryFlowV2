@@ -20,6 +20,7 @@ import {
   getRecentOutcomes,
   getConfidenceTrend,
 } from "./decisionEvaluation";
+import { getTopNews } from "./newsIngestion";
 
 export interface EvidenceBundle {
   entityIds: string[];
@@ -34,6 +35,14 @@ export interface EvidenceBundle {
   policyInputs?: Record<string, any>;
   dataQualityScore?: number;
   provenanceVersion: string;
+}
+
+export interface CopilotNewsItem {
+  title: string;
+  source: string;
+  date: string;           // ISO string
+  link: string;
+  relevanceExplanation: string;  // 1-line derived explanation
 }
 
 export interface CopilotQueryResult {
@@ -55,6 +64,7 @@ export interface CopilotQueryResult {
       deltaStockout: number | null;
     }>;
   };
+  topNews: CopilotNewsItem[];   // top 3 relevant real news articles
 }
 
 export interface EvidenceRef {
@@ -154,8 +164,8 @@ export async function queryCopilot(companyId: string, userId: string, query: str
 
   const evidenceBundle = buildEvidenceBundle(entityIds, rowCounts);
 
-  // Win rate intelligence — fetched in parallel with the log insert
-  const [logEntry, winMetrics, recentRows, confidenceTrend] = await Promise.all([
+  // Win rate intelligence + top news — fetched in parallel with the log insert
+  const [logEntry, winMetrics, recentRows, confidenceTrend, rawTopNews] = await Promise.all([
     db.insert(copilotQueryLog).values({
       companyId,
       userId,
@@ -168,6 +178,7 @@ export async function queryCopilot(companyId: string, userId: string, query: str
     computeWinRateMetrics(companyId).catch(() => null),
     getRecentOutcomes(companyId, 5).catch(() => []),
     getConfidenceTrend(companyId).catch(() => "stable" as const),
+    getTopNews({ limit: 3 }).catch(() => [] as any[]),
   ]);
 
   // Derive SKU-specific win rate if the query mentions a specific SKU
@@ -196,7 +207,16 @@ export async function queryCopilot(companyId: string, userId: string, query: str
     })),
   };
 
-  return { answer, evidence, evidenceBundle, queryId: logEntry.id, winRateContext };
+  // Map raw news into slim copilot-friendly shape
+  const topNews: CopilotNewsItem[] = (rawTopNews ?? []).slice(0, 3).map((n: any) => ({
+    title: n.title,
+    source: n.source,
+    date: (n.pubDate instanceof Date ? n.pubDate : new Date(n.pubDate)).toISOString(),
+    link: n.link,
+    relevanceExplanation: `${n.category ?? "news"} · ${n.sentiment ?? "neutral"} · relevance ${((n.relevanceScore ?? 0) * 100).toFixed(0)}%`,
+  }));
+
+  return { answer, evidence, evidenceBundle, queryId: logEntry.id, winRateContext, topNews };
 }
 
 export async function createDraft(

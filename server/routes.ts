@@ -55,6 +55,13 @@ import {
   behavioralAuditTrail,
 } from "@shared/schema";
 import {
+  refreshNews,
+  getTopNews,
+  getCacheStats,
+  type NewsCategory,
+  type NewsSentiment,
+} from "./lib/newsIngestion";
+import {
   insertCompanySchema,
   insertSkuSchema,
   updateSkuSchema,
@@ -8309,6 +8316,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('News summary error:', error);
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============================================================
+  // NEWS INGESTION ENDPOINTS (RSS — no API key)
+  // ============================================================
+
+  // GET /api/news — top N articles sorted by relevance
+  app.get("/api/news", isAuthenticated, async (req: any, res) => {
+    try {
+      const limit    = Math.min(100, Math.max(1, parseInt(String(req.query.limit  ?? "20"))));
+      const category = req.query.category  as NewsCategory  | undefined;
+      const sentiment= req.query.sentiment as NewsSentiment | undefined;
+
+      const items = await getTopNews({ limit, category, sentiment });
+      res.json({
+        articles: items,
+        total:    items.length,
+        cache:    getCacheStats(),
+      });
+    } catch (err: any) {
+      console.error("[NewsIngestion] GET /api/news:", err.message);
+      if (err.message?.startsWith("NO_VALID_NEWS_SOURCES")) {
+        return res.status(503).json({ error: err.message });
+      }
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // GET /api/news/audit — ingestion stats
+  app.get("/api/news/audit", isAuthenticated, async (_req, res) => {
+    try {
+      const cache = getCacheStats();
+      res.json({
+        cacheAge:      cache.cacheAge,
+        lastRefreshed: cache.lastRefreshed,
+        note: cache.lastRefreshed
+          ? "Cache populated — detailed stats available after first refreshNews() call"
+          : "Cache empty — call GET /api/news/refresh to populate",
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // POST /api/news/refresh — force refresh from RSS feeds
+  app.post("/api/news/refresh", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const user   = userId ? await storage.getUser(userId) : null;
+      const companyId = user?.companyId;
+
+      let context: { materials?: string[] } | undefined;
+      if (companyId) {
+        try {
+          const mats = await storage.getMaterials(companyId);
+          context = { materials: mats.map((m: any) => m.name).filter(Boolean) };
+        } catch { /* non-fatal */ }
+      }
+
+      const { items, stats } = await refreshNews(context, true);
+      res.json({ articles: items.slice(0, 20), stats });
+    } catch (err: any) {
+      console.error("[NewsIngestion] POST /api/news/refresh:", err.message);
+      if (err.message?.startsWith("NO_VALID_NEWS_SOURCES")) {
+        return res.status(503).json({ error: err.message });
+      }
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // GET /api/news/:id — single article by DB id
+  app.get("/api/news/:id", isAuthenticated, async (req, res) => {
+    try {
+      const { newsArticles: naTable } = await import("@shared/schema");
+      const { eq: eqOp }              = await import("drizzle-orm");
+      const { db: dbInst }            = await import("./db");
+      const [row] = await dbInst.select().from(naTable).where(eqOp(naTable.id, req.params.id));
+      if (!row) return res.status(404).json({ error: "Article not found" });
+      res.json({ ...row, provenance: row.provenance });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
     }
   });
 

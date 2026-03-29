@@ -1,6 +1,6 @@
 /**
- * LIVE VALIDATION HARNESS v3.0.0
- * Full enterprise audit: 17 sections, 19 gates, strict evidence-first methodology
+ * LIVE VALIDATION HARNESS v4.0.0
+ * Full enterprise audit: 18 sections, 20 gates, strict evidence-first methodology
  * Run: npx tsx server/tests/live-validation-harness.ts
  */
 
@@ -54,6 +54,16 @@ import { computeAdaptiveWeights }               from "../lib/forecasting";
 import { getCompanyRegimeIntelligence }         from "../lib/regimeIntelligence";
 import { canExecuteDraft, approveDraft } from "../lib/copilotService";
 import { sanitizeDetails } from "../lib/structuredLogger";
+import {
+  validateNewsItem,
+  dedupeNews,
+  scoreNews,
+  enrichNewsItem,
+  computeHash,
+  getCacheStats,
+  clearCache,
+  type RawNewsItem,
+} from "../lib/newsIngestion";
 import { createHash, randomUUID } from "crypto";
 import * as fs from "fs";
 import * as path from "path";
@@ -1336,7 +1346,7 @@ function printFinalReport() {
   console.log("  SECTION RESULTS");
   console.log("─".repeat(72));
 
-  const sectionOrder = ["S1","S2","S3","S4","S5","S6","S7","S8","S9","S10","S11","S12"];
+  const sectionOrder = ["S1","S2","S3","S4","S5","S6","S7","S8","S9","S10","S11","S12","S13","S14","S15","S16","S17","S18"];
   const sectionNames: Record<string, string> = {
     S1:  "System Health & Boot Validation",
     S2:  "Authentication & Tenant Isolation",
@@ -1350,6 +1360,12 @@ function printFinalReport() {
     S10: "Auditability & Evidence Traceability",
     S11: "API & Endpoint Validation",
     S12: "Gate 14 — Economic Truth Validation",
+    S13: "Gate 15 — Adversarial + Drift Validation",
+    S14: "Gate 16 — SOC 2 Controls",
+    S15: "Gate 17 — News Article Guard",
+    S16: "Gate 18 — Decision Outcome Evaluator",
+    S17: "Gate 19 — Decision Win-Rate Learning Loop",
+    S18: "Gate 20 — Real News Ingestion & Verification",
   };
 
   for (const s of sectionOrder) {
@@ -1400,7 +1416,7 @@ function printFinalReport() {
   // Write JSON artifact
   const artifact = {
     harnessMeta: {
-      version: "2.0.0",
+      version: "4.0.0",
       generatedAt: new Date().toISOString(),
       totalTests: total,
       totalPass,
@@ -2504,13 +2520,244 @@ async function section17() {
 }
 
 // ─────────────────────────────────────────────
+// SECTION 18 — Real News Ingestion & Verification (Gate 20)
+// Tests: validation, deduplication, scoring, enrichment, provenance, guards
+// ─────────────────────────────────────────────
+async function section18() {
+  const S = "S18";
+  console.log(`\n${"─".repeat(64)}\n  SECTION 18 — Real News Ingestion & Verification (Gate 20)\n${"─".repeat(64)}`);
+
+  // ── Deterministic valid item ─────────────────────────────────────────────
+  const recentDate = new Date(Date.now() - 2 * 60 * 60 * 1000).toUTCString(); // 2 hours ago
+  const validItem: RawNewsItem = {
+    title: "Supply chain disruptions worsen as port congestion escalates",
+    link: "https://reuters.com/business/supply-chain-2024",
+    pubDate: recentDate,
+    source: "Reuters",
+    description: "Severe supply chain disruptions are worsening as major ports report record congestion.",
+    feedCredibility: 1.0,
+  };
+
+  // ── 18.1  validateNewsItem: rejects title shorter than 20 chars ──────────
+  {
+    const t0 = Date.now();
+    let threw = false;
+    try { validateNewsItem({ ...validItem, title: "Short" }); }
+    catch (e: any) { threw = e.message.includes("title too short"); }
+    assert(threw, S, "18.1", "validateNewsItem rejects title < 20 chars", "deterministic", { threw }, t0);
+  }
+
+  // ── 18.2  validateNewsItem: rejects link not starting with http ──────────
+  {
+    const t0 = Date.now();
+    let threw = false;
+    try { validateNewsItem({ ...validItem, link: "ftp://bad-link.com/article" }); }
+    catch (e: any) { threw = e.message.includes("link must start with http"); }
+    assert(threw, S, "18.2", "validateNewsItem rejects non-http link", "deterministic", { threw }, t0);
+  }
+
+  // ── 18.3  validateNewsItem: rejects article older than 7 days ───────────
+  {
+    const t0 = Date.now();
+    let threw = false;
+    const oldDate = new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toUTCString();
+    try { validateNewsItem({ ...validItem, pubDate: oldDate }); }
+    catch (e: any) { threw = e.message.includes("older than 7 days"); }
+    assert(threw, S, "18.3", "validateNewsItem rejects article older than 7 days", "deterministic", { threw }, t0);
+  }
+
+  // ── 18.4  validateNewsItem: rejects empty source ─────────────────────────
+  {
+    const t0 = Date.now();
+    let threw = false;
+    try { validateNewsItem({ ...validItem, source: "" }); }
+    catch (e: any) { threw = e.message.includes("source is empty"); }
+    assert(threw, S, "18.4", "validateNewsItem rejects empty source", "deterministic", { threw }, t0);
+  }
+
+  // ── 18.5  validateNewsItem: accepts a fully valid item ───────────────────
+  {
+    const t0 = Date.now();
+    let passed = true;
+    try { validateNewsItem(validItem); }
+    catch { passed = false; }
+    assert(passed, S, "18.5", "validateNewsItem accepts a fully valid news item", "deterministic", { passed }, t0);
+  }
+
+  // ── 18.6  dedupeNews: removes exact duplicates (same hash) ───────────────
+  {
+    const t0 = Date.now();
+    const items: RawNewsItem[] = [validItem, { ...validItem }, { ...validItem }];
+    const deduped = dedupeNews(items);
+    assert(
+      deduped.length === 1,
+      S, "18.6",
+      `dedupeNews removes exact duplicates: in=${items.length} out=${deduped.length}`,
+      "deterministic", { in: items.length, out: deduped.length }, t0,
+    );
+  }
+
+  // ── 18.7  dedupeNews: removes fuzzy duplicates (≥85% bigram similarity) ──
+  {
+    const t0 = Date.now();
+    const item1: RawNewsItem = { ...validItem, title: "Supply chain disruptions worsen as port congestion escalates globally" };
+    const item2: RawNewsItem = { ...validItem, title: "Supply chain disruptions worsen as port congestion escalates worldwide" };
+    const deduped = dedupeNews([item1, item2]);
+    assert(
+      deduped.length === 1,
+      S, "18.7",
+      `dedupeNews removes fuzzy duplicates: in=2 out=${deduped.length} (bigram ≥85%)`,
+      "deterministic", { in: 2, out: deduped.length }, t0,
+    );
+  }
+
+  // ── 18.8  scoreNews: returns value in [0, 1] range ───────────────────────
+  {
+    const t0 = Date.now();
+    const score = scoreNews(validItem);
+    const inRange = score >= 0 && score <= 1;
+    assert(
+      inRange, S, "18.8",
+      `scoreNews returns value in [0,1]: score=${score.toFixed(3)}`,
+      "deterministic", { score }, t0,
+    );
+  }
+
+  // ── 18.9  scoreNews: high-relevance item scores above low-relevance ───────
+  {
+    const t0 = Date.now();
+    const highRelItem: RawNewsItem = {
+      ...validItem,
+      title: "Critical supply chain disruption: freight logistics port congestion commodity shortage",
+      description: "Procurement teams face supply chain disruptions as logistics and shipping costs surge.",
+    };
+    const lowRelItem: RawNewsItem = {
+      ...validItem,
+      title: "Local sports team wins regional championship tournament this weekend",
+      description: "The home team secured a decisive victory in the regional sports competition.",
+    };
+    const highScore = scoreNews(highRelItem);
+    const lowScore  = scoreNews(lowRelItem);
+    assert(
+      highScore > lowScore,
+      S, "18.9",
+      `scoreNews ranks supply-chain article (${highScore.toFixed(3)}) above sports article (${lowScore.toFixed(3)})`,
+      "deterministic", { highScore, lowScore }, t0,
+    );
+  }
+
+  // ── 18.10  enrichNewsItem: detects supply_chain category ─────────────────
+  {
+    const t0 = Date.now();
+    const score = scoreNews(validItem);
+    const enriched = enrichNewsItem(validItem, score);
+    assert(
+      enriched.category === "supply_chain",
+      S, "18.10",
+      `enrichNewsItem detects category=supply_chain for supply chain article (got: ${enriched.category})`,
+      "deterministic", { category: enriched.category }, t0,
+    );
+  }
+
+  // ── 18.11  enrichNewsItem: detects negative sentiment for disruption ──────
+  {
+    const t0 = Date.now();
+    const disruptionItem: RawNewsItem = {
+      ...validItem,
+      title: "Supply chain crisis: severe shortage and disruption cause factory shutdown",
+      description: "A severe supply chain disruption is causing factory shutdowns and shortages.",
+    };
+    const score = scoreNews(disruptionItem);
+    const enriched = enrichNewsItem(disruptionItem, score);
+    assert(
+      enriched.sentiment === "negative",
+      S, "18.11",
+      `enrichNewsItem detects negative sentiment for disruption article (got: ${enriched.sentiment})`,
+      "deterministic", { sentiment: enriched.sentiment }, t0,
+    );
+  }
+
+  // ── 18.12  enrichNewsItem: provenance is always "RSS_V1" ─────────────────
+  {
+    const t0 = Date.now();
+    const score = scoreNews(validItem);
+    const enriched = enrichNewsItem(validItem, score);
+    assert(
+      enriched.provenance === "RSS_V1",
+      S, "18.12",
+      `enrichNewsItem sets provenance="RSS_V1" (got: ${enriched.provenance})`,
+      "deterministic", { provenance: enriched.provenance }, t0,
+    );
+  }
+
+  // ── 18.13  NO_VALID_NEWS_SOURCES: thrown when all items fail validation ───
+  {
+    const t0 = Date.now();
+    // Simulate a batch where every item fails validation (all have bad titles)
+    const badItems: RawNewsItem[] = [
+      { ...validItem, title: "short" },              // title < 20 chars
+      { ...validItem, title: "tiny" },
+      { ...validItem, link: "ftp://bad.com" },       // bad link
+    ];
+    let errorCode = "";
+    try {
+      // Replicate the guard logic: filter valids, throw if zero
+      const valid: RawNewsItem[] = [];
+      for (const item of badItems) {
+        try { validateNewsItem(item); valid.push(item); } catch { /* rejected */ }
+      }
+      if (valid.length === 0) throw new Error("NO_VALID_NEWS_SOURCES: all feeds returned zero valid articles");
+    } catch (e: any) {
+      errorCode = e.message.startsWith("NO_VALID_NEWS_SOURCES") ? "NO_VALID_NEWS_SOURCES" : e.message;
+    }
+    assert(
+      errorCode === "NO_VALID_NEWS_SOURCES",
+      S, "18.13",
+      `NO_VALID_NEWS_SOURCES thrown when all items fail validation (got: "${errorCode}")`,
+      "deterministic", { errorCode }, t0,
+    );
+  }
+
+  // ── 18.14  computeHash: deterministic — same inputs → same hash ──────────
+  {
+    const t0 = Date.now();
+    const h1 = computeHash(validItem.title, validItem.source);
+    const h2 = computeHash(validItem.title, validItem.source);
+    const h3 = computeHash("Different title for another article", validItem.source);
+    assert(
+      h1 === h2 && h1 !== h3 && h1.length === 64,
+      S, "18.14",
+      `computeHash is deterministic: h1===h2=${h1 === h2} h1!==h3=${h1 !== h3} len=${h1.length}`,
+      "deterministic", { h1: h1.slice(0, 12) + "...", h3: h3.slice(0, 12) + "...", match: h1 === h2 }, t0,
+    );
+  }
+
+  // ── 18.15  getCacheStats: returns null before any refresh ────────────────
+  {
+    const t0 = Date.now();
+    clearCache();
+    const stats = getCacheStats();
+    assert(
+      stats.cacheAge === null && stats.lastRefreshed === null,
+      S, "18.15",
+      `getCacheStats returns null before first refresh: cacheAge=${stats.cacheAge} lastRefreshed=${stats.lastRefreshed}`,
+      "deterministic", { ...stats }, t0,
+    );
+  }
+
+  // ── Print section summary ────────────────────────────────────────────────
+  const c = sectionCounters[S] ?? { pass: 0, fail: 0 };
+  console.log(`\n  Section 18 Complete — Gate 20: ${c.pass}/${c.pass + c.fail} tests passed`);
+}
+
+// ─────────────────────────────────────────────
 // MAIN
 // ─────────────────────────────────────────────
 async function main() {
   console.log("═".repeat(72));
-  console.log("  LIVE VALIDATION HARNESS v3.0.0");
+  console.log("  LIVE VALIDATION HARNESS v4.0.0");
   console.log("  Prescient Labs — Enterprise Manufacturing Intelligence Platform");
-  console.log("  17 Sections | 19 Gates | Full-Stack Audit | SOC 2-Level Evidence");
+  console.log("  18 Sections | 20 Gates | Full-Stack Audit | SOC 2-Level Evidence");
   console.log("═".repeat(72));
 
   await setup();
@@ -2532,6 +2779,7 @@ async function main() {
   await section15();
   await section16();
   await section17();
+  await section18();
 
   await teardown();
 

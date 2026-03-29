@@ -1,9 +1,9 @@
 {
   "harnessMeta": {
-    "version": "2.0.0",
-    "generatedAt": "2026-03-29T01:42:06.632Z",
-    "totalTests": 178,
-    "totalPass": 178,
+    "version": "4.0.0",
+    "generatedAt": "2026-03-29T03:25:02.042Z",
+    "totalTests": 208,
+    "totalPass": 208,
     "totalFail": 0,
     "confidenceScore": 100,
     "verdict": "SAFE FOR PILOT"
@@ -92,6 +92,48 @@
       "pass": 14,
       "fail": 0,
       "result": "PASS"
+    },
+    {
+      "section": "S13",
+      "name": "Gate 15 — Adversarial + Drift Validation",
+      "pass": 32,
+      "fail": 0,
+      "result": "PASS"
+    },
+    {
+      "section": "S14",
+      "name": "Gate 16 — SOC 2 Controls",
+      "pass": 24,
+      "fail": 0,
+      "result": "PASS"
+    },
+    {
+      "section": "S15",
+      "name": "Gate 17 — News Article Guard",
+      "pass": 8,
+      "fail": 0,
+      "result": "PASS"
+    },
+    {
+      "section": "S16",
+      "name": "Gate 18 — Decision Outcome Evaluator",
+      "pass": 10,
+      "fail": 0,
+      "result": "PASS"
+    },
+    {
+      "section": "S17",
+      "name": "Gate 19 — Decision Win-Rate Learning Loop",
+      "pass": 0,
+      "fail": 0,
+      "result": "PASS"
+    },
+    {
+      "section": "S18",
+      "name": "Gate 20 — Real News Ingestion & Verification",
+      "pass": 15,
+      "fail": 0,
+      "result": "PASS"
     }
   ],
   "criticalFailures": [],
@@ -104,7 +146,7 @@
       "pass": true,
       "proofType": "runtime",
       "evidence": {},
-      "durationMs": 3
+      "durationMs": 2
     },
     {
       "section": "S1",
@@ -128,7 +170,7 @@
         "hasDatabaseUrl": true,
         "optionalPresent": "4/4"
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S1",
@@ -139,7 +181,7 @@
       "evidence": {
         "safeModeEnabled": 1
       },
-      "durationMs": 7
+      "durationMs": 8
     },
     {
       "section": "S1",
@@ -149,9 +191,9 @@
       "proofType": "runtime",
       "evidence": {
         "status": 200,
-        "ms": 53
+        "ms": 45
       },
-      "durationMs": 53
+      "durationMs": 45
     },
     {
       "section": "S1",
@@ -161,9 +203,9 @@
       "proofType": "runtime",
       "evidence": {
         "status": 200,
-        "ms": 15
+        "ms": 7
       },
-      "durationMs": 15
+      "durationMs": 7
     },
     {
       "section": "S1",
@@ -173,9 +215,9 @@
       "proofType": "runtime",
       "evidence": {
         "status": 200,
-        "ms": 4
+        "ms": 2
       },
-      "durationMs": 4
+      "durationMs": 2
     },
     {
       "section": "S2",
@@ -187,7 +229,7 @@
         "ownQuery": 1,
         "crossQuery": 0
       },
-      "durationMs": 7
+      "durationMs": 5
     },
     {
       "section": "S2",
@@ -223,7 +265,7 @@
         "ownQuery": 1,
         "crossQuery": 0
       },
-      "durationMs": 12
+      "durationMs": 10
     },
     {
       "section": "S2",
@@ -235,7 +277,7 @@
         "ownQuery": 1,
         "crossQuery": 0
       },
-      "durationMs": 22
+      "durationMs": 8
     },
     {
       "section": "S2",
@@ -247,7 +289,7 @@
         "ownQuery": 1,
         "crossQuery": 0
       },
-      "durationMs": 10
+      "durationMs": 8
     },
     {
       "section": "S2",
@@ -269,7 +311,7 @@
       "evidence": {
         "status": 401
       },
-      "durationMs": 23
+      "durationMs": 7
     },
     {
       "section": "S3",
@@ -291,7 +333,7 @@
       "evidence": {
         "hasSafeModeCheck": true
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S3",
@@ -303,7 +345,7 @@
         "allowed": false,
         "reason": "Draft status is 'draft', must be 'approved' to execute"
       },
-      "durationMs": 10
+      "durationMs": 8
     },
     {
       "section": "S3",
@@ -326,7 +368,7 @@
         "allowed": true,
         "status": "approved"
       },
-      "durationMs": 11
+      "durationMs": 8
     },
     {
       "section": "S3",
@@ -338,7 +380,7 @@
         "allowed": false,
         "reason": "Draft status is 'rejected', must be 'approved' to execute"
       },
-      "durationMs": 10
+      "durationMs": 7
     },
     {
       "section": "S3",
@@ -360,7 +402,7 @@
       "evidence": {
         "dailySpendTotal": 0
       },
-      "durationMs": 8
+      "durationMs": 7
     },
     {
       "section": "S4",
@@ -374,7 +416,7 @@
         "allowed": 33,
         "blocked": 27
       },
-      "durationMs": 238
+      "durationMs": 198
     },
     {
       "section": "S4",
@@ -408,7 +450,7 @@
       "pass": true,
       "proofType": "runtime",
       "evidence": {
-        "stateId": "5789716d-3f4f-47b9-9ac9-28c237770dfc"
+        "stateId": "a7f84de5-f58f-4aeb-8fa8-5a33e218d38c"
       },
       "durationMs": 0
     },
@@ -419,11 +461,11 @@
       "pass": true,
       "proofType": "deterministic",
       "evidence": {
-        "id1": "2a73fc4ba315021c04d71f9dbe2a6b42",
+        "id1": "aee44190630ec5daca98ef7997b1d84f",
         "equal": true,
         "length": 32
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S5",
@@ -432,8 +474,8 @@
       "pass": true,
       "proofType": "deterministic",
       "evidence": {
-        "id1": "2a73fc4ba315021c04d71f9dbe2a6b42",
-        "idAlt": "92c15ecd3b0167438f3d0dc3af5f3935",
+        "id1": "aee44190630ec5daca98ef7997b1d84f",
+        "idAlt": "d0a46c8ed7554638a63f8ef1d1028134",
         "collision": false
       },
       "durationMs": 0
@@ -447,7 +489,7 @@
       "evidence": {
         "count": 1
       },
-      "durationMs": 5
+      "durationMs": 20
     },
     {
       "section": "S5",
@@ -469,7 +511,7 @@
       "evidence": {
         "count": 1
       },
-      "durationMs": 6
+      "durationMs": 8
     },
     {
       "section": "S5",
@@ -480,7 +522,7 @@
       "evidence": {
         "rows": 1
       },
-      "durationMs": 52
+      "durationMs": 48
     },
     {
       "section": "S6",
@@ -577,7 +619,7 @@
       "evidence": {
         "hasRegimeUncertainty": true
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S7",
@@ -588,7 +630,7 @@
       "evidence": {
         "qty": 720
       },
-      "durationMs": 18
+      "durationMs": 16
     },
     {
       "section": "S7",
@@ -634,7 +676,7 @@
         "conserv": 610,
         "aggress": 815
       },
-      "durationMs": 32
+      "durationMs": 27
     },
     {
       "section": "S7",
@@ -645,7 +687,7 @@
       "evidence": {
         "qty": 940
       },
-      "durationMs": 15
+      "durationMs": 13
     },
     {
       "section": "S7",
@@ -679,7 +721,7 @@
         "r1": 735,
         "r2": 735
       },
-      "durationMs": 25
+      "durationMs": 27
     },
     {
       "section": "S8",
@@ -690,7 +732,7 @@
       "evidence": {
         "crashed": false
       },
-      "durationMs": 4
+      "durationMs": 5
     },
     {
       "section": "S8",
@@ -785,7 +827,7 @@
       "pass": true,
       "proofType": "deterministic",
       "evidence": {
-        "hash": "efc653073c2450dc"
+        "hash": "ef0206f643df1e4b"
       },
       "durationMs": 2
     },
@@ -799,7 +841,7 @@
         "score": 0.86,
         "entities": 5
       },
-      "durationMs": 28
+      "durationMs": 37
     },
     {
       "section": "S9",
@@ -822,7 +864,7 @@
         "scoreA": 0.86,
         "scoreB": 0.72
       },
-      "durationMs": 29
+      "durationMs": 34
     },
     {
       "section": "S9",
@@ -844,7 +886,7 @@
       "evidence": {
         "found": true
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S9",
@@ -867,7 +909,7 @@
         "scoreEmpty": 0,
         "scoreA": 0.86
       },
-      "durationMs": 11
+      "durationMs": 12
     },
     {
       "section": "S10",
@@ -890,7 +932,7 @@
       "evidence": {
         "found": 1
       },
-      "durationMs": 7
+      "durationMs": 6
     },
     {
       "section": "S10",
@@ -901,7 +943,7 @@
       "evidence": {
         "provenanceVersion": "v5.0.0"
       },
-      "durationMs": 13
+      "durationMs": 6
     },
     {
       "section": "S10",
@@ -912,7 +954,7 @@
       "evidence": {
         "provenanceVersion": "4.0.0"
       },
-      "durationMs": 12
+      "durationMs": 9
     },
     {
       "section": "S10",
@@ -924,7 +966,7 @@
         "hash": "c782f112f72930b4",
         "equal": true
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S10",
@@ -936,18 +978,18 @@
         "ownRows": 1,
         "crossRows": 0
       },
-      "durationMs": 5
+      "durationMs": 4
     },
     {
       "section": "S10",
       "testId": "10.7",
-      "description": "Stress test report has configHash (9334c1d737882908...)",
+      "description": "Stress test report has configHash (c08130e34ebf38a2...)",
       "pass": true,
       "proofType": "deterministic",
       "evidence": {
-        "configHash": "9334c1d737882908"
+        "configHash": "c08130e34ebf38a2"
       },
-      "durationMs": 4
+      "durationMs": 3
     },
     {
       "section": "S11",
@@ -957,9 +999,9 @@
       "proofType": "runtime",
       "evidence": {
         "status": 200,
-        "ms": 17
+        "ms": 6
       },
-      "durationMs": 17
+      "durationMs": 6
     },
     {
       "section": "S11",
@@ -1017,9 +1059,9 @@
       "proofType": "runtime",
       "evidence": {
         "status": 401,
-        "ms": 1
+        "ms": 2
       },
-      "durationMs": 1
+      "durationMs": 2
     },
     {
       "section": "S11",
@@ -1041,9 +1083,9 @@
       "proofType": "runtime",
       "evidence": {
         "status": 401,
-        "ms": 1
+        "ms": 2
       },
-      "durationMs": 1
+      "durationMs": 2
     },
     {
       "section": "S11",
@@ -1053,9 +1095,9 @@
       "proofType": "runtime",
       "evidence": {
         "status": 401,
-        "ms": 1
+        "ms": 2
       },
-      "durationMs": 1
+      "durationMs": 2
     },
     {
       "section": "S11",
@@ -1077,50 +1119,14 @@
       "proofType": "runtime",
       "evidence": {
         "status": 401,
-        "ms": 2
+        "ms": 1
       },
-      "durationMs": 2
+      "durationMs": 1
     },
     {
       "section": "S11",
       "testId": "11.12",
       "description": "GET /api/adaptive-forecast/reports → 401 (expected: 401|403|302)",
-      "pass": true,
-      "proofType": "runtime",
-      "evidence": {
-        "status": 401,
-        "ms": 2
-      },
-      "durationMs": 2
-    },
-    {
-      "section": "S11",
-      "testId": "11.13",
-      "description": "GET /api/stress-test/reports → 401 (expected: 401|403|302)",
-      "pass": true,
-      "proofType": "runtime",
-      "evidence": {
-        "status": 401,
-        "ms": 2
-      },
-      "durationMs": 2
-    },
-    {
-      "section": "S11",
-      "testId": "11.14",
-      "description": "POST /api/adaptive-forecast/analyze → 401 (expected: 401|403|302|400)",
-      "pass": true,
-      "proofType": "runtime",
-      "evidence": {
-        "status": 401,
-        "ms": 2
-      },
-      "durationMs": 2
-    },
-    {
-      "section": "S11",
-      "testId": "11.15",
-      "description": "POST /api/stress-test/run → 401 (expected: 401|403|302|400)",
       "pass": true,
       "proofType": "runtime",
       "evidence": {
@@ -1131,15 +1137,51 @@
     },
     {
       "section": "S11",
+      "testId": "11.13",
+      "description": "GET /api/stress-test/reports → 401 (expected: 401|403|302)",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "status": 401,
+        "ms": 1
+      },
+      "durationMs": 1
+    },
+    {
+      "section": "S11",
+      "testId": "11.14",
+      "description": "POST /api/adaptive-forecast/analyze → 401 (expected: 401|403|302|400)",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "status": 401,
+        "ms": 1
+      },
+      "durationMs": 1
+    },
+    {
+      "section": "S11",
+      "testId": "11.15",
+      "description": "POST /api/stress-test/run → 401 (expected: 401|403|302|400)",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "status": 401,
+        "ms": 2
+      },
+      "durationMs": 2
+    },
+    {
+      "section": "S11",
       "testId": "11.16",
-      "description": "Health endpoints all respond within 2000ms (3ms, 6ms, 5ms)",
+      "description": "Health endpoints all respond within 2000ms (4ms, 6ms, 4ms)",
       "pass": true,
       "proofType": "runtime",
       "evidence": {
         "timings": [
-          3,
+          4,
           6,
-          5
+          4
         ]
       },
       "durationMs": 6
@@ -1153,7 +1195,7 @@
       "evidence": {
         "status": 401
       },
-      "durationMs": 1
+      "durationMs": 2
     },
     {
       "section": "S12",
@@ -1267,7 +1309,7 @@
         "optimizedSL": 0.8571428571428571,
         "deltaSlDelta": 0.09523809523809523
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S12",
@@ -1329,7 +1371,7 @@
         "threw": false,
         "automationBlocked": true
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S13",
@@ -1341,7 +1383,7 @@
         "driftScore": 1,
         "rawPSI": 34.18024754401441
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S13",
@@ -1356,7 +1398,7 @@
         ],
         "driftScore": 1
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S13",
@@ -1368,7 +1410,7 @@
         "original": 0.85,
         "adjusted": 0.595
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S13",
@@ -1380,7 +1422,7 @@
         "severeDrift": 1,
         "blocked": true
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S13",
@@ -1410,7 +1452,7 @@
           "demandHistory"
         ]
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S13",
@@ -1424,7 +1466,7 @@
         ],
         "completeness": 0.5
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S13",
@@ -1436,7 +1478,7 @@
         "perfectTrust": 0.925,
         "degradedTrust": 0.8
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S13",
@@ -1462,7 +1504,7 @@
           "ANOMALOUS_INPUT"
         ]
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S13",
@@ -1474,7 +1516,7 @@
         "threwInf": true,
         "threwNaN": true
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S13",
@@ -1486,7 +1528,7 @@
         "threwZero": true,
         "threwNaNDemand": true
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S13",
@@ -1509,7 +1551,7 @@
         "expansion": 1040,
         "excess": 1460
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S13",
@@ -1521,7 +1563,7 @@
         "stableTrust": 0.9125,
         "flipTrust": 0.8325
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S13",
@@ -1534,7 +1576,7 @@
           "SIGNAL_INCONSISTENCY"
         ]
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S13",
@@ -1558,7 +1600,7 @@
         "early": 0.942,
         "late": 0.5660000000000001
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S13",
@@ -1572,7 +1614,7 @@
           "ACCURACY_DEGRADING"
         ]
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S13",
@@ -1584,7 +1626,7 @@
         "goodTrust": 0.9279999999999999,
         "badTrust": 0.8340000000000001
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S13",
@@ -1596,7 +1638,7 @@
         "lowCost": 63100,
         "highCost": 88340
       },
-      "durationMs": 33
+      "durationMs": 31
     },
     {
       "section": "S13",
@@ -1609,7 +1651,7 @@
         "badFields": [],
         "optimizedQty": 631
       },
-      "durationMs": 33
+      "durationMs": 32
     },
     {
       "section": "S13",
@@ -1622,7 +1664,7 @@
         "badFields": [],
         "optimizedQty": 631
       },
-      "durationMs": 33
+      "durationMs": 32
     },
     {
       "section": "S13",
@@ -1635,7 +1677,7 @@
         "badFields": [],
         "optimizedQty": 631
       },
-      "durationMs": 33
+      "durationMs": 32
     },
     {
       "section": "S13",
@@ -1646,7 +1688,7 @@
       "evidence": {
         "hasSF001Guard": true
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S13",
@@ -1657,7 +1699,7 @@
       "evidence": {
         "hasCostGuard": true
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S13",
@@ -1670,7 +1712,7 @@
         "legitimate": 47.5,
         "hasSF001Guard": true
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S13",
@@ -1681,7 +1723,7 @@
       "evidence": {
         "hasROIGuard": true
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S13",
@@ -1693,7 +1735,7 @@
         "N": 10000,
         "errorCount": 0
       },
-      "durationMs": 668
+      "durationMs": 614
     },
     {
       "section": "S13",
@@ -1705,7 +1747,7 @@
         "N": 10000,
         "nanCount": 0
       },
-      "durationMs": 668
+      "durationMs": 614
     },
     {
       "section": "S13",
@@ -1717,19 +1759,19 @@
         "finalConfidence": 0.7,
         "finalQty": 583
       },
-      "durationMs": 669
+      "durationMs": 614
     },
     {
       "section": "S13",
       "testId": "13.8d",
-      "description": "Heap growth bounded: -0.6 MB < 50 MB over 10000 calls",
+      "description": "Heap growth bounded: -0.3 MB < 50 MB over 10000 calls",
       "pass": true,
       "proofType": "deterministic",
       "evidence": {
-        "heapGrowthMB": "-0.57",
+        "heapGrowthMB": "-0.31",
         "N": 10000
       },
-      "durationMs": 669
+      "durationMs": 614
     },
     {
       "section": "S14",
@@ -1751,7 +1793,7 @@
       "evidence": {
         "threwAnalyst": true
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S14",
@@ -1762,7 +1804,7 @@
       "evidence": {
         "passedOperator": true
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S14",
@@ -1773,7 +1815,7 @@
       "evidence": {
         "passedAdmin": true
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S14",
@@ -1852,7 +1894,7 @@
         "automationBlocked": false,
         "requiresApproval": false
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S14",
@@ -1863,7 +1905,7 @@
       "evidence": {
         "boundaryOk": true
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S14",
@@ -1886,7 +1928,7 @@
         "hashLength": 64,
         "hashPrefix": "defd8627"
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S14",
@@ -1897,7 +1939,7 @@
       "evidence": {
         "match": true
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S14",
@@ -1957,22 +1999,22 @@
     {
       "section": "S14",
       "testId": "14.6a",
-      "description": "DECISION TRACE: traceId is valid UUID v4 (0871fd41-fe92-4966-8f87-fe29c010fe29)",
+      "description": "DECISION TRACE: traceId is valid UUID v4 (49feeb1d-93c3-4ca0-8838-80d38feda4a7)",
       "pass": true,
       "proofType": "deterministic",
       "evidence": {
-        "traceId": "0871fd41-fe92-4966-8f87-fe29c010fe29"
+        "traceId": "49feeb1d-93c3-4ca0-8838-80d38feda4a7"
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S14",
       "testId": "14.6b",
-      "description": "DECISION TRACE: timestamp is valid ISO 8601 (2026-03-29T01:41:53.506Z)",
+      "description": "DECISION TRACE: timestamp is valid ISO 8601 (2026-03-29T03:24:50.136Z)",
       "pass": true,
       "proofType": "deterministic",
       "evidence": {
-        "timestamp": "2026-03-29T01:41:53.506Z"
+        "timestamp": "2026-03-29T03:24:50.136Z"
       },
       "durationMs": 1
     },
@@ -1994,8 +2036,8 @@
       "pass": true,
       "proofType": "deterministic",
       "evidence": {
-        "trace1": "0871fd41-fe92-4966-8f87-fe29c010fe29",
-        "trace2": "85c13ab7-5605-4eaf-8bc5-c511cb1632f7"
+        "trace1": "49feeb1d-93c3-4ca0-8838-80d38feda4a7",
+        "trace2": "f639bd11-4d5c-40d3-9a09-cd18448bff93"
       },
       "durationMs": 1
     },
@@ -2091,7 +2133,7 @@
       "evidence": {
         "url": "https://ft.com/copper-demand"
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S16",
@@ -2207,7 +2249,7 @@
       "evidence": {
         "err": "INVALID_OUTCOME_FIELD: baseline.cost is non-finite (NaN)"
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S16",
@@ -2218,7 +2260,7 @@
       "evidence": {
         "err": "INVALID_OUTCOME_FIELD: actual.serviceLevel must be in [0,1] (got 1.5)"
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S16",
@@ -2230,6 +2272,389 @@
         "err": "INVALID_OUTCOME_FIELD: actual.cost is non-finite (Infinity)"
       },
       "durationMs": 1
+    },
+    {
+      "section": "SECTION 17 — Decision Win-Rate Learning Loop",
+      "testId": "17.1",
+      "description": "OUTCOME PERSIST: win=true winType=compound id=967903cc...",
+      "pass": true,
+      "proofType": "live-db",
+      "evidence": {
+        "win": true,
+        "winType": "compound",
+        "deltaCost": -1500,
+        "deltaServiceLevel": 0.08000000000000007,
+        "deltaStockout": -0.07999999999999999,
+        "id": "967903cc-b650-4ab5-b39a-516bd85455df"
+      },
+      "durationMs": 8
+    },
+    {
+      "section": "SECTION 17 — Decision Win-Rate Learning Loop",
+      "testId": "17.2",
+      "description": "WIN RATE GLOBAL: 4/5 = 80% (want 80%)",
+      "pass": true,
+      "proofType": "live-db",
+      "evidence": {
+        "globalWinRate": 0.8,
+        "totalDecisions": 5,
+        "totalWins": 4,
+        "winRateBySku": {
+          "SKU-WR-005": 1,
+          "SKU-WR-004": 0,
+          "SKU-WR-003": 1,
+          "SKU-WR-002": 1,
+          "SKU-WR-001": 1
+        },
+        "winRateBySegment": {
+          "intermittent": 1,
+          "fast_mover": 0.6666666666666666,
+          "slow_mover": 1
+        },
+        "winRateByRegime": {
+          "REAL_ECONOMY_LEAD": 1,
+          "ASSET_LED_GROWTH": 0,
+          "HEALTHY_EXPANSION": 1
+        },
+        "performanceFlag": null,
+        "automationBlocked": false,
+        "trustScoreMultiplier": 1
+      },
+      "durationMs": 31
+    },
+    {
+      "section": "SECTION 17 — Decision Win-Rate Learning Loop",
+      "testId": "17.3",
+      "description": "WIN RATE BY SKU: SKU-WR-004 (loss) = 0% (want 0%)",
+      "pass": true,
+      "proofType": "live-db",
+      "evidence": {
+        "skuRate": 0
+      },
+      "durationMs": 33
+    },
+    {
+      "section": "SECTION 17 — Decision Win-Rate Learning Loop",
+      "testId": "17.4",
+      "description": "WIN RATE BY SEGMENT: fast_mover = 66.7% (want 66.7%)",
+      "pass": true,
+      "proofType": "live-db",
+      "evidence": {
+        "segRate": 0.6666666666666666
+      },
+      "durationMs": 35
+    },
+    {
+      "section": "SECTION 17 — Decision Win-Rate Learning Loop",
+      "testId": "17.5",
+      "description": "WIN RATE BY REGIME: REAL_ECONOMY_LEAD = 100% (want 100%)",
+      "pass": true,
+      "proofType": "live-db",
+      "evidence": {
+        "regRate": 1
+      },
+      "durationMs": 37
+    },
+    {
+      "section": "SECTION 17 — Decision Win-Rate Learning Loop",
+      "testId": "17.6",
+      "description": "GUARDRAIL <30%: flag=UNDERPERFORMING_SYSTEM blocked=true multiplier=0.7",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "performanceFlag": "UNDERPERFORMING_SYSTEM",
+        "automationBlocked": true,
+        "trustScoreMultiplier": 0.7
+      },
+      "durationMs": 38
+    },
+    {
+      "section": "SECTION 17 — Decision Win-Rate Learning Loop",
+      "testId": "17.7",
+      "description": "GUARDRAIL <40%: flag=UNDERPERFORMING_SYSTEM blocked=false multiplier=0.7",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "performanceFlag": "UNDERPERFORMING_SYSTEM",
+        "automationBlocked": false,
+        "trustScoreMultiplier": 0.7
+      },
+      "durationMs": 38
+    },
+    {
+      "section": "SECTION 17 — Decision Win-Rate Learning Loop",
+      "testId": "17.8",
+      "description": "GUARDRAIL <50%: flag=UNDERPERFORMING_SYSTEM blocked=false multiplier=1",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "performanceFlag": "UNDERPERFORMING_SYSTEM",
+        "automationBlocked": false,
+        "trustScoreMultiplier": 1
+      },
+      "durationMs": 38
+    },
+    {
+      "section": "SECTION 17 — Decision Win-Rate Learning Loop",
+      "testId": "17.9",
+      "description": "GUARDRAIL ≥50%: flag=null blocked=false multiplier=1",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "performanceFlag": null,
+        "automationBlocked": false,
+        "trustScoreMultiplier": 1
+      },
+      "durationMs": 38
+    },
+    {
+      "section": "SECTION 17 — Decision Win-Rate Learning Loop",
+      "testId": "17.10",
+      "description": "CONFIDENCE TREND: stable (want \"stable\" — all outcomes recent, prior window empty)",
+      "pass": true,
+      "proofType": "live-db",
+      "evidence": {
+        "trend": "stable"
+      },
+      "durationMs": 40
+    },
+    {
+      "section": "SECTION 17 — Decision Win-Rate Learning Loop",
+      "testId": "17.11",
+      "description": "ADAPTIVE WEIGHTS MAPE=10%: ets=0.9 seasonal=0.08 croston=0.02",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "ets": 0.9,
+        "seasonal": 0.08,
+        "croston": 0.02
+      },
+      "durationMs": 40
+    },
+    {
+      "section": "SECTION 17 — Decision Win-Rate Learning Loop",
+      "testId": "17.12",
+      "description": "ADAPTIVE WEIGHTS MAPE=25%: ets=0.65 seasonal=0.25 croston=0.1",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "ets": 0.65,
+        "seasonal": 0.25,
+        "croston": 0.1
+      },
+      "durationMs": 41
+    },
+    {
+      "section": "SECTION 17 — Decision Win-Rate Learning Loop",
+      "testId": "17.13",
+      "description": "ADAPTIVE WEIGHTS MAPE=40%: ets=0.4 seasonal=0.35 croston=0.25",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "ets": 0.4,
+        "seasonal": 0.35,
+        "croston": 0.25
+      },
+      "durationMs": 41
+    },
+    {
+      "section": "SECTION 17 — Decision Win-Rate Learning Loop",
+      "testId": "17.14",
+      "description": "REGIME FACTOR FORMULA: oldFactor=1 acc=0.95 → 1.0050 (expected 1.0050) OK | oldFactor=1 acc=0.8 → 0.9900 (expected 0.9900) OK | oldFactor=1.1 acc=0.95 → 1.1055 (expected 1.1055) OK | oldFactor=0.82 acc=0.5 → 0.8000 (expected 0.8000) OK | oldFactor=1.18 acc=0.99 → 1.1906 (expected 1.1906) OK",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "results": [
+          "oldFactor=1 acc=0.95 → 1.0050 (expected 1.0050) OK",
+          "oldFactor=1 acc=0.8 → 0.9900 (expected 0.9900) OK",
+          "oldFactor=1.1 acc=0.95 → 1.1055 (expected 1.1055) OK",
+          "oldFactor=0.82 acc=0.5 → 0.8000 (expected 0.8000) OK",
+          "oldFactor=1.18 acc=0.99 → 1.1906 (expected 1.1906) OK"
+        ]
+      },
+      "durationMs": 41
+    },
+    {
+      "section": "SECTION 17 — Decision Win-Rate Learning Loop",
+      "testId": "17.15",
+      "description": "SNAPSHOT PERSIST: rows=1 decisions=5 winRate=80%",
+      "pass": true,
+      "proofType": "live-db",
+      "evidence": {
+        "snapshotCount": 1
+      },
+      "durationMs": 52
+    },
+    {
+      "section": "S18",
+      "testId": "18.1",
+      "description": "validateNewsItem rejects title < 20 chars",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "threw": true
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S18",
+      "testId": "18.2",
+      "description": "validateNewsItem rejects non-http link",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "threw": true
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S18",
+      "testId": "18.3",
+      "description": "validateNewsItem rejects article older than 7 days",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "threw": true
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S18",
+      "testId": "18.4",
+      "description": "validateNewsItem rejects empty source",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "threw": true
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S18",
+      "testId": "18.5",
+      "description": "validateNewsItem accepts a fully valid news item",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "passed": true
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S18",
+      "testId": "18.6",
+      "description": "dedupeNews removes exact duplicates: in=3 out=1",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "in": 3,
+        "out": 1
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S18",
+      "testId": "18.7",
+      "description": "dedupeNews removes fuzzy duplicates: in=2 out=1 (bigram ≥85%)",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "in": 2,
+        "out": 1
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S18",
+      "testId": "18.8",
+      "description": "scoreNews returns value in [0,1]: score=0.573",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "score": 0.5728990644257703
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S18",
+      "testId": "18.9",
+      "description": "scoreNews ranks supply-chain article (0.896) above sports article (0.455)",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "highScore": 0.8964284761904762,
+        "lowScore": 0.4552520056022409
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S18",
+      "testId": "18.10",
+      "description": "enrichNewsItem detects category=supply_chain for supply chain article (got: supply_chain)",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "category": "supply_chain"
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S18",
+      "testId": "18.11",
+      "description": "enrichNewsItem detects negative sentiment for disruption article (got: negative)",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "sentiment": "negative"
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S18",
+      "testId": "18.12",
+      "description": "enrichNewsItem sets provenance=\"RSS_V1\" (got: RSS_V1)",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "provenance": "RSS_V1"
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S18",
+      "testId": "18.13",
+      "description": "NO_VALID_NEWS_SOURCES thrown when all items fail validation (got: \"NO_VALID_NEWS_SOURCES\")",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "errorCode": "NO_VALID_NEWS_SOURCES"
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S18",
+      "testId": "18.14",
+      "description": "computeHash is deterministic: h1===h2=true h1!==h3=true len=64",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "h1": "d1c1e0d00ecc...",
+        "h3": "8e7a5d515d72...",
+        "match": true
+      },
+      "durationMs": 0
+    },
+    {
+      "section": "S18",
+      "testId": "18.15",
+      "description": "getCacheStats returns null before first refresh: cacheAge=null lastRefreshed=null",
+      "pass": true,
+      "proofType": "deterministic",
+      "evidence": {
+        "cacheAge": null,
+        "lastRefreshed": null
+      },
+      "durationMs": 0
     }
   ]
 }

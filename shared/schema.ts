@@ -9163,3 +9163,35 @@ export const winRateSnapshots = pgTable(
 
 export const insertWinRateSnapshotSchema = createInsertSchema(winRateSnapshots).omit({ id: true, createdAt: true });
 export type WinRateSnapshot = typeof winRateSnapshots.$inferSelect;
+
+// ============================================================
+// News Articles — real RSS-ingested, validated, deduplicated
+// ============================================================
+
+export const newsArticles = pgTable(
+  "news_articles",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    title: text("title").notNull(),
+    link: text("link").notNull(),
+    source: text("source").notNull(),
+    pubDate: timestamp("pub_date").notNull(),
+    description: text("description"),
+    category: text("category").notNull(),   // macro | supply_chain | commodities | manufacturing | geopolitics
+    sentiment: text("sentiment").notNull(),  // positive | neutral | negative
+    relevanceScore: real("relevance_score").notNull(),  // [0, 1]
+    region: text("region"),
+    relatedEntities: text("related_entities").array(),
+    ingestedAt: timestamp("ingested_at").defaultNow().notNull(),
+    hash: text("hash").notNull(),  // sha256(normalizedTitle + source)
+    provenance: text("provenance").notNull().default("RSS_V1"),
+  },
+  (t) => [
+    index("news_articles_ingested_idx").on(t.ingestedAt),
+    index("news_articles_category_idx").on(t.category),
+    uniqueIndex("news_articles_hash_uniq").on(t.hash),
+  ],
+);
+
+export const insertNewsArticleSchema = createInsertSchema(newsArticles).omit({ id: true, ingestedAt: true });
+export type NewsArticleRow = typeof newsArticles.$inferSelect;
