@@ -109,33 +109,43 @@ export default function LandingPage() {
 
   const subscriptionPlans = [
     {
-      name: "Professional",
-      price: "$1,999",
+      name: "Starter",
+      price: "$299",
       period: "/month",
-      description: "Complete platform access for growing manufacturers",
-      features: ["Up to 250 SKUs"],
-      highlighted: true,
+      description: "Demand forecasting and procurement optimization for growing manufacturers",
+      features: ["Demand forecasting", "Procurement timing signals", "Live commodity price feeds", "Supplier risk scoring"],
+      highlighted: false,
       icon: Rocket,
     },
     {
-      name: "Enterprise",
-      price: "Contact Sales",
-      period: "",
-      description: "Unlimited scale with dedicated support",
-      features: ["Unlimited SKUs"],
+      name: "Growth",
+      price: "$799",
+      period: "/month",
+      description: "Full platform access with advanced supply chain intelligence",
+      features: ["Everything in Starter", "Supply chain digital twin", "Multi-tier supplier mapping", "Automated RFQ generation"],
+      highlighted: true,
       icon: Building2,
     },
   ];
 
   const performancePlans = [
     {
-      name: "Strategic Alliance",
-      price: "2%",
-      period: " + $2K/mo",
-      description: "Enterprise partnership with full platform access",
-      features: ["Unlimited SKUs"],
+      name: "Usage-Based",
+      price: "$199",
+      period: "/month + metered",
+      description: "Start low and scale — pay for exactly what you consume",
+      features: ["Full platform access", "Per-API call pricing", "No long-term commitment", "Volume discounts available"],
+      highlighted: false,
+      icon: Zap,
+    },
+    {
+      name: "Performance",
+      price: "$100",
+      period: "/month + 15% of savings",
+      description: "Pay only on verified, measured savings — never on estimates",
+      features: ["Full platform access", "15% of verified savings only", "Strict evidence chain required", "Zero fee on projections"],
       highlighted: true,
-      icon: Building2,
+      icon: DollarSign,
     },
   ];
 
@@ -285,17 +295,17 @@ export default function LandingPage() {
               </div>
             )}
             
-            {/* Performance-Based Plan */}
+            {/* Performance-Based Plans */}
             {pricingModel === "performance" && (
-              <div className="flex justify-center">
+              <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
                 {performancePlans.map((plan, idx) => (
                   <Card 
                     key={idx} 
-                    className={`p-5 flex flex-col text-left max-w-md w-full ${plan.highlighted ? 'border-primary shadow-lg ring-2 ring-primary/20' : ''}`}
+                    className={`p-5 flex flex-col text-left ${plan.highlighted ? 'border-primary shadow-lg ring-2 ring-primary/20' : ''}`}
                     data-testid={`card-hero-plan-${plan.name.toLowerCase().replace(" ", "-")}`}
                   >
                     {plan.highlighted && (
-                      <Badge className="mb-3 self-start">Enterprise Partnership</Badge>
+                      <Badge className="mb-3 self-start">Best Value</Badge>
                     )}
                     <div className="flex items-center gap-3 mb-2">
                       <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
@@ -323,9 +333,7 @@ export default function LandingPage() {
                       asChild
                       data-testid={`button-hero-select-${plan.name.toLowerCase().replace(" ", "-")}`}
                     >
-                      <a href={plan.name === "Strategic Alliance" ? "mailto:sales@prescientlabs.ai" : "/api/login"}>
-                        {plan.name === "Strategic Alliance" ? "Contact Sales" : "Start Free Pilot"}
-                      </a>
+                      <a href="/api/login">Start Free Trial</a>
                     </Button>
                   </Card>
                 ))}
