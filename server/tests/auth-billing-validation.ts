@@ -148,7 +148,7 @@ async function runBillingTests(accessToken: string) {
   // 1. Plans list (public)
   const plansResp = await get("/api/billing/plans", accessToken);
   assert("Plans list returns 200", plansResp.status === 200, `status=${plansResp.status}`);
-  assert("Plans list has 5 plans", plansResp.body.plans?.length === 5, `count=${plansResp.body.plans?.length}`);
+  assert("Plans list has 6 plans", plansResp.body.plans?.length === 6, `count=${plansResp.body.plans?.length}`);
 
   const planIds = (plansResp.body.plans ?? []).map((p: any) => p.id);
   assert("Has monthly_starter plan", planIds.includes("monthly_starter"));

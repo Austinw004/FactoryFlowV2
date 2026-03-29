@@ -18,7 +18,8 @@ import {
   Plus, CheckCircle, XCircle, Settings, TrendingUp, 
   AlertCircle, Clock, Zap, Link as LinkIcon, PlayCircle, Loader2,
   Package, BarChart3, Activity, Calendar, ArrowRight, ArrowLeft,
-  Sparkles, ShieldCheck, Info
+  Sparkles, ShieldCheck, Info, DollarSign, ShoppingCart, AlertTriangle,
+  FileText, Shield
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -42,8 +43,10 @@ interface ERPStatus {
 export default function AutomatedPO() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState("rules");
+  const [activeTab, setActiveTab] = useState("pending");
   const [showRuleDialog, setShowRuleDialog] = useState(false);
+  const [confirmExec, setConfirmExec] = useState<{ id: string; name: string; supplier: string; amount: number; paymentMethod: "card" | "ach" | "invoice" } | null>(null);
+  const [executingId, setExecutingId] = useState<string | null>(null);
   const [showPlaybookDialog, setShowPlaybookDialog] = useState(false);
   const [showErpDialog, setShowErpDialog] = useState(false);
   const [ruleWizardStep, setRuleWizardStep] = useState(1);
@@ -198,6 +201,56 @@ export default function AutomatedPO() {
   // Fetch ERP Status
   const { data: erpStatus } = useQuery<ERPStatus>({
     queryKey: ["/api/erp/status"],
+  });
+
+  // Fetch pending procurement recommendations
+  const { data: pendingRecs = [], isLoading: recsLoading } = useQuery<any[]>({
+    queryKey: ["/api/procurement/recommendations/pending"],
+    refetchInterval: 30000,
+  });
+
+  // Fetch purchase intents
+  const { data: intentsData } = useQuery<{ intents: any[] }>({
+    queryKey: ["/api/procurement/intents"],
+    refetchInterval: 30000,
+  });
+  const purchaseIntents = intentsData?.intents ?? [];
+
+  // Approve recommendation only
+  const approveMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("POST", `/api/procurement/recommendations/${id}/approve`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/procurement/recommendations/pending"] });
+      toast({ title: "Recommendation approved", description: "Queued for manual PO processing." });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Approval failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  // Execute recommendation (Stripe or PO fallback)
+  const executeMutation = useMutation({
+    mutationFn: async ({ id, paymentMethod }: { id: string; paymentMethod: "card" | "ach" | "invoice" }) => {
+      return await apiRequest("POST", `/api/procurement/recommendations/${id}/execute`, { paymentMethod });
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/procurement/recommendations/pending"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/procurement/intents"] });
+      setConfirmExec(null);
+      setExecutingId(null);
+      if (data.method === "po_fallback") {
+        toast({ title: "Purchase Order created", description: `PO ${data.poNumber} generated for net-30 payment.` });
+      } else {
+        toast({ title: "Payment executed", description: `Transaction confirmed. Amount: $${(data.amountCharged / 100).toLocaleString()}` });
+      }
+    },
+    onError: (err: Error) => {
+      setExecutingId(null);
+      setConfirmExec(null);
+      toast({ title: "Execution failed", description: err.message, variant: "destructive" });
+    },
   });
 
   // Toggle PO Rule
@@ -403,6 +456,17 @@ export default function AutomatedPO() {
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList data-testid="tabs-main-navigation">
+          <TabsTrigger value="pending" data-testid="tab-pending">
+            <span className="flex items-center gap-1.5">
+              <ShoppingCart className="h-3.5 w-3.5" />
+              Pending Actions
+              {pendingRecs.length > 0 && (
+                <Badge className="ml-1 h-5 min-w-5 rounded-full px-1.5 text-xs" data-testid="badge-pending-count">
+                  {pendingRecs.length}
+                </Badge>
+              )}
+            </span>
+          </TabsTrigger>
           <TabsTrigger value="rules" data-testid="tab-rules">
             PO Rules ({rules.length})
           </TabsTrigger>
@@ -413,6 +477,207 @@ export default function AutomatedPO() {
             ERP Integration
           </TabsTrigger>
         </TabsList>
+
+        {/* Pending Actions Tab */}
+        <TabsContent value="pending" className="space-y-4">
+          {/* Summary row */}
+          <div className="grid grid-cols-3 gap-4">
+            <Card>
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-md bg-muted p-2"><ShoppingCart className="h-4 w-4 text-muted-foreground" /></div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Pending</p>
+                    <p className="text-2xl font-semibold" data-testid="text-pending-count">{pendingRecs.length}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-md bg-muted p-2"><CheckCircle className="h-4 w-4 text-muted-foreground" /></div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Executed (total)</p>
+                    <p className="text-2xl font-semibold" data-testid="text-executed-count">
+                      {purchaseIntents.filter((i: any) => i.status === "completed").length}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-md bg-muted p-2"><DollarSign className="h-4 w-4 text-muted-foreground" /></div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Committed</p>
+                    <p className="text-2xl font-semibold" data-testid="text-committed-total">
+                      ${purchaseIntents
+                        .filter((i: any) => i.status === "completed")
+                        .reduce((sum: number, i: any) => sum + (i.amountCents ?? 0), 0)
+                        .toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Recommendations list */}
+          {recsLoading ? (
+            <div className="flex items-center justify-center py-12 text-muted-foreground" data-testid="loading-pending">
+              <Loader2 className="h-5 w-5 animate-spin mr-2" />
+              Loading recommendations…
+            </div>
+          ) : pendingRecs.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 flex flex-col items-center gap-3 text-muted-foreground">
+                <CheckCircle className="h-8 w-8" />
+                <p className="font-medium">No pending actions</p>
+                <p className="text-sm text-center max-w-xs">
+                  All recommendations have been actioned. New recommendations from the AI engine will appear here automatically.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {pendingRecs.map((rec: any) => (
+                <Card key={rec.id} data-testid={`card-recommendation-${rec.id}`}>
+                  <CardContent className="pt-4 pb-4">
+                    <div className="flex items-start justify-between gap-4 flex-wrap">
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-sm" data-testid={`text-rec-material-${rec.id}`}>
+                            {rec.materialName ?? rec.materialId}
+                          </span>
+                          <Badge variant="secondary" className="text-xs">
+                            {rec.recommendationType?.replace(/_/g, " ")}
+                          </Badge>
+                          {rec.trustScore != null && (
+                            <Badge
+                              variant={rec.trustScore >= 0.7 ? "default" : "secondary"}
+                              className="text-xs"
+                              data-testid={`badge-trust-${rec.id}`}
+                            >
+                              <Shield className="h-3 w-3 mr-1" />
+                              Trust {Math.round(rec.trustScore * 100)}%
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+                          <span data-testid={`text-rec-supplier-${rec.id}`}>
+                            Supplier: <span className="text-foreground">{rec.supplierName ?? rec.supplierId ?? "—"}</span>
+                          </span>
+                          <span data-testid={`text-rec-qty-${rec.id}`}>
+                            Qty: <span className="text-foreground">{rec.recommendedQuantity?.toLocaleString()} {rec.unit ?? ""}</span>
+                          </span>
+                          <span data-testid={`text-rec-price-${rec.id}`}>
+                            Unit price: <span className="text-foreground">${Number(rec.unitPrice ?? 0).toFixed(2)}</span>
+                          </span>
+                          <span className="font-medium text-foreground" data-testid={`text-rec-total-${rec.id}`}>
+                            Total: ${((rec.recommendedQuantity ?? 0) * Number(rec.unitPrice ?? 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                        {rec.rationale && (
+                          <p className="text-xs text-muted-foreground line-clamp-2" data-testid={`text-rec-rationale-${rec.id}`}>{rec.rationale}</p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => approveMutation.mutate(rec.id)}
+                              disabled={approveMutation.isPending && approveMutation.variables === rec.id}
+                              data-testid={`button-approve-${rec.id}`}
+                            >
+                              {approveMutation.isPending && approveMutation.variables === rec.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <CheckCircle className="h-3.5 w-3.5" />
+                              )}
+                              <span className="ml-1.5">Approve</span>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Approve for manual PO (no payment)</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              onClick={() => setConfirmExec({
+                                id: rec.id,
+                                name: rec.materialName ?? rec.materialId,
+                                supplier: rec.supplierName ?? rec.supplierId ?? "Unknown",
+                                amount: (rec.recommendedQuantity ?? 0) * Number(rec.unitPrice ?? 0),
+                                paymentMethod: "card",
+                              })}
+                              disabled={executeMutation.isPending && executingId === rec.id}
+                              data-testid={`button-execute-${rec.id}`}
+                            >
+                              {executeMutation.isPending && executingId === rec.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Zap className="h-3.5 w-3.5" />
+                              )}
+                              <span className="ml-1.5">Execute</span>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Approve + execute payment via Stripe or PO</TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* Recent Purchase Intents */}
+          {purchaseIntents.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Recent Transactions</h3>
+              {purchaseIntents.slice(0, 5).map((intent: any) => (
+                <Card key={intent.id} data-testid={`card-intent-${intent.id}`}>
+                  <CardContent className="pt-3 pb-3">
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <div className="flex items-center gap-3">
+                        {intent.executionMethod === "po_fallback" ? (
+                          <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        ) : (
+                          <DollarSign className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        )}
+                        <div>
+                          <p className="text-sm font-medium" data-testid={`text-intent-ref-${intent.id}`}>
+                            {intent.poNumber ?? intent.stripePaymentIntentId ?? intent.id.slice(0, 8)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {intent.executionMethod === "po_fallback" ? "Purchase Order (net-30)" : "Stripe payment"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium" data-testid={`text-intent-amount-${intent.id}`}>
+                          ${((intent.amountCents ?? 0) / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </span>
+                        <Badge
+                          variant={intent.status === "completed" ? "default" : intent.status === "failed" ? "destructive" : "secondary"}
+                          data-testid={`badge-intent-status-${intent.id}`}
+                        >
+                          {intent.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
 
         {/* PO Rules Tab */}
         <TabsContent value="rules" className="space-y-4">
@@ -854,6 +1119,77 @@ export default function AutomatedPO() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Execute Confirmation Dialog */}
+      <Dialog open={!!confirmExec} onOpenChange={(open) => { if (!open) setConfirmExec(null); }}>
+        <DialogContent data-testid="dialog-confirm-execute">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              Confirm Purchase Execution
+            </DialogTitle>
+            <DialogDescription>
+              This will execute a real payment or create a binding Purchase Order. Review carefully before confirming.
+            </DialogDescription>
+          </DialogHeader>
+          {confirmExec && (
+            <div className="space-y-4">
+              <div className="rounded-md border p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Material</span>
+                  <span className="font-medium" data-testid="text-confirm-material">{confirmExec.name}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Supplier</span>
+                  <span className="font-medium" data-testid="text-confirm-supplier">{confirmExec.supplier}</span>
+                </div>
+                <Separator />
+                <div className="flex justify-between text-sm font-medium">
+                  <span>Total Amount</span>
+                  <span data-testid="text-confirm-amount">${confirmExec.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Payment Method</Label>
+                <Select
+                  value={confirmExec.paymentMethod}
+                  onValueChange={(v) => setConfirmExec(prev => prev ? { ...prev, paymentMethod: v as "card" | "ach" | "invoice" } : null)}
+                >
+                  <SelectTrigger data-testid="select-payment-method">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="card">Card (Stripe)</SelectItem>
+                    <SelectItem value="ach">ACH (Stripe)</SelectItem>
+                    <SelectItem value="invoice">Invoice / Net-30 PO</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  If no billing profile or card is on file, execution will automatically fall back to a Purchase Order.
+                </p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmExec(null)} data-testid="button-cancel-execute">Cancel</Button>
+            <Button
+              onClick={() => {
+                if (!confirmExec) return;
+                setExecutingId(confirmExec.id);
+                executeMutation.mutate({ id: confirmExec.id, paymentMethod: confirmExec.paymentMethod });
+              }}
+              disabled={executeMutation.isPending}
+              data-testid="button-confirm-execute"
+            >
+              {executeMutation.isPending ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Executing…</>
+              ) : (
+                <><Zap className="h-4 w-4 mr-2" />Execute Purchase</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Create Rule Dialog - Multi-step Wizard */}
       <Dialog open={showRuleDialog} onOpenChange={(open) => { setShowRuleDialog(open); if (!open) resetRuleForm(); }}>

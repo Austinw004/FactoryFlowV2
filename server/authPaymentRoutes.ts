@@ -52,6 +52,12 @@ import {
   computeMonthlyBill, getPerformanceSummary, listPerformanceBillingRecords,
   PERFORMANCE_BASE_FEE, PERFORMANCE_FEE_DEFAULT,
 } from "./lib/performanceBillingService";
+import {
+  approveAndExecuteRecommendation, approveRecommendationOnly,
+  getPendingRecommendations, getPurchaseIntents,
+  getBillingProfile, upsertBillingProfile,
+  validateRecommendationForExecution,
+} from "./lib/procurementExecutionService";
 import { getUncachableStripeClient } from "./stripeClient";
 import { db } from "./db";
 import {
@@ -504,6 +510,221 @@ export function registerAuthPaymentRoutes(app: Express): void {
       requiresApproval: result.requiresApproval,
       anomalyFlagged: result.anomalyFlagged,
     });
+  }));
+
+  // ─── Billing Profile Routes ────────────────────────────────────────────────────
+
+  /**
+   * GET /api/billing/profile
+   * Returns the company billing profile (redacted — no raw payment tokens).
+   */
+  app.get("/api/billing/profile", requireJwt, handle(async (req, res) => {
+    const authUser = getAuthUser(req);
+    if (!authUser) { apiError(res, 401, "UNAUTHORIZED", "Authentication required."); return; }
+    if (!authUser.companyId) { apiError(res, 400, "NO_COMPANY", "Company required."); return; }
+
+    const profile = await getBillingProfile(authUser.companyId);
+    if (!profile) { res.json({ profile: null }); return; }
+
+    // Redact sensitive fields — never return raw payment method IDs
+    res.json({
+      profile: {
+        id: profile.id,
+        companyId: profile.companyId,
+        billingEmail: profile.billingEmail,
+        companyName: profile.companyName,
+        address: profile.address,
+        taxId: profile.taxId ? "***" + profile.taxId.slice(-4) : null,
+        paymentMethodLast4: profile.paymentMethodLast4,
+        paymentMethodBrand: profile.paymentMethodBrand,
+        preferredPaymentMethod: profile.preferredPaymentMethod,
+        hasStripeCustomer: !!profile.stripeCustomerId,
+        hasPaymentMethod: !!profile.defaultPaymentMethodId,
+        createdAt: profile.createdAt,
+        updatedAt: profile.updatedAt,
+      },
+    });
+  }));
+
+  /**
+   * POST /api/billing/setup
+   * Create or update the billing profile for a company.
+   * Optionally attaches a Stripe SetupIntent payment method.
+   */
+  app.post("/api/billing/setup", requireJwt, handle(async (req, res) => {
+    const authUser = getAuthUser(req);
+    if (!authUser) { apiError(res, 401, "UNAUTHORIZED", "Authentication required."); return; }
+    if (!authUser.companyId) { apiError(res, 400, "NO_COMPANY", "Company required."); return; }
+
+    const {
+      billingEmail, companyName, address, taxId,
+      paymentMethodId, preferredPaymentMethod,
+    } = z.object({
+      billingEmail:            z.string().email(),
+      companyName:             z.string().min(1).max(200),
+      address:                 z.object({
+        street:  z.string().optional(),
+        city:    z.string().optional(),
+        state:   z.string().optional(),
+        zip:     z.string().optional(),
+        country: z.string().optional(),
+      }).optional(),
+      taxId:                   z.string().max(50).optional(),
+      paymentMethodId:         z.string().optional(), // Stripe PaymentMethod ID from Elements
+      preferredPaymentMethod:  z.enum(["card", "ach", "invoice"]).optional(),
+    }).parse(req.body);
+
+    // If a payment method is provided, attach to Stripe customer
+    let stripeCustomerId: string | undefined;
+    let resolvedPmId: string | undefined;
+    let last4: string | undefined;
+    let brand: string | undefined;
+
+    if (paymentMethodId) {
+      const stripe = await getUncachableStripeClient();
+      const user = authUser;
+
+      // Create or retrieve Stripe customer
+      const existing = await getBillingProfile(authUser.companyId);
+      if (existing?.stripeCustomerId) {
+        stripeCustomerId = existing.stripeCustomerId;
+      } else {
+        const customer = await stripe.customers.create({
+          email: billingEmail,
+          name: companyName,
+          metadata: { companyId: authUser.companyId, userId: authUser.id },
+        });
+        stripeCustomerId = customer.id;
+      }
+
+      // Attach payment method
+      await stripe.paymentMethods.attach(paymentMethodId, { customer: stripeCustomerId });
+      await stripe.customers.update(stripeCustomerId, {
+        invoice_settings: { default_payment_method: paymentMethodId },
+      });
+
+      const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
+      resolvedPmId = pm.id;
+      last4 = pm.card?.last4;
+      brand = pm.card?.brand;
+    }
+
+    const profile = await upsertBillingProfile({
+      companyId: authUser.companyId,
+      billingEmail,
+      companyName,
+      address: address as Record<string, string> | undefined,
+      taxId,
+      stripeCustomerId,
+      defaultPaymentMethodId: resolvedPmId,
+      paymentMethodLast4: last4,
+      paymentMethodBrand: brand,
+      preferredPaymentMethod,
+    });
+
+    res.json({
+      profile: {
+        id: profile.id,
+        billingEmail: profile.billingEmail,
+        companyName: profile.companyName,
+        paymentMethodLast4: profile.paymentMethodLast4,
+        paymentMethodBrand: profile.paymentMethodBrand,
+        hasPaymentMethod: !!profile.defaultPaymentMethodId,
+        preferredPaymentMethod: profile.preferredPaymentMethod,
+      },
+    });
+  }));
+
+  // ─── Procurement Execution Routes ─────────────────────────────────────────────
+
+  /**
+   * GET /api/procurement/recommendations/pending
+   * Lists pending purchase recommendations awaiting user action.
+   */
+  app.get("/api/procurement/recommendations/pending", requireJwt, handle(async (req, res) => {
+    const authUser = getAuthUser(req);
+    if (!authUser) { apiError(res, 401, "UNAUTHORIZED", "Authentication required."); return; }
+    if (!authUser.companyId) { apiError(res, 400, "NO_COMPANY", "Company required."); return; }
+
+    const recommendations = await getPendingRecommendations(authUser.companyId);
+    res.json({ recommendations });
+  }));
+
+  /**
+   * POST /api/procurement/recommendations/:id/validate
+   * Pre-flight validation — check if a recommendation is ready to execute.
+   */
+  app.post("/api/procurement/recommendations/:id/validate", requireJwt, handle(async (req, res) => {
+    const authUser = getAuthUser(req);
+    if (!authUser) { apiError(res, 401, "UNAUTHORIZED", "Authentication required."); return; }
+    if (!authUser.companyId) { apiError(res, 400, "NO_COMPANY", "Company required."); return; }
+
+    const result = await validateRecommendationForExecution(req.params.id, authUser.companyId);
+    res.json(result);
+  }));
+
+  /**
+   * POST /api/procurement/recommendations/:id/approve
+   * Approve a recommendation (status → user_approved) without executing payment.
+   */
+  app.post("/api/procurement/recommendations/:id/approve", requireJwt, handle(async (req, res) => {
+    const authUser = getAuthUser(req);
+    if (!authUser) { apiError(res, 401, "UNAUTHORIZED", "Authentication required."); return; }
+    if (!authUser.companyId) { apiError(res, 400, "NO_COMPANY", "Company required."); return; }
+
+    const result = await approveRecommendationOnly(req.params.id, authUser.id, authUser.companyId);
+
+    if (!result.success) {
+      apiError(res, 422, "VALIDATION_FAILED", result.error ?? "Approval failed");
+      return;
+    }
+    res.json({ success: true, message: "Recommendation approved" });
+  }));
+
+  /**
+   * POST /api/procurement/recommendations/:id/execute
+   * Approve + execute a recommendation (Stripe payment or PO fallback).
+   * Enforces: trustScore >= 0.6, fraud check, billing profile, full audit.
+   */
+  app.post("/api/procurement/recommendations/:id/execute", requireJwt, handle(async (req, res) => {
+    const authUser = getAuthUser(req);
+    if (!authUser) { apiError(res, 401, "UNAUTHORIZED", "Authentication required."); return; }
+    if (!authUser.companyId) { apiError(res, 400, "NO_COMPANY", "Company required."); return; }
+
+    const { paymentMethod } = z.object({
+      paymentMethod: z.enum(["card", "ach", "invoice"]).optional().default("card"),
+    }).parse(req.body);
+
+    const result = await approveAndExecuteRecommendation(
+      req.params.id,
+      authUser.id,
+      authUser.companyId,
+      paymentMethod as "card" | "ach" | "invoice",
+    );
+
+    if (!result.success && result.blocked) {
+      apiError(res, 403, "EXECUTION_BLOCKED", result.error ?? "Execution blocked");
+      return;
+    }
+    if (!result.success) {
+      apiError(res, 422, "EXECUTION_FAILED", result.error ?? "Execution failed");
+      return;
+    }
+
+    res.status(201).json(result);
+  }));
+
+  /**
+   * GET /api/procurement/intents
+   * Lists purchase intents for the authenticated company.
+   */
+  app.get("/api/procurement/intents", requireJwt, handle(async (req, res) => {
+    const authUser = getAuthUser(req);
+    if (!authUser) { apiError(res, 401, "UNAUTHORIZED", "Authentication required."); return; }
+    if (!authUser.companyId) { apiError(res, 400, "NO_COMPANY", "Company required."); return; }
+
+    const intents = await getPurchaseIntents(authUser.companyId);
+    res.json({ intents });
   }));
 
   /**

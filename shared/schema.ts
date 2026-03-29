@@ -9516,3 +9516,66 @@ export const performanceBilling = pgTable(
 export const insertPerformanceBillingSchema = createInsertSchema(performanceBilling).omit({ id: true, createdAt: true, updatedAt: true });
 export type PerformanceBilling = typeof performanceBilling.$inferSelect;
 export type InsertPerformanceBilling = z.infer<typeof insertPerformanceBillingSchema>;
+
+// ============================================================
+// Procurement Execution — Purchase Intents & Billing Profiles
+// ============================================================
+
+export const billingProfiles = pgTable(
+  "billing_profiles",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    companyId: varchar("company_id").notNull().unique().references(() => companies.id, { onDelete: "cascade" }),
+    stripeCustomerId: text("stripe_customer_id"),
+    defaultPaymentMethodId: text("default_payment_method_id"),
+    paymentMethodLast4: text("payment_method_last4"),
+    paymentMethodBrand: text("payment_method_brand"),
+    billingEmail: text("billing_email").notNull(),
+    companyName: text("company_name").notNull(),
+    address: jsonb("address"),                           // { street, city, state, zip, country }
+    taxId: text("tax_id"),
+    preferredPaymentMethod: text("preferred_payment_method").notNull().default("card"), // card|ach|invoice
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (t) => [
+    index("billing_profiles_company_idx").on(t.companyId),
+  ],
+);
+export const insertBillingProfileSchema = createInsertSchema(billingProfiles).omit({ id: true, createdAt: true, updatedAt: true });
+export type BillingProfile = typeof billingProfiles.$inferSelect;
+export type InsertBillingProfile = z.infer<typeof insertBillingProfileSchema>;
+
+export const purchaseIntents = pgTable(
+  "purchase_intents",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    supplierId: varchar("supplier_id").references(() => suppliers.id, { onDelete: "set null" }),
+    materialId: varchar("material_id").references(() => materials.id, { onDelete: "set null" }),
+    recommendationId: varchar("recommendation_id").references(() => autoPurchaseRecommendations.id, { onDelete: "set null" }),
+    executedByUserId: varchar("executed_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    quantity: real("quantity").notNull(),
+    unitPrice: real("unit_price").notNull(),
+    totalAmount: real("total_amount").notNull(),
+    status: text("status").notNull().default("draft"),   // draft|pending_approval|approved|executing|completed|failed
+    paymentMethod: text("payment_method").notNull().default("card"), // card|ach|invoice
+    trustScore: real("trust_score"),
+    fraudScore: real("fraud_score"),
+    evidenceBundle: jsonb("evidence_bundle"),             // { recommendationId, trustScore, unitCostSource, demandBasis, decisionTraceId }
+    stripePaymentIntentId: text("stripe_payment_intent_id"),
+    purchaseOrderId: varchar("purchase_order_id").references(() => purchaseOrders.id, { onDelete: "set null" }),
+    failureReason: text("failure_reason"),
+    executedAt: timestamp("executed_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (t) => [
+    index("purchase_intents_company_idx").on(t.companyId),
+    index("purchase_intents_status_idx").on(t.status),
+    index("purchase_intents_recommendation_idx").on(t.recommendationId),
+  ],
+);
+export const insertPurchaseIntentSchema = createInsertSchema(purchaseIntents).omit({ id: true, createdAt: true, updatedAt: true });
+export type PurchaseIntent = typeof purchaseIntents.$inferSelect;
+export type InsertPurchaseIntent = z.infer<typeof insertPurchaseIntentSchema>;
