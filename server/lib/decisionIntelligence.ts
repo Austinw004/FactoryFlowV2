@@ -15,6 +15,7 @@ import {
 } from "@shared/schema";
 import { classifyRegimeFromFDR } from "./regimeConstants";
 import { DemandForecaster } from "./forecasting";
+import { enforceTrust } from "./trustGuard";
 
 const POLICY_VERSION = "2.0.0";
 
@@ -59,17 +60,18 @@ export function computeTrustScore(inputs: TrustScoreInputs): number {
 
 /**
  * Trust guard: sets automationBlocked/requiresApproval flags and throws for
- * critically low trust scores. Call AFTER building a system output object.
+ * critically low trust scores. Delegates threshold logic to enforceTrust()
+ * so both APIs stay in sync. Call AFTER building a system output object.
  */
 export function applyTrustGuard(output: { trustScore: number; automationBlocked: boolean; requiresApproval: boolean }): void {
-  if (output.trustScore < 0.6) {
+  // enforceTrust throws LOW_TRUST_BLOCKED_DECISION for score < 0.4
+  // and returns flags for score in [0.4, 0.6)
+  const result = enforceTrust(output.trustScore);
+
+  if (result.automationBlocked) {
     output.automationBlocked = true;
-    output.requiresApproval = true;
+    output.requiresApproval  = true;
     console.warn(`[TrustGuard] AUTOMATION_BLOCKED trustScore=${output.trustScore.toFixed(3)} < 0.6`);
-  }
-  if (output.trustScore < 0.4) {
-    console.error(`[TrustGuard] LOW_TRUST_BLOCKED_DECISION trustScore=${output.trustScore.toFixed(3)} < 0.4 — refusing to produce decision`);
-    throw new Error(`LOW_TRUST_BLOCKED_DECISION: trustScore=${output.trustScore.toFixed(3)}`);
   }
 }
 
