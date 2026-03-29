@@ -1,7 +1,7 @@
 {
   "harnessMeta": {
     "version": "2.0.0",
-    "generatedAt": "2026-03-29T01:17:16.783Z",
+    "generatedAt": "2026-03-29T01:22:25.120Z",
     "totalTests": 160,
     "totalPass": 160,
     "totalFail": 0,
@@ -104,7 +104,7 @@
       "pass": true,
       "proofType": "runtime",
       "evidence": {},
-      "durationMs": 3
+      "durationMs": 2
     },
     {
       "section": "S1",
@@ -149,9 +149,9 @@
       "proofType": "runtime",
       "evidence": {
         "status": 200,
-        "ms": 46
+        "ms": 35
       },
-      "durationMs": 46
+      "durationMs": 35
     },
     {
       "section": "S1",
@@ -161,9 +161,9 @@
       "proofType": "runtime",
       "evidence": {
         "status": 200,
-        "ms": 9
+        "ms": 7
       },
-      "durationMs": 9
+      "durationMs": 7
     },
     {
       "section": "S1",
@@ -187,7 +187,7 @@
         "ownQuery": 1,
         "crossQuery": 0
       },
-      "durationMs": 6
+      "durationMs": 5
     },
     {
       "section": "S2",
@@ -199,7 +199,7 @@
         "ownQuery": 1,
         "crossQuery": 0
       },
-      "durationMs": 4
+      "durationMs": 5
     },
     {
       "section": "S2",
@@ -211,7 +211,7 @@
         "ownQuery": 2,
         "crossQuery": 0
       },
-      "durationMs": 5
+      "durationMs": 4
     },
     {
       "section": "S2",
@@ -223,7 +223,7 @@
         "ownQuery": 1,
         "crossQuery": 0
       },
-      "durationMs": 10
+      "durationMs": 18
     },
     {
       "section": "S2",
@@ -258,7 +258,7 @@
       "evidence": {
         "status": 401
       },
-      "durationMs": 2
+      "durationMs": 3
     },
     {
       "section": "S2",
@@ -269,7 +269,7 @@
       "evidence": {
         "status": 401
       },
-      "durationMs": 22
+      "durationMs": 17
     },
     {
       "section": "S3",
@@ -303,7 +303,7 @@
         "allowed": false,
         "reason": "Draft status is 'draft', must be 'approved' to execute"
       },
-      "durationMs": 8
+      "durationMs": 6
     },
     {
       "section": "S3",
@@ -326,7 +326,7 @@
         "allowed": true,
         "status": "approved"
       },
-      "durationMs": 8
+      "durationMs": 6
     },
     {
       "section": "S3",
@@ -338,7 +338,7 @@
         "allowed": false,
         "reason": "Draft status is 'rejected', must be 'approved' to execute"
       },
-      "durationMs": 5
+      "durationMs": 6
     },
     {
       "section": "S3",
@@ -360,7 +360,7 @@
       "evidence": {
         "dailySpendTotal": 0
       },
-      "durationMs": 7
+      "durationMs": 6
     },
     {
       "section": "S4",
@@ -374,7 +374,7 @@
         "allowed": 33,
         "blocked": 27
       },
-      "durationMs": 158
+      "durationMs": 189
     },
     {
       "section": "S4",
@@ -408,7 +408,7 @@
       "pass": true,
       "proofType": "runtime",
       "evidence": {
-        "stateId": "4d580f5e-e05a-4287-b477-b5c4932b441d"
+        "stateId": "841a223f-cb8c-4fb5-b1cb-08e42b841814"
       },
       "durationMs": 0
     },
@@ -419,7 +419,7 @@
       "pass": true,
       "proofType": "deterministic",
       "evidence": {
-        "id1": "241106798aceffe378ac0b8d692912cb",
+        "id1": "f4046dd81a59ee2a259453913b05bbee",
         "equal": true,
         "length": 32
       },
@@ -432,8 +432,8 @@
       "pass": true,
       "proofType": "deterministic",
       "evidence": {
-        "id1": "241106798aceffe378ac0b8d692912cb",
-        "idAlt": "de21fac2db46958dbdc34aaea9998fc2",
+        "id1": "f4046dd81a59ee2a259453913b05bbee",
+        "idAlt": "465cab95e9ecf9cf96de1c4bae82f4fb",
         "collision": false
       },
       "durationMs": 0
@@ -447,7 +447,7 @@
       "evidence": {
         "count": 1
       },
-      "durationMs": 78
+      "durationMs": 7
     },
     {
       "section": "S5",
@@ -458,7 +458,7 @@
       "evidence": {
         "duplicateBlocked": true
       },
-      "durationMs": 3
+      "durationMs": 2
     },
     {
       "section": "S5",
@@ -469,7 +469,7 @@
       "evidence": {
         "count": 1
       },
-      "durationMs": 7
+      "durationMs": 5
     },
     {
       "section": "S5",
@@ -480,7 +480,7 @@
       "evidence": {
         "rows": 1
       },
-      "durationMs": 35
+      "durationMs": 187
     },
     {
       "section": "S6",
@@ -529,7 +529,7 @@
           0
         ]
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S6",
@@ -622,7 +622,7 @@
         "qty": 720,
         "moq": 10
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S7",
@@ -679,7 +679,7 @@
         "r1": 735,
         "r2": 735
       },
-      "durationMs": 23
+      "durationMs": 22
     },
     {
       "section": "S8",
@@ -690,7 +690,7 @@
       "evidence": {
         "crashed": false
       },
-      "durationMs": 5
+      "durationMs": 4
     },
     {
       "section": "S8",
@@ -785,7 +785,7 @@
       "pass": true,
       "proofType": "deterministic",
       "evidence": {
-        "hash": "dc90fdabc18a316c"
+        "hash": "b7beca1ca4ba0228"
       },
       "durationMs": 3
     },
@@ -799,7 +799,7 @@
         "score": 0.86,
         "entities": 5
       },
-      "durationMs": 33
+      "durationMs": 35
     },
     {
       "section": "S9",
@@ -822,7 +822,7 @@
         "scoreA": 0.86,
         "scoreB": 0.72
       },
-      "durationMs": 33
+      "durationMs": 30
     },
     {
       "section": "S9",
@@ -867,7 +867,7 @@
         "scoreEmpty": 0,
         "scoreA": 0.86
       },
-      "durationMs": 10
+      "durationMs": 9
     },
     {
       "section": "S10",
@@ -890,7 +890,7 @@
       "evidence": {
         "found": 1
       },
-      "durationMs": 16
+      "durationMs": 8
     },
     {
       "section": "S10",
@@ -901,7 +901,7 @@
       "evidence": {
         "provenanceVersion": "v5.0.0"
       },
-      "durationMs": 7
+      "durationMs": 6
     },
     {
       "section": "S10",
@@ -936,18 +936,18 @@
         "ownRows": 1,
         "crossRows": 0
       },
-      "durationMs": 3
+      "durationMs": 4
     },
     {
       "section": "S10",
       "testId": "10.7",
-      "description": "Stress test report has configHash (e49eed57a5f34f81...)",
+      "description": "Stress test report has configHash (636da94b1f1d47f7...)",
       "pass": true,
       "proofType": "deterministic",
       "evidence": {
-        "configHash": "e49eed57a5f34f81"
+        "configHash": "636da94b1f1d47f7"
       },
-      "durationMs": 5
+      "durationMs": 4
     },
     {
       "section": "S11",
@@ -957,9 +957,9 @@
       "proofType": "runtime",
       "evidence": {
         "status": 200,
-        "ms": 7
+        "ms": 6
       },
-      "durationMs": 7
+      "durationMs": 6
     },
     {
       "section": "S11",
@@ -969,9 +969,9 @@
       "proofType": "runtime",
       "evidence": {
         "status": 200,
-        "ms": 7
+        "ms": 6
       },
-      "durationMs": 7
+      "durationMs": 6
     },
     {
       "section": "S11",
@@ -1017,9 +1017,9 @@
       "proofType": "runtime",
       "evidence": {
         "status": 401,
-        "ms": 2
+        "ms": 1
       },
-      "durationMs": 2
+      "durationMs": 1
     },
     {
       "section": "S11",
@@ -1029,7 +1029,7 @@
       "proofType": "runtime",
       "evidence": {
         "status": 401,
-        "ms": 2
+        "ms": 1
       },
       "durationMs": 2
     },
@@ -1041,9 +1041,9 @@
       "proofType": "runtime",
       "evidence": {
         "status": 401,
-        "ms": 2
+        "ms": 1
       },
-      "durationMs": 2
+      "durationMs": 1
     },
     {
       "section": "S11",
@@ -1053,9 +1053,9 @@
       "proofType": "runtime",
       "evidence": {
         "status": 401,
-        "ms": 2
+        "ms": 1
       },
-      "durationMs": 2
+      "durationMs": 1
     },
     {
       "section": "S11",
@@ -1077,9 +1077,9 @@
       "proofType": "runtime",
       "evidence": {
         "status": 401,
-        "ms": 1
+        "ms": 2
       },
-      "durationMs": 1
+      "durationMs": 2
     },
     {
       "section": "S11",
@@ -1089,38 +1089,14 @@
       "proofType": "runtime",
       "evidence": {
         "status": 401,
-        "ms": 2
-      },
-      "durationMs": 3
-    },
-    {
-      "section": "S11",
-      "testId": "11.13",
-      "description": "GET /api/stress-test/reports → 401 (expected: 401|403|302)",
-      "pass": true,
-      "proofType": "runtime",
-      "evidence": {
-        "status": 401,
         "ms": 1
       },
       "durationMs": 1
     },
     {
       "section": "S11",
-      "testId": "11.14",
-      "description": "POST /api/adaptive-forecast/analyze → 401 (expected: 401|403|302|400)",
-      "pass": true,
-      "proofType": "runtime",
-      "evidence": {
-        "status": 401,
-        "ms": 3
-      },
-      "durationMs": 3
-    },
-    {
-      "section": "S11",
-      "testId": "11.15",
-      "description": "POST /api/stress-test/run → 401 (expected: 401|403|302|400)",
+      "testId": "11.13",
+      "description": "GET /api/stress-test/reports → 401 (expected: 401|403|302)",
       "pass": true,
       "proofType": "runtime",
       "evidence": {
@@ -1131,18 +1107,42 @@
     },
     {
       "section": "S11",
+      "testId": "11.14",
+      "description": "POST /api/adaptive-forecast/analyze → 401 (expected: 401|403|302|400)",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "status": 401,
+        "ms": 2
+      },
+      "durationMs": 2
+    },
+    {
+      "section": "S11",
+      "testId": "11.15",
+      "description": "POST /api/stress-test/run → 401 (expected: 401|403|302|400)",
+      "pass": true,
+      "proofType": "runtime",
+      "evidence": {
+        "status": 401,
+        "ms": 1
+      },
+      "durationMs": 1
+    },
+    {
+      "section": "S11",
       "testId": "11.16",
-      "description": "Health endpoints all respond within 2000ms (4ms, 9ms, 7ms)",
+      "description": "Health endpoints all respond within 2000ms (3ms, 6ms, 5ms)",
       "pass": true,
       "proofType": "runtime",
       "evidence": {
         "timings": [
-          4,
-          9,
-          7
+          3,
+          6,
+          5
         ]
       },
-      "durationMs": 10
+      "durationMs": 6
     },
     {
       "section": "S11",
@@ -1165,7 +1165,7 @@
         "forecastError": 0.07558386411889605,
         "detail": "forecast=120.9 actual=130.8 error=7.6%"
       },
-      "durationMs": 4
+      "durationMs": 3
     },
     {
       "section": "S12",
@@ -1191,7 +1191,7 @@
         "hasMeasuredOutcomeRef": true,
         "hasEntityRefs": true
       },
-      "durationMs": 6
+      "durationMs": 7
     },
     {
       "section": "S12",
@@ -1227,7 +1227,7 @@
         "limit": 140000,
         "demand": 500
       },
-      "durationMs": 21
+      "durationMs": 10
     },
     {
       "section": "S12",
@@ -1240,7 +1240,7 @@
           "SIGNAL_INCONSISTENCY"
         ]
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S12",
@@ -1267,7 +1267,7 @@
         "optimizedSL": 0.8571428571428571,
         "deltaSlDelta": 0.09523809523809523
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S12",
@@ -1279,7 +1279,7 @@
         "policyTrustScore": 0.84875,
         "optTrustScore": 0.9375
       },
-      "durationMs": 6
+      "durationMs": 4
     },
     {
       "section": "S12",
@@ -1305,7 +1305,7 @@
         "automationBlocked": true,
         "requiresApproval": true
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S12",
@@ -1341,7 +1341,7 @@
         "driftScore": 1,
         "rawPSI": 34.18024754401441
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S13",
@@ -1356,7 +1356,7 @@
         ],
         "driftScore": 1
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S13",
@@ -1447,7 +1447,7 @@
       "evidence": {
         "threwNeg": true
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S13",
@@ -1497,7 +1497,7 @@
       "evidence": {
         "noNaN": true
       },
-      "durationMs": 2
+      "durationMs": 1
     },
     {
       "section": "S13",
@@ -1546,7 +1546,7 @@
         "isDegrading": true,
         "overallMAPE": 0.25
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S13",
@@ -1558,7 +1558,7 @@
         "early": 0.942,
         "late": 0.5660000000000001
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S13",
@@ -1572,7 +1572,7 @@
           "ACCURACY_DEGRADING"
         ]
       },
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "section": "S13",
@@ -1596,7 +1596,7 @@
         "lowCost": 63100,
         "highCost": 88340
       },
-      "durationMs": 37
+      "durationMs": 34
     },
     {
       "section": "S13",
@@ -1609,7 +1609,7 @@
         "badFields": [],
         "optimizedQty": 631
       },
-      "durationMs": 37
+      "durationMs": 35
     },
     {
       "section": "S13",
@@ -1622,7 +1622,7 @@
         "badFields": [],
         "optimizedQty": 631
       },
-      "durationMs": 37
+      "durationMs": 35
     },
     {
       "section": "S13",
@@ -1635,7 +1635,7 @@
         "badFields": [],
         "optimizedQty": 631
       },
-      "durationMs": 37
+      "durationMs": 35
     },
     {
       "section": "S13",
@@ -1693,7 +1693,7 @@
         "N": 10000,
         "errorCount": 0
       },
-      "durationMs": 242
+      "durationMs": 702
     },
     {
       "section": "S13",
@@ -1705,7 +1705,7 @@
         "N": 10000,
         "nanCount": 0
       },
-      "durationMs": 242
+      "durationMs": 702
     },
     {
       "section": "S13",
@@ -1717,19 +1717,19 @@
         "finalConfidence": 0.7,
         "finalQty": 583
       },
-      "durationMs": 242
+      "durationMs": 702
     },
     {
       "section": "S13",
       "testId": "13.8d",
-      "description": "Heap growth bounded: 6.1 MB < 50 MB over 10000 calls",
+      "description": "Heap growth bounded: -0.5 MB < 50 MB over 10000 calls",
       "pass": true,
       "proofType": "deterministic",
       "evidence": {
-        "heapGrowthMB": "6.10",
+        "heapGrowthMB": "-0.53",
         "N": 10000
       },
-      "durationMs": 242
+      "durationMs": 703
     },
     {
       "section": "S14",
@@ -1784,7 +1784,7 @@
       "evidence": {
         "password": "[REDACTED]"
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S14",
@@ -1795,7 +1795,7 @@
       "evidence": {
         "token": "[REDACTED]"
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S14",
@@ -1806,7 +1806,7 @@
       "evidence": {
         "user": "alice"
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S14",
@@ -1817,7 +1817,7 @@
       "evidence": {
         "apiKey": "[REDACTED]"
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S14",
@@ -1886,7 +1886,7 @@
         "hashLength": 64,
         "hashPrefix": "defd8627"
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S14",
@@ -1897,7 +1897,7 @@
       "evidence": {
         "match": true
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S14",
@@ -1957,22 +1957,22 @@
     {
       "section": "S14",
       "testId": "14.6a",
-      "description": "DECISION TRACE: traceId is valid UUID v4 (2dcaf9ea-a6bb-47c7-8f24-bafea97e6ed4)",
+      "description": "DECISION TRACE: traceId is valid UUID v4 (fffd3d0a-f8d5-4a40-94dc-bb0e0fb6d60d)",
       "pass": true,
       "proofType": "deterministic",
       "evidence": {
-        "traceId": "2dcaf9ea-a6bb-47c7-8f24-bafea97e6ed4"
+        "traceId": "fffd3d0a-f8d5-4a40-94dc-bb0e0fb6d60d"
       },
       "durationMs": 0
     },
     {
       "section": "S14",
       "testId": "14.6b",
-      "description": "DECISION TRACE: timestamp is valid ISO 8601 (2026-03-29T01:17:03.821Z)",
+      "description": "DECISION TRACE: timestamp is valid ISO 8601 (2026-03-29T01:22:12.681Z)",
       "pass": true,
       "proofType": "deterministic",
       "evidence": {
-        "timestamp": "2026-03-29T01:17:03.821Z"
+        "timestamp": "2026-03-29T01:22:12.681Z"
       },
       "durationMs": 0
     },
@@ -1985,7 +1985,7 @@
       "evidence": {
         "trustScore": 0.87
       },
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "section": "S14",
@@ -1994,10 +1994,10 @@
       "pass": true,
       "proofType": "deterministic",
       "evidence": {
-        "trace1": "2dcaf9ea-a6bb-47c7-8f24-bafea97e6ed4",
-        "trace2": "444bab13-e0cb-44e5-8fea-ed0b3d929565"
+        "trace1": "fffd3d0a-f8d5-4a40-94dc-bb0e0fb6d60d",
+        "trace2": "af6aba56-6e5a-42f8-95dc-43767551a809"
       },
-      "durationMs": 0
+      "durationMs": 1
     }
   ]
 }
