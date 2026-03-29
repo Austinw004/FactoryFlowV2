@@ -9,7 +9,11 @@ import { getAISystemPromptEnhancements } from "./industryPersonalization";
 import { getIndustryConfig } from "@shared/industryConfig";
 import { smartInsightsService } from "./smartInsights";
 import { classifyRegimeFromFDR, CANONICAL_REGIME_THRESHOLDS } from "./regimeConstants";
-import { COPILOT_SYSTEM_DIRECTIVE } from "./copilotDirective";
+import {
+  COPILOT_SYSTEM_DIRECTIVE,
+  ADVERSARIAL_DEFENSE_LAYER,
+  EXECUTIVE_SUMMARY_TRANSLATOR,
+} from "./copilotDirective";
 
 // Format regime names from SCREAMING_SNAKE_CASE to Title Case
 function formatRegimeName(regime: string): string {
@@ -1395,6 +1399,14 @@ INDUSTRY-SPECIFIC GUIDANCE:
 ${context.industry.aiContextHints.map((hint, i) => `${i + 1}. ${hint}`).join('\n')}` : '';
 
     return `${COPILOT_SYSTEM_DIRECTIVE}
+
+===
+
+${ADVERSARIAL_DEFENSE_LAYER}
+
+===
+
+${EXECUTIVE_SUMMARY_TRANSLATOR}
 
 ---
 

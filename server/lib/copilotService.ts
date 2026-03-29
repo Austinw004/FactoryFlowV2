@@ -75,6 +75,7 @@ export interface CopilotQueryResult {
   topNews: CopilotNewsItem[];   // top 3 relevant real news articles
   // ── Directive v1 enforcement fields ──────────────────────────────────────
   trustScore: number;           // [0,1] — derived from evidence completeness + win rate
+  confidenceLevel: "LOW" | "MEDIUM" | "HIGH";  // trust-score tier per defense layer rule 8
   requiresApproval: boolean;   // true if trustScore < 0.6
   automationBlocked: boolean;  // true if trustScore < 0.4 or win rate guardrail blocks
   flags: string[];             // e.g. SIGNAL_INCONSISTENCY, LOW CONFIDENCE – APPROVAL REQUIRED
@@ -298,6 +299,13 @@ export async function queryCopilot(companyId: string, userId: string, query: str
     rowCount:     totalRowsFound,
   });
 
+  // Confidence level tier (defense layer rule 8: LOW/MEDIUM/HIGH)
+  const confidenceLevel: "LOW" | "MEDIUM" | "HIGH" =
+    trustScore < TRUST_THRESHOLDS.BLOCK                  ? "LOW"    :
+    trustScore < TRUST_THRESHOLDS.APPROVAL_REQUIRED      ? "LOW"    :
+    trustScore < 0.8                                     ? "MEDIUM" :
+                                                           "HIGH";
+
   return {
     answer,
     evidence,
@@ -305,11 +313,12 @@ export async function queryCopilot(companyId: string, userId: string, query: str
     queryId: logEntry.id,
     winRateContext,
     topNews,
-    trustScore: parseFloat(trustScore.toFixed(3)),
+    trustScore:      parseFloat(trustScore.toFixed(3)),
+    confidenceLevel,
     requiresApproval,
     automationBlocked,
     flags,
-    keyDrivers: keyDrivers.slice(0, 5),
+    keyDrivers:      keyDrivers.slice(0, 5),
     riskFactors,
     directiveEvidenceBundle,
   };
