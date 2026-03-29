@@ -4,6 +4,7 @@
  * Works alongside the existing Replit Auth (OpenID Connect) layer.
  */
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import type { Request, Response, NextFunction } from "express";
 
 const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || "prescient-labs-jwt-fallback";
@@ -16,14 +17,15 @@ export interface JwtPayload {
   role: string;
   companyId: string | null;
   type: "access" | "refresh";
+  jti?: string;         // unique token ID (prevents hash collision within same second)
 }
 
 export function signAccessToken(payload: Omit<JwtPayload, "type">): string {
-  return jwt.sign({ ...payload, type: "access" }, JWT_SECRET, { expiresIn: JWT_ACCESS_EXPIRES });
+  return jwt.sign({ ...payload, type: "access", jti: crypto.randomBytes(8).toString("hex") }, JWT_SECRET, { expiresIn: JWT_ACCESS_EXPIRES });
 }
 
 export function signRefreshToken(payload: Omit<JwtPayload, "type">): string {
-  return jwt.sign({ ...payload, type: "refresh" }, JWT_SECRET, { expiresIn: JWT_REFRESH_EXPIRES });
+  return jwt.sign({ ...payload, type: "refresh", jti: crypto.randomBytes(16).toString("hex") }, JWT_SECRET, { expiresIn: JWT_REFRESH_EXPIRES });
 }
 
 export function verifyToken(token: string): JwtPayload {

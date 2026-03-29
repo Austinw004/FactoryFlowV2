@@ -52,6 +52,11 @@ export const users = pgTable("users", {
   username: text("username").unique(),
   role: text("role").default("viewer"), // viewer | analyst | operator | admin
   googleId: text("google_id").unique(),
+  // ── Login security (lockout + device tracking) ────────────────────────────
+  failedLoginAttempts: integer("failed_login_attempts").default(0),
+  lockedUntil: timestamp("locked_until"),
+  lastLoginIp: text("last_login_ip"),
+  lastLoginDevice: text("last_login_device"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -9279,3 +9284,201 @@ export const supplierPayouts = pgTable(
 
 export const insertSupplierPayoutSchema = createInsertSchema(supplierPayouts).omit({ id: true, createdAt: true, updatedAt: true });
 export type SupplierPayout = typeof supplierPayouts.$inferSelect;
+
+// ─── Enterprise Auth & Billing Tables ─────────────────────────────────────────
+
+/**
+ * authSessions — JWT refresh token store (distinct from Express sessions table).
+ * Enables server-side refresh token rotation and revocation.
+ */
+export const authSessions = pgTable(
+  "auth_sessions",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    refreshTokenHash: text("refresh_token_hash").notNull().unique(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    deviceFingerprint: text("device_fingerprint"),
+    expiresAt: timestamp("expires_at").notNull(),
+    revokedAt: timestamp("revoked_at"),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (t) => [
+    index("auth_sessions_user_idx").on(t.userId),
+    index("auth_sessions_token_idx").on(t.refreshTokenHash),
+    index("auth_sessions_expires_idx").on(t.expiresAt),
+  ],
+);
+export const insertAuthSessionSchema = createInsertSchema(authSessions).omit({ id: true, createdAt: true });
+export type AuthSession = typeof authSessions.$inferSelect;
+
+/**
+ * subscriptions — Tracks user/company billing plan.
+ * IMPORTANT: Plan type is stored for billing mechanics ONLY — no feature gating.
+ * All plans include all features. Differences are billing structure only.
+ */
+export const subscriptions = pgTable(
+  "subscriptions",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+    companyId: varchar("company_id").references(() => companies.id, { onDelete: "cascade" }),
+    planId: text("plan_id").notNull(), // "monthly_starter"|"monthly_growth"|"annual_starter"|"annual_growth"|"usage_based"
+    status: text("status").notNull().default("active"), // active|past_due|canceled|trialing|incomplete
+    stripeCustomerId: text("stripe_customer_id"),
+    stripeSubscriptionId: text("stripe_subscription_id").unique(),
+    stripePriceId: text("stripe_price_id"),
+    currentPeriodStart: timestamp("current_period_start"),
+    currentPeriodEnd: timestamp("current_period_end"),
+    cancelAtPeriodEnd: integer("cancel_at_period_end").default(0),
+    trialEndsAt: timestamp("trial_ends_at"),
+    // Usage-based billing: base fee + per-unit / % of spend
+    usageBaseFeeCents: integer("usage_base_fee_cents"),     // $199/month = 19900
+    usageRatePerUnit: text("usage_rate_per_unit"),           // "0.02" = $0.02 per unit
+    usageRatePercent: text("usage_rate_percent"),            // "0.0025" = 0.25% of spend
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (t) => [
+    index("subscriptions_user_idx").on(t.userId),
+    index("subscriptions_company_idx").on(t.companyId),
+    index("subscriptions_status_idx").on(t.status),
+    index("subscriptions_stripe_sub_idx").on(t.stripeSubscriptionId),
+  ],
+);
+export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({ id: true, createdAt: true, updatedAt: true });
+export type Subscription = typeof subscriptions.$inferSelect;
+
+/**
+ * usageEvents — Metered billing event log.
+ * Aggregated daily and reported to Stripe for usage-based plans.
+ */
+export const usageEvents = pgTable(
+  "usage_events",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+    companyId: varchar("company_id").references(() => companies.id, { onDelete: "cascade" }),
+    subscriptionId: varchar("subscription_id").references(() => subscriptions.id, { onDelete: "set null" }),
+    metricType: text("metric_type").notNull(), // "units_processed" | "procurement_spend"
+    quantity: text("quantity").notNull(), // stored as text to preserve decimal precision
+    valueCents: integer("value_cents"),  // computed billing value for this event (if spend-based)
+    reportedToStripe: integer("reported_to_stripe").default(0),
+    stripeUsageRecordId: text("stripe_usage_record_id"),
+    metadata: jsonb("metadata"),
+    timestamp: timestamp("timestamp").notNull().defaultNow(),
+  },
+  (t) => [
+    index("usage_events_user_idx").on(t.userId),
+    index("usage_events_company_idx").on(t.companyId),
+    index("usage_events_metric_idx").on(t.metricType),
+    index("usage_events_timestamp_idx").on(t.timestamp),
+    index("usage_events_reported_idx").on(t.reportedToStripe),
+  ],
+);
+export const insertUsageEventSchema = createInsertSchema(usageEvents).omit({ id: true, timestamp: true });
+export type UsageEvent = typeof usageEvents.$inferSelect;
+
+/**
+ * transactions — One-time procurement payment transactions.
+ * Records platform fee, supplier ID, and full audit trail.
+ */
+export const transactions = pgTable(
+  "transactions",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+    companyId: varchar("company_id").references(() => companies.id, { onDelete: "set null" }),
+    supplierId: varchar("supplier_id").references(() => suppliers.id, { onDelete: "set null" }),
+    amount: integer("amount").notNull(),              // total in cents
+    fee: integer("fee").notNull().default(0),          // platform fee in cents
+    netAmount: integer("net_amount").notNull(),         // amount - fee
+    currency: text("currency").notNull().default("usd"),
+    status: text("status").notNull().default("pending"), // pending|succeeded|failed|refunded|blocked
+    stripePaymentIntentId: text("stripe_payment_intent_id").unique(),
+    stripeChargeId: text("stripe_charge_id"),
+    description: text("description"),
+    fraudScore: text("fraud_score"),                   // 0.0–1.0 as text for precision
+    fraudFlags: jsonb("fraud_flags"),                  // array of flag reasons
+    requiresApproval: integer("requires_approval").default(0),
+    approvedBy: varchar("approved_by").references(() => users.id, { onDelete: "set null" }),
+    approvedAt: timestamp("approved_at"),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (t) => [
+    index("transactions_user_idx").on(t.userId),
+    index("transactions_company_idx").on(t.companyId),
+    index("transactions_supplier_idx").on(t.supplierId),
+    index("transactions_status_idx").on(t.status),
+    index("transactions_created_idx").on(t.createdAt),
+  ],
+);
+export const insertTransactionSchema = createInsertSchema(transactions).omit({ id: true, createdAt: true, updatedAt: true });
+export type Transaction = typeof transactions.$inferSelect;
+
+/**
+ * invoices — Invoice records (subscription + usage breakdowns).
+ */
+export const invoices = pgTable(
+  "invoices",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+    companyId: varchar("company_id").references(() => companies.id, { onDelete: "set null" }),
+    subscriptionId: varchar("subscription_id").references(() => subscriptions.id, { onDelete: "set null" }),
+    stripeInvoiceId: text("stripe_invoice_id").unique(),
+    status: text("status").notNull().default("draft"), // draft|open|paid|void|uncollectible
+    total: integer("total").notNull(),                 // in cents
+    subtotal: integer("subtotal").notNull(),
+    taxAmount: integer("tax_amount").default(0),
+    currency: text("currency").notNull().default("usd"),
+    lineItems: jsonb("line_items"),                    // [{description, quantity, unitAmount, amount}]
+    usageBreakdown: jsonb("usage_breakdown"),           // aggregated usage for the period
+    pdfUrl: text("pdf_url"),                           // stored URL or "/api/invoices/:id/download"
+    periodStart: timestamp("period_start"),
+    periodEnd: timestamp("period_end"),
+    dueDate: timestamp("due_date"),
+    paidAt: timestamp("paid_at"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (t) => [
+    index("invoices_user_idx").on(t.userId),
+    index("invoices_company_idx").on(t.companyId),
+    index("invoices_status_idx").on(t.status),
+    index("invoices_stripe_idx").on(t.stripeInvoiceId),
+  ],
+);
+export const insertInvoiceSchema = createInsertSchema(invoices).omit({ id: true, createdAt: true, updatedAt: true });
+export type Invoice = typeof invoices.$inferSelect;
+
+/**
+ * fraudEvents — Immutable fraud detection audit log.
+ */
+export const fraudEvents = pgTable(
+  "fraud_events",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+    companyId: varchar("company_id").references(() => companies.id, { onDelete: "set null" }),
+    transactionId: varchar("transaction_id").references(() => transactions.id, { onDelete: "set null" }),
+    fraudScore: text("fraud_score").notNull(),       // "0.00" – "1.00"
+    outcome: text("outcome").notNull(),               // "allowed"|"requires_approval"|"blocked"
+    flags: jsonb("flags").notNull(),                  // [{rule, detail}]
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (t) => [
+    index("fraud_events_user_idx").on(t.userId),
+    index("fraud_events_score_idx").on(t.fraudScore),
+    index("fraud_events_outcome_idx").on(t.outcome),
+    index("fraud_events_created_idx").on(t.createdAt),
+  ],
+);
+export const insertFraudEventSchema = createInsertSchema(fraudEvents).omit({ id: true, createdAt: true });
+export type FraudEvent = typeof fraudEvents.$inferSelect;

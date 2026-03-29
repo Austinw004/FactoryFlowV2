@@ -1,0 +1,235 @@
+You are implementing a production-grade authentication, billing, and payments system for an enterprise SaaS platform.
+
+CRITICAL REQUIREMENTS:
+- ALL product features are available on ALL plans (no feature gating)
+- Pricing differences are based ONLY on billing structure (monthly, annual, usage)
+- System must be secure, auditable, and enterprise-ready (SOC2-aligned patterns)
+- No mock logic, no fake data, no placeholders — everything must be real or safely stubbed with explicit flags
+
+========================================================
+SECTION 1 — AUTHENTICATION SYSTEM (PRODUCTION-READY)
+========================================================
+
+Implement a complete auth system with:
+
+1. Email + Password Login
+   - bcrypt password hashing (min 12 rounds)
+   - JWT-based session (access + refresh tokens)
+   - Secure HTTP-only cookies
+   - Rate limiting on login attempts
+   - Account lockout after 5 failed attempts
+
+2. Forgot Password Flow
+   - POST /auth/forgot-password
+   - Generate secure reset token (crypto random, expires in 1 hour)
+   - Store hashed token in DB
+   - Send reset link (log to console if no email service)
+   - POST /auth/reset-password validates token and updates password
+
+3. Forgot Username (email lookup)
+   - POST /auth/forgot-username
+   - Returns masked email confirmation
+   - Sends username via email/log
+
+4. Google OAuth (no API key mode fallback)
+   - If GOOGLE_CLIENT_ID present → use OAuth
+   - If not → simulate SSO login with verified email domain
+   - Always log auth source: "google" | "password"
+
+5. Session Security
+   - Rotate refresh tokens
+   - Invalidate sessions on password change
+   - Track login IP + device fingerprint
+
+========================================================
+SECTION 2 — PRICING MODEL (NO FEATURE GATING)
+========================================================
+
+Define 5 plans (ALL FEATURES INCLUDED):
+
+1. Monthly Starter — $299/month
+2. Monthly Growth — $799/month
+
+3. Annual Starter — $2,990/year (~17% discount)
+4. Annual Growth — $7,990/year (~17% discount)
+
+5. Usage-Based Plan:
+   - Base fee: $199/month
+   - + $0.02 per unit processed OR
+   - + 0.25% of managed procurement spend
+   - Track usage in real-time
+
+IMPORTANT:
+- DO NOT restrict features by plan
+- Only differentiate by billing mechanics and price
+- Store plan type in DB but DO NOT use it for feature flags
+
+========================================================
+SECTION 3 — STRIPE BILLING + PAYMENTS
+========================================================
+
+Implement Stripe integration:
+
+1. Subscription Billing
+   - Create customer on signup
+   - Attach payment method
+   - Create subscription (monthly/annual)
+   - Webhooks:
+     - invoice.paid
+     - invoice.failed
+     - customer.subscription.updated
+
+2. Usage-Based Billing
+   - Track usage in DB table: usage_events
+   - Aggregate daily usage
+   - Report usage to Stripe metered billing
+
+3. One-Time Payments (Procurement Flow)
+   - PaymentIntent for supplier transactions
+   - Platform takes % fee (configurable)
+   - Store:
+     - transactionId
+     - supplierId
+     - amount
+     - fee
+     - status
+
+4. Invoice Generation
+   - Generate PDF invoices (server-side)
+   - Include:
+     - line items
+     - usage breakdown
+     - subscription fee
+   - Store in DB + allow download
+
+========================================================
+SECTION 4 — FRAUD DETECTION LAYER
+========================================================
+
+Implement real-time fraud checks:
+
+1. Flag if:
+   - Payment > 3x historical average
+   - New device + large transaction
+   - Rapid repeated payment attempts
+
+2. Risk scoring:
+   - score 0–1
+   - >0.7 → require manual approval
+   - >0.9 → block transaction
+
+3. Log all fraud events:
+   - audit_logs table
+   - include reason + metadata
+
+========================================================
+SECTION 5 — ENTERPRISE SSO (SAML)
+========================================================
+
+Implement SAML SSO support:
+
+1. Endpoint:
+   - POST /auth/saml/callback
+
+2. Validate:
+   - email domain
+   - signature (stub if no provider)
+
+3. Auto-provision users:
+   - create account if not exists
+   - assign role based on domain rules
+
+4. Log:
+   - SSO login events
+   - provisioning actions
+
+========================================================
+SECTION 6 — DATABASE TABLES (REQUIRED)
+========================================================
+
+Ensure these exist:
+
+users
+- id
+- email
+- passwordHash
+- role
+- createdAt
+
+sessions
+- id
+- userId
+- refreshToken
+- expiresAt
+
+subscriptions
+- id
+- userId
+- planType
+- status
+- stripeCustomerId
+
+usage_events
+- id
+- userId
+- metricType
+- quantity
+- timestamp
+
+transactions
+- id
+- amount
+- fee
+- status
+- supplierId
+
+invoices
+- id
+- userId
+- pdfUrl
+- total
+
+audit_logs
+- id
+- eventType
+- metadata
+- createdAt
+
+========================================================
+SECTION 7 — VALIDATION TESTS (MUST PASS)
+========================================================
+
+Create tests:
+
+AUTH:
+✔ login works
+✔ password reset works
+✔ JWT expires properly
+
+PAYMENTS:
+✔ subscription created
+✔ webhook updates status
+✔ usage billing accumulates correctly
+
+FRAUD:
+✔ large transaction triggers flag
+✔ blocked transactions fail safely
+
+SSO:
+✔ SAML login creates user
+✔ domain restriction enforced
+
+========================================================
+FINAL RULES
+========================================================
+
+- No feature gating anywhere in code
+- All plans access identical system capabilities
+- Every financial number must be real or explicitly marked as missing (never fake defaults)
+- All sensitive data must be redacted in logs
+- All actions must be auditable
+
+OUTPUT:
+- Full implementation
+- No placeholders
+- Clean, production-ready structure
