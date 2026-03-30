@@ -58,6 +58,15 @@ import {
   getBillingProfile, upsertBillingProfile,
   validateRecommendationForExecution,
 } from "./lib/procurementExecutionService";
+import {
+  listCompanyPaymentMethods,
+  addCompanyPaymentMethod,
+  setDefaultPaymentMethod,
+  removeCompanyPaymentMethod,
+  createOrUpdateSubscription,
+  executeSupplierPayment,
+} from "./lib/paymentMethodsService";
+import { logAudit } from "./lib/auditLogger";
 import { getUncachableStripeClient } from "./stripeClient";
 import { db } from "./db";
 import {
@@ -633,6 +642,291 @@ export function registerAuthPaymentRoutes(app: Express): void {
         preferredPaymentMethod: profile.preferredPaymentMethod,
       },
     });
+  }));
+
+  // ─── Payment Method Management Routes ─────────────────────────────────────────
+
+  /** GET /api/billing/publishable-key — returns Stripe publishable key for frontend */
+  app.get("/api/billing/publishable-key", requireJwt, handle(async (_req, res) => {
+    res.json({ publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || "" });
+  }));
+
+  /**
+   * POST /api/billing/create-customer
+   * Explicitly create a Stripe customer if one doesn't exist yet.
+   * RBAC: operator or admin
+   */
+  app.post("/api/billing/create-customer", requireJwt, handle(async (req, res) => {
+    const authUser = getAuthUser(req);
+    if (!authUser) { apiError(res, 401, "UNAUTHORIZED", "Authentication required."); return; }
+    if (!authUser.companyId) { apiError(res, 400, "NO_COMPANY", "Company context required."); return; }
+    if (!["operator", "admin"].includes(authUser.role || "")) {
+      apiError(res, 403, "FORBIDDEN", "Operator or admin role required."); return;
+    }
+
+    const profile = await getBillingProfile(authUser.companyId);
+    if (profile?.stripeCustomerId) {
+      res.json({ customerId: profile.stripeCustomerId, created: false });
+      return;
+    }
+
+    const stripe = await getUncachableStripeClient();
+    const customer = await stripe.customers.create({
+      email:    req.body.email  || profile?.billingEmail  || undefined,
+      name:     req.body.name   || profile?.companyName   || undefined,
+      metadata: { companyId: authUser.companyId },
+    });
+
+    await upsertBillingProfile({
+      companyId: authUser.companyId,
+      stripeCustomerId: customer.id,
+    });
+
+    res.json({ customerId: customer.id, created: true });
+  }));
+
+  /**
+   * POST /api/billing/setup-intent
+   * Creates a Stripe SetupIntent and returns the client_secret for Stripe Elements.
+   * RBAC: operator or admin
+   */
+  app.post("/api/billing/setup-intent", requireJwt, handle(async (req, res) => {
+    const authUser = getAuthUser(req);
+    if (!authUser) { apiError(res, 401, "UNAUTHORIZED", "Authentication required."); return; }
+    if (!authUser.companyId) { apiError(res, 400, "NO_COMPANY", "Company context required."); return; }
+    if (!["operator", "admin"].includes(authUser.role || "")) {
+      apiError(res, 403, "FORBIDDEN", "Operator or admin role required."); return;
+    }
+
+    const profile = await getBillingProfile(authUser.companyId);
+    let stripeCustomerId = profile?.stripeCustomerId;
+
+    if (!stripeCustomerId) {
+      const stripe = await getUncachableStripeClient();
+      const customer = await stripe.customers.create({
+        email:    profile?.billingEmail  || undefined,
+        name:     profile?.companyName   || undefined,
+        metadata: { companyId: authUser.companyId },
+      });
+      stripeCustomerId = customer.id;
+      await upsertBillingProfile({ companyId: authUser.companyId, stripeCustomerId });
+    }
+
+    const stripe = await getUncachableStripeClient();
+    const setupIntent = await stripe.setupIntents.create({
+      customer: stripeCustomerId,
+      payment_method_types: ["card"],
+    });
+
+    res.json({ clientSecret: setupIntent.client_secret });
+  }));
+
+  /**
+   * POST /api/billing/attach-payment-method
+   * Attaches a Stripe PaymentMethod to the customer and saves it in DB.
+   * RBAC: operator or admin
+   */
+  app.post("/api/billing/attach-payment-method", requireJwt, handle(async (req, res) => {
+    const authUser = getAuthUser(req);
+    if (!authUser) { apiError(res, 401, "UNAUTHORIZED", "Authentication required."); return; }
+    if (!authUser.companyId) { apiError(res, 400, "NO_COMPANY", "Company context required."); return; }
+    if (!["operator", "admin"].includes(authUser.role || "")) {
+      apiError(res, 403, "FORBIDDEN", "Operator or admin role required."); return;
+    }
+
+    const { paymentMethodId, setAsDefault = false } = req.body;
+    if (!paymentMethodId) { apiError(res, 400, "MISSING_FIELD", "paymentMethodId is required."); return; }
+
+    const profile = await getBillingProfile(authUser.companyId);
+    if (!profile?.stripeCustomerId) {
+      apiError(res, 400, "NO_CUSTOMER", "No Stripe customer found. Call create-customer first."); return;
+    }
+
+    const stripe = await getUncachableStripeClient();
+
+    // Attach PM to the customer
+    await stripe.paymentMethods.attach(paymentMethodId, { customer: profile.stripeCustomerId });
+
+    // Retrieve card details
+    const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
+    const card = pm.card;
+    if (!card) { apiError(res, 400, "INVALID_PM", "Only card payment methods are supported."); return; }
+
+    const isFirstCard = (await listCompanyPaymentMethods(authUser.companyId)).length === 0;
+    const makeDefault = setAsDefault || isFirstCard;
+
+    const saved = await addCompanyPaymentMethod({
+      companyId:             authUser.companyId,
+      stripePaymentMethodId: paymentMethodId,
+      brand:                 card.brand,
+      last4:                 card.last4,
+      expMonth:              card.exp_month,
+      expYear:               card.exp_year,
+      isDefault:             makeDefault,
+    });
+
+    if (makeDefault) {
+      // Set default on Stripe customer and mirror to billing profile
+      await stripe.customers.update(profile.stripeCustomerId, {
+        invoice_settings: { default_payment_method: paymentMethodId },
+      });
+      await upsertBillingProfile({
+        companyId:             authUser.companyId,
+        defaultPaymentMethodId: paymentMethodId,
+        paymentMethodLast4:    card.last4,
+        paymentMethodBrand:    card.brand,
+      });
+    }
+
+    await logAudit({
+      action:     "create",
+      entityType: "payment_method",
+      entityId:   saved.id,
+      notes:      `Added ${card.brand} ending ${card.last4}`,
+      req,
+    });
+
+    res.json({ paymentMethod: saved });
+  }));
+
+  /**
+   * GET /api/billing/payment-methods
+   * Returns all saved payment methods for the authenticated company.
+   */
+  app.get("/api/billing/payment-methods", requireJwt, handle(async (req, res) => {
+    const authUser = getAuthUser(req);
+    if (!authUser) { apiError(res, 401, "UNAUTHORIZED", "Authentication required."); return; }
+    if (!authUser.companyId) { apiError(res, 400, "NO_COMPANY", "Company context required."); return; }
+
+    const methods = await listCompanyPaymentMethods(authUser.companyId);
+    res.json({ paymentMethods: methods });
+  }));
+
+  /**
+   * POST /api/billing/payment-methods/:id/set-default
+   * Marks a saved card as the default.
+   * RBAC: operator or admin
+   */
+  app.post("/api/billing/payment-methods/:id/set-default", requireJwt, handle(async (req, res) => {
+    const authUser = getAuthUser(req);
+    if (!authUser) { apiError(res, 401, "UNAUTHORIZED", "Authentication required."); return; }
+    if (!authUser.companyId) { apiError(res, 400, "NO_COMPANY", "Company context required."); return; }
+    if (!["operator", "admin"].includes(authUser.role || "")) {
+      apiError(res, 403, "FORBIDDEN", "Operator or admin role required."); return;
+    }
+
+    const updated = await setDefaultPaymentMethod(authUser.companyId, req.params.id);
+
+    // Mirror default to Stripe customer
+    const profile = await getBillingProfile(authUser.companyId);
+    if (profile?.stripeCustomerId) {
+      const stripe = await getUncachableStripeClient();
+      await stripe.customers.update(profile.stripeCustomerId, {
+        invoice_settings: { default_payment_method: updated.stripePaymentMethodId },
+      });
+    }
+
+    await logAudit({
+      action:     "update",
+      entityType: "payment_method",
+      entityId:   req.params.id,
+      notes:      "Set as default payment method",
+      req,
+    });
+
+    res.json({ paymentMethod: updated });
+  }));
+
+  /**
+   * DELETE /api/billing/payment-methods/:id
+   * Removes a saved card from DB and detaches it from Stripe.
+   * RBAC: operator or admin
+   */
+  app.delete("/api/billing/payment-methods/:id", requireJwt, handle(async (req, res) => {
+    const authUser = getAuthUser(req);
+    if (!authUser) { apiError(res, 401, "UNAUTHORIZED", "Authentication required."); return; }
+    if (!authUser.companyId) { apiError(res, 400, "NO_COMPANY", "Company context required."); return; }
+    if (!["operator", "admin"].includes(authUser.role || "")) {
+      apiError(res, 403, "FORBIDDEN", "Operator or admin role required."); return;
+    }
+
+    await removeCompanyPaymentMethod(authUser.companyId, req.params.id);
+
+    await logAudit({
+      action:     "delete",
+      entityType: "payment_method",
+      entityId:   req.params.id,
+      notes:      "Payment method removed",
+      req,
+    });
+
+    res.json({ success: true });
+  }));
+
+  /**
+   * POST /api/billing/create-subscription
+   * Creates or upgrades a Stripe subscription for the authenticated company.
+   * RBAC: operator or admin
+   */
+  app.post("/api/billing/create-subscription", requireJwt, handle(async (req, res) => {
+    const authUser = getAuthUser(req);
+    if (!authUser) { apiError(res, 401, "UNAUTHORIZED", "Authentication required."); return; }
+    if (!authUser.companyId) { apiError(res, 400, "NO_COMPANY", "Company context required."); return; }
+    if (!["operator", "admin"].includes(authUser.role || "")) {
+      apiError(res, 403, "FORBIDDEN", "Operator or admin role required."); return;
+    }
+
+    const { planId } = req.body;
+    if (!planId) { apiError(res, 400, "MISSING_FIELD", "planId is required."); return; }
+
+    const profile = await getBillingProfile(authUser.companyId);
+    if (!profile?.stripeCustomerId) {
+      apiError(res, 400, "NO_CUSTOMER", "Set up billing profile first."); return;
+    }
+
+    const result = await createOrUpdateSubscription(planId, profile.stripeCustomerId);
+
+    await logAudit({
+      action:     "create",
+      entityType: "subscription",
+      entityId:   result.subscriptionId,
+      notes:      `Plan: ${planId} — status: ${result.status}`,
+      req,
+    });
+
+    res.json(result);
+  }));
+
+  /**
+   * POST /api/billing/execute-payment/:intentId
+   * Executes a supplier payment for an approved purchase intent.
+   * RBAC: operator or admin
+   */
+  app.post("/api/billing/execute-payment/:intentId", requireJwt, handle(async (req, res) => {
+    const authUser = getAuthUser(req);
+    if (!authUser) { apiError(res, 401, "UNAUTHORIZED", "Authentication required."); return; }
+    if (!authUser.companyId) { apiError(res, 400, "NO_COMPANY", "Company context required."); return; }
+    if (!["operator", "admin"].includes(authUser.role || "")) {
+      apiError(res, 403, "FORBIDDEN", "Operator or admin role required."); return;
+    }
+
+    const result = await executeSupplierPayment(req.params.intentId, authUser.companyId);
+
+    if (result.success) {
+      await logAudit({
+        action:     "execute",
+        entityType: "purchase_transaction",
+        entityId:   result.transactionId,
+        notes:      `PaymentIntent: ${result.stripePaymentIntentId}`,
+        req,
+      });
+    }
+
+    if (!result.success) {
+      apiError(res, 422, "PAYMENT_FAILED", result.error || "Payment failed"); return;
+    }
+
+    res.json(result);
   }));
 
   // ─── Procurement Execution Routes ─────────────────────────────────────────────

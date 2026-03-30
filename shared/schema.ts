@@ -9579,3 +9579,74 @@ export const purchaseIntents = pgTable(
 export const insertPurchaseIntentSchema = createInsertSchema(purchaseIntents).omit({ id: true, createdAt: true, updatedAt: true });
 export type PurchaseIntent = typeof purchaseIntents.$inferSelect;
 export type InsertPurchaseIntent = z.infer<typeof insertPurchaseIntentSchema>;
+
+// ============================================================
+// Payment Methods — Saved cards per company (multi-card)
+// ============================================================
+export const companyPaymentMethods = pgTable(
+  "company_payment_methods",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    stripePaymentMethodId: text("stripe_payment_method_id").notNull().unique(),
+    brand: text("brand").notNull(),
+    last4: text("last4").notNull(),
+    expMonth: integer("exp_month").notNull(),
+    expYear: integer("exp_year").notNull(),
+    isDefault: boolean("is_default").notNull().default(false),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    index("company_pm_company_idx").on(t.companyId),
+  ],
+);
+export const insertCompanyPaymentMethodSchema = createInsertSchema(companyPaymentMethods).omit({ id: true, createdAt: true });
+export type CompanyPaymentMethod = typeof companyPaymentMethods.$inferSelect;
+export type InsertCompanyPaymentMethod = z.infer<typeof insertCompanyPaymentMethodSchema>;
+
+// ============================================================
+// Subscription Payments — Invoice tracking
+// ============================================================
+export const subscriptionPayments = pgTable(
+  "subscription_payments",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    stripeInvoiceId: text("stripe_invoice_id").notNull().unique(),
+    amount: integer("amount").notNull(),
+    status: text("status").notNull().default("pending"),   // paid|pending|failed
+    billingPeriodStart: timestamp("billing_period_start"),
+    billingPeriodEnd: timestamp("billing_period_end"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    index("subscription_payments_company_idx").on(t.companyId),
+  ],
+);
+export const insertSubscriptionPaymentSchema = createInsertSchema(subscriptionPayments).omit({ id: true, createdAt: true });
+export type SubscriptionPayment = typeof subscriptionPayments.$inferSelect;
+export type InsertSubscriptionPayment = z.infer<typeof insertSubscriptionPaymentSchema>;
+
+// ============================================================
+// Purchase Transactions — Supplier payment tracking
+// ============================================================
+export const purchaseTransactions = pgTable(
+  "purchase_transactions",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    purchaseIntentId: varchar("purchase_intent_id").references(() => purchaseIntents.id, { onDelete: "set null" }),
+    stripePaymentIntentId: text("stripe_payment_intent_id").unique(),
+    amount: integer("amount").notNull(),
+    status: text("status").notNull().default("pending"),   // pending|succeeded|failed
+    failureReason: text("failure_reason"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    index("purchase_transactions_company_idx").on(t.companyId),
+    index("purchase_transactions_intent_idx").on(t.purchaseIntentId),
+  ],
+);
+export const insertPurchaseTransactionSchema = createInsertSchema(purchaseTransactions).omit({ id: true, createdAt: true });
+export type PurchaseTransaction = typeof purchaseTransactions.$inferSelect;
+export type InsertPurchaseTransaction = z.infer<typeof insertPurchaseTransactionSchema>;

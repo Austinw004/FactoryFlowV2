@@ -29,7 +29,16 @@ import {
   Save
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+
+declare const Stripe: any;
 import { format } from "date-fns";
 
 const tierIcons: Record<string, typeof Zap> = {
@@ -114,6 +123,12 @@ export default function Billing() {
   const success = searchParams.get("success");
   const { toast } = useToast();
   const [editingProfile, setEditingProfile] = useState(false);
+  const [showAddCard, setShowAddCard] = useState(false);
+  const [addCardLoading, setAddCardLoading] = useState(false);
+  const [addCardError, setAddCardError] = useState<string | null>(null);
+  const cardElementRef = useRef<HTMLDivElement>(null);
+  const stripeRef = useRef<any>(null);
+  const cardElementInstanceRef = useRef<any>(null);
   const [profileForm, setProfileForm] = useState({
     billingEmail: "",
     companyName: "",
@@ -132,7 +147,7 @@ export default function Billing() {
   });
 
   const { data: paymentMethodsData } = useQuery<{ paymentMethods: PaymentMethod[] }>({
-    queryKey: ["/api/stripe/payment-methods"],
+    queryKey: ["/api/billing/payment-methods"],
   });
 
   const { data: invoicesData } = useQuery<{ invoices: Invoice[] }>({
@@ -188,6 +203,121 @@ export default function Billing() {
       });
     },
   });
+
+  const setDefaultMutation = useMutation({
+    mutationFn: async (pmId: string) => {
+      const response = await apiRequest("POST", `/api/billing/payment-methods/${pmId}/set-default`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/billing/payment-methods"] });
+      toast({ title: "Default card updated", description: "Your default payment method has been changed." });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const removePmMutation = useMutation({
+    mutationFn: async (pmId: string) => {
+      const response = await apiRequest("DELETE", `/api/billing/payment-methods/${pmId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/billing/payment-methods"] });
+      toast({ title: "Card removed", description: "Payment method has been removed." });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Failed to remove", description: err.message, variant: "destructive" });
+    },
+  });
+
+  // Mount Stripe Card Element when modal opens
+  useEffect(() => {
+    if (!showAddCard) {
+      cardElementInstanceRef.current = null;
+      stripeRef.current = null;
+      setAddCardError(null);
+      return;
+    }
+    if (typeof Stripe === "undefined") {
+      setAddCardError("Stripe.js is not loaded. Please refresh the page.");
+      return;
+    }
+    const publishableKey = (window as any).__STRIPE_PK__ || "";
+    const initStripe = async () => {
+      try {
+        const pkRes = await fetch("/api/billing/publishable-key", {
+          headers: { Authorization: `Bearer ${localStorage.getItem("prescient_access_token") || ""}` },
+        });
+        const { publishableKey: pk } = await pkRes.json();
+        const stripe = Stripe(pk);
+        stripeRef.current = stripe;
+        const elements = stripe.elements();
+        const card = elements.create("card", {
+          style: {
+            base: {
+              fontSize: "14px",
+              color: "#1a1a1a",
+              "::placeholder": { color: "#9ca3af" },
+            },
+          },
+        });
+        setTimeout(() => {
+          if (cardElementRef.current) {
+            card.mount(cardElementRef.current);
+            cardElementInstanceRef.current = card;
+          }
+        }, 50);
+      } catch (e: any) {
+        setAddCardError("Could not initialize card form. Please try again.");
+      }
+    };
+    initStripe();
+  }, [showAddCard]);
+
+  const handleAddCard = async () => {
+    if (!stripeRef.current || !cardElementInstanceRef.current) {
+      setAddCardError("Card form is not ready. Please wait.");
+      return;
+    }
+    setAddCardLoading(true);
+    setAddCardError(null);
+    try {
+      const siRes = await apiRequest("POST", "/api/billing/setup-intent");
+      const { clientSecret } = await siRes.json();
+
+      const { setupIntent, error } = await stripeRef.current.confirmCardSetup(clientSecret, {
+        payment_method: { card: cardElementInstanceRef.current },
+      });
+
+      if (error) {
+        setAddCardError(error.message || "Card setup failed.");
+        setAddCardLoading(false);
+        return;
+      }
+
+      const attachRes = await apiRequest("POST", "/api/billing/attach-payment-method", {
+        paymentMethodId: setupIntent.payment_method,
+        setAsDefault: paymentMethods.length === 0,
+      });
+
+      if (!attachRes.ok) {
+        const err = await attachRes.json();
+        setAddCardError(err.message || "Failed to save card.");
+        setAddCardLoading(false);
+        return;
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["/api/billing/payment-methods"] });
+      setShowAddCard(false);
+      toast({ title: "Card added", description: "Your new payment method has been saved." });
+    } catch (e: any) {
+      setAddCardError(e.message || "An unexpected error occurred.");
+    } finally {
+      setAddCardLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (success === "true") {
@@ -376,6 +506,51 @@ export default function Billing() {
         </Card>
       )}
 
+      {/* Add Payment Method Dialog */}
+      <Dialog open={showAddCard} onOpenChange={setShowAddCard}>
+        <DialogContent className="sm:max-w-md" data-testid="dialog-add-card">
+          <DialogHeader>
+            <DialogTitle>Add Payment Method</DialogTitle>
+            <DialogDescription>
+              Enter your card details below. All data is encrypted and processed securely by Stripe.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div
+              ref={cardElementRef}
+              className="border rounded-md p-3 min-h-[44px] bg-background"
+              data-testid="stripe-card-element"
+            />
+            {addCardError && (
+              <p className="text-sm text-red-600 dark:text-red-400" data-testid="text-card-error">
+                {addCardError}
+              </p>
+            )}
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Shield className="h-3.5 w-3.5 shrink-0" />
+              <span>Your card information is never stored on our servers. All payments are processed securely via Stripe.</span>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setShowAddCard(false)}
+                disabled={addCardLoading}
+                data-testid="button-cancel-add-card"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleAddCard}
+                disabled={addCardLoading}
+                data-testid="button-save-card"
+              >
+                {addCardLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving…</> : "Save Card"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Payment Methods */}
       <Card className="mb-6">
         <CardHeader>
@@ -384,22 +559,33 @@ export default function Billing() {
               <CreditCard className="h-5 w-5" />
               Payment Methods
             </CardTitle>
-            {subscription && (
+            <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => portalMutation.mutate()}
-                disabled={portalMutation.isPending}
-                data-testid="button-update-payment"
+                onClick={() => setShowAddCard(true)}
+                data-testid="button-add-payment-method"
               >
-                {portalMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <CreditCard className="h-4 w-4 mr-2" />
-                )}
-                Update Payment Method
+                <CreditCard className="h-4 w-4 mr-2" />
+                Add Card
               </Button>
-            )}
+              {subscription && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => portalMutation.mutate()}
+                  disabled={portalMutation.isPending}
+                  data-testid="button-update-payment"
+                >
+                  {portalMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                  )}
+                  Manage in Portal
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -408,7 +594,7 @@ export default function Billing() {
               {paymentMethods.map((pm) => (
                 <div
                   key={pm.id}
-                  className="flex items-center justify-between p-3 rounded-lg border"
+                  className="flex items-center justify-between p-3 rounded-lg border flex-wrap gap-2"
                   data-testid={`payment-method-${pm.id}`}
                 >
                   <div className="flex items-center gap-3">
@@ -416,7 +602,7 @@ export default function Billing() {
                       <CreditCard className="h-4 w-4" />
                     </div>
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-sm">
                           {cardBrandLabels[pm.brand] || pm.brand}
                         </span>
@@ -424,7 +610,7 @@ export default function Billing() {
                           ending in {pm.last4}
                         </span>
                         {pm.isDefault && (
-                          <Badge variant="secondary" className="text-xs">Default</Badge>
+                          <Badge variant="secondary" className="text-xs" data-testid={`badge-default-${pm.id}`}>Default</Badge>
                         )}
                       </div>
                       <span className="text-xs text-muted-foreground">
@@ -432,9 +618,28 @@ export default function Billing() {
                       </span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 text-green-600">
-                    <Shield className="h-3.5 w-3.5" />
-                    <span className="text-xs">Secure</span>
+                  <div className="flex items-center gap-2">
+                    {!pm.isDefault && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDefaultMutation.mutate(pm.id)}
+                        disabled={setDefaultMutation.isPending}
+                        data-testid={`button-set-default-${pm.id}`}
+                      >
+                        Set Default
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removePmMutation.mutate(pm.id)}
+                      disabled={removePmMutation.isPending}
+                      data-testid={`button-remove-pm-${pm.id}`}
+                      className="text-red-600 dark:text-red-400"
+                    >
+                      Remove
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -443,11 +648,13 @@ export default function Billing() {
             <div className="text-center py-6 text-muted-foreground">
               <CreditCard className="h-8 w-8 mx-auto mb-2 opacity-50" />
               <p className="text-sm">No payment methods on file.</p>
-              {!subscription && (
-                <p className="text-xs mt-1">A payment method will be added when you subscribe to a plan.</p>
-              )}
+              <p className="text-xs mt-1">Click "Add Card" to add your first payment method.</p>
             </div>
           )}
+          <div className="flex items-center gap-2 mt-4 pt-4 border-t text-xs text-muted-foreground">
+            <Shield className="h-3.5 w-3.5 shrink-0 text-green-600" />
+            <span>All payments processed securely via Stripe. Card data is never stored on our servers.</span>
+          </div>
         </CardContent>
       </Card>
 

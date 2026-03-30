@@ -1,0 +1,279 @@
+SYSTEM DIRECTIVE: IMPLEMENT SECURE BILLING & PAYMENT SETTINGS SYSTEM (PRODUCTION-GRADE)
+
+GOAL:
+Create a Billing Settings module that allows companies to:
+1. Store payment methods securely
+2. Pay subscriptions
+3. Execute supplier purchases
+4. Maintain full auditability and compliance
+
+STRICT REQUIREMENTS:
+- NEVER store raw card or bank data
+- MUST use Stripe for all payment handling
+- MUST support both subscription billing and supplier transactions
+- MUST integrate with procurement execution flow
+- MUST be RBAC-protected and auditable
+
+========================================================
+SECTION 1 — DATABASE SCHEMA
+========================================================
+
+CREATE TABLE billingProfiles:
+
+- id
+- companyId (FK)
+- stripeCustomerId (string)
+- defaultPaymentMethodId (string)
+- billingEmail
+- companyName
+- address
+- taxId
+- createdAt
+- updatedAt
+
+CREATE TABLE paymentMethods:
+
+- id
+- companyId
+- stripePaymentMethodId
+- brand
+- last4
+- expMonth
+- expYear
+- isDefault (boolean)
+- createdAt
+
+CREATE TABLE subscriptionPayments:
+
+- id
+- companyId
+- stripeInvoiceId
+- amount
+- status (paid, pending, failed)
+- billingPeriodStart
+- billingPeriodEnd
+- createdAt
+
+CREATE TABLE purchaseTransactions:
+
+- id
+- companyId
+- purchaseIntentId
+- stripePaymentIntentId
+- amount
+- status (pending, succeeded, failed)
+- createdAt
+
+========================================================
+SECTION 2 — SETTINGS UI (FRONTEND)
+========================================================
+
+ADD NEW TAB: Settings → Billing & Payments
+
+DISPLAY:
+
+1. COMPANY BILLING INFO
+- Company Name
+- Billing Email
+- Address
+- Tax ID
+
+2. PAYMENT METHODS
+- List saved cards (brand + last4)
+- “Add Payment Method” button
+- “Set Default” option
+
+3. BILLING SUMMARY
+- Current plan
+- Monthly cost
+- Last payment status
+
+4. SECURITY NOTE:
+- “All payments processed securely via Stripe. No card data is stored.”
+
+========================================================
+SECTION 3 — STRIPE INTEGRATION
+========================================================
+
+INSTALL:
+npm install stripe
+
+BACKEND SETUP:
+
+- Initialize Stripe with secret key
+- Use SetupIntent for saving payment methods
+- Use PaymentIntent for purchases
+- Use Subscriptions API for recurring billing
+
+ENDPOINTS:
+
+POST /api/billing/create-customer
+→ Create Stripe customer
+→ Store stripeCustomerId
+
+POST /api/billing/setup-intent
+→ Create SetupIntent
+→ Return client_secret
+
+POST /api/billing/attach-payment-method
+→ Attach payment method to customer
+→ Store stripePaymentMethodId
+→ Set default method
+
+GET /api/billing/payment-methods
+→ Return saved methods (masked)
+
+========================================================
+SECTION 4 — SUBSCRIPTION BILLING
+========================================================
+
+FUNCTION: createOrUpdateSubscription(companyId, planId)
+
+- Fetch billingProfile
+- Ensure defaultPaymentMethod exists
+- Create Stripe subscription:
+  - customer = stripeCustomerId
+  - default_payment_method = paymentMethodId
+
+STORE:
+- stripe subscription ID
+- billing cycle info
+
+WEBHOOKS REQUIRED:
+
+- invoice.paid
+- invoice.payment_failed
+
+UPDATE subscriptionPayments accordingly
+
+========================================================
+SECTION 5 — SUPPLIER PURCHASE PAYMENTS
+========================================================
+
+FUNCTION: executeSupplierPayment(purchaseIntentId)
+
+STEPS:
+
+1. Fetch purchaseIntent
+2. Fetch billingProfile
+3. Validate:
+   - defaultPaymentMethod exists
+   - trustScore >= 0.6
+   - unitCost NOT NaN
+
+4. CREATE Stripe PaymentIntent:
+   - amount = totalAmount
+   - currency = USD
+   - customer = stripeCustomerId
+   - payment_method = defaultPaymentMethodId
+   - confirm = true
+
+5. HANDLE RESULT:
+   - success → status = succeeded
+   - failure → status = failed
+
+6. STORE in purchaseTransactions
+
+========================================================
+SECTION 6 — SECURITY + RBAC
+========================================================
+
+ONLY allow:
+- admin
+- operator
+
+to:
+- add payment methods
+- execute purchases
+
+ENFORCE:
+
+requireRole('operator')
+
+BLOCK:
+- viewer
+- analyst
+
+========================================================
+SECTION 7 — AUDIT LOGGING
+========================================================
+
+LOG ALL EVENTS:
+
+- PAYMENT_METHOD_ADDED
+- PAYMENT_METHOD_UPDATED
+- SUBSCRIPTION_CREATED
+- PURCHASE_PAYMENT_EXECUTED
+
+FIELDS:
+
+- userId
+- companyId
+- action
+- metadata (masked)
+- timestamp
+
+REDACT:
+
+- tokens
+- payment IDs (partial only)
+
+========================================================
+SECTION 8 — FRAUD + VALIDATION LAYER
+========================================================
+
+BEFORE ANY PAYMENT:
+
+RUN:
+
+computeFraudScore()
+
+RULES:
+
+- >0.9 → BLOCK
+- >0.7 → require approval
+
+VALIDATE:
+
+- amount > 0
+- unitCost finite
+- quantity reasonable
+
+========================================================
+SECTION 9 — ERROR HANDLING
+========================================================
+
+HANDLE:
+
+- missing billing profile → prompt setup
+- no payment method → block purchase
+- Stripe failure → retry or log failure
+
+NEVER:
+- silently fail
+- auto-retry without logging
+
+========================================================
+SECTION 10 — TESTING (MANDATORY)
+========================================================
+
+CREATE TESTS:
+
+✔ Add payment method successfully
+✔ Subscription payment succeeds
+✔ Supplier purchase executes
+✔ Missing payment method blocks transaction
+✔ Fraud detection blocks payment
+✔ RBAC prevents unauthorized payment actions
+
+========================================================
+FINAL RULES
+========================================================
+
+- NO raw card storage EVER
+- ALL payments must go through Stripe
+- ALL actions must be logged
+- ALL failures must be visible
+
+OUTPUT:
+Full implementation with production-grade security and no placeholders.
