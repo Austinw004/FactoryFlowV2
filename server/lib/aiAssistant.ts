@@ -397,7 +397,8 @@ async function callOpenAI(messages: Array<{ role: string; content: string }>): P
       console.warn("[AI Assistant] OpenAI returned empty content, will use fallback");
       return null; // Signal to use fallback
     }
-    return content;
+    // Strip any markdown bold/italic asterisks the model may have included
+    return content.replace(/\*\*/g, '').replace(/\*/g, '');
   } catch (error) {
     console.error("[AI Assistant] OpenAI call failed:", error);
     return null; // Signal to use fallback instead of unavailable message
@@ -1896,31 +1897,31 @@ RESPONSE STYLE:
       parts.push(`Based on your current platform data, here are the key areas that need attention:`);
       
       // Economic regime context
-      parts.push(`\n\n**Market Conditions**: The economy is in a ${formatRegimeName(context.regime.regime)} regime with FDR at ${context.regime.fdr.toFixed(2)}. ${context.regime.fdr >= CANONICAL_REGIME_THRESHOLDS.IMBALANCED_EXCESS.min ? 'Consider deferring non-essential purchases — market conditions suggest caution.' : context.regime.fdr >= CANONICAL_REGIME_THRESHOLDS.ASSET_LED_GROWTH.min ? 'Monitor asset-driven dynamics before making large purchases.' : 'Market conditions appear stable for procurement.'}`);
+      parts.push(`\n\nMarket Conditions: The economy is in a ${formatRegimeName(context.regime.regime)} regime with FDR at ${context.regime.fdr.toFixed(2)}. ${context.regime.fdr >= CANONICAL_REGIME_THRESHOLDS.IMBALANCED_EXCESS.min ? 'Consider deferring non-essential purchases — market conditions suggest caution.' : context.regime.fdr >= CANONICAL_REGIME_THRESHOLDS.ASSET_LED_GROWTH.min ? 'Monitor asset-driven dynamics before making large purchases.' : 'Market conditions appear stable for procurement.'}`);
       
       // Inventory priorities
       if (context.inventory.lowStockItems > 0) {
-        parts.push(`\n\n**Inventory Alert**: ${context.inventory.lowStockItems} items are below reorder point. Consider reviewing these in the Materials Catalog.`);
+        parts.push(`\n\nInventory Alert: ${context.inventory.lowStockItems} items are below reorder point. Consider reviewing these in the Materials Catalog.`);
       }
       
       // Supplier risks
       if (context.suppliers.atRiskSuppliers > 0) {
-        parts.push(`\n\n**Supplier Risk**: ${context.suppliers.atRiskSuppliers} supplier(s) flagged as at-risk. Review in Supply Chain Intelligence for mitigation actions.`);
+        parts.push(`\n\nSupplier Risk: ${context.suppliers.atRiskSuppliers} supplier(s) flagged as at-risk. Review in Supply Chain Intelligence for mitigation actions.`);
       }
       
       // Forecast health
       if (context.forecasts.degradedSkus > 0) {
-        parts.push(`\n\n**Forecast Accuracy**: ${context.forecasts.degradedSkus} SKU forecasts showing degraded accuracy. Consider retraining these models in the Demand Hub.`);
+        parts.push(`\n\nForecast Accuracy: ${context.forecasts.degradedSkus} SKU forecasts showing degraded accuracy. Consider retraining these models in the Demand Hub.`);
       }
       
       // Production issues
       if (context.production.activeBottlenecks > 0) {
-        parts.push(`\n\n**Production**: ${context.production.activeBottlenecks} active bottleneck(s) detected. Review Operations Hub for details.`);
+        parts.push(`\n\nProduction: ${context.production.activeBottlenecks} active bottleneck(s) detected. Review Operations Hub for details.`);
       }
       
       // Commodity opportunities
       if (context.commodities.buySignals.length > 0) {
-        parts.push(`\n\n**Buying Opportunities**: ${context.commodities.buySignals.length} commodities showing favorable pricing: ${context.commodities.buySignals.slice(0, 3).join(', ')}.`);
+        parts.push(`\n\nBuying Opportunities: ${context.commodities.buySignals.length} commodities showing favorable pricing: ${context.commodities.buySignals.slice(0, 3).join(', ')}.`);
       }
     }
     
@@ -1950,7 +1951,7 @@ RESPONSE STYLE:
     
     // Market/regime response
     if (isAskingAboutMarket) {
-      parts.push(`**Current Economic Regime**: ${formatRegimeName(context.regime.regime)}`);
+      parts.push(`Current Economic Regime: ${formatRegimeName(context.regime.regime)}`);
       parts.push(`\n- FDR (Financialization-Deflator Ratio): ${context.regime.fdr.toFixed(2)}`);
       parts.push(`\n- Market momentum: ${context.commodities.priceTrends.rising} commodities rising, ${context.commodities.priceTrends.falling} falling`);
       parts.push(`\n- Signal: ${formatRegimeName(context.regime.signal)}`);
@@ -1958,7 +1959,7 @@ RESPONSE STYLE:
     
     // Supplier-specific response
     if (isAskingAboutSuppliers) {
-      parts.push(`**Supplier Overview**:`);
+      parts.push(`Supplier Overview:`);
       parts.push(`\n- Total suppliers: ${context.suppliers.totalSuppliers}`);
       parts.push(`\n- At-risk suppliers: ${context.suppliers.atRiskSuppliers}`);
       if (context.suppliers.riskDetails.length > 0) {
@@ -1971,7 +1972,7 @@ RESPONSE STYLE:
     
     // Inventory-specific response
     if (isAskingAboutInventory) {
-      parts.push(`**Inventory Status**:`);
+      parts.push(`Inventory Status:`);
       parts.push(`\n- Items below reorder point: ${context.inventory.lowStockItems}`);
       parts.push(`\n- Inventory value: $${(context.inventory.totalValue / 1000000).toFixed(1)}M`);
       if (context.inventory.criticalItems.length > 0) {
@@ -1981,7 +1982,7 @@ RESPONSE STYLE:
     
     // Forecast-specific response
     if (isAskingAboutForecasts) {
-      parts.push(`**Forecast Health**:`);
+      parts.push(`Forecast Health:`);
       parts.push(`\n- Average MAPE: ${context.forecasts.averageMape.toFixed(1)}%`);
       parts.push(`\n- Accuracy trend: ${context.forecasts.accuracyTrend}`);
       parts.push(`\n- SKUs needing retraining: ${context.forecasts.retrainingNeeded}`);
@@ -1993,10 +1994,10 @@ RESPONSE STYLE:
     // If we have no specific parts, provide a general overview
     if (parts.length === 0) {
       parts.push(`Here's a quick overview of your platform status:`);
-      parts.push(`\n\n**Economic Regime**: ${formatRegimeName(context.regime.regime)} (FDR: ${context.regime.fdr.toFixed(2)})`);
-      parts.push(`\n**Inventory**: ${context.inventory.lowStockItems} items below reorder point`);
-      parts.push(`\n**Suppliers**: ${context.suppliers.atRiskSuppliers} at-risk`);
-      parts.push(`\n**Forecasts**: Average MAPE ${context.forecasts.averageMape.toFixed(1)}%`);
+      parts.push(`\n\nEconomic Regime: ${formatRegimeName(context.regime.regime)} (FDR: ${context.regime.fdr.toFixed(2)})`);
+      parts.push(`\nInventory: ${context.inventory.lowStockItems} items below reorder point`);
+      parts.push(`\nSuppliers: ${context.suppliers.atRiskSuppliers} at-risk`);
+      parts.push(`\nForecasts: Average MAPE ${context.forecasts.averageMape.toFixed(1)}%`);
       parts.push(`\n\nYou can ask me about specific areas for more detailed insights.`);
     }
     
