@@ -1,0 +1,93 @@
+SYSTEM DIRECTIVE: IMPLEMENT SELF-HEALING AND AUTO-CORRECTION ENGINE
+
+GOAL:
+Detect and automatically correct:
+- bad inputs
+- drift
+- unstable outputs
+- system anomalies
+
+========================================================
+SECTION 1 — ANOMALY DETECTOR
+========================================================
+
+export function detectAnomaly(value, baseline) {
+  const deviation = Math.abs(value - baseline) / (baseline || 1);
+
+  if (deviation > 1.0) return "SEVERE";
+  if (deviation > 0.5) return "MODERATE";
+  return "NORMAL";
+}
+
+========================================================
+SECTION 2 — AUTO CORRECTION ENGINE
+========================================================
+
+export function autoCorrectForecast(forecast, historicalAvg) {
+  if (forecast > historicalAvg * 5) {
+    return historicalAvg * 3;
+  }
+
+  if (forecast < historicalAvg * 0.2) {
+    return historicalAvg * 0.5;
+  }
+
+  return forecast;
+}
+
+========================================================
+SECTION 3 — DRIFT RESPONSE
+========================================================
+
+IF driftScore > 0.5:
+
+- reduce trustScore by 30%
+- block automation
+- trigger re-training
+
+========================================================
+SECTION 4 — PAYMENT RECOVERY
+========================================================
+
+IF payment fails:
+
+- retry once after 5 seconds
+- if still fails → flag + log
+
+========================================================
+SECTION 5 — DATA RECOVERY
+========================================================
+
+IF missing demand history:
+
+- BLOCK decision
+- request data refresh
+
+========================================================
+SECTION 6 — SYSTEM WATCHDOG
+========================================================
+
+RUN EVERY 5 MINUTES:
+
+- scan for anomalies
+- scan for failed jobs
+- scan for missing data
+
+========================================================
+SECTION 7 — ACTION LOG
+========================================================
+
+LOG ALL AUTO ACTIONS:
+
+AUTO_CORRECT_FORECAST  
+AUTO_BLOCK_DECISION  
+AUTO_RETRY_PAYMENT  
+
+========================================================
+FINAL RULE
+========================================================
+
+System must:
+- detect issues
+- respond automatically
+- log everything

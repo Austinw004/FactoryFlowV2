@@ -12,6 +12,7 @@ import {
 import { classifyRegimeFromFDR, CANONICAL_REGIME_THRESHOLDS, type Regime } from "./regimeConstants";
 import { seededRandom } from "./evaluationHarness";
 import { computePolicyRecommendation, computeWhatIf, computeTrustScore, assertEconomicValidity, type PolicyInputs, type WhatIfScenario } from "./decisionIntelligence";
+import { assertEconomicValidityStrict } from "./guardRails";
 import { DemandForecaster } from "./forecasting";
 
 export interface OptimizationConfig {
@@ -40,6 +41,9 @@ export interface OptimizationResult {
   trustScore: number;
   automationBlocked: boolean;
   requiresApproval: boolean;
+  // Section 6 — hard cap flag
+  optimizationCapped: boolean;
+  flags: string[];
 }
 
 interface WhatIfComparisonEntry {
@@ -99,8 +103,17 @@ export function optimizeReorderQuantity(
   demandSampleCount: number,
   seed: number,
 ): OptimizationResult {
+  // Section 1 — strict economic validity before any computation
+  assertEconomicValidityStrict({
+    avgDemand: inputs.avgDemand,
+    leadTimeDays: inputs.leadTimeDays,
+    currentOnHand: inputs.currentOnHand,
+    forecastUncertainty: inputs.forecastUncertainty,
+  });
+
   const rng = seededRandom(seed);
   const { regime, fdr, forecastUncertainty, currentOnHand, avgDemand, leadTimeDays, moq, packSize } = inputs;
+  const optimizationFlags: string[] = [];
 
   const demandSamples = generateDemandSamples(avgDemand, forecastUncertainty, demandSampleCount, rng);
 
@@ -115,13 +128,20 @@ export function optimizeReorderQuantity(
   if (moq && rawOptimal > 0 && rawOptimal < moq) rawOptimal = moq;
   if (packSize && rawOptimal > 0) rawOptimal = Math.ceil(rawOptimal / packSize) * packSize;
 
-  // GATE 14 (TEST_9): Hard cap — prevent unbounded algorithmic outputs.
+  // Section 6 / GATE 14 (TEST_9): Hard cap — prevent unbounded algorithmic outputs.
   // Cap at 30× lead-time demand (30 reorder cycles). This catches numeric runaway while
   // still being economically rational under extreme demand stress.
   const systemCap = avgDemand * leadTimeDays * 30;
+  let optimizationCapped = false;
   if (rawOptimal > systemCap) {
     console.warn(`[Optimization:AUDIT] SYSTEM_CAP_APPLIED materialId=${inputs.materialId} rawOptimal=${rawOptimal.toFixed(0)} cappedAt=${systemCap.toFixed(0)} (avgDemand=${avgDemand} × leadTime=${leadTimeDays} × 30)`);
     rawOptimal = systemCap;
+    optimizationCapped = true;
+    optimizationFlags.push("OPTIMIZATION_CAPPED");
+  }
+  if (rawOptimal < 0) {
+    rawOptimal = 0;
+    optimizationFlags.push("NEGATIVE_CLAMPED_TO_ZERO");
   }
 
   const optimizedQuantity = Math.round(rawOptimal);
@@ -230,6 +250,8 @@ export function optimizeReorderQuantity(
     trustScore,
     automationBlocked,
     requiresApproval,
+    optimizationCapped,
+    flags: optimizationFlags,
   };
 }
 

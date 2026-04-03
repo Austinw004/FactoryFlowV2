@@ -17,6 +17,7 @@ import {
 } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { getUncachableStripeClient } from "../stripeClient";
+import { assertEconomicValidityStrict, safeAsync, logEvent } from "./guardRails";
 
 // ─── Plan → Stripe price ID map ────────────────────────────────────────────────
 const PLAN_PRICE_IDS: Record<string, string> = {
@@ -163,49 +164,71 @@ export async function createOrUpdateSubscription(
 }
 
 // ─── Execute a supplier payment for an approved purchase intent ───────────────
+const STRIPE_TIMEOUT_MS = 10_000;
+
 export async function executeSupplierPayment(
   purchaseIntentId: string,
   companyId: string,
 ): Promise<{ success: boolean; transactionId?: string; stripePaymentIntentId?: string; error?: string }> {
   const stripe = await getUncachableStripeClient();
 
-  const [intent] = await db
-    .select()
-    .from(purchaseIntents)
-    .where(
-      and(
-        eq(purchaseIntents.id, purchaseIntentId),
-        eq(purchaseIntents.companyId, companyId),
-      ),
-    );
+  // ── Fetch and validate intent ─────────────────────────────────────────────
+  const [intent] = await safeAsync(
+    () => db.select().from(purchaseIntents).where(
+      and(eq(purchaseIntents.id, purchaseIntentId), eq(purchaseIntents.companyId, companyId)),
+    ),
+    "fetchPurchaseIntent",
+  );
 
   if (!intent) return { success: false, error: "Purchase intent not found" };
   if (intent.status !== "approved" && intent.status !== "user_approved") {
     return { success: false, error: `Cannot execute intent in status: ${intent.status}` };
   }
 
-  const [profile] = await db
-    .select()
-    .from(billingProfiles)
-    .where(eq(billingProfiles.companyId, companyId));
-
-  if (!profile?.stripeCustomerId) {
-    return { success: false, error: "No Stripe customer on file — set up billing first" };
+  // Section 4 — hard economic validity guard on payment amounts
+  const rawAmount = intent.totalCost || 0;
+  const amountCents = Math.round(rawAmount * 100);
+  try {
+    assertEconomicValidityStrict({ amount: rawAmount });
+    if (amountCents <= 0) throw new Error("ZERO_PAYMENT_AMOUNT");
+  } catch (validityErr: any) {
+    return { success: false, error: `Payment validation failed: ${validityErr.message}` };
   }
 
-  const amountCents = Math.round((intent.totalCost || 0) * 100);
-  if (amountCents <= 0) return { success: false, error: "Invalid purchase amount" };
+  // ── Fetch billing profile ─────────────────────────────────────────────────
+  const [profile] = await safeAsync(
+    () => db.select().from(billingProfiles).where(eq(billingProfiles.companyId, companyId)),
+    "fetchBillingProfile",
+  );
+
+  // Section 4 — hard guard: no billing profile
+  if (!profile?.stripeCustomerId) {
+    logEvent({ type: "payment", companyId, action: "execute_blocked", payload: { reason: "NO_BILLING_PROFILE" } });
+    return { success: false, error: "NO_BILLING_PROFILE: No Stripe customer on file — set up billing first" };
+  }
+
+  // Section 4 — hard guard: no default payment method for off-session charge
+  if (!profile.defaultPaymentMethodId) {
+    logEvent({ type: "payment", companyId, action: "execute_blocked", payload: { reason: "NO_PAYMENT_METHOD" } });
+    return { success: false, error: "NO_PAYMENT_METHOD: No default payment method — add a card before executing payment" };
+  }
 
   try {
-    const pi = await stripe.paymentIntents.create({
-      amount: amountCents,
-      currency: "usd",
-      customer: profile.stripeCustomerId,
-      payment_method: profile.defaultPaymentMethodId || undefined,
-      confirm: !!profile.defaultPaymentMethodId,
-      off_session: true,
-      metadata: { companyId, purchaseIntentId },
-    });
+    // Section 4 — Stripe call with 10-second timeout to prevent hanging
+    const pi = await Promise.race([
+      stripe.paymentIntents.create({
+        amount: amountCents,
+        currency: "usd",
+        customer: profile.stripeCustomerId,
+        payment_method: profile.defaultPaymentMethodId,
+        confirm: true,
+        off_session: true,
+        metadata: { companyId, purchaseIntentId },
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("PAYMENT_TIMEOUT")), STRIPE_TIMEOUT_MS),
+      ),
+    ]);
 
     const [txRow] = await db
       .insert(purchaseTransactions)
@@ -226,6 +249,7 @@ export async function executeSupplierPayment(
       } as any)
       .where(eq(purchaseIntents.id, purchaseIntentId));
 
+    logEvent({ type: "payment", companyId, action: "execute_succeeded", payload: { intentId: pi.id, amountCents } });
     return { success: true, transactionId: txRow.id, stripePaymentIntentId: pi.id };
   } catch (err: any) {
     const [txRow] = await db
@@ -239,6 +263,7 @@ export async function executeSupplierPayment(
       })
       .returning();
 
+    logEvent({ type: "payment", companyId, action: "execute_failed", payload: { error: err.message, amountCents } });
     return { success: false, transactionId: txRow.id, error: err.message };
   }
 }

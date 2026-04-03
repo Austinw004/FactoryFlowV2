@@ -1072,7 +1072,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const regimeIntel = getCompanyRegimeIntelligence(user.companyId);
       
       // Load historical snapshots to initialize intelligence if needed
-      if (!regimeIntel.isInitialized()) {
+      if (!regimeIntel.isInitialized() || regimeIntel.isStale()) {
         const historicalSnapshots = await storage.getEconomicSnapshotHistory(user.companyId, 100);
         // Always call initializeFromSnapshots to set the flag (even with empty array)
         regimeIntel.initializeFromSnapshots(historicalSnapshots.map(s => ({
@@ -1336,7 +1336,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const regimeIntel = getCompanyRegimeIntelligence(user.companyId);
       
       // Load historical snapshots to initialize intelligence if needed
-      if (!regimeIntel.isInitialized()) {
+      if (!regimeIntel.isInitialized() || regimeIntel.isStale()) {
         const historicalSnapshots = await storage.getEconomicSnapshotHistory(user.companyId, 100);
         // Always call initializeFromSnapshots to set the flag (even with empty array)
         regimeIntel.initializeFromSnapshots(historicalSnapshots.map(s => ({
@@ -1381,7 +1381,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const regimeIntel = getCompanyRegimeIntelligence(user.companyId);
       
       // Load historical snapshots to initialize intelligence if needed
-      if (!regimeIntel.isInitialized()) {
+      if (!regimeIntel.isInitialized() || regimeIntel.isStale()) {
         const historicalSnapshots = await storage.getEconomicSnapshotHistory(user.companyId, 100);
         // Always call initializeFromSnapshots to set the flag (even with empty array)
         regimeIntel.initializeFromSnapshots(historicalSnapshots.map(s => ({
@@ -1648,7 +1648,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get current regime from company intelligence
       const regimeIntel = getCompanyRegimeIntelligence(user.companyId);
-      if (!regimeIntel.isInitialized()) {
+      if (!regimeIntel.isInitialized() || regimeIntel.isStale()) {
         regimeIntel.initializeFromSnapshots(snapshots.map(s => ({
           fdr: Number(s.fdr),
           regime: s.regime as any,

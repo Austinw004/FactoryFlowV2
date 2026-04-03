@@ -16,6 +16,7 @@ import {
 import { classifyRegimeFromFDR } from "./regimeConstants";
 import { DemandForecaster } from "./forecasting";
 import { enforceTrust } from "./trustGuard";
+import { assertEconomicValidityStrict } from "./guardRails";
 
 const POLICY_VERSION = "2.0.0";
 
@@ -181,6 +182,14 @@ export function assertEconomicValidity({
 
 export function computePolicyRecommendation(inputs: PolicyInputs): PolicyRecommendation {
   const { regime, forecastUncertainty, currentOnHand, avgDemand, leadTimeDays, moq, packSize, dataQualityScore } = inputs;
+
+  // Section 1 — assertEconomicValidityStrict before any computation
+  assertEconomicValidityStrict({
+    avgDemand,
+    leadTimeDays,
+    currentOnHand,
+    forecastUncertainty,
+  });
 
   // GATE 14 — TEST_8: Guard against missing/zero demand before computing anything
   if (!avgDemand || avgDemand <= 0 || !isFinite(avgDemand)) {

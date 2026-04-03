@@ -1,0 +1,142 @@
+SYSTEM DIRECTIVE: IMPLEMENT SOC2-LEVEL AUDIT LOGGING SYSTEM
+
+GOAL:
+Create a complete, tamper-resistant, audit-grade logging system covering:
+- all user actions
+- all system decisions
+- all payments
+- all data mutations
+
+========================================================
+SECTION 1 — AUDIT LOG SCHEMA
+========================================================
+
+CREATE TABLE auditLogs:
+
+- id (UUID)
+- companyId
+- userId
+- action (string)
+- entityType (string)
+- entityId (string)
+- metadata (JSONB)
+- ipAddress
+- userAgent
+- success (boolean)
+- errorMessage (string, nullable)
+- createdAt (timestamp)
+
+INDEX:
+- companyId
+- createdAt
+- action
+
+========================================================
+SECTION 2 — LOGGING FUNCTION
+========================================================
+
+export function logAuditEvent({
+  companyId,
+  userId,
+  action,
+  entityType,
+  entityId,
+  metadata,
+  success,
+  errorMessage,
+  ipAddress,
+  userAgent
+}) {
+  const sanitizedMetadata = redactSensitive(metadata);
+
+  db.insert(auditLogs).values({
+    id: crypto.randomUUID(),
+    companyId,
+    userId,
+    action,
+    entityType,
+    entityId,
+    metadata: sanitizedMetadata,
+    success,
+    errorMessage,
+    ipAddress,
+    userAgent,
+    createdAt: new Date()
+  });
+}
+
+========================================================
+SECTION 3 — SENSITIVE DATA REDACTION
+========================================================
+
+const SENSITIVE_KEYS = ["password", "token", "apiKey", "secret", "card"];
+
+function redactSensitive(obj) {
+  if (!obj) return obj;
+
+  if (typeof obj === 'object') {
+    const result = {};
+    for (const key in obj) {
+      if (SENSITIVE_KEYS.includes(key)) {
+        result[key] = "[REDACTED]";
+      } else {
+        result[key] = redactSensitive(obj[key]);
+      }
+    }
+    return result;
+  }
+
+  return obj;
+}
+
+========================================================
+SECTION 4 — MANDATORY LOGGING POINTS
+========================================================
+
+LOG ALL:
+
+- LOGIN_SUCCESS / LOGIN_FAILURE
+- PAYMENT_EXECUTED
+- SUBSCRIPTION_UPDATED
+- POLICY_RECOMMENDATION_CREATED
+- OPTIMIZATION_RUN
+- PURCHASE_APPROVED
+- PURCHASE_EXECUTED
+- ROLE_CHANGED
+- SETTINGS_UPDATED
+
+========================================================
+SECTION 5 — IMMUTABILITY
+========================================================
+
+RULE:
+- NO UPDATE or DELETE allowed on auditLogs table
+
+Enforce via:
+- DB permissions
+- application layer guard
+
+========================================================
+SECTION 6 — ACCESS CONTROL
+========================================================
+
+ONLY admin role can:
+
+GET /api/audit/logs
+
+========================================================
+SECTION 7 — EXPORT
+========================================================
+
+CREATE endpoint:
+
+GET /api/audit/export
+
+→ returns JSON or CSV
+→ filter by date range
+
+========================================================
+FINAL RULE
+========================================================
+
+Every critical action MUST leave an audit trail.

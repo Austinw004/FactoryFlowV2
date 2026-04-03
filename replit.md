@@ -46,6 +46,21 @@ The system is a multi-tenant application with robust data isolation. Key feature
 - **AI Copilot Governance**: A 12-rule non-negotiable enforcement layer for AI copilot outputs, ensuring zero hallucination, trust scoring, fail-closed behavior, economic validity checks, draft-only actions, and structured output schemas.
 - **Adversarial Input Defense Layer**: A 10-rule system prompt block enforcing anti-prompt-injection rules, blocking unsafe requests, and protecting core system information.
 - **Executive Summary Translator**: A 6-section executive brief format for all AI responses, focusing on financial impact, recommendations, key drivers, risks, and counterfactuals, free of jargon.
+- **SOC2-Level Hardening Layer** (14 sections in `server/lib/guardRails.ts` and companion modules):
+  1. `assertEconomicValidityStrict` — rejects NaN, Infinity, null, negative demand inputs
+  2. `safeAsync` — wraps all async calls with structured logging + rethrow
+  3. `assertNonEmpty` — blocks computation on empty/null data arrays
+  4. `executeSupplierPayment` hard guards — requires billing profile + valid payment method; 10s Stripe timeout
+  5. Forecast sanity bounds — clamps predictions to 0.2×–5× historical average per SKU
+  6. Optimizer hard cap — `optimizationCapped` + `flags[]` on every `optimizeReorderQuantity` result
+  7. ROI sanity check — `getAnnualBudgetProxy` flags `IMPOSSIBLE_SAVINGS` (>2× budget) and `EXTREME_NEGATIVE` (<-1× budget)
+  8. Trust score enforcement via `enforceTrust` — throws at <0.4, blocks automation at <0.6
+  9. Signal inconsistency detection — `SIGNAL_INCONSISTENCY` flag when demand/inventory/velocity signals contradict
+  10. `apiResponse` standard envelope — `success`, `data`, `error`, `traceId`, `timestamp` on every response
+  11. Regime cache TTL — `REGIME_INTELLIGENCE_TTL_MS = 6h`; all four regime-init blocks check `isStale()` before `isInitialized()`
+  12. `sanitizeInput` / `sanitizeObject` — strips `<` and `>` from all user-supplied string inputs
+  13. `logEvent` — structured JSON event logging with `ts`, `type`, `companyId`, `action`, `payload`
+  14. Validation harness — `server/tests/hardening-validation.ts` with 55 tests covering all 14 sections (55/55 passing)
 
 ### System Design Choices
 

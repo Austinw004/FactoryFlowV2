@@ -253,7 +253,7 @@ export class DemandForecaster {
     }
 
     // Blend
-    return Array.from({ length: monthsAhead }, (_, h) =>
+    const blended = Array.from({ length: monthsAhead }, (_, h) =>
       Math.max(
         0,
         etsForecasts[h] * weights.ets +
@@ -261,6 +261,30 @@ export class DemandForecaster {
           crostonForecasts[h] * weights.croston,
       ),
     );
+
+    // Section 5 — Forecast sanity bounds
+    // Clamp outliers relative to the historical mean to prevent runaway predictions.
+    const historicalAvg = history.length > 0
+      ? history.reduce((s, v) => s + v, 0) / history.length
+      : null;
+
+    if (historicalAvg !== null && historicalAvg > 0) {
+      return blended.map((v, h) => {
+        const upper = historicalAvg * 5;
+        const lower = historicalAvg * 0.2;
+        if (v > upper) {
+          console.warn(`[Forecasting:AUDIT] FORECAST_ANOMALY_DETECTED sku=${sku} horizon=${h} rawForecast=${v.toFixed(2)} clampedTo=${upper.toFixed(2)} (5× historicalAvg=${historicalAvg.toFixed(2)})`);
+          return upper;
+        }
+        if (v < lower) {
+          console.warn(`[Forecasting:AUDIT] FORECAST_ANOMALY_DETECTED sku=${sku} horizon=${h} rawForecast=${v.toFixed(2)} clampedTo=${lower.toFixed(2)} (0.2× historicalAvg=${historicalAvg.toFixed(2)})`);
+          return lower;
+        }
+        return v;
+      });
+    }
+
+    return blended;
   }
 
   recordActualDemand(sku: string, predicted: number, actual: number, regime: Regime): void {

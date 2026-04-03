@@ -1,0 +1,282 @@
+SYSTEM DIRECTIVE: FULL FUNCTIONAL HARDENING + ERROR ELIMINATION LAYER
+
+GOAL:
+Eliminate ALL remaining silent failures, edge-case crashes, and real-world execution risks across:
+- forecasting
+- optimization
+- payments
+- ROI
+- decision logic
+- API endpoints
+
+This is NOT optional logic — this is SYSTEM-LEVEL PROTECTION.
+
+========================================================
+SECTION 1 — GLOBAL ECONOMIC VALIDITY GUARD (ENFORCE EVERYWHERE)
+========================================================
+
+CREATE utility: assertEconomicValidityStrict(input)
+
+RULES:
+- Throw if ANY of the following:
+  - NaN
+  - Infinity
+  - undefined
+  - null (unless explicitly allowed)
+  - negative where not valid (demand, cost, quantity)
+
+CODE:
+
+export function assertEconomicValidityStrict(obj: Record<string, any>) {
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === null || value === undefined) {
+      throw new Error(`INVALID_NULL_${key}`);
+    }
+    if (typeof value === 'number') {
+      if (!Number.isFinite(value)) throw new Error(`NON_FINITE_${key}`);
+      if (value < 0 && key !== 'delta') throw new Error(`NEGATIVE_${key}`);
+    }
+  }
+}
+
+MANDATE:
+Call this in:
+- computePolicyRecommendation
+- optimizeReorderQuantity
+- executeSupplierPayment
+- ROI calculations
+
+========================================================
+SECTION 2 — ASYNC SAFETY WRAPPER (PREVENT SILENT FAILURES)
+========================================================
+
+CREATE wrapper:
+
+export async function safeAsync<T>(fn: () => Promise<T>, context: string): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    console.error(`[ASYNC_ERROR] ${context}`, err);
+    throw new Error(`SAFE_ASYNC_FAILURE_${context}`);
+  }
+}
+
+MANDATE:
+Wrap ALL:
+- DB queries
+- API calls
+- Stripe calls
+
+========================================================
+SECTION 3 — DB RESULT VALIDATION (NO EMPTY ASSUMPTIONS)
+========================================================
+
+CREATE:
+
+export function assertNonEmpty<T>(data: T[], name: string) {
+  if (!data || data.length === 0) {
+    throw new Error(`EMPTY_DATA_${name}`);
+  }
+}
+
+MANDATE:
+Apply after:
+- demandHistory queries
+- supplierMaterials queries
+- RFQ queries
+
+========================================================
+SECTION 4 — PAYMENT EXECUTION HARD GUARDS
+========================================================
+
+IN executeSupplierPayment:
+
+ADD:
+
+assertEconomicValidityStrict({
+  amount,
+  unitCost,
+  quantity
+});
+
+IF:
+- no billingProfile → THROW NO_BILLING_PROFILE
+- no defaultPaymentMethod → THROW NO_PAYMENT_METHOD
+
+ADD TIMEOUT:
+
+const payment = await Promise.race([
+  stripe.paymentIntents.create(...),
+  new Promise((_, reject) =>
+    setTimeout(() => reject(new Error("PAYMENT_TIMEOUT")), 10000)
+  )
+]);
+
+========================================================
+SECTION 5 — FORECAST SANITY BOUNDS
+========================================================
+
+AFTER forecast generated:
+
+IF:
+forecast > historicalAvg * 5 → clamp
+forecast < historicalAvg * 0.2 → clamp
+
+LOG:
+FORECAST_ANOMALY_DETECTED
+
+========================================================
+SECTION 6 — OPTIMIZER HARD CAPS (FINAL PROTECTION)
+========================================================
+
+FINAL OUTPUT:
+
+const HARD_CAP = avgDemand * leadTimeDays * 30;
+
+IF optimizedQuantity > HARD_CAP:
+  optimizedQuantity = HARD_CAP
+  FLAG: OPTIMIZATION_CAPPED
+
+IF optimizedQuantity < 0:
+  optimizedQuantity = 0
+
+========================================================
+SECTION 7 — ROI SANITY CHECK (PREVENT FAKE NUMBERS)
+========================================================
+
+AFTER ROI computed:
+
+IF:
+- savings > revenue × 2 → FLAG IMPOSSIBLE_SAVINGS
+- savings < -revenue → FLAG EXTREME_NEGATIVE
+
+DO NOT BLOCK — but LOG + FLAG
+
+========================================================
+SECTION 8 — TRUST SCORE ENFORCEMENT (GLOBAL)
+========================================================
+
+BEFORE returning ANY decision:
+
+IF trustScore < 0.4:
+  THROW LOW_TRUST_BLOCKED_DECISION
+
+IF trustScore < 0.6:
+  automationBlocked = true
+
+========================================================
+SECTION 9 — SIGNAL CONSISTENCY CHECK
+========================================================
+
+IF:
+- demand ↑
+- inventory ↑
+- orders ↓
+
+FLAG:
+SIGNAL_INCONSISTENCY
+
+ADD to:
+riskFactors
+
+========================================================
+SECTION 10 — API RESPONSE STANDARDIZATION
+========================================================
+
+ALL API RESPONSES MUST FOLLOW:
+
+{
+  success: boolean,
+  data?: any,
+  error?: string,
+  traceId: string,
+  timestamp: string
+}
+
+CREATE:
+
+function apiResponse(success, data, error) {
+  return {
+    success,
+    data,
+    error,
+    traceId: crypto.randomUUID(),
+    timestamp: new Date().toISOString()
+  };
+}
+
+========================================================
+SECTION 11 — CACHE INVALIDATION FIX
+========================================================
+
+FOR regime cache:
+
+ADD TTL:
+
+const CACHE_TTL = 6 * 60 * 60 * 1000;
+
+IF now - lastUpdated > TTL:
+  RELOAD FROM DB
+
+========================================================
+SECTION 12 — INPUT SANITIZATION (FRONTEND + API)
+========================================================
+
+CREATE:
+
+function sanitizeInput(str: string) {
+  return str.replace(/[<>]/g, '');
+}
+
+APPLY to:
+- all user inputs
+- all query params
+
+========================================================
+SECTION 13 — LOGGING STANDARDIZATION
+========================================================
+
+CREATE:
+
+logEvent(type, payload)
+
+REQUIRED FIELDS:
+- companyId
+- userId
+- action
+- timestamp
+
+NO sensitive data
+
+========================================================
+SECTION 14 — FINAL SYSTEM VALIDATION TEST
+========================================================
+
+RUN:
+
+1. Zero demand → expect THROW
+2. NaN cost → expect THROW
+3. Missing payment method → BLOCK
+4. Extreme demand spike → capped
+5. Low trust → blocked
+6. Async failure → logged + thrown
+
+ALL must PASS.
+
+========================================================
+FINAL RULE
+========================================================
+
+NO:
+- silent fallbacks
+- hardcoded constants
+- hidden failures
+- unvalidated outputs
+
+ALL failures must:
+- throw
+- log
+- or flag visibly
+
+OUTPUT:
+Fully hardened system ready for real-world deployment.

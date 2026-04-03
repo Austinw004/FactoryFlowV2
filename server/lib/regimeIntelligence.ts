@@ -83,12 +83,16 @@ const REGIME_PROCUREMENT_GUIDANCE: Record<Regime, { action: ProcurementTimingSig
 // Company-scoped intelligence instances
 const companyIntelligenceCache: Map<string, RegimeIntelligence> = new Map();
 
+/** Section 11 — 6-hour TTL for regime intelligence cache. */
+export const REGIME_INTELLIGENCE_TTL_MS = 6 * 60 * 60 * 1000;
+
 export class RegimeIntelligence {
   private companyId: string;
   private fdrHistory: FDRSnapshot[] = [];
   private regimeStartDate: Date = new Date();
   private currentRegime: Regime = 'HEALTHY_EXPANSION';
   private _initialized: boolean = false;
+  private _lastInitializedAt: number = 0;
   private historicalRegimeAccuracy: Record<Regime, { predictions: number; correct: number; factor: number }> = {
     HEALTHY_EXPANSION: { predictions: 0, correct: 0, factor: 1.0 },
     ASSET_LED_GROWTH: { predictions: 0, correct: 0, factor: 0.96 },
@@ -140,6 +144,7 @@ export class RegimeIntelligence {
   }>): void {
     // Mark as initialized even if empty to prevent repeated DB reads
     this._initialized = true;
+    this._lastInitializedAt = Date.now();
     if (snapshots.length === 0) return;
 
     // Sort by timestamp ascending
@@ -186,6 +191,7 @@ export class RegimeIntelligence {
     
     // Mark as initialized to prevent repeated DB loads
     this._initialized = true;
+    this._lastInitializedAt = Date.now();
     console.log(`[RegimeIntelligence] Initialized company ${this.companyId} with ${this.fdrHistory.length} snapshots, current regime: ${this.currentRegime}`);
   }
 
@@ -195,6 +201,15 @@ export class RegimeIntelligence {
    */
   isInitialized(): boolean {
     return this._initialized;
+  }
+
+  /**
+   * Section 11 — Returns true if the intelligence data is older than REGIME_INTELLIGENCE_TTL_MS
+   * (6 hours). Callers should force re-initialization from DB when stale.
+   */
+  isStale(): boolean {
+    if (!this._initialized || this._lastInitializedAt === 0) return true;
+    return Date.now() - this._lastInitializedAt > REGIME_INTELLIGENCE_TTL_MS;
   }
   
   /**

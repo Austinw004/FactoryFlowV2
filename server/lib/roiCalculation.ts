@@ -17,6 +17,7 @@ import {
 } from "@shared/schema";
 import { eq, and, desc, sql, gte, lte, count } from "drizzle-orm";
 import type { IStorage } from "../storage";
+import { logEvent } from "./guardRails";
 
 /**
  * ROI Calculation Service
@@ -417,6 +418,34 @@ export class RoiCalculationService {
 
     console.log(`[ROI] Created ${metricsCreated} metrics, total value: $${totalValue.toFixed(2)}`);
 
+    // Section 7 — ROI sanity bounds (flag only, never block)
+    // We use annualBudget as a revenue proxy since we don't store explicit revenue.
+    // Flag if claimed savings are economically implausible.
+    const roiFlags: string[] = [];
+    const budgetProxy = await this.getAnnualBudgetProxy(companyId);
+    if (budgetProxy > 0) {
+      if (totalValue > budgetProxy * 2) {
+        roiFlags.push("IMPOSSIBLE_SAVINGS");
+        logEvent({
+          type: "roi_sanity",
+          companyId,
+          action: "ROI_FLAG",
+          payload: { flag: "IMPOSSIBLE_SAVINGS", totalValue, budgetProxy, ratio: totalValue / budgetProxy },
+        });
+        console.warn(`[ROI:AUDIT] IMPOSSIBLE_SAVINGS companyId=${companyId} totalValue=${totalValue.toFixed(2)} budgetProxy=${budgetProxy.toFixed(2)} ratio=${(totalValue / budgetProxy).toFixed(2)}×`);
+      }
+      if (totalValue < -(budgetProxy)) {
+        roiFlags.push("EXTREME_NEGATIVE");
+        logEvent({
+          type: "roi_sanity",
+          companyId,
+          action: "ROI_FLAG",
+          payload: { flag: "EXTREME_NEGATIVE", totalValue, budgetProxy },
+        });
+        console.warn(`[ROI:AUDIT] EXTREME_NEGATIVE companyId=${companyId} totalValue=${totalValue.toFixed(2)}`);
+      }
+    }
+
     return {
       totalValueDelivered: totalValue,
       procurementSavings: totalProcurement,
@@ -429,8 +458,21 @@ export class RoiCalculationService {
   }
 
   /**
-   * Update or create ROI summary for the current period
+   * Section 7 — Returns company annual budget as a revenue proxy for ROI sanity checks.
+   * Returns 0 if no budget data is available (sanity check is skipped).
    */
+  private async getAnnualBudgetProxy(companyId: string): Promise<number> {
+    try {
+      const { companies } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const [company] = await db.select({ annualBudget: companies.annualBudget })
+        .from(companies).where(eq(companies.id, companyId));
+      return company?.annualBudget ?? 0;
+    } catch {
+      return 0;
+    }
+  }
+
   private async updateRoiSummary(
     companyId: string,
     data: Partial<InsertRoiSummary>
