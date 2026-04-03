@@ -19610,6 +19610,94 @@ You'll receive emails for:
     }
   });
 
+  // ─── SOC2 Section 6: Admin-only audit log retrieval ──────────────────────────
+  // Only users with role "admin" or "owner" can access all audit logs.
+  // Regular users see only their own company's logs.
+  app.get("/api/audit/logs", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.rbacUser || req.user;
+      if (!user?.companyId) return res.status(400).json({ error: "No company context" });
+
+      const isAdmin = user.role === "admin" || user.role === "owner" || user.role === "super_admin";
+      const limit = Math.min(parseInt(req.query.limit as string) || 100, 500);
+      const offset = parseInt(req.query.offset as string) || 0;
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+      const filterAction = req.query.action as string | undefined;
+      const filterEntityType = req.query.entityType as string | undefined;
+      const filterUserId = isAdmin ? (req.query.userId as string | undefined) : undefined;
+
+      const { logs, total } = await storage.getAuditLogsWithFilters({
+        companyId: user.companyId,
+        startDate,
+        endDate,
+        action: filterAction,
+        entityType: filterEntityType,
+        userId: filterUserId,
+        limit,
+        offset,
+      });
+
+      res.json({
+        logs,
+        total,
+        limit,
+        offset,
+        isAdmin,
+        exportedAt: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ─── SOC2 Section 7: Enhanced audit export (JSON + CSV, date range) ──────────
+  // This wraps the existing export and adds CSV support + storage-backed export.
+  app.get("/api/audit/export/download", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.rbacUser || req.user;
+      if (!user?.companyId) return res.status(400).json({ error: "No company context" });
+
+      const format = (req.query.format as string) === "csv" ? "csv" : "json";
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+      const limit = Math.min(parseInt(req.query.limit as string) || 1000, 5000);
+
+      const { logs, total } = await storage.getAuditLogsWithFilters({
+        companyId: user.companyId,
+        startDate,
+        endDate,
+        limit,
+      });
+
+      if (format === "csv") {
+        const headers = ["id", "timestamp", "userId", "action", "entityType", "entityId", "ipAddress"];
+        const rows = logs.map((l) => [
+          l.id,
+          l.timestamp?.toISOString() ?? "",
+          l.userId ?? "",
+          l.action,
+          l.entityType,
+          l.entityId ?? "",
+          l.ipAddress ?? "",
+        ]);
+        const csv = [headers.join(","), ...rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))].join("\n");
+        res.setHeader("Content-Type", "text/csv");
+        res.setHeader("Content-Disposition", `attachment; filename="audit-logs-${Date.now()}.csv"`);
+        return res.send(csv);
+      }
+
+      res.json({
+        count: logs.length,
+        total,
+        logs,
+        exportedAt: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/audit/export", isAuthenticated, async (req: any, res) => {
     try {
       const user = req.user;
@@ -19649,8 +19737,13 @@ You'll receive emails for:
   });
 
   const httpServer = createServer(app);
-  
+
   setupWebSocket(httpServer);
+
+  // ─── Self-Healing Watchdog ────────────────────────────────────────────────────
+  import("./lib/selfHealingEngine").then(({ startWatchdog }) => {
+    startWatchdog();
+  }).catch(console.error);
   
   app.get("/api/websocket/status", isAuthenticated, (_req, res) => {
     res.json({

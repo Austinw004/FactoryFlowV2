@@ -753,6 +753,16 @@ export interface IStorage {
   // Audit Logs
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
   getAuditLogs(companyId: string, limit?: number): Promise<AuditLog[]>;
+  getAuditLogsWithFilters(params: {
+    companyId: string;
+    startDate?: Date;
+    endDate?: Date;
+    action?: string;
+    entityType?: string;
+    userId?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ logs: AuditLog[]; total: number }>;
   getAuditLogsByEntity(companyId: string, entityType: string, entityId?: string): Promise<AuditLog[]>;
   getAuditLogsByUser(userId: string, limit?: number): Promise<AuditLog[]>;
   
@@ -3594,6 +3604,35 @@ export class DbStorage implements IStorage {
       .where(eq(auditLogs.companyId, companyId))
       .orderBy(desc(auditLogs.timestamp))
       .limit(limit);
+  }
+
+  async getAuditLogsWithFilters(params: {
+    companyId: string;
+    startDate?: Date;
+    endDate?: Date;
+    action?: string;
+    entityType?: string;
+    userId?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ logs: AuditLog[]; total: number }> {
+    const { companyId, startDate, endDate, action: filterAction, entityType, userId, limit = 100, offset = 0 } = params;
+    const conditions: any[] = [eq(auditLogs.companyId, companyId)];
+
+    if (startDate) conditions.push(gte(auditLogs.timestamp, startDate));
+    if (endDate) conditions.push(lte(auditLogs.timestamp, endDate));
+    if (filterAction) conditions.push(eq(auditLogs.action, filterAction));
+    if (entityType) conditions.push(eq(auditLogs.entityType, entityType));
+    if (userId) conditions.push(eq(auditLogs.userId, userId));
+
+    const whereClause = and(...conditions);
+
+    const [logs, countResult] = await Promise.all([
+      db.select().from(auditLogs).where(whereClause).orderBy(desc(auditLogs.timestamp)).limit(limit).offset(offset),
+      db.select({ count: sql<number>`count(*)` }).from(auditLogs).where(whereClause),
+    ]);
+
+    return { logs, total: Number(countResult[0]?.count ?? 0) };
   }
 
   async getAuditLogsByEntity(companyId: string, entityType: string, entityId?: string): Promise<AuditLog[]> {
