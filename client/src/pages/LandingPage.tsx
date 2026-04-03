@@ -162,26 +162,26 @@ export default function LandingPage() {
         description="Manufacturing intelligence built on the Dual-Circuit FDR framework. Time procurement to economic regimes, forecast demand with macro-awareness, and optimize production with traceable evidence."
       />
       {/* Navigation */}
-      <nav className="border-b sticky top-0 bg-background/95 backdrop-blur z-50">
+      <nav className="border-b border-border/40 sticky top-0 bg-background/80 backdrop-blur-xl z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center">
-                <Eye className="h-5 w-5 text-primary-foreground" />
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/80 rounded-lg flex items-center justify-center shadow-sm">
+                <Eye className="h-4.5 w-4.5 text-primary-foreground" />
               </div>
-              <span className="font-semibold text-lg">Prescient Labs</span>
+              <span className="font-semibold text-lg tracking-tight">Prescient Labs</span>
             </div>
-            <div className="hidden md:flex items-center gap-6">
+            <div className="hidden md:flex items-center gap-8">
               <a href="#capabilities" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Capabilities</a>
               <a href="#platform" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Platform</a>
               <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Pricing</a>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <ThemeToggle />
-              <Button variant="ghost" asChild data-testid="link-signin">
+              <Button variant="ghost" size="sm" asChild data-testid="link-signin">
                 <a href="/api/login">Sign In</a>
               </Button>
-              <Button asChild data-testid="button-get-started">
+              <Button size="sm" className="shadow-sm" asChild data-testid="button-get-started">
                 <a href="/api/login">Start Free Trial</a>
               </Button>
             </div>
@@ -190,49 +190,51 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden py-16 sm:py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="relative overflow-hidden pt-20 sm:pt-28 pb-16 sm:pb-24">
+        {/* Subtle background gradient */}
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.02] via-transparent to-transparent pointer-events-none" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           {/* Text content centered */}
-          <div className="max-w-3xl mx-auto text-center space-y-6 mb-12">
-            <Badge className="mb-2">Manufacturing Intelligence Platform</Badge>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight">
-              See Ahead. <span className="text-primary">Act First.</span>
+          <div className="max-w-3xl mx-auto text-center space-y-6 mb-16">
+            <Badge variant="secondary" className="text-xs font-medium tracking-wide px-3 py-1">Manufacturing Intelligence Platform</Badge>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1]">
+              See Ahead. <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">Act First.</span>
             </h1>
-            <p className="text-xl text-muted-foreground">
-              Prescient Labs provides manufacturing intelligence tools for demand forecasting, 
+            <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              Manufacturing intelligence tools for demand forecasting,
               procurement timing, production optimization, and supply chain visibility.
             </p>
-            <div className="flex flex-wrap gap-4 justify-center pt-2">
-              <Button size="lg" asChild data-testid="button-start-free-trial">
+            <div className="flex flex-wrap gap-3 justify-center pt-4">
+              <Button size="lg" className="h-12 px-8 shadow-md" asChild data-testid="button-start-free-trial">
                 <a href="/api/login">
                   Start 30-Day Free Trial
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </a>
               </Button>
-              <Button size="lg" variant="outline" onClick={() => setLocation("/how-it-works")} data-testid="button-how-it-works">
+              <Button size="lg" variant="outline" className="h-12 px-8" onClick={() => setLocation("/how-it-works")} data-testid="button-how-it-works">
                 See How It Works
               </Button>
             </div>
-            <p className="text-sm text-muted-foreground">No credit card required. Full platform access.</p>
+            <p className="text-sm text-muted-foreground/70">No credit card required. Full platform access.</p>
           </div>
-          
+
           {/* Hero image below text content */}
-          <div className="relative max-w-5xl mx-auto mb-14">
+          <div className="relative max-w-5xl mx-auto mb-16">
             {/* Marketing-style presentation with gradient background */}
-            <div className="absolute -inset-4 bg-gradient-to-br from-primary/30 via-primary/10 to-transparent rounded-3xl blur-2xl" />
+            <div className="absolute -inset-6 bg-gradient-to-br from-primary/20 via-primary/5 to-transparent rounded-3xl blur-3xl opacity-60" />
             <div className="relative">
               {/* Clean app screenshot with professional framing */}
-              <div className="rounded-xl overflow-hidden border-2 border-border/50 shadow-2xl">
-                <img 
-                  src={heroImage} 
-                  alt="Prescient Labs AI Assistant - Autonomous manufacturing intelligence" 
+              <div className="rounded-2xl overflow-hidden border border-border/60 shadow-2xl ring-1 ring-black/5 dark:ring-white/5">
+                <img
+                  src={heroImage}
+                  alt="Prescient Labs AI Assistant - Autonomous manufacturing intelligence"
                   className="w-full h-auto"
                   data-testid="img-hero-screenshot"
                 />
               </div>
               {/* Floating badge */}
-              <div className="absolute -bottom-4 -right-4 bg-primary text-primary-foreground px-4 py-2 rounded-lg shadow-lg text-sm font-medium">
-                <Sparkles className="h-4 w-4 inline mr-2" />
+              <div className="absolute -bottom-3 -right-3 bg-primary text-primary-foreground px-4 py-2 rounded-xl shadow-lg text-sm font-medium">
+                <Sparkles className="h-4 w-4 inline mr-1.5" />
                 Regime-Aware
               </div>
             </div>
@@ -365,12 +367,12 @@ export default function LandingPage() {
       </section>
 
       {/* Core Capabilities */}
-      <section id="capabilities" className="pt-14 pb-16">
+      <section id="capabilities" className="pt-20 pb-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <Badge className="mb-3">Core Capabilities</Badge>
-            <h2 className="text-3xl font-bold mb-3">Intelligence Across Your Entire Operation</h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+          <div className="text-center mb-14">
+            <Badge variant="secondary" className="mb-4 text-xs font-medium tracking-wide px-3 py-1">Core Capabilities</Badge>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4 tracking-tight">Intelligence Across Your Entire Operation</h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
               Four interconnected pillars that transform how you plan, procure, produce, and protect your manufacturing business
             </p>
           </div>
@@ -405,23 +407,23 @@ export default function LandingPage() {
       </section>
 
       {/* Differentiators */}
-      <section className="py-16 bg-muted/30">
+      <section className="py-20 bg-muted/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mx-auto text-center mb-12">
-            <h2 className="text-3xl font-bold mb-3">Why Manufacturers Choose Prescient</h2>
-            <p className="text-lg text-muted-foreground">
-              It's not just another dashboard. It's a fundamentally different approach to manufacturing intelligence.
+          <div className="max-w-3xl mx-auto text-center mb-14">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4 tracking-tight">Why Manufacturers Choose Prescient</h2>
+            <p className="text-lg text-muted-foreground leading-relaxed">
+              A fundamentally different approach to manufacturing intelligence.
             </p>
           </div>
-          
-          <div className="grid md:grid-cols-3 gap-6">
+
+          <div className="grid md:grid-cols-3 gap-8">
             {differentiators.map((diff, idx) => (
-              <div key={idx} className="text-center">
-                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Sparkles className="h-6 w-6 text-primary" />
+              <div key={idx} className="text-center px-2">
+                <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-primary/8 flex items-center justify-center">
+                  <Sparkles className="h-5 w-5 text-primary" />
                 </div>
                 <h3 className="text-lg font-semibold mb-2">{diff.title}</h3>
-                <p className="text-muted-foreground">{diff.description}</p>
+                <p className="text-muted-foreground text-sm leading-relaxed">{diff.description}</p>
               </div>
             ))}
           </div>
@@ -429,12 +431,12 @@ export default function LandingPage() {
       </section>
 
       {/* Platform Modules */}
-      <section id="platform" className="py-16">
+      <section id="platform" className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <Badge className="mb-3">Complete Platform</Badge>
-            <h2 className="text-3xl font-bold mb-3">Everything You Need, Connected</h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+          <div className="text-center mb-14">
+            <Badge variant="secondary" className="mb-4 text-xs font-medium tracking-wide px-3 py-1">Complete Platform</Badge>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4 tracking-tight">Everything You Need, Connected</h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
               Six integrated modules that share data and insights, giving you unprecedented visibility and control
             </p>
           </div>
@@ -620,20 +622,21 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 bg-muted/30">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold mb-3">Ready to See What's Coming?</h2>
-          <p className="text-xl text-muted-foreground mb-6">
+      <section className="py-24 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.04] via-transparent to-primary/[0.02] pointer-events-none" />
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative">
+          <h2 className="text-3xl sm:text-4xl font-bold mb-4 tracking-tight">Ready to See What's Coming?</h2>
+          <p className="text-lg text-muted-foreground mb-8 max-w-xl mx-auto leading-relaxed">
             Start making procurement decisions informed by real economic data.
           </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <Button size="lg" asChild>
+          <div className="flex flex-wrap justify-center gap-3">
+            <Button size="lg" className="h-12 px-8 shadow-md" asChild>
               <a href="/api/login">
                 Start Your Free Trial
                 <ArrowRight className="ml-2 h-4 w-4" />
               </a>
             </Button>
-            <Button size="lg" variant="outline" asChild>
+            <Button size="lg" variant="outline" className="h-12 px-8" asChild>
               <a href="mailto:sales@prescientlabs.ai">
                 Talk to Sales
               </a>
@@ -643,11 +646,11 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t py-10">
+      <footer className="border-t border-border/40 py-12 bg-muted/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             <div>
-              <h4 className="font-semibold mb-3">Platform</h4>
+              <h4 className="font-semibold text-sm mb-3">Platform</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><a href="#capabilities" className="hover:text-foreground">Capabilities</a></li>
                 <li><a href="#platform" className="hover:text-foreground">Modules</a></li>
@@ -656,7 +659,7 @@ export default function LandingPage() {
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-3">Sales</h4>
+              <h4 className="font-semibold text-sm mb-3">Sales</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><a href="/pilot-program" className="hover:text-foreground" data-testid="link-pilot">Pilot Program</a></li>
                 <li><a href="/roi-calculator" className="hover:text-foreground" data-testid="link-roi">ROI Calculator</a></li>
@@ -664,7 +667,7 @@ export default function LandingPage() {
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-3">Resources</h4>
+              <h4 className="font-semibold text-sm mb-3">Resources</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><a href="/how-it-works" className="hover:text-foreground">How It Works</a></li>
                 <li><a href="/security" className="hover:text-foreground" data-testid="link-security-faq">Security FAQ</a></li>
@@ -672,7 +675,7 @@ export default function LandingPage() {
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-3">Legal</h4>
+              <h4 className="font-semibold text-sm mb-3">Legal</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><a href="/privacy" className="hover:text-foreground" data-testid="link-privacy">Privacy Policy</a></li>
                 <li><a href="/terms" className="hover:text-foreground" data-testid="link-terms">Terms of Service</a></li>
@@ -680,12 +683,12 @@ export default function LandingPage() {
               </ul>
             </div>
           </div>
-          <div className="mt-10 pt-6 border-t flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="mt-10 pt-6 border-t border-border/40 flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-primary rounded flex items-center justify-center">
-                <Eye className="h-4 w-4 text-primary-foreground" />
+              <div className="w-6 h-6 bg-gradient-to-br from-primary to-primary/80 rounded-md flex items-center justify-center">
+                <Eye className="h-3.5 w-3.5 text-primary-foreground" />
               </div>
-              <span className="font-semibold">Prescient Labs</span>
+              <span className="font-semibold text-sm">Prescient Labs</span>
             </div>
             <p className="text-sm text-muted-foreground">
               &copy; 2026 Prescient Labs. All rights reserved.

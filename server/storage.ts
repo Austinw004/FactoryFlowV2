@@ -217,6 +217,7 @@ export interface IStorage {
   getSuppliers(companyId: string): Promise<Supplier[]>;
   getSupplier(id: string): Promise<Supplier | undefined>;
   createSupplier(supplier: InsertSupplier): Promise<Supplier>;
+  updateSupplier(id: string, supplier: Partial<InsertSupplier>): Promise<Supplier | undefined>;
   deleteSupplier(id: string): Promise<void>;
   
   // Supplier Materials
@@ -1284,6 +1285,14 @@ export class DbStorage implements IStorage {
 
   async createSupplier(insertSupplier: InsertSupplier): Promise<Supplier> {
     const [supplier] = await db.insert(suppliers).values(insertSupplier).returning();
+    return supplier;
+  }
+
+  async updateSupplier(id: string, updateData: Partial<InsertSupplier>, companyId?: string): Promise<Supplier | undefined> {
+    const conditions = companyId
+      ? and(eq(suppliers.id, id), eq(suppliers.companyId, companyId))
+      : eq(suppliers.id, id);
+    const [supplier] = await db.update(suppliers).set(updateData).where(conditions).returning();
     return supplier;
   }
 

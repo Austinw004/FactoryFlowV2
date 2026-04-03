@@ -18,6 +18,7 @@ import { db } from "../db";
 import { users } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import crypto from "crypto";
+import { OAuth2Client } from "google-auth-library";
 import { signAccessToken, signRefreshToken } from "./jwtAuth";
 import { logger } from "./structuredLogger";
 
@@ -141,13 +142,32 @@ export async function handleGoogleAuth(input: {
 
   if (hasOAuth && input.code) {
     // ── Real Google OAuth exchange ─────────────────────────────────────────
-    // Requires google-auth-library. EXPLICITLY STUBBED pending package install.
-    // Production path: exchange code → verify ID token → extract email + sub
-    logger.warn("sso" as any, "Google OAuth real exchange STUBBED — install google-auth-library to enable", {});
-    throw Object.assign(
-      new Error("Google OAuth exchange not yet implemented. Set GOOGLE_CLIENT_ID and install google-auth-library."),
-      { code: "NOT_IMPLEMENTED", status: 501 }
-    );
+    const clientId = process.env.GOOGLE_CLIENT_ID!;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET!;
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${process.env.REPLIT_DEV_DOMAIN ? 'https://' + process.env.REPLIT_DEV_DOMAIN : 'http://localhost:5000'}/api/auth/google/callback`;
+
+    const oauthClient = new OAuth2Client(clientId, clientSecret, redirectUri);
+    const { tokens } = await oauthClient.getToken(input.code);
+
+    if (!tokens.id_token) {
+      throw Object.assign(new Error("Google OAuth did not return an ID token."), { code: "OAUTH_NO_ID_TOKEN", status: 401 });
+    }
+
+    const ticket = await oauthClient.verifyIdToken({
+      idToken: tokens.id_token,
+      audience: clientId,
+    });
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email) {
+      throw Object.assign(new Error("Google OAuth token missing email claim."), { code: "OAUTH_INVALID_TOKEN", status: 401 });
+    }
+
+    email = payload.email;
+    googleId = payload.sub!;
+    name = payload.name;
+    authSource = "google-oauth";
+
+    logger.info("sso" as any, "Google OAuth code exchanged successfully", { email: "[REDACTED]" });
   } else if (!hasOAuth && input.email) {
     // ── Simulated SSO (no OAuth credentials) ─────────────────────────────
     // EXPLICITLY marked as simulated — not for production use.

@@ -570,6 +570,260 @@ export class OracleErpClient {
 }
 
 // ================================
+// MICROSOFT DYNAMICS 365 INTEGRATION
+// ================================
+
+interface Dynamics365Config {
+  baseUrl: string;
+  tenantId: string;
+  clientId: string;
+  clientSecret: string;
+  environment: string;
+}
+
+export class Dynamics365Client {
+  private client: AxiosInstance;
+  private config: Dynamics365Config;
+  private accessToken: string | null = null;
+  private tokenExpiry: Date | null = null;
+
+  constructor(config: Dynamics365Config) {
+    this.config = config;
+    this.client = axios.create({
+      baseURL: `${config.baseUrl}/data/v9.2`,
+      timeout: 30000,
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'OData-MaxVersion': '4.0',
+        'OData-Version': '4.0',
+      },
+    });
+
+    this.client.interceptors.request.use(async (reqConfig) => {
+      const token = await this.getAccessToken();
+      if (token) {
+        reqConfig.headers.Authorization = `Bearer ${token}`;
+      }
+      return reqConfig;
+    });
+  }
+
+  private async getAccessToken(): Promise<string | null> {
+    if (this.accessToken && this.tokenExpiry && this.tokenExpiry > new Date()) {
+      return this.accessToken;
+    }
+    try {
+      const tokenUrl = `https://login.microsoftonline.com/${this.config.tenantId}/oauth2/v2.0/token`;
+      const response = await axios.post(tokenUrl, new URLSearchParams({
+        client_id: this.config.clientId,
+        client_secret: this.config.clientSecret,
+        scope: `${this.config.baseUrl}/.default`,
+        grant_type: 'client_credentials',
+      }));
+      this.accessToken = response.data.access_token;
+      this.tokenExpiry = new Date(Date.now() + (response.data.expires_in - 60) * 1000);
+      return this.accessToken;
+    } catch (error) {
+      console.error('Dynamics 365 OAuth token error:', (error as Error).message);
+      return null;
+    }
+  }
+
+  async getInventoryLevels(): Promise<any[]> {
+    const response = await this.client.get('/InventOnHandEntities', {
+      params: { '$top': 1000, '$select': 'ItemNumber,InventoryWarehouse,AvailableOnHandQuantity,PhysicalInventory' },
+    });
+    return response.data.value || [];
+  }
+
+  async getPurchaseOrders(options?: { fromDate?: Date }): Promise<any[]> {
+    let filter = '';
+    if (options?.fromDate) {
+      filter = `PurchaseOrderDate ge ${options.fromDate.toISOString().split('T')[0]}`;
+    }
+    const response = await this.client.get('/PurchaseOrderHeadersV2', {
+      params: { '$top': 500, '$filter': filter || undefined },
+    });
+    return response.data.value || [];
+  }
+
+  async getItems(): Promise<any[]> {
+    const response = await this.client.get('/ReleasedProductsV2', {
+      params: { '$top': 1000, '$select': 'ItemNumber,ProductName,ProductType,ProductGroupId' },
+    });
+    return response.data.value || [];
+  }
+
+  async getSuppliers(): Promise<any[]> {
+    const response = await this.client.get('/VendorsV2', {
+      params: { '$top': 500, '$select': 'VendorAccountNumber,VendorOrganizationName,AddressCountryRegionId,VendorGroupId' },
+    });
+    return response.data.value || [];
+  }
+
+  transformToStandardFormat(data: any[], type: string): any[] {
+    switch (type) {
+      case 'inventory':
+        return data.map(item => ({
+          materialCode: item.ItemNumber,
+          plant: item.InventoryWarehouse,
+          quantity: parseFloat(item.AvailableOnHandQuantity || '0'),
+          physicalQuantity: parseFloat(item.PhysicalInventory || '0'),
+          lastUpdated: new Date().toISOString(),
+          source: 'dynamics365',
+        }));
+      case 'purchase_order':
+        return data.map(po => ({
+          poNumber: po.PurchaseOrderNumber,
+          supplier: po.OrderVendorAccountNumber,
+          creationDate: po.PurchaseOrderDate,
+          status: po.PurchaseOrderStatus,
+          currency: po.CurrencyCode,
+          source: 'dynamics365',
+        }));
+      case 'item':
+        return data.map(item => ({
+          code: item.ItemNumber,
+          name: item.ProductName || item.ItemNumber,
+          type: item.ProductType,
+          materialGroup: item.ProductGroupId,
+          source: 'dynamics365',
+        }));
+      case 'supplier':
+        return data.map(sup => ({
+          id: sup.VendorAccountNumber,
+          name: sup.VendorOrganizationName,
+          country: sup.AddressCountryRegionId,
+          group: sup.VendorGroupId,
+          isActive: true,
+          source: 'dynamics365',
+        }));
+      default:
+        return data;
+    }
+  }
+}
+
+// ================================
+// NETSUITE ERP INTEGRATION
+// ================================
+
+interface NetSuiteErpConfig {
+  accountId: string;
+  consumerKey: string;
+  consumerSecret: string;
+  tokenId: string;
+  tokenSecret: string;
+  baseUrl?: string;
+}
+
+export class NetSuiteErpClient {
+  private config: NetSuiteErpConfig;
+  private baseUrl: string;
+
+  constructor(config: NetSuiteErpConfig) {
+    this.config = config;
+    this.baseUrl = config.baseUrl || `https://${config.accountId}.suitetalk.api.netsuite.com/services/rest/record/v1`;
+  }
+
+  private generateOAuthHeader(method: string, url: string): string {
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    const nonce = crypto.randomBytes(16).toString('hex');
+    const params: Record<string, string> = {
+      oauth_consumer_key: this.config.consumerKey,
+      oauth_token: this.config.tokenId,
+      oauth_signature_method: 'HMAC-SHA256',
+      oauth_timestamp: timestamp,
+      oauth_nonce: nonce,
+      oauth_version: '1.0',
+    };
+    const baseString = `${method.toUpperCase()}&${encodeURIComponent(url)}&${encodeURIComponent(
+      Object.entries(params).sort().map(([k, v]) => `${k}=${v}`).join('&')
+    )}`;
+    const signingKey = `${encodeURIComponent(this.config.consumerSecret)}&${encodeURIComponent(this.config.tokenSecret)}`;
+    const signature = crypto.createHmac('sha256', signingKey).update(baseString).digest('base64');
+    params.oauth_signature = signature;
+    return 'OAuth ' + Object.entries(params).map(([k, v]) => `${k}="${encodeURIComponent(v)}"`).join(', ');
+  }
+
+  private async request(endpoint: string, params?: Record<string, string>): Promise<any[]> {
+    const url = `${this.baseUrl}/${endpoint}`;
+    const response = await axios.get(url, {
+      headers: {
+        'Authorization': this.generateOAuthHeader('GET', url),
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      params: { limit: 1000, ...params },
+      timeout: 30000,
+    });
+    return response.data.items || response.data.results || [];
+  }
+
+  async getInventoryLevels(): Promise<any[]> {
+    return this.request('inventoryItem', { fields: 'itemId,displayName,quantityOnHand,quantityAvailable,location' });
+  }
+
+  async getPurchaseOrders(options?: { fromDate?: Date }): Promise<any[]> {
+    return this.request('purchaseOrder', { fields: 'tranId,entity,tranDate,status,total,currency' });
+  }
+
+  async getItems(): Promise<any[]> {
+    return this.request('inventoryItem', { fields: 'itemId,displayName,type,unitsType,itemGroup' });
+  }
+
+  async getSuppliers(): Promise<any[]> {
+    return this.request('vendor', { fields: 'entityId,companyName,country,isInactive,category' });
+  }
+
+  transformToStandardFormat(data: any[], type: string): any[] {
+    switch (type) {
+      case 'inventory':
+        return data.map(item => ({
+          materialCode: item.itemId,
+          name: item.displayName,
+          quantity: parseFloat(item.quantityOnHand || '0'),
+          available: parseFloat(item.quantityAvailable || '0'),
+          location: item.location,
+          lastUpdated: new Date().toISOString(),
+          source: 'netsuite',
+        }));
+      case 'purchase_order':
+        return data.map(po => ({
+          poNumber: po.tranId,
+          supplier: po.entity,
+          creationDate: po.tranDate,
+          status: po.status,
+          totalAmount: parseFloat(po.total || '0'),
+          currency: po.currency,
+          source: 'netsuite',
+        }));
+      case 'item':
+        return data.map(item => ({
+          code: item.itemId,
+          name: item.displayName || item.itemId,
+          type: item.type,
+          unitType: item.unitsType,
+          materialGroup: item.itemGroup,
+          source: 'netsuite',
+        }));
+      case 'supplier':
+        return data.map(sup => ({
+          id: sup.entityId,
+          name: sup.companyName,
+          country: sup.country,
+          category: sup.category,
+          isActive: !sup.isInactive,
+          source: 'netsuite',
+        }));
+      default:
+        return data;
+    }
+  }
+}
+
+// ================================
 // ERP FACTORY - Create appropriate client
 // ================================
 
@@ -578,14 +832,18 @@ export type ErpType = 'sap_s4hana' | 'oracle_erp' | 'dynamics365' | 'netsuite';
 export function createErpClient(
   erpType: ErpType,
   config: any
-): SapS4HanaClient | OracleErpClient | null {
+): SapS4HanaClient | OracleErpClient | Dynamics365Client | NetSuiteErpClient | null {
   switch (erpType) {
     case 'sap_s4hana':
       return new SapS4HanaClient(config as SapConfig);
     case 'oracle_erp':
       return new OracleErpClient(config as OracleConfig);
+    case 'dynamics365':
+      return new Dynamics365Client(config as Dynamics365Config);
+    case 'netsuite':
+      return new NetSuiteErpClient(config as NetSuiteErpConfig);
     default:
-      console.warn(`ERP type ${erpType} not yet implemented`);
+      console.warn(`ERP type ${erpType} not yet supported`);
       return null;
   }
 }
@@ -603,7 +861,7 @@ interface SyncResult {
 }
 
 export async function syncErpData(
-  erpClient: SapS4HanaClient | OracleErpClient,
+  erpClient: SapS4HanaClient | OracleErpClient | Dynamics365Client | NetSuiteErpClient,
   erpType: ErpType,
   dataType: 'inventory' | 'purchase_orders' | 'materials' | 'suppliers',
   options?: { fullSync?: boolean; fromDate?: Date }
@@ -614,7 +872,7 @@ export async function syncErpData(
 
   try {
     let rawData: any[] = [];
-    
+
     if (erpClient instanceof SapS4HanaClient) {
       switch (dataType) {
         case 'inventory':
@@ -638,6 +896,44 @@ export async function syncErpData(
       switch (dataType) {
         case 'inventory':
           rawData = await erpClient.getInventoryBalances();
+          rawData = erpClient.transformToStandardFormat(rawData, 'inventory');
+          break;
+        case 'purchase_orders':
+          rawData = await erpClient.getPurchaseOrders({ fromDate: options?.fromDate });
+          rawData = erpClient.transformToStandardFormat(rawData, 'purchase_order');
+          break;
+        case 'materials':
+          rawData = await erpClient.getItems();
+          rawData = erpClient.transformToStandardFormat(rawData, 'item');
+          break;
+        case 'suppliers':
+          rawData = await erpClient.getSuppliers();
+          rawData = erpClient.transformToStandardFormat(rawData, 'supplier');
+          break;
+      }
+    } else if (erpClient instanceof Dynamics365Client) {
+      switch (dataType) {
+        case 'inventory':
+          rawData = await erpClient.getInventoryLevels();
+          rawData = erpClient.transformToStandardFormat(rawData, 'inventory');
+          break;
+        case 'purchase_orders':
+          rawData = await erpClient.getPurchaseOrders({ fromDate: options?.fromDate });
+          rawData = erpClient.transformToStandardFormat(rawData, 'purchase_order');
+          break;
+        case 'materials':
+          rawData = await erpClient.getItems();
+          rawData = erpClient.transformToStandardFormat(rawData, 'item');
+          break;
+        case 'suppliers':
+          rawData = await erpClient.getSuppliers();
+          rawData = erpClient.transformToStandardFormat(rawData, 'supplier');
+          break;
+      }
+    } else if (erpClient instanceof NetSuiteErpClient) {
+      switch (dataType) {
+        case 'inventory':
+          rawData = await erpClient.getInventoryLevels();
           rawData = erpClient.transformToStandardFormat(rawData, 'inventory');
           break;
         case 'purchase_orders':

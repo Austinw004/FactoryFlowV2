@@ -9879,11 +9879,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { entity, updateExisting } = validationResult.data;
       
-      // Reject updateExisting until functionality is implemented
-      if (updateExisting) {
-        return res.status(400).json({ error: "Update existing records is not yet implemented" });
-      }
-
       const csvContent = req.file.buffer.toString('utf-8');
 
       const dataImportService = new DataImportService(storage);
