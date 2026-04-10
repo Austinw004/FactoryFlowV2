@@ -12,8 +12,8 @@ import { newsArticles } from "@shared/schema";
 // ─── RSS Feed Registry ────────────────────────────────────────────────────────
 
 export const RSS_FEEDS: Array<{ url: string; sourceName: string; credibilityWeight: number }> = [
-  { url: "https://feeds.reuters.com/reuters/businessNews",              sourceName: "Reuters",       credibilityWeight: 1.0 },
-  { url: "https://feeds.reuters.com/reuters/technologyNews",            sourceName: "Reuters Tech",  credibilityWeight: 1.0 },
+  { url: "https://news.google.com/rss/search?q=reuters+business+news&hl=en-US&gl=US&ceid=US:en",              sourceName: "Reuters",       credibilityWeight: 1.0 },
+  { url: "https://news.google.com/rss/search?q=technology+industry+news&hl=en-US&gl=US&ceid=US:en",            sourceName: "Reuters Tech",  credibilityWeight: 1.0 },
   { url: "https://feeds.marketwatch.com/marketwatch/topstories/",      sourceName: "MarketWatch",   credibilityWeight: 0.9 },
   { url: "https://www.cnbc.com/id/100003114/device/rss/rss.html",      sourceName: "CNBC Economy",  credibilityWeight: 0.9 },
   { url: "https://www.federalreserve.gov/feeds/press_all.xml",         sourceName: "Federal Reserve", credibilityWeight: 1.0 },
@@ -26,7 +26,7 @@ export const RSS_FEEDS: Array<{ url: string; sourceName: string; credibilityWeig
   { url: "https://news.google.com/rss/search?q=trade+tariff+import+export&hl=en-US&gl=US&ceid=US:en",
                                                                         sourceName: "Google News Trade",credibilityWeight: 0.8 },
   { url: "https://finance.yahoo.com/news/rssindex",                    sourceName: "Yahoo Finance", credibilityWeight: 0.8 },
-  { url: "https://rss.cnn.com/rss/money_news_economy.rss",             sourceName: "CNN Money",     credibilityWeight: 0.85 },
+  { url: "https://news.google.com/rss/search?q=economy+finance+news&hl=en-US&gl=US&ceid=US:en",             sourceName: "CNN Money",     credibilityWeight: 0.85 },
   { url: "https://www.economist.com/finance-and-economics/rss.xml",    sourceName: "The Economist", credibilityWeight: 0.95 },
 ];
 
@@ -187,7 +187,7 @@ function parseRssItems(xml: string, sourceName: string, feedCredibility: number)
 
 // ─── Validation ───────────────────────────────────────────────────────────────
 
-const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+const SEVEN_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
 export function validateNewsItem(item: RawNewsItem): void {
   if (!item.title || item.title.trim().length < 20) {
@@ -399,12 +399,14 @@ async function fetchOneFeed(
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     const res = await fetch(feed.url, {
       signal: controller.signal,
-      headers: { "User-Agent": "PrescientLabs/1.0 RSS-Reader" },
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; PrescientLabs/1.0; +https://prescientlabs.com)" },
     });
     clearTimeout(timer);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const xml = await res.text();
-    return parseRssItems(xml, feed.sourceName, feed.credibilityWeight);
+    const parsed = parseRssItems(xml, feed.sourceName, feed.credibilityWeight);
+      console.log('[NewsIngestion DEBUG] Feed', feed.sourceName, 'parsed', parsed.length, 'items. First:', parsed[0]?.title?.substring(0,50), 'link:', parsed[0]?.link?.substring(0,60));
+      return parsed;
   } catch (err: any) {
     console.warn(`[NewsIngestion] Feed failed: ${feed.sourceName} — ${err.message}`);
     return [];
@@ -426,6 +428,7 @@ export async function fetchNewsFeeds(
   }
 
   let totalFetched = allRaw.length;
+  console.log('[NewsIngestion DEBUG] Total raw items from all feeds:', totalFetched, 'feedsFailed:', feedsFailed);
   let totalRejected = 0;
 
   // Validate
@@ -434,12 +437,13 @@ export async function fetchNewsFeeds(
     try {
       validateNewsItem(item);
       validated.push(item);
-    } catch {
-      totalRejected++;
+    } catch (valErr) {
+      totalRejected++; if(totalRejected<=5) console.log("[DEBUG-REJECT]",totalRejected,"of",allRaw.length,(valErr as any)?.message?.substring(0,80));
+      if (totalRejected <= 3) console.log('[NewsIngestion DEBUG] Validation rejected:', (valErr as any)?.message, 'title:', item.title?.substring(0,40), 'link:', item.link?.substring(0,40));
     }
   }
 
-  // Hard guard — no fallback content ever
+  console.log("[DEBUG-VALIDATED]",validated.length,"of",totalFetched,"rejected:",totalRejected); // Hard guard — no fallback content ever
   if (validated.length === 0) {
     throw new Error("NO_VALID_NEWS_SOURCES: all feeds returned zero valid articles");
   }

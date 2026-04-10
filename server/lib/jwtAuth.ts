@@ -7,7 +7,8 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import type { Request, Response, NextFunction } from "express";
 
-const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || "prescient-labs-jwt-fallback";
+const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET;
+if (!JWT_SECRET) { console.error("CRITICAL: JWT_SECRET environment variable is required"); process.exit(1); }
 const JWT_ACCESS_EXPIRES  = "15m";
 const JWT_REFRESH_EXPIRES = "7d";
 

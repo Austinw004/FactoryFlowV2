@@ -8161,7 +8161,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const relevanceReasons: string[] = [];
         
         // Check if alert affects company's materials
-        const alertCommodities = alert.affectedCommodities.map(c => c.toLowerCase());
+        const alertCommodities = (alert.affectedCommodities||alert.commodities||[]).map(c => c.toLowerCase());
         const matchingMaterials = companyContext.materials.filter(m => 
           alertCommodities.some(c => c.includes(m) || m.includes(c))
         );
@@ -8171,7 +8171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Check if alert affects company's supplier regions
-        const alertRegions = alert.affectedRegions.map(r => r.toLowerCase());
+        const alertRegions = (alert.affectedRegions||alert.regions||[]).map(r => r.toLowerCase());
         const matchingRegions = companyContext.supplierRegions.filter(r =>
           alertRegions.some(ar => ar.includes(r.toLowerCase()) || r.toLowerCase().includes(ar))
         );
@@ -8292,7 +8292,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Count by category
       for (const alert of alerts) {
         summary.byCategory[alert.category] = (summary.byCategory[alert.category] || 0) + 1;
-        for (const region of alert.affectedRegions) {
+        for (const region of (alert.affectedRegions||alert.regions||[])) {
           summary.byRegion[region] = (summary.byRegion[region] || 0) + 1;
         }
       }
@@ -8300,7 +8300,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get top commodities
       const commodityCounts: Record<string, number> = {};
       for (const alert of alerts) {
-        for (const commodity of alert.affectedCommodities) {
+        for (const commodity of (alert.affectedCommodities||alert.commodities||[])) {
           commodityCounts[commodity] = (commodityCounts[commodity] || 0) + 1;
         }
       }
