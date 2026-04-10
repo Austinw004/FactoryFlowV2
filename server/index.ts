@@ -8,6 +8,17 @@ import { WebhookHandlers } from './webhookHandlers';
 
 const app = express();
 
+// Startup env validation — fail fast before binding port
+(function validateEnv() {
+  const missing: string[] = [];
+  if (!process.env.JWT_SECRET && !process.env.SESSION_SECRET) missing.push("JWT_SECRET or SESSION_SECRET");
+  if (!process.env.DATABASE_URL) missing.push("DATABASE_URL");
+  if (missing.length > 0) {
+    console.error(`[Startup] FATAL: missing required environment variables: ${missing.join(", ")}`);
+    process.exit(1);
+  }
+})();
+
 async function initStripe() {
   const databaseUrl = process.env.DATABASE_URL;
 

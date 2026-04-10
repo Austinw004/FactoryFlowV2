@@ -56,7 +56,11 @@ export async function fetchFREDData(seriesId: string, apiKey?: string): Promise<
     console.error(`FRED API circuit breaker open, skipping ${seriesId}`);
     return null;
   }
-  const key = apiKey || process.env.FRED_API_KEY || "demo_key";
+  const key = apiKey || process.env.FRED_API_KEY;
+  if (!key) {
+    console.warn(`[FRED] No FRED_API_KEY configured — skipping ${seriesId}`);
+    return null;
+  }
   try {
     const response = await axios.get(
       `https://api.stlouisfed.org/fred/series/observations`,

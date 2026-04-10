@@ -25,7 +25,9 @@ export function useWebSocket(onMessage?: MessageHandler) {
     }
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const host = window.location.hostname;
+    const port = window.location.port;
+    const wsUrl = protocol + "//" + host + (port ? ":" + port : "") + "/ws";
 
     try {
       const ws = new WebSocket(wsUrl);
