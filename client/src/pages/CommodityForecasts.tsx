@@ -252,7 +252,7 @@ export default function CommodityForecasts() {
     <div className="p-6 space-y-6">
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <h1 className="text-3xl font-bold" data-testid="heading-commodity-forecasts">
+          <h1 className="text-3xl font-bold tracking-tight" data-testid="heading-commodity-forecasts">
             Commodity Price Forecasts
           </h1>
           <UITooltip>

@@ -586,7 +586,7 @@ function SimulationDetail({
             <ArrowRight className="h-4 w-4 mr-2 rotate-180" />
             Back to Simulations
           </Button>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <Beaker className="h-6 w-6 text-primary" />
             {simulation.name}
           </h1>
@@ -960,7 +960,7 @@ export default function ScenarioSimulation() {
     <div className="p-6 space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <Beaker className="h-6 w-6 text-primary" />
             Scenario Simulation
           </h1>

@@ -64,13 +64,6 @@ const advancedItems = [
     landingMode: false,
   },
   {
-    title: "Event Monitoring",
-    url: "/event-monitoring",
-    icon: AlertTriangle,
-    testId: "sidebar-event-monitoring",
-    landingMode: false,
-  },
-  {
     title: "Demand & Forecasting",
     url: "/demand",
     icon: TrendingUp,

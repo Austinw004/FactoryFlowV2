@@ -288,14 +288,14 @@ export default function RoiCalculator() {
           <p className="text-sm text-muted-foreground text-center mb-6">These are projected estimates based on counter-cyclical procurement research, not guaranteed results.</p>
           <div className="grid sm:grid-cols-3 gap-6">
             <Card className="p-6">
-              <div className="text-2xl font-bold text-primary mb-2">Up to 18%</div>
+              <div className="text-2xl font-bold text-primary mb-2">Estimated potential</div>
               <div className="font-medium mb-1">Potential Procurement Savings</div>
               <p className="text-sm text-muted-foreground">
                 Estimated savings opportunity from counter-cyclical buying - purchasing when economic indicators signal optimal timing.
               </p>
             </Card>
             <Card className="p-6">
-              <div className="text-2xl font-bold text-primary mb-2">Up to 30%</div>
+              <div className="text-2xl font-bold text-primary mb-2">Estimated potential</div>
               <div className="font-medium mb-1">Potential MAPE Improvement</div>
               <p className="text-sm text-muted-foreground">
                 Projected forecast accuracy improvement from regime-aware models with automated retraining.

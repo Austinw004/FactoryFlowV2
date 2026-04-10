@@ -11743,8 +11743,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             { id: "5", title: "Identify alternative lower-cost suppliers", description: "Qualify backup suppliers for cost optimization", timeframe: "60 days", department: "Procurement" },
           ],
           expectedOutcomes: {
-            procurementSavings: "8-15%",
-            cashFlowImprovement: "20-30%",
+            procurementSavings: "Varies by implementation",
+            cashFlowImprovement: "Varies by implementation",
             riskReduction: "Significant supply chain resilience improvement"
           },
           isSystemDefault: true,
@@ -11766,8 +11766,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             { id: "5", title: "Review and pursue deferred growth initiatives", description: "Restart projects paused during downturn", timeframe: "60 days", department: "Strategy" },
           ],
           expectedOutcomes: {
-            marketShareGain: "5-10%",
-            costAdvantage: "10-20% vs delayed action",
+            marketShareGain: "Varies by implementation",
+            costAdvantage: "Varies by implementation",
             capacityReadiness: "Full utilization ready"
           },
           isSystemDefault: true,
@@ -11810,7 +11810,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             { id: "4", title: "Review external demand signals", description: "Check for market changes not captured in model", timeframe: "1 week", department: "Sales" },
           ],
           expectedOutcomes: {
-            forecastRecovery: "MAPE reduction of 20-30%",
+            forecastRecovery: "Varies by data quality",
             serviceLevel: "Maintained despite degradation",
             modelImprovement: "Continuous learning validated"
           },
@@ -14983,7 +14983,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           requiresApproval: true,
           confidence: 0.82,
         });
-        responseText = "I can analyze your inventory distribution and suggest optimal rebalancing. This typically saves 10-15% on expedited shipping costs. Should I run the analysis?";
+        responseText = "I can analyze your inventory distribution and suggest optimal rebalancing. This can help reduce expedited shipping costs. Should I run the analysis?";
       } else if (lowerMessage.includes("adjust") && lowerMessage.includes("safety stock")) {
         suggestedActions.push({
           id: `action_safety_stock_${Date.now()}`,

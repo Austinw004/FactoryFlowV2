@@ -93,7 +93,7 @@ export default function PlatformAnalytics() {
     }
   }, [isError, error, toast]);
 
-  const uptimePercent = healthData?.uptime ?? 99.97;
+  const uptimePercent = healthData?.uptime ?? 0;
   
   const userMetrics = healthData?.userMetrics ?? {
     totalUsers: 0,
@@ -160,7 +160,7 @@ export default function PlatformAnalytics() {
       <div className="flex-1 space-y-6 p-6 overflow-auto" data-testid="loading-state">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-2xl font-bold">Platform Analytics</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Platform Analytics</h1>
             <p className="text-muted-foreground">Loading platform metrics...</p>
           </div>
           <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20">
@@ -207,7 +207,7 @@ export default function PlatformAnalytics() {
       <div className="flex-1 space-y-6 p-6 overflow-auto" data-testid="error-state">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-2xl font-bold">Platform Analytics</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Platform Analytics</h1>
             <p className="text-muted-foreground">Unable to load platform metrics</p>
           </div>
           <Badge className="bg-red-500/10 text-red-600 border-red-500/20">
@@ -238,7 +238,7 @@ export default function PlatformAnalytics() {
     <div className="flex-1 space-y-6 p-6 overflow-auto">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold" data-testid="text-page-title">Platform Analytics</h1>
+          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">Platform Analytics</h1>
           <p className="text-muted-foreground" data-testid="text-page-description">
             Real-time platform health, usage metrics, and engagement analytics
           </p>
@@ -648,22 +648,22 @@ export default function PlatformAnalytics() {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="border rounded-lg p-4">
                   <div className="text-sm text-muted-foreground">Net Promoter Score</div>
-                  <div className="text-2xl font-bold mt-1">+72</div>
+                  <div className="text-2xl font-bold mt-1">—</div>
                   <Badge className="mt-2 bg-emerald-500/10 text-emerald-600 border-emerald-500/20">Excellent</Badge>
                 </div>
                 <div className="border rounded-lg p-4">
                   <div className="text-sm text-muted-foreground">Customer Health Score</div>
-                  <div className="text-2xl font-bold mt-1">8.4/10</div>
+                  <div className="text-2xl font-bold mt-1">—</div>
                   <Progress value={84} className="mt-2 h-1" />
                 </div>
                 <div className="border rounded-lg p-4">
                   <div className="text-sm text-muted-foreground">Time to Value</div>
-                  <div className="text-2xl font-bold mt-1">2.3 days</div>
+                  <div className="text-2xl font-bold mt-1">—</div>
                   <span className="text-xs text-muted-foreground">Avg first ROI seen</span>
                 </div>
                 <div className="border rounded-lg p-4">
                   <div className="text-sm text-muted-foreground">Expansion Rate</div>
-                  <div className="text-2xl font-bold mt-1">127%</div>
+                  <div className="text-2xl font-bold mt-1">— %</div>
                   <span className="text-xs text-emerald-600">NDR (Net Dollar Retention)</span>
                 </div>
               </div>

@@ -116,7 +116,7 @@ export default function LandingPage() {
       monthlyPeriod: "/month",
       annualPeriod: "/year",
       annualNote: "$249/mo",
-      skus: "Up to 500 SKUs",
+      skus: "Standard SKU support",
       description: "Demand forecasting and procurement optimization for growing manufacturers",
       highlighted: false,
       icon: Rocket,
@@ -222,7 +222,7 @@ export default function LandingPage() {
             <div className="absolute -inset-4 bg-gradient-to-br from-primary/30 via-primary/10 to-transparent rounded-3xl blur-2xl" />
             <div className="relative">
               {/* Clean app screenshot with professional framing */}
-              <div className="rounded-xl overflow-hidden border-2 border-border/50 shadow-2xl">
+              <div className="rounded-xl overflow-hidden border border-border/50">
                 <img 
                   src={heroImage} 
                   alt="Prescient Labs AI Assistant - Autonomous manufacturing intelligence" 
@@ -231,7 +231,7 @@ export default function LandingPage() {
                 />
               </div>
               {/* Floating badge */}
-              <div className="absolute -bottom-4 -right-4 bg-primary text-primary-foreground px-4 py-2 rounded-lg shadow-lg text-sm font-medium">
+              <div className="absolute -bottom-4 -right-4 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium">
                 <Sparkles className="h-4 w-4 inline mr-2" />
                 Regime-Aware
               </div>
@@ -276,7 +276,7 @@ export default function LandingPage() {
                   {subscriptionPlans.map((plan, idx) => (
                     <Card 
                       key={idx} 
-                      className={`p-5 flex flex-col text-left ${plan.highlighted ? 'border-primary shadow-lg ring-2 ring-primary/20' : ''}`}
+                      className={`p-5 flex flex-col text-left ${plan.highlighted ? 'border-primary' : ''}`}
                       data-testid={`card-hero-plan-${plan.name.toLowerCase()}`}
                     >
                       {plan.highlighted && (
@@ -322,7 +322,7 @@ export default function LandingPage() {
                 {performancePlans.map((plan, idx) => (
                   <Card 
                     key={idx} 
-                    className={`p-5 flex flex-col text-left ${plan.highlighted ? 'border-primary shadow-lg ring-2 ring-primary/20' : ''}`}
+                    className={`p-5 flex flex-col text-left ${plan.highlighted ? 'border-primary' : ''}`}
                     data-testid={`card-hero-plan-${plan.name.toLowerCase().replace(" ", "-")}`}
                   >
                     {plan.highlighted && (
@@ -548,8 +548,8 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900 flex items-center justify-center shrink-0">
-                <Clock className="h-6 w-6 text-green-600 dark:text-green-400" />
+              <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center shrink-0">
+                <Clock className="h-6 w-6 text-muted-foreground" />
               </div>
               <div>
                 <h3 className="font-semibold mb-1">Fast Onboarding</h3>
@@ -563,9 +563,9 @@ export default function LandingPage() {
                 <BarChart3 className="h-6 w-6 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <h3 className="font-semibold mb-1">Designed for ROI</h3>
+                <h3 className="font-semibold mb-1">Built for Manufacturing</h3>
                 <p className="text-sm text-muted-foreground">
-                  Built to deliver measurable procurement savings through better timing decisions.
+                  Data-driven manufacturing intelligence for smarter operational decisions.
                 </p>
               </div>
             </div>
@@ -596,13 +596,13 @@ export default function LandingPage() {
             </div>
             <div className="flex flex-col items-center gap-2 opacity-70 hover:opacity-100 transition-opacity">
               <div className="w-16 h-16 rounded-lg bg-background border flex items-center justify-center">
-                <span className="text-sm font-bold text-blue-500">Microsoft</span>
+                <span className="text-sm font-bold text-blue-500">Integration Partner</span>
               </div>
               <span className="text-xs text-muted-foreground">Dynamics 365</span>
             </div>
             <div className="flex flex-col items-center gap-2 opacity-70 hover:opacity-100 transition-opacity">
               <div className="w-16 h-16 rounded-lg bg-background border flex items-center justify-center">
-                <span className="text-lg font-bold text-green-600">Sage</span>
+                <span className="text-lg font-bold text-muted-foreground">ERP Systems</span>
               </div>
               <span className="text-xs text-muted-foreground">Sage X3</span>
             </div>

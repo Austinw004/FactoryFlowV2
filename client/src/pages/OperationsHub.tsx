@@ -40,7 +40,7 @@ export default function OperationsHub({ initialTab = "machinery" }: OperationsHu
         <div className="px-6 pt-4 pb-0">
           <div className="flex items-center justify-between mb-2">
             <div>
-              <h1 className="text-2xl font-bold" data-testid="heading-operations-hub">
+              <h1 className="text-2xl font-bold tracking-tight" data-testid="heading-operations-hub">
                 Operations
               </h1>
               <p className="text-sm text-muted-foreground">

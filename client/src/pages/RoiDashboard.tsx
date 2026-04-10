@@ -208,7 +208,7 @@ export default function RoiDashboard() {
     return (
       <div className="p-6 space-y-6">
         <div>
-          <h1 className="text-2xl font-bold" data-testid="heading-roi-dashboard">ROI Dashboard</h1>
+          <h1 className="text-2xl font-bold tracking-tight" data-testid="heading-roi-dashboard">ROI Dashboard</h1>
           <p className="text-muted-foreground">
             Track your platform savings, forecast accuracy improvements, and operational efficiency gains
           </p>
@@ -251,7 +251,7 @@ export default function RoiDashboard() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold" data-testid="heading-roi-dashboard">ROI Dashboard</h1>
+          <h1 className="text-2xl font-bold tracking-tight" data-testid="heading-roi-dashboard">ROI Dashboard</h1>
           <p className="text-muted-foreground">
             Track your platform savings, forecast accuracy improvements, and operational efficiency gains
           </p>

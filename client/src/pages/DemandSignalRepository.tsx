@@ -344,7 +344,7 @@ export default function DemandSignalRepository() {
     <div className="space-y-4 p-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold" data-testid="text-page-title">Demand Signal Repository</h1>
+          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">Demand Signal Repository</h1>
           <p className="text-muted-foreground">
             Centralized hub for multi-source demand signals and analytics
           </p>

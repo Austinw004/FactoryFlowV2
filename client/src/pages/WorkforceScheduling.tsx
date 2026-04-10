@@ -257,7 +257,7 @@ export default function WorkforceScheduling() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2" data-testid="heading-workforce">
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2" data-testid="heading-workforce">
             <Users className="h-8 w-8" />
             Workforce Management
           </h1>

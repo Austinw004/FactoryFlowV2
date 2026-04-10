@@ -788,9 +788,9 @@ export default function AgenticAI() {
       activeHoursStart: "08:00",
       activeHoursEnd: "18:00",
       activeDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
-      actionsToday: 12,
-      valueToday: 45000,
-      successRate: 94,
+      actionsToday: 0,
+      valueToday: 0,
+      successRate: 0,
     },
     {
       id: "agent_inventory",
@@ -809,9 +809,9 @@ export default function AgenticAI() {
       activeHoursStart: "00:00",
       activeHoursEnd: "23:59",
       activeDays: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
-      actionsToday: 28,
+      actionsToday: 0,
       valueToday: 0,
-      successRate: 97,
+      successRate: 0,
     },
     {
       id: "agent_forecasting",
@@ -830,9 +830,9 @@ export default function AgenticAI() {
       activeHoursStart: "00:00",
       activeHoursEnd: "23:59",
       activeDays: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
-      actionsToday: 45,
+      actionsToday: 0,
       valueToday: 0,
-      successRate: 99,
+      successRate: 0,
     },
     {
       id: "agent_supplier",
@@ -851,9 +851,9 @@ export default function AgenticAI() {
       activeHoursStart: "06:00",
       activeHoursEnd: "20:00",
       activeDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
-      actionsToday: 5,
-      valueToday: 15000,
-      successRate: 88,
+      actionsToday: 0,
+      valueToday: 0,
+      successRate: 0,
     },
   ];
 
@@ -874,8 +874,8 @@ export default function AgenticAI() {
       priority: 90,
       executionCount: 234,
       lastExecutedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      successRate: 96,
-      avgSavings: 1250,
+      successRate: 0,
+      avgSavings: 0,
     },
     {
       id: "rule_regime_safety",
@@ -901,8 +901,8 @@ export default function AgenticAI() {
       priority: 95,
       executionCount: 18,
       lastExecutedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-      successRate: 100,
-      avgSavings: 8500,
+      successRate: 0,
+      avgSavings: 0,
     },
     {
       id: "rule_rebalance",
@@ -920,8 +920,8 @@ export default function AgenticAI() {
       priority: 70,
       executionCount: 52,
       lastExecutedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-      successRate: 92,
-      avgSavings: 3200,
+      successRate: 0,
+      avgSavings: 0,
     },
     {
       id: "rule_price_spike",
@@ -939,8 +939,8 @@ export default function AgenticAI() {
       priority: 100,
       executionCount: 7,
       lastExecutedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-      successRate: 100,
-      avgSavings: 25000,
+      successRate: 0,
+      avgSavings: 0,
     },
     {
       id: "rule_forecast_accuracy",
@@ -962,7 +962,7 @@ export default function AgenticAI() {
       priority: 85,
       executionCount: 12,
       lastExecutedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-      successRate: 100,
+      successRate: 0,
       avgSavings: 0,
     },
   ];
@@ -987,8 +987,8 @@ export default function AgenticAI() {
       },
       status: "awaiting_approval",
       estimatedImpact: {
-        costSavings: 2400,
-        stockoutRiskReduction: 0.85,
+        costSavings: 0,
+        stockoutRiskReduction: 0,
         confidence: 0.92,
       },
       economicRegime: "HEALTHY",
@@ -1008,12 +1008,12 @@ export default function AgenticAI() {
           { from: "Warehouse B", to: "Warehouse A", material: "Copper Wire", quantity: 150 },
         ],
         totalTransfers: 2,
-        estimatedTransportCost: 1200,
+        estimatedTransportCost: 0,
       },
       status: "awaiting_approval",
       estimatedImpact: {
-        costSavings: 3800,
-        efficiencyGain: 0.12,
+        costSavings: 0,
+        efficiencyGain: 0,
         confidence: 0.88,
       },
       economicRegime: "HEALTHY",
@@ -1095,7 +1095,7 @@ export default function AgenticAI() {
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-3xl font-bold flex items-center gap-3" data-testid="text-page-title">
+            <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3" data-testid="text-page-title">
               <Bot className="h-8 w-8 text-primary" />
               Agentic AI Control Center
             </h1>

@@ -1342,7 +1342,7 @@ export default function Integrations() {
                 <Star className="w-5 h-5 text-amber-500" />
                 Popular Integrations
               </CardTitle>
-              <CardDescription>Most commonly used by manufacturing companies</CardDescription>
+              <CardDescription>Popular with manufacturing companies</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

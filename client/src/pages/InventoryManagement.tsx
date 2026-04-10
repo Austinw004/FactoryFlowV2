@@ -147,7 +147,7 @@ export default function InventoryManagement() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold" data-testid="heading-inventory">
+        <h1 className="text-3xl font-bold tracking-tight" data-testid="heading-inventory">
           Inventory Management
         </h1>
         <p className="text-muted-foreground mt-1">
@@ -486,7 +486,7 @@ export default function InventoryManagement() {
                           </div>
                           <div>
                             <span className="text-muted-foreground">Cost Savings:</span>
-                            <p className="font-semibold text-green-600">
+                            <p className="font-semibold">
                               ${rec.costSavings?.toFixed(2) || "0.00"}
                             </p>
                           </div>

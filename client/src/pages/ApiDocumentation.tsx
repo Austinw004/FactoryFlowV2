@@ -444,7 +444,7 @@ export default function ApiDocumentation() {
     <div className="flex-1 space-y-6 p-6 overflow-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">API Documentation</h1>
+          <h1 className="text-2xl font-bold tracking-tight">API Documentation</h1>
           <p className="text-muted-foreground">
             Enterprise-grade REST API for manufacturing intelligence integration
           </p>

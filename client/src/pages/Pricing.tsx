@@ -244,7 +244,7 @@ export default function Pricing() {
               </button>
               <span className={billingPeriod === "annual" ? "font-medium" : "text-muted-foreground"}>
                 Annual
-                <Badge variant="secondary" className="ml-2">Save ~17%</Badge>
+                <Badge variant="secondary" className="ml-2">Best value</Badge>
               </span>
             </div>
 
@@ -254,7 +254,7 @@ export default function Pricing() {
                 return (
                   <Card
                     key={plan.id}
-                    className={`relative flex flex-col ${plan.popular ? "border-primary shadow-lg scale-105" : ""}`}
+                    className={`relative flex flex-col ${plan.popular ? "border-primary" : ""}`}
                     data-testid={`card-plan-${plan.id}`}
                   >
                     {plan.popular && (
@@ -285,8 +285,8 @@ export default function Pricing() {
                             <p className="text-sm text-muted-foreground mt-1">
                               ${(plan as any).annualTotal.toLocaleString()} billed annually
                             </p>
-                            <p className="text-sm text-green-600 dark:text-green-400 mt-1">
-                              Save ${(((plan as any).annualEquiv - plan.price) * 12).toLocaleString()}/year vs monthly
+                            <p className="text-sm text-muted-foreground mt-1">
+                              ${(((plan as any).annualEquiv - plan.price) * 12).toLocaleString()}/year less than monthly billing
                             </p>
                           </>
                         )}
@@ -295,7 +295,7 @@ export default function Pricing() {
                       <ul className="space-y-2">
                         {FEATURES_ALL.map((feature, i) => (
                           <li key={i} className="flex items-start gap-2">
-                            <Check className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                            <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                             <span className="text-sm">{feature}</span>
                           </li>
                         ))}
@@ -366,7 +366,7 @@ export default function Pricing() {
                   <ul className="space-y-2">
                     {FEATURES_ALL.slice(0, 5).map((feature, i) => (
                       <li key={i} className="flex items-start gap-2">
-                        <Check className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                        <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                         <span className="text-sm">{feature}</span>
                       </li>
                     ))}
@@ -392,7 +392,7 @@ export default function Pricing() {
               </Card>
 
               {/* Performance Card */}
-              <Card className="relative flex flex-col border-primary shadow-lg" data-testid="card-plan-performance">
+              <Card className="relative flex flex-col border-primary" data-testid="card-plan-performance">
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                   <Badge className="bg-primary text-primary-foreground">
                     <Handshake className="h-3 w-3 mr-1" />
@@ -549,7 +549,7 @@ export default function Pricing() {
         <Card className="mb-16">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-green-500" />
+              <CheckCircle2 className="h-5 w-5 text-primary" />
               Everything Included — On Every Plan
             </CardTitle>
             <CardDescription>No feature gating. No tiered access. All six plans unlock the full platform.</CardDescription>
@@ -558,7 +558,7 @@ export default function Pricing() {
             <div className="grid md:grid-cols-2 gap-3">
               {FEATURES_ALL.map((feature, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-500 shrink-0" />
+                  <Check className="h-4 w-4 text-primary shrink-0" />
                   <span className="text-sm">{feature}</span>
                 </div>
               ))}

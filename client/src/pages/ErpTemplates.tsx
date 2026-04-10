@@ -1090,7 +1090,7 @@ export default function ErpTemplates() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold" data-testid="heading-erp-integration">
+          <h1 className="text-2xl font-bold tracking-tight" data-testid="heading-erp-integration">
             ERP Integration
           </h1>
           <p className="text-muted-foreground">

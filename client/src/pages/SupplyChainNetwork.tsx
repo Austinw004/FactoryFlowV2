@@ -110,7 +110,7 @@ export default function SupplyChainNetwork() {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold" data-testid="heading-supply-chain-network">Supply Chain Network Intelligence</h1>
+          <h1 className="text-3xl font-bold tracking-tight" data-testid="heading-supply-chain-network">Supply Chain Network Intelligence</h1>
           <p className="text-muted-foreground">FDR-aware supplier risk monitoring and network analysis</p>
         </div>
       </div>

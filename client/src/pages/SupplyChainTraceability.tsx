@@ -161,7 +161,7 @@ export default function SupplyChainTraceability() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2" data-testid="heading-supply-chain-traceability">
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2" data-testid="heading-supply-chain-traceability">
             <Network className="h-8 w-8" />
             Supply Chain Traceability
           </h1>

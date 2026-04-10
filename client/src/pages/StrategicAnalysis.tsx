@@ -175,9 +175,9 @@ export default function StrategicAnalysis() {
       durationMonths: parseInt(formData.get('durationMonths') as string) || 12,
       currentFDR,
       currentRegime,
-      baseRevenue: 10000000,
-      baseCosts: 7000000,
-      baseMargin: 30,
+      baseRevenue: 0,
+      baseCosts: 0,
+      baseMargin: 0,
       affectedCommodities: [],
       affectedSKUs: [],
     };
@@ -314,9 +314,9 @@ export default function StrategicAnalysis() {
           durationMonths: parseInt(formData.get('durationMonths') as string) || 12,
           currentFDR,
           currentRegime,
-          baseRevenue: 10000000,
-          baseCosts: 7000000,
-          baseMargin: 30,
+          baseRevenue: 0,
+          baseCosts: 0,
+          baseMargin: 0,
           affectedCommodities: [],
           affectedSKUs: [],
         };
@@ -383,7 +383,7 @@ export default function StrategicAnalysis() {
   return (
     <div className="flex flex-col gap-6 p-6 pb-12">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold" data-testid="text-page-title">
+        <h1 className="text-3xl font-bold tracking-tight" data-testid="text-page-title">
           Strategic Analysis
         </h1>
         <p className="text-muted-foreground" data-testid="text-page-description">

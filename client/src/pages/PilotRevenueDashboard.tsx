@@ -269,7 +269,7 @@ export default function PilotRevenueDashboard() {
   return (
     <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
       <div>
-        <h1 className="text-2xl font-bold" data-testid="text-page-title">Pilot Revenue Dashboard</h1>
+        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">Pilot Revenue Dashboard</h1>
         <p className="text-muted-foreground mt-1">
           Track pilot experiment ROI with clear, measurable outcomes
         </p>

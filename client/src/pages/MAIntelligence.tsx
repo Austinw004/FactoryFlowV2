@@ -51,7 +51,7 @@ export default function MAIntelligence() {
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold" data-testid="text-page-title">
+        <h1 className="text-3xl font-bold tracking-tight" data-testid="text-page-title">
           M&A Intelligence
         </h1>
         <p className="text-muted-foreground" data-testid="text-page-description">

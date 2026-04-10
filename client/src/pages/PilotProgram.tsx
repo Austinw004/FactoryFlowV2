@@ -141,7 +141,7 @@ export default function PilotProgram() {
   return (
     <div className="min-h-screen bg-background">
       <SEOHead 
-        title="Risk-Free Pilot Program - Prescient Labs"
+        title="Performance-Based Pilot Program - Prescient Labs"
         description="Start with zero upfront cost. Our performance-based pilot program lets you prove ROI before committing. Pay only when you see verified savings."
       />
       {/* Navigation */}
@@ -165,7 +165,7 @@ export default function PilotProgram() {
       <section className="py-16 border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <Badge className="mb-4">100% Performance-Based</Badge>
-          <h1 className="text-4xl font-bold mb-4">Zero Risk. We Only Win When You Win.</h1>
+          <h1 className="text-4xl font-bold mb-4">Aligned Incentives. We earn contingent fees only on verified savings.</h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             No upfront fees. No monthly subscriptions. You pay a percentage of the verified savings we help you achieve — nothing more.
           </p>
@@ -365,7 +365,7 @@ export default function PilotProgram() {
             </Badge>
             <h2 className="text-2xl font-bold mb-4">Are You Pilot-Ready?</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Check if your organization is positioned to maximize value from a pilot. Most manufacturers who meet these criteria see results within 4 weeks.
+              Check if your organization is positioned to maximize value from a pilot. Timeline varies based on data quality and integration complexity. Pilots typically run 8-12 weeks.
             </p>
           </div>
 
@@ -447,7 +447,7 @@ export default function PilotProgram() {
       <section className="py-16 bg-primary text-primary-foreground">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-80" />
-          <h2 className="text-2xl font-bold mb-4">Start Saving With Zero Risk</h2>
+          <h2 className="text-2xl font-bold mb-4">Start Your Performance-Based Pilot</h2>
           <p className="text-primary-foreground/80 mb-8 max-w-xl mx-auto">
             Schedule a discovery call to discuss your procurement spend and estimated savings potential. No commitment required.
           </p>

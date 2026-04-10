@@ -114,7 +114,7 @@ export default function NotificationSettings() {
     <div className="container mx-auto p-6 max-w-4xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Notification Settings</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Notification Settings</h1>
           <p className="text-muted-foreground mt-1">
             Control how and when you receive alerts and updates
           </p>

@@ -194,7 +194,7 @@ export default function Allocation() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold" data-testid="heading-allocation">
+        <h1 className="text-3xl font-bold tracking-tight" data-testid="heading-allocation">
           Material Allocation
         </h1>
         <p className="text-muted-foreground mt-1">

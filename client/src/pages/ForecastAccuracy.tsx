@@ -130,7 +130,7 @@ export default function ForecastAccuracy() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold" data-testid="heading-page-title">Forecast Accuracy Dashboard</h1>
+        <h1 className="text-3xl font-bold tracking-tight" data-testid="heading-page-title">Forecast Accuracy Dashboard</h1>
         <p className="text-muted-foreground">
           Track prediction accuracy with MAPE metrics, bias analysis, and performance by SKU
         </p>

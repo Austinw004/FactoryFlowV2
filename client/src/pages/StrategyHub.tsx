@@ -34,7 +34,7 @@ export default function StrategyHub({ initialTab = "digital-twin" }: StrategyHub
     <div className="h-full flex flex-col">
       <div className="border-b bg-background">
         <div className="px-6 pt-4 pb-0">
-          <h1 className="text-2xl font-bold" data-testid="heading-strategy-hub">
+          <h1 className="text-2xl font-bold tracking-tight" data-testid="heading-strategy-hub">
             Strategy & Insights
           </h1>
           <p className="text-sm text-muted-foreground mb-3">

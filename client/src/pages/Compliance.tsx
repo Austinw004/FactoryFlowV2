@@ -353,7 +353,7 @@ export default function Compliance() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2" data-testid="heading-compliance">
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2" data-testid="heading-compliance">
             <Shield className="h-8 w-8" />
             Regulatory Compliance Management
           </h1>

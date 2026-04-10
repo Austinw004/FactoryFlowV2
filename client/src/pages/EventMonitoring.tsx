@@ -155,7 +155,7 @@ export default function EventMonitoring() {
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-3xl font-bold" data-testid="text-page-title">
+            <h1 className="text-3xl font-bold tracking-tight" data-testid="text-page-title">
               Event Monitoring
             </h1>
             <p className="text-muted-foreground" data-testid="text-page-description">
@@ -315,7 +315,7 @@ export default function EventMonitoring() {
                 <div className="flex flex-col items-center text-center gap-4">
                   <AlertTriangle className="h-12 w-12 text-amber-500" />
                   <div>
-                    <h3 className="text-lg font-semibold text-foreground">News Data Unavailable</h3>
+                    <h3 className="text-lg font-semibold text-foreground">Event Monitoring Initializing</h3>
                     <p className="text-sm text-muted-foreground mt-1 max-w-md">
                       {alertsData.unavailableReason || 'Real-time news data is currently unavailable.'}
                     </p>
