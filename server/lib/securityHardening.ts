@@ -91,6 +91,14 @@ export class EncryptionService {
 // RATE LIMITING
 // ============================================================================
 
+/**
+ * NOTE: This in-memory store is suitable for single-instance deployments.
+ * For multi-instance or containerized deployments (e.g. horizontal scaling),
+ * replace this store with a shared Redis-backed implementation using ioredis
+ * or a compatible Redis client so rate limit counters are shared across all
+ * instances. Example: use `rate-limit-redis` adapter with `express-rate-limit`.
+ */
+
 interface RateLimitStore {
   [key: string]: {
     count: number;
@@ -103,8 +111,10 @@ export class RateLimiter {
   private cleanupInterval: NodeJS.Timeout;
 
   constructor() {
-    // Cleanup expired entries every minute
-    this.cleanupInterval = setInterval(() => this.cleanup(), 60000);
+    // Cleanup expired entries every 5 minutes to prevent memory leaks on
+    // long-running servers. Entries are only deleted when resetTime has passed,
+    // so active windows are never evicted early.
+    this.cleanupInterval = setInterval(() => this.cleanup(), 5 * 60 * 1000);
   }
 
   private cleanup() {
@@ -304,10 +314,17 @@ export function securityHeadersMiddleware(req: Request, res: Response, next: Nex
   // Referrer policy
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   
-  // Content Security Policy
+  // Content Security Policy — tighter in production, permissive in development
+  const isProduction = process.env.NODE_ENV === 'production';
+  const scriptSrc = isProduction
+    ? "script-src 'self' https://cdnjs.cloudflare.com https://js.stripe.com"
+    : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://js.stripe.com";
+  const styleSrc = isProduction
+    ? "style-src 'self' https://fonts.googleapis.com"
+    : "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com";
   res.setHeader(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' wss: https:;"
+    `default-src 'self'; ${scriptSrc}; ${styleSrc}; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' wss: https:; frame-src 'self' https://js.stripe.com;`
   );
   
   // Strict Transport Security (HSTS) - only in production with HTTPS
