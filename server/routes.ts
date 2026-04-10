@@ -8157,7 +8157,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Decode common HTML entities that appear as raw text in RSS titles/descriptions
       const decodeHtmlEntities = (str: string): string =>
-        (str || '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'").replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)));
+        (str || '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'").replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code))).replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
 
       // Calculate company-specific relevance for each alert
       const enrichedAlerts = alerts.map(alert => {
