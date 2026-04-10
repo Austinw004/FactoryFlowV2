@@ -390,13 +390,13 @@ export default function EventMonitoring() {
                         {alert.description}
                       </p>
                       <div className="flex flex-wrap gap-2 mb-3">
-                        {alert.affectedRegions.slice(0, 3).map((region) => (
+                        {(alert.affectedRegions || alert.regions || []).slice(0, 3).map((region) => (
                           <Badge key={region} variant="secondary" className="text-xs">
                             <MapPin className="h-3 w-3 mr-1" />
                             {region}
                           </Badge>
                         ))}
-                        {alert.affectedCommodities.slice(0, 2).map((commodity) => (
+                        {(alert.affectedCommodities || alert.commodities || []).slice(0, 2).map((commodity) => (
                           <Badge key={commodity} variant="secondary" className="text-xs">
                             <Package className="h-3 w-3 mr-1" />
                             {commodity}
