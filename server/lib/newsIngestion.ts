@@ -187,7 +187,7 @@ function parseRssItems(xml: string, sourceName: string, feedCredibility: number)
 
 // ─── Validation ───────────────────────────────────────────────────────────────
 
-const SEVEN_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 export function validateNewsItem(item: RawNewsItem): void {
   if (!item.title || item.title.trim().length < 20) {
@@ -438,12 +438,10 @@ export async function fetchNewsFeeds(
       validateNewsItem(item);
       validated.push(item);
     } catch (valErr) {
-      totalRejected++; if(totalRejected<=5) console.log("[DEBUG-REJECT]",totalRejected,"of",allRaw.length,(valErr as any)?.message?.substring(0,80));
-      if (totalRejected <= 3) console.log('[NewsIngestion DEBUG] Validation rejected:', (valErr as any)?.message, 'title:', item.title?.substring(0,40), 'link:', item.link?.substring(0,40));
+      totalRejected++;
     }
   }
 
-  console.log("[DEBUG-VALIDATED]",validated.length,"of",totalFetched,"rejected:",totalRejected); // Hard guard — no fallback content ever
   if (validated.length === 0) {
     throw new Error("NO_VALID_NEWS_SOURCES: all feeds returned zero valid articles");
   }

@@ -8155,6 +8155,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'construction': ['steel', 'cement', 'lumber', 'copper', 'aluminum', 'glass']
       };
       
+      // Decode common HTML entities that appear as raw text in RSS titles/descriptions
+      const decodeHtmlEntities = (str: string): string =>
+        (str || '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'").replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)));
+
       // Calculate company-specific relevance for each alert
       const enrichedAlerts = alerts.map(alert => {
         let companyRelevanceScore = alert.relevanceScore;
@@ -8199,6 +8203,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         return {
           ...alert,
+          title: decodeHtmlEntities(alert.title),
+          description: decodeHtmlEntities(alert.description),
           companyRelevanceScore: Math.min(100, companyRelevanceScore),
           relevanceReasons,
           isDirectlyRelevant: relevanceReasons.length > 0
