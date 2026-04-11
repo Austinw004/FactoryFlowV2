@@ -228,6 +228,9 @@ function AppLayout() {
               <Router />
             </ErrorBoundary>
           </main>
+          <footer className="border-t px-6 py-3 text-center text-xs text-muted-foreground shrink-0">
+            &copy; 2026 Prescient Labs, Inc. All rights reserved.
+          </footer>
         </div>
       </div>
       <GuidedTour />
