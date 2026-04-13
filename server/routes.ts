@@ -2946,11 +2946,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      const supplier = await storage.getSupplier(req.body.supplierId);
+      const supplier = await storage.getSupplier(req.body.supplierId, user.companyId);
       if (!supplier || supplier.companyId !== user.companyId) {
         return res.status(403).json({ error: "Access denied to supplier" });
       }
-      const material = await storage.getMaterial(req.body.materialId);
+      const material = await storage.getMaterial(req.body.materialId, user.companyId);
       if (!material || material.companyId !== user.companyId) {
         return res.status(403).json({ error: "Access denied to material" });
       }
@@ -2988,7 +2988,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      const sku = await storage.getSku(req.body.skuId);
+      const sku = await storage.getSku(req.body.skuId, user.companyId);
       if (!sku || sku.companyId !== user.companyId) {
         return res.status(403).json({ error: "Access denied" });
       }
@@ -3009,7 +3009,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const items = req.body.items || [];
       for (const item of items) {
-        const sku = await storage.getSku(item.skuId);
+        const sku = await storage.getSku(item.skuId, user.companyId);
         if (!sku || sku.companyId !== user.companyId) {
           return res.status(403).json({ error: "Access denied" });
         }
@@ -6449,13 +6449,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Verify material belongs to company
-      const material = await storage.getMaterial(req.body.materialId);
+      const material = await storage.getMaterial(req.body.materialId, user.companyId);
       if (!material || material.companyId !== user.companyId) {
         return res.status(403).json({ error: "Material not found in your company" });
       }
 
       // Verify supplier belongs to company
-      const supplier = await storage.getSupplier(req.body.supplierId);
+      const supplier = await storage.getSupplier(req.body.supplierId, user.companyId);
       if (!supplier || supplier.companyId !== user.companyId) {
         return res.status(403).json({ error: "Supplier not found in your company" });
       }
@@ -6490,7 +6490,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verify new material if changing
       if (req.body.materialId && req.body.materialId !== existingOrder.materialId) {
-        const material = await storage.getMaterial(req.body.materialId);
+        const material = await storage.getMaterial(req.body.materialId, user.companyId);
         if (!material || material.companyId !== user.companyId) {
           return res.status(403).json({ error: "Material not found in your company" });
         }
@@ -6498,7 +6498,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verify new supplier if changing
       if (req.body.supplierId && req.body.supplierId !== existingOrder.supplierId) {
-        const supplier = await storage.getSupplier(req.body.supplierId);
+        const supplier = await storage.getSupplier(req.body.supplierId, user.companyId);
         if (!supplier || supplier.companyId !== user.companyId) {
           return res.status(403).json({ error: "Supplier not found in your company" });
         }
@@ -6591,14 +6591,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Verify material belongs to company
-      const material = await storage.getMaterial(req.body.materialId);
+      const material = await storage.getMaterial(req.body.materialId, user.companyId);
       if (!material || material.companyId !== user.companyId) {
         return res.status(403).json({ error: "Material not found in your company" });
       }
 
       // Verify SKU if provided
       if (req.body.skuId) {
-        const sku = await storage.getSku(req.body.skuId);
+        const sku = await storage.getSku(req.body.skuId, user.companyId);
         if (!sku || sku.companyId !== user.companyId) {
           return res.status(403).json({ error: "SKU not found in your company" });
         }
@@ -6666,13 +6666,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Verify material belongs to company
-      const material = await storage.getMaterial(req.body.materialId);
+      const material = await storage.getMaterial(req.body.materialId, user.companyId);
       if (!material || material.companyId !== user.companyId) {
         return res.status(403).json({ error: "Material not found in your company" });
       }
 
       // Verify supplier belongs to company
-      const supplier = await storage.getSupplier(req.body.supplierId);
+      const supplier = await storage.getSupplier(req.body.supplierId, user.companyId);
       if (!supplier || supplier.companyId !== user.companyId) {
         return res.status(403).json({ error: "Supplier not found in your company" });
       }
@@ -6707,7 +6707,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verify new material if changing
       if (req.body.materialId && req.body.materialId !== existingSchedule.materialId) {
-        const material = await storage.getMaterial(req.body.materialId);
+        const material = await storage.getMaterial(req.body.materialId, user.companyId);
         if (!material || material.companyId !== user.companyId) {
           return res.status(403).json({ error: "Material not found in your company" });
         }
@@ -6715,7 +6715,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verify new supplier if changing
       if (req.body.supplierId && req.body.supplierId !== existingSchedule.supplierId) {
-        const supplier = await storage.getSupplier(req.body.supplierId);
+        const supplier = await storage.getSupplier(req.body.supplierId, user.companyId);
         if (!supplier || supplier.companyId !== user.companyId) {
           return res.status(403).json({ error: "Supplier not found in your company" });
         }
@@ -6784,13 +6784,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Verify material belongs to company
-      const material = await storage.getMaterial(req.body.materialId);
+      const material = await storage.getMaterial(req.body.materialId, user.companyId);
       if (!material || material.companyId !== user.companyId) {
         return res.status(403).json({ error: "Material not found in your company" });
       }
 
       // Verify supplier belongs to company
-      const supplier = await storage.getSupplier(req.body.supplierId);
+      const supplier = await storage.getSupplier(req.body.supplierId, user.companyId);
       if (!supplier || supplier.companyId !== user.companyId) {
         return res.status(403).json({ error: "Supplier not found in your company" });
       }
@@ -6825,7 +6825,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verify new material if changing
       if (req.body.materialId && req.body.materialId !== existingRecommendation.materialId) {
-        const material = await storage.getMaterial(req.body.materialId);
+        const material = await storage.getMaterial(req.body.materialId, user.companyId);
         if (!material || material.companyId !== user.companyId) {
           return res.status(403).json({ error: "Material not found in your company" });
         }
@@ -6833,7 +6833,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verify new supplier if changing
       if (req.body.supplierId && req.body.supplierId !== existingRecommendation.supplierId) {
-        const supplier = await storage.getSupplier(req.body.supplierId);
+        const supplier = await storage.getSupplier(req.body.supplierId, user.companyId);
         if (!supplier || supplier.companyId !== user.companyId) {
           return res.status(403).json({ error: "Supplier not found in your company" });
         }
@@ -12645,7 +12645,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Enrich with supplier details
       const enriched = await Promise.all(snapshots.map(async (snapshot) => {
-        const supplier = await storage.getSupplier(snapshot.supplierId);
+        const supplier = await storage.getSupplier(snapshot.supplierId, user.companyId);
         return { ...snapshot, supplier };
       }));
       
@@ -16363,8 +16363,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!company?.hubspotAccessToken || company.hubspotEnabled !== 1) {
         return res.status(400).json({ error: "HubSpot not configured or enabled" });
       }
-      
-      const supplier = await storage.getSupplier(supplierId);
+
+      const supplier = await storage.getSupplier(supplierId, user.companyId);
       if (!supplier || supplier.companyId !== user.companyId) {
         return res.status(404).json({ error: "Supplier not found" });
       }
