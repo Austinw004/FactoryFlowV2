@@ -12,6 +12,9 @@ import { GuidedTour } from "@/components/GuidedTour";
 import { CommandPalette } from "@/components/CommandPalette";
 import { RealtimeProvider } from "@/contexts/RealtimeContext";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
+import { KeyboardShortcutsHelp } from "@/components/KeyboardShortcutsHelp";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { useState } from "react";
 import { UnifiedDataProvider } from "@/contexts/UnifiedDataContext";
 import NotFound from "@/pages/not-found";
 import LandingPage from "@/pages/LandingPage";
@@ -228,6 +231,8 @@ function Router() {
 
 function AppLayout() {
   const { isAuthenticated, isLoading, needsOnboarding } = useAuth();
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  useKeyboardShortcuts(() => setShowShortcuts(true));
   const style = {
     "--sidebar-width": "15rem",
   };
@@ -251,6 +256,7 @@ function AppLayout() {
       </div>
       <GuidedTour />
       <CommandPalette />
+      <KeyboardShortcutsHelp open={showShortcuts} onOpenChange={setShowShortcuts} />
     </SidebarProvider>
   );
 }

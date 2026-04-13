@@ -6,8 +6,9 @@ import { LiveAnalysisIndicator } from "./LiveAnalysisIndicator";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Bell, User, CreditCard, Settings, LogOut, Search, ChevronRight } from "lucide-react";
+import { Bell, User, CreditCard, Settings, LogOut, Search, ChevronRight, Keyboard } from "lucide-react";
 import { ConnectionStatus } from "@/components/ConnectionStatus";
+import { InsightBadge } from "@/components/InsightPanel";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -164,6 +165,8 @@ export function Header() {
           </Badge>
         )}
 
+        <InsightBadge />
+
         <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" data-testid="button-notifications">
           <Bell className="h-4 w-4" />
         </Button>
@@ -194,6 +197,14 @@ export function Header() {
             >
               <Settings className="h-4 w-4 mr-2" />
               Settings
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "?", bubbles: true }))}
+              data-testid="menu-shortcuts"
+            >
+              <Keyboard className="h-4 w-4 mr-2" />
+              Keyboard Shortcuts
+              <kbd className="ml-auto text-[10px] bg-muted px-1 rounded">?</kbd>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
