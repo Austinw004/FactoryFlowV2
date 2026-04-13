@@ -8,6 +8,29 @@ import { WebhookHandlers } from './webhookHandlers';
 
 const app = express();
 
+// ── CORS Whitelist ──────────────────────────────────────────────────────────
+const ALLOWED_ORIGINS = new Set([
+  'https://prescient-labs.com',
+  'https://www.prescient-labs.com',
+  // Replit preview domains
+  ...(process.env.REPLIT_DOMAINS?.split(',').map(d => `https://${d}`) || []),
+]);
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Device-Fingerprint');
+    res.setHeader('Access-Control-Max-Age', '86400'); // Cache preflight 24h
+  }
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+  next();
+});
+
 async function initStripe() {
   const databaseUrl = process.env.DATABASE_URL;
 
@@ -94,11 +117,12 @@ declare module 'http' {
   }
 }
 app.use(express.json({
+  limit: '2mb', // Prevent oversized payloads
   verify: (req, _res, buf) => {
     req.rawBody = buf;
   }
 }));
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: false, limit: '1mb' }));
 
 app.use((req, res, next) => {
   const start = Date.now();

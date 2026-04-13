@@ -450,10 +450,10 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
           icon={TrendingUp}
-          label="FDR Score"
+          label="Market Health"
           value={fdr.toFixed(2)}
           subtitle={friendlyRegime}
-          trend={{ value: regimeIntelligence?.confidence?.overall ? `${Math.round(regimeIntelligence.confidence.overall * 100)}% conf.` : "Live", positive: true }}
+          trend={{ value: regimeIntelligence?.confidence?.overall ? `${Math.round(regimeIntelligence.confidence.overall * 100)}% confidence` : "Live", positive: true }}
           tooltipTerm="fdr"
         />
         <KPICard
@@ -616,7 +616,7 @@ export default function Dashboard() {
                 </Badge>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Economic Regime:</span>
+                <span className="text-muted-foreground">Market Conditions:</span>
                 <span className="font-semibold text-xs">{friendlyRegime}</span>
               </div>
               <div className="flex justify-between">
@@ -636,7 +636,7 @@ export default function Dashboard() {
             <TrendingUp className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
             <div className="text-sm space-y-1">
               <p className="font-semibold text-foreground">
-                FDR Analysis: {fdr >= 1.5 ? 'Financial markets significantly outpacing real economy' : fdr >= 1.0 ? 'Moderate financial-real divergence detected' : 'Real economy leading financial markets'}
+                Market Insight: {fdr >= 1.5 ? 'Financial markets are outpacing the real economy — consider deferring major purchases' : fdr >= 1.0 ? 'Moderate market divergence detected — standard procurement pace recommended' : 'Real economy is strong — favorable conditions for locking in supplier terms'}
               </p>
               <p className="text-muted-foreground">
                 Current FDR ratio of {fdr.toFixed(2)} indicates <strong>{friendlyRegime}</strong> regime. 
