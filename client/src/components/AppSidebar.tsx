@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   BarChart3,
   ChevronRight,
+  Zap,
 } from "lucide-react";
 import {
   Sidebar,
@@ -106,6 +107,12 @@ const operationsItems = [
 ];
 
 const bottomMenuItems = [
+  {
+    title: "Automations",
+    url: "/automations",
+    icon: Zap,
+    testId: "sidebar-automations",
+  },
   {
     title: "Integrations",
     url: "/integrations",

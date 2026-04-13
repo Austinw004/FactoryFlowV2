@@ -964,6 +964,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ── Workflow Automation API ──────────────────────────────────────────────
+  app.get('/api/automations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user || !user.companyId) return res.status(400).json({ error: "No company" });
+      const { getRules } = await import("./lib/workflowEngine");
+      const rules = await getRules(user.companyId);
+      res.json(rules);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch automation rules" });
+    }
+  });
+
+  app.post('/api/automations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user || !user.companyId) return res.status(400).json({ error: "No company" });
+      const { createRule } = await import("./lib/workflowEngine");
+      const rule = await createRule({ ...req.body, companyId: user.companyId, createdBy: userId });
+      res.status(201).json(rule);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to create automation rule" });
+    }
+  });
+
+  app.put('/api/automations/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user || !user.companyId) return res.status(400).json({ error: "No company" });
+      const { updateRule } = await import("./lib/workflowEngine");
+      const rule = await updateRule(req.params.id, user.companyId, req.body);
+      if (!rule) return res.status(404).json({ error: "Rule not found" });
+      res.json(rule);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to update automation rule" });
+    }
+  });
+
+  app.delete('/api/automations/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user || !user.companyId) return res.status(400).json({ error: "No company" });
+      const { deleteRule } = await import("./lib/workflowEngine");
+      await deleteRule(req.params.id, user.companyId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to delete automation rule" });
+    }
+  });
+
+  app.get('/api/automations/:id/executions', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user || !user.companyId) return res.status(400).json({ error: "No company" });
+      const { getRuleExecutions } = await import("./lib/workflowEngine");
+      const executions = await getRuleExecutions(req.params.id, user.companyId);
+      res.json(executions);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch executions" });
+    }
+  });
+
   // Contextual Intelligence API
   app.get('/api/intelligence/insights', isAuthenticated, async (req: any, res) => {
     try {

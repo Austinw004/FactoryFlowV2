@@ -9650,3 +9650,66 @@ export const purchaseTransactions = pgTable(
 export const insertPurchaseTransactionSchema = createInsertSchema(purchaseTransactions).omit({ id: true, createdAt: true });
 export type PurchaseTransaction = typeof purchaseTransactions.$inferSelect;
 export type InsertPurchaseTransaction = z.infer<typeof insertPurchaseTransactionSchema>;
+
+// ── Workflow Automation Engine ──────────────────────────────────────────────
+export const automationRules = pgTable(
+  "automation_rules",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    companyId: varchar("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "cascade" }),
+    createdBy: varchar("created_by")
+      .references(() => users.id, { onDelete: "set null" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    enabled: boolean("enabled").notNull().default(true),
+    triggerType: text("trigger_type").notNull(), // "entity_change", "threshold", "schedule", "manual"
+    triggerEntity: text("trigger_entity"), // "material", "supplier", "machinery", etc.
+    triggerEvent: text("trigger_event"), // "create", "update", "delete", "any"
+    conditions: jsonb("conditions").notNull().default(sql`'[]'::jsonb`), // Array of { field, operator, value }
+    actions: jsonb("actions").notNull().default(sql`'[]'::jsonb`), // Array of { type, params }
+    executionCount: integer("execution_count").notNull().default(0),
+    lastExecutedAt: timestamp("last_executed_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("automation_rules_company_idx").on(table.companyId),
+    index("automation_rules_trigger_idx").on(table.triggerType, table.triggerEntity),
+  ],
+);
+
+export const automationExecutions = pgTable(
+  "automation_executions",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    ruleId: varchar("rule_id")
+      .notNull()
+      .references(() => automationRules.id, { onDelete: "cascade" }),
+    companyId: varchar("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "cascade" }),
+    triggerData: jsonb("trigger_data"), // The event data that triggered execution
+    conditionResults: jsonb("condition_results"), // Which conditions matched
+    actionResults: jsonb("action_results"), // Result of each action
+    status: text("status").notNull().default("pending"), // "pending", "running", "completed", "failed"
+    error: text("error"),
+    duration: integer("duration"), // ms
+    executedAt: timestamp("executed_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("automation_executions_rule_idx").on(table.ruleId),
+    index("automation_executions_company_idx").on(table.companyId),
+    index("automation_executions_status_idx").on(table.status),
+  ],
+);
+
+export const insertAutomationRuleSchema = createInsertSchema(automationRules).omit({ id: true, createdAt: true, updatedAt: true, executionCount: true, lastExecutedAt: true });
+export type AutomationRule = typeof automationRules.$inferSelect;
+export type InsertAutomationRule = z.infer<typeof insertAutomationRuleSchema>;
+export type AutomationExecution = typeof automationExecutions.$inferSelect;
