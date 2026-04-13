@@ -317,7 +317,7 @@ export default function IntegrationChecklist() {
               View Pilot Program
             </Button>
             <Button size="lg" variant="outline" asChild data-testid="link-contact-sales">
-              <a href="mailto:sales@prescientlabs.ai">Contact Sales</a>
+              <a href="mailto:info@prescient-labs.com">Contact Sales</a>
             </Button>
           </div>
         </div>

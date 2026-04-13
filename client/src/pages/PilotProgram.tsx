@@ -453,7 +453,7 @@ export default function PilotProgram() {
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <Button size="lg" variant="secondary" asChild data-testid="link-schedule-call">
-              <a href="mailto:pilots@prescientlabs.ai">
+              <a href="mailto:info@prescient-labs.com">
                 Schedule Discovery Call
                 <ArrowRight className="ml-2 h-4 w-4" />
               </a>
