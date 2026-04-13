@@ -6,7 +6,7 @@ import { LiveAnalysisIndicator } from "./LiveAnalysisIndicator";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Bell, User, CreditCard, Settings, LogOut, Sparkles, Search, ChevronRight } from "lucide-react";
+import { Bell, User, CreditCard, Settings, LogOut, Search, ChevronRight } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -128,13 +128,13 @@ export function Header() {
         {/* Upgrade CTA for non-subscribers */}
         {!hasSubscription && (
           <Button
+            variant="outline"
             size="sm"
             onClick={() => setLocation("/pricing")}
-            className="h-8 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground shadow-sm"
+            className="h-8 text-xs"
             data-testid="button-upgrade-cta"
           >
-            <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-            Start Free Trial
+            Upgrade
           </Button>
         )}
 
@@ -194,11 +194,15 @@ export function Header() {
               Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild data-testid="menu-logout">
-              <a href="/api/logout">
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </a>
+            <DropdownMenuItem
+              onClick={() => {
+                localStorage.removeItem("prescient_token");
+                window.location.href = "/";
+              }}
+              data-testid="menu-logout"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
