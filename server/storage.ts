@@ -1249,10 +1249,13 @@ export class DbStorage implements IStorage {
   }
 
   async getAllBomsForCompany(companyId: string): Promise<Bom[]> {
-    const companySkus = await db.select({ id: skus.id }).from(skus).where(eq(skus.companyId, companyId));
-    if (companySkus.length === 0) return [];
-    const skuIds = companySkus.map(s => s.id);
-    return db.select().from(boms).where(inArray(boms.skuId, skuIds));
+    // Single query using JOIN instead of N+1 pattern
+    const results = await db
+      .select({ bom: boms })
+      .from(boms)
+      .innerJoin(skus, eq(boms.skuId, skus.id))
+      .where(eq(skus.companyId, companyId));
+    return results.map(r => r.bom);
   }
 
   async createBom(insertBom: InsertBom): Promise<Bom> {
@@ -1292,10 +1295,13 @@ export class DbStorage implements IStorage {
   }
 
   async getAllSupplierMaterialsForCompany(companyId: string): Promise<SupplierMaterial[]> {
-    const companySuppliers = await db.select({ id: suppliers.id }).from(suppliers).where(eq(suppliers.companyId, companyId));
-    if (companySuppliers.length === 0) return [];
-    const supplierIds = companySuppliers.map(s => s.id);
-    return db.select().from(supplierMaterials).where(inArray(supplierMaterials.supplierId, supplierIds));
+    // Single query using JOIN instead of 2-query pattern
+    const results = await db
+      .select({ sm: supplierMaterials })
+      .from(supplierMaterials)
+      .innerJoin(suppliers, eq(supplierMaterials.supplierId, suppliers.id))
+      .where(eq(suppliers.companyId, companyId));
+    return results.map(r => r.sm);
   }
 
   async createSupplierMaterial(insertSm: InsertSupplierMaterial): Promise<SupplierMaterial> {
@@ -1308,10 +1314,13 @@ export class DbStorage implements IStorage {
   }
 
   async getAllDemandHistoryForCompany(companyId: string): Promise<DemandHistory[]> {
-    const companySkus = await db.select({ id: skus.id }).from(skus).where(eq(skus.companyId, companyId));
-    if (companySkus.length === 0) return [];
-    const skuIds = companySkus.map(s => s.id);
-    return db.select().from(demandHistory).where(inArray(demandHistory.skuId, skuIds));
+    // Single query using JOIN instead of 2-query pattern
+    const results = await db
+      .select({ dh: demandHistory })
+      .from(demandHistory)
+      .innerJoin(skus, eq(demandHistory.skuId, skus.id))
+      .where(eq(skus.companyId, companyId));
+    return results.map(r => r.dh);
   }
 
   async createDemandHistory(insertDh: InsertDemandHistory): Promise<DemandHistory> {

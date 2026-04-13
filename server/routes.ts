@@ -3021,10 +3021,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User not associated with a company" });
       }
       const items = req.body.items || [];
-      for (const item of items) {
-        const sku = await storage.getSku(item.skuId, user.companyId);
-        if (!sku || sku.companyId !== user.companyId) {
-          return res.status(403).json({ error: "Access denied" });
+      // Batch-validate all SKU IDs in one query to avoid N+1
+      const skuIds = [...new Set(items.map((item: { skuId: string }) => item.skuId))];
+      const companySkus = await storage.getSkus(user.companyId);
+      const companySkuIds = new Set(companySkus.map(s => s.id));
+      for (const skuId of skuIds) {
+        if (!companySkuIds.has(skuId)) {
+          return res.status(403).json({ error: `Access denied for SKU ${skuId}` });
         }
       }
       const validated = items.map((item: any) => insertDemandHistorySchema.parse(item));
