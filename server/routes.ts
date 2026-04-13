@@ -1151,7 +1151,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(userId);
       if (!user || !user.companyId) return res.status(400).json({ error: "No company" });
       const { createRule } = await import("./lib/workflowEngine");
-      const rule = await createRule({ ...req.body, companyId: user.companyId, createdBy: userId });
+      const { insertAutomationRuleSchema } = await import("@shared/schema");
+      const validatedData = insertAutomationRuleSchema.parse({ ...req.body, companyId: user.companyId, createdBy: userId });
+      const rule = await createRule(validatedData);
       res.status(201).json(rule);
     } catch (error: any) {
       res.status(500).json({ error: "Failed to create automation rule" });
@@ -1269,9 +1271,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User has no associated company" });
       }
       
-      // Sanitize input - remove fields that shouldn't be set by client
-      const { id, createdAt, updatedAt, ...sanitizedBody } = req.body;
-      
+      // Validate and sanitize input
+      const notifPrefsSchema = z.object({
+        emailEnabled: z.boolean().optional(),
+        pushEnabled: z.boolean().optional(),
+        smsEnabled: z.boolean().optional(),
+        inAppEnabled: z.boolean().optional(),
+        digestFrequency: z.enum(["realtime", "hourly", "daily", "weekly"]).optional(),
+        quietHoursStart: z.string().optional().nullable(),
+        quietHoursEnd: z.string().optional().nullable(),
+        alertThreshold: z.enum(["all", "warning", "critical"]).optional(),
+        categories: z.record(z.boolean()).optional(),
+      }).passthrough();
+      const sanitizedBody = notifPrefsSchema.parse(req.body);
+
       const prefs = await storage.upsertUserNotificationPreferences({
         userId,
         companyId: user.companyId,
