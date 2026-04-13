@@ -38,6 +38,9 @@ import RoiCalculator from "@/pages/RoiCalculator";
 import SecurityFaq from "@/pages/SecurityFaq";
 import SignUpPage from "@/pages/SignUpPage";
 import SignInPage from "@/pages/SignInPage";
+import LandingPageVariantA from "@/pages/LandingPageVariantA";
+import LandingPageVariantB from "@/pages/LandingPageVariantB";
+import LandingPageVariantC from "@/pages/LandingPageVariantC";
 import NotificationSettings from "@/pages/NotificationSettings";
 import ShopFloorMode from "@/pages/ShopFloorMode";
 import Integrations from "@/pages/Integrations";
@@ -111,6 +114,9 @@ function Router() {
         <Route path="/security" component={SecurityFaq} />
         <Route path="/signup" component={SignUpPage} />
         <Route path="/signin" component={SignInPage} />
+        <Route path="/preview/variant-a" component={LandingPageVariantA} />
+        <Route path="/preview/variant-b" component={LandingPageVariantB} />
+        <Route path="/preview/variant-c" component={LandingPageVariantC} />
         <Route component={LandingPage} />
       </Switch>
     );
