@@ -964,6 +964,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ── Audit Trail API ────────────────────────────────────────────────────────
+  app.get('/api/audit-trail', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user || !user.companyId) return res.status(400).json({ error: "No company" });
+
+      const { auditLogs, users: usersTable } = await import("../shared/schema");
+      const { desc, and: drizzleAnd, eq: drizzleEq, gte: drizzleGte, like } = await import("drizzle-orm");
+
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+      const offset = parseInt(req.query.offset as string) || 0;
+      const entityType = req.query.entityType as string;
+      const action = req.query.action as string;
+      const entityId = req.query.entityId as string;
+      const search = req.query.search as string;
+      const since = req.query.since as string;
+
+      // Build conditions
+      const conditions: any[] = [drizzleEq(auditLogs.companyId, user.companyId)];
+      if (entityType) conditions.push(drizzleEq(auditLogs.entityType, entityType));
+      if (action) conditions.push(drizzleEq(auditLogs.action, action));
+      if (entityId) conditions.push(drizzleEq(auditLogs.entityId, entityId));
+      if (since) conditions.push(drizzleGte(auditLogs.timestamp, new Date(since)));
+
+      const logs = await db.select({
+        id: auditLogs.id,
+        userId: auditLogs.userId,
+        action: auditLogs.action,
+        entityType: auditLogs.entityType,
+        entityId: auditLogs.entityId,
+        changes: auditLogs.changes,
+        ipAddress: auditLogs.ipAddress,
+        userAgent: auditLogs.userAgent,
+        timestamp: auditLogs.timestamp,
+      })
+      .from(auditLogs)
+      .where(conditions.length > 1 ? drizzleAnd(...conditions) : conditions[0])
+      .orderBy(desc(auditLogs.timestamp))
+      .limit(limit)
+      .offset(offset);
+
+      // Get total count
+      const [countResult] = await db.select({ count: sql`COUNT(*)::int` })
+        .from(auditLogs)
+        .where(conditions.length > 1 ? drizzleAnd(...conditions) : conditions[0]);
+
+      res.json({
+        logs,
+        total: countResult?.count || 0,
+        limit,
+        offset,
+      });
+    } catch (error: any) {
+      console.error("Error fetching audit trail:", error);
+      res.status(500).json({ error: "Failed to fetch audit trail" });
+    }
+  });
+
+  // Audit trail entity types summary
+  app.get('/api/audit-trail/summary', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user || !user.companyId) return res.status(400).json({ error: "No company" });
+
+      const { auditLogs } = await import("../shared/schema");
+      const { eq: drizzleEq } = await import("drizzle-orm");
+
+      const summary = await db.select({
+        entityType: auditLogs.entityType,
+        count: sql`COUNT(*)::int`,
+        lastActivity: sql`MAX(${auditLogs.timestamp})`,
+      })
+      .from(auditLogs)
+      .where(drizzleEq(auditLogs.companyId, user.companyId))
+      .groupBy(auditLogs.entityType);
+
+      const actionSummary = await db.select({
+        action: auditLogs.action,
+        count: sql`COUNT(*)::int`,
+      })
+      .from(auditLogs)
+      .where(drizzleEq(auditLogs.companyId, user.companyId))
+      .groupBy(auditLogs.action);
+
+      res.json({ entityTypes: summary, actions: actionSummary });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch audit summary" });
+    }
+  });
+
   // ── Workflow Automation API ──────────────────────────────────────────────
   app.get('/api/automations', isAuthenticated, async (req: any, res) => {
     try {

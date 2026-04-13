@@ -15,6 +15,7 @@ import {
   BarChart3,
   ChevronRight,
   Zap,
+  Shield,
 } from "lucide-react";
 import {
   Sidebar,
@@ -112,6 +113,12 @@ const bottomMenuItems = [
     url: "/automations",
     icon: Zap,
     testId: "sidebar-automations",
+  },
+  {
+    title: "Audit Trail",
+    url: "/audit-trail",
+    icon: Shield,
+    testId: "sidebar-audit-trail",
   },
   {
     title: "Integrations",
