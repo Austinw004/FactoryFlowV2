@@ -24,16 +24,14 @@ export default function HistoricalBacktesting() {
     setLatestResults(null); // Clear previous results
     
     try {
-      console.log('[HistoricalBacktesting] Starting backtest...');
       const response = await apiRequest('POST', '/api/backtest/run', {
         startYear: 2015,
         endYear: 2023,
         horizonMonths: 6,
       });
-      
+
       // Parse JSON from response
       const results: any = await response.json();
-      console.log('[HistoricalBacktesting] Backtest complete:', results);
       
       setLatestResults(results);
       await refetch();
@@ -43,7 +41,6 @@ export default function HistoricalBacktesting() {
         description: `Validated ${results.totalPredictions} predictions with ${results.correctDirectionPct}% directional accuracy`,
       });
     } catch (error: any) {
-      console.error('[HistoricalBacktesting] Error:', error);
       toast({
         title: "Backtest Failed",
         description: error.message || 'Unknown error occurred',
@@ -69,15 +66,8 @@ export default function HistoricalBacktesting() {
         meanAbsolutePercentageError: Number(rawResults.meanAbsolutePercentageError || 0),
       };
     }
-    
-    console.log('[HistoricalBacktesting] Current results state:', {
-      latestResults,
-      storedResults,
-      finalResults: results,
-      hasTotal: results?.totalPredictions,
-    });
+
   } catch (e) {
-    console.error('[HistoricalBacktesting] Error extracting results:', e);
   }
 
   return (

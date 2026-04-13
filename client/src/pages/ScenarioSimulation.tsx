@@ -306,7 +306,6 @@ function AddVariantDialog({
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      console.log("[AddVariantDialog] Submitting variant data:", data);
       const res = await apiRequest("POST", `/api/simulations/${simulation.id}/variants`, data);
       return res.json();
     },
@@ -334,7 +333,6 @@ function AddVariantDialog({
       toast({ title: "Label required", description: "Please enter a variant label.", variant: "destructive" });
       return;
     }
-    console.log("[AddVariantDialog] handleCreate - Current state values:", { label, fdrValue, regime, commodityAdjustments });
     createMutation.mutate({ label, fdrValue, regime, commodityAdjustments });
   };
 
@@ -363,7 +361,6 @@ function AddVariantDialog({
             <Slider
               value={[fdrValue]}
               onValueChange={([val]) => {
-                console.log("[AddVariantDialog] Slider changed to:", val);
                 setFdrValue(val);
               }}
               min={0.5}
@@ -375,7 +372,6 @@ function AddVariantDialog({
           <div className="space-y-2">
             <Label>Economic Regime</Label>
             <Select value={regime} onValueChange={(val) => {
-              console.log("[AddVariantDialog] Regime changed to:", val);
               setRegime(val);
             }}>
               <SelectTrigger data-testid="select-variant-regime">

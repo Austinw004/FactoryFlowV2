@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { isOnline, onConnectivityChange } from "@/lib/performanceUtils";
 import { WifiOff, RefreshCw } from "lucide-react";
 
 export function OfflineIndicator() {
   const [online, setOnline] = useState(isOnline());
   const [showBanner, setShowBanner] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const cleanup = onConnectivityChange((isOnline) => {
@@ -13,10 +14,18 @@ export function OfflineIndicator() {
         setShowBanner(true);
       } else {
         // Keep banner visible briefly when coming back online
-        setTimeout(() => setShowBanner(false), 3000);
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+        timeoutRef.current = setTimeout(() => setShowBanner(false), 3000);
       }
     });
-    return cleanup;
+    return () => {
+      cleanup();
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
   }, []);
 
   if (!showBanner) return null;

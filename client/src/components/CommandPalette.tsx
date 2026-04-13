@@ -154,31 +154,32 @@ export function CommandPalette() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Fetch entity data for search
-  const { data: materials } = useQuery<any[]>({
+  interface SearchEntity { id: string; name?: string; [key: string]: unknown; }
+  const { data: materials } = useQuery<SearchEntity[]>({
     queryKey: ["/api/materials"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: open,
   });
 
-  const { data: suppliers } = useQuery<any[]>({
+  const { data: suppliers } = useQuery<SearchEntity[]>({
     queryKey: ["/api/suppliers"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: open,
   });
 
-  const { data: skus } = useQuery<any[]>({
+  const { data: skus } = useQuery<SearchEntity[]>({
     queryKey: ["/api/skus"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: open,
   });
 
-  const { data: machinery } = useQuery<any[]>({
+  const { data: machinery } = useQuery<SearchEntity[]>({
     queryKey: ["/api/machinery"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: open,
   });
 
-  const { data: employees } = useQuery<any[]>({
+  const { data: employees } = useQuery<SearchEntity[]>({
     queryKey: ["/api/employees"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: open,

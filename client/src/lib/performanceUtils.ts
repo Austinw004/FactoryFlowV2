@@ -10,7 +10,7 @@
 import { queryClient } from "./queryClient";
 
 // ── Request Deduplication ──────────────────────────────────────────────────
-const pendingRequests = new Map<string, Promise<any>>();
+const pendingRequests = new Map<string, Promise<Response>>();
 
 export async function deduplicatedFetch(url: string, options?: RequestInit): Promise<Response> {
   const key = `${options?.method || "GET"}:${url}`;

@@ -122,7 +122,6 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       ws.onopen = () => {
         setIsConnected(true);
         reconnectAttemptsRef.current = 0;
-        console.log("[Realtime] Connected");
       };
 
       ws.onmessage = (event) => {

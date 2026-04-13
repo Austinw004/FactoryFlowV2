@@ -32,7 +32,6 @@ export function useWebSocket(onMessage?: MessageHandler) {
       wsRef.current = ws;
 
       ws.onopen = () => {
-        console.log('[WebSocket] Connected to real-time updates (server-side authenticated)');
         reconnectAttemptsRef.current = 0;
       };
 
@@ -41,13 +40,10 @@ export function useWebSocket(onMessage?: MessageHandler) {
           const message: WebSocketMessage = JSON.parse(event.data);
           
           if (message.type === 'connection_established') {
-            console.log('[WebSocket]', message.message);
             return;
           }
 
           if (message.type === 'database_update') {
-            console.log(`[WebSocket] Received update: ${message.entity}:${message.action}`);
-            
             // Invalidate relevant queries based on entity type
             if (message.entity === 'economic_indicators' || message.entity === 'external_economic_data') {
               queryClient.invalidateQueries({ queryKey: ['/api/economics/regime'] });
@@ -67,8 +63,6 @@ export function useWebSocket(onMessage?: MessageHandler) {
               onMessage(message);
             }
           } else if (message.type === 'regime_change') {
-            console.log(`[WebSocket] 🚨 REGIME CHANGE: ${message.data?.from} → ${message.data?.to} (FDR: ${message.data?.fdr?.toFixed(2)})`);
-            
             // Invalidate all economic data queries
             queryClient.invalidateQueries({ queryKey: ['/api/economics/regime'] });
             queryClient.invalidateQueries({ queryKey: ['/api/economics/indicators'] });
@@ -88,14 +82,12 @@ export function useWebSocket(onMessage?: MessageHandler) {
       };
 
       ws.onclose = () => {
-        console.log('[WebSocket] Disconnected');
         wsRef.current = null;
 
         // Attempt to reconnect with exponential backoff
         if (reconnectAttemptsRef.current < maxReconnectAttempts) {
           const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
-          console.log(`[WebSocket] Reconnecting in ${delay}ms...`);
-          
+
           reconnectTimeoutRef.current = setTimeout(() => {
             reconnectAttemptsRef.current++;
             connect();
