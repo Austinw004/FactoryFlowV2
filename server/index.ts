@@ -157,12 +157,27 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    const isProduction = process.env.NODE_ENV === 'production';
 
-    res.status(status).json({ message });
-    throw err;
+    // Log structured error for debugging
+    const errorLog = {
+      timestamp: new Date().toISOString(),
+      method: req.method,
+      path: req.path,
+      status,
+      error: err.message,
+      ...(isProduction ? {} : { stack: err.stack }),
+    };
+    console.error('[Error]', JSON.stringify(errorLog));
+
+    // Return safe error response (never expose stack traces to client)
+    const message = status >= 500 && isProduction
+      ? "An unexpected error occurred. Please try again."
+      : err.message || "Internal Server Error";
+
+    res.status(status).json({ error: message, status });
   });
 
   // importantly only setup vite in development and after
