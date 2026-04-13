@@ -11,6 +11,7 @@ import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 import { GuidedTour } from "@/components/GuidedTour";
 import { CommandPalette } from "@/components/CommandPalette";
 import { RealtimeProvider } from "@/contexts/RealtimeContext";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { UnifiedDataProvider } from "@/contexts/UnifiedDataContext";
 import NotFound from "@/pages/not-found";
 import LandingPage from "@/pages/LandingPage";
@@ -265,6 +266,7 @@ function App() {
             </UnifiedDataProvider>
           </RealtimeProvider>
           <Toaster />
+          <OfflineIndicator />
         </TooltipProvider>
       </QueryClientProvider>
     </GlobalErrorBoundary>
