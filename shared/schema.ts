@@ -544,7 +544,10 @@ export const supplierMaterials = pgTable("supplier_materials", {
   leadTimeDays: integer("lead_time_days").notNull(),
   onTimePct: real("on_time_pct"),        // 0.0–1.0 on-time delivery rate; null = no data
   deliveryVariance: real("delivery_variance"), // fractional variance ≥ 0; null = no data
-});
+}, (table) => [
+  index("sm_supplier_idx").on(table.supplierId),
+  index("sm_material_idx").on(table.materialId),
+]);
 
 export const demandHistory = pgTable("demand_history", {
   id: varchar("id")
@@ -556,7 +559,10 @@ export const demandHistory = pgTable("demand_history", {
   period: text("period").notNull(),
   units: real("units").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("dh_sku_idx").on(table.skuId),
+  index("dh_period_idx").on(table.period),
+]);
 
 export const allocations = pgTable(
   "allocations",
@@ -602,7 +608,10 @@ export const allocationResults = pgTable("allocation_results", {
   estimatedCostPerPeriod: real("estimated_cost_per_period"), // Burn rate for this SKU
   projectedDepletionDate: timestamp("projected_depletion_date"), // When budget runs out for this SKU
   daysOfInventory: real("days_of_inventory"), // How many days this allocation covers
-});
+}, (table) => [
+  index("ar_allocation_idx").on(table.allocationId),
+  index("ar_sku_idx").on(table.skuId),
+]);
 
 export const priceAlerts = pgTable("price_alerts", {
   id: varchar("id")
@@ -624,7 +633,11 @@ export const priceAlerts = pgTable("price_alerts", {
   notificationsSent: integer("notifications_sent").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("pa_company_idx").on(table.companyId),
+  index("pa_supplier_idx").on(table.supplierId),
+  index("pa_active_idx").on(table.isActive),
+]);
 
 export const machinery = pgTable("machinery", {
   id: varchar("id")
@@ -676,7 +689,11 @@ export const maintenanceRecords = pgTable("maintenance_records", {
   downTimeHours: real("down_time_hours").default(0),
   partsReplaced: text("parts_replaced").array(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("mr_machinery_idx").on(table.machineryId),
+  index("mr_type_idx").on(table.maintenanceType),
+  index("mr_performed_date_idx").on(table.performedDate),
+]);
 
 // Financial Statements
 export const balanceSheets = pgTable("balance_sheets", {
