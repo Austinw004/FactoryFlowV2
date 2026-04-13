@@ -16,6 +16,7 @@ import { IndustryInsightsPanel, IndustryBanner } from "@/components/IndustryInsi
 import { InfoTooltip } from "@/components/InfoTooltip";
 import { ActivityFeed } from "@/components/ActivityFeed";
 import { SmartInsightsCompact } from "@/components/SmartInsightsPanel";
+import { InsightPanel } from "@/components/InsightPanel";
 import { generateDashboardPDF } from "@/lib/pdfExport";
 import { TrendingUp, DollarSign, Package, AlertCircle, Plus, Upload, GitCompare, Loader2, Globe, Radio, Package2, Building2, Box, FileDown, Clock, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -525,6 +526,7 @@ export default function Dashboard() {
           <IndustryInsightsPanel maxItems={4} />
         </div>
         <div className="space-y-4">
+          <InsightPanel compact />
           <QuickWinsWidget />
           <MaterialsAtRiskWidget />
         </div>
