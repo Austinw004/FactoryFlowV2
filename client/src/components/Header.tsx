@@ -21,7 +21,7 @@ import {
 const routeTitles: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/pilot-revenue": "Pilot Revenue",
-  "/agentic-ai": "Agentic AI",
+  "/agentic-ai": "AI Advisor",
   "/strategy": "Strategy & Insights",
   "/event-monitoring": "Event Monitoring",
   "/demand": "Demand & Forecasting",

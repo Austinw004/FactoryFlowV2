@@ -30,6 +30,7 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Link, useLocation } from "wouter";
 import { SidebarTour } from "@/components/GuidedTour";
 import { useUnifiedData } from "@/contexts/UnifiedDataContext";
@@ -38,6 +39,7 @@ import { useQuery } from "@tanstack/react-query";
 const overviewItems = [
   {
     title: "Dashboard",
+    description: "Your manufacturing control center",
     url: "/dashboard",
     icon: LayoutDashboard,
     testId: "sidebar-dashboard",
@@ -45,6 +47,7 @@ const overviewItems = [
   },
   {
     title: "Pilot Revenue",
+    description: "Track pilot program performance and revenue",
     url: "/pilot-revenue",
     icon: BarChart3,
     testId: "sidebar-pilot-revenue",
@@ -54,7 +57,8 @@ const overviewItems = [
 
 const intelligenceItems = [
   {
-    title: "Agentic AI",
+    title: "AI Advisor",
+    description: "AI-powered recommendations and optimization",
     url: "/agentic-ai",
     icon: Bot,
     testId: "sidebar-agentic-ai",
@@ -62,6 +66,7 @@ const intelligenceItems = [
   },
   {
     title: "Strategy & Insights",
+    description: "Scenario planning, digital twin, and benchmarking",
     url: "/strategy",
     icon: Lightbulb,
     testId: "sidebar-strategy",
@@ -69,6 +74,7 @@ const intelligenceItems = [
   },
   {
     title: "Event Monitoring",
+    description: "Track supplier disruptions and market changes",
     url: "/event-monitoring",
     icon: AlertTriangle,
     testId: "sidebar-event-monitoring",
@@ -79,6 +85,7 @@ const intelligenceItems = [
 const operationsItems = [
   {
     title: "Demand & Forecasting",
+    description: "Predict demand and plan production schedules",
     url: "/demand",
     icon: TrendingUp,
     testId: "sidebar-demand",
@@ -86,6 +93,7 @@ const operationsItems = [
   },
   {
     title: "Supply Chain",
+    description: "Inventory, supplier risk, and network visibility",
     url: "/supply-chain",
     icon: Network,
     testId: "sidebar-supply-chain",
@@ -93,6 +101,7 @@ const operationsItems = [
   },
   {
     title: "Procurement",
+    description: "Purchase orders, RFQs, and commodity tracking",
     url: "/procurement",
     icon: ShoppingCart,
     testId: "sidebar-procurement",
@@ -100,6 +109,7 @@ const operationsItems = [
   },
   {
     title: "Operations",
+    description: "Machinery, production, maintenance, and workforce",
     url: "/operations",
     icon: Wrench,
     testId: "sidebar-operations",
@@ -204,21 +214,30 @@ export function AppSidebar() {
         .filter(item => !isLandingMode || item.landingMode)
         .map((item) => (
           <SidebarMenuItem key={item.title}>
-            <SidebarMenuButton
-              asChild
-              isActive={isActive(item.url)}
-              data-testid={item.testId}
-              className="h-9 rounded-lg transition-all duration-150"
-            >
-              <Link href={item.url}>
-                <item.icon className="h-4 w-4 shrink-0" />
-                <span className="flex-1 truncate">{item.title}</span>
-                {getAlertBadge(item.url)}
-                {isActive(item.url) && (
-                  <ChevronRight className="h-3 w-3 text-muted-foreground/50 shrink-0" />
-                )}
-              </Link>
-            </SidebarMenuButton>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive(item.url)}
+                  data-testid={item.testId}
+                  className="h-9 rounded-lg transition-all duration-150"
+                >
+                  <Link href={item.url}>
+                    <item.icon className="h-4 w-4 shrink-0" />
+                    <span className="flex-1 truncate">{item.title}</span>
+                    {getAlertBadge(item.url)}
+                    {isActive(item.url) && (
+                      <ChevronRight className="h-3 w-3 text-muted-foreground/50 shrink-0" />
+                    )}
+                  </Link>
+                </SidebarMenuButton>
+              </TooltipTrigger>
+              {"description" in item && item.description && (
+                <TooltipContent side="right" className="text-xs max-w-48">
+                  {item.description}
+                </TooltipContent>
+              )}
+            </Tooltip>
           </SidebarMenuItem>
         ))}
     </SidebarMenu>
