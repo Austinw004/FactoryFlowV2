@@ -36,6 +36,8 @@ import IntegrationChecklist from "@/pages/IntegrationChecklist";
 import PilotProgram from "@/pages/PilotProgram";
 import RoiCalculator from "@/pages/RoiCalculator";
 import SecurityFaq from "@/pages/SecurityFaq";
+import SignUpPage from "@/pages/SignUpPage";
+import SignInPage from "@/pages/SignInPage";
 import NotificationSettings from "@/pages/NotificationSettings";
 import ShopFloorMode from "@/pages/ShopFloorMode";
 import Integrations from "@/pages/Integrations";
@@ -107,6 +109,8 @@ function Router() {
         <Route path="/pilot-program" component={PilotProgram} />
         <Route path="/roi-calculator" component={RoiCalculator} />
         <Route path="/security" component={SecurityFaq} />
+        <Route path="/signup" component={SignUpPage} />
+        <Route path="/signin" component={SignInPage} />
         <Route component={LandingPage} />
       </Switch>
     );

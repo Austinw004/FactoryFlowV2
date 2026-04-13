@@ -484,6 +484,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register enterprise auth + payments routes (before isAuthenticated middleware)
   registerAuthPaymentRoutes(app);
 
+  // Unified auth middleware — supports both JWT Bearer and Replit session
+  const requireAuth: import("express").RequestHandler = (req: any, res, next) => {
+    // If JWT middleware already decoded a Bearer token, normalize to req.user format
+    if (req.jwtUser?.sub) {
+      if (!req.user) {
+        req.user = { claims: { sub: req.jwtUser.sub, email: req.jwtUser.email } };
+      }
+      return next();
+    }
+    // Fall back to Replit session auth
+    return isAuthenticated(req, res, next);
+  };
+
   // Initialize RBAC system on startup
   console.log("[RBAC] Initializing permissions...");
   await initializePermissions();
@@ -556,7 +569,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Attach RBAC user to all authenticated API requests (not frontend static files)
-  app.use('/api', isAuthenticated, attachRbacUser);
+  // Uses unified auth that supports both JWT Bearer and Replit session
+  app.use('/api', requireAuth, attachRbacUser);
 
   // RBAC routes (roles, permissions, user role assignments)
   app.use('/api/rbac', rbacRoutes);
@@ -607,10 +621,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Auth endpoints
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  // Auth endpoints — supports both Replit session auth and JWT Bearer auth
+  app.get('/api/auth/user', async (req: any, res, next) => {
+    // Try JWT auth first (from Bearer token)
+    if (req.jwtUser?.sub) {
+      return next();
+    }
+    // Fall back to Replit session auth
+    isAuthenticated(req, res, next);
+  }, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.jwtUser?.sub || req.user?.claims?.sub;
       let user = await storage.getUser(userId);
       
       if (!user) {

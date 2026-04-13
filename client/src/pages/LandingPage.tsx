@@ -32,10 +32,10 @@ export default function LandingPage() {
             <div className="flex items-center gap-3">
               <ThemeToggle />
               <Button variant="ghost" size="sm" asChild>
-                <a href="/api/login">Sign In</a>
+                <a href="/signin">Sign In</a>
               </Button>
               <Button size="sm" asChild>
-                <a href="/api/login">Get Started</a>
+                <a href="/signup">Get Started</a>
               </Button>
             </div>
           </div>
@@ -55,7 +55,7 @@ export default function LandingPage() {
           </p>
           <div className="flex flex-wrap gap-3 justify-center">
             <Button size="lg" className="h-11 px-7" asChild>
-              <a href="/api/login">
+              <a href="/signup">
                 Start Free Trial
                 <ArrowRight className="ml-2 h-4 w-4" />
               </a>
@@ -212,7 +212,7 @@ export default function LandingPage() {
                 </div>
                 <p className="text-xs text-muted-foreground mb-4">{plan.note}</p>
                 <Button variant="outline" size="sm" className="w-full" asChild>
-                  <a href="/api/login">Start Trial</a>
+                  <a href="/signup">Start Trial</a>
                 </Button>
               </Card>
             ))}
