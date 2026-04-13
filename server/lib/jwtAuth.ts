@@ -7,7 +7,16 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import type { Request, Response, NextFunction } from "express";
 
-const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || "prescient-labs-jwt-fallback";
+const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET;
+if (!JWT_SECRET) {
+  console.error('[JWT] FATAL: JWT_SECRET or SESSION_SECRET environment variable must be set');
+  console.error('[JWT] Generate one with: openssl rand -hex 64');
+  // In production, fail fast. In dev, generate an ephemeral key and warn.
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1);
+  }
+}
+const EFFECTIVE_JWT_SECRET = JWT_SECRET || require("crypto").randomBytes(64).toString("hex");
 const JWT_ACCESS_EXPIRES  = "15m";
 const JWT_REFRESH_EXPIRES = "7d";
 
@@ -21,15 +30,15 @@ export interface JwtPayload {
 }
 
 export function signAccessToken(payload: Omit<JwtPayload, "type">): string {
-  return jwt.sign({ ...payload, type: "access", jti: crypto.randomBytes(8).toString("hex") }, JWT_SECRET, { expiresIn: JWT_ACCESS_EXPIRES });
+  return jwt.sign({ ...payload, type: "access", jti: crypto.randomBytes(8).toString("hex") }, EFFECTIVE_JWT_SECRET, { expiresIn: JWT_ACCESS_EXPIRES });
 }
 
 export function signRefreshToken(payload: Omit<JwtPayload, "type">): string {
-  return jwt.sign({ ...payload, type: "refresh", jti: crypto.randomBytes(16).toString("hex") }, JWT_SECRET, { expiresIn: JWT_REFRESH_EXPIRES });
+  return jwt.sign({ ...payload, type: "refresh", jti: crypto.randomBytes(16).toString("hex") }, EFFECTIVE_JWT_SECRET, { expiresIn: JWT_REFRESH_EXPIRES });
 }
 
 export function verifyToken(token: string): JwtPayload {
-  return jwt.verify(token, JWT_SECRET) as JwtPayload;
+  return jwt.verify(token, EFFECTIVE_JWT_SECRET) as JwtPayload;
 }
 
 /**

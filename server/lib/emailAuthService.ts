@@ -180,8 +180,10 @@ export async function forgotPassword(input: z.infer<typeof forgotPasswordSchema>
   await db.insert(passwordResetTokens).values({ userId: user.id, tokenHash, expiresAt, used: 0 });
 
   const resetLink = `${process.env.APP_URL ?? ""}/reset-password?token=${rawToken}`;
-  // In production: send via email service. Logging to console until email service configured.
-  console.log(`[PasswordReset] Reset link for ${email} (expires in 1 hour): ${resetLink}`);
+  // TODO: Send via email service (SendGrid/SES). Never log tokens in production.
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[PasswordReset] Reset link generated for ${email} (dev only — expires in 1 hour)`);
+  }
 
   return { message: "If that email is registered, a reset link has been sent." };
 }

@@ -67,6 +67,7 @@ import {
   executeSupplierPayment,
 } from "./lib/paymentMethodsService";
 import { logAudit } from "./lib/auditLogger";
+import { rateLimiters } from "./lib/securityHardening";
 import { getUncachableStripeClient } from "./stripeClient";
 import { db } from "./db";
 import {
@@ -127,7 +128,7 @@ export function registerAuthPaymentRoutes(app: Express): void {
   // ═══════════════════════════════════════════════════════════════════════════
 
   /** POST /api/auth/signup */
-  app.post("/api/auth/signup", handle(async (req, res) => {
+  app.post("/api/auth/signup", rateLimiters.auth, handle(async (req, res) => {
     const ctx = clientContext(req);
     const result = await signup(req.body, ctx);
     // Set HTTP-only refresh cookie for browser clients
@@ -140,7 +141,7 @@ export function registerAuthPaymentRoutes(app: Express): void {
   }));
 
   /** POST /api/auth/login */
-  app.post("/api/auth/login", handle(async (req, res) => {
+  app.post("/api/auth/login", rateLimiters.auth, handle(async (req, res) => {
     const ctx = clientContext(req);
     const result = await login(req.body, ctx);
     res.cookie(REFRESH_COOKIE, result.refreshToken, COOKIE_OPTS);
@@ -162,7 +163,7 @@ export function registerAuthPaymentRoutes(app: Express): void {
   }));
 
   /** POST /api/auth/refresh — supports both cookie and body */
-  app.post("/api/auth/refresh", handle(async (req, res) => {
+  app.post("/api/auth/refresh", rateLimiters.auth, handle(async (req, res) => {
     const refreshToken = req.cookies?.[REFRESH_COOKIE] ?? req.body?.refreshToken;
     if (!refreshToken) { apiError(res, 400, "MISSING_TOKEN", "Refresh token required."); return; }
     const result = await refreshAccessToken(refreshToken);
@@ -171,13 +172,13 @@ export function registerAuthPaymentRoutes(app: Express): void {
   }));
 
   /** POST /api/auth/forgot-password */
-  app.post("/api/auth/forgot-password", handle(async (req, res) => {
+  app.post("/api/auth/forgot-password", rateLimiters.sensitive, handle(async (req, res) => {
     const result = await forgotPassword(req.body);
     res.json(result);
   }));
 
   /** POST /api/auth/reset-password */
-  app.post("/api/auth/reset-password", handle(async (req, res) => {
+  app.post("/api/auth/reset-password", rateLimiters.sensitive, handle(async (req, res) => {
     const result = await resetPassword(req.body);
     res.json(result);
   }));

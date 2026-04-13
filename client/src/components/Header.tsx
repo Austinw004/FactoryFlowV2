@@ -208,8 +208,18 @@ export function Header() {
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={() => {
+              onClick={async () => {
+                try {
+                  await fetch("/api/auth/logout", {
+                    method: "POST",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                  });
+                } catch {
+                  // Best-effort server logout; proceed with client cleanup
+                }
                 localStorage.removeItem("prescient_token");
+                localStorage.removeItem("prescient_cmd_recent");
                 window.location.href = "/";
               }}
               data-testid="menu-logout"

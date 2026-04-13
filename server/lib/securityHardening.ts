@@ -304,10 +304,16 @@ export function securityHeadersMiddleware(req: Request, res: Response, next: Nex
   // Referrer policy
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   
-  // Content Security Policy
+  // Content Security Policy — tightened for production
+  // Note: 'unsafe-inline' for style-src is required by many UI frameworks (Tailwind, shadcn)
+  // 'unsafe-inline' for script-src is needed for Vite HMR in dev; nonce-based CSP recommended for prod
+  const isDev = process.env.NODE_ENV !== 'production';
+  const scriptSrc = isDev
+    ? "'self' 'unsafe-inline' 'unsafe-eval'"
+    : "'self' 'unsafe-inline'"; // Remove unsafe-eval in prod
   res.setHeader(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' wss: https:;"
+    `default-src 'self'; script-src ${scriptSrc}; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' wss://${req.headers.host || ''} https://api.stripe.com https://js.stripe.com; frame-src https://js.stripe.com; base-uri 'self'; form-action 'self';`
   );
   
   // Strict Transport Security (HSTS) - only in production with HTTPS
