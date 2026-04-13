@@ -113,13 +113,13 @@ export function Header() {
           variant="outline"
           size="sm"
           className="hidden md:flex items-center gap-2 text-muted-foreground h-8 px-3 rounded-lg border-border/60"
-          onClick={() => {/* Future: open command palette */}}
+          onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true }))}
           data-testid="button-search"
         >
           <Search className="h-3.5 w-3.5" />
           <span className="text-xs">Search...</span>
           <kbd className="pointer-events-none ml-2 hidden lg:inline-flex h-5 select-none items-center gap-1 rounded border border-border/60 bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
-            /
+            ⌘K
           </kbd>
         </Button>
 

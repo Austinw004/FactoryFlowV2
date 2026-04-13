@@ -9,6 +9,7 @@ import { Header } from "@/components/Header";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 import { GuidedTour } from "@/components/GuidedTour";
+import { CommandPalette } from "@/components/CommandPalette";
 import { UnifiedDataProvider } from "@/contexts/UnifiedDataContext";
 import NotFound from "@/pages/not-found";
 import LandingPage from "@/pages/LandingPage";
@@ -243,6 +244,7 @@ function AppLayout() {
         </div>
       </div>
       <GuidedTour />
+      <CommandPalette />
     </SidebarProvider>
   );
 }
