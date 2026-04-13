@@ -10,6 +10,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 import { GuidedTour } from "@/components/GuidedTour";
 import { CommandPalette } from "@/components/CommandPalette";
+import { RealtimeProvider } from "@/contexts/RealtimeContext";
 import { UnifiedDataProvider } from "@/contexts/UnifiedDataContext";
 import NotFound from "@/pages/not-found";
 import LandingPage from "@/pages/LandingPage";
@@ -254,9 +255,11 @@ function App() {
     <GlobalErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <UnifiedDataProvider>
-            <AppLayout />
-          </UnifiedDataProvider>
+          <RealtimeProvider>
+            <UnifiedDataProvider>
+              <AppLayout />
+            </UnifiedDataProvider>
+          </RealtimeProvider>
           <Toaster />
         </TooltipProvider>
       </QueryClientProvider>

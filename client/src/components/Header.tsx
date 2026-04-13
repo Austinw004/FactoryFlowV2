@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Bell, User, CreditCard, Settings, LogOut, Search, ChevronRight } from "lucide-react";
+import { ConnectionStatus } from "@/components/ConnectionStatus";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -102,8 +103,9 @@ export function Header() {
           <span className="font-medium text-foreground truncate">{breadcrumb.current}</span>
         </nav>
 
-        <div className="ml-2">
+        <div className="ml-2 flex items-center gap-2">
           <LiveAnalysisIndicator />
+          <ConnectionStatus />
         </div>
       </div>
 
