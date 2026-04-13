@@ -57,6 +57,12 @@ export const users = pgTable("users", {
   lockedUntil: timestamp("locked_until"),
   lastLoginIp: text("last_login_ip"),
   lastLoginDevice: text("last_login_device"),
+  // ── Onboarding profile fields ─────────────────────────────────────────────
+  jobTitle: text("job_title"),
+  phone: text("phone"),
+  department: text("department"),
+  selectedPlanId: text("selected_plan_id"),
+  selectedBillingInterval: text("selected_billing_interval"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -171,6 +177,17 @@ export const companies = pgTable("companies", {
   location: text("location"),
   companySize: text("company_size"), // "small", "medium", "large", "enterprise"
   timezone: text("timezone").default("America/New_York"),
+  // ── Onboarding operations intelligence ────────────────────────────────────
+  website: text("website"),
+  annualRevenue: text("annual_revenue"),
+  productionVolume: text("production_volume"),
+  annualProcurementSpend: text("annual_procurement_spend"),
+  keyMaterials: text("key_materials"), // JSON array
+  erpSystemUsed: text("erp_system_used"),
+  painPoints: text("pain_points"), // JSON array
+  numberOfSuppliers: text("number_of_suppliers"),
+  numberOfFacilities: text("number_of_facilities"),
+  topProducts: text("top_products"),
   // Budget Configuration
   annualBudget: real("annual_budget"),
   currentBudgetSpent: real("current_budget_spent").default(0),

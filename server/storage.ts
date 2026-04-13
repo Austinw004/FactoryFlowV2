@@ -1135,6 +1135,17 @@ export class DbStorage implements IStorage {
     if (updates.hubspotAccessToken !== undefined) updateData.hubspotAccessToken = updates.hubspotAccessToken;
     if (updates.hubspotRefreshToken !== undefined) updateData.hubspotRefreshToken = updates.hubspotRefreshToken;
     if (updates.hubspotEnabled !== undefined) updateData.hubspotEnabled = updates.hubspotEnabled;
+    // Onboarding Operations Intelligence
+    if ((updates as any).website !== undefined) updateData.website = (updates as any).website;
+    if ((updates as any).annualRevenue !== undefined) updateData.annualRevenue = (updates as any).annualRevenue;
+    if ((updates as any).productionVolume !== undefined) updateData.productionVolume = (updates as any).productionVolume;
+    if ((updates as any).annualProcurementSpend !== undefined) updateData.annualProcurementSpend = (updates as any).annualProcurementSpend;
+    if ((updates as any).keyMaterials !== undefined) updateData.keyMaterials = (updates as any).keyMaterials;
+    if ((updates as any).erpSystemUsed !== undefined) updateData.erpSystemUsed = (updates as any).erpSystemUsed;
+    if ((updates as any).painPoints !== undefined) updateData.painPoints = (updates as any).painPoints;
+    if ((updates as any).numberOfSuppliers !== undefined) updateData.numberOfSuppliers = (updates as any).numberOfSuppliers;
+    if ((updates as any).numberOfFacilities !== undefined) updateData.numberOfFacilities = (updates as any).numberOfFacilities;
+    if ((updates as any).topProducts !== undefined) updateData.topProducts = (updates as any).topProducts;
 
     const [updated] = await db.update(companies)
       .set(updateData)

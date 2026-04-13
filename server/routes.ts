@@ -831,15 +831,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Save user profile during onboarding
+  app.post('/api/onboarding/profile', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ error: "User not found" });
+      const { firstName, lastName, jobTitle, phone, department } = req.body;
+      await storage.upsertUser({
+        ...user,
+        firstName: firstName || user.firstName,
+        lastName: lastName || user.lastName,
+        jobTitle: jobTitle || (user as any).jobTitle,
+        phone: phone || (user as any).phone,
+        department: department || (user as any).department,
+      });
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to save profile" });
+    }
+  });
+
+  // Save operations intelligence during onboarding
+  app.post('/api/onboarding/operations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user || !user.companyId) return res.status(400).json({ error: "No company" });
+      const { productionVolume, annualProcurementSpend, keyMaterials, erpSystem, painPoints, numberOfSuppliers, numberOfFacilities, topProducts } = req.body;
+      await storage.updateCompany(user.companyId, {
+        productionVolume,
+        annualProcurementSpend,
+        keyMaterials: Array.isArray(keyMaterials) ? JSON.stringify(keyMaterials) : keyMaterials,
+        erpSystemUsed: erpSystem,
+        painPoints: Array.isArray(painPoints) ? JSON.stringify(painPoints) : painPoints,
+        numberOfSuppliers,
+        numberOfFacilities,
+        topProducts,
+      });
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to save operations data" });
+    }
+  });
+
+  // Select plan during onboarding
+  app.post('/api/onboarding/select-plan', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ error: "User not found" });
+      const { planId, billingInterval } = req.body;
+      await storage.upsertUser({
+        ...user,
+        selectedPlanId: planId,
+        selectedBillingInterval: billingInterval,
+        subscriptionStatus: 'trialing',
+        trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      });
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to select plan" });
+    }
+  });
+
+  // Payment method placeholder (Stripe approval pending)
+  app.post('/api/onboarding/payment-method', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      console.log(`[Onboarding] Payment method intent recorded for user ${userId} (Stripe integration pending)`);
+      res.json({ success: true, message: "Payment method recorded. Stripe integration pending." });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to save payment method" });
+    }
+  });
+
   app.post('/api/onboarding/complete', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      
+
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-      
+
       // Mark onboarding as complete
       await storage.upsertUser({
         ...user,
