@@ -964,6 +964,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Contextual Intelligence API
+  app.get('/api/intelligence/insights', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no associated company" });
+      }
+      const { getInsightsForCompany } = await import("./lib/intelligenceEngine");
+      const insights = await getInsightsForCompany(user.companyId);
+      res.json(insights);
+    } catch (error: any) {
+      console.error("Error generating insights:", error);
+      res.status(500).json({ error: "Failed to generate insights" });
+    }
+  });
+
   // User Notification Preferences API
   app.get('/api/notification-preferences', isAuthenticated, async (req: any, res) => {
     try {
