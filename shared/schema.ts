@@ -289,6 +289,8 @@ export const companies = pgTable("companies", {
   // Company Branding
   logoUrl: text("logo_url"),
   primaryColor: text("primary_color").default("#3b82f6"), // Hex color for branding
+  // Billing & Metering
+  verifiedSavingsTotalCents: integer("verified_savings_total_cents").default(0), // YTD verified savings (for Performance plan)
   // Onboarding & Feature Flags
   onboardingCompleted: integer("onboarding_completed").default(0),
   showOnboardingHints: integer("show_onboarding_hints").default(1),
@@ -9488,6 +9490,37 @@ export const invoices = pgTable(
 );
 export const insertInvoiceSchema = createInsertSchema(invoices).omit({ id: true, createdAt: true, updatedAt: true });
 export type Invoice = typeof invoices.$inferSelect;
+
+/**
+ * skuCountSnapshots — Daily SKU count snapshots for usage-based metering.
+ * Stores historical SKU counts per company per day for billing audits.
+ */
+export const skuCountSnapshots = pgTable(
+  "sku_count_snapshots",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    companyId: varchar("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "cascade" }),
+    countDate: text("count_date").notNull(), // ISO date string (YYYY-MM-DD)
+    activeSkuCount: integer("active_sku_count").notNull(),
+    stripeMeterEventId: text("stripe_meter_event_id"), // Idempotency key or Stripe event ID
+    recordedAt: timestamp("recorded_at").defaultNow(),
+  },
+  (t) => [
+    index("sku_count_snapshots_company_idx").on(t.companyId),
+    index("sku_count_snapshots_date_idx").on(t.countDate),
+    // Unique constraint: one snapshot per company per day
+  ],
+);
+
+export const insertSkuCountSnapshotSchema = createInsertSchema(skuCountSnapshots).omit({
+  id: true,
+  recordedAt: true,
+});
+export type SkuCountSnapshot = typeof skuCountSnapshots.$inferSelect;
 
 /**
  * fraudEvents — Immutable fraud detection audit log.

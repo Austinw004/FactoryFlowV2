@@ -11,6 +11,16 @@ export default {
         sm: ".1875rem", /* 3px */
       },
       colors: {
+        // Palantir dark design tokens
+        ink: "#000000",
+        panel: "#0A0B0D",
+        line: "#1A1B1E",
+        muted: "#6A6E76",
+        soft: "#A1A4AB",
+        bone: "#F2F2F2",
+        signal: "#D9B56B",
+        good: "#7FB09A",
+        bad: "#C47A6E",
         // Flat / base colors (regular buttons)
         background: "hsl(var(--background) / <alpha-value>)",
         foreground: "hsl(var(--foreground) / <alpha-value>)",

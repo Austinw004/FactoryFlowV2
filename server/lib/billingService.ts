@@ -70,10 +70,11 @@ export const BILLING_PLANS = {
   usage_based: {
     id:           "usage_based",
     name:         "Usage-Based",
-    description:  "Full platform access — $199/month base + $0.02/unit OR 0.25% of procurement spend",
+    description:  "Full platform access — $199/month base + $2/SKU overage (100 SKUs included, capped at $799/mo)",
     baseFeeCents: 19900,      // $199.00/month
-    perUnitRate:  "0.02",    // $0.02 per unit processed
-    spendRate:    "0.0025",  // 0.25% of managed procurement spend
+    baseSkus:     100,        // First 100 SKUs included
+    overageRate:  "2.00",    // $2.00 per additional SKU
+    monthlyCapCents: 79900,  // $799.00 cap (then upgrade to Growth)
     currency:     "usd",
     interval:     "month" as const,
     type:         "usage" as const,

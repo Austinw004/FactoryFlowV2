@@ -88,147 +88,19 @@ export function Header() {
   const breadcrumb = getBreadcrumb(location);
 
   return (
-    <header className="flex items-center justify-between h-14 px-4 border-b border-border/60 bg-background/95 backdrop-blur-sm supports-[backdrop-filter]:bg-background/60">
-      <div className="flex items-center gap-3 min-w-0">
-        <SidebarTrigger data-testid="button-sidebar-toggle" className="shrink-0" />
-        <Separator orientation="vertical" className="h-5 hidden sm:block" />
-
-        {/* Breadcrumb */}
-        <nav className="hidden sm:flex items-center gap-1 text-sm min-w-0">
-          {breadcrumb.parent && (
-            <>
-              <span className="text-muted-foreground/60 text-xs font-medium">{breadcrumb.parent}</span>
-              <ChevronRight className="h-3 w-3 text-muted-foreground/40 shrink-0" />
-            </>
-          )}
-          <span className="font-medium text-foreground truncate">{breadcrumb.current}</span>
-        </nav>
-
-        <div className="ml-2 flex items-center gap-2">
-          <LiveAnalysisIndicator />
-          <ConnectionStatus />
-        </div>
+    <header className="flex items-center justify-between h-16 px-12 border-b border-line bg-ink">
+      <div className="flex items-center gap-6 min-w-0">
+        <h2 className="text-sm font-medium">{breadcrumb.current}</h2>
+        <span className="mono text-xs text-muted">
+          {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} · 14:22 UTC
+        </span>
       </div>
 
-      <div className="flex items-center gap-1.5">
-        {/* Quick search trigger */}
-        <Button
-          variant="outline"
-          size="sm"
-          className="hidden md:flex items-center gap-2 text-muted-foreground h-8 px-3 rounded-lg border-border/60"
-          onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true }))}
-          data-testid="button-search"
-        >
-          <Search className="h-3.5 w-3.5" />
-          <span className="text-xs">Search...</span>
-          <kbd className="pointer-events-none ml-2 hidden lg:inline-flex h-5 select-none items-center gap-1 rounded border border-border/60 bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
-            ⌘K
-          </kbd>
-        </Button>
-
-        <Separator orientation="vertical" className="h-5 mx-1 hidden md:block" />
-
-        {/* Upgrade CTA for non-subscribers */}
-        {!hasSubscription && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setLocation("/pricing")}
-            className="h-8 text-xs"
-            data-testid="button-upgrade-cta"
-          >
-            Upgrade
-          </Button>
-        )}
-
-        {/* Trial badge */}
-        {isTrialing && (
-          <Badge
-            variant="secondary"
-            className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 cursor-pointer text-xs"
-            onClick={() => setLocation("/billing")}
-            data-testid="badge-trial"
-          >
-            Trial Active
-          </Badge>
-        )}
-
-        {/* Subscription tier badge */}
-        {hasSubscription && !isTrialing && (
-          <Badge
-            variant="secondary"
-            className="cursor-pointer text-xs"
-            onClick={() => setLocation("/billing")}
-            data-testid="badge-tier"
-          >
-            {tier?.charAt(0).toUpperCase() + tier?.slice(1)}
-          </Badge>
-        )}
-
-        <InsightBadge />
-
-        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" data-testid="button-notifications">
-          <Bell className="h-4 w-4" />
-        </Button>
-
-        <ThemeToggle />
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" data-testid="button-user-menu">
-              <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
-                <User className="h-3.5 w-3.5 text-primary" />
-              </div>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">My Account</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => setLocation("/billing")}
-              data-testid="menu-billing"
-            >
-              <CreditCard className="h-4 w-4 mr-2" />
-              Billing
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => setLocation("/configuration")}
-              data-testid="menu-settings"
-            >
-              <Settings className="h-4 w-4 mr-2" />
-              Settings
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "?", bubbles: true }))}
-              data-testid="menu-shortcuts"
-            >
-              <Keyboard className="h-4 w-4 mr-2" />
-              Keyboard Shortcuts
-              <kbd className="ml-auto text-[10px] bg-muted px-1 rounded">?</kbd>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={async () => {
-                try {
-                  await fetch("/api/auth/logout", {
-                    method: "POST",
-                    credentials: "include",
-                    headers: { "Content-Type": "application/json" },
-                  });
-                } catch {
-                  // Best-effort server logout; proceed with client cleanup
-                }
-                localStorage.removeItem("prescient_token");
-                localStorage.removeItem("prescient_cmd_recent");
-                window.location.href = "/";
-              }}
-              data-testid="menu-logout"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+      <div className="flex items-center gap-4">
+        <span className="mono text-xs text-muted flex items-center gap-2">
+          <span className="dot bg-good"></span> Live
+        </span>
+        <button className="btn-ghost text-xs tracking-[0.16em] px-3 py-2 uppercase">Export</button>
       </div>
     </header>
   );

@@ -11,7 +11,7 @@ export interface DripSubscriber {
   tags: string[];
   customFields: Record<string, any>;
   createdAt: Date;
-  lifetime Value: number | null;
+  lifetimeValue: number | null;
 }
 
 export interface DripCampaign {

@@ -92,12 +92,14 @@ export async function signup(
   }
 
   const passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);
+  const trialEndsAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000); // 90 days from now
 
   const [user] = await db.insert(users).values({
     email:        data.email,
     name:         data.name ?? null,
     username:     data.username ?? null,
     passwordHash,
+    trialEndsAt,  // Start 90-day trial on signup
     role:         "viewer",
     lastLoginIp:  context?.ipAddress ?? null,
     lastLoginDevice: context?.userAgent ?? null,

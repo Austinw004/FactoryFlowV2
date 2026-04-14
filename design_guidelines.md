@@ -1,118 +1,172 @@
-# Manufacturing Allocation Intelligence SaaS - Design Guidelines
+# FactoryFlow — Design System Guidelines
 
 ## Design Approach
 
-**Selected System**: Material Design for Enterprise with Linear-inspired minimalism
-**Rationale**: Data-heavy productivity tool requiring clear information hierarchy, professional credibility, and efficient data comprehension. Material Design's systematic approach to data visualization combined with Linear's clean typography creates optimal conditions for complex manufacturing analytics.
+**Selected System**: Dark Palantir-Inspired Design
+**Rationale**: Enterprise manufacturing intelligence platform requiring clarity, confidence, and a sophisticated aesthetic. Dark backgrounds with amber accents create a control-center feel while maintaining readability for complex operational dashboards.
 
-## Core Design Elements
+## Color Palette
 
-### A. Typography System
+**Semantic Colors**:
+- **ink**: `#000000` — Primary background
+- **panel**: `#0A0B0D` — Secondary surfaces (cards, panels)
+- **line**: `#1A1B1E` — Borders, dividers, grid lines
+- **bone**: `#F2F2F2` — Primary text, high contrast
+- **soft**: `#A1A4AB` — Secondary text, descriptions
+- **muted**: `#6A6E76` — Tertiary text, metadata
+- **signal**: `#D9B56B` — Interactive elements, highlights, active states
+- **good**: `#7FB09A` — Positive indicators, success
+- **bad**: `#C47A6E` — Negative indicators, warnings
 
-**Font Stack**: Inter (primary), Roboto Mono (data/numbers)
-- **Display/Hero**: 48px, 600 weight - Dashboard headers, company name
-- **H1**: 32px, 600 weight - Page titles, main sections
-- **H2**: 24px, 600 weight - Card headers, subsection titles
-- **H3**: 18px, 500 weight - Data table headers, widget titles
-- **Body Large**: 16px, 400 weight - Primary content, descriptions
-- **Body**: 14px, 400 weight - Secondary content, form labels
-- **Small/Caption**: 12px, 400 weight - Metadata, timestamps, helper text
-- **Data/Metrics**: Roboto Mono 20-32px, 500 weight - KPIs, numerical displays
+## Typography
 
-### B. Layout System
+**Font Stack**: Inter (UI), JetBrains Mono (data)
 
-**Spacing Primitives**: Use Tailwind units 2, 4, 6, 8, 12, 16, 24
-- **Component padding**: p-4 to p-6 for cards, p-2 for compact elements
-- **Section spacing**: py-8 to py-12 for major sections
-- **Grid gaps**: gap-4 for tight grids, gap-6 for comfortable spacing
-- **Container max-width**: max-w-7xl for dashboard, max-w-6xl for forms
+**Type Scales**:
+- **hero** (300 weight, -0.035em tracking): Section headlines, 48-72px
+- **display** (300 weight, -0.02em tracking): Page titles, 32-48px
+- **eyebrow** (11px, 0.22em tracking, uppercase): Section labels, category headers
+- **mono** (JetBrains Mono): Timestamps, codes, data values
+- **Body**: 14-16px regular weight for main content
+- **Small**: 12px for secondary text, metadata
+
+**Text Colors**:
+- Headings: `text-bone`
+- Primary body: `text-soft`
+- Secondary/metadata: `text-muted`
+- Interactive: `text-signal`
+- Positive: `text-good`
+- Negative: `text-bad`
+
+## Layout System
+
+**Spacing**:
+- **Padding**: p-4 (compact), p-6 (standard), p-8/p-10/p-12 (spacious)
+- **Gaps**: gap-px (1px grids), gap-4 (standard), gap-6 (relaxed)
+- **Sections**: py-14 to py-28 for major content sections
+
+**Container Widths**:
+- **Dashboard content**: max-w-5xl
+- **Full-width sections**: max-w-7xl
+- **Narrow content**: max-w-4xl
 
 **Grid Patterns**:
-- Dashboard: 3-column grid (lg:grid-cols-3) for KPI cards
-- Main content: 2-column split (lg:grid-cols-2) for allocation vs. forecasting views
-- Data tables: Full-width single column with horizontal scroll if needed
-- Sidebar navigation: Fixed 240px width on desktop, collapsible on mobile
+- KPI cards: `grid-cols-1 md:grid-cols-2 lg:grid-cols-4`
+- Features: `grid-cols-1 md:grid-cols-2 lg:grid-cols-3`
+- Integrations: `grid-cols-2 md:grid-cols-6` with `gap-px bg-line`
+- Pricing: `grid-cols-1 md:grid-cols-4` with `gap-px bg-line`
 
-### C. Component Library
+## Component Patterns
 
-**Navigation**
-- **Top Bar**: Fixed header with company logo, user profile, notification bell, regime indicator badge
-- **Sidebar**: Vertical navigation with icons + text, grouped by: Dashboard, Forecasting, Allocation, Procurement, Configuration, Reports
-- **Breadcrumbs**: Show current location hierarchy (Home > Allocation Planner > SKU_A)
+**Buttons**:
+- **Primary** (`.btn-primary`): Bone background, ink text, 0.5rem 1.25rem padding
+- **Ghost** (`.btn-ghost`): Transparent background, bone text, line border
 
-**Dashboard Components**
-- **KPI Cards**: Elevated cards with icon, metric value (large), label (small), trend indicator (+/-%)
-- **Regime Status Widget**: Prominent badge displaying current FDR regime (HEALTHY_EXPANSION, etc.) with intensity meter
-- **Policy Signals Panel**: List of active signals with intensity bars (0-100%)
+**Cards**:
+- Background: `bg-panel` or `bg-ink`
+- Border: `border border-line`
+- Spacing: `p-6` to `p-10` internal padding
+- Gap grids: Use `gap-px bg-line` for bordered grids
 
-**Data Visualization**
-- **Allocation Table**: Sortable columns (SKU, Planned Units, Fill Rate %), row hover states, inline edit capability
-- **Forecast Charts**: Line charts with multiple series (historical, forecast, confidence intervals)
-- **Material Flow Diagram**: Visual representation of BOM → Inventory → Allocation pipeline
-- **Budget Gauge**: Circular progress indicator showing spent/remaining budget
+**Badges & Indicators**:
+- Active indicator: 2px left border with `bg-signal` color
+- Status dot: 6x6px circle with semantic color (signal/good/bad)
+- Trial banner: `trial-banner` class with panel bg and line border
 
-**Forms & Input**
-- **Material Input Cards**: Structured forms for SKU data, BOM configuration, supplier terms
-- **File Upload**: Drag-and-drop zone for CSV/JSON with preview table
-- **Date Range Picker**: Calendar component for forecast horizons
-- **Numeric Steppers**: +/- controls for quantity inputs with manual entry
+**Dividers**:
+- Full-width class: `.divider` (1px line, line color)
+- Inline spacing: Use py-X around dividers
 
-**Data Tables**
-- **Interactive Headers**: Sortable, filterable columns with icons
-- **Row Actions**: Edit, delete, duplicate icons on hover
-- **Pagination**: Standard controls with page size selector
-- **Bulk Selection**: Checkboxes for multi-row operations
+## Page Layouts
 
-**Feedback Elements**
-- **Toast Notifications**: Top-right corner for success/error messages
-- **Loading States**: Skeleton screens for data tables, spinner for calculations
-- **Empty States**: Illustrative graphics with CTA buttons for first-time setup
+**Landing Page**:
+- Header with signal dot, company name, navigation, CTA buttons
+- Hero section with eyebrow, large display heading, description, CTAs
+- Product screen mock with bordered panel, KPI grid, chart
+- Capabilities section with numbered left-border items
+- Integrations: Category eyebrows + grid layout (6 columns on desktop)
+- Deployment cards (3-column with descriptions)
+- Pricing cards (4-column with toggle for monthly/annual)
+- Footer with signal dot, company name, copyright
 
-**Modals & Overlays**
-- **Scenario Comparison**: Side-by-side modal showing allocation results under different policies
-- **Configuration Drawer**: Slide-in panel from right for editing supplier terms, BOM details
-- **Confirmation Dialogs**: Centered modal with clear action buttons
+**Dashboard**:
+- Header with breadcrumb title, date/time, live indicator, export button
+- Sidebar with signal dot header, FACTORYFLOW branding, nav sections
+- Content area with max-w-5xl constraint
+- Trial banner (if applicable) at top
+- Section eyebrows for content groups
+- KPI grid with gap-px borders
+- Main content with consistent spacing
 
-### D. Page-Specific Layouts
+**Integrations Page**:
+- Header with eyebrow and description
+- Collapsible category sections
+- Integration tiles showing connection status
+- Add/remove/configure action buttons
 
-**Landing/Marketing Page**
-- **Hero Section**: Full-width (100vh) with headline "Manufacturing Intelligence Powered by Dual-Circuit Economics", subheadline explaining core value, primary CTA button, dashboard preview image
-- **Features Grid**: 3-column showcase (Demand Forecasting, Smart Allocation, Cycle-Aware Procurement) with icons
-- **How It Works**: 3-step visual process (Connect Data → AI Forecasts → Optimize Allocation)
-- **Regime Intelligence Section**: Explanation of FDR framework with visual diagram
-- **Social Proof**: 2-column layout with customer logos + testimonial quotes
-- **Pricing Table**: 3-tier comparison (Starter, Professional, Enterprise)
-- **Footer**: 4-column layout (Product, Company, Resources, Contact) with newsletter signup
+**Billing Page**:
+- Current plan cards (3-column grid)
+- Billing period toggle
+- Pricing plans (4-column grid)
+- Invoice list with download actions
+- Payment method section
 
-**Dashboard Page**
-- **Status Overview**: Top row with 4 KPI cards (Current Regime, FDR Score, Active Signals, Budget Health)
-- **Main Grid**: 2-column layout - left: Recent allocations table, right: Forecast trends chart
-- **Quick Actions Panel**: Floating action buttons for "New Allocation", "Import Data", "Run Scenario"
+## Interactions
 
-**Allocation Planner**
-- **Configuration Panel**: Left sidebar (300px) with SKU selection, priority weighting sliders, policy toggles
-- **Results View**: Main area with allocation table, material consumption breakdown, procurement recommendations
-- **Comparison Mode**: Split-screen view for A/B scenario testing
+**Hover States**:
+- Light backgrounds: `hover:bg-panel`
+- Ghost buttons: `hover:text-bone hover:bg-line`
+- Interactive elements: Smooth color transitions (150-200ms)
 
-**Forecasting Module**
-- **SKU Selector**: Dropdown with search and multi-select capability
-- **Historical Chart**: Line graph showing 12-month trailing data
-- **Forecast Output**: Table with month-by-month predictions, confidence intervals, regime adjustments
-- **Export Controls**: Download CSV/PDF buttons
+**Active States**:
+- Sidebar nav items: Amber left border indicator (`bg-signal`)
+- Current page text: `text-bone`
+- Inactive elements: `text-soft`
 
-## Images
+**Focus States**:
+- 2px offset outline for keyboard navigation
+- Consistent focus ring on all interactive elements
 
-**Hero Image**: Dashboard screenshot or abstract manufacturing visualization showing data flow and optimization - full-width, high-quality, professional photography style
-**Feature Icons**: Custom line icons (64x64px) for each major feature - consistent stroke weight, minimal style
-**Process Diagrams**: Clean infographic-style illustrations showing data flow from input → analysis → output
-**Empty States**: Friendly illustrations encouraging users to add their first SKU, upload data, or configure suppliers
+## Responsive Design
 
-## Accessibility & Polish
+**Breakpoints** (Tailwind):
+- `md:` (768px) for tablet layouts
+- `lg:` (1024px) for desktop layouts
+- Mobile-first approach: single column by default, expand on md/lg
 
-- All interactive elements have 44x44px minimum touch targets
-- Form inputs include floating labels that move on focus
-- Data tables support keyboard navigation (arrow keys, tab)
-- Chart tooltips appear on hover with detailed breakdowns
-- Consistent elevation system: cards at elevation-1, modals at elevation-3, dropdowns at elevation-2
-- Smooth transitions (200-300ms) for state changes, no distracting animations
-- Focus indicators on all interactive elements (2px offset outline)
+**Common Patterns**:
+- 2-column layout collapses to 1 on mobile (col-span-12 md:col-span-6)
+- Full-width text sections use max-w-2xl for readability
+- Images/charts stack vertically on mobile
+- Navigation and modals are touch-friendly
+
+## Texture & Depth
+
+- **Grain overlay** (fixed position, pointer-events-none): Subtle texture across entire page
+- **No shadows**: All box-shadow properties set to none
+- **Borders over elevation**: Use thin 1px line borders instead of shadows
+- **Grid backgrounds**: `gap-px bg-line` creates subtle grid pattern
+
+## Accessibility
+
+- Minimum touch targets: 44x44px for interactive elements
+- Contrast ratio: All text meets WCAG AA standards
+- Focus indicators: Visible 2px outlines on all focusable elements
+- Semantic HTML: Proper heading hierarchy, alt text for images
+- Keyboard navigation: All interactive elements reachable via Tab
+
+## Asset Guidelines
+
+**Icons**:
+- Use lucide-react icons (4-6px stroke weight)
+- Color with semantic colors: signal for interactive, soft for secondary
+- Size: w-4 h-4 (standard), w-5 h-5 (prominent), w-6 h-6 (large)
+
+**Images**:
+- Dark backgrounds: Use high-contrast images
+- Screenshots/mockups: Bordered with line color
+- Illustrations: Line-style or minimalist aesthetic
+
+**Spacing Around Assets**:
+- Icon + text: gap-2 to gap-4
+- Image + text: gap-6 to gap-8

@@ -38,6 +38,7 @@ import {
   resetPasswordSchema, forgotUsernameSchema,
 } from "./lib/emailAuthService";
 import { jwtMiddleware, requireJwt, getAuthUser } from "./lib/jwtAuth";
+import { checkTrialExpiry } from "./middleware/trialCheck";
 import { handleStripeWebhook } from "./lib/stripeWebhookHandler";
 import { handleGoogleAuth, handleSamlCallback } from "./lib/ssoService";
 import {
@@ -115,6 +116,9 @@ function handle(fn: (req: Request, res: Response) => Promise<void>) {
 export function registerAuthPaymentRoutes(app: Express): void {
   // JWT middleware (non-blocking, reads Bearer header)
   app.use(jwtMiddleware);
+
+  // Trial expiry check on all authenticated routes
+  app.use(checkTrialExpiry);
 
   // ─── STRIPE WEBHOOK — must be before express.json() ───────────────────────
   app.post(
@@ -221,6 +225,67 @@ export function registerAuthPaymentRoutes(app: Express): void {
       refreshToken: result.refreshToken,
       user:         result.user,
       authSource:   result.authSource,
+    });
+  }));
+
+  /** GET /api/auth/me — returns authenticated user + trial status */
+  app.get("/api/auth/me", requireJwt, handle(async (req, res) => {
+    const authUser = getAuthUser(req);
+    if (!authUser) {
+      apiError(res, 401, "UNAUTHORIZED", "Authentication required.");
+      return;
+    }
+
+    const { users: usersSchema, companies: companiesSchema } = await import("@shared/schema");
+    const [user] = await db
+      .select()
+      .from(usersSchema)
+      .where(eq(usersSchema.id, authUser.id))
+      .limit(1);
+
+    if (!user) {
+      apiError(res, 404, "NOT_FOUND", "User not found.");
+      return;
+    }
+
+    // Get company info
+    let company = null;
+    if (user.companyId) {
+      const [comp] = await db
+        .select()
+        .from(companiesSchema)
+        .where(eq(companiesSchema.id, user.companyId))
+        .limit(1);
+      company = comp;
+    }
+
+    // Calculate trial status
+    const trialInfo = (() => {
+      if (!user.trialEndsAt) {
+        return { status: "none", ends_at: null, days_remaining: null };
+      }
+      const now = new Date();
+      const trialEnd = new Date(user.trialEndsAt);
+      const msRemaining = trialEnd.getTime() - now.getTime();
+      const daysRemaining = Math.ceil(msRemaining / (1000 * 60 * 60 * 24));
+      return {
+        status: msRemaining > 0 ? "active" : "expired",
+        ends_at: user.trialEndsAt.toISOString(),
+        days_remaining: Math.max(0, daysRemaining),
+      };
+    })();
+
+    res.json({
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        username: user.username,
+        role: user.role,
+        companyId: user.companyId,
+      },
+      company: company ? { id: company.id, name: company.name } : null,
+      trial: trialInfo,
     });
   }));
 

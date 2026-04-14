@@ -1,150 +1,131 @@
 /**
- * Variant C: "Ultra-minimal" — maximum whitespace, almost no visual flourishes.
- * Text-forward, Notion/Basecamp-style simplicity.
- * Focuses entirely on clarity and readability.
+ * Variant C: Ultra-minimal, text-forward design
+ * Maximum whitespace, Notion/Basecamp-style simplicity
  */
-import { Button } from "@/components/ui/button";
-import {
-  ArrowRight, Eye, Mail
-} from "lucide-react";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { ArrowRight } from "lucide-react";
 import { SEOHead } from "@/components/SEOHead";
 import { useLocation } from "wouter";
 
 export default function LandingPageVariantC() {
   const [, setLocation] = useLocation();
 
+  const handleStartTrial = () => {
+    setLocation("/signup");
+  };
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-ink text-bone font-sans">
       <SEOHead
-        title="Prescient Labs — Manufacturing Intelligence Platform"
+        title="FactoryFlow — Manufacturing Intelligence Platform"
         description="Manufacturing intelligence tools for demand forecasting, procurement timing, production optimization, and supply chain visibility."
       />
 
-      {/* Navigation — barely there */}
-      <nav className="max-w-3xl mx-auto px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <span className="font-semibold text-sm">Prescient Labs</span>
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
-            <a href="/signin" className="text-sm text-muted-foreground hover:text-foreground">Sign in</a>
-          </div>
-        </div>
-      </nav>
+      {/* Grain texture overlay */}
+      <div className="grain fixed inset-0 pointer-events-none z-0"></div>
 
-      {/* Hero — text only, maximum breathing room */}
-      <section className="pt-16 sm:pt-24 pb-20">
-        <div className="max-w-3xl mx-auto px-6 lg:px-8">
-          <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight leading-snug mb-6">
+      <div className="relative z-10">
+        {/* Minimal header */}
+        <header className="max-w-4xl mx-auto px-10 py-8 flex items-center justify-between">
+          <span className="text-sm tracking-[0.18em] font-medium">FACTORYFLOW</span>
+          <div className="flex items-center gap-6">
+            <a href="/signin" className="text-xs text-soft hover:text-bone transition-colors">Sign in</a>
+            <button onClick={handleStartTrial} className="btn-primary text-xs px-4 py-2">
+              Start trial
+            </button>
+          </div>
+        </header>
+
+        {/* Hero — text only */}
+        <section className="max-w-4xl mx-auto px-10 py-24">
+          <h1 className="hero text-5xl md:text-6xl leading-[0.95] mb-12">
             Manufacturing intelligence that connects demand, supply, procurement, and production in one place.
           </h1>
-          <p className="text-muted-foreground leading-relaxed mb-8 max-w-xl">
-            Prescient Labs helps manufacturers forecast demand, time purchases, optimize production,
-            and monitor supply chain risk — with data, not guesswork.
+          <p className="text-soft text-base leading-relaxed mb-10 max-w-2xl">
+            Prescient Labs helps manufacturers forecast demand, time purchases, optimize production, and monitor supply chain risk — with data, not guesswork.
           </p>
-          <Button className="h-10 px-6" asChild>
-            <a href="/signup">
-              Start free trial
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </a>
-          </Button>
-          <p className="text-xs text-muted-foreground/60 mt-3">30 days free. No credit card.</p>
-        </div>
-      </section>
+          <button onClick={handleStartTrial} className="btn-primary text-sm px-6 py-3 flex items-center gap-2">
+            Start free trial
+            <ArrowRight className="w-4 h-4" />
+          </button>
+          <p className="mono text-xs text-muted mt-6">90 days. No credit card.</p>
+        </section>
 
-      {/* Capabilities — simple text list */}
-      <section className="pb-20">
-        <div className="max-w-3xl mx-auto px-6 lg:px-8">
-          <div className="border-t pt-12 space-y-10">
+        <div className="divider"></div>
+
+        {/* Features — simple list */}
+        <section className="max-w-4xl mx-auto px-10 py-20">
+          <div className="space-y-12">
             {[
               {
-                title: "Demand Forecasting",
-                text: "Upload your sales history and get 30/60/90-day forecasts that adjust as new data arrives. Review weekly to keep production schedules aligned with actual demand.",
+                title: "Demand forecasting",
+                desc: "Generate accurate 30/60/90-day demand forecasts from your sales data, economic indicators, and market signals. Reduce stockouts and overstock.",
               },
               {
-                title: "Market Intelligence",
-                text: "Get clear buy, hold, or wait signals based on economic indicators and commodity price data. The platform monitors conditions so you can time purchases for better prices.",
+                title: "Procurement timing",
+                desc: "Know when to buy. Real-time commodity prices, supplier lead times, and market intelligence tell you the optimal moment to place orders.",
               },
               {
-                title: "Smart Allocation",
-                text: "When materials are limited, set your priorities and constraints and get recommendations on what to produce first. Maximize revenue from what you have.",
+                title: "Production optimization",
+                description: "Smart allocation of materials and resources across SKUs. Maximize throughput while minimizing waste during shortages.",
               },
               {
-                title: "Supply Chain Visibility",
-                text: "Map your supplier network, track reliability scores, and get alerts about potential disruptions. Know where your vulnerabilities are before they become crises.",
+                title: "Supply chain visibility",
+                desc: "Map your entire supplier network. Score risk. Get alerts on disruptions. Know your dependencies before they become problems.",
               },
             ].map((item, idx) => (
               <div key={idx}>
-                <h3 className="font-medium mb-2">{item.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed max-w-lg">{item.text}</p>
+                <h2 className="text-2xl display mb-4">{item.title}</h2>
+                <p className="text-soft leading-relaxed">{item.desc || item.description}</p>
               </div>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Platform overview — single paragraph */}
-      <section className="pb-20">
-        <div className="max-w-3xl mx-auto px-6 lg:px-8">
-          <div className="border-t pt-12">
-            <h2 className="font-medium mb-3">The platform</h2>
-            <p className="text-sm text-muted-foreground leading-relaxed max-w-lg mb-4">
-              Six integrated modules that share data: Demand Planning, Material Allocation,
-              Procurement Timing, Supply Chain Mapping, Production Analytics, and Digital Twin.
-              Changes in one area automatically inform recommendations across the others.
-            </p>
-            <Button variant="ghost" size="sm" className="text-muted-foreground px-0 hover:text-foreground" onClick={() => setLocation("/how-it-works")}>
-              How it works
-              <ArrowRight className="ml-1 h-3 w-3" />
-            </Button>
-          </div>
-        </div>
-      </section>
+        <div className="divider"></div>
 
-      {/* Pricing — minimal text */}
-      <section className="pb-20">
-        <div className="max-w-3xl mx-auto px-6 lg:px-8">
-          <div className="border-t pt-12">
-            <h2 className="font-medium mb-3">Pricing</h2>
-            <p className="text-sm text-muted-foreground leading-relaxed max-w-lg mb-6">
-              Plans start at $299/month for up to 500 SKUs. We also offer usage-based
-              and performance-based pricing where you pay a percentage of verified savings.
-              Every plan starts with a 30-day free trial.
-            </p>
-            <Button variant="ghost" size="sm" className="text-muted-foreground px-0 hover:text-foreground" onClick={() => setLocation("/pricing")}>
-              View pricing details
-              <ArrowRight className="ml-1 h-3 w-3" />
-            </Button>
+        {/* Pricing — minimal */}
+        <section className="max-w-4xl mx-auto px-10 py-20">
+          <h2 className="text-3xl display mb-12">Pricing</h2>
+          <div className="space-y-8">
+            {[
+              { name: "Starter", price: "$299/mo", desc: "Everything you need to get started" },
+              { name: "Growth", price: "$799/mo", desc: "For teams managing complex supply chains" },
+              { name: "Usage-Based", price: "$199/mo + metered", desc: "Pay for what you use" },
+              { name: "Enterprise", price: "Custom", desc: "Contact sales for dedicated support" },
+            ].map((plan, idx) => (
+              <div key={idx} className="flex items-start justify-between pb-8 border-b border-line">
+                <div>
+                  <div className="font-medium mb-2">{plan.name}</div>
+                  <p className="text-sm text-soft">{plan.desc}</p>
+                </div>
+                <div className="text-right mono text-sm text-signal shrink-0">{plan.price}</div>
+              </div>
+            ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Get help */}
-      <section className="pb-20">
-        <div className="max-w-3xl mx-auto px-6 lg:px-8">
-          <div className="border-t pt-12">
-            <h2 className="font-medium mb-3">Get help</h2>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Questions about Prescient? Email{" "}
-              <a href="mailto:info@prescient-labs.com" className="text-foreground hover:underline">info@prescient-labs.com</a>
-            </p>
-          </div>
-        </div>
-      </section>
+        <div className="divider"></div>
 
-      {/* Footer — absolute minimum */}
-      <footer className="pb-12">
-        <div className="max-w-3xl mx-auto px-6 lg:px-8">
-          <div className="border-t pt-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <p className="text-xs text-muted-foreground">&copy; 2026 Prescient Labs</p>
-            <div className="flex gap-5 text-xs text-muted-foreground">
-              <a href="/privacy" className="hover:text-foreground">Privacy</a>
-              <a href="/terms" className="hover:text-foreground">Terms</a>
-              <a href="/security" className="hover:text-foreground">Security</a>
-            </div>
-          </div>
-        </div>
-      </footer>
+        {/* Final CTA */}
+        <section className="max-w-4xl mx-auto px-10 py-24 text-center">
+          <h2 className="hero text-4xl md:text-5xl leading-tight mb-8">
+            Built for the operators who run it.
+          </h2>
+          <p className="text-soft text-base mb-10 max-w-2xl mx-auto">
+            Manufacturing isn't theoretical. It's real. Raw. Demanding. Your software should be too.
+          </p>
+          <button onClick={handleStartTrial} className="btn-primary text-sm px-6 py-3">
+            Start 90-day free trial
+          </button>
+        </section>
+
+        <div className="divider"></div>
+
+        {/* Footer */}
+        <footer className="max-w-4xl mx-auto px-10 py-12 text-center text-sm text-muted">
+          <div className="mono text-xs">© 2026 Prescient Labs · SOC 2 · ISO 27001</div>
+        </footer>
+      </div>
     </div>
   );
 }

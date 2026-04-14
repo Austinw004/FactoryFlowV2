@@ -213,22 +213,22 @@ export function AppSidebar() {
       {items
         .filter(item => !isLandingMode || item.landingMode)
         .map((item) => (
-          <SidebarMenuItem key={item.title}>
+          <SidebarMenuItem key={item.title} className="relative">
+            {isActive(item.url) && (
+              <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-3.5 bg-signal rounded-r" style={{width: '2px'}}></div>
+            )}
             <Tooltip>
               <TooltipTrigger asChild>
                 <SidebarMenuButton
                   asChild
                   isActive={isActive(item.url)}
                   data-testid={item.testId}
-                  className="h-9 rounded-lg transition-all duration-150"
+                  className={`h-9 rounded-sm transition-all duration-150 pl-6 text-sm mono ${isActive(item.url) ? 'text-bone' : 'text-soft'}`}
                 >
-                  <Link href={item.url}>
+                  <Link href={item.url} className="flex items-center gap-2">
                     <item.icon className="h-4 w-4 shrink-0" />
                     <span className="flex-1 truncate">{item.title}</span>
                     {getAlertBadge(item.url)}
-                    {isActive(item.url) && (
-                      <ChevronRight className="h-3 w-3 text-muted-foreground/50 shrink-0" />
-                    )}
                   </Link>
                 </SidebarMenuButton>
               </TooltipTrigger>
@@ -244,16 +244,11 @@ export function AppSidebar() {
   );
 
   return (
-    <Sidebar>
-      <SidebarHeader className="px-4 py-5 border-b border-sidebar-border">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center shadow-sm">
-            <Eye className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <div className="min-w-0">
-            <h2 className="font-semibold text-sm tracking-tight leading-none">Prescient Labs</h2>
-            <p className="text-[11px] text-muted-foreground mt-0.5 tracking-wide uppercase">Manufacturing Intelligence</p>
-          </div>
+    <Sidebar className="bg-ink border-r border-line">
+      <SidebarHeader className="px-6 py-5 border-b border-line h-16 flex items-center">
+        <div className="flex items-center gap-3 w-full">
+          <div className="w-2 h-2 bg-signal"></div>
+          <span className="text-sm tracking-[0.18em] font-medium">FACTORYFLOW</span>
         </div>
       </SidebarHeader>
 
@@ -288,7 +283,15 @@ export function AppSidebar() {
         )}
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border px-2 py-2">
+      <SidebarFooter className="border-t border-line px-6 py-5">
+        <div className="space-y-3">
+          <div className="eyebrow">Operator</div>
+          <div className="text-sm">A. Wendler</div>
+          <div className="mono text-xs text-muted">Prescient Labs</div>
+        </div>
+      </SidebarFooter>
+
+      <div className="px-2 py-2 border-t border-line">
         <SidebarMenu>
           <SidebarTour />
           {bottomMenuItems.map((item) => (
@@ -307,7 +310,7 @@ export function AppSidebar() {
             </SidebarMenuItem>
           ))}
         </SidebarMenu>
-      </SidebarFooter>
+      </div>
     </Sidebar>
   );
 }

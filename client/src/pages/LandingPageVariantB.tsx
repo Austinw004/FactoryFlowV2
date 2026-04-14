@@ -1,223 +1,160 @@
 /**
- * Variant B: "Split Layout" — left-aligned hero with feature grid.
- * Asymmetric, editorial feel. Content breathes.
- * Inspired by Linear/Stripe's landing page style.
+ * Variant B: Split layout with asymmetric design
+ * Inspired by Linear/Stripe style but in dark Palantir design
  */
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import {
-  ArrowRight, Eye, Brain, Target, Network, Mail,
-  LineChart, Boxes, DollarSign, Truck, Gauge, Layers, Check
-} from "lucide-react";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { ArrowRight, Brain, Target, Network, LineChart, Boxes, DollarSign, Truck, Check } from "lucide-react";
 import { SEOHead } from "@/components/SEOHead";
 import { useLocation } from "wouter";
 
 export default function LandingPageVariantB() {
   const [, setLocation] = useLocation();
 
+  const handleStartTrial = () => {
+    setLocation("/signup");
+  };
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-ink text-bone font-sans">
       <SEOHead
-        title="Prescient Labs — Manufacturing Intelligence Platform"
+        title="FactoryFlow — Manufacturing Intelligence Platform"
         description="Manufacturing intelligence tools for demand forecasting, procurement timing, production optimization, and supply chain visibility."
       />
 
-      {/* Navigation */}
-      <nav className="border-b border-border/40 sticky top-0 bg-background/80 backdrop-blur-xl z-50">
-        <div className="max-w-6xl mx-auto px-6 lg:px-8">
-          <div className="flex justify-between items-center h-14">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-foreground rounded-md flex items-center justify-center">
-                <Eye className="h-3.5 w-3.5 text-background" />
-              </div>
-              <span className="font-semibold text-sm tracking-tight">Prescient Labs</span>
+      {/* Grain texture overlay */}
+      <div className="grain fixed inset-0 pointer-events-none z-0"></div>
+
+      <div className="relative z-10">
+        {/* Header */}
+        <header className="border-b hair sticky top-0 bg-ink/95 backdrop-blur z-50">
+          <div className="max-w-7xl mx-auto px-10 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 bg-signal"></div>
+              <span className="text-sm tracking-[0.18em] font-medium">FACTORYFLOW</span>
             </div>
-            <div className="flex items-center gap-6">
-              <a href="/how-it-works" className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:block">How It Works</a>
-              <a href="/pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:block">Pricing</a>
-              <div className="flex items-center gap-2">
-                <ThemeToggle />
-                <Button variant="ghost" size="sm" asChild>
-                  <a href="/signin">Sign In</a>
-                </Button>
-                <Button size="sm" asChild>
-                  <a href="/signup">Get Started</a>
-                </Button>
+            <div className="flex items-center gap-4">
+              <a href="/pricing" className="text-xs text-soft hover:text-bone transition-colors">Pricing</a>
+              <a href="/signin" className="text-xs text-soft hover:text-bone transition-colors">Sign in</a>
+              <button onClick={handleStartTrial} className="btn-primary text-xs px-4 py-2">
+                Start free trial
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* Split Hero Section */}
+        <section className="max-w-7xl mx-auto px-10 py-20">
+          <div className="grid grid-cols-12 gap-14">
+            {/* Left: Text content */}
+            <div className="col-span-12 md:col-span-6 flex flex-col justify-center">
+              <div className="eyebrow mb-6">Industrial intelligence</div>
+              <h1 className="hero text-6xl leading-[0.95] mb-10">
+                Plan ahead. Optimize operations. Build resilience.
+              </h1>
+              <p className="text-soft text-base leading-relaxed mb-8 max-w-lg">
+                Demand forecasting, procurement timing, production optimization, and supply chain visibility — all in one platform.
+              </p>
+              <div className="flex flex-col gap-4">
+                {[
+                  "Real-time demand sensing",
+                  "Supplier risk scoring",
+                  "Automated procurement",
+                  "Production optimization",
+                ].map((feature, idx) => (
+                  <div key={idx} className="flex items-center gap-3">
+                    <Check className="w-4 h-4 text-signal shrink-0" />
+                    <span className="text-sm text-soft">{feature}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center gap-4 mt-10">
+                <button onClick={handleStartTrial} className="btn-primary text-sm px-6 py-3">
+                  Start 90-day free trial
+                </button>
+                <button className="btn-ghost text-sm px-6 py-3 flex items-center gap-2">
+                  Schedule demo <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+
+            {/* Right: Feature cards grid */}
+            <div className="col-span-12 md:col-span-6">
+              <div className="grid grid-cols-2 gap-px bg-line h-full">
+                {[
+                  { icon: LineChart, title: "Demand Planning", desc: "Forecast with confidence" },
+                  { icon: Brain, title: "Market Intelligence", desc: "Procurement timing signals" },
+                  { icon: Target, title: "Smart Allocation", desc: "Optimize production mix" },
+                  { icon: Network, title: "Supply Chain", desc: "End-to-end visibility" },
+                ].map((item, idx) => {
+                  const Icon = item.icon;
+                  return (
+                    <div key={idx} className="bg-panel p-6 flex flex-col">
+                      <Icon className="w-6 h-6 text-signal mb-4" />
+                      <div className="text-sm font-medium mb-2">{item.title}</div>
+                      <p className="text-xs text-soft">{item.desc}</p>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
-        </div>
-      </nav>
+        </section>
 
-      {/* Hero — left-aligned */}
-      <section className="pt-20 sm:pt-28 pb-20">
-        <div className="max-w-6xl mx-auto px-6 lg:px-8">
-          <div className="max-w-2xl">
-            <p className="text-sm font-medium text-muted-foreground mb-4">Manufacturing Intelligence Platform</p>
-            <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight leading-[1.1] mb-5">
-              See what's coming. Act before it arrives.
-            </h1>
-            <p className="text-lg text-muted-foreground leading-relaxed mb-8">
-              Prescient connects demand forecasting, procurement timing, production
-              optimization, and supply chain visibility into a single platform built
-              for manufacturing teams.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <Button size="lg" className="h-11 px-7" asChild>
-                <a href="/signup">
-                  Start Free Trial
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
-              </Button>
-              <Button size="lg" variant="ghost" className="h-11 px-7 text-muted-foreground" onClick={() => setLocation("/how-it-works")}>
-                Learn more
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
+        <div className="divider"></div>
 
-      {/* Feature grid — 2x2 with detailed cards */}
-      <section className="py-20 border-t">
-        <div className="max-w-6xl mx-auto px-6 lg:px-8">
-          <div className="grid sm:grid-cols-2 gap-px bg-border rounded-xl overflow-hidden">
+        {/* Features Section */}
+        <section className="max-w-7xl mx-auto px-10 py-28">
+          <div className="eyebrow mb-12">Why FactoryFlow</div>
+          <div className="grid md:grid-cols-3 gap-8">
             {[
               {
-                icon: Eye,
-                title: "Demand Forecasting",
-                description: "30/60/90-day demand forecasts from your sales history and economic indicators. Forecasts update as new data arrives.",
-                points: ["Upload sales data, get forecasts automatically", "Review weekly to adjust production schedules", "Accuracy tracking over time"],
+                title: "Built for operators",
+                description: "Designed by and for the people running manufacturing operations. Simple, powerful, no complexity.",
               },
               {
-                icon: Brain,
-                title: "Market Intelligence",
-                description: "Timing signals based on economic data and commodity trends. Know when to buy aggressively and when to wait.",
-                points: ["Daily buy/hold/wait signals", "Based on real economic indicators", "Signals adjust to market shifts"],
+                title: "Real-time intelligence",
+                description: "React instantly to market changes, supplier disruptions, and demand shifts with AI-powered insights.",
               },
               {
-                icon: Target,
-                title: "Smart Allocation",
-                description: "When materials are limited, get clear recommendations on what to produce first for maximum revenue.",
-                points: ["Set priorities and constraints", "Run optimizer before each production cycle", "Clear production recommendations"],
-              },
-              {
-                icon: Network,
-                title: "Supply Chain Visibility",
-                description: "Map your entire supplier network, score risk by supplier, and get alerts before disruptions reach you.",
-                points: ["Multi-tier supplier mapping", "Automated risk scoring", "Disruption alerts before impact"],
+                title: "Enterprise ready",
+                description: "SOC 2 certified. Supports complex supply chains. Integrates with your existing ERP and systems.",
               },
             ].map((item, idx) => (
-              <div key={idx} className="bg-background p-8 lg:p-10">
-                <item.icon className="h-5 w-5 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium mb-2">{item.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed mb-5">{item.description}</p>
-                <ul className="space-y-2">
-                  {item.points.map((point, pidx) => (
-                    <li key={pidx} className="flex items-start gap-2 text-sm text-muted-foreground">
-                      <Check className="h-4 w-4 text-foreground shrink-0 mt-0.5" />
-                      <span>{point}</span>
-                    </li>
-                  ))}
-                </ul>
+              <div key={idx} className="border-l border-signal pl-6">
+                <h3 className="text-xl display mb-3">{item.title}</h3>
+                <p className="text-soft text-sm leading-relaxed">{item.description}</p>
               </div>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Modules list */}
-      <section className="py-20 border-t bg-muted/20">
-        <div className="max-w-6xl mx-auto px-6 lg:px-8">
-          <div className="max-w-2xl mb-12">
-            <h2 className="text-2xl font-semibold tracking-tight mb-3">Six integrated modules</h2>
-            <p className="text-muted-foreground">Everything shares data. Changes in one area automatically flow into recommendations across the platform.</p>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[
-              { icon: LineChart, name: "Demand Planning", desc: "Multi-horizon forecasting" },
-              { icon: Boxes, name: "Material Allocation", desc: "Constraint-based optimization" },
-              { icon: DollarSign, name: "Procurement Timing", desc: "Buy/hold/wait signals" },
-              { icon: Truck, name: "Supply Chain Mapping", desc: "Supplier risk visibility" },
-              { icon: Gauge, name: "Production Analytics", desc: "OEE and bottleneck tracking" },
-              { icon: Layers, name: "Digital Twin", desc: "What-if simulations" },
-            ].map((m, idx) => (
-              <div key={idx} className="flex items-center gap-3 p-4 rounded-lg border bg-background">
-                <m.icon className="h-4 w-4 text-muted-foreground shrink-0" />
-                <div>
-                  <p className="text-sm font-medium">{m.name}</p>
-                  <p className="text-xs text-muted-foreground">{m.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+        <div className="divider"></div>
 
-      {/* Simple pricing row */}
-      <section className="py-20 border-t">
-        <div className="max-w-6xl mx-auto px-6 lg:px-8">
-          <h2 className="text-2xl font-semibold tracking-tight mb-3">Simple, transparent pricing</h2>
-          <p className="text-muted-foreground mb-10">Start with a 30-day free trial. Choose a plan when you're ready.</p>
-          <div className="grid sm:grid-cols-4 gap-4">
-            {[
-              { name: "Starter", price: "$299", period: "/mo", note: "500 SKUs" },
-              { name: "Growth", price: "$799", period: "/mo", note: "5,000 SKUs" },
-              { name: "Usage", price: "$199", period: "/mo+", note: "Metered" },
-              { name: "Performance", price: "$100", period: "/mo+", note: "15% savings" },
-            ].map((p, idx) => (
-              <Card key={idx} className="p-5 flex flex-col">
-                <p className="text-sm font-medium mb-2">{p.name}</p>
-                <p className="text-2xl font-semibold">{p.price}<span className="text-sm font-normal text-muted-foreground">{p.period}</span></p>
-                <p className="text-xs text-muted-foreground mt-1 mb-auto">{p.note}</p>
-                <Button variant="outline" size="sm" className="w-full mt-4" asChild>
-                  <a href="/signup">Start Trial</a>
-                </Button>
-              </Card>
-            ))}
+        {/* CTA */}
+        <section className="max-w-7xl mx-auto px-10 py-32">
+          <div className="text-center">
+            <h2 className="hero text-5xl md:text-6xl leading-tight mb-6 max-w-3xl mx-auto">
+              Ready to optimize your operations?
+            </h2>
+            <p className="text-soft text-base mb-10 max-w-2xl mx-auto">
+              Start your free trial today. No credit card required. 90 days full access.
+            </p>
+            <button onClick={handleStartTrial} className="btn-primary text-sm px-6 py-3">
+              Start 90-day free trial
+            </button>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Get help + CTA */}
-      <section className="py-20 border-t bg-muted/20">
-        <div className="max-w-6xl mx-auto px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-8">
-            <div>
-              <h2 className="text-2xl font-semibold tracking-tight mb-2">Ready to get started?</h2>
-              <p className="text-muted-foreground">
-                Questions? Email us at{" "}
-                <a href="mailto:info@prescient-labs.com" className="font-medium text-foreground hover:underline">info@prescient-labs.com</a>
-              </p>
-            </div>
-            <Button size="lg" asChild>
-              <a href="/signup">
-                Start Free Trial
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </a>
-            </Button>
-          </div>
-        </div>
-      </section>
+        <div className="divider"></div>
 
-      {/* Footer */}
-      <footer className="border-t py-8">
-        <div className="max-w-6xl mx-auto px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 bg-foreground rounded flex items-center justify-center">
-              <Eye className="h-3 w-3 text-background" />
-            </div>
-            <span className="text-xs text-muted-foreground">&copy; 2026 Prescient Labs</span>
+        {/* Footer */}
+        <footer className="max-w-7xl mx-auto px-10 py-14 flex items-center justify-between text-sm text-muted">
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 bg-signal"></div>
+            <span className="tracking-[0.18em] font-medium">PRESCIENT LABS</span>
           </div>
-          <div className="flex gap-6 text-xs text-muted-foreground">
-            <a href="/how-it-works" className="hover:text-foreground">How It Works</a>
-            <a href="/security" className="hover:text-foreground">Security</a>
-            <a href="/privacy" className="hover:text-foreground">Privacy</a>
-            <a href="/terms" className="hover:text-foreground">Terms</a>
-            <a href="mailto:info@prescient-labs.com" className="hover:text-foreground">Contact</a>
-          </div>
-        </div>
-      </footer>
+          <div className="mono text-xs">© 2026 · SOC 2 · ISO 27001</div>
+        </footer>
+      </div>
     </div>
   );
 }

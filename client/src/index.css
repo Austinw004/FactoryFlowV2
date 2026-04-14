@@ -1,9 +1,84 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* LIGHT MODE — refined enterprise palette */
+/* DARK MODE — Palantir-inspired enterprise palette (DEFAULT) */
 :root {
+  --button-outline: rgba(255,255,255, .08);
+  --badge-outline: rgba(255,255,255, .04);
+  --opaque-button-border-intensity: 8;
+  --elevate-1: rgba(255,255,255, .03);
+  --elevate-2: rgba(255,255,255, .07);
+  --background: 0 0% 0%;
+  --foreground: 0 0% 94.9%;
+  --border: 0 0% 10.6%;
+  --card: 0 0% 6.3%;
+  --card-foreground: 0 0% 94.9%;
+  --card-border: 0 0% 10.6%;
+  --sidebar: 0 0% 0%;
+  --sidebar-foreground: 0 0% 94.9%;
+  --sidebar-border: 0 0% 10.6%;
+  --sidebar-primary: 43 77% 58%;
+  --sidebar-primary-foreground: 0 0% 0%;
+  --sidebar-accent: 43 77% 58%;
+  --sidebar-accent-foreground: 0 0% 94.9%;
+  --sidebar-ring: 43 77% 58%;
+  --popover: 0 0% 6.3%;
+  --popover-foreground: 0 0% 94.9%;
+  --popover-border: 0 0% 10.6%;
+  --primary: 0 0% 94.9%;
+  --primary-foreground: 0 0% 0%;
+  --secondary: 0 0% 10.6%;
+  --secondary-foreground: 0 0% 94.9%;
+  --muted: 0 0% 41.6%;
+  --muted-foreground: 0 0% 63.1%;
+  --accent: 43 77% 58%;
+  --accent-foreground: 0 0% 0%;
+  --destructive: 0 76% 63%;
+  --destructive-foreground: 0 0% 98%;
+  --input: 0 0% 10.6%;
+  --ring: 43 77% 58%;
+  --chart-1: 43 77% 58%;
+  --chart-2: 130 43% 61%;
+  --chart-3: 0 76% 63%;
+  --chart-4: 0 0% 94.9%;
+  --chart-5: 43 77% 58%;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', monospace;
+  --radius: .125rem;
+  --shadow-2xs: none;
+  --shadow-xs: none;
+  --shadow-sm: none;
+  --shadow: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --shadow-xl: none;
+  --shadow-2xl: none;
+  --tracking-normal: -0.011em;
+  --spacing: 0.25rem;
+
+  /* Fallback for older browsers */
+  --sidebar-primary-border: hsl(var(--sidebar-primary));
+  --sidebar-primary-border: hsl(from hsl(var(--sidebar-primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+  --sidebar-accent-border: hsl(var(--sidebar-accent));
+  --sidebar-accent-border: hsl(from hsl(var(--sidebar-accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+  --primary-border: hsl(var(--primary));
+  --primary-border: hsl(from hsl(var(--primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+  --secondary-border: hsl(var(--secondary));
+  --secondary-border: hsl(from hsl(var(--secondary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+  --muted-border: hsl(var(--muted));
+  --muted-border: hsl(from hsl(var(--muted)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+  --accent-border: hsl(var(--accent));
+  --accent-border: hsl(from hsl(var(--accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+  --destructive-border: hsl(var(--destructive));
+  --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+}
+
+/* Light mode fallback (not used but available) */
+.light {
   --button-outline: rgba(0,0,0, .08);
   --badge-outline: rgba(0,0,0, .04);
   --opaque-button-border-intensity: -6;
@@ -45,7 +120,7 @@
   --chart-5: 350 72% 50%;
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-serif: Georgia, serif;
-  --font-mono: 'Roboto Mono', 'SF Mono', 'Cascadia Code', monospace;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', monospace;
   --radius: .625rem;
   --shadow-2xs: 0 1px 2px 0 rgb(0 0 0 / 0.03);
   --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.04);
@@ -58,46 +133,6 @@
   --tracking-normal: -0.011em;
   --spacing: 0.25rem;
 
-  /* Fallback for older browsers */
-  --sidebar-primary-border: hsl(var(--sidebar-primary));
-  --sidebar-primary-border: hsl(from hsl(var(--sidebar-primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-  --sidebar-accent-border: hsl(var(--sidebar-accent));
-  --sidebar-accent-border: hsl(from hsl(var(--sidebar-accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-  --primary-border: hsl(var(--primary));
-  --primary-border: hsl(from hsl(var(--primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-  --secondary-border: hsl(var(--secondary));
-  --secondary-border: hsl(from hsl(var(--secondary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-  --muted-border: hsl(var(--muted));
-  --muted-border: hsl(from hsl(var(--muted)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-  --accent-border: hsl(var(--accent));
-  --accent-border: hsl(from hsl(var(--accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-  --destructive-border: hsl(var(--destructive));
-  --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-}
-
-/* DARK MODE — deep enterprise palette */
-.dark {
-  --button-outline: rgba(255,255,255, .08);
-  --badge-outline: rgba(255,255,255, .04);
-  --opaque-button-border-intensity: 8;
-  --elevate-1: rgba(255,255,255, .03);
-  --elevate-2: rgba(255,255,255, .07);
-  --background: 224 14% 7%;
-  --foreground: 220 14% 95%;
-  --border: 224 10% 16%;
-  --card: 224 14% 9%;
-  --card-foreground: 220 14% 95%;
-  --card-border: 224 10% 12%;
-  --sidebar: 224 14% 10%;
-  --sidebar-foreground: 220 14% 95%;
-  --sidebar-border: 224 10% 14%;
-  --sidebar-primary: 220 72% 56%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 224 14% 15%;
-  --sidebar-accent-foreground: 220 14% 95%;
-  --sidebar-ring: 220 72% 56%;
-  --popover: 224 14% 11%;
-  --popover-foreground: 220 14% 95%;
   --popover-border: 224 10% 16%;
   --primary: 220 72% 54%;
   --primary-foreground: 0 0% 100%;
@@ -265,5 +300,106 @@
   .border.active-elevate-2:not(.no-active-interaction-elevate)::after,
   .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
     inset: -1px;
+  }
+
+  /* Palantir design system utility classes */
+  .eyebrow {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: hsl(var(--muted-foreground));
+    font-weight: 500;
+  }
+
+  .hair {
+    border-color: hsl(var(--border));
+  }
+
+  .divider {
+    height: 1px;
+    background: hsl(var(--border));
+  }
+
+  .display {
+    font-weight: 300;
+    letter-spacing: -0.02em;
+  }
+
+  .hero {
+    font-weight: 300;
+    letter-spacing: -0.035em;
+  }
+
+  .mono {
+    font-family: var(--font-mono);
+  }
+
+  .btn-primary {
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    font-weight: 500;
+    padding: 0.5rem 1.25rem;
+    border-radius: 0.125rem;
+    border: 1px solid hsl(var(--primary));
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-primary:hover {
+    background: #fff;
+    border-color: #fff;
+  }
+
+  .btn-ghost {
+    color: hsl(var(--foreground));
+    border: 1px solid hsl(var(--border));
+    font-weight: 500;
+    padding: 0.5rem 1.25rem;
+    border-radius: 0.125rem;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-ghost:hover {
+    border-color: hsl(var(--muted-foreground));
+    color: hsl(var(--foreground));
+  }
+
+  .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    display: inline-block;
+  }
+
+  .grain {
+    background-image: radial-gradient(#fff 0.5px, transparent 0.5px);
+    background-size: 3px 3px;
+    opacity: 0.015;
+    pointer-events: none;
+  }
+
+  .integration-tile {
+    border: 1px solid hsl(var(--border));
+    padding: 18px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    color: hsl(var(--muted-foreground));
+    transition: all 0.15s;
+    font-weight: 400;
+  }
+
+  .integration-tile:hover {
+    border-color: hsl(var(--border) / 0.6);
+    color: hsl(var(--foreground));
+  }
+
+  .trial-banner {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
   }
 }

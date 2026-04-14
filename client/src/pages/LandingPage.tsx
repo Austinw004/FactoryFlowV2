@@ -1,666 +1,309 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  TrendingUp, Boxes, ShoppingCart, BarChart3, ArrowRight, Check, Factory,
-  Shield, Clock, DollarSign, Zap, Building2, Rocket, LineChart, Truck,
-  Eye, Brain, Gauge, Network, AlertTriangle, Sparkles, Target, Layers,
-  CreditCard, Percent, Mail
-} from "lucide-react";
-import heroImage from "@assets/Screenshot_2025-12-06_at_2.06.49_pm_1765051647586.png";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { SEOHead } from "@/components/SEOHead";
 import { useLocation } from "wouter";
+import { SEOHead } from "@/components/SEOHead";
 
 export default function LandingPage() {
   const [, setLocation] = useLocation();
-  const [pricingModel, setPricingModel] = useState<"subscription" | "performance">("performance");
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("monthly");
 
-  const coreCapabilities = [
-    {
-      icon: Eye,
-      title: "See What's Coming",
-      subtitle: "Demand Forecasting",
-      description: "Generate demand forecasts based on your sales history and current economic indicators.",
-      howToUse: "Upload your sales history, add your products, and the platform automatically generates 30/60/90-day forecasts. Review weekly to adjust production schedules.",
-      keyBenefit: "Demand visibility to inform production and inventory decisions",
-    },
-    {
-      icon: Brain,
-      title: "Know When to Act",
-      subtitle: "Market Intelligence",
-      description: "Receive buying signals based on economic data and commodity price trends. Signals update as market conditions change.",
-      howToUse: "Check your dashboard daily for the current market signal. Green means buy aggressively, yellow means proceed normally, red means preserve cash and wait.",
-      keyBenefit: "Data-driven timing signals for procurement decisions",
-    },
-    {
-      icon: Target,
-      title: "Optimize Every Decision",
-      subtitle: "Smart Allocation",
-      description: "Determine what to make, when to make it, and how to allocate limited materials across priorities.",
-      howToUse: "Set your product priorities and constraints, then run the optimizer before each production cycle. Get clear recommendations on what to produce first.",
-      keyBenefit: "Maximize revenue from limited materials during supply constraints",
-    },
-    {
-      icon: Network,
-      title: "Protect Your Supply Chain",
-      subtitle: "Supplier Intelligence",
-      description: "Score supplier risk, map dependencies, and get alerts before disruptions hit. Full visibility from raw materials to delivery.",
-      howToUse: "Add your suppliers with location and material data. The platform monitors risks and alerts you to potential disruptions before they impact production.",
-      keyBenefit: "Identify supply chain vulnerabilities before they become crises",
-    },
-  ];
+  // All 40 integrations from the codebase
+  const integrationsByCategory = {
+    "ERP & Finance": [
+      "NetSuite", "QuickBooks", "Xero", "Stripe", "PayPal", "Braintree"
+    ],
+    "E-commerce": [
+      "Shopify", "WooCommerce", "BigCommerce", "Amazon Seller", "Square"
+    ],
+    "Shipping & logistics": [
+      "FedEx", "UPS", "DHL"
+    ],
+    "CRM & Sales": [
+      "Salesforce"
+    ],
+    "Work management": [
+      "Asana", "Jira", "Linear", "Monday", "Trello", "Notion"
+    ],
+    "Marketing": [
+      "Mailchimp", "Klaviyo", "SendGrid", "SendPulse", "ActiveCampaign", "Drip"
+    ],
+    "Support": [
+      "Zendesk", "Zendesk Chat", "Intercom", "Freshdesk"
+    ],
+    "Analytics & BI": [
+      "Power BI", "Mixpanel", "Segment", "Google Sheets"
+    ],
+    "Productivity & data": [
+      "Microsoft Teams", "Google Calendar", "Airtable", "DocuSign", "Weather"
+    ],
+  };
 
-  const platformModules = [
-    {
-      icon: LineChart,
-      name: "Demand Planning",
-      description: "Multi-horizon forecasting with model accuracy tracking",
-      details: "30/60/90-day forecasts that improve as you add more sales data",
-    },
-    {
-      icon: Boxes,
-      name: "Material Allocation",
-      description: "Constraint-based optimization across your product mix",
-      details: "Input your priorities and constraints, get optimal production recommendations",
-    },
-    {
-      icon: DollarSign,
-      name: "Procurement Timing",
-      description: "Counter-cyclical buying signals to reduce material costs",
-      details: "Clear buy/hold/wait signals based on market conditions and your inventory",
-    },
-    {
-      icon: Truck,
-      name: "Supply Chain Mapping",
-      description: "Multi-tier supplier visibility with risk scoring",
-      details: "Visual network map showing all supplier dependencies and risk hotspots",
-    },
-    {
-      icon: Gauge,
-      name: "Production Analytics",
-      description: "Real-time OEE, bottleneck detection, and efficiency tracking",
-      details: "Monitor availability, performance, and quality with automatic alerts",
-    },
-    {
-      icon: Layers,
-      name: "Digital Twin",
-      description: "Live operational snapshot with what-if simulations",
-      details: "Ask questions in plain English and run scenarios without affecting real data",
-    },
-  ];
+  const handleStartTrial = () => {
+    setLocation("/signup");
+  };
 
-  const differentiators = [
-    {
-      title: "Forward-Looking Signals",
-      description: "The platform analyzes economic indicators and market data to generate procurement timing signals before price movements become apparent in spot markets.",
-    },
-    {
-      title: "Unified Operations View",
-      description: "Demand, supply, production, and procurement data in one platform. Replace disconnected spreadsheets with a single source of operational data.",
-    },
-    {
-      title: "Built for Manufacturers",
-      description: "Purpose-built for manufacturing operations — not a generic analytics tool adapted to the factory floor. Every feature is designed for how manufacturers work.",
-    },
-  ];
-
-  const subscriptionPlans = [
-    {
-      name: "Starter",
-      monthlyPrice: "$299",
-      annualPrice: "$2,990",
-      monthlyPeriod: "/month",
-      annualPeriod: "/year",
-      annualNote: "$249/mo",
-      skus: "Up to 500 SKUs",
-      description: "Demand forecasting and procurement optimization for growing manufacturers",
-      highlighted: false,
-      icon: Rocket,
-    },
-    {
-      name: "Growth",
-      monthlyPrice: "$799",
-      annualPrice: "$7,990",
-      monthlyPeriod: "/month",
-      annualPeriod: "/year",
-      annualNote: "$666/mo",
-      skus: "Up to 5,000 SKUs",
-      description: "Full platform access with advanced supply chain intelligence",
-      highlighted: true,
-      icon: Building2,
-    },
-  ];
-
-  const performancePlans = [
-    {
-      name: "Usage-Based",
-      price: "$199",
-      period: "/month + metered",
-      description: "Start low and scale — pay for exactly what you consume",
-      highlighted: false,
-      icon: Zap,
-    },
-    {
-      name: "Performance",
-      price: "$100",
-      period: "/month + 15% of savings",
-      description: "Pay only on verified, measured savings — never on estimates",
-      highlighted: true,
-      icon: DollarSign,
-    },
-  ];
-
+  const handleSeeProduct = () => {
+    const element = document.querySelector('[data-testid="product-screen"]');
+    element?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-ink text-bone font-sans">
       <SEOHead
-        title="Prescient Labs — Manufacturing Intelligence Platform"
-        description="Manufacturing intelligence tools for demand forecasting, procurement timing, production optimization, and supply chain visibility."
+        title="FactoryFlow — Software for the industrial floor"
+        description="FactoryFlow unifies demand, supply, commodities, and production into a single operational system. Built for operators running the physical economy."
       />
-      {/* Navigation */}
-      <nav className="border-b border-border/40 sticky top-0 bg-background/80 backdrop-blur-xl z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shadow-sm">
-                <Eye className="h-4.5 w-4.5 text-primary-foreground" />
-              </div>
-              <span className="font-semibold text-lg tracking-tight">Prescient Labs</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <ThemeToggle />
-              <Button variant="ghost" size="sm" asChild data-testid="link-signin">
-                <a href="/signin">Sign In</a>
-              </Button>
-              <Button size="sm" className="shadow-sm" asChild data-testid="button-get-started">
-                <a href="/signup">Start Free Trial</a>
-              </Button>
-            </div>
+
+      {/* Grain texture overlay */}
+      <div className="grain fixed inset-0 pointer-events-none z-0"></div>
+
+      {/* Header */}
+      <header className="border-b hair relative z-10">
+        <div className="max-w-7xl mx-auto px-10 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 bg-signal"></div>
+            <span className="text-sm tracking-[0.18em] font-medium">FACTORYFLOW</span>
+          </div>
+          <nav className="hidden md:flex items-center gap-10 text-sm text-soft">
+            <a href="#platform" className="hover:text-bone transition">Platform</a>
+            <a href="#integrations" className="hover:text-bone transition">Integrations</a>
+            <a href="#deployment" className="hover:text-bone transition">Deployments</a>
+            <a href="#pricing" className="hover:text-bone transition">Pricing</a>
+          </nav>
+          <div className="flex items-center gap-3">
+            <a href="/signin" className="text-sm text-soft hover:text-bone transition">Sign in</a>
+            <button onClick={handleStartTrial} className="btn-primary text-sm">Start free trial</button>
           </div>
         </div>
-      </nav>
+      </header>
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden pt-20 sm:pt-28 pb-16 sm:pb-24">
-        {/* Subtle background gradient */}
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.02] via-transparent to-transparent pointer-events-none" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          {/* Text content centered */}
-          <div className="max-w-3xl mx-auto text-center space-y-6 mb-16">
-            <Badge variant="secondary" className="text-xs font-medium tracking-wide px-3 py-1">Manufacturing Intelligence Platform</Badge>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1]">
-              See Ahead. <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">Act First.</span>
-            </h1>
-            <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              Manufacturing intelligence tools for demand forecasting,
-              procurement timing, production optimization, and supply chain visibility.
-            </p>
-            <div className="flex flex-wrap gap-3 justify-center pt-4">
-              <Button size="lg" className="h-12 px-8 shadow-md" asChild data-testid="button-start-free-trial">
-                <a href="/signup">
-                  Start 30-Day Free Trial
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
-              </Button>
-              <Button size="lg" variant="outline" className="h-12 px-8" onClick={() => setLocation("/how-it-works")} data-testid="button-how-it-works">
-                See How It Works
-              </Button>
-            </div>
-            <p className="text-sm text-muted-foreground/70">No credit card required. Full platform access.</p>
-          </div>
-
-          {/* Hero image below text content */}
-          <div className="relative max-w-5xl mx-auto mb-16">
-            {/* Marketing-style presentation with gradient background */}
-            <div className="absolute -inset-6 bg-gradient-to-br from-primary/20 via-primary/5 to-transparent rounded-3xl blur-3xl opacity-60" />
-            <div className="relative">
-              {/* Clean app screenshot with professional framing */}
-              <div className="rounded-2xl overflow-hidden border border-border/60 shadow-2xl ring-1 ring-black/5 dark:ring-white/5">
-                <img
-                  src={heroImage}
-                  alt="Prescient Labs AI Assistant - Manufacturing intelligence platform"
-                  className="w-full h-auto"
-                  data-testid="img-hero-screenshot"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Pricing Options below Hero Image */}
-          <div id="pricing" className="w-full max-w-5xl mx-auto text-center">
-            <Tabs value={pricingModel} onValueChange={(v) => setPricingModel(v as "subscription" | "performance")} className="w-full">
-              <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-6">
-                <TabsTrigger value="subscription" className="flex items-center gap-2" data-testid="tab-hero-subscription">
-                  <CreditCard className="h-4 w-4" />
-                  Fixed Subscription
-                </TabsTrigger>
-                <TabsTrigger value="performance" className="flex items-center gap-2" data-testid="tab-hero-performance">
-                  <Percent className="h-4 w-4" />
-                  Performance-Based
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-
-            {/* Subscription Plans */}
-            {pricingModel === "subscription" && (
-              <>
-                <div className="flex items-center justify-center gap-3 mb-5">
-                  <span className={`text-sm ${billingPeriod === "monthly" ? "font-semibold" : "text-muted-foreground"}`}>Monthly</span>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={billingPeriod === "annual"}
-                    onClick={() => setBillingPeriod(billingPeriod === "monthly" ? "annual" : "monthly")}
-                    data-testid="toggle-billing-period"
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${billingPeriod === "annual" ? "bg-primary" : "bg-muted"}`}
-                  >
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${billingPeriod === "annual" ? "translate-x-6" : "translate-x-1"}`} />
-                  </button>
-                  <span className={`text-sm ${billingPeriod === "annual" ? "font-semibold" : "text-muted-foreground"}`}>
-                    Annual
-                  </span>
-                </div>
-                <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-                  {subscriptionPlans.map((plan, idx) => (
-                    <Card
-                      key={idx}
-                      className={`p-5 flex flex-col text-left ${plan.highlighted ? 'border-primary shadow-lg ring-2 ring-primary/20' : ''}`}
-                      data-testid={`card-hero-plan-${plan.name.toLowerCase()}`}
-                    >
-                      {plan.highlighted && (
-                        <Badge className="mb-3 self-start">Most Popular</Badge>
-                      )}
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
-                          <plan.icon className="h-4 w-4 text-primary" />
-                        </div>
-                        <h3 className="text-xl font-bold">{plan.name}</h3>
-                      </div>
-                      <p className="text-xs text-muted-foreground mb-3">{plan.description}</p>
-                      <div className="mb-1">
-                        <span className="text-3xl font-bold">{billingPeriod === "annual" ? plan.annualPrice : plan.monthlyPrice}</span>
-                        <span className="text-muted-foreground text-sm">{billingPeriod === "annual" ? plan.annualPeriod : plan.monthlyPeriod}</span>
-                      </div>
-                      {billingPeriod === "annual" && (
-                        <p className="text-xs text-muted-foreground mb-4">{plan.annualNote}</p>
-                      )}
-                      {billingPeriod === "monthly" && <div className="mb-4" />}
-                      <p className="flex items-center gap-2 text-sm font-medium mb-4 flex-1">
-                        <Check className="h-4 w-4 text-primary shrink-0" />
-                        {plan.skus}
-                      </p>
-                      <Button
-                        className="w-full"
-                        size="sm"
-                        variant={plan.highlighted ? "default" : "outline"}
-                        asChild
-                        data-testid={`button-hero-select-${plan.name.toLowerCase()}`}
-                      >
-                        <a href="/signup">Start Free Trial</a>
-                      </Button>
-                    </Card>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {/* Performance-Based Plans */}
-            {pricingModel === "performance" && (
-              <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-                {performancePlans.map((plan, idx) => (
-                  <Card
-                    key={idx}
-                    className={`p-5 flex flex-col text-left ${plan.highlighted ? 'border-primary shadow-lg ring-2 ring-primary/20' : ''}`}
-                    data-testid={`card-hero-plan-${plan.name.toLowerCase().replace(" ", "-")}`}
-                  >
-                    {plan.highlighted && (
-                      <Badge className="mb-3 self-start">Best Value</Badge>
-                    )}
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
-                        <plan.icon className="h-4 w-4 text-primary" />
-                      </div>
-                      <h3 className="text-xl font-bold">{plan.name}</h3>
-                    </div>
-                    <p className="text-xs text-muted-foreground mb-3">{plan.description}</p>
-                    <div className="mb-4">
-                      <span className="text-3xl font-bold">{plan.price}</span>
-                      <span className="text-muted-foreground text-sm">{plan.period}</span>
-                    </div>
-                    <div className="flex-1" />
-                    <Button
-                      className="w-full"
-                      size="sm"
-                      variant={plan.highlighted ? "default" : "outline"}
-                      asChild
-                      data-testid={`button-hero-select-${plan.name.toLowerCase().replace(" ", "-")}`}
-                    >
-                      <a href="/signup">Start Free Trial</a>
-                    </Button>
-                  </Card>
-                ))}
-              </div>
-            )}
-
-            <div className="mt-4 text-center">
-              <Button variant="ghost" onClick={() => setLocation("/pricing")} className="text-primary text-sm">
-                See full pricing details & savings calculator
-                <ArrowRight className="ml-1 h-3 w-3" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Core Capabilities */}
-      <section id="capabilities" className="pt-20 pb-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
-            <Badge variant="secondary" className="mb-4 text-xs font-medium tracking-wide px-3 py-1">Core Capabilities</Badge>
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4 tracking-tight">Intelligence Across Your Entire Operation</h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              Four interconnected pillars that transform how you plan, procure, produce, and protect your manufacturing business
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            {coreCapabilities.map((capability, idx) => (
-              <Card key={idx} className="p-6 hover-elevate" data-testid={`card-capability-${idx}`}>
-                <div className="flex items-start gap-6">
-                  <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                    <capability.icon className="h-8 w-8 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-sm text-primary font-medium mb-1">{capability.subtitle}</div>
-                    <h3 className="text-xl font-semibold mb-2">{capability.title}</h3>
-                    <p className="text-muted-foreground mb-4">{capability.description}</p>
-                    <div className="space-y-3 pt-3 border-t">
-                      <div>
-                        <p className="text-xs font-medium text-primary uppercase tracking-wide mb-1">How to Use</p>
-                        <p className="text-sm text-muted-foreground">{capability.howToUse}</p>
-                      </div>
-                      <div className="flex items-center gap-2 bg-primary/5 rounded-lg p-3">
-                        <Check className="h-4 w-4 text-primary shrink-0" />
-                        <p className="text-sm font-medium">{capability.keyBenefit}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Differentiators */}
-      <section className="py-20 bg-muted/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mx-auto text-center mb-14">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4 tracking-tight">Why Manufacturers Choose Prescient</h2>
-            <p className="text-lg text-muted-foreground leading-relaxed">
-              A fundamentally different approach to manufacturing intelligence.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {differentiators.map((diff, idx) => (
-              <div key={idx} className="text-center px-2">
-                <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-primary/8 flex items-center justify-center">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                </div>
-                <h3 className="text-lg font-semibold mb-2">{diff.title}</h3>
-                <p className="text-muted-foreground text-sm leading-relaxed">{diff.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Platform Modules */}
-      <section id="platform" className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
-            <Badge variant="secondary" className="mb-4 text-xs font-medium tracking-wide px-3 py-1">Complete Platform</Badge>
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4 tracking-tight">Everything You Need, Connected</h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              Six integrated modules that share data and insights, giving you unprecedented visibility and control
-            </p>
-          </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {platformModules.map((module, idx) => (
-              <Card key={idx} className="p-6 hover-elevate" data-testid={`card-module-${idx}`}>
-                <div className="flex items-center gap-4 mb-3">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <module.icon className="h-5 w-5 text-primary" />
-                  </div>
-                  <h3 className="font-semibold">{module.name}</h3>
-                </div>
-                <p className="text-sm text-muted-foreground mb-3">{module.description}</p>
-                <p className="text-xs text-primary/80 border-t pt-3">{module.details}</p>
-              </Card>
-            ))}
-          </div>
-
-          <div className="mt-10 text-center">
-            <Button variant="outline" onClick={() => setLocation("/how-it-works")}>
-              Explore All Features
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* Problem/Solution Section */}
-      <section className="py-16 bg-muted/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mx-auto text-center mb-12">
-            <h2 className="text-3xl font-bold mb-3">The Intelligence Gap</h2>
-            <p className="text-lg text-muted-foreground">
-              Most manufacturers operate with fragmented data, reactive decisions, and limited visibility.
-              Prescient closes that gap.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-            <Card className="p-6 border-destructive/30 bg-destructive/5">
-              <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-destructive/20 flex items-center justify-center">
-                  <AlertTriangle className="h-4 w-4 text-destructive" />
-                </div>
-                Operating Blind
-              </h3>
-              <ul className="space-y-3 text-muted-foreground">
-                <li className="flex items-start gap-2">
-                  <span className="text-destructive">-</span>
-                  Forecasts based on last year's numbers, ignoring market shifts
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-destructive">-</span>
-                  Buying materials when prices are already high
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-destructive">-</span>
-                  Supply chain surprises that halt production
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-destructive">-</span>
-                  Decisions spread across disconnected spreadsheets
-                </li>
-              </ul>
-            </Card>
-
-            <Card className="p-6 border-primary/30 bg-primary/5">
-              <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                  <Eye className="h-4 w-4 text-primary" />
-                </div>
-                Operating with Foresight
-              </h3>
-              <ul className="space-y-3 text-muted-foreground">
-                <li className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-primary mt-1 shrink-0" />
-                  Forecasts that adapt to current market conditions
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-primary mt-1 shrink-0" />
-                  Timing signals that tell you when to buy
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-primary mt-1 shrink-0" />
-                  Supplier risks identified before they impact you
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-primary mt-1 shrink-0" />
-                  One unified platform for all planning decisions
-                </li>
-              </ul>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Trust Indicators */}
-      <section className="py-14 border-t">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900 flex items-center justify-center shrink-0">
-                <Shield className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Enterprise-Grade Security</h3>
-                <p className="text-sm text-muted-foreground">
-                  Your data is encrypted at rest and in transit. Role-based access controls included.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900 flex items-center justify-center shrink-0">
-                <Clock className="h-6 w-6 text-green-600 dark:text-green-400" />
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Fast Onboarding</h3>
-                <p className="text-sm text-muted-foreground">
-                  Self-service setup with guided onboarding. Import your data and get started quickly.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900 flex items-center justify-center shrink-0">
-                <BarChart3 className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Designed for ROI</h3>
-                <p className="text-sm text-muted-foreground">
-                  Built to deliver measurable procurement savings through better timing decisions.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Get Help Section */}
-      <section className="py-16 bg-muted/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-2xl mx-auto text-center">
-            <h2 className="text-2xl font-bold mb-3 tracking-tight">Need Help?</h2>
-            <p className="text-muted-foreground mb-6">
-              Have questions about Prescient, need help getting started, or want to talk about how the platform fits your operation? Reach out — we're here to help.
-            </p>
-            <div className="inline-flex items-center gap-3 bg-background rounded-xl border px-6 py-4">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Mail className="h-5 w-5 text-primary" />
-              </div>
-              <div className="text-left">
-                <p className="text-xs text-muted-foreground">Email us at</p>
-                <a href="mailto:info@prescient-labs.com" className="font-semibold text-primary hover:underline">
-                  info@prescient-labs.com
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-24 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.04] via-transparent to-primary/[0.02] pointer-events-none" />
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4 tracking-tight">Ready to See What's Coming?</h2>
-          <p className="text-lg text-muted-foreground mb-8 max-w-xl mx-auto leading-relaxed">
-            Start making procurement decisions informed by real economic data.
+      {/* Hero */}
+      <div className="max-w-7xl mx-auto px-10 pt-40 pb-20 relative z-10">
+        <div className="eyebrow mb-10">Prescient Labs · Industrial intelligence</div>
+        <h1 className="hero text-8xl md:text-9xl leading-[0.95] max-w-6xl mb-14">
+          Software<br/>
+          for the<br/>
+          industrial&nbsp;floor.
+        </h1>
+        <div className="mt-14 flex items-start justify-between gap-10 flex-wrap">
+          <p className="text-soft text-lg max-w-xl leading-relaxed">
+            FactoryFlow unifies demand, supply, commodities, and production into a single operational system. Built for operators running the physical economy.
           </p>
-          <div className="flex flex-wrap justify-center gap-3">
-            <Button size="lg" className="h-12 px-8 shadow-md" asChild>
-              <a href="/signup">
-                Start Your Free Trial
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </a>
-            </Button>
-            <Button size="lg" variant="outline" className="h-12 px-8" asChild>
-              <a href="mailto:info@prescient-labs.com">
-                Talk to Us
-              </a>
-            </Button>
+          <div className="flex items-center gap-3">
+            <button onClick={handleStartTrial} className="btn-primary text-sm px-5 py-3">Start 90-day free trial</button>
+            <button onClick={handleSeeProduct} className="btn-ghost text-sm px-5 py-3">See the product</button>
           </div>
         </div>
-      </section>
+        <div className="mt-6 text-xs mono text-muted">No credit card required · Cancel anytime</div>
+      </div>
+
+      {/* Product screen */}
+      <div className="max-w-7xl mx-auto px-10 pb-32 relative z-10">
+        <div className="border hair bg-panel" data-testid="product-screen">
+          <div className="h-10 border-b hair px-4 flex items-center gap-2">
+            <span className="dot bg-muted"></span>
+            <span className="dot bg-muted"></span>
+            <span className="dot bg-muted"></span>
+            <span className="mono text-xs text-muted ml-4">factoryflow.prescient-labs.com / overview</span>
+          </div>
+          <div className="p-10">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <div className="eyebrow mb-2">State of operations</div>
+                <div className="text-2xl display">Everything is nominal.</div>
+              </div>
+              <span className="mono text-xs text-muted">14:22 UTC · live</span>
+            </div>
+            <div className="grid grid-cols-4 gap-px bg-line mb-10">
+              <div className="bg-panel p-5"><div className="eyebrow mb-3">Forecast acc.</div><div className="text-2xl display">94.2%</div></div>
+              <div className="bg-panel p-5"><div className="eyebrow mb-3">Active SKUs</div><div className="text-2xl display">1,284</div></div>
+              <div className="bg-panel p-5"><div className="eyebrow mb-3">Exposure</div><div className="text-2xl display">$2.4M</div></div>
+              <div className="bg-panel p-5"><div className="eyebrow mb-3">Signals</div><div className="text-2xl display">3</div></div>
+            </div>
+            <svg viewBox="0 0 800 160" className="w-full h-40">
+              <line x1="0" y1="140" x2="800" y2="140" stroke="#1A1B1E"/>
+              <line x1="0" y1="90"  x2="800" y2="90"  stroke="#1A1B1E" strokeDasharray="2 4"/>
+              <line x1="0" y1="40"  x2="800" y2="40"  stroke="#1A1B1E" strokeDasharray="2 4"/>
+              <path d="M0,100 C80,80 160,65 240,70 C320,75 400,50 480,40 C560,30 640,45 720,50 L800,55 L800,90 C720,85 640,80 560,70 C480,60 400,85 320,100 C240,110 160,105 80,115 L0,130 Z" fill="#D9B56B" opacity="0.07"/>
+              <polyline points="0,120 100,100 200,85 300,70 400,55 500,45 600,50 700,48 800,52" fill="none" stroke="#D9B56B" strokeWidth="1.5" strokeDasharray="4 4"/>
+              <polyline points="0,130 100,115 200,95 300,80 400,65 500,58 600,62 700,58" fill="none" stroke="#F2F2F2" strokeWidth="1.5"/>
+              <circle cx="700" cy="58" r="3" fill="#F2F2F2"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <div className="divider relative z-10"></div>
+
+      {/* Capabilities */}
+      <div id="platform" className="max-w-7xl mx-auto px-10 py-28 relative z-10">
+        <div className="eyebrow mb-16">Platform</div>
+
+        <div className="grid grid-cols-12 gap-10 mb-20">
+          <div className="col-span-12 md:col-span-2 mono text-4xl display text-muted">01</div>
+          <div className="col-span-12 md:col-span-10 md:pl-10 border-l hair">
+            <h3 className="text-4xl display mb-5">Demand &amp; forecast.</h3>
+            <p className="text-soft max-w-2xl leading-relaxed">
+              Probabilistic forecasts with confidence bands, reconciled against live order flow and shipment telemetry.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-12 gap-10 mb-20">
+          <div className="col-span-12 md:col-span-2 mono text-4xl display text-muted">02</div>
+          <div className="col-span-12 md:col-span-10 md:pl-10 border-l hair">
+            <h3 className="text-4xl display mb-5">Supplier &amp; commodity.</h3>
+            <p className="text-soft max-w-2xl leading-relaxed">
+              Counterparty risk scoring and commodity hedging signals drawn from market feeds and your own payment history.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-12 gap-10">
+          <div className="col-span-12 md:col-span-2 mono text-4xl display text-muted">03</div>
+          <div className="col-span-12 md:col-span-10 md:pl-10 border-l hair">
+            <h3 className="text-4xl display mb-5">AI Advisor.</h3>
+            <p className="text-soft max-w-2xl leading-relaxed">
+              A model-in-the-loop copilot that cites its sources. Every recommendation is auditable and reversible.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="divider relative z-10"></div>
+
+      {/* Integrations */}
+      <div id="integrations" className="max-w-7xl mx-auto px-10 py-28 relative z-10">
+        <div className="flex items-end justify-between mb-14 flex-wrap gap-4">
+          <div>
+            <div className="eyebrow mb-4">Integrations</div>
+            <h3 className="text-4xl display">Connect your stack.</h3>
+          </div>
+          <p className="text-soft text-sm max-w-sm leading-relaxed">
+            40+ native integrations across ERP, e-commerce, shipping, CRM, finance, support, and analytics.
+          </p>
+        </div>
+
+        {Object.entries(integrationsByCategory).map(([category, integrations]) => (
+          <div key={category} className="mb-10">
+            <div className="eyebrow mb-5">{category}</div>
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-px bg-line">
+              {integrations.map((name) => (
+                <div key={name} className="integration-tile bg-ink">{name}</div>
+              ))}
+            </div>
+          </div>
+        ))}
+
+        <div className="mt-10 mono text-xs text-muted">Plus webhook and REST API for anything custom.</div>
+      </div>
+
+      <div className="divider relative z-10"></div>
+
+      {/* Deployment */}
+      <div id="deployment" className="max-w-7xl mx-auto px-10 py-28 relative z-10">
+        <div className="eyebrow mb-16">Deployment</div>
+        <div className="grid md:grid-cols-3 gap-px bg-line">
+          <div className="bg-ink p-10">
+            <div className="mono text-xs text-muted mb-8">01</div>
+            <div className="text-2xl display mb-4">Managed cloud</div>
+            <p className="text-soft text-sm leading-relaxed">SOC 2 Type II. Fastest onboarding.</p>
+          </div>
+          <div className="bg-ink p-10">
+            <div className="mono text-xs text-muted mb-8">02</div>
+            <div className="text-2xl display mb-4">Tenant VPC</div>
+            <p className="text-soft text-sm leading-relaxed">Dedicated infrastructure inside your cloud account.</p>
+          </div>
+          <div className="bg-ink p-10">
+            <div className="mono text-xs text-muted mb-8">03</div>
+            <div className="text-2xl display mb-4">Air-gapped</div>
+            <p className="text-soft text-sm leading-relaxed">On-prem appliance for ITAR-controlled environments.</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="divider relative z-10"></div>
+
+      {/* Pricing */}
+      <div id="pricing" className="max-w-7xl mx-auto px-10 py-28 relative z-10">
+        <div className="flex items-end justify-between mb-14 flex-wrap gap-4">
+          <div>
+            <div className="eyebrow mb-4">Pricing</div>
+            <h3 className="text-4xl display">90 days free. Then pick a plan.</h3>
+          </div>
+          <div className="billing-toggle" style={{display:'inline-flex', border:'1px solid #1A1B1E', padding:'3px'}}>
+            <button
+              style={{padding:'6px 16px', fontSize:'12px', color:billingPeriod==='monthly'?'#000':'#6A6E76', background:billingPeriod==='monthly'?'#F2F2F2':'transparent', fontWeight: billingPeriod==='monthly'?'500':'400'}}
+              onClick={() => setBillingPeriod('monthly')}
+            >Monthly</button>
+            <button
+              style={{padding:'6px 16px', fontSize:'12px', color:billingPeriod==='annual'?'#000':'#6A6E76', background:billingPeriod==='annual'?'#F2F2F2':'transparent', fontWeight: billingPeriod==='annual'?'500':'400'}}
+              onClick={() => setBillingPeriod('annual')}
+            >Annual · save ~17%</button>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-4 gap-px bg-line">
+          <div className="bg-ink p-10">
+            <div className="text-sm text-soft mb-10">Starter</div>
+            <div className="text-4xl display mb-1">
+              {billingPeriod === 'monthly' ? '$299' : '$2,990'}
+              <span className="text-base text-muted">{billingPeriod === 'monthly' ? '/mo' : '/yr'}</span>
+            </div>
+            {billingPeriod === 'annual' && <div className="mono text-xs text-muted mt-3">$249/mo billed annually</div>}
+            {billingPeriod === 'monthly' && <div className="mono text-xs text-muted mt-3">Billed monthly</div>}
+            <button onClick={handleStartTrial} className="btn-ghost text-xs px-4 py-2 inline-block mt-8 uppercase tracking-[0.14em]">Start trial</button>
+          </div>
+          <div className="bg-ink p-10">
+            <div className="text-sm text-soft mb-10">Growth</div>
+            <div className="text-4xl display mb-1">
+              {billingPeriod === 'monthly' ? '$799' : '$7,990'}
+              <span className="text-base text-muted">{billingPeriod === 'monthly' ? '/mo' : '/yr'}</span>
+            </div>
+            {billingPeriod === 'annual' && <div className="mono text-xs text-muted mt-3">$666/mo billed annually</div>}
+            {billingPeriod === 'monthly' && <div className="mono text-xs text-muted mt-3">Billed monthly</div>}
+            <button onClick={handleStartTrial} className="btn-ghost text-xs px-4 py-2 inline-block mt-8 uppercase tracking-[0.14em]">Start trial</button>
+          </div>
+          <div className="bg-ink p-10">
+            <div className="text-sm text-soft mb-10">Usage-based</div>
+            <div className="text-4xl display mb-1">$199<span className="text-base text-muted">/mo</span></div>
+            <div className="mono text-xs text-muted mt-3">+ metered usage</div>
+            <button onClick={handleStartTrial} className="btn-ghost text-xs px-4 py-2 inline-block mt-8 uppercase tracking-[0.14em]">Start trial</button>
+          </div>
+          <div className="bg-ink p-10 border-l" style={{borderLeftColor:'rgba(217, 181, 107, 0.3)'}}>
+            <div className="text-sm text-signal mb-10">Performance</div>
+            <div className="text-4xl display mb-1">15<span className="text-base text-muted">%</span></div>
+            <div className="mono text-xs text-muted mt-3">of verified savings</div>
+            <button onClick={handleStartTrial} className="btn-ghost text-xs px-4 py-2 inline-block mt-8 uppercase tracking-[0.14em]">Start trial</button>
+          </div>
+        </div>
+
+        <div className="mt-8 mono text-xs text-muted">All plans include the 90-day free trial. No credit card required to start.</div>
+      </div>
+
+      <div className="divider relative z-10"></div>
+
+      {/* Final CTA */}
+      <div className="max-w-7xl mx-auto px-10 py-32 relative z-10">
+        <div className="grid grid-cols-12 gap-10">
+          <div className="col-span-12 md:col-span-8">
+            <h3 className="hero text-5xl md:text-6xl leading-[0.95]">Built for the<br/>operators who run it.</h3>
+            <p className="text-soft mt-6 text-sm">90 days free. No credit card. Cancel anytime.</p>
+          </div>
+          <div className="col-span-12 md:col-span-4 flex md:justify-end items-end">
+            <button onClick={handleStartTrial} className="btn-primary text-sm px-6 py-3">Start 90-day free trial</button>
+          </div>
+        </div>
+      </div>
+
+      <div className="divider relative z-10"></div>
 
       {/* Footer */}
-      <footer className="border-t border-border/40 py-12 bg-muted/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <div>
-              <h4 className="font-semibold text-sm mb-3">Platform</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#capabilities" className="hover:text-foreground">Capabilities</a></li>
-                <li><a href="#platform" className="hover:text-foreground">Modules</a></li>
-                <li><a href="#pricing" className="hover:text-foreground">Pricing</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-sm mb-3">Company</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="/pilot-program" className="hover:text-foreground" data-testid="link-pilot">Pilot Program</a></li>
-                <li><a href="/roi-calculator" className="hover:text-foreground" data-testid="link-roi">ROI Calculator</a></li>
-                <li><a href="mailto:info@prescient-labs.com" className="hover:text-foreground">Contact</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-sm mb-3">Resources</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="/how-it-works" className="hover:text-foreground">How It Works</a></li>
-                <li><a href="/security" className="hover:text-foreground" data-testid="link-security-faq">Security FAQ</a></li>
-                <li><a href="/pricing" className="hover:text-foreground">Pricing</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-sm mb-3">Legal</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="/privacy" className="hover:text-foreground" data-testid="link-privacy">Privacy Policy</a></li>
-                <li><a href="/terms" className="hover:text-foreground" data-testid="link-terms">Terms of Service</a></li>
-                <li><a href="/security" className="hover:text-foreground">Security</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="mt-10 pt-6 border-t border-border/40 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-primary rounded-md flex items-center justify-center">
-                <Eye className="h-3.5 w-3.5 text-primary-foreground" />
-              </div>
-              <span className="font-semibold text-sm">Prescient Labs</span>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              &copy; 2026 Prescient Labs. All rights reserved.
-            </p>
-          </div>
+      <footer className="max-w-7xl mx-auto px-10 py-14 flex items-center justify-between text-sm text-muted relative z-10">
+        <div className="flex items-center gap-3">
+          <div className="w-2 h-2 bg-signal"></div>
+          <span className="tracking-[0.18em] font-medium">PRESCIENT LABS</span>
         </div>
+        <div className="mono text-xs">© 2026 · SOC 2 · ISO 27001</div>
       </footer>
     </div>
   );
