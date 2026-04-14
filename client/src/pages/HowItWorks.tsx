@@ -425,7 +425,7 @@ export default function HowItWorks() {
             </div>
             <div className="p-3 rounded-lg border bg-card">
               <p className="font-medium text-foreground text-sm mb-1">Email Support</p>
-              <p className="text-xs">support@prescientlabs.ai for detailed questions.</p>
+              <p className="text-xs">info@prescient-labs.com for detailed questions.</p>
             </div>
             <div className="p-3 rounded-lg border bg-card">
               <p className="font-medium text-foreground text-sm mb-1">Account Manager</p>

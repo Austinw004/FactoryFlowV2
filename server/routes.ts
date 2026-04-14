@@ -484,6 +484,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register enterprise auth + payments routes (before isAuthenticated middleware)
   registerAuthPaymentRoutes(app);
 
+  // Unified auth middleware — supports both JWT Bearer and Replit session
+  const requireAuth: import("express").RequestHandler = (req: any, res, next) => {
+    // If JWT middleware already decoded a Bearer token, normalize to req.user format
+    if (req.jwtUser?.sub) {
+      if (!req.user) {
+        req.user = { claims: { sub: req.jwtUser.sub, email: req.jwtUser.email } };
+      }
+      return next();
+    }
+    // Fall back to Replit session auth
+    return isAuthenticated(req, res, next);
+  };
+
   // Initialize RBAC system on startup
   console.log("[RBAC] Initializing permissions...");
   await initializePermissions();
@@ -556,7 +569,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Attach RBAC user to all authenticated API requests (not frontend static files)
-  app.use('/api', isAuthenticated, attachRbacUser);
+  // Uses unified auth that supports both JWT Bearer and Replit session
+  app.use('/api', requireAuth, attachRbacUser);
 
   // RBAC routes (roles, permissions, user role assignments)
   app.use('/api/rbac', rbacRoutes);
@@ -607,10 +621,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Auth endpoints
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  // Auth endpoints — supports both Replit session auth and JWT Bearer auth
+  app.get('/api/auth/user', async (req: any, res, next) => {
+    // Try JWT auth first (from Bearer token)
+    if (req.jwtUser?.sub) {
+      return next();
+    }
+    // Fall back to Replit session auth
+    isAuthenticated(req, res, next);
+  }, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.jwtUser?.sub || req.user?.claims?.sub;
       let user = await storage.getUser(userId);
       
       if (!user) {
@@ -810,15 +831,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Save user profile during onboarding
+  app.post('/api/onboarding/profile', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ error: "User not found" });
+      const { firstName, lastName, jobTitle, phone, department } = req.body;
+      await storage.upsertUser({
+        ...user,
+        firstName: firstName || user.firstName,
+        lastName: lastName || user.lastName,
+        jobTitle: jobTitle || (user as any).jobTitle,
+        phone: phone || (user as any).phone,
+        department: department || (user as any).department,
+      });
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to save profile" });
+    }
+  });
+
+  // Save operations intelligence during onboarding
+  app.post('/api/onboarding/operations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user || !user.companyId) return res.status(400).json({ error: "No company" });
+      const { productionVolume, annualProcurementSpend, keyMaterials, erpSystem, painPoints, numberOfSuppliers, numberOfFacilities, topProducts } = req.body;
+      await storage.updateCompany(user.companyId, {
+        productionVolume,
+        annualProcurementSpend,
+        keyMaterials: Array.isArray(keyMaterials) ? JSON.stringify(keyMaterials) : keyMaterials,
+        erpSystemUsed: erpSystem,
+        painPoints: Array.isArray(painPoints) ? JSON.stringify(painPoints) : painPoints,
+        numberOfSuppliers,
+        numberOfFacilities,
+        topProducts,
+      });
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to save operations data" });
+    }
+  });
+
+  // Select plan during onboarding
+  app.post('/api/onboarding/select-plan', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ error: "User not found" });
+      const { planId, billingInterval } = req.body;
+      await storage.upsertUser({
+        ...user,
+        selectedPlanId: planId,
+        selectedBillingInterval: billingInterval,
+        subscriptionStatus: 'trialing',
+        trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      });
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to select plan" });
+    }
+  });
+
+  // Payment method placeholder (Stripe approval pending)
+  app.post('/api/onboarding/payment-method', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      console.log(`[Onboarding] Payment method intent recorded for user ${userId} (Stripe integration pending)`);
+      res.json({ success: true, message: "Payment method recorded. Stripe integration pending." });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to save payment method" });
+    }
+  });
+
   app.post('/api/onboarding/complete', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      
+
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-      
+
       // Mark onboarding as complete
       await storage.upsertUser({
         ...user,
@@ -943,6 +1039,184 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ── Audit Trail API ────────────────────────────────────────────────────────
+  app.get('/api/audit-trail', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user || !user.companyId) return res.status(400).json({ error: "No company" });
+
+      const { auditLogs, users: usersTable } = await import("../shared/schema");
+      const { desc, and: drizzleAnd, eq: drizzleEq, gte: drizzleGte, like } = await import("drizzle-orm");
+
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+      const offset = parseInt(req.query.offset as string) || 0;
+      const entityType = req.query.entityType as string;
+      const action = req.query.action as string;
+      const entityId = req.query.entityId as string;
+      const search = req.query.search as string;
+      const since = req.query.since as string;
+
+      // Build conditions
+      const conditions: any[] = [drizzleEq(auditLogs.companyId, user.companyId)];
+      if (entityType) conditions.push(drizzleEq(auditLogs.entityType, entityType));
+      if (action) conditions.push(drizzleEq(auditLogs.action, action));
+      if (entityId) conditions.push(drizzleEq(auditLogs.entityId, entityId));
+      if (since) conditions.push(drizzleGte(auditLogs.timestamp, new Date(since)));
+
+      const logs = await db.select({
+        id: auditLogs.id,
+        userId: auditLogs.userId,
+        action: auditLogs.action,
+        entityType: auditLogs.entityType,
+        entityId: auditLogs.entityId,
+        changes: auditLogs.changes,
+        ipAddress: auditLogs.ipAddress,
+        userAgent: auditLogs.userAgent,
+        timestamp: auditLogs.timestamp,
+      })
+      .from(auditLogs)
+      .where(conditions.length > 1 ? drizzleAnd(...conditions) : conditions[0])
+      .orderBy(desc(auditLogs.timestamp))
+      .limit(limit)
+      .offset(offset);
+
+      // Get total count
+      const [countResult] = await db.select({ count: sql`COUNT(*)::int` })
+        .from(auditLogs)
+        .where(conditions.length > 1 ? drizzleAnd(...conditions) : conditions[0]);
+
+      res.json({
+        logs,
+        total: countResult?.count || 0,
+        limit,
+        offset,
+      });
+    } catch (error: any) {
+      console.error("Error fetching audit trail:", error);
+      res.status(500).json({ error: "Failed to fetch audit trail" });
+    }
+  });
+
+  // Audit trail entity types summary
+  app.get('/api/audit-trail/summary', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user || !user.companyId) return res.status(400).json({ error: "No company" });
+
+      const { auditLogs } = await import("../shared/schema");
+      const { eq: drizzleEq } = await import("drizzle-orm");
+
+      const summary = await db.select({
+        entityType: auditLogs.entityType,
+        count: sql`COUNT(*)::int`,
+        lastActivity: sql`MAX(${auditLogs.timestamp})`,
+      })
+      .from(auditLogs)
+      .where(drizzleEq(auditLogs.companyId, user.companyId))
+      .groupBy(auditLogs.entityType);
+
+      const actionSummary = await db.select({
+        action: auditLogs.action,
+        count: sql`COUNT(*)::int`,
+      })
+      .from(auditLogs)
+      .where(drizzleEq(auditLogs.companyId, user.companyId))
+      .groupBy(auditLogs.action);
+
+      res.json({ entityTypes: summary, actions: actionSummary });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch audit summary" });
+    }
+  });
+
+  // ── Workflow Automation API ──────────────────────────────────────────────
+  app.get('/api/automations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user || !user.companyId) return res.status(400).json({ error: "No company" });
+      const { getRules } = await import("./lib/workflowEngine");
+      const rules = await getRules(user.companyId);
+      res.json(rules);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch automation rules" });
+    }
+  });
+
+  app.post('/api/automations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user || !user.companyId) return res.status(400).json({ error: "No company" });
+      const { createRule } = await import("./lib/workflowEngine");
+      const { insertAutomationRuleSchema } = await import("@shared/schema");
+      const validatedData = insertAutomationRuleSchema.parse({ ...req.body, companyId: user.companyId, createdBy: userId });
+      const rule = await createRule(validatedData);
+      res.status(201).json(rule);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to create automation rule" });
+    }
+  });
+
+  app.put('/api/automations/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user || !user.companyId) return res.status(400).json({ error: "No company" });
+      const { updateRule } = await import("./lib/workflowEngine");
+      const rule = await updateRule(req.params.id, user.companyId, req.body);
+      if (!rule) return res.status(404).json({ error: "Rule not found" });
+      res.json(rule);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to update automation rule" });
+    }
+  });
+
+  app.delete('/api/automations/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user || !user.companyId) return res.status(400).json({ error: "No company" });
+      const { deleteRule } = await import("./lib/workflowEngine");
+      await deleteRule(req.params.id, user.companyId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to delete automation rule" });
+    }
+  });
+
+  app.get('/api/automations/:id/executions', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user || !user.companyId) return res.status(400).json({ error: "No company" });
+      const { getRuleExecutions } = await import("./lib/workflowEngine");
+      const executions = await getRuleExecutions(req.params.id, user.companyId);
+      res.json(executions);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch executions" });
+    }
+  });
+
+  // Contextual Intelligence API
+  app.get('/api/intelligence/insights', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user || !user.companyId) {
+        return res.status(400).json({ error: "User has no associated company" });
+      }
+      const { getInsightsForCompany } = await import("./lib/intelligenceEngine");
+      const insights = await getInsightsForCompany(user.companyId);
+      res.json(insights);
+    } catch (error: any) {
+      console.error("Error generating insights:", error);
+      res.status(500).json({ error: "Failed to generate insights" });
+    }
+  });
+
   // User Notification Preferences API
   app.get('/api/notification-preferences', isAuthenticated, async (req: any, res) => {
     try {
@@ -997,9 +1271,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User has no associated company" });
       }
       
-      // Sanitize input - remove fields that shouldn't be set by client
-      const { id, createdAt, updatedAt, ...sanitizedBody } = req.body;
-      
+      // Validate and sanitize input
+      const notifPrefsSchema = z.object({
+        emailEnabled: z.boolean().optional(),
+        pushEnabled: z.boolean().optional(),
+        smsEnabled: z.boolean().optional(),
+        inAppEnabled: z.boolean().optional(),
+        digestFrequency: z.enum(["realtime", "hourly", "daily", "weekly"]).optional(),
+        quietHoursStart: z.string().optional().nullable(),
+        quietHoursEnd: z.string().optional().nullable(),
+        alertThreshold: z.enum(["all", "warning", "critical"]).optional(),
+        categories: z.record(z.boolean()).optional(),
+      }).passthrough();
+      const sanitizedBody = notifPrefsSchema.parse(req.body);
+
       const prefs = await storage.upsertUserNotificationPreferences({
         userId,
         companyId: user.companyId,
@@ -2674,11 +2959,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      const supplier = await storage.getSupplier(req.body.supplierId);
+      const supplier = await storage.getSupplier(req.body.supplierId, user.companyId);
       if (!supplier || supplier.companyId !== user.companyId) {
         return res.status(403).json({ error: "Access denied to supplier" });
       }
-      const material = await storage.getMaterial(req.body.materialId);
+      const material = await storage.getMaterial(req.body.materialId, user.companyId);
       if (!material || material.companyId !== user.companyId) {
         return res.status(403).json({ error: "Access denied to material" });
       }
@@ -2716,7 +3001,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      const sku = await storage.getSku(req.body.skuId);
+      const sku = await storage.getSku(req.body.skuId, user.companyId);
       if (!sku || sku.companyId !== user.companyId) {
         return res.status(403).json({ error: "Access denied" });
       }
@@ -2736,10 +3021,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User not associated with a company" });
       }
       const items = req.body.items || [];
-      for (const item of items) {
-        const sku = await storage.getSku(item.skuId);
-        if (!sku || sku.companyId !== user.companyId) {
-          return res.status(403).json({ error: "Access denied" });
+      // Batch-validate all SKU IDs in one query to avoid N+1
+      const skuIds = [...new Set(items.map((item: { skuId: string }) => item.skuId))];
+      const companySkus = await storage.getSkus(user.companyId);
+      const companySkuIds = new Set(companySkus.map(s => s.id));
+      for (const skuId of skuIds) {
+        if (!companySkuIds.has(skuId)) {
+          return res.status(403).json({ error: `Access denied for SKU ${skuId}` });
         }
       }
       const validated = items.map((item: any) => insertDemandHistorySchema.parse(item));
@@ -6177,13 +6465,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Verify material belongs to company
-      const material = await storage.getMaterial(req.body.materialId);
+      const material = await storage.getMaterial(req.body.materialId, user.companyId);
       if (!material || material.companyId !== user.companyId) {
         return res.status(403).json({ error: "Material not found in your company" });
       }
 
       // Verify supplier belongs to company
-      const supplier = await storage.getSupplier(req.body.supplierId);
+      const supplier = await storage.getSupplier(req.body.supplierId, user.companyId);
       if (!supplier || supplier.companyId !== user.companyId) {
         return res.status(403).json({ error: "Supplier not found in your company" });
       }
@@ -6218,7 +6506,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verify new material if changing
       if (req.body.materialId && req.body.materialId !== existingOrder.materialId) {
-        const material = await storage.getMaterial(req.body.materialId);
+        const material = await storage.getMaterial(req.body.materialId, user.companyId);
         if (!material || material.companyId !== user.companyId) {
           return res.status(403).json({ error: "Material not found in your company" });
         }
@@ -6226,7 +6514,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verify new supplier if changing
       if (req.body.supplierId && req.body.supplierId !== existingOrder.supplierId) {
-        const supplier = await storage.getSupplier(req.body.supplierId);
+        const supplier = await storage.getSupplier(req.body.supplierId, user.companyId);
         if (!supplier || supplier.companyId !== user.companyId) {
           return res.status(403).json({ error: "Supplier not found in your company" });
         }
@@ -6319,14 +6607,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Verify material belongs to company
-      const material = await storage.getMaterial(req.body.materialId);
+      const material = await storage.getMaterial(req.body.materialId, user.companyId);
       if (!material || material.companyId !== user.companyId) {
         return res.status(403).json({ error: "Material not found in your company" });
       }
 
       // Verify SKU if provided
       if (req.body.skuId) {
-        const sku = await storage.getSku(req.body.skuId);
+        const sku = await storage.getSku(req.body.skuId, user.companyId);
         if (!sku || sku.companyId !== user.companyId) {
           return res.status(403).json({ error: "SKU not found in your company" });
         }
@@ -6394,13 +6682,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Verify material belongs to company
-      const material = await storage.getMaterial(req.body.materialId);
+      const material = await storage.getMaterial(req.body.materialId, user.companyId);
       if (!material || material.companyId !== user.companyId) {
         return res.status(403).json({ error: "Material not found in your company" });
       }
 
       // Verify supplier belongs to company
-      const supplier = await storage.getSupplier(req.body.supplierId);
+      const supplier = await storage.getSupplier(req.body.supplierId, user.companyId);
       if (!supplier || supplier.companyId !== user.companyId) {
         return res.status(403).json({ error: "Supplier not found in your company" });
       }
@@ -6435,7 +6723,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verify new material if changing
       if (req.body.materialId && req.body.materialId !== existingSchedule.materialId) {
-        const material = await storage.getMaterial(req.body.materialId);
+        const material = await storage.getMaterial(req.body.materialId, user.companyId);
         if (!material || material.companyId !== user.companyId) {
           return res.status(403).json({ error: "Material not found in your company" });
         }
@@ -6443,7 +6731,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verify new supplier if changing
       if (req.body.supplierId && req.body.supplierId !== existingSchedule.supplierId) {
-        const supplier = await storage.getSupplier(req.body.supplierId);
+        const supplier = await storage.getSupplier(req.body.supplierId, user.companyId);
         if (!supplier || supplier.companyId !== user.companyId) {
           return res.status(403).json({ error: "Supplier not found in your company" });
         }
@@ -6512,13 +6800,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Verify material belongs to company
-      const material = await storage.getMaterial(req.body.materialId);
+      const material = await storage.getMaterial(req.body.materialId, user.companyId);
       if (!material || material.companyId !== user.companyId) {
         return res.status(403).json({ error: "Material not found in your company" });
       }
 
       // Verify supplier belongs to company
-      const supplier = await storage.getSupplier(req.body.supplierId);
+      const supplier = await storage.getSupplier(req.body.supplierId, user.companyId);
       if (!supplier || supplier.companyId !== user.companyId) {
         return res.status(403).json({ error: "Supplier not found in your company" });
       }
@@ -6553,7 +6841,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verify new material if changing
       if (req.body.materialId && req.body.materialId !== existingRecommendation.materialId) {
-        const material = await storage.getMaterial(req.body.materialId);
+        const material = await storage.getMaterial(req.body.materialId, user.companyId);
         if (!material || material.companyId !== user.companyId) {
           return res.status(403).json({ error: "Material not found in your company" });
         }
@@ -6561,7 +6849,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verify new supplier if changing
       if (req.body.supplierId && req.body.supplierId !== existingRecommendation.supplierId) {
-        const supplier = await storage.getSupplier(req.body.supplierId);
+        const supplier = await storage.getSupplier(req.body.supplierId, user.companyId);
         if (!supplier || supplier.companyId !== user.companyId) {
           return res.status(403).json({ error: "Supplier not found in your company" });
         }
@@ -9885,11 +10173,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { entity, updateExisting } = validationResult.data;
       
-      // Reject updateExisting until functionality is implemented
-      if (updateExisting) {
-        return res.status(400).json({ error: "Update existing records is not yet implemented" });
-      }
-
       const csvContent = req.file.buffer.toString('utf-8');
 
       const dataImportService = new DataImportService(storage);
@@ -12384,7 +12667,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Enrich with supplier details
       const enriched = await Promise.all(snapshots.map(async (snapshot) => {
-        const supplier = await storage.getSupplier(snapshot.supplierId);
+        const supplier = await storage.getSupplier(snapshot.supplierId, user.companyId);
         return { ...snapshot, supplier };
       }));
       
@@ -16102,8 +16385,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!company?.hubspotAccessToken || company.hubspotEnabled !== 1) {
         return res.status(400).json({ error: "HubSpot not configured or enabled" });
       }
-      
-      const supplier = await storage.getSupplier(supplierId);
+
+      const supplier = await storage.getSupplier(supplierId, user.companyId);
       if (!supplier || supplier.companyId !== user.companyId) {
         return res.status(404).json({ error: "Supplier not found" });
       }

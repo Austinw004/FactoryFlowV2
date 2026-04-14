@@ -326,7 +326,7 @@ export default function RoiCalculator() {
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
             <Button size="lg" variant="outline" asChild data-testid="link-schedule-demo">
-              <a href="mailto:sales@prescientlabs.ai">Schedule Demo</a>
+              <a href="mailto:info@prescient-labs.com">Schedule Demo</a>
             </Button>
           </div>
         </div>

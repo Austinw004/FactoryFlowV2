@@ -141,13 +141,14 @@ export class DataImportService {
 
     if (existing) {
       if (updateExisting) {
-        throw new Error('SKU update not yet implemented');
+        const { companyId: _c, code: _k, ...updateFields } = validatedData as any;
+        await this.storage.updateSku(existing.id, updateFields);
       } else {
         throw new Error(`SKU with code ${validatedData.code} already exists`);
       }
+    } else {
+      await this.storage.createSku(validatedData);
     }
-
-    await this.storage.createSku(validatedData);
   }
 
   private async importMaterial(data: any, updateExisting: boolean, existingMaterials: any[]): Promise<void> {
@@ -157,13 +158,14 @@ export class DataImportService {
 
     if (existing) {
       if (updateExisting) {
-        throw new Error('Material update not yet implemented');
+        const { companyId: _c, name: _k, ...updateFields } = validatedData as any;
+        await this.storage.updateMaterial(existing.id, updateFields);
       } else {
         throw new Error(`Material with name ${validatedData.name} already exists`);
       }
+    } else {
+      await this.storage.createMaterial(validatedData);
     }
-
-    await this.storage.createMaterial(validatedData);
   }
 
   private async importSupplier(data: any, updateExisting: boolean, existingSuppliers: any[]): Promise<void> {
@@ -173,13 +175,14 @@ export class DataImportService {
 
     if (existing) {
       if (updateExisting) {
-        throw new Error('Supplier update not yet implemented');
+        const { companyId: _c, name: _k, ...updateFields } = validatedData as any;
+        await this.storage.updateSupplier(existing.id, updateFields);
       } else {
         throw new Error(`Supplier with name ${validatedData.name} already exists`);
       }
+    } else {
+      await this.storage.createSupplier(validatedData);
     }
-
-    await this.storage.createSupplier(validatedData);
   }
 
   async generateTemplate(entity: ImportEntity): Promise<string> {

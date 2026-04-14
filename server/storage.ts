@@ -217,6 +217,7 @@ export interface IStorage {
   getSuppliers(companyId: string): Promise<Supplier[]>;
   getSupplier(id: string): Promise<Supplier | undefined>;
   createSupplier(supplier: InsertSupplier): Promise<Supplier>;
+  updateSupplier(id: string, supplier: Partial<InsertSupplier>): Promise<Supplier | undefined>;
   deleteSupplier(id: string): Promise<void>;
   
   // Supplier Materials
@@ -1134,6 +1135,17 @@ export class DbStorage implements IStorage {
     if (updates.hubspotAccessToken !== undefined) updateData.hubspotAccessToken = updates.hubspotAccessToken;
     if (updates.hubspotRefreshToken !== undefined) updateData.hubspotRefreshToken = updates.hubspotRefreshToken;
     if (updates.hubspotEnabled !== undefined) updateData.hubspotEnabled = updates.hubspotEnabled;
+    // Onboarding Operations Intelligence
+    if ((updates as any).website !== undefined) updateData.website = (updates as any).website;
+    if ((updates as any).annualRevenue !== undefined) updateData.annualRevenue = (updates as any).annualRevenue;
+    if ((updates as any).productionVolume !== undefined) updateData.productionVolume = (updates as any).productionVolume;
+    if ((updates as any).annualProcurementSpend !== undefined) updateData.annualProcurementSpend = (updates as any).annualProcurementSpend;
+    if ((updates as any).keyMaterials !== undefined) updateData.keyMaterials = (updates as any).keyMaterials;
+    if ((updates as any).erpSystemUsed !== undefined) updateData.erpSystemUsed = (updates as any).erpSystemUsed;
+    if ((updates as any).painPoints !== undefined) updateData.painPoints = (updates as any).painPoints;
+    if ((updates as any).numberOfSuppliers !== undefined) updateData.numberOfSuppliers = (updates as any).numberOfSuppliers;
+    if ((updates as any).numberOfFacilities !== undefined) updateData.numberOfFacilities = (updates as any).numberOfFacilities;
+    if ((updates as any).topProducts !== undefined) updateData.topProducts = (updates as any).topProducts;
 
     const [updated] = await db.update(companies)
       .set(updateData)
@@ -1190,11 +1202,8 @@ export class DbStorage implements IStorage {
     return db.select().from(skus).where(eq(skus.companyId, companyId));
   }
 
-  async getSku(id: string, companyId?: string): Promise<Sku | undefined> {
-    const conditions = companyId
-      ? and(eq(skus.id, id), eq(skus.companyId, companyId))
-      : eq(skus.id, id);
-    const [sku] = await db.select().from(skus).where(conditions);
+  async getSku(id: string, companyId: string): Promise<Sku | undefined> {
+    const [sku] = await db.select().from(skus).where(and(eq(skus.id, id), eq(skus.companyId, companyId)));
     return sku;
   }
 
@@ -1203,30 +1212,21 @@ export class DbStorage implements IStorage {
     return sku;
   }
 
-  async updateSku(id: string, updateData: Partial<InsertSku>, companyId?: string): Promise<Sku | undefined> {
-    const conditions = companyId
-      ? and(eq(skus.id, id), eq(skus.companyId, companyId))
-      : eq(skus.id, id);
-    const [sku] = await db.update(skus).set(updateData).where(conditions).returning();
+  async updateSku(id: string, updateData: Partial<InsertSku>, companyId: string): Promise<Sku | undefined> {
+    const [sku] = await db.update(skus).set(updateData).where(and(eq(skus.id, id), eq(skus.companyId, companyId))).returning();
     return sku;
   }
 
-  async deleteSku(id: string, companyId?: string): Promise<void> {
-    const conditions = companyId
-      ? and(eq(skus.id, id), eq(skus.companyId, companyId))
-      : eq(skus.id, id);
-    await db.delete(skus).where(conditions);
+  async deleteSku(id: string, companyId: string): Promise<void> {
+    await db.delete(skus).where(and(eq(skus.id, id), eq(skus.companyId, companyId)));
   }
 
   async getMaterials(companyId: string): Promise<Material[]> {
     return db.select().from(materials).where(eq(materials.companyId, companyId));
   }
 
-  async getMaterial(id: string, companyId?: string): Promise<Material | undefined> {
-    const conditions = companyId
-      ? and(eq(materials.id, id), eq(materials.companyId, companyId))
-      : eq(materials.id, id);
-    const [material] = await db.select().from(materials).where(conditions);
+  async getMaterial(id: string, companyId: string): Promise<Material | undefined> {
+    const [material] = await db.select().from(materials).where(and(eq(materials.id, id), eq(materials.companyId, companyId)));
     return material;
   }
 
@@ -1235,19 +1235,13 @@ export class DbStorage implements IStorage {
     return material;
   }
 
-  async updateMaterial(id: string, updateData: Partial<InsertMaterial>, companyId?: string): Promise<Material | undefined> {
-    const conditions = companyId
-      ? and(eq(materials.id, id), eq(materials.companyId, companyId))
-      : eq(materials.id, id);
-    const [material] = await db.update(materials).set(updateData).where(conditions).returning();
+  async updateMaterial(id: string, updateData: Partial<InsertMaterial>, companyId: string): Promise<Material | undefined> {
+    const [material] = await db.update(materials).set(updateData).where(and(eq(materials.id, id), eq(materials.companyId, companyId))).returning();
     return material;
   }
 
-  async deleteMaterial(id: string, companyId?: string): Promise<void> {
-    const conditions = companyId
-      ? and(eq(materials.id, id), eq(materials.companyId, companyId))
-      : eq(materials.id, id);
-    await db.delete(materials).where(conditions);
+  async deleteMaterial(id: string, companyId: string): Promise<void> {
+    await db.delete(materials).where(and(eq(materials.id, id), eq(materials.companyId, companyId)));
   }
 
   async getBomsForSku(skuId: string): Promise<Bom[]> {
@@ -1255,10 +1249,13 @@ export class DbStorage implements IStorage {
   }
 
   async getAllBomsForCompany(companyId: string): Promise<Bom[]> {
-    const companySkus = await db.select({ id: skus.id }).from(skus).where(eq(skus.companyId, companyId));
-    if (companySkus.length === 0) return [];
-    const skuIds = companySkus.map(s => s.id);
-    return db.select().from(boms).where(inArray(boms.skuId, skuIds));
+    // Single query using JOIN instead of N+1 pattern
+    const results = await db
+      .select({ bom: boms })
+      .from(boms)
+      .innerJoin(skus, eq(boms.skuId, skus.id))
+      .where(eq(skus.companyId, companyId));
+    return results.map(r => r.bom);
   }
 
   async createBom(insertBom: InsertBom): Promise<Bom> {
@@ -1274,11 +1271,8 @@ export class DbStorage implements IStorage {
     return db.select().from(suppliers).where(eq(suppliers.companyId, companyId));
   }
 
-  async getSupplier(id: string, companyId?: string): Promise<Supplier | undefined> {
-    const conditions = companyId
-      ? and(eq(suppliers.id, id), eq(suppliers.companyId, companyId))
-      : eq(suppliers.id, id);
-    const [supplier] = await db.select().from(suppliers).where(conditions);
+  async getSupplier(id: string, companyId: string): Promise<Supplier | undefined> {
+    const [supplier] = await db.select().from(suppliers).where(and(eq(suppliers.id, id), eq(suppliers.companyId, companyId)));
     return supplier;
   }
 
@@ -1287,11 +1281,13 @@ export class DbStorage implements IStorage {
     return supplier;
   }
 
-  async deleteSupplier(id: string, companyId?: string): Promise<void> {
-    const conditions = companyId
-      ? and(eq(suppliers.id, id), eq(suppliers.companyId, companyId))
-      : eq(suppliers.id, id);
-    await db.delete(suppliers).where(conditions);
+  async updateSupplier(id: string, updateData: Partial<InsertSupplier>, companyId: string): Promise<Supplier | undefined> {
+    const [supplier] = await db.update(suppliers).set(updateData).where(and(eq(suppliers.id, id), eq(suppliers.companyId, companyId))).returning();
+    return supplier;
+  }
+
+  async deleteSupplier(id: string, companyId: string): Promise<void> {
+    await db.delete(suppliers).where(and(eq(suppliers.id, id), eq(suppliers.companyId, companyId)));
   }
 
   async getSupplierMaterials(supplierId: string): Promise<SupplierMaterial[]> {
@@ -1299,10 +1295,13 @@ export class DbStorage implements IStorage {
   }
 
   async getAllSupplierMaterialsForCompany(companyId: string): Promise<SupplierMaterial[]> {
-    const companySuppliers = await db.select({ id: suppliers.id }).from(suppliers).where(eq(suppliers.companyId, companyId));
-    if (companySuppliers.length === 0) return [];
-    const supplierIds = companySuppliers.map(s => s.id);
-    return db.select().from(supplierMaterials).where(inArray(supplierMaterials.supplierId, supplierIds));
+    // Single query using JOIN instead of 2-query pattern
+    const results = await db
+      .select({ sm: supplierMaterials })
+      .from(supplierMaterials)
+      .innerJoin(suppliers, eq(supplierMaterials.supplierId, suppliers.id))
+      .where(eq(suppliers.companyId, companyId));
+    return results.map(r => r.sm);
   }
 
   async createSupplierMaterial(insertSm: InsertSupplierMaterial): Promise<SupplierMaterial> {
@@ -1315,10 +1314,13 @@ export class DbStorage implements IStorage {
   }
 
   async getAllDemandHistoryForCompany(companyId: string): Promise<DemandHistory[]> {
-    const companySkus = await db.select({ id: skus.id }).from(skus).where(eq(skus.companyId, companyId));
-    if (companySkus.length === 0) return [];
-    const skuIds = companySkus.map(s => s.id);
-    return db.select().from(demandHistory).where(inArray(demandHistory.skuId, skuIds));
+    // Single query using JOIN instead of 2-query pattern
+    const results = await db
+      .select({ dh: demandHistory })
+      .from(demandHistory)
+      .innerJoin(skus, eq(demandHistory.skuId, skus.id))
+      .where(eq(skus.companyId, companyId));
+    return results.map(r => r.dh);
   }
 
   async createDemandHistory(insertDh: InsertDemandHistory): Promise<DemandHistory> {
@@ -1369,11 +1371,8 @@ export class DbStorage implements IStorage {
     return db.select().from(priceAlerts).where(eq(priceAlerts.companyId, companyId));
   }
 
-  async getPriceAlert(id: string, companyId?: string): Promise<PriceAlert | undefined> {
-    const conditions = companyId
-      ? and(eq(priceAlerts.id, id), eq(priceAlerts.companyId, companyId))
-      : eq(priceAlerts.id, id);
-    const [alert] = await db.select().from(priceAlerts).where(conditions);
+  async getPriceAlert(id: string, companyId: string): Promise<PriceAlert | undefined> {
+    const [alert] = await db.select().from(priceAlerts).where(and(eq(priceAlerts.id, id), eq(priceAlerts.companyId, companyId)));
     return alert;
   }
 
@@ -1386,22 +1385,16 @@ export class DbStorage implements IStorage {
     return alert;
   }
 
-  async updatePriceAlert(id: string, updateData: Partial<InsertPriceAlert>, companyId?: string): Promise<PriceAlert | undefined> {
-    const conditions = companyId
-      ? and(eq(priceAlerts.id, id), eq(priceAlerts.companyId, companyId))
-      : eq(priceAlerts.id, id);
+  async updatePriceAlert(id: string, updateData: Partial<InsertPriceAlert>, companyId: string): Promise<PriceAlert | undefined> {
     const [alert] = await db.update(priceAlerts)
       .set({ ...updateData, updatedAt: new Date() })
-      .where(conditions)
+      .where(and(eq(priceAlerts.id, id), eq(priceAlerts.companyId, companyId)))
       .returning();
     return alert;
   }
 
-  async deletePriceAlert(id: string, companyId?: string): Promise<void> {
-    const conditions = companyId
-      ? and(eq(priceAlerts.id, id), eq(priceAlerts.companyId, companyId))
-      : eq(priceAlerts.id, id);
-    await db.delete(priceAlerts).where(conditions);
+  async deletePriceAlert(id: string, companyId: string): Promise<void> {
+    await db.delete(priceAlerts).where(and(eq(priceAlerts.id, id), eq(priceAlerts.companyId, companyId)));
   }
 
   // RFQ methods
@@ -1409,11 +1402,8 @@ export class DbStorage implements IStorage {
     return db.select().from(rfqs).where(eq(rfqs.companyId, companyId)).orderBy(desc(rfqs.createdAt));
   }
 
-  async getRfq(id: string, companyId?: string): Promise<Rfq | undefined> {
-    const conditions = companyId
-      ? and(eq(rfqs.id, id), eq(rfqs.companyId, companyId))
-      : eq(rfqs.id, id);
-    const [rfq] = await db.select().from(rfqs).where(conditions);
+  async getRfq(id: string, companyId: string): Promise<Rfq | undefined> {
+    const [rfq] = await db.select().from(rfqs).where(and(eq(rfqs.id, id), eq(rfqs.companyId, companyId)));
     return rfq;
   }
 
@@ -1422,22 +1412,16 @@ export class DbStorage implements IStorage {
     return rfq;
   }
 
-  async updateRfq(id: string, updateData: Partial<InsertRfq>, companyId?: string): Promise<Rfq | undefined> {
-    const conditions = companyId
-      ? and(eq(rfqs.id, id), eq(rfqs.companyId, companyId))
-      : eq(rfqs.id, id);
+  async updateRfq(id: string, updateData: Partial<InsertRfq>, companyId: string): Promise<Rfq | undefined> {
     const [rfq] = await db.update(rfqs)
       .set({ ...updateData, updatedAt: new Date() })
-      .where(conditions)
+      .where(and(eq(rfqs.id, id), eq(rfqs.companyId, companyId)))
       .returning();
     return rfq;
   }
 
-  async deleteRfq(id: string, companyId?: string): Promise<void> {
-    const conditions = companyId
-      ? and(eq(rfqs.id, id), eq(rfqs.companyId, companyId))
-      : eq(rfqs.id, id);
-    await db.delete(rfqs).where(conditions);
+  async deleteRfq(id: string, companyId: string): Promise<void> {
+    await db.delete(rfqs).where(and(eq(rfqs.id, id), eq(rfqs.companyId, companyId)));
   }
 
   // RFQ Quote methods

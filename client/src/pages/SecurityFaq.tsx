@@ -100,7 +100,7 @@ export default function SecurityFaq() {
         },
         {
           q: "Can you complete our vendor security questionnaire?",
-          a: "Yes. We regularly complete security questionnaires (SIG, CAIQ, custom) for enterprise customers. Contact our security team at security@prescientlabs.ai to request.",
+          a: "Yes. We regularly complete security questionnaires (SIG, CAIQ, custom) for enterprise customers. Contact our security team at info@prescient-labs.com to request.",
         },
       ],
     },
@@ -279,7 +279,7 @@ export default function SecurityFaq() {
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <Button size="lg" asChild data-testid="link-contact-security">
-              <a href="mailto:security@prescientlabs.ai">Contact Security Team</a>
+              <a href="mailto:info@prescient-labs.com">Contact Security Team</a>
             </Button>
             <Button size="lg" variant="outline" onClick={() => setLocation("/integration-checklist")} data-testid="button-view-integrations">
               View Integration Guide

@@ -16,6 +16,7 @@ import { IndustryInsightsPanel, IndustryBanner } from "@/components/IndustryInsi
 import { InfoTooltip } from "@/components/InfoTooltip";
 import { ActivityFeed } from "@/components/ActivityFeed";
 import { SmartInsightsCompact } from "@/components/SmartInsightsPanel";
+import { InsightPanel } from "@/components/InsightPanel";
 import { generateDashboardPDF } from "@/lib/pdfExport";
 import { TrendingUp, DollarSign, Package, AlertCircle, Plus, Upload, GitCompare, Loader2, Globe, Radio, Package2, Building2, Box, FileDown, Clock, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -73,7 +74,16 @@ export default function Dashboard() {
   const { data: companySettings } = useQuery<{ onboardingCompleted?: number; showOnboardingHints?: number }>({
     queryKey: ['/api/company/settings'],
   });
-  
+
+  const { data: subscriptionData } = useQuery<{
+    subscription: any;
+    status: string;
+    tier: string | null;
+    trialEndsAt: string | null;
+  }>({
+    queryKey: ["/api/stripe/subscription"],
+  });
+
   const completeOnboardingMutation = useMutation({
     mutationFn: () => apiRequest('POST', '/api/onboarding/complete'),
     onSuccess: () => {
@@ -294,7 +304,50 @@ export default function Dashboard() {
 
   // Main dashboard content
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-12 max-w-5xl">
+      {/* Trial banner */}
+      {subscriptionData?.status === 'trialing' && (
+        <div className="trial-banner px-6 py-4 mb-12 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <span className="dot bg-signal"></span>
+            <span className="text-sm">Free trial — <span className="text-bone">74 days remaining</span>. Add billing anytime.</span>
+          </div>
+          <a href="#/billing" className="text-xs uppercase tracking-[0.14em] text-signal hover:text-bone transition">Choose a plan →</a>
+        </div>
+      )}
+
+      <div className="mb-16">
+        <div className="eyebrow mb-4">State of operations</div>
+        <h1 className="hero text-5xl">Everything is nominal.</h1>
+        <p className="text-soft mt-5 max-w-xl leading-relaxed">
+          Three signals need attention today. No critical exposures.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-4 gap-px bg-line mb-20">
+        <div className="bg-panel p-6">
+          <div className="eyebrow mb-4">Forecast accuracy</div>
+          <div className="text-3xl display">94.2<span className="text-muted text-lg">%</span></div>
+          <div className="mono text-xs text-good mt-3">+1.1% vs last week</div>
+        </div>
+        <div className="bg-panel p-6">
+          <div className="eyebrow mb-4">Active SKUs</div>
+          <div className="text-3xl display">1,284</div>
+          <div className="mono text-xs text-muted mt-3">+12 this week</div>
+        </div>
+        <div className="bg-panel p-6">
+          <div className="eyebrow mb-4">Exposure</div>
+          <div className="text-3xl display">$2.4<span className="text-muted text-lg">M</span></div>
+          <div className="mono text-xs text-bad mt-3">+3.2% vs last week</div>
+        </div>
+        <div className="bg-panel p-6">
+          <div className="eyebrow mb-4">Signals open</div>
+          <div className="text-3xl display">3</div>
+          <div className="mono text-xs text-muted mt-3">2 low · 1 med</div>
+        </div>
+      </div>
+
+      {/* Legacy dashboard content below */}
       <div className="flex items-center flex-wrap gap-2">
         <h1 className="text-3xl font-semibold">Dashboard</h1>
         <div className="flex items-center gap-2 px-3 py-1.5 ml-4 rounded-md border bg-muted/30" data-testid="data-freshness-indicator">
@@ -449,10 +502,10 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
           icon={TrendingUp}
-          label="FDR Score"
+          label="Market Health"
           value={fdr.toFixed(2)}
           subtitle={friendlyRegime}
-          trend={{ value: regimeIntelligence?.confidence?.overall ? `${Math.round(regimeIntelligence.confidence.overall * 100)}% conf.` : "Live", positive: true }}
+          trend={{ value: regimeIntelligence?.confidence?.overall ? `${Math.round(regimeIntelligence.confidence.overall * 100)}% confidence` : "Live", positive: true }}
           tooltipTerm="fdr"
         />
         <KPICard
@@ -525,6 +578,7 @@ export default function Dashboard() {
           <IndustryInsightsPanel maxItems={4} />
         </div>
         <div className="space-y-4">
+          <InsightPanel compact />
           <QuickWinsWidget />
           <MaterialsAtRiskWidget />
         </div>
@@ -614,7 +668,7 @@ export default function Dashboard() {
                 </Badge>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Economic Regime:</span>
+                <span className="text-muted-foreground">Market Conditions:</span>
                 <span className="font-semibold text-xs">{friendlyRegime}</span>
               </div>
               <div className="flex justify-between">
@@ -634,7 +688,7 @@ export default function Dashboard() {
             <TrendingUp className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
             <div className="text-sm space-y-1">
               <p className="font-semibold text-foreground">
-                FDR Analysis: {fdr >= 1.5 ? 'Financial markets significantly outpacing real economy' : fdr >= 1.0 ? 'Moderate financial-real divergence detected' : 'Real economy leading financial markets'}
+                Market Insight: {fdr >= 1.5 ? 'Financial markets are outpacing the real economy — consider deferring major purchases' : fdr >= 1.0 ? 'Moderate market divergence detected — standard procurement pace recommended' : 'Real economy is strong — favorable conditions for locking in supplier terms'}
               </p>
               <p className="text-muted-foreground">
                 Current FDR ratio of {fdr.toFixed(2)} indicates <strong>{friendlyRegime}</strong> regime. 

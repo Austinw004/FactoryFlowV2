@@ -57,6 +57,12 @@ export const users = pgTable("users", {
   lockedUntil: timestamp("locked_until"),
   lastLoginIp: text("last_login_ip"),
   lastLoginDevice: text("last_login_device"),
+  // ── Onboarding profile fields ─────────────────────────────────────────────
+  jobTitle: text("job_title"),
+  phone: text("phone"),
+  department: text("department"),
+  selectedPlanId: text("selected_plan_id"),
+  selectedBillingInterval: text("selected_billing_interval"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -171,6 +177,17 @@ export const companies = pgTable("companies", {
   location: text("location"),
   companySize: text("company_size"), // "small", "medium", "large", "enterprise"
   timezone: text("timezone").default("America/New_York"),
+  // ── Onboarding operations intelligence ────────────────────────────────────
+  website: text("website"),
+  annualRevenue: text("annual_revenue"),
+  productionVolume: text("production_volume"),
+  annualProcurementSpend: text("annual_procurement_spend"),
+  keyMaterials: text("key_materials"), // JSON array
+  erpSystemUsed: text("erp_system_used"),
+  painPoints: text("pain_points"), // JSON array
+  numberOfSuppliers: text("number_of_suppliers"),
+  numberOfFacilities: text("number_of_facilities"),
+  topProducts: text("top_products"),
   // Budget Configuration
   annualBudget: real("annual_budget"),
   currentBudgetSpent: real("current_budget_spent").default(0),
@@ -272,6 +289,8 @@ export const companies = pgTable("companies", {
   // Company Branding
   logoUrl: text("logo_url"),
   primaryColor: text("primary_color").default("#3b82f6"), // Hex color for branding
+  // Billing & Metering
+  verifiedSavingsTotalCents: integer("verified_savings_total_cents").default(0), // YTD verified savings (for Performance plan)
   // Onboarding & Feature Flags
   onboardingCompleted: integer("onboarding_completed").default(0),
   showOnboardingHints: integer("show_onboarding_hints").default(1),
@@ -527,7 +546,10 @@ export const supplierMaterials = pgTable("supplier_materials", {
   leadTimeDays: integer("lead_time_days").notNull(),
   onTimePct: real("on_time_pct"),        // 0.0–1.0 on-time delivery rate; null = no data
   deliveryVariance: real("delivery_variance"), // fractional variance ≥ 0; null = no data
-});
+}, (table) => [
+  index("sm_supplier_idx").on(table.supplierId),
+  index("sm_material_idx").on(table.materialId),
+]);
 
 export const demandHistory = pgTable("demand_history", {
   id: varchar("id")
@@ -539,7 +561,10 @@ export const demandHistory = pgTable("demand_history", {
   period: text("period").notNull(),
   units: real("units").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("dh_sku_idx").on(table.skuId),
+  index("dh_period_idx").on(table.period),
+]);
 
 export const allocations = pgTable(
   "allocations",
@@ -585,7 +610,10 @@ export const allocationResults = pgTable("allocation_results", {
   estimatedCostPerPeriod: real("estimated_cost_per_period"), // Burn rate for this SKU
   projectedDepletionDate: timestamp("projected_depletion_date"), // When budget runs out for this SKU
   daysOfInventory: real("days_of_inventory"), // How many days this allocation covers
-});
+}, (table) => [
+  index("ar_allocation_idx").on(table.allocationId),
+  index("ar_sku_idx").on(table.skuId),
+]);
 
 export const priceAlerts = pgTable("price_alerts", {
   id: varchar("id")
@@ -607,7 +635,11 @@ export const priceAlerts = pgTable("price_alerts", {
   notificationsSent: integer("notifications_sent").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("pa_company_idx").on(table.companyId),
+  index("pa_supplier_idx").on(table.supplierId),
+  index("pa_active_idx").on(table.isActive),
+]);
 
 export const machinery = pgTable("machinery", {
   id: varchar("id")
@@ -659,7 +691,11 @@ export const maintenanceRecords = pgTable("maintenance_records", {
   downTimeHours: real("down_time_hours").default(0),
   partsReplaced: text("parts_replaced").array(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("mr_machinery_idx").on(table.machineryId),
+  index("mr_type_idx").on(table.maintenanceType),
+  index("mr_performed_date_idx").on(table.performedDate),
+]);
 
 // Financial Statements
 export const balanceSheets = pgTable("balance_sheets", {
@@ -9456,6 +9492,37 @@ export const insertInvoiceSchema = createInsertSchema(invoices).omit({ id: true,
 export type Invoice = typeof invoices.$inferSelect;
 
 /**
+ * skuCountSnapshots — Daily SKU count snapshots for usage-based metering.
+ * Stores historical SKU counts per company per day for billing audits.
+ */
+export const skuCountSnapshots = pgTable(
+  "sku_count_snapshots",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    companyId: varchar("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "cascade" }),
+    countDate: text("count_date").notNull(), // ISO date string (YYYY-MM-DD)
+    activeSkuCount: integer("active_sku_count").notNull(),
+    stripeMeterEventId: text("stripe_meter_event_id"), // Idempotency key or Stripe event ID
+    recordedAt: timestamp("recorded_at").defaultNow(),
+  },
+  (t) => [
+    index("sku_count_snapshots_company_idx").on(t.companyId),
+    index("sku_count_snapshots_date_idx").on(t.countDate),
+    // Unique constraint: one snapshot per company per day
+  ],
+);
+
+export const insertSkuCountSnapshotSchema = createInsertSchema(skuCountSnapshots).omit({
+  id: true,
+  recordedAt: true,
+});
+export type SkuCountSnapshot = typeof skuCountSnapshots.$inferSelect;
+
+/**
  * fraudEvents — Immutable fraud detection audit log.
  */
 export const fraudEvents = pgTable(
@@ -9650,3 +9717,66 @@ export const purchaseTransactions = pgTable(
 export const insertPurchaseTransactionSchema = createInsertSchema(purchaseTransactions).omit({ id: true, createdAt: true });
 export type PurchaseTransaction = typeof purchaseTransactions.$inferSelect;
 export type InsertPurchaseTransaction = z.infer<typeof insertPurchaseTransactionSchema>;
+
+// ── Workflow Automation Engine ──────────────────────────────────────────────
+export const automationRules = pgTable(
+  "automation_rules",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    companyId: varchar("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "cascade" }),
+    createdBy: varchar("created_by")
+      .references(() => users.id, { onDelete: "set null" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    enabled: boolean("enabled").notNull().default(true),
+    triggerType: text("trigger_type").notNull(), // "entity_change", "threshold", "schedule", "manual"
+    triggerEntity: text("trigger_entity"), // "material", "supplier", "machinery", etc.
+    triggerEvent: text("trigger_event"), // "create", "update", "delete", "any"
+    conditions: jsonb("conditions").notNull().default(sql`'[]'::jsonb`), // Array of { field, operator, value }
+    actions: jsonb("actions").notNull().default(sql`'[]'::jsonb`), // Array of { type, params }
+    executionCount: integer("execution_count").notNull().default(0),
+    lastExecutedAt: timestamp("last_executed_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("automation_rules_company_idx").on(table.companyId),
+    index("automation_rules_trigger_idx").on(table.triggerType, table.triggerEntity),
+  ],
+);
+
+export const automationExecutions = pgTable(
+  "automation_executions",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    ruleId: varchar("rule_id")
+      .notNull()
+      .references(() => automationRules.id, { onDelete: "cascade" }),
+    companyId: varchar("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "cascade" }),
+    triggerData: jsonb("trigger_data"), // The event data that triggered execution
+    conditionResults: jsonb("condition_results"), // Which conditions matched
+    actionResults: jsonb("action_results"), // Result of each action
+    status: text("status").notNull().default("pending"), // "pending", "running", "completed", "failed"
+    error: text("error"),
+    duration: integer("duration"), // ms
+    executedAt: timestamp("executed_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("automation_executions_rule_idx").on(table.ruleId),
+    index("automation_executions_company_idx").on(table.companyId),
+    index("automation_executions_status_idx").on(table.status),
+  ],
+);
+
+export const insertAutomationRuleSchema = createInsertSchema(automationRules).omit({ id: true, createdAt: true, updatedAt: true, executionCount: true, lastExecutedAt: true });
+export type AutomationRule = typeof automationRules.$inferSelect;
+export type InsertAutomationRule = z.infer<typeof insertAutomationRuleSchema>;
+export type AutomationExecution = typeof automationExecutions.$inferSelect;

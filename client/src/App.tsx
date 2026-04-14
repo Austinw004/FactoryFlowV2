@@ -9,39 +9,69 @@ import { Header } from "@/components/Header";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 import { GuidedTour } from "@/components/GuidedTour";
+import { CommandPalette } from "@/components/CommandPalette";
+import { RealtimeProvider } from "@/contexts/RealtimeContext";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
+import { KeyboardShortcutsHelp } from "@/components/KeyboardShortcutsHelp";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { useState, lazy, Suspense } from "react";
 import { UnifiedDataProvider } from "@/contexts/UnifiedDataContext";
+import { useAuth } from "@/hooks/useAuth";
+
+// Core pages — loaded eagerly for instant navigation for instant navigation
 import NotFound from "@/pages/not-found";
 import LandingPage from "@/pages/LandingPage";
 import DashboardHub from "@/pages/DashboardHub";
-import DemandHub from "@/pages/DemandHub";
-import ProcurementHub from "@/pages/ProcurementHub";
-import OperationsHub from "@/pages/OperationsHub";
-import SupplyChainHub from "@/pages/SupplyChainHub";
-import StrategyHub from "@/pages/StrategyHub";
-import Configuration from "@/pages/Configuration";
-import HowItWorks from "@/pages/HowItWorks";
-import SopWorkflows from "@/pages/SopWorkflows";
-import Pricing from "@/pages/Pricing";
-import Billing from "@/pages/Billing";
-import CommodityForecasts from "@/pages/CommodityForecasts";
-import ApiDocumentation from "@/pages/ApiDocumentation";
-import PlatformAnalytics from "@/pages/PlatformAnalytics";
-import PlatformOwnerAnalytics from "@/pages/PlatformOwnerAnalytics";
-import AgenticAI from "@/pages/AgenticAI";
-import { useAuth } from "@/hooks/useAuth";
 import Onboarding from "@/pages/Onboarding";
-import TermsOfService from "@/pages/TermsOfService";
-import PrivacyPolicy from "@/pages/PrivacyPolicy";
-import IntegrationChecklist from "@/pages/IntegrationChecklist";
-import PilotProgram from "@/pages/PilotProgram";
-import RoiCalculator from "@/pages/RoiCalculator";
-import SecurityFaq from "@/pages/SecurityFaq";
-import NotificationSettings from "@/pages/NotificationSettings";
-import ShopFloorMode from "@/pages/ShopFloorMode";
-import Integrations from "@/pages/Integrations";
-import WebhookIntegrations from "@/pages/WebhookIntegrations";
-import Allocation from "@/pages/Allocation";
-import PilotRevenueDashboard from "@/pages/PilotRevenueDashboard";
+import SignUpPage from "@/pages/SignUpPage";
+import SignInPage from "@/pages/SignInPage";
+import Pricing from "@/pages/Pricing";
+
+// Lazy-loaded pages — split into separate chunks for faster initial load
+const DemandHub = lazy(() => import("@/pages/DemandHub"));
+const ProcurementHub = lazy(() => import("@/pages/ProcurementHub"));
+const OperationsHub = lazy(() => import("@/pages/OperationsHub"));
+const SupplyChainHub = lazy(() => import("@/pages/SupplyChainHub"));
+const StrategyHub = lazy(() => import("@/pages/StrategyHub"));
+const Configuration = lazy(() => import("@/pages/Configuration"));
+const HowItWorks = lazy(() => import("@/pages/HowItWorks"));
+const SopWorkflows = lazy(() => import("@/pages/SopWorkflows"));
+const Billing = lazy(() => import("@/pages/Billing"));
+const CommodityForecasts = lazy(() => import("@/pages/CommodityForecasts"));
+const ApiDocumentation = lazy(() => import("@/pages/ApiDocumentation"));
+const PlatformAnalytics = lazy(() => import("@/pages/PlatformAnalytics"));
+const PlatformOwnerAnalytics = lazy(() => import("@/pages/PlatformOwnerAnalytics"));
+const AgenticAI = lazy(() => import("@/pages/AgenticAI"));
+const TermsOfService = lazy(() => import("@/pages/TermsOfService"));
+const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
+const IntegrationChecklist = lazy(() => import("@/pages/IntegrationChecklist"));
+const PilotProgram = lazy(() => import("@/pages/PilotProgram"));
+const RoiCalculator = lazy(() => import("@/pages/RoiCalculator"));
+const SecurityFaq = lazy(() => import("@/pages/SecurityFaq"));
+const LandingPageVariantA = lazy(() => import("@/pages/LandingPageVariantA"));
+const LandingPageVariantB = lazy(() => import("@/pages/LandingPageVariantB"));
+const LandingPageVariantC = lazy(() => import("@/pages/LandingPageVariantC"));
+const NotificationSettings = lazy(() => import("@/pages/NotificationSettings"));
+const ShopFloorMode = lazy(() => import("@/pages/ShopFloorMode"));
+const Integrations = lazy(() => import("@/pages/Integrations"));
+const WebhookIntegrations = lazy(() => import("@/pages/WebhookIntegrations"));
+const Automations = lazy(() => import("@/pages/Automations"));
+const AuditTrail = lazy(() => import("@/pages/AuditTrail"));
+const Allocation = lazy(() => import("@/pages/Allocation"));
+const EventMonitoring = lazy(() => import("@/pages/EventMonitoring"));
+const PilotRevenueDashboard = lazy(() => import("@/pages/PilotRevenueDashboard"));
+
+// Loading fallback for lazy-loaded routes
+function PageLoadingFallback() {
+  return (
+    <div className="flex items-center justify-center h-64">
+      <div className="flex flex-col items-center gap-3">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <span className="text-sm text-muted-foreground">Loading...</span>
+      </div>
+    </div>
+  );
+}
 
 // Dashboard Hub routes
 const DashboardOverviewRoute = () => <DashboardHub initialTab="overview" />;
@@ -106,6 +136,11 @@ function Router() {
         <Route path="/pilot-program" component={PilotProgram} />
         <Route path="/roi-calculator" component={RoiCalculator} />
         <Route path="/security" component={SecurityFaq} />
+        <Route path="/signup" component={SignUpPage} />
+        <Route path="/signin" component={SignInPage} />
+        <Route path="/preview/variant-a" component={LandingPageVariantA} />
+        <Route path="/preview/variant-b" component={LandingPageVariantB} />
+        <Route path="/preview/variant-c" component={LandingPageVariantC} />
         <Route component={LandingPage} />
       </Switch>
     );
@@ -124,6 +159,7 @@ function Router() {
   }
 
   return (
+    <Suspense fallback={<PageLoadingFallback />}>
     <Switch>
       {/* Main hub routes - Dashboard is default landing for authenticated users */}
       <Route path="/" component={DashboardOverviewRoute} />
@@ -184,6 +220,7 @@ function Router() {
       <Route path="/scenario-simulation" component={StrategyScenariosRoute} />
       <Route path="/ma-intelligence" component={StrategyMaRoute} />
       <Route path="/peer-benchmarking" component={StrategyBenchmarkingRoute} />
+      <Route path="/event-monitoring" component={EventMonitoring} />
 
       {/* Billing & Subscription routes */}
       <Route path="/pricing" component={Pricing} />
@@ -195,6 +232,8 @@ function Router() {
       <Route path="/internal/poa" component={PlatformOwnerAnalytics} />
       <Route path="/integrations" component={Integrations} />
       <Route path="/webhook-integrations" component={WebhookIntegrations} />
+      <Route path="/automations" component={Automations} />
+      <Route path="/audit-trail" component={AuditTrail} />
       
       {/* Pilot Revenue Dashboard */}
       <Route path="/pilot-revenue" component={PilotRevenueDashboard} />
@@ -204,11 +243,14 @@ function Router() {
 
       <Route component={NotFound} />
     </Switch>
+    </Suspense>
   );
 }
 
 function AppLayout() {
   const { isAuthenticated, isLoading, needsOnboarding } = useAuth();
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  useKeyboardShortcuts(() => setShowShortcuts(true));
   const style = {
     "--sidebar-width": "15rem",
   };
@@ -228,12 +270,11 @@ function AppLayout() {
               <Router />
             </ErrorBoundary>
           </main>
-          <footer className="border-t px-6 py-3 text-center text-xs text-muted-foreground shrink-0">
-            &copy; 2026 Prescient Labs, Inc. All rights reserved.
-          </footer>
         </div>
       </div>
       <GuidedTour />
+      <CommandPalette />
+      <KeyboardShortcutsHelp open={showShortcuts} onOpenChange={setShowShortcuts} />
     </SidebarProvider>
   );
 }
@@ -243,10 +284,13 @@ function App() {
     <GlobalErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <UnifiedDataProvider>
-            <AppLayout />
-          </UnifiedDataProvider>
+          <RealtimeProvider>
+            <UnifiedDataProvider>
+              <AppLayout />
+            </UnifiedDataProvider>
+          </RealtimeProvider>
           <Toaster />
+          <OfflineIndicator />
         </TooltipProvider>
       </QueryClientProvider>
     </GlobalErrorBoundary>
