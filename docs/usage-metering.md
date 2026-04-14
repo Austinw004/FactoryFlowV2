@@ -5,7 +5,7 @@
 
 ## Executive Summary
 
-FactoryFlowV2's Usage-Based plan ($199/mo base) charges per **active SKU forecasted per month** to ensure customers pay only for value received. This unit was selected as the fairest metering approach across all candidates.
+Prescient LabsV2's Usage-Based plan ($199/mo base) charges per **active SKU forecasted per month** to ensure customers pay only for value received. This unit was selected as the fairest metering approach across all candidates.
 
 ## Rationale: Why Per-SKU is Fairest
 

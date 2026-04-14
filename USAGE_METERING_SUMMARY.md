@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-FactoryFlowV2's **Usage-Based plan** ($199/mo base) now meters by **Active SKUs Forecasted per Month**, the fairest unit that aligns pricing with customer value. Implementation is 95% complete; only Stripe meter creation and daily job deployment remain.
+Prescient LabsV2's **Usage-Based plan** ($199/mo base) now meters by **Active SKUs Forecasted per Month**, the fairest unit that aligns pricing with customer value. Implementation is 95% complete; only Stripe meter creation and daily job deployment remain.
 
 **Key Decision:** Per-active-SKU is fairest because:
 - Customers pay only for what they manage (no idle capacity penalty)
@@ -286,7 +286,7 @@ Monthly Cap:      $799.00 (at cap → upgrade to Growth plan)
 **Run the Stripe setup script:**
 
 ```bash
-cd /sessions/gracious-wizardly-feynman/FactoryFlowV2-work
+cd /sessions/gracious-wizardly-feynman/Prescient LabsV2-work
 npm run tsx server/scripts/setup-usage-metering.ts
 ```
 

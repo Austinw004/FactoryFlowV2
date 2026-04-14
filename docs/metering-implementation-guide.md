@@ -6,7 +6,7 @@
 
 ## Quick Reference
 
-This document guides the full implementation of usage-based metering for FactoryFlowV2. The implementation is split into:
+This document guides the full implementation of usage-based metering for Prescient LabsV2. The implementation is split into:
 
 1. **Immediate (MVP):** Stripe meter + daily SKU counting job
 2. **Post-MVP (v1.1):** Dashboard integration + audit features

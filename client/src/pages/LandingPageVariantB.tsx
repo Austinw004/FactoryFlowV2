@@ -16,7 +16,7 @@ export default function LandingPageVariantB() {
   return (
     <div className="min-h-screen bg-ink text-bone font-sans">
       <SEOHead
-        title="FactoryFlow — Manufacturing Intelligence Platform"
+        title="Prescient Labs — Manufacturing Intelligence Platform"
         description="Manufacturing intelligence tools for demand forecasting, procurement timing, production optimization, and supply chain visibility."
       />
 
@@ -29,7 +29,7 @@ export default function LandingPageVariantB() {
           <div className="max-w-7xl mx-auto px-10 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 bg-signal"></div>
-              <span className="text-sm tracking-[0.18em] font-medium">FACTORYFLOW</span>
+              <span className="text-sm tracking-[0.18em] font-medium">PRESCIENT LABS</span>
             </div>
             <div className="flex items-center gap-4">
               <a href="/pricing" className="text-xs text-soft hover:text-bone transition-colors">Pricing</a>
@@ -103,7 +103,7 @@ export default function LandingPageVariantB() {
 
         {/* Features Section */}
         <section className="max-w-7xl mx-auto px-10 py-28">
-          <div className="eyebrow mb-12">Why FactoryFlow</div>
+          <div className="eyebrow mb-12">Why Prescient Labs</div>
           <div className="grid md:grid-cols-3 gap-8">
             {[
               {

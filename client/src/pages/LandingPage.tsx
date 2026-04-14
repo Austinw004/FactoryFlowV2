@@ -49,8 +49,8 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-ink text-bone font-sans">
       <SEOHead
-        title="FactoryFlow — Software for the industrial floor"
-        description="FactoryFlow unifies demand, supply, commodities, and production into a single operational system. Built for operators running the physical economy."
+        title="Prescient Labs — Software for the industrial floor"
+        description="Prescient Labs unifies demand, supply, commodities, and production into a single operational system. Built for operators running the physical economy."
       />
 
       {/* Grain texture overlay */}
@@ -61,7 +61,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-10 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-2 h-2 bg-signal"></div>
-            <span className="text-sm tracking-[0.18em] font-medium">FACTORYFLOW</span>
+            <span className="text-sm tracking-[0.18em] font-medium">PRESCIENT LABS</span>
           </div>
           <nav className="hidden md:flex items-center gap-10 text-sm text-soft">
             <a href="#platform" className="hover:text-bone transition">Platform</a>
@@ -86,7 +86,7 @@ export default function LandingPage() {
         </h1>
         <div className="mt-14 flex items-start justify-between gap-10 flex-wrap">
           <p className="text-soft text-lg max-w-xl leading-relaxed">
-            FactoryFlow unifies demand, supply, commodities, and production into a single operational system. Built for operators running the physical economy.
+            Prescient Labs unifies demand, supply, commodities, and production into a single operational system. Built for operators running the physical economy.
           </p>
           <div className="flex items-center gap-3">
             <button onClick={handleStartTrial} className="btn-primary text-sm px-5 py-3">Start 90-day free trial</button>
@@ -103,7 +103,7 @@ export default function LandingPage() {
             <span className="dot bg-muted"></span>
             <span className="dot bg-muted"></span>
             <span className="dot bg-muted"></span>
-            <span className="mono text-xs text-muted ml-4">factoryflow.prescient-labs.com / overview</span>
+            <span className="mono text-xs text-muted ml-4">prescient-labs.prescient-labs.com / overview</span>
           </div>
           <div className="p-10">
             <div className="flex items-center justify-between mb-8">

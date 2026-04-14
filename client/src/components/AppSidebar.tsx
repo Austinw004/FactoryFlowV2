@@ -248,7 +248,7 @@ export function AppSidebar() {
       <SidebarHeader className="px-6 py-5 border-b border-line h-16 flex items-center">
         <div className="flex items-center gap-3 w-full">
           <div className="w-2 h-2 bg-signal"></div>
-          <span className="text-sm tracking-[0.18em] font-medium">FACTORYFLOW</span>
+          <span className="text-sm tracking-[0.18em] font-medium">PRESCIENT LABS</span>
         </div>
       </SidebarHeader>
 

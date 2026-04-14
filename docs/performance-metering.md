@@ -6,7 +6,7 @@
 
 ## Overview
 
-The Performance plan charges $100/mo base + **15% of verified, realized savings** delivered by FactoryFlowV2's AI Advisor.
+The Performance plan charges $100/mo base + **15% of verified, realized savings** delivered by Prescient LabsV2's AI Advisor.
 
 This document outlines the metering strategy for the Performance plan. Implementation is deferred until:
 1. Core Usage-Based metering is proven stable (v1)
@@ -38,7 +38,7 @@ Unlike Usage-Based (which charges for complexity managed), Performance-Based ali
    - Require third-party audit for claims > $100K
 
 4. **Transparent Aggregation**
-   - Display running total in dashboard: $X saved YTD → $Y owed to FactoryFlowV2
+   - Display running total in dashboard: $X saved YTD → $Y owed to Prescient LabsV2
    - Monthly invoice shows: $100 base + $Savings × 15%
    - Customer can dispute any savings record (triggers audit review)
 

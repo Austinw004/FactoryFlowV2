@@ -16,7 +16,7 @@ export default function LandingPageVariantC() {
   return (
     <div className="min-h-screen bg-ink text-bone font-sans">
       <SEOHead
-        title="FactoryFlow — Manufacturing Intelligence Platform"
+        title="Prescient Labs — Manufacturing Intelligence Platform"
         description="Manufacturing intelligence tools for demand forecasting, procurement timing, production optimization, and supply chain visibility."
       />
 
@@ -26,7 +26,7 @@ export default function LandingPageVariantC() {
       <div className="relative z-10">
         {/* Minimal header */}
         <header className="max-w-4xl mx-auto px-10 py-8 flex items-center justify-between">
-          <span className="text-sm tracking-[0.18em] font-medium">FACTORYFLOW</span>
+          <span className="text-sm tracking-[0.18em] font-medium">PRESCIENT LABS</span>
           <div className="flex items-center gap-6">
             <a href="/signin" className="text-xs text-soft hover:text-bone transition-colors">Sign in</a>
             <button onClick={handleStartTrial} className="btn-primary text-xs px-4 py-2">

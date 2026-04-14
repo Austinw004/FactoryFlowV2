@@ -1,4 +1,4 @@
-# FactoryFlow — Design System Guidelines
+# Prescient Labs — Design System Guidelines
 
 ## Design Approach
 
@@ -91,7 +91,7 @@
 
 **Dashboard**:
 - Header with breadcrumb title, date/time, live indicator, export button
-- Sidebar with signal dot header, FACTORYFLOW branding, nav sections
+- Sidebar with signal dot header, PRESCIENT LABS branding, nav sections
 - Content area with max-w-5xl constraint
 - Trial banner (if applicable) at top
 - Section eyebrows for content groups
