@@ -8,6 +8,36 @@ import { WebhookHandlers } from './webhookHandlers';
 
 const app = express();
 
+// ── Startup Secret Audit ────────────────────────────────────────────────────
+// Logs a clear checklist of which required secrets are missing so operators
+// see the gap immediately in Replit logs instead of hunting through 500s later.
+(function auditRequiredSecrets() {
+  const REQUIRED: Record<string, string> = {
+    DATABASE_URL: 'Postgres connection string',
+    JWT_SECRET: 'JWT signing secret (required in production)',
+    STRIPE_SECRET_KEY: 'Stripe live secret key (sk_live_...)',
+    VITE_STRIPE_PUBLISHABLE_KEY: 'Stripe live publishable key (pk_live_...)',
+    STRIPE_PRICE_MONTHLY_STARTER: 'Starter monthly price ID',
+    STRIPE_PRICE_ANNUAL_STARTER: 'Starter annual price ID',
+    STRIPE_PRICE_MONTHLY_GROWTH: 'Growth monthly price ID',
+    STRIPE_PRICE_ANNUAL_GROWTH: 'Growth annual price ID',
+    STRIPE_PRICE_USAGE_BASED: 'Usage-based monthly price ID',
+    STRIPE_PRICE_PERFORMANCE: 'Performance monthly price ID',
+  };
+  const missing: string[] = [];
+  for (const [key, desc] of Object.entries(REQUIRED)) {
+    if (!process.env[key]) missing.push(`  - ${key} (${desc})`);
+  }
+  if (missing.length === 0) {
+    console.log('[StartupAudit] ✓ All required secrets present');
+  } else {
+    console.warn(
+      '[StartupAudit] ⚠ Missing secrets — add these in Replit → Tools → Secrets:\n' +
+        missing.join('\n'),
+    );
+  }
+})();
+
 // ── CORS Whitelist ──────────────────────────────────────────────────────────
 const ALLOWED_ORIGINS = new Set([
   'https://prescient-labs.com',
