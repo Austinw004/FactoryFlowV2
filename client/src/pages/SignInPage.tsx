@@ -7,6 +7,7 @@ import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { SEOHead } from "@/components/SEOHead";
+import { SSOButtons } from "@/components/SSOButtons";
 
 export default function SignInPage() {
   const [, setLocation] = useLocation();
@@ -92,6 +93,8 @@ export default function SignInPage() {
               Welcome back. Enter your credentials to continue.
             </p>
           </div>
+
+          <SSOButtons mode="login" />
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>

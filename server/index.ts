@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import compression from "compression";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startBackgroundJobs, stopBackgroundJobs } from "./backgroundJobs";
@@ -7,6 +8,9 @@ import { getStripeSync } from './stripeClient';
 import { WebhookHandlers } from './webhookHandlers';
 
 const app = express();
+app.use(compression());
+app.disable("x-powered-by");
+app.set("trust proxy", 1);
 
 // Startup env validation — fail fast before binding port
 (function validateEnv() {

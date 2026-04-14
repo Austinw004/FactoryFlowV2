@@ -7,6 +7,7 @@ import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { SEOHead } from "@/components/SEOHead";
+import { SSOButtons } from "@/components/SSOButtons";
 
 export default function SignUpPage() {
   const [, setLocation] = useLocation();
@@ -102,9 +103,11 @@ export default function SignUpPage() {
           <div className="mb-8">
             <h1 className="text-2xl font-semibold tracking-tight mb-2">Create your account</h1>
             <p className="text-sm text-muted-foreground">
-              Start your 30-day free trial. No credit card required.
+              Start your 90-day free trial. No credit card required.
             </p>
           </div>
+
+          <SSOButtons mode="signup" />
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
