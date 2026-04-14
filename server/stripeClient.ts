@@ -26,7 +26,7 @@ async function getCredentials() {
   const response = await fetch(url.toString(), {
     headers: {
       'Accept': 'application/json',
-      'X_REPLIT_TOKEN': xReplitToken
+      'X-Replit-Token': xReplitToken
     }
   });
 
@@ -48,7 +48,7 @@ export async function getUncachableStripeClient() {
   const { secretKey } = await getCredentials();
 
   return new Stripe(secretKey, {
-    apiVersion: '2025-04-30.basil',
+    apiVersion: '2025-08-27.basil',
   });
 }
 
