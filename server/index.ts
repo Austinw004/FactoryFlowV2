@@ -1,5 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import compression from "compression";
+import helmet from "helmet";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startBackgroundJobs, stopBackgroundJobs } from "./backgroundJobs";
@@ -11,6 +12,18 @@ const app = express();
 app.use(compression());
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
+
+// Security headers — keep CSP off (Vite + Stripe + many third-party scripts);
+// HSTS is set by upstream Replit/Vercel proxy. We still want frame protection,
+// referrer policy, X-Content-Type-Options, etc.
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+  }),
+);
 
 // Startup env validation — fail fast before binding port
 (function validateEnv() {
