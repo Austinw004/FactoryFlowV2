@@ -60,6 +60,8 @@ const AuditTrail = lazy(() => import("@/pages/AuditTrail"));
 const Allocation = lazy(() => import("@/pages/Allocation"));
 const EventMonitoring = lazy(() => import("@/pages/EventMonitoring"));
 const PilotRevenueDashboard = lazy(() => import("@/pages/PilotRevenueDashboard"));
+const ImpactDashboard = lazy(() => import("@/pages/ImpactDashboard"));
+const Training = lazy(() => import("@/pages/Training"));
 
 // Loading fallback for lazy-loaded routes
 function PageLoadingFallback() {
@@ -240,6 +242,10 @@ function Router() {
       
       {/* Agentic AI route */}
       <Route path="/agentic-ai" component={AgenticAI} />
+
+      {/* Federal grant-readiness surfaces */}
+      <Route path="/impact" component={ImpactDashboard} />
+      <Route path="/training" component={Training} />
 
       <Route component={NotFound} />
     </Switch>
