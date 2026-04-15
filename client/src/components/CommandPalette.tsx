@@ -185,6 +185,18 @@ export function CommandPalette() {
     enabled: open,
   });
 
+  const { data: purchaseOrders } = useQuery<SearchEntity[]>({
+    queryKey: ["/api/purchase-orders"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    enabled: open,
+  });
+
+  const { data: smartAlerts } = useQuery<SearchEntity[]>({
+    queryKey: ["/api/smart-insights/alerts"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    enabled: open,
+  });
+
   // Keyboard shortcut
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -310,8 +322,42 @@ export function CommandPalette() {
       });
     }
 
+    if (purchaseOrders && Array.isArray(purchaseOrders)) {
+      purchaseOrders.slice(0, 50).forEach((po: any) => {
+        const id = po.id ?? po.poNumber ?? "";
+        const label = po.poNumber || po.orderNumber || `PO ${id}`;
+        results.push({
+          id: `po-${id}`,
+          label,
+          description: [po.status, po.supplierName, po.totalAmount && `$${po.totalAmount}`].filter(Boolean).join(" • ") || "Purchase order",
+          category: "Purchase Orders",
+          icon: <FileText className="h-4 w-4" />,
+          keywords: [po.poNumber, po.orderNumber, po.supplierName, po.status, "po", "purchase", "order", "work order"].filter(Boolean),
+          action: () => navigate("/automated-po", label, `po-${id}`),
+          priority: 4,
+        });
+      });
+    }
+
+    if (smartAlerts && Array.isArray(smartAlerts)) {
+      smartAlerts.slice(0, 30).forEach((a: any) => {
+        const id = a.id ?? a.alertId ?? "";
+        const label = a.title || a.message || `Alert ${id}`;
+        results.push({
+          id: `alert-${id}`,
+          label,
+          description: [a.severity, a.entityType, a.category].filter(Boolean).join(" • ") || "Smart insight alert",
+          category: "Alerts",
+          icon: <AlertTriangle className="h-4 w-4" />,
+          keywords: [a.title, a.message, a.severity, a.category, a.entityType, "alert", "warning", "incident", "quality", "issue"].filter(Boolean),
+          action: () => navigate("/event-monitoring", label, `alert-${id}`),
+          priority: 5,
+        });
+      });
+    }
+
     return results;
-  }, [materials, suppliers, skus, machinery, employees, navigate]);
+  }, [materials, suppliers, skus, machinery, employees, purchaseOrders, smartAlerts, navigate]);
 
   const allResults = buildResults();
 

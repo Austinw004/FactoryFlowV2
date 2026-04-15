@@ -102,9 +102,15 @@ export function setupWebSocket(server: Server) {
     ws.on('message', (message: string) => {
       try {
         const parsed = JSON.parse(message.toString());
-        console.log(`[WebSocket] Received message from company ${client.companyId}:`, parsed.type);
+        // Respond to client heartbeat pings so the client knows the connection is alive
+        if (parsed?.type === 'ping') {
+          if (ws.readyState === ws.OPEN) {
+            ws.send(JSON.stringify({ type: 'pong', timestamp: new Date().toISOString() }));
+          }
+          return;
+        }
       } catch (error) {
-        console.error('[WebSocket] Failed to parse message:', error);
+        // Silently ignore malformed client frames; they cannot affect server state
       }
     });
 
