@@ -1,0 +1,388 @@
+openapi: 3.0.3
+info:
+  title: Prescient Labs Platform API
+  description: |
+    Manufacturing intelligence platform — demand, supply chain, production,
+    procurement, and real-time operational telemetry. This document captures
+    the most-used API surfaces. The full canonical surface lives in
+    `server/routes.ts`; a generated full spec is produced by
+    `npx tsx server/scripts/generate-openapi.ts` (planned).
+
+    All endpoints (except those explicitly marked public) require authentication
+    via the session cookie produced by POST /api/auth/login.
+  version: "1.0.0"
+  contact:
+    name: Austin Wendler (CEO)
+    email: austinwendler44@gmail.com
+  license:
+    name: Proprietary
+servers:
+  - url: https://prescient-labs.com
+    description: Production
+  - url: http://localhost:5000
+    description: Local development
+
+tags:
+  - name: Authentication
+  - name: Economics & Regime
+  - name: Materials & Inventory
+  - name: Suppliers
+  - name: Purchase Orders
+  - name: Smart Insights
+  - name: Automations
+  - name: Audit & Traceability
+  - name: Webhooks
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: connect.sid
+      description: HTTP-only signed session cookie issued by /api/auth/login.
+  schemas:
+    Error:
+      type: object
+      properties:
+        error: { type: string, example: "Authentication required" }
+    Material:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        materialCode: { type: string }
+        name: { type: string }
+        category: { type: string }
+        currentPrice: { type: number }
+        priceVolatility: { type: number }
+    PurchaseOrder:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        poNumber: { type: string }
+        status: { type: string, enum: [draft, submitted, approved, received, cancelled] }
+        totalAmount: { type: number }
+        currency: { type: string, example: "USD" }
+        supplierId: { type: string, format: uuid }
+    AuditLog:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        userId: { type: string, format: uuid, nullable: true }
+        action: { type: string, enum: [create, update, delete, login, logout, export, import, view] }
+        entityType: { type: string }
+        entityId: { type: string, nullable: true }
+        changes: { type: object }
+        ipAddress: { type: string, nullable: true }
+        userAgent: { type: string, nullable: true }
+        timestamp: { type: string, format: date-time }
+    TraceabilityReport:
+      type: object
+      required: [reportId, issuedAt, companyId, requested, chain, signature, canonicalHash]
+      properties:
+        reportId: { type: string, format: uuid }
+        issuedAt: { type: string, format: date-time }
+        companyId: { type: string, format: uuid }
+        requested:
+          type: object
+          properties:
+            entity: { type: string, enum: [finished_good, work_order, material_lot, quality_record] }
+            entityId: { type: string }
+        chain:
+          $ref: "#/components/schemas/ProvenanceNode"
+        signature: { type: string, description: "Base64 HMAC-SHA256" }
+        signatureAlgorithm: { type: string, enum: ["HMAC-SHA256"] }
+        canonicalHash: { type: string, description: "Hex SHA-256 of canonical JSON" }
+    ProvenanceNode:
+      type: object
+      properties:
+        entityType: { type: string }
+        entityId: { type: string }
+        occurredAt: { type: string, format: date-time }
+        actor: { type: string, nullable: true }
+        action: { type: string }
+        payload: { type: object }
+        children:
+          type: array
+          items: { $ref: "#/components/schemas/ProvenanceNode" }
+
+security:
+  - sessionCookie: []
+
+paths:
+  /api/auth/signup:
+    post:
+      tags: [Authentication]
+      summary: Create account
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name: { type: string }
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8 }
+      responses:
+        "201": { description: Created }
+        "400": { description: Validation failure, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "429": { description: Rate limit }
+
+  /api/auth/login:
+    post:
+      tags: [Authentication]
+      summary: Sign in and receive a session cookie
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        "200": { description: OK, headers: { "Set-Cookie": { schema: { type: string } } } }
+        "401": { description: Invalid credentials }
+        "429": { description: Rate limit }
+
+  /api/auth/logout:
+    post:
+      tags: [Authentication]
+      summary: End current session
+      responses:
+        "204": { description: No content }
+
+  /api/auth/forgot-password:
+    post:
+      tags: [Authentication]
+      security: []
+      summary: Begin password reset flow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        "204": { description: Reset email dispatched (always returns 204 to avoid enumeration) }
+        "429": { description: Rate limit }
+
+  /api/auth/reset-password:
+    post:
+      tags: [Authentication]
+      security: []
+      summary: Consume a reset token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, newPassword]
+              properties:
+                token: { type: string }
+                newPassword: { type: string, minLength: 8 }
+      responses:
+        "204": { description: Password updated }
+
+  /api/economics/regime:
+    get:
+      tags: [Economics & Regime]
+      summary: Current FDR regime
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  regime:
+                    type: string
+                    enum: [HEALTHY_EXPANSION, ASSET_LED_GROWTH, IMBALANCED_EXCESS, REAL_ECONOMY_LEAD]
+                  fdr: { type: number }
+                  updatedAt: { type: string, format: date-time }
+
+  /api/materials:
+    get:
+      tags: [Materials & Inventory]
+      summary: List materials for the current tenant
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, default: 100, maximum: 500 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Material" }
+
+  /api/materials/at-risk:
+    get:
+      tags: [Materials & Inventory]
+      summary: Ranked Materials at Risk
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20, maximum: 100 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  allOf:
+                    - $ref: "#/components/schemas/Material"
+                    - type: object
+                      properties:
+                        riskScore: { type: number }
+                        dominantDriver: { type: string, enum: [volatility, supplier, coverage, regime] }
+
+  /api/purchase-orders:
+    get:
+      tags: [Purchase Orders]
+      summary: List purchase orders
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 100, maximum: 500 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PurchaseOrder" }
+
+  /api/smart-insights/alerts:
+    get:
+      tags: [Smart Insights]
+      summary: Active anomaly / insight alerts across all series
+      responses:
+        "200":
+          description: OK
+
+  /api/automations:
+    get:
+      tags: [Automations]
+      summary: List automation rules
+      responses:
+        "200": { description: OK }
+    post:
+      tags: [Automations]
+      summary: Create an automation rule
+      responses:
+        "201": { description: Created }
+
+  /api/audit/logs:
+    get:
+      tags: [Audit & Traceability]
+      summary: List audit logs (admin only)
+      parameters:
+        - in: query
+          name: entityType
+          schema: { type: string }
+        - in: query
+          name: action
+          schema: { type: string }
+        - in: query
+          name: since
+          schema: { type: string, format: date-time }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 100, maximum: 500 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  logs:
+                    type: array
+                    items: { $ref: "#/components/schemas/AuditLog" }
+                  total: { type: integer }
+                  limit: { type: integer }
+                  offset: { type: integer }
+        "403": { description: Forbidden (not admin) }
+
+  /api/audit/export/download:
+    get:
+      tags: [Audit & Traceability]
+      summary: Export audit logs as CSV
+      responses:
+        "200":
+          description: CSV stream
+          content:
+            text/csv: {}
+
+  /api/traceability/{entity}/{entityId}:
+    get:
+      tags: [Audit & Traceability]
+      summary: Generate signed chain-of-custody report
+      parameters:
+        - in: path
+          name: entity
+          required: true
+          schema: { type: string, enum: [finished_good, work_order, material_lot, quality_record] }
+        - in: path
+          name: entityId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TraceabilityReport" }
+
+  /api/traceability/verify:
+    post:
+      tags: [Audit & Traceability]
+      summary: Verify a previously issued traceability report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TraceabilityReport" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid: { type: boolean }
+
+  /api/webhooks/inbound/{integrationId}:
+    post:
+      tags: [Webhooks]
+      security: []
+      summary: Inbound webhook, per-integration HMAC signed
+      parameters:
+        - in: path
+          name: integrationId
+          required: true
+          schema: { type: string }
+      responses:
+        "202": { description: Accepted }
+        "401": { description: HMAC signature invalid }
