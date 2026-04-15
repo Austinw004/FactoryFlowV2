@@ -1,15 +1,22 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
-import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+
+// All Replit dev tooling is loaded dynamically and only in development.
+// Production builds never include the runtime error modal, cartographer, or
+// dev banner — these are the sources of the "Made in Replit" / dev banner
+// that must never appear on prescient-labs.com.
+const isDev =
+  process.env.NODE_ENV !== "production" && process.env.REPL_ID !== undefined;
 
 export default defineConfig({
   plugins: [
     react(),
-    runtimeErrorOverlay(),
-    ...(process.env.NODE_ENV !== "production" &&
-    process.env.REPL_ID !== undefined
+    ...(isDev
       ? [
+          await import("@replit/vite-plugin-runtime-error-modal").then(
+            (m) => m.default(),
+          ),
           await import("@replit/vite-plugin-cartographer").then((m) =>
             m.cartographer(),
           ),

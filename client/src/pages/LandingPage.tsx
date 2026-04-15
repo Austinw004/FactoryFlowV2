@@ -90,7 +90,6 @@ export default function LandingPage() {
           </p>
           <div className="flex items-center gap-3">
             <button onClick={handleStartTrial} className="btn-primary text-sm px-5 py-3">Start 90-day free trial</button>
-            <button onClick={handleSeeProduct} className="btn-ghost text-sm px-5 py-3">See the product</button>
           </div>
         </div>
         <div className="mt-6 text-xs mono text-muted">No credit card required · Cancel anytime</div>
