@@ -19899,6 +19899,45 @@ You'll receive emails for:
     }
   });
 
+  // ─── Traceability / provenance export (DoD ManTech, defense industrial base)
+  // Produces a signed, tamper-evident chain-of-custody report for a given
+  // finished good, work order, material lot, or quality record.
+  app.get("/api/traceability/:entity/:entityId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { exportTraceabilityChain } = await import("./lib/traceabilityExporter");
+      const user = req.rbacUser || req.user;
+      if (!user?.companyId) return res.status(400).json({ error: "No company context" });
+      const entity = String(req.params.entity);
+      const entityId = String(req.params.entityId);
+      const allowed = ["finished_good", "work_order", "material_lot", "quality_record"];
+      if (!allowed.includes(entity)) {
+        return res.status(400).json({ error: `entity must be one of ${allowed.join(", ")}` });
+      }
+      const report = await exportTraceabilityChain(user.companyId, {
+        entity: entity as any,
+        entityId,
+      });
+      res.json(report);
+    } catch (error: any) {
+      console.error("[traceability] error:", error?.message);
+      res.status(500).json({ error: "Failed to generate traceability report" });
+    }
+  });
+
+  app.post("/api/traceability/verify", isAuthenticated, async (req: any, res) => {
+    try {
+      const { verifyTraceabilityReport } = await import("./lib/traceabilityExporter");
+      const report = req.body;
+      if (!report?.reportId || !report?.signature || !report?.chain) {
+        return res.status(400).json({ error: "Invalid report payload" });
+      }
+      const valid = verifyTraceabilityReport(report);
+      res.json({ valid });
+    } catch (error: any) {
+      res.status(500).json({ error: "Verification failed" });
+    }
+  });
+
   // ─── SOC2 Section 6: Admin-only audit log retrieval ──────────────────────────
   // Only users with role "admin" or "owner" can access all audit logs.
   // Regular users see only their own company's logs.
