@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
+import { Virtuoso } from "react-virtuoso";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -340,10 +341,19 @@ export default function AuditTrail() {
               <p className="text-xs mt-1">Audit records are created automatically as changes are made.</p>
             </div>
           ) : (
-            <div className="divide-y divide-border/50">
-              {logs.map((log) => (
-                <AuditLogRow key={log.id} log={log} onClick={() => setSelectedLog(log)} />
-              ))}
+            // Virtualized list — only visible rows are mounted. Scales to
+            // 100k+ audit records without freezing the UI. Fixed height of
+            // 640px keeps the audit card visually stable while paging.
+            <div style={{ height: 640 }} data-testid="audit-virtuoso">
+              <Virtuoso
+                data={logs}
+                computeItemKey={(_, log) => log.id}
+                itemContent={(_, log) => (
+                  <div className="border-b border-border/50">
+                    <AuditLogRow log={log} onClick={() => setSelectedLog(log)} />
+                  </div>
+                )}
+              />
             </div>
           )}
         </CardContent>

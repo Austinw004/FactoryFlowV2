@@ -2,13 +2,20 @@ import { KPICard } from "@/components/KPICard";
 import { RegimeStatus } from "@/components/RegimeStatus";
 import { PolicySignals } from "@/components/PolicySignals";
 import { AllocationTable } from "@/components/AllocationTable";
-import { ForecastChart } from "@/components/ForecastChart";
 import { EditableBudgetGauge } from "@/components/EditableBudgetGauge";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
-import { CreateSKUDialog } from "@/components/CreateSKUDialog";
-import { CreateMaterialDialog } from "@/components/CreateMaterialDialog";
-import { CreateSupplierDialog } from "@/components/CreateSupplierDialog";
-import { FDRTrendChart } from "@/components/FDRTrendChart";
+
+// Heavy Create*Dialog components are only mounted when the user opens a
+// dialog. Lazy-load them so the Dashboard entry chunk is smaller on cold load.
+const CreateSKUDialog = lazy(() =>
+  import("@/components/CreateSKUDialog").then((m) => ({ default: m.CreateSKUDialog })),
+);
+const CreateMaterialDialog = lazy(() =>
+  import("@/components/CreateMaterialDialog").then((m) => ({ default: m.CreateMaterialDialog })),
+);
+const CreateSupplierDialog = lazy(() =>
+  import("@/components/CreateSupplierDialog").then((m) => ({ default: m.CreateSupplierDialog })),
+);
 import { MaterialsAtRiskWidget } from "@/components/MaterialsAtRiskWidget";
 import { QuickWinsWidget } from "@/components/QuickWinsWidget";
 import { RegimeActionCards } from "@/components/RegimeActionCards";
@@ -31,7 +38,7 @@ import { useWebSocket } from "@/hooks/useWebSocket";
 import { useLocation } from "wouter";
 import { useOnboardingSteps } from "@/hooks/useOnboardingSteps";
 import React from "react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 
 const regimeDescriptions: Record<string, string> = {
   HEALTHY_EXPANSION: "Balanced growth. FDR < 1.2 indicates equilibrium between asset and real economy circuits. Standard procurement pace.",
@@ -297,7 +304,9 @@ export default function Dashboard() {
             </div>
           </Card>
         </div>
-        <CreateSKUDialog open={showCreateSKU} onOpenChange={setShowCreateSKU} />
+        <Suspense fallback={null}>
+          <CreateSKUDialog open={showCreateSKU} onOpenChange={setShowCreateSKU} />
+        </Suspense>
       </>
     );
   }
@@ -712,10 +721,12 @@ export default function Dashboard() {
       {/* Activity Feed */}
       <ActivityFeed limit={10} />
       
-      {/* Creation Dialogs */}
-      <CreateSKUDialog open={showCreateSKU} onOpenChange={setShowCreateSKU} />
-      <CreateMaterialDialog open={showCreateMaterial} onOpenChange={setShowCreateMaterial} />
-      <CreateSupplierDialog open={showCreateSupplier} onOpenChange={setShowCreateSupplier} />
+      {/* Creation Dialogs (lazy-loaded — no render until `open` is true) */}
+      <Suspense fallback={null}>
+        <CreateSKUDialog open={showCreateSKU} onOpenChange={setShowCreateSKU} />
+        <CreateMaterialDialog open={showCreateMaterial} onOpenChange={setShowCreateMaterial} />
+        <CreateSupplierDialog open={showCreateSupplier} onOpenChange={setShowCreateSupplier} />
+      </Suspense>
     </div>
   );
 }
