@@ -317,7 +317,7 @@ export default function Dashboard() {
             </div>
           </Card>
         </div>
-        <Suspense fallback={null}>
+        <Suspense fallback={<div className="h-32 rounded-md bg-muted/20 animate-pulse" />}>
           <CreateSKUDialog open={showCreateSKU} onOpenChange={setShowCreateSKU} />
         </Suspense>
       </>
@@ -743,7 +743,7 @@ export default function Dashboard() {
       </Suspense>
       
       {/* Creation Dialogs (lazy-loaded — no render until `open` is true) */}
-      <Suspense fallback={null}>
+      <Suspense fallback={<div className="h-32 rounded-md bg-muted/20 animate-pulse" />}>
         <CreateSKUDialog open={showCreateSKU} onOpenChange={setShowCreateSKU} />
         <CreateMaterialDialog open={showCreateMaterial} onOpenChange={setShowCreateMaterial} />
         <CreateSupplierDialog open={showCreateSupplier} onOpenChange={setShowCreateSupplier} />
