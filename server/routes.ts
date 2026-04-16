@@ -12702,7 +12702,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Enrich with supplier details
       const enriched = await Promise.all(snapshots.map(async (snapshot) => {
-        const supplier = snapshot.supplierId ? await storage.getSupplier(snapshot.supplierId, user.companyId) : null;
+        const supplier = snapshot.supplierId ? await storage.getSupplier(snapshot.supplierId, user.companyId ?? undefined) : null;
         return { ...snapshot, supplier };
       }));
       

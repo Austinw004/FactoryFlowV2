@@ -1202,8 +1202,9 @@ export class DbStorage implements IStorage {
     return db.select().from(skus).where(eq(skus.companyId, companyId));
   }
 
-  async getSku(id: string, companyId: string): Promise<Sku | undefined> {
-    const [sku] = await db.select().from(skus).where(and(eq(skus.id, id), eq(skus.companyId, companyId)));
+  async getSku(id: string, companyId?: string): Promise<Sku | undefined> {
+    const where = companyId ? and(eq(skus.id, id), eq(skus.companyId, companyId)) : eq(skus.id, id);
+    const [sku] = await db.select().from(skus).where(where);
     return sku;
   }
 
@@ -1212,21 +1213,24 @@ export class DbStorage implements IStorage {
     return sku;
   }
 
-  async updateSku(id: string, updateData: Partial<InsertSku>, companyId: string): Promise<Sku | undefined> {
-    const [sku] = await db.update(skus).set(updateData).where(and(eq(skus.id, id), eq(skus.companyId, companyId))).returning();
+  async updateSku(id: string, updateData: Partial<InsertSku>, companyId?: string): Promise<Sku | undefined> {
+    const where = companyId ? and(eq(skus.id, id), eq(skus.companyId, companyId)) : eq(skus.id, id);
+    const [sku] = await db.update(skus).set(updateData).where(where).returning();
     return sku;
   }
 
-  async deleteSku(id: string, companyId: string): Promise<void> {
-    await db.delete(skus).where(and(eq(skus.id, id), eq(skus.companyId, companyId)));
+  async deleteSku(id: string, companyId?: string): Promise<void> {
+    const where = companyId ? and(eq(skus.id, id), eq(skus.companyId, companyId)) : eq(skus.id, id);
+    await db.delete(skus).where(where);
   }
 
   async getMaterials(companyId: string): Promise<Material[]> {
     return db.select().from(materials).where(eq(materials.companyId, companyId));
   }
 
-  async getMaterial(id: string, companyId: string): Promise<Material | undefined> {
-    const [material] = await db.select().from(materials).where(and(eq(materials.id, id), eq(materials.companyId, companyId)));
+  async getMaterial(id: string, companyId?: string): Promise<Material | undefined> {
+    const where = companyId ? and(eq(materials.id, id), eq(materials.companyId, companyId)) : eq(materials.id, id);
+    const [material] = await db.select().from(materials).where(where);
     return material;
   }
 
@@ -1235,13 +1239,15 @@ export class DbStorage implements IStorage {
     return material;
   }
 
-  async updateMaterial(id: string, updateData: Partial<InsertMaterial>, companyId: string): Promise<Material | undefined> {
-    const [material] = await db.update(materials).set(updateData).where(and(eq(materials.id, id), eq(materials.companyId, companyId))).returning();
+  async updateMaterial(id: string, updateData: Partial<InsertMaterial>, companyId?: string): Promise<Material | undefined> {
+    const where = companyId ? and(eq(materials.id, id), eq(materials.companyId, companyId)) : eq(materials.id, id);
+    const [material] = await db.update(materials).set(updateData).where(where).returning();
     return material;
   }
 
-  async deleteMaterial(id: string, companyId: string): Promise<void> {
-    await db.delete(materials).where(and(eq(materials.id, id), eq(materials.companyId, companyId)));
+  async deleteMaterial(id: string, companyId?: string): Promise<void> {
+    const where = companyId ? and(eq(materials.id, id), eq(materials.companyId, companyId)) : eq(materials.id, id);
+    await db.delete(materials).where(where);
   }
 
   async getBomsForSku(skuId: string): Promise<Bom[]> {
@@ -1271,8 +1277,9 @@ export class DbStorage implements IStorage {
     return db.select().from(suppliers).where(eq(suppliers.companyId, companyId));
   }
 
-  async getSupplier(id: string, companyId: string): Promise<Supplier | undefined> {
-    const [supplier] = await db.select().from(suppliers).where(and(eq(suppliers.id, id), eq(suppliers.companyId, companyId)));
+  async getSupplier(id: string, companyId?: string): Promise<Supplier | undefined> {
+    const where = companyId ? and(eq(suppliers.id, id), eq(suppliers.companyId, companyId)) : eq(suppliers.id, id);
+    const [supplier] = await db.select().from(suppliers).where(where);
     return supplier;
   }
 
@@ -1281,13 +1288,15 @@ export class DbStorage implements IStorage {
     return supplier;
   }
 
-  async updateSupplier(id: string, updateData: Partial<InsertSupplier>, companyId: string): Promise<Supplier | undefined> {
-    const [supplier] = await db.update(suppliers).set(updateData).where(and(eq(suppliers.id, id), eq(suppliers.companyId, companyId))).returning();
+  async updateSupplier(id: string, updateData: Partial<InsertSupplier>, companyId?: string): Promise<Supplier | undefined> {
+    const where = companyId ? and(eq(suppliers.id, id), eq(suppliers.companyId, companyId)) : eq(suppliers.id, id);
+    const [supplier] = await db.update(suppliers).set(updateData).where(where).returning();
     return supplier;
   }
 
-  async deleteSupplier(id: string, companyId: string): Promise<void> {
-    await db.delete(suppliers).where(and(eq(suppliers.id, id), eq(suppliers.companyId, companyId)));
+  async deleteSupplier(id: string, companyId?: string): Promise<void> {
+    const where = companyId ? and(eq(suppliers.id, id), eq(suppliers.companyId, companyId)) : eq(suppliers.id, id);
+    await db.delete(suppliers).where(where);
   }
 
   async getSupplierMaterials(supplierId: string): Promise<SupplierMaterial[]> {
@@ -1402,8 +1411,9 @@ export class DbStorage implements IStorage {
     return db.select().from(rfqs).where(eq(rfqs.companyId, companyId)).orderBy(desc(rfqs.createdAt));
   }
 
-  async getRfq(id: string, companyId: string): Promise<Rfq | undefined> {
-    const [rfq] = await db.select().from(rfqs).where(and(eq(rfqs.id, id), eq(rfqs.companyId, companyId)));
+  async getRfq(id: string, companyId?: string): Promise<Rfq | undefined> {
+    const where = companyId ? and(eq(rfqs.id, id), eq(rfqs.companyId, companyId)) : eq(rfqs.id, id);
+    const [rfq] = await db.select().from(rfqs).where(where);
     return rfq;
   }
 

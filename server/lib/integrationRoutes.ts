@@ -119,7 +119,7 @@ export function registerIntegrationOrchestratorRoutes(app: Express, isAuthentica
       try {
         const cred = await CredentialService.getCredentials(companyId, integrationId);
         if (cred) {
-          credentials = CredentialService.decrypt(cred.encryptedCredentials);
+          credentials = JSON.parse(CredentialService.decrypt(cred.encryptedCredentials));
         }
       } catch (e) {
       }
@@ -145,7 +145,7 @@ export function registerIntegrationOrchestratorRoutes(app: Express, isAuthentica
       try {
         const cred = await CredentialService.getCredentials(companyId, integrationId);
         if (cred) {
-          credentials = CredentialService.decrypt(cred.encryptedCredentials);
+          credentials = JSON.parse(CredentialService.decrypt(cred.encryptedCredentials));
         }
       } catch (e) {
       }

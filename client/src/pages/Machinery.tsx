@@ -338,7 +338,7 @@ function AddMachineForm({ onSuccess, onCancel }: {
       };
       return await apiRequest("POST", "/api/machinery", payload);
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/machinery"] });
       onSuccess(data);
     },

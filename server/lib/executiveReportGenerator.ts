@@ -228,7 +228,7 @@ export async function generateExecutiveReport(
       estimatedDollars: round2(optimized?.totalEstimatedSavings ?? 0),
       estimatedLabel: "estimated" as const,
       measuredDollars: optimized?.totalMeasuredSavings ?? null,
-      measuredLabel: (optimized?.totalMeasuredSavings !== null ? "measured" : "not_yet_available") as const,
+      measuredLabel: (optimized?.totalMeasuredSavings !== null ? "measured" : "not_yet_available") as "measured" | "not_yet_available",
       hasMeasuredData: optimized?.totalMeasuredSavings !== null,
     },
     recommendation: comparison?.recommendation ?? "INCONCLUSIVE",

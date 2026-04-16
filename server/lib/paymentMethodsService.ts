@@ -186,7 +186,7 @@ export async function executeSupplierPayment(
   }
 
   // Section 4 — hard economic validity guard on payment amounts
-  const rawAmount = intent.totalCost || 0;
+  const rawAmount = (intent as any).totalCost || 0;
   const amountCents = Math.round(rawAmount * 100);
   try {
     assertEconomicValidityStrict({ amount: rawAmount });

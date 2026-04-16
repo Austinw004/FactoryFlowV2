@@ -401,7 +401,6 @@ export async function approveAndExecuteRecommendation(
     userId,
     companyId,
     amount: Math.round(totalAmount * 100), // cents
-    isNewDevice: false,
     metadata: { source: "procurement_execution", recommendationId },
   });
 
