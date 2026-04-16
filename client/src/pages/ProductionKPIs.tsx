@@ -46,22 +46,19 @@ export default function ProductionKPIs() {
   const [openRunDialog, setOpenRunDialog] = useState(false);
 
   // Fetch production runs
-  const { data: productionRuns = [], isLoading: runsLoading } = useQuery({
+  const { data: productionRuns = [] as any[], isLoading: runsLoading } = useQuery<any[]>({
     queryKey: ["/api/production/runs"],
   });
 
   // Fetch current regime
-  const { data: regime } = useQuery({
+  const { data: regime } = useQuery<any>({
     queryKey: ["/api/economics/regime"],
   });
 
   // Create production run mutation
   const createRunMutation = useMutation({
-    mutationFn: async (data: any) => 
-      apiRequest("/api/production/runs", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
+    mutationFn: async (data: any) =>
+      apiRequest("POST", "/api/production/runs", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/production/runs"] });
       toast({ title: "Production run created successfully" });
