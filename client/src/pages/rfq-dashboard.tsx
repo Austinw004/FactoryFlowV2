@@ -77,7 +77,7 @@ export default function RfqDashboard() {
     mutationFn: async () => {
       return await apiRequest("POST", "/api/rfqs/generate", {});
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       toast({
         title: "RFQs Generated",
         description: `Successfully generated ${data.generated} RFQs from ${data.total} opportunities.`,

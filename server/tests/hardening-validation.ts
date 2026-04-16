@@ -156,7 +156,7 @@ async function testS4() {
 function testS5() {
   console.log("\n─── S5: Forecast sanity bounds ───");
 
-  const forecaster = new DemandForecaster();
+  const forecaster = new (DemandForecaster as any)();
   const sku = "TEST_SANITY_SKU";
 
   // Seed with small history → feed extreme values → expect clamp
@@ -170,9 +170,9 @@ function testS5() {
   expect("S5-a forecast returns 3 values",
     () => forecasts.length === 3);
   expect("S5-b all forecast values are finite numbers",
-    () => forecasts.every(v => Number.isFinite(v)));
+    () => (forecasts as number[]).every((v: number) => Number.isFinite(v)));
   expect("S5-c forecasts are not impossibly large (< 5× mean)",
-    () => forecasts.every(v => v <= 10 * 5));
+    () => (forecasts as number[]).every((v: number) => v <= 10 * 5));
 
   // Verify clamp constant REGIME_CACHE_TTL_MS is 6 hours
   expect("S5-d REGIME_CACHE_TTL_MS is 6 hours",

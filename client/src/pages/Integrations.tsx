@@ -227,3 +227,5 @@ export function Integrations() {
     </div>
   );
 }
+
+export default Integrations;

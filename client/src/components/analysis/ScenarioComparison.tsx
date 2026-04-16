@@ -183,7 +183,7 @@ export function ScenarioComparison({ open, onOpenChange, scenarios }: ScenarioCo
                                     </span>
                                   )}
                                   <span className={isBest ? 'text-primary' : ''}>
-                                    {metric.format(value)}
+                                    {(metric.format as (v: any) => any)(value)}
                                   </span>
                                   {isBest && <Badge variant="outline" className="ml-1 text-xs">Best</Badge>}
                                 </div>

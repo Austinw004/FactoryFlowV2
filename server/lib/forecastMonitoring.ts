@@ -334,7 +334,7 @@ async function createDegradationAlert(
   
   if (existingAlerts.length > 0) {
     const existingAlert = existingAlerts[0];
-    alert = await storage.updateForecastAlert(existingAlert.id, {
+    alert = await (storage as any).updateForecastAlert(existingAlert.id, {
       severity: degradationCheck.severity!,
       currentMAPE,
       degradationPercent: degradationCheck.degradationPercent || null,
@@ -369,7 +369,7 @@ async function createDegradationAlert(
     
     const { runAutomatedRetraining } = await import('./forecastRetraining');
     try {
-      await runAutomatedRetraining(storage, companyId, 1, skuId);
+      await runAutomatedRetraining(storage, companyId, 1);
       
       const newMetrics = await calculateMAPEForSKU(companyId, skuId, 30);
       if (newMetrics && newMetrics.mape < currentMAPE) {

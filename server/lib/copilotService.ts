@@ -156,10 +156,10 @@ export async function queryCopilot(companyId: string, userId: string, query: str
   } else if (lowerQuery.includes("order") || lowerQuery.includes("purchase") || lowerQuery.includes("po")) {
     const pos = await db.select().from(purchaseOrders).where(eq(purchaseOrders.companyId, companyId));
     rowCounts.purchaseOrders = pos.length;
-    const totalValue = pos.reduce((a, po) => a + (po.totalAmount || 0), 0);
+    const totalValue = pos.reduce((a, po) => a + (po.totalCost || 0), 0);
     answer = `Found ${pos.length} purchase orders with total value $${totalValue.toFixed(2)}.`;
     for (const po of pos.slice(0, 5)) {
-      evidence.push({ entityType: "purchase_order", entityId: po.id, field: "totalAmount", value: po.totalAmount, timestamp: po.createdAt?.toISOString() });
+      evidence.push({ entityType: "purchase_order", entityId: po.id, field: "totalCost", value: po.totalCost, timestamp: po.createdAt?.toISOString() });
       entityIds.push(po.id);
     }
   } else if (lowerQuery.includes("rfq") || lowerQuery.includes("quote")) {

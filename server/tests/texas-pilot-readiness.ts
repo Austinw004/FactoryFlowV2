@@ -71,22 +71,22 @@ async function setup() {
   await db.insert(companies).values([
     { id: COMPANY_A, name: "Texas Alpha Manufacturing", industry: "manufacturing", size: "medium", tier: "growth" },
     { id: COMPANY_B, name: "Texas Beta Manufacturing", industry: "manufacturing", size: "medium", tier: "growth" },
-  ]).onConflictDoNothing();
+  ] as any).onConflictDoNothing();
 
   for (const cid of [COMPANY_A, COMPANY_B]) {
     const suffix = cid === COMPANY_A ? "A" : "B";
     await db.insert(materials).values([
       { id: `${PREFIX}-mat-${suffix}-1`, companyId: cid, name: `Steel-${suffix}`, code: `STL-${suffix}-001`, category: "raw", unit: "kg", onHand: 500, reorderPoint: 100, leadTimeDays: 14, unitCost: 25 },
       { id: `${PREFIX}-mat-${suffix}-2`, companyId: cid, name: `Copper-${suffix}`, code: `CPR-${suffix}-001`, category: "raw", unit: "kg", onHand: 300, reorderPoint: 80, leadTimeDays: 21, unitCost: 40 },
-    ]).onConflictDoNothing();
+    ] as any).onConflictDoNothing();
 
     await db.insert(suppliers).values([
       { id: `${PREFIX}-sup-${suffix}-1`, companyId: cid, name: `Supplier-${suffix}-1`, status: "active", riskScore: 25, onTimeDeliveryRate: 95 },
-    ]).onConflictDoNothing();
+    ] as any).onConflictDoNothing();
 
     await db.insert(skus).values([
       { id: `${PREFIX}-sku-${suffix}-1`, companyId: cid, name: `Widget-${suffix}`, code: `WDG-${suffix}-001`, category: "finished", unitPrice: 150, currentDemand: 200, safetyStockDays: 14 },
-    ]).onConflictDoNothing();
+    ] as any).onConflictDoNothing();
 
     await db.insert(rfqs).values([
       { id: `${PREFIX}-rfq-${suffix}-1`, companyId: cid, title: `RFQ-${suffix}`, rfqNumber: `RFQ-TX-${suffix}-001`, materialId: `${PREFIX}-mat-${suffix}-1`, requestedQuantity: 100, unit: "kg", regimeAtGeneration: "expansionary", fdrAtGeneration: 0.45, status: "draft" },

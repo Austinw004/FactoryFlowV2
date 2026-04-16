@@ -230,7 +230,7 @@ async function testAuthorizationSweep(): Promise<boolean> {
     name: "Company A Supplier",
     contactEmail: "a@test.com",
     riskScore: 50,
-  }).returning();
+  } as any).returning();
 
   const crossSup = await storage.getSupplier(supA.id, COMPANY_B);
   assert("Cross-tenant getSupplier returns undefined", crossSup === undefined);

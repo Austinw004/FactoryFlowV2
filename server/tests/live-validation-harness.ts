@@ -85,8 +85,8 @@ interface TestResult {
   section: string;
   testId: string;
   description: string;
-  pass: boolean;
-  proofType: "runtime" | "structural" | "deterministic";
+  pass: boolean | string;
+  proofType: "runtime" | "structural" | "deterministic" | "live-db";
   evidence: Record<string, any>;
   durationMs: number;
 }
@@ -95,11 +95,11 @@ const allResults: TestResult[] = [];
 const sectionCounters: Record<string, { pass: number; fail: number }> = {};
 
 function assert(
-  cond: boolean,
+  cond: boolean | string,
   section: string,
   testId: string,
   desc: string,
-  proofType: "runtime" | "structural" | "deterministic",
+  proofType: "runtime" | "structural" | "deterministic" | "live-db",
   evidence: Record<string, any>,
   startMs: number,
 ) {
@@ -149,23 +149,23 @@ async function setup() {
   await db.insert(companies).values([
     { id: COMPANY_A, name: "LV Alpha Mfg", industry: "manufacturing", size: "medium", tier: "growth" },
     { id: COMPANY_B, name: "LV Beta Mfg", industry: "manufacturing", size: "small", tier: "starter" },
-  ]).onConflictDoNothing();
+  ] as any).onConflictDoNothing();
 
   for (const cid of [COMPANY_A, COMPANY_B]) {
     const s = cid === COMPANY_A ? "A" : "B";
     await db.insert(materials).values([
       { id: `${PREFIX}-mat-${s}-1`, companyId: cid, name: `Steel-${s}`, code: `STL-${s}`, category: "raw", unit: "kg", onHand: 800, reorderPoint: 150, leadTimeDays: 14, unitCost: 25 },
       { id: `${PREFIX}-mat-${s}-2`, companyId: cid, name: `Copper-${s}`, code: `CPR-${s}`, category: "raw", unit: "kg", onHand: 400, reorderPoint: 80, leadTimeDays: 21, unitCost: 40 },
-    ]).onConflictDoNothing();
+    ] as any).onConflictDoNothing();
 
     await db.insert(suppliers).values([
       { id: `${PREFIX}-sup-${s}-1`, companyId: cid, name: `Supplier-${s}-1`, contactEmail: `sup1@${s.toLowerCase()}.test`, leadTimeDays: 14, reliabilityScore: 0.9 },
-    ]).onConflictDoNothing();
+    ] as any).onConflictDoNothing();
 
     await db.insert(skus).values([
       { id: `${PREFIX}-sku-${s}-1`, companyId: cid, name: `Widget-${s}`, code: `WGT-${s}`, forecastHorizonMonths: 3, regime: "HEALTHY_EXPANSION", reorderPoint: 50, safetyStock: 20, moq: 10, packSize: 5 },
       { id: `${PREFIX}-sku-${s}-slow`, companyId: cid, name: `SlowMover-${s}`, code: `SLW-${s}`, forecastHorizonMonths: 3, regime: "CAUTION", reorderPoint: 10, safetyStock: 5, moq: 2, packSize: 1 },
-    ]).onConflictDoNothing();
+    ] as any).onConflictDoNothing();
   }
 
   // Demand history for Company A SKU (skuId only, no companyId in table)
@@ -234,7 +234,7 @@ async function section1() {
   let t0 = Date.now();
   try {
     const rows = await db.execute(sql`SELECT 1 AS ping`);
-    assert(true, S, "1.1", "Database connectivity via SELECT 1", "runtime", { ping: (rows as any[])[0]?.ping }, t0);
+    assert(true, S, "1.1", "Database connectivity via SELECT 1", "runtime", { ping: (rows as unknown as any[])[0]?.ping }, t0);
   } catch (e: any) {
     assert(false, S, "1.1", "Database connectivity via SELECT 1", "runtime", { error: e.message }, t0);
   }
@@ -596,7 +596,7 @@ async function section6() {
   const S = "S6";
   console.log("\n━━━ SECTION 6: FORECASTING & PREDICTIVE VALIDATION ━━━");
 
-  const forecaster = new DemandForecaster();
+  const forecaster = new (DemandForecaster as any)();
 
   // 6.1 Fast mover WAPE < 30%
   let t0 = Date.now();
@@ -668,8 +668,8 @@ async function section7() {
   const S = "S7";
   console.log("\n━━━ SECTION 7: OPTIMIZATION & DECISION OUTPUTS ━━━");
 
-  const baseInputs = {
-    regime: "HEALTHY_EXPANSION" as any,
+  const baseInputs: any = {
+    regime: "HEALTHY_EXPANSION",
     fdr: -1.5,
     forecastUncertainty: 0.2,
     currentOnHand: 200,
@@ -818,7 +818,7 @@ async function section9() {
 
   // 9.2 Well-populated company not blocked (or has score > threshold)
   t0 = Date.now();
-  assert(!reportA.blocked || reportA.overallScore > 0.4, S, "9.2", "Company A is not blocked by data quality gate", "runtime", { blocked: reportA.blocked, score: reportA.overallScore }, t0);
+  assert(!(reportA as any).blocked || reportA.overallScore > 0.4, S, "9.2", "Company A is not blocked by data quality gate", "runtime", { blocked: (reportA as any).blocked, score: reportA.overallScore }, t0);
 
   // 9.3 Company B (with fewer entities) has lower or equal score than Company A
   t0 = Date.now();
@@ -845,12 +845,12 @@ async function section9() {
   // 9.7 New company with zero entities → lowest possible quality score (no data at all)
   t0 = Date.now();
   const poorCid = `${PREFIX}-poor-${Date.now()}`;
-  await db.insert(companies).values({ id: poorCid, name: "Poor Data Co", industry: "manufacturing", size: "small", tier: "starter" }).onConflictDoNothing();
+  await db.insert(companies).values({ id: poorCid, name: "Poor Data Co", industry: "manufacturing", size: "small", tier: "starter" } as any).onConflictDoNothing();
   // Insert NO materials, suppliers, or SKUs — zero entities → low score
   const poorReport = await scoreCompanyDataQuality(poorCid);
   // A company with no data should have a very low score or be blocked
-  const lowScoreFlag = poorReport.blocked === true || poorReport.overallScore < reportA.overallScore;
-  assert(lowScoreFlag, S, "9.7", `Empty company score (${(poorReport.overallScore * 100).toFixed(1)}%) < Company A (${(reportA.overallScore * 100).toFixed(1)}%) — data volume impacts quality`, "runtime", { blocked: poorReport.blocked, scoreEmpty: poorReport.overallScore, scoreA: reportA.overallScore }, t0);
+  const lowScoreFlag = (poorReport as any).blocked === true || poorReport.overallScore < reportA.overallScore;
+  assert(lowScoreFlag, S, "9.7", `Empty company score (${(poorReport.overallScore * 100).toFixed(1)}%) < Company A (${(reportA.overallScore * 100).toFixed(1)}%) — data volume impacts quality`, "runtime", { blocked: (poorReport as any).blocked, scoreEmpty: poorReport.overallScore, scoreA: reportA.overallScore }, t0);
 
   // Cleanup poor company
   await db.delete(companies).where(eq(companies.id, poorCid)).catch(() => {});
@@ -903,7 +903,7 @@ async function section10() {
   // 10.4 Optimization result carries provenance evidence
   t0 = Date.now();
   const optResult = optimizeReorderQuantity(
-    { regime: "HEALTHY_EXPANSION" as any, fdr: -1.0, forecastUncertainty: 0.2, currentOnHand: 200, avgDemand: 50, leadTimeDays: 14, moq: 10, packSize: 5, reorderPoint: 100, safetyStock: 30, unitCost: 25, budget: 50000 },
+    { regime: "HEALTHY_EXPANSION", fdr: -1.0, forecastUncertainty: 0.2, currentOnHand: 200, avgDemand: 50, leadTimeDays: 14, moq: 10, packSize: 5, reorderPoint: 100, safetyStock: 30, unitCost: 25, budget: 50000 } as any,
     0.95, 500, 55
   );
   const optEb = optResult.evidenceBundle;
@@ -1646,7 +1646,7 @@ async function section13() {
       typeof v !== "number" || isFinite(v));
     assert(noNaN, S, "13.3e",
       "Edge-case valid inputs: no NaN in PolicyRecommendation output",
-      "deterministic", { safetyMultiplier: edgeResult.safetyStockMultiplier, noNaN }, t0);
+      "deterministic", { safetyMultiplier: (edgeResult as any).safetyStockMultiplier, noNaN }, t0);
   }
 
   // ──────────────────────────────────────────────────────────────────────

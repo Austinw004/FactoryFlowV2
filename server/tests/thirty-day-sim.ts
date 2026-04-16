@@ -333,7 +333,7 @@ function computeWorkingCapital(skus: SimSKU[]): number {
 // FORECASTING ENGINE
 // ─────────────────────────────────────────────
 function runForecasting(skus: SimSKU[]): Map<string, number[]> {
-  const forecaster = new DemandForecaster();
+  const forecaster = new (DemandForecaster as any)();
   const out = new Map<string, number[]>();
   for (const sku of skus) {
     if (sku.demandHistory.length < 5) {
@@ -343,7 +343,7 @@ function runForecasting(skus: SimSKU[]): Map<string, number[]> {
     try {
       const raw = forecaster.forecast(sku.demandHistory, 7);
       // Sanitize: replace any NaN/negative values with avgDemand fallback
-      const safe = raw.map(v => isFinite(v) && v >= 0 ? v : sku.avgDemand);
+      const safe = (raw as number[]).map((v: number) => isFinite(v) && v >= 0 ? v : sku.avgDemand);
       out.set(sku.id, safe);
     } catch {
       const recent = sku.demandHistory.slice(-7).filter(v => isFinite(v) && v >= 0);
@@ -358,7 +358,7 @@ function runForecasting(skus: SimSKU[]): Map<string, number[]> {
 // OPTIMIZATION + PROPOSAL ENGINE
 // ─────────────────────────────────────────────
 let actionCounter = 1;
-const allActions: PendingAction[] = [];
+const allActions: any[] = [];
 
 function proposeOrders(
   skus: SimSKU[],

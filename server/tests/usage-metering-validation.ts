@@ -8,6 +8,7 @@
  * 4. Daily job orchestration
  */
 
+// @ts-ignore - @jest/globals may not be installed
 import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
 import { calculateMeteringCost, formatMeteringCost, countActiveSKUs, recordUsageEvent } from "../lib/usageMetering";
 import { db } from "../db";

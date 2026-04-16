@@ -228,11 +228,11 @@ export async function exportAuditLogs(filters: AuditExportFilters): Promise<any[
     filtered = filtered.filter(r => r.timestamp && new Date(r.timestamp) <= filters.endTime!);
   }
   if (filters.category) {
-    filtered = filtered.filter(r => r.eventType === filters.category);
+    filtered = filtered.filter(r => (r as any).eventType === filters.category);
   }
 
   if (config?.allowedCategories && config.allowedCategories.length > 0) {
-    filtered = filtered.filter(r => config.allowedCategories!.includes(r.eventType));
+    filtered = filtered.filter(r => config.allowedCategories!.includes((r as any).eventType));
   }
 
   if (config?.retentionDays) {

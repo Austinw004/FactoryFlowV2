@@ -1266,7 +1266,7 @@ export default function SopWorkspace() {
                               <>
                                 <h4 className="text-sm font-semibold mb-2">Decisions:</h4>
                                 <ul className="text-sm text-muted-foreground list-disc list-inside" data-testid={`text-meeting-decisions-${meeting.id}`}>
-                                  {meeting.decisions.map((d: any, i: number) => (
+                                  {(meeting as any).decisions.map((d: any, i: number) => (
                                     <li key={i}>{d.decision || d.text || JSON.stringify(d)}</li>
                                   ))}
                                 </ul>

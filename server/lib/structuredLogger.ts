@@ -2,7 +2,7 @@ import { db } from "../db";
 import { structuredEventLog } from "@shared/schema";
 
 type LogLevel = "debug" | "info" | "warn" | "error" | "critical";
-type LogCategory = "automation" | "webhook" | "guardrail" | "regime" | "integration" | "auth" | "payment" | "health" | "system" | "sku_count" | "usage_event" | "stripe_meter_event" | "metering_job" | "metering_backfill";
+type LogCategory = "automation" | "webhook" | "guardrail" | "regime" | "integration" | "auth" | "payment" | "health" | "system" | "sku_count" | "usage_event" | "stripe_meter_event" | "metering_job" | "metering_backfill" | "stripe_setup";
 
 const LOG_LEVEL_PRIORITY: Record<LogLevel, number> = {
   debug: 0,

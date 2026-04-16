@@ -23,7 +23,7 @@ async function setup() {
   await db.insert(companies).values([
     { id: COMPANY_A, name: 'Evidence Test Company A', industry: 'test', size: 'small' },
     { id: COMPANY_B, name: 'Evidence Test Company B', industry: 'test', size: 'small' },
-  ]).onConflictDoNothing();
+  ] as any).onConflictDoNothing();
 
   console.log(`  Created Company A: ${COMPANY_A}`);
   console.log(`  Created Company B: ${COMPANY_B}`);

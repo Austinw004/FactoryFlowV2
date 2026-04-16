@@ -237,9 +237,9 @@ async function gate1() {
   const tAuto = Date.now();
   const ruleA = await storage.createAiAutomationRule({
     companyId: COMPANY_A, name: `${PREFIX}-rule-A`, triggerType: "threshold",
-    triggerConfig: {}, actionType: "send_alert", actionConfig: {}, enabled: true, priority: 5,
+    actionType: "send_alert", actionConfig: {}, enabled: true, priority: 5,
     category: "monitoring", triggerConditions: {},
-  });
+  } as any);
   const crossRule = await storage.getAiAutomationRule(ruleA.id, COMPANY_B);
   assert(crossRule === undefined, "1.9", "Cross-tenant GET automation rule blocked",
     { validated: "getAiAutomationRule WHERE-clause scoped by companyId", endpointsOrFunctions: "storage.getAiAutomationRule",
@@ -335,7 +335,7 @@ async function gate2() {
 
   const t22 = Date.now();
   const safeModeCompany = `${PREFIX}-safemode-test`;
-  await db.insert(companies).values({ id: safeModeCompany, name: `Safe Mode Test ${PREFIX}` }).onConflictDoNothing();
+  await db.insert(companies).values({ id: safeModeCompany, name: `Safe Mode Test ${PREFIX}` } as any).onConflictDoNothing();
   await db.delete(automationSafeMode).where(eq(automationSafeMode.companyId, safeModeCompany));
   await db.insert(automationSafeMode).values({
     companyId: safeModeCompany,
@@ -344,7 +344,7 @@ async function gate2() {
     enabledBy: "cert-harness",
     reason: "Certification test",
     readinessChecklistPassed: 0,
-  });
+  } as any);
 
   const actionData = {
     ruleId: "r-safe-test",
@@ -476,13 +476,13 @@ async function gate3() {
 
   const t32 = Date.now();
   await db.delete(backgroundJobLocks).where(like(backgroundJobLocks.jobName, `${PREFIX}%`));
-  const lock1 = await acquireJobLock({ jobName: `${PREFIX}-test-job`, companyId: null, ttlMs: 60000 });
+  const lock1 = await acquireJobLock({ jobName: `${PREFIX}-test-job`, companyId: undefined, ttlMs: 60000 });
   assert(lock1.acquired, "3.2a", "First lock acquisition succeeds",
     { validated: "acquireJobLock returns acquired=true for uncontested lock", endpointsOrFunctions: "acquireJobLock",
       inputs: `jobName=${PREFIX}-test-job`, expected: "acquired=true", actual: `acquired=${lock1.acquired}`,
       rawEvidence: { acquired: lock1.acquired, lockId: lock1.lockId }, proofType: "runtime" }, t32);
 
-  const lock2 = await acquireJobLock({ jobName: `${PREFIX}-test-job`, companyId: null, ttlMs: 60000 });
+  const lock2 = await acquireJobLock({ jobName: `${PREFIX}-test-job`, companyId: undefined, ttlMs: 60000 });
   assert(!lock2.acquired, "3.2b", "Second lock acquisition rejected (contention)",
     { validated: "acquireJobLock returns acquired=false when lock already held", endpointsOrFunctions: "acquireJobLock",
       inputs: `same jobName, different instance`, expected: "acquired=false", actual: `acquired=${lock2.acquired}`,
@@ -491,7 +491,7 @@ async function gate3() {
   if (lock1.lockId) await releaseJobLock(lock1.lockId);
 
   const t33 = Date.now();
-  const lock3 = await acquireJobLock({ jobName: `${PREFIX}-test-job`, companyId: null, ttlMs: 60000 });
+  const lock3 = await acquireJobLock({ jobName: `${PREFIX}-test-job`, companyId: undefined, ttlMs: 60000 });
   assert(lock3.acquired, "3.3", "Lock re-acquired after release",
     { validated: "Released lock can be re-acquired", endpointsOrFunctions: "acquireJobLock + releaseJobLock",
       inputs: `jobName=${PREFIX}-test-job after release`, expected: "acquired=true", actual: `acquired=${lock3.acquired}`,
@@ -500,11 +500,11 @@ async function gate3() {
 
   const t34 = Date.now();
   await db.insert(backgroundJobLocks).values({
-    jobName: `${PREFIX}-stale-job`, companyId: null,
+    jobName: `${PREFIX}-stale-job`, companyId: undefined,
     lockedBy: "dead-instance-xyz", expiresAt: new Date(Date.now() - 10000),
     heartbeatAt: new Date(Date.now() - 60000),
   });
-  const staleLock = await acquireJobLock({ jobName: `${PREFIX}-stale-job`, companyId: null, ttlMs: 60000 });
+  const staleLock = await acquireJobLock({ jobName: `${PREFIX}-stale-job`, companyId: undefined, ttlMs: 60000 });
   assert(staleLock.acquired, "3.4", "Stale lock recovered after TTL expiry",
     { validated: "Expired lock is taken over by CAS UPDATE", endpointsOrFunctions: "acquireJobLock (stale recovery path)",
       inputs: "Lock with expiresAt in past", expected: "acquired=true", actual: `acquired=${staleLock.acquired}`,
@@ -512,9 +512,9 @@ async function gate3() {
   if (staleLock.lockId) await releaseJobLock(staleLock.lockId);
 
   const t35 = Date.now();
-  const preLock = await acquireJobLock({ jobName: `${PREFIX}-wrapper-job`, companyId: null, ttlMs: 60000 });
+  const preLock = await acquireJobLock({ jobName: `${PREFIX}-wrapper-job`, companyId: undefined, ttlMs: 60000 });
   let ranBody = false;
-  await withJobLock({ jobName: `${PREFIX}-wrapper-job`, companyId: null, ttlMs: 60000 }, async () => { ranBody = true; });
+  await withJobLock({ jobName: `${PREFIX}-wrapper-job`, companyId: undefined, ttlMs: 60000 }, async () => { ranBody = true; });
   assert(!ranBody, "3.5a", "withJobLock skips execution when lock already held",
     { validated: "withJobLock does not execute callback if lock is contested", endpointsOrFunctions: "withJobLock",
       inputs: `jobName=${PREFIX}-wrapper-job (pre-locked)`, expected: "callback not executed", actual: ranBody ? "callback ran" : "callback skipped",
@@ -522,7 +522,7 @@ async function gate3() {
   if (preLock.lockId) await releaseJobLock(preLock.lockId);
 
   ranBody = false;
-  await withJobLock({ jobName: `${PREFIX}-wrapper-job`, companyId: null, ttlMs: 60000 }, async () => { ranBody = true; });
+  await withJobLock({ jobName: `${PREFIX}-wrapper-job`, companyId: undefined, ttlMs: 60000 }, async () => { ranBody = true; });
   assert(ranBody, "3.5b", "withJobLock executes when lock available",
     { validated: "withJobLock executes callback when lock is available", endpointsOrFunctions: "withJobLock",
       inputs: `jobName=${PREFIX}-wrapper-job (released)`, expected: "callback executed", actual: ranBody ? "callback ran" : "callback skipped",
@@ -2225,7 +2225,7 @@ async function gate11() {
   await db.insert(materials).values({
     id: matId, companyId: COMPANY_A, name: `${PREFIX}-PilotMat`, code: `${PREFIX}-PLT-001`, category: "test",
     unit: "kg", onHand: 100, reorderPoint: 50, leadTimeDays: 14, unitCost: 10,
-  }).onConflictDoNothing();
+  } as any).onConflictDoNothing();
 
   const exp1 = await runPilotExperiment(pilotConfig);
   const cfgSnap = exp1.configSnapshot as any;
@@ -3040,7 +3040,7 @@ async function gate13() {
   const baselineFdrSeries = Array.from({ length: 60 }, (_, i) => 0.4 + Math.sin(i * 0.1) * 0.3);
   const baselineForecastErrors = baselineDemand.map((d, i) => Math.abs(d - baselineForecast[i]) / Math.max(baselineForecast[i], 1));
 
-  const config: StressTestConfig = {
+  const config: any = {
     companyId: COMPANY_A,
     version: "1.0.0",
     seed: 42,
@@ -3465,7 +3465,7 @@ async function gate13() {
 
   // 13.29: Custom scenario spec produces targeted stress test
   const t1329 = Date.now();
-  const customConfig: StressTestConfig = {
+  const customConfig: any = {
     ...config,
     scenarios: [
       { type: "demand_spike", severity: "severe", label: "Custom severe spike" },
@@ -3520,7 +3520,7 @@ async function gate14() {
   await db.insert(materials).values({
     id: pilotMatId, companyId: COMPANY_A, name: `${PREFIX}-RevMat`, code: `${PREFIX}-REV-001`, category: "test",
     unit: "kg", onHand: 150, reorderPoint: 60, leadTimeDays: 10, unitCost: 12,
-  }).onConflictDoNothing();
+  } as any).onConflictDoNothing();
 
   const pilotConfig = {
     companyId: COMPANY_A,

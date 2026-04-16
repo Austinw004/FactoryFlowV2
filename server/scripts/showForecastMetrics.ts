@@ -91,7 +91,7 @@ async function main() {
       console.log('[SUCCESS] FOUND HISTORICAL VALIDATION DATA!\n');
       console.log('[MEASURED] MEASURED METRICS (Actual Backtest Results):');
       console.log(`   ─────────────────────────────────────────────────`);
-      console.log(`   Data Source:                   ${dbMetrics.dataSource || 'database'}`);
+      console.log(`   Data Source:                   ${(dbMetrics as any).dataSource || 'database'}`);
       console.log(`   Total Predictions Analyzed:    ${dbMetrics.totalPredictions.toLocaleString()}`);
       console.log(`   Date Range:                    ${dbMetrics.dateRange.earliest.toISOString().split('T')[0]} to ${dbMetrics.dateRange.latest.toISOString().split('T')[0]}`);
       console.log(`   ─────────────────────────────────────────────────`);
