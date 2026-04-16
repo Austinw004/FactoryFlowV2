@@ -419,7 +419,9 @@ export default function Compliance() {
                 </div>
               </div>
             ) : (
-              <div className="text-muted-foreground">No data available</div>
+              <div className="text-sm text-muted-foreground" data-testid="empty-compliance-score">
+                Compliance score pending — log at least three documents (certifications, inspections, or training records) to unlock your posture score and category breakdown.
+              </div>
             )}
           </CardContent>
         </Card>

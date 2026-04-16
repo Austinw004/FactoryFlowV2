@@ -31,8 +31,8 @@ export function ExportDialog({ open, onOpenChange, scenarioData }: ExportDialogP
   const handleExportCSV = async () => {
     if (!scenarioData?.results) {
       toast({
-        title: "No Data",
-        description: "No scenario results to export",
+        title: "Nothing to export yet",
+        description: "Run the scenario first — once results are calculated you can export CSV or PDF from here.",
         variant: "destructive",
       });
       return;
@@ -124,8 +124,8 @@ export function ExportDialog({ open, onOpenChange, scenarioData }: ExportDialogP
   const handleExportPDF = async () => {
     if (!scenarioData?.results) {
       toast({
-        title: "No Data",
-        description: "No scenario results to export",
+        title: "Nothing to export yet",
+        description: "Run the scenario first — once results are calculated you can export CSV or PDF from here.",
         variant: "destructive",
       });
       return;

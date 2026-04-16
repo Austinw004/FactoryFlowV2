@@ -111,8 +111,8 @@ export function SaveScenarioDialog({ open, onOpenChange, scenarioData }: SaveSce
 
     if (!scenarioData) {
       toast({
-        title: "No Data",
-        description: "No scenario data to save",
+        title: "Nothing to save yet",
+        description: "Configure a scenario first — once you've set assumptions you can save it as a template or snapshot.",
         variant: "destructive",
       });
       return;

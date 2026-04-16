@@ -706,8 +706,10 @@ export default function SupplierRisk() {
                 {pieData.length > 0 ? (
                   <RiskTierPieChart data={pieData} />
                 ) : (
-                  <div className="h-full flex items-center justify-center text-muted-foreground">
-                    No data available
+                  <div className="h-full flex flex-col items-center justify-center text-center px-4 text-muted-foreground" data-testid="empty-risk-tiers">
+                    <PieChartIcon className="h-8 w-8 mb-2 opacity-40" />
+                    <p className="text-sm font-medium">Risk tiers will appear here</p>
+                    <p className="text-xs mt-1">Run a risk evaluation from the Calculate Risk button above to score your suppliers across Critical / High / Medium / Low tiers.</p>
                   </div>
                 )}
               </CardContent>
