@@ -201,10 +201,8 @@ export async function createPurchaseIntent(input: {
   }).returning();
 
   logger.info("procurement" as any, "Purchase intent created", {
-    intentId: intent.id,
     companyId: input.companyId,
-    totalAmount,
-    paymentMethod: input.paymentMethod,
+    details: { intentId: intent.id, totalAmount, paymentMethod: input.paymentMethod },
   });
 
   return intent;
@@ -237,10 +235,7 @@ async function executePOFallback(
     .where(eq(purchaseIntents.id, intent.id));
 
   logger.info("procurement" as any, "PO fallback generated", {
-    intentId: intent.id,
-    poId: po.id,
-    poNumber,
-    totalCost: intent.totalAmount,
+    details: { intentId: intent.id, poId: po.id, poNumber, totalCost: intent.totalAmount },
   });
 
   return { status: "po_created", poId: po.id, poNumber };
@@ -376,7 +371,8 @@ export async function approveAndExecuteRecommendation(
 
   if (validation.blocked) {
     logger.warn("procurement" as any, "Execution blocked by validation", {
-      recommendationId, companyId, reasons: validation.reasons,
+      companyId,
+      details: { recommendationId, reasons: validation.reasons },
     });
     return {
       success: false,
@@ -518,13 +514,8 @@ export async function approveAndExecuteRecommendation(
   });
 
   logger.info("procurement" as any, result.success ? "Purchase executed" : "Purchase failed", {
-    intentId: intent.id,
-    recommendationId,
     companyId,
-    totalAmount,
-    paymentMethod,
-    status: result.status,
-    requiresApproval,
+    details: { intentId: intent.id, recommendationId, totalAmount, paymentMethod, status: result.status, requiresApproval },
   });
 
   return { ...result, requiresApproval };

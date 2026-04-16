@@ -204,8 +204,7 @@ export async function createPerformanceBillingRecord(
   if (!billability.billable) {
     logger.warn("perf-billing" as any, "Savings record is not billable", {
       companyId: input.companyId,
-      savingsRecordId: input.savingsRecordId,
-      reasons: billability.reasons,
+      details: { savingsRecordId: input.savingsRecordId, reasons: billability.reasons },
     });
     return { success: false, nonBillableReasons: billability.reasons };
   }
@@ -228,10 +227,7 @@ export async function createPerformanceBillingRecord(
   if (anomaly.flagged) {
     logger.warn("perf-billing" as any, "Savings anomaly detected — flagging for review", {
       companyId: input.companyId,
-      savingsRecordId: input.savingsRecordId,
-      incomingSavings: evidenceRecord.measuredSavings,
-      historicalAvg: anomaly.historicalAvg,
-      multiplier: anomaly.multiplier,
+      details: { savingsRecordId: input.savingsRecordId, incomingSavings: evidenceRecord.measuredSavings, historicalAvg: anomaly.historicalAvg, multiplier: anomaly.multiplier },
     });
   }
 
@@ -260,12 +256,7 @@ export async function createPerformanceBillingRecord(
 
   logger.info("perf-billing" as any, "Performance billing record created", {
     companyId: input.companyId,
-    savingsRecordId: input.savingsRecordId,
-    measuredSavings: evidenceRecord.measuredSavings,
-    feeAmount,
-    feePercentage,
-    requiresApproval: trustValidation.requiresApproval,
-    anomalyFlagged: anomaly.flagged,
+    details: { savingsRecordId: input.savingsRecordId, measuredSavings: evidenceRecord.measuredSavings, feeAmount, feePercentage, requiresApproval: trustValidation.requiresApproval, anomalyFlagged: anomaly.flagged },
   });
 
   return {

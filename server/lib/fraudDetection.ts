@@ -24,6 +24,7 @@ export interface FraudCheckInput {
   ipAddress?:   string;
   userAgent?:   string;
   deviceFingerprint?: string;
+  isNewDevice?: boolean;
   metadata?:    Record<string, unknown>;
 }
 
@@ -80,7 +81,7 @@ export async function checkFraud(input: FraudCheckInput): Promise<FraudCheckResu
       score += weight;
     }
   } catch (err: any) {
-    logger.warn("fraud" as any, "Rule 1 check failed", { error: err.message });
+    logger.warn("fraud" as any, "Rule 1 check failed", { errorMessage: err.message });
   }
 
   // ── Rule 2: New device + large transaction ────────────────────────────────
@@ -103,7 +104,7 @@ export async function checkFraud(input: FraudCheckInput): Promise<FraudCheckResu
         score += weight;
       }
     } catch (err: any) {
-      logger.warn("fraud" as any, "Rule 2 check failed", { error: err.message });
+      logger.warn("fraud" as any, "Rule 2 check failed", { errorMessage: err.message });
     }
   }
 
@@ -126,7 +127,7 @@ export async function checkFraud(input: FraudCheckInput): Promise<FraudCheckResu
       score += weight;
     }
   } catch (err: any) {
-    logger.warn("fraud" as any, "Rule 3 check failed", { error: err.message });
+    logger.warn("fraud" as any, "Rule 3 check failed", { errorMessage: err.message });
   }
 
   // ── Rule 4: Very large single transaction (absolute threshold) ────────────
@@ -181,7 +182,7 @@ async function logFraudEvent(input: FraudCheckInput, result: FraudCheckResult): 
     });
   } catch (err: any) {
     // Never let fraud logging block a transaction — log but don't throw
-    logger.error("fraud" as any, "Failed to log fraud event", { error: err.message });
+    logger.error("fraud" as any, "Failed to log fraud event", { errorMessage: err.message });
   }
 }
 
