@@ -38,7 +38,7 @@ const InsightPanel = lazy(() =>
   import("@/components/InsightPanel").then((m) => ({ default: m.InsightPanel })),
 );
 import { generateDashboardPDF } from "@/lib/pdfExport";
-import { TrendingUp, DollarSign, Package, AlertCircle, Plus, Upload, GitCompare, Loader2, Globe, Radio, Package2, Building2, Box, FileDown, Clock, RefreshCw } from "lucide-react";
+import { TrendingUp, DollarSign, Package, AlertCircle, Plus, Upload, GitCompare, Loader2, Globe, Radio, Package2, Building2, Box, FileDown, Clock, RefreshCw, ArrowRight, X, Zap, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -54,31 +54,85 @@ import React from "react";
 import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 
 const regimeDescriptions: Record<string, string> = {
-  HEALTHY_EXPANSION: "Balanced growth. FDR < 1.2 indicates equilibrium between asset and real economy circuits. Standard procurement pace.",
-  ASSET_LED_GROWTH: "Asset circuit outpacing real economy. FDR 1.2-1.8. Consider accelerating procurement of critical materials.",
-  IMBALANCED_EXCESS: "Significant asset-real economy decoupling. FDR 1.8-2.5. Defer non-critical purchases, renegotiate contracts.",
-  REAL_ECONOMY_LEAD: "Counter-cyclical opportunity. FDR > 2.5. Lock in favorable supplier terms while asset markets correct.",
+  HEALTHY_EXPANSION: "Market conditions stable. Good window for long-term contract negotiations.",
+  ASSET_LED_GROWTH: "Asset prices outpacing real economy. Input costs rising — lock in contracts now.",
+  IMBALANCED_EXCESS: "Significant market decoupling detected. Defer purchases. Renegotiate contracts.",
+  REAL_ECONOMY_LEAD: "Counter-cyclical window open. Favorable terms available — lock in supplier agreements.",
 };
 
 function getRegimeDescription(regime: string): string {
   return regimeDescriptions[regime] || "Economic conditions are being analyzed.";
 }
 
+// Regime-specific procurement guidance for the command center hero
+const regimeProcurementGuidance: Record<string, {
+  headline: string;
+  detail: string;
+  actionLabel: string;
+  actionPath: string;
+  urgency: 'low' | 'medium' | 'high';
+  accentClass: string;
+}> = {
+  HEALTHY_EXPANSION: {
+    headline: "Market conditions are stable. This is an ideal window to negotiate long-term contracts.",
+    detail: "FDR below 1.2 indicates equilibrium between asset and real economy circuits. Establish fixed-price agreements with key suppliers before conditions shift. Standard procurement pace is appropriate.",
+    actionLabel: "View Supplier Contracts",
+    actionPath: "/multi-tier-mapping",
+    urgency: 'low',
+    accentClass: "border-green-500/20 bg-green-500/5",
+  },
+  ASSET_LED_GROWTH: {
+    headline: "Asset prices are outpacing the real economy. Input costs likely to rise 8–12% this quarter.",
+    detail: "FDR between 1.2–1.8 signals the asset circuit is running hot. Lock in contracts and pre-purchase critical materials now — before the pricing cycle closes. Every week of delay costs more.",
+    actionLabel: "Start Contract Negotiations",
+    actionPath: "/rfq-generation",
+    urgency: 'high',
+    accentClass: "border-amber-500/30 bg-amber-500/5",
+  },
+  IMBALANCED_EXCESS: {
+    headline: "Significant market decoupling detected. Purchasing non-critical materials now means overpaying.",
+    detail: "FDR above 1.8 indicates severe divergence. Defer non-critical purchases. Renegotiate any expiring contracts. Build safety stock on business-critical materials only — everything else waits.",
+    actionLabel: "Review Pending Orders",
+    actionPath: "/procurement",
+    urgency: 'high',
+    accentClass: "border-red-500/30 bg-red-500/5",
+  },
+  REAL_ECONOMY_LEAD: {
+    headline: "Counter-cyclical window is open. Favorable supplier terms are available right now.",
+    detail: "FDR above 2.5 is a rare buyer's market signal. Asset markets are correcting toward real economy levels. Lock in long-term supplier agreements and renegotiate pricing while leverage is on your side.",
+    actionLabel: "Lock In Supplier Terms",
+    actionPath: "/rfq-generation",
+    urgency: 'medium',
+    accentClass: "border-blue-500/30 bg-blue-500/5",
+  },
+};
+
 export default function Dashboard() {
   const { toast } = useToast();
   const { user, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
 
+  // Regime change banner state (persists until dismissed)
+  const [regimeChangeBanner, setRegimeChangeBanner] = useState<{
+    from: string; to: string; fdr: string; date: string;
+  } | null>(null);
+
   // Enable WebSocket for real-time updates with regime change notifications
   const { isConnected } = useWebSocket((message) => {
     if (message.type === 'regime_change' && message.data) {
-      const severity = message.data.severity === 'high' ? 'destructive' : 'default';
-      
+      const fdrStr = Number.isFinite(Number(message.data.fdr)) ? Number(message.data.fdr).toFixed(2) : '—';
+      setRegimeChangeBanner({
+        from: message.data.from,
+        to: message.data.to,
+        fdr: fdrStr,
+        date: new Date().toLocaleDateString(),
+      });
+      // Also show a brief toast for immediate visibility
       toast({
-        title: "Economic Regime Changed",
-        description: `The economic regime has shifted from ${message.data.from} to ${message.data.to}. FDR: ${Number.isFinite(Number(message.data.fdr)) ? Number(message.data.fdr).toFixed(2) : '—'}`,
-        variant: severity as 'default' | 'destructive',
-        duration: 10000, // Show for 10 seconds
+        title: "Economic Regime Shifted",
+        description: `${message.data.from.replace(/_/g, ' ')} → ${message.data.to.replace(/_/g, ' ')}. Dashboard updated with new procurement strategy.`,
+        variant: message.data.severity === 'high' ? 'destructive' : 'default',
+        duration: 6000,
       });
     }
   });
@@ -338,17 +392,81 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="mb-16">
+      {/* Regime Change Banner — appears when WebSocket fires a regime_change event */}
+      {regimeChangeBanner && (
+        <div className="mb-8 flex items-start gap-4 p-4 rounded-md border border-amber-500/40 bg-amber-500/8" data-testid="banner-regime-change">
+          <Zap className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+          <div className="flex-1 space-y-1">
+            <p className="text-sm font-semibold">Economic regime shifted on {regimeChangeBanner.date}</p>
+            <p className="text-xs text-muted-foreground">
+              <span className="font-medium">{regimeChangeBanner.from.replace(/_/g, ' ')}</span>
+              {' → '}
+              <span className="font-medium">{regimeChangeBanner.to.replace(/_/g, ' ')}</span>
+              {' '}(FDR: {regimeChangeBanner.fdr}). Your procurement strategy has been updated below.
+            </p>
+          </div>
+          <button
+            onClick={() => setRegimeChangeBanner(null)}
+            className="text-muted-foreground hover:text-foreground transition"
+            aria-label="Dismiss banner"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      <div className="mb-12">
         <div className="eyebrow mb-4">State of operations</div>
         <h1 className="hero text-5xl">{regime?.regime ? getRegimeDescription(regime.regime).split('.')[0] + '.' : 'Analyzing conditions.'}</h1>
         <p className="text-soft mt-5 max-w-xl leading-relaxed">
           {Array.isArray(skus) && skus.length > 0
-            ? `Tracking ${skus.length.toLocaleString()} SKU${skus.length === 1 ? '' : 's'}. ${regime?.regime === 'HEALTHY_EXPANSION' ? 'No critical exposures.' : 'Review current regime conditions.'}`
+            ? `Tracking ${skus.length.toLocaleString()} SKU${skus.length === 1 ? '' : 's'}.`
             : 'Add your first SKU to start tracking operations.'}
         </p>
+
+        {/* Regime-specific procurement guidance — the #1 action for this regime */}
+        {regimeType !== 'UNKNOWN' && regimeProcurementGuidance[regimeType] && (() => {
+          const guidance = regimeProcurementGuidance[regimeType];
+          return (
+            <div
+              className={`mt-6 p-5 rounded-md border ${guidance.accentClass} max-w-2xl`}
+              data-testid="card-regime-procurement-guidance"
+            >
+              <div className="flex items-start gap-3">
+                {guidance.urgency === 'high'
+                  ? <ShieldAlert className="h-5 w-5 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                  : <TrendingUp className="h-5 w-5 shrink-0 mt-0.5 text-primary" />
+                }
+                <div className="flex-1 space-y-2">
+                  <p className="font-semibold text-sm leading-snug">{guidance.headline}</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{guidance.detail}</p>
+                  <div className="flex items-center gap-3 pt-1">
+                    <button
+                      onClick={() => setLocation(guidance.actionPath)}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+                      data-testid="button-regime-action"
+                    >
+                      {guidance.actionLabel}
+                      <ArrowRight className="h-3 w-3" />
+                    </button>
+                    <span className="text-xs text-muted-foreground">
+                      FDR: <span className="font-mono font-semibold">{fdr.toFixed(2)}</span>
+                      {' '}— <span className="font-medium">{friendlyRegime}</span>
+                      {' '}regime
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
-      <div className="grid grid-cols-4 gap-px bg-line mb-20">
+      <div className={`grid grid-cols-4 gap-px bg-line mb-20 rounded-sm overflow-hidden ${
+        regimeType === 'ASSET_LED_GROWTH' ? 'ring-1 ring-amber-500/20' :
+        regimeType === 'IMBALANCED_EXCESS' ? 'ring-1 ring-red-500/20' :
+        regimeType === 'REAL_ECONOMY_LEAD' ? 'ring-1 ring-blue-500/20' : ''
+      }`}>
         <div className="bg-panel p-6">
           <div className="eyebrow mb-4">Regime</div>
           <div className="text-3xl display">{regime?.regime ? regime.regime.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase()).split(' ').slice(0, 2).join(' ') : '—'}</div>

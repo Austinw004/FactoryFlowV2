@@ -1,8 +1,10 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Activity, ShieldCheck, AlertTriangle, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Activity, ShieldCheck, AlertTriangle, TrendingUp, TrendingDown, Minus, ArrowRight, Lock, TrendingDown as DeferIcon, ShieldOff, Handshake } from "lucide-react";
 import { InfoTooltip } from "@/components/InfoTooltip";
+import { useLocation } from "wouter";
 
 type Regime = "HEALTHY_EXPANSION" | "ASSET_LED_GROWTH" | "IMBALANCED_EXCESS" | "REAL_ECONOMY_LEAD";
 
@@ -47,30 +49,91 @@ interface RegimeStatusProps {
   };
 }
 
-const regimeConfig: Record<Regime, { label: string; description: string; thresholdRange: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+const regimeConfig: Record<Regime, {
+  label: string;
+  description: string;
+  thresholdRange: string;
+  variant: "default" | "secondary" | "destructive" | "outline";
+  procurementAction: {
+    title: string;
+    bullets: string[];
+    actionLabel: string;
+    actionPath: string;
+    Icon: any;
+    accentClass: string;
+  };
+}> = {
   HEALTHY_EXPANSION: {
     label: "Healthy Expansion",
     description: "Balanced growth. Standard procurement pace.",
     thresholdRange: "FDR < 1.2",
     variant: "default",
+    procurementAction: {
+      title: "Negotiation window: establish long-term contracts now.",
+      bullets: [
+        "Market equilibrium reduces supplier leverage — push for fixed-price agreements",
+        "Extend contract terms (12–24 months) before conditions tighten",
+        "Standard reorder cadence is appropriate — no urgency to pre-buy",
+      ],
+      actionLabel: "Review Supplier Contracts",
+      actionPath: "/multi-tier-mapping",
+      Icon: Handshake,
+      accentClass: "border-green-500/20 bg-green-500/5 text-green-700 dark:text-green-400",
+    },
   },
   ASSET_LED_GROWTH: {
     label: "Asset-Led Growth",
-    description: "Assets outpacing real economy. Consider accelerating procurement.",
+    description: "Assets outpacing real economy. Lock in contracts before prices climb.",
     thresholdRange: "FDR 1.2 - 1.8",
     variant: "secondary",
+    procurementAction: {
+      title: "Action required: lock in contracts before Q3 pricing cycle.",
+      bullets: [
+        "Input costs historically rise 8–12% during this regime — buy ahead",
+        "Pre-purchase critical materials with 3–6 month supply buffer",
+        "Accelerate any pending RFQs — delay costs more each week",
+      ],
+      actionLabel: "Start Contract Negotiations",
+      actionPath: "/rfq-generation",
+      Icon: Lock,
+      accentClass: "border-amber-500/30 bg-amber-500/5 text-amber-700 dark:text-amber-400",
+    },
   },
   IMBALANCED_EXCESS: {
     label: "Imbalanced Excess",
-    description: "Significant asset-real economy gap. Defer non-critical purchases.",
+    description: "Significant decoupling detected. Defer purchases. Renegotiate contracts.",
     thresholdRange: "FDR 1.8 - 2.5",
     variant: "destructive",
+    procurementAction: {
+      title: "Defer non-critical purchases. Every dollar spent now is overpaying.",
+      bullets: [
+        "Hold all non-critical purchase orders pending market correction",
+        "Build safety stock on business-critical materials only",
+        "Renegotiate any contracts expiring in the next 90 days",
+      ],
+      actionLabel: "Review Pending Orders",
+      actionPath: "/procurement",
+      Icon: DeferIcon,
+      accentClass: "border-red-500/30 bg-red-500/5 text-red-700 dark:text-red-400",
+    },
   },
   REAL_ECONOMY_LEAD: {
     label: "Real Economy Lead",
-    description: "Counter-cyclical opportunity. Lock in favorable pricing.",
+    description: "Counter-cyclical window open. Favorable terms available now.",
     thresholdRange: "FDR > 2.5",
     variant: "default",
+    procurementAction: {
+      title: "Buyer's market: lock in long-term agreements while leverage is yours.",
+      bullets: [
+        "Suppliers are under pricing pressure — renegotiate rates aggressively",
+        "Extend contract durations while you have favorable positioning",
+        "Consider increasing safety stock at current favorable prices",
+      ],
+      actionLabel: "Lock In Supplier Terms",
+      actionPath: "/rfq-generation",
+      Icon: TrendingUp,
+      accentClass: "border-blue-500/30 bg-blue-500/5 text-blue-700 dark:text-blue-400",
+    },
   },
 };
 
@@ -92,6 +155,7 @@ function ConfidenceBar({ label, value, testId, tooltip }: { label: string; value
 }
 
 export function RegimeStatus({ regime, fdr: fdrProp, intensity, regimeEvidence, intelligence }: RegimeStatusProps) {
+  const [, setLocation] = useLocation();
   const fdr = Number.isFinite(Number(fdrProp)) ? Number(fdrProp) : 1.0;
   const config = regimeConfig[regime] || regimeConfig.HEALTHY_EXPANSION;
   const confidence = intelligence?.confidence || regimeEvidence?.confidence;
@@ -183,6 +247,40 @@ export function RegimeStatus({ regime, fdr: fdrProp, intensity, regimeEvidence, 
             </span>
           </div>
         )}
+
+        {/* Procurement Action Section — what to DO given this regime */}
+        {(() => {
+          const pa = config.procurementAction;
+          const ActionIcon = pa.Icon;
+          return (
+            <div className={`mt-2 p-4 rounded-md border ${pa.accentClass}`} data-testid="card-regime-procurement-action">
+              <div className="flex items-start gap-3">
+                <ActionIcon className="h-4 w-4 shrink-0 mt-0.5" />
+                <div className="flex-1 space-y-2">
+                  <p className="text-sm font-semibold">{pa.title}</p>
+                  <ul className="space-y-1">
+                    {pa.bullets.map((bullet, i) => (
+                      <li key={i} className="text-xs flex items-start gap-1.5">
+                        <span className="w-1 h-1 rounded-full bg-current mt-1.5 shrink-0 opacity-60" />
+                        {bullet}
+                      </li>
+                    ))}
+                  </ul>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs gap-1 -ml-2 mt-1"
+                    onClick={() => setLocation(pa.actionPath)}
+                    data-testid="button-regime-procurement-action"
+                  >
+                    {pa.actionLabel}
+                    <ArrowRight className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </Card>
   );
