@@ -49,32 +49,29 @@ export default function PredictiveMaintenance() {
   const { toast } = useToast();
   const [openSensorDialog, setOpenSensorDialog] = useState(false);
 
-  const { data: sensors = [], isLoading: sensorsLoading } = useQuery({
+  const { data: sensors = [] as any[], isLoading: sensorsLoading } = useQuery<any[]>({
     queryKey: ["/api/predictive-maintenance/sensors"],
   });
 
-  const { data: alerts = [], isLoading: alertsLoading } = useQuery({
+  const { data: alerts = [] as any[], isLoading: alertsLoading } = useQuery<any[]>({
     queryKey: ["/api/predictive-maintenance/alerts"],
   });
 
-  const { data: predictions = [], isLoading: predictionsLoading } = useQuery({
+  const { data: predictions = [] as any[], isLoading: predictionsLoading } = useQuery<any[]>({
     queryKey: ["/api/predictive-maintenance/predictions"],
   });
 
-  const { data: machinery = [] } = useQuery({
+  const { data: machinery = [] as any[] } = useQuery<any[]>({
     queryKey: ["/api/machinery"],
   });
 
-  const { data: regime } = useQuery({
+  const { data: regime } = useQuery<any>({
     queryKey: ["/api/economics/regime"],
   });
 
   const createSensorMutation = useMutation({
-    mutationFn: async (data: any) => 
-      apiRequest("/api/predictive-maintenance/sensors", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
+    mutationFn: async (data: any) =>
+      apiRequest("POST", "/api/predictive-maintenance/sensors", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/predictive-maintenance/sensors"] });
       toast({ title: "Sensor created successfully" });
@@ -89,10 +86,8 @@ export default function PredictiveMaintenance() {
   });
 
   const acknowledgeAlertMutation = useMutation({
-    mutationFn: async (alertId: string) => 
-      apiRequest(`/api/predictive-maintenance/alerts/${alertId}/acknowledge`, {
-        method: "PATCH",
-      }),
+    mutationFn: async (alertId: string) =>
+      apiRequest("PATCH", `/api/predictive-maintenance/alerts/${alertId}/acknowledge`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/predictive-maintenance/alerts"] });
       toast({ title: "Alert acknowledged" });
@@ -100,10 +95,8 @@ export default function PredictiveMaintenance() {
   });
 
   const resolveAlertMutation = useMutation({
-    mutationFn: async (alertId: string) => 
-      apiRequest(`/api/predictive-maintenance/alerts/${alertId}/resolve`, {
-        method: "PATCH",
-      }),
+    mutationFn: async (alertId: string) =>
+      apiRequest("PATCH", `/api/predictive-maintenance/alerts/${alertId}/resolve`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/predictive-maintenance/alerts"] });
       toast({ title: "Alert resolved" });
@@ -136,7 +129,7 @@ export default function PredictiveMaintenance() {
       low: { variant: "secondary" as const, label: "Low" },
     };
     const c = config[severity as keyof typeof config] || config.medium;
-    return <Badge variant={c.variant} className={c.className}>{c.label}</Badge>;
+    return <Badge variant={c.variant} className={(c as any).className}>{c.label}</Badge>;
   };
 
   const getRegimeBadge = (regimeName: string) => {
