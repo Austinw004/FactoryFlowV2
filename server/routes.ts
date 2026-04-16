@@ -113,6 +113,11 @@ import {
   predictionOutcomes,
   insertPredictionOutcomeSchema,
   automationSafeMode,
+  insertComplianceDocumentSchema,
+  insertComplianceRegulationSchema,
+  insertComplianceAuditSchema,
+  insertAuditFindingSchema,
+  updateAuditFindingSchema,
 } from "@shared/schema";
 
 const economics = new DualCircuitEconomics();
@@ -4401,7 +4406,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create compliance document
-  app.post("/api/compliance/documents", isAuthenticated, async (req: any, res) => {
+  app.post("/api/compliance/documents", isAuthenticated, validateBody(insertComplianceDocumentSchema.omit({ id: true, companyId: true, createdBy: true, economicRegimeContext: true, createdAt: true, updatedAt: true })), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4411,9 +4416,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get current economic regime for context
       await economics.fetch();
-      
+
       const document = await storage.createComplianceDocument({
-        ...req.body,
+        ...req.validated as any,
         companyId: user.companyId,
         createdBy: user.id,
         economicRegimeContext: economics.regime,
@@ -4444,7 +4449,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create compliance regulation
-  app.post("/api/compliance/regulations", isAuthenticated, async (req: any, res) => {
+  app.post("/api/compliance/regulations", isAuthenticated, validateBody(insertComplianceRegulationSchema.omit({ id: true, companyId: true, createdAt: true, updatedAt: true })), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4453,7 +4458,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const regulation = await storage.createComplianceRegulation({
-        ...req.body,
+        ...req.validated as any,
         companyId: user.companyId,
       });
       
@@ -4482,7 +4487,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create compliance audit
-  app.post("/api/compliance/audits", isAuthenticated, async (req: any, res) => {
+  app.post("/api/compliance/audits", isAuthenticated, validateBody(insertComplianceAuditSchema.omit({ id: true, companyId: true, economicRegime: true, fdrAtAudit: true, createdAt: true, updatedAt: true })), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4492,9 +4497,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get current economic regime and FDR
       await economics.fetch();
-      
+
       const audit = await storage.createComplianceAudit({
-        ...req.body,
+        ...req.validated as any,
         companyId: user.companyId,
         economicRegime: economics.regime,
         fdrAtAudit: economics.fdr,
@@ -4529,7 +4534,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create audit finding
-  app.post("/api/compliance/findings", isAuthenticated, async (req: any, res) => {
+  app.post("/api/compliance/findings", isAuthenticated, validateBody(insertAuditFindingSchema.omit({ companyId: true })), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4538,7 +4543,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const finding = await storage.createAuditFinding({
-        ...req.body,
+        ...req.validated as any,
         companyId: user.companyId,
       });
       
@@ -4550,7 +4555,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update audit finding
-  app.patch("/api/compliance/findings/:id", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/compliance/findings/:id", isAuthenticated, validateBody(updateAuditFindingSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4558,7 +4563,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "User must be associated with a company" });
       }
 
-      const finding = await storage.updateAuditFinding(req.params.id, req.body);
+      const finding = await storage.updateAuditFinding(req.params.id, req.validated as any);
       if (!finding) {
         return res.status(404).json({ error: "Finding not found" });
       }
