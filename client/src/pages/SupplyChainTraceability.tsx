@@ -49,36 +49,33 @@ export default function SupplyChainTraceability() {
   const [openBatchDialog, setOpenBatchDialog] = useState(false);
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
 
-  const { data: batches = [], isLoading: batchesLoading } = useQuery({
+  const { data: batches = [], isLoading: batchesLoading } = useQuery<any[]>({
     queryKey: ["/api/traceability/batches"],
   });
 
-  const { data: events = [], isLoading: eventsLoading } = useQuery({
+  const { data: events = [], isLoading: eventsLoading } = useQuery<any[]>({
     queryKey: ["/api/traceability/events"],
   });
 
-  const { data: chainLinks = [], isLoading: linksLoading } = useQuery({
+  const { data: chainLinks = [], isLoading: linksLoading } = useQuery<any[]>({
     queryKey: ["/api/traceability/chain-links"],
   });
 
-  const { data: materials = [] } = useQuery({
+  const { data: materials = [] } = useQuery<any[]>({
     queryKey: ["/api/materials"],
   });
 
-  const { data: suppliers = [] } = useQuery({
+  const { data: suppliers = [] } = useQuery<any[]>({
     queryKey: ["/api/suppliers"],
   });
 
-  const { data: regime } = useQuery({
+  const { data: regime } = useQuery<{ regime: string; fdr: number } | null>({
     queryKey: ["/api/economics/regime"],
   });
 
   const createBatchMutation = useMutation({
-    mutationFn: async (data: any) => 
-      apiRequest("/api/traceability/batches", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
+    mutationFn: async (data: any) =>
+      apiRequest("POST", "/api/traceability/batches", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/traceability/batches"] });
       toast({ title: "Batch created successfully" });
@@ -110,24 +107,24 @@ export default function SupplyChainTraceability() {
   };
 
   const getQualityBadge = (status: string) => {
-    const config = {
-      approved: { variant: "default" as const, className: "bg-green-600", label: "Approved" },
-      pending: { variant: "default" as const, className: "bg-yellow-600", label: "Pending" },
-      rejected: { variant: "destructive" as const, label: "Rejected" },
-      quarantine: { variant: "destructive" as const, className: "bg-orange-600", label: "Quarantine" },
+    const config: Record<string, { variant: "default" | "destructive"; className?: string; label: string }> = {
+      approved: { variant: "default", className: "bg-green-600", label: "Approved" },
+      pending: { variant: "default", className: "bg-yellow-600", label: "Pending" },
+      rejected: { variant: "destructive", label: "Rejected" },
+      quarantine: { variant: "destructive", className: "bg-orange-600", label: "Quarantine" },
     };
-    const c = config[status as keyof typeof config] || config.pending;
+    const c = config[status] || config.pending;
     return <Badge variant={c.variant} className={c.className}>{c.label}</Badge>;
   };
 
   const getRiskBadge = (risk: string) => {
-    const config = {
-      low: { variant: "default" as const, className: "bg-green-600", label: "Low Risk" },
-      medium: { variant: "default" as const, className: "bg-yellow-600", label: "Medium Risk" },
-      high: { variant: "destructive" as const, className: "bg-orange-600", label: "High Risk" },
-      critical: { variant: "destructive" as const, label: "Critical Risk" },
+    const config: Record<string, { variant: "default" | "destructive"; className?: string; label: string }> = {
+      low: { variant: "default", className: "bg-green-600", label: "Low Risk" },
+      medium: { variant: "default", className: "bg-yellow-600", label: "Medium Risk" },
+      high: { variant: "destructive", className: "bg-orange-600", label: "High Risk" },
+      critical: { variant: "destructive", label: "Critical Risk" },
     };
-    const c = config[risk as keyof typeof config] || config.medium;
+    const c = config[risk] || config.medium;
     return <Badge variant={c.variant} className={c.className}>{c.label}</Badge>;
   };
 

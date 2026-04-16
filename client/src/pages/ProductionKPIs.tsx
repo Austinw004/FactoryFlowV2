@@ -46,12 +46,12 @@ export default function ProductionKPIs() {
   const [openRunDialog, setOpenRunDialog] = useState(false);
 
   // Fetch production runs
-  const { data: productionRuns = [], isLoading: runsLoading } = useQuery({
+  const { data: productionRuns = [], isLoading: runsLoading } = useQuery<any[]>({
     queryKey: ["/api/production/runs"],
   });
 
   // Fetch current regime
-  const { data: regime } = useQuery({
+  const { data: regime } = useQuery<{ regime: string; fdr: number } | null>({
     queryKey: ["/api/economics/regime"],
   });
 

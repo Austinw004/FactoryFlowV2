@@ -58,23 +58,23 @@ export default function SupplyChain() {
   const [selectedNode, setSelectedNode] = useState<SupplierNode | null>(null);
 
   // Traceability Queries
-  const { data: batches = [], isLoading: batchesLoading } = useQuery({
+  const { data: batches = [], isLoading: batchesLoading } = useQuery<any[]>({
     queryKey: ["/api/traceability/batches"],
   });
 
-  const { data: events = [], isLoading: eventsLoading } = useQuery({
+  const { data: events = [], isLoading: eventsLoading } = useQuery<any[]>({
     queryKey: ["/api/traceability/events"],
   });
 
-  const { data: chainLinks = [], isLoading: linksLoading } = useQuery({
+  const { data: chainLinks = [], isLoading: linksLoading } = useQuery<any[]>({
     queryKey: ["/api/traceability/chain-links"],
   });
 
-  const { data: materials = [] } = useQuery({
+  const { data: materials = [] } = useQuery<any[]>({
     queryKey: ["/api/materials"],
   });
 
-  const { data: suppliers = [] } = useQuery({
+  const { data: suppliers = [] } = useQuery<any[]>({
     queryKey: ["/api/suppliers"],
   });
 
