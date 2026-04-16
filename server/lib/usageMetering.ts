@@ -446,5 +446,3 @@ export function formatMeteringCost(costCents: number): string {
   return `$${(costCents / 100).toFixed(2)}`;
 }
 
-// Export types
-export type { DailySkuCountSnapshot, MeteringResult };

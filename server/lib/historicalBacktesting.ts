@@ -1,7 +1,7 @@
 import type { IStorage } from "../storage";
 import { RealHistoricalDataFetcher } from "./realHistoricalData";
 
-interface HistoricalDataPoint {
+export interface HistoricalDataPoint {
   date: Date;
   fdr: number;
   regime: string;

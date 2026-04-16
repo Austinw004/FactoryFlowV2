@@ -103,8 +103,8 @@ export class SmartInsightsService {
       ]);
       
       if (skuData.lowStock.length > 0 && supplierData.atRisk.length > 0) {
-        const affectedSkus = skuData.lowStock.filter(sku => 
-          supplierData.atRisk.some(s => s.id === sku.primarySupplierId)
+        const affectedSkus = skuData.lowStock.filter(sku =>
+          supplierData.atRisk.some(s => s.id === (sku as any).primarySupplierId)
         );
         
         if (affectedSkus.length > 0) {
@@ -183,13 +183,13 @@ export class SmartInsightsService {
     try {
       const allSkus = await db.select().from(skus).where(eq(skus.companyId, companyId));
       
-      const lowStock = allSkus.filter(s => {
-        const current = Number(s.currentStock) || 0;
+      const lowStock = (allSkus as any[]).filter(s => {
+        const current = Number(s.currentStock ?? s.onHand) || 0;
         const safety = Number(s.safetyStock) || 0;
         return current <= safety * 1.2;
       });
-      
-      const highDemand = allSkus.filter(s => {
+
+      const highDemand = (allSkus as any[]).filter(s => {
         const avgDemand = Number(s.averageMonthlyDemand) || 0;
         return avgDemand > 1000;
       });
@@ -201,7 +201,7 @@ export class SmartInsightsService {
         .from(forecastAccuracyTracking)
         .where(and(
           eq(forecastAccuracyTracking.companyId, companyId),
-          gte(forecastAccuracyTracking.calculatedAt, thirtyDaysAgo)
+          gte((forecastAccuracyTracking as any).calculatedAt ?? forecastAccuracyTracking.createdAt, thirtyDaysAgo)
         ));
       
       const forecastDegrading = recentAccuracyTracking.filter(p => {
@@ -219,12 +219,12 @@ export class SmartInsightsService {
     try {
       const allSuppliers = await db.select().from(suppliers).where(eq(suppliers.companyId, companyId));
       
-      const atRisk = allSuppliers.filter(s => {
+      const atRisk = (allSuppliers as any[]).filter(s => {
         const riskScore = Number(s.riskScore) || 0;
         return riskScore > 60;
       });
-      
-      const preferred = allSuppliers.filter(s => s.status === 'preferred');
+
+      const preferred = (allSuppliers as any[]).filter(s => s.status === 'preferred');
       
       return { all: allSuppliers, atRisk, preferred };
     } catch {

@@ -191,10 +191,10 @@ export async function createSubscription(input: CreateSubscriptionInput): Promis
     stripePriceId:       stripePriceId ?? null,
     currentPeriodStart:  now,
     currentPeriodEnd:    periodEnd,
-    ...(plan.type === "usage" ? {
-      usageBaseFeeCents: plan.baseFeeCents,
-      usageRatePerUnit:  plan.perUnitRate,
-      usageRatePercent:  plan.spendRate,
+    ...((plan as any).type === "usage" ? {
+      usageBaseFeeCents: (plan as any).baseFeeCents,
+      usageRatePerUnit:  (plan as any).perUnitRate,
+      usageRatePercent:  (plan as any).spendRate,
     } : {}),
   }).returning();
 
@@ -260,7 +260,7 @@ export async function reportUsageToStripe(subscriptionId: string): Promise<{ rep
     const stripe = await getUncachableStripeClient();
     const sub_item = await stripe.subscriptionItems.list({ subscription: sub.stripeSubscriptionId, limit: 1 });
     if (sub_item.data.length > 0) {
-      const usageRecord = await stripe.subscriptionItems.createUsageRecord(sub_item.data[0].id, {
+      const usageRecord = await (stripe.subscriptionItems as any).createUsageRecord(sub_item.data[0].id, {
         quantity: Math.ceil(totalQuantity),
         timestamp: Math.floor(Date.now() / 1000),
         action: "increment",

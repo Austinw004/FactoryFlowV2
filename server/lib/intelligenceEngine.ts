@@ -106,8 +106,8 @@ async function analyzeInventory(companyId: string): Promise<Insight[]> {
       .where(eq(materials.companyId, companyId))
       .limit(200);
 
-    for (const mat of materialList) {
-      const qty = Number(mat.currentStock) || 0;
+    for (const mat of materialList as any[]) {
+      const qty = Number(mat.currentStock ?? mat.onHand) || 0;
       const reorder = Number(mat.reorderPoint) || 0;
       const safetyStock = Number(mat.safetyStock) || 0;
 
@@ -186,7 +186,7 @@ async function analyzeProduction(companyId: string): Promise<Insight[]> {
   try {
     const recentMetrics = await db.select().from(productionMetrics)
       .where(eq(productionMetrics.companyId, companyId))
-      .orderBy(desc(productionMetrics.recordedAt))
+      .orderBy(desc((productionMetrics as any).recordedAt ?? productionMetrics.createdAt))
       .limit(100);
 
     if (recentMetrics.length < 5) return insights;
@@ -238,7 +238,7 @@ async function analyzeProduction(companyId: string): Promise<Insight[]> {
 
     // Defect rate analysis
     const defectRates = recentMetrics
-      .map(m => Number(m.defectRate) || 0)
+      .map(m => Number((m as any).defectRate) || 0)
       .filter(v => v >= 0);
 
     if (defectRates.length >= 5) {
@@ -281,7 +281,7 @@ async function analyzeMaintenance(companyId: string): Promise<Insight[]> {
       .where(eq(machinery.companyId, companyId))
       .limit(100);
 
-    for (const machine of machineList) {
+    for (const machine of machineList as any[]) {
       const health = Number(machine.healthScore) || 100;
       const status = machine.status;
 
@@ -366,7 +366,7 @@ async function analyzeSuppliers(companyId: string): Promise<Insight[]> {
       .where(eq(suppliers.companyId, companyId))
       .limit(100);
 
-    for (const supplier of supplierList) {
+    for (const supplier of supplierList as any[]) {
       const reliability = Number(supplier.reliabilityScore) || 0;
       const riskLevel = supplier.riskLevel;
 
