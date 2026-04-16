@@ -88,7 +88,7 @@ export async function handleSamlCallback(
 
   // Domain restriction check
   if (!isDomainAllowed(email)) {
-    logger.warn("sso" as any, "SAML login rejected: domain not allowed", { email: "[REDACTED]", domain: getEmailDomain(email) });
+    logger.warn("sso" as any, "SAML login rejected: domain not allowed", { details: { email: "[REDACTED]", domain: getEmailDomain(email) } });
     throw Object.assign(new Error("Email domain not authorized for SSO access."), { code: "DOMAIN_NOT_ALLOWED", status: 403 });
   }
 
@@ -97,7 +97,7 @@ export async function handleSamlCallback(
   if (isStrict && assertion.rawXml) {
     const verified = verifySignatureStub(assertion.rawXml, assertion.idpEntityId);
     if (!verified) {
-      logger.error("sso" as any, "SAML signature verification failed — rejecting login", { idpEntityId: assertion.idpEntityId });
+      logger.error("sso" as any, "SAML signature verification failed — rejecting login", { details: { idpEntityId: assertion.idpEntityId } });
       throw Object.assign(new Error("SAML signature verification failed."), { code: "SAML_SIGNATURE_INVALID", status: 401 });
     }
   } else if (isStrict) {
@@ -112,8 +112,7 @@ export async function handleSamlCallback(
   // Emit audit log
   logger.info("sso" as any, isNewUser ? "SSO user provisioned" : "SSO user logged in", {
     userId: user.id,
-    authSource: "saml",
-    ipAddress: ipAddress ? "[REDACTED]" : null,
+    details: { authSource: "saml", ipAddress: ipAddress ? "[REDACTED]" : null },
   });
 
   const tokenBase = { sub: user.id, email: user.email, role: user.role, companyId: user.companyId };
@@ -167,11 +166,11 @@ export async function handleGoogleAuth(input: {
     name = payload.name;
     authSource = "google-oauth";
 
-    logger.info("sso" as any, "Google OAuth code exchanged successfully", { email: "[REDACTED]" });
+    logger.info("sso" as any, "Google OAuth code exchanged successfully", { details: { email: "[REDACTED]" } });
   } else if (!hasOAuth && input.email) {
     // ── Simulated SSO (no OAuth credentials) ─────────────────────────────
     // EXPLICITLY marked as simulated — not for production use.
-    logger.warn("sso" as any, "Google OAuth SIMULATED (no GOOGLE_CLIENT_ID configured)", { email: "[REDACTED]" });
+    logger.warn("sso" as any, "Google OAuth SIMULATED (no GOOGLE_CLIENT_ID configured)", { details: { email: "[REDACTED]" } });
     email     = input.email;
     googleId  = input.googleId ?? crypto.createHash("sha256").update(email).digest("hex");
     name      = input.name;
@@ -190,7 +189,7 @@ export async function handleGoogleAuth(input: {
   const { user, isNewUser } = await provisionSsoUser({ email, name, googleId });
 
   logger.info("sso" as any, isNewUser ? "Google user provisioned" : "Google user logged in", {
-    userId: user.id, authSource, ipAddress: ipAddress ? "[REDACTED]" : null,
+    userId: user.id, details: { authSource, ipAddress: ipAddress ? "[REDACTED]" : null },
   });
 
   const tokenBase = { sub: user.id, email: user.email, role: user.role, companyId: user.companyId };
@@ -236,7 +235,7 @@ async function provisionSsoUser(input: {
     googleId:  input.googleId ?? null,
   }).returning();
 
-  logger.info("sso" as any, "SSO user auto-provisioned", { userId: newUser.id, role });
+  logger.info("sso" as any, "SSO user auto-provisioned", { userId: newUser.id, details: { role } });
   return { user: newUser, isNewUser: true };
 }
 
@@ -247,6 +246,6 @@ async function provisionSsoUser(input: {
 function verifySignatureStub(rawXml: string, idpEntityId?: string): boolean {
   // EXPLICITLY STUBBED — requires IDP certificate and samlify/node-saml integration
   // Return false to force rejection in strict mode.
-  logger.warn("sso" as any, "SAML signature verification is STUBBED — returns false", { idpEntityId });
+  logger.warn("sso" as any, "SAML signature verification is STUBBED — returns false", { details: { idpEntityId } });
   return false;
 }

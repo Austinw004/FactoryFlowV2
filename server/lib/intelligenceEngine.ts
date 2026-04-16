@@ -107,9 +107,9 @@ async function analyzeInventory(companyId: string): Promise<Insight[]> {
       .limit(200);
 
     for (const mat of materialList) {
-      const qty = Number(mat.currentStock) || 0;
-      const reorder = Number(mat.reorderPoint) || 0;
-      const safetyStock = Number(mat.safetyStock) || 0;
+      const qty = Number((mat as any).currentStock) || 0;
+      const reorder = Number((mat as any).reorderPoint) || 0;
+      const safetyStock = Number((mat as any).safetyStock) || 0;
 
       // Critical: below safety stock
       if (safetyStock > 0 && qty <= safetyStock) {
@@ -118,7 +118,7 @@ async function analyzeInventory(companyId: string): Promise<Insight[]> {
           type: "alert",
           severity: "critical",
           category: "inventory",
-          title: `${mat.name || mat.materialName || "Material"} below safety stock`,
+          title: `${mat.name || (mat as any).materialName || "Material"} below safety stock`,
           description: `Current stock (${qty}) is at or below safety stock level (${safetyStock}). Risk of production disruption.`,
           metric: "stock_level",
           currentValue: qty,
@@ -127,7 +127,7 @@ async function analyzeInventory(companyId: string): Promise<Insight[]> {
           recommendation: `Expedite procurement for ${mat.name || "this material"}. Consider emergency sourcing if lead time exceeds 3 days.`,
           entityType: "material",
           entityId: mat.id,
-          entityName: mat.name || mat.materialName || undefined,
+          entityName: mat.name || (mat as any).materialName || undefined,
           timestamp: now,
         });
       }
@@ -138,7 +138,7 @@ async function analyzeInventory(companyId: string): Promise<Insight[]> {
           type: "alert",
           severity: "warning",
           category: "inventory",
-          title: `${mat.name || mat.materialName || "Material"} at reorder point`,
+          title: `${mat.name || (mat as any).materialName || "Material"} at reorder point`,
           description: `Current stock (${qty}) has reached the reorder point (${reorder}). Standard replenishment should be initiated.`,
           metric: "stock_level",
           currentValue: qty,
@@ -146,20 +146,20 @@ async function analyzeInventory(companyId: string): Promise<Insight[]> {
           recommendation: `Place standard replenishment order. Estimated ${Math.ceil((reorder - qty) / (reorder * 0.1))} days until safety stock is reached.`,
           entityType: "material",
           entityId: mat.id,
-          entityName: mat.name || mat.materialName || undefined,
+          entityName: mat.name || (mat as any).materialName || undefined,
           timestamp: now,
         });
       }
 
       // Overstock detection
-      const maxStock = Number(mat.maxStock) || 0;
+      const maxStock = Number((mat as any).maxStock) || 0;
       if (maxStock > 0 && qty > maxStock * 1.2) {
         insights.push({
           id: `inv-overstock-${mat.id}`,
           type: "anomaly",
           severity: "info",
           category: "inventory",
-          title: `${mat.name || mat.materialName || "Material"} overstocked`,
+          title: `${mat.name || (mat as any).materialName || "Material"} overstocked`,
           description: `Current stock (${qty}) exceeds maximum level (${maxStock}) by ${Math.round(((qty - maxStock) / maxStock) * 100)}%.`,
           metric: "stock_level",
           currentValue: qty,
@@ -167,7 +167,7 @@ async function analyzeInventory(companyId: string): Promise<Insight[]> {
           recommendation: `Review demand forecasts. Consider reducing next order quantity or exploring spot-sale opportunities.`,
           entityType: "material",
           entityId: mat.id,
-          entityName: mat.name || mat.materialName || undefined,
+          entityName: mat.name || (mat as any).materialName || undefined,
           timestamp: now,
         });
       }
@@ -186,7 +186,7 @@ async function analyzeProduction(companyId: string): Promise<Insight[]> {
   try {
     const recentMetrics = await db.select().from(productionMetrics)
       .where(eq(productionMetrics.companyId, companyId))
-      .orderBy(desc(productionMetrics.recordedAt))
+      .orderBy(desc((productionMetrics as any).recordedAt))
       .limit(100);
 
     if (recentMetrics.length < 5) return insights;
@@ -238,7 +238,7 @@ async function analyzeProduction(companyId: string): Promise<Insight[]> {
 
     // Defect rate analysis
     const defectRates = recentMetrics
-      .map(m => Number(m.defectRate) || 0)
+      .map(m => Number((m as any).defectRate) || 0)
       .filter(v => v >= 0);
 
     if (defectRates.length >= 5) {
@@ -282,7 +282,7 @@ async function analyzeMaintenance(companyId: string): Promise<Insight[]> {
       .limit(100);
 
     for (const machine of machineList) {
-      const health = Number(machine.healthScore) || 100;
+      const health = Number((machine as any).healthScore) || 100;
       const status = machine.status;
 
       if (health < 50) {
@@ -367,8 +367,8 @@ async function analyzeSuppliers(companyId: string): Promise<Insight[]> {
       .limit(100);
 
     for (const supplier of supplierList) {
-      const reliability = Number(supplier.reliabilityScore) || 0;
-      const riskLevel = supplier.riskLevel;
+      const reliability = Number((supplier as any).reliabilityScore) || 0;
+      const riskLevel = (supplier as any).riskLevel;
 
       if (reliability > 0 && reliability < 70) {
         insights.push({

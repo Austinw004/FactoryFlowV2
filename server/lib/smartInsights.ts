@@ -104,7 +104,7 @@ export class SmartInsightsService {
       
       if (skuData.lowStock.length > 0 && supplierData.atRisk.length > 0) {
         const affectedSkus = skuData.lowStock.filter(sku => 
-          supplierData.atRisk.some(s => s.id === sku.primarySupplierId)
+          supplierData.atRisk.some(s => s.id === (sku as any).primarySupplierId)
         );
         
         if (affectedSkus.length > 0) {
@@ -184,13 +184,13 @@ export class SmartInsightsService {
       const allSkus = await db.select().from(skus).where(eq(skus.companyId, companyId));
       
       const lowStock = allSkus.filter(s => {
-        const current = Number(s.currentStock) || 0;
-        const safety = Number(s.safetyStock) || 0;
+        const current = Number((s as any).currentStock) || 0;
+        const safety = Number((s as any).safetyStock) || 0;
         return current <= safety * 1.2;
       });
-      
+
       const highDemand = allSkus.filter(s => {
-        const avgDemand = Number(s.averageMonthlyDemand) || 0;
+        const avgDemand = Number((s as any).averageMonthlyDemand) || 0;
         return avgDemand > 1000;
       });
       
@@ -201,7 +201,7 @@ export class SmartInsightsService {
         .from(forecastAccuracyTracking)
         .where(and(
           eq(forecastAccuracyTracking.companyId, companyId),
-          gte(forecastAccuracyTracking.calculatedAt, thirtyDaysAgo)
+          gte((forecastAccuracyTracking as any).calculatedAt, thirtyDaysAgo)
         ));
       
       const forecastDegrading = recentAccuracyTracking.filter(p => {
@@ -220,11 +220,11 @@ export class SmartInsightsService {
       const allSuppliers = await db.select().from(suppliers).where(eq(suppliers.companyId, companyId));
       
       const atRisk = allSuppliers.filter(s => {
-        const riskScore = Number(s.riskScore) || 0;
+        const riskScore = Number((s as any).riskScore) || 0;
         return riskScore > 60;
       });
-      
-      const preferred = allSuppliers.filter(s => s.status === 'preferred');
+
+      const preferred = allSuppliers.filter(s => (s as any).status === 'preferred');
       
       return { all: allSuppliers, atRisk, preferred };
     } catch {

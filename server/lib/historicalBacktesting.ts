@@ -1,7 +1,7 @@
 import type { IStorage } from "../storage";
 import { RealHistoricalDataFetcher } from "./realHistoricalData";
 
-interface HistoricalDataPoint {
+export interface HistoricalDataPoint {
   date: Date;
   fdr: number;
   regime: string;
@@ -11,6 +11,7 @@ interface HistoricalDataPoint {
   unemployment?: number;
   sp500Index?: number;
   commodityPrices?: Record<string, number>; // {materialName: price}
+  commodityPrice?: number;
 }
 
 interface BacktestResult {

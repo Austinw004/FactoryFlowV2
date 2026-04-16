@@ -415,7 +415,7 @@ export async function updateCommodityPrices() {
     
     for (const companyId of companies) {
       const materials = await storage.getMaterials(companyId);
-      const materialCodes = materials.slice(0, 20).map(m => m.materialCode).filter(Boolean);
+      const materialCodes = materials.slice(0, 20).map(m => m.code).filter(Boolean);
       
       if (materialCodes.length === 0) continue;
       
@@ -423,8 +423,8 @@ export async function updateCommodityPrices() {
       const priceResult = await fetchCommodityPricesWithMeta(materialCodes);
       
       for (const material of materials.slice(0, 20)) {
-        const priceData = priceResult.prices.find(p => 
-          p.code === material.materialCode || p.material === material.materialCode
+        const priceData = priceResult.prices.find(p =>
+          p.code === material.code || p.material === material.code
         );
         
         if (!priceData) continue;
@@ -1063,7 +1063,7 @@ async function automationQueueWorkerJob() {
             }
 
             const currentSafeMode = await engine.getSafeMode(companyId);
-            const isSafeModeEnabled = currentSafeMode && (currentSafeMode.safeModeEnabled === 1 || currentSafeMode.isEnabled);
+            const isSafeModeEnabled = currentSafeMode && currentSafeMode.safeModeEnabled === 1;
 
             if (isSafeModeEnabled) {
               const highStakesTypes = ["create_po", "pause_orders", "adjust_safety_stock", "rebalance_inventory"];

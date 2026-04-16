@@ -123,7 +123,7 @@ export async function ensureStripeCustomer(userId: string, email: string, name?:
   });
 
   await db.update(users).set({ stripeCustomerId: customer.id, updatedAt: new Date() }).where(eq(users.id, userId));
-  logger.info("billing" as any, "Stripe customer created", { userId, customerId: customer.id });
+  logger.info("billing" as any, "Stripe customer created", { userId, details: { customerId: customer.id } });
   return customer.id;
 }
 
@@ -172,7 +172,7 @@ export async function createSubscription(input: CreateSubscriptionInput): Promis
     // Stripe price not configured — log and proceed with DB record only
     // (Production: create matching Stripe products/prices in dashboard first)
     logger.warn("billing" as any, "stripePriceId not provided — subscription recorded in DB only", {
-      userId: input.userId, planId: input.planId
+      userId: input.userId, details: { planId: input.planId }
     });
   }
 
@@ -193,12 +193,12 @@ export async function createSubscription(input: CreateSubscriptionInput): Promis
     currentPeriodEnd:    periodEnd,
     ...(plan.type === "usage" ? {
       usageBaseFeeCents: plan.baseFeeCents,
-      usageRatePerUnit:  plan.perUnitRate,
-      usageRatePercent:  plan.spendRate,
+      usageRatePerUnit:  (plan as any).overageRate ?? null,
+      usageRatePercent:  (plan as any).spendRate ?? null,
     } : {}),
   }).returning();
 
-  logger.info("billing" as any, "Subscription created", { userId: input.userId, planId: input.planId, subId: sub.id });
+  logger.info("billing" as any, "Subscription created", { userId: input.userId, details: { planId: input.planId, subId: sub.id } });
   return sub;
 }
 
@@ -260,7 +260,7 @@ export async function reportUsageToStripe(subscriptionId: string): Promise<{ rep
     const stripe = await getUncachableStripeClient();
     const sub_item = await stripe.subscriptionItems.list({ subscription: sub.stripeSubscriptionId, limit: 1 });
     if (sub_item.data.length > 0) {
-      const usageRecord = await stripe.subscriptionItems.createUsageRecord(sub_item.data[0].id, {
+      const usageRecord = await (stripe.subscriptionItems as any).createUsageRecord(sub_item.data[0].id, {
         quantity: Math.ceil(totalQuantity),
         timestamp: Math.floor(Date.now() / 1000),
         action: "increment",
@@ -274,7 +274,7 @@ export async function reportUsageToStripe(subscriptionId: string): Promise<{ rep
       }
     }
   } catch (err: any) {
-    logger.warn("billing" as any, "Usage report to Stripe failed", { subscriptionId, error: err.message });
+    logger.warn("billing" as any, "Usage report to Stripe failed", { details: { subscriptionId }, errorMessage: err.message });
   }
 
   return { reported: unreported.length, totalQuantity };
@@ -310,7 +310,7 @@ export async function generateInvoice(input: {
     dueDate:        new Date(input.periodEnd.getTime() + 30 * 24 * 60 * 60 * 1000),
   }).returning();
 
-  logger.info("billing" as any, "Invoice generated", { invoiceId: inv.id, userId: input.userId, total: subtotal });
+  logger.info("billing" as any, "Invoice generated", { userId: input.userId, details: { invoiceId: inv.id, total: subtotal } });
   return inv;
 }
 
