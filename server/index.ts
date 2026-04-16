@@ -25,6 +25,12 @@ app.use(
   }),
 );
 
+// Permissions-Policy — not included in helmet 8, add manually
+app.use((_req, res, next) => {
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  next();
+});
+
 // Startup env validation — fail fast before binding port
 (function validateEnv() {
   const missing: string[] = [];
