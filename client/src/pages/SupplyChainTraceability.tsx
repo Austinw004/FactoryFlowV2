@@ -49,36 +49,33 @@ export default function SupplyChainTraceability() {
   const [openBatchDialog, setOpenBatchDialog] = useState(false);
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
 
-  const { data: batches = [], isLoading: batchesLoading } = useQuery({
+  const { data: batches = [] as any[], isLoading: batchesLoading } = useQuery<any[]>({
     queryKey: ["/api/traceability/batches"],
   });
 
-  const { data: events = [], isLoading: eventsLoading } = useQuery({
+  const { data: events = [] as any[], isLoading: eventsLoading } = useQuery<any[]>({
     queryKey: ["/api/traceability/events"],
   });
 
-  const { data: chainLinks = [], isLoading: linksLoading } = useQuery({
+  const { data: chainLinks = [] as any[], isLoading: linksLoading } = useQuery<any[]>({
     queryKey: ["/api/traceability/chain-links"],
   });
 
-  const { data: materials = [] } = useQuery({
+  const { data: materials = [] as any[] } = useQuery<any[]>({
     queryKey: ["/api/materials"],
   });
 
-  const { data: suppliers = [] } = useQuery({
+  const { data: suppliers = [] as any[] } = useQuery<any[]>({
     queryKey: ["/api/suppliers"],
   });
 
-  const { data: regime } = useQuery({
+  const { data: regime } = useQuery<any>({
     queryKey: ["/api/economics/regime"],
   });
 
   const createBatchMutation = useMutation({
     mutationFn: async (data: any) => 
-      apiRequest("/api/traceability/batches", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
+      apiRequest("POST", "/api/traceability/batches", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/traceability/batches"] });
       toast({ title: "Batch created successfully" });
@@ -117,7 +114,7 @@ export default function SupplyChainTraceability() {
       quarantine: { variant: "destructive" as const, className: "bg-orange-600", label: "Quarantine" },
     };
     const c = config[status as keyof typeof config] || config.pending;
-    return <Badge variant={c.variant} className={c.className}>{c.label}</Badge>;
+    return <Badge variant={c.variant} className={(c as any).className}>{c.label}</Badge>;
   };
 
   const getRiskBadge = (risk: string) => {
@@ -128,7 +125,7 @@ export default function SupplyChainTraceability() {
       critical: { variant: "destructive" as const, label: "Critical Risk" },
     };
     const c = config[risk as keyof typeof config] || config.medium;
-    return <Badge variant={c.variant} className={c.className}>{c.label}</Badge>;
+    return <Badge variant={c.variant} className={(c as any).className}>{c.label}</Badge>;
   };
 
   const getRegimeBadge = (regimeName: string) => {

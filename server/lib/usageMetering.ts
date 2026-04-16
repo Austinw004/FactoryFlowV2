@@ -71,8 +71,7 @@ export async function countActiveSKUs(
     const skuCount = result[0]?.count || 0;
     logger.info("sku_count", "skus_counted", {
       companyId,
-      skuCount,
-      asOfDate: asOfDate.toISOString(),
+      details: { skuCount, asOfDate: asOfDate.toISOString() },
     });
 
     return skuCount;
@@ -110,18 +109,15 @@ export async function recordUsageEvent(
 
     logger.info("usage_event", "recorded", {
       companyId,
-      eventType,
-      quantity,
-      eventId: result.id,
+      details: { eventType, quantity, eventId: result.id },
     });
 
     return result.id;
   } catch (error) {
     logger.error("usage_event", "failed_to_record", {
       companyId,
-      eventType,
-      quantity,
       errorMessage: error instanceof Error ? error.message : String(error),
+      details: { eventType, quantity },
     });
     throw error;
   }
@@ -169,9 +165,8 @@ export async function submitToStripe(
         onRetry: (error, attempt, nextDelay) => {
           logger.warn("stripe_meter_event", "retry", {
             companyId,
-            attempt,
-            nextDelayMs: nextDelay,
             errorMessage: error instanceof Error ? error.message : String(error),
+            details: { attempt, nextDelayMs: nextDelay },
           });
         },
       },
@@ -179,9 +174,7 @@ export async function submitToStripe(
 
     logger.info("stripe_meter_event", "submitted", {
       companyId,
-      skuCount,
-      eventId: (response as any)?.id,
-      idempotencyKey,
+      details: { skuCount, eventId: (response as any)?.id, idempotencyKey },
     });
 
     return {
@@ -193,10 +186,8 @@ export async function submitToStripe(
 
     logger.error("stripe_meter_event", "submission_failed", {
       companyId,
-      skuCount,
-      idempotencyKey,
       errorMessage,
-      errorStack: error instanceof Error ? error.stack : undefined,
+      details: { skuCount, idempotencyKey, errorStack: error instanceof Error ? error.stack : undefined },
     });
 
     throw error;
@@ -220,13 +211,12 @@ export async function markEventReported(
       .where(eq(usageEvents.id, eventId));
 
     logger.info("usage_event", "marked_reported", {
-      eventId,
-      stripeEventId,
+      details: { eventId, stripeEventId },
     });
   } catch (error) {
     logger.error("usage_event", "failed_to_mark_reported", {
-      eventId,
       errorMessage: error instanceof Error ? error.message : String(error),
+      details: { eventId },
     });
   }
 }
@@ -243,7 +233,7 @@ export async function runDailySkuMeteringJob(
   runDate: Date = new Date(),
 ): Promise<MeteringResult[]> {
   logger.info("metering_job", "started", {
-    runDate: runDate.toISOString(),
+    details: { runDate: runDate.toISOString() },
   });
 
   try {
@@ -265,7 +255,7 @@ export async function runDailySkuMeteringJob(
       );
 
     logger.info("metering_job", "companies_found", {
-      count: usageBasedCompanies.length,
+      details: { count: usageBasedCompanies.length },
     });
 
     const results: MeteringResult[] = [];
@@ -306,9 +296,7 @@ export async function runDailySkuMeteringJob(
 
         logger.info("metering_job", "company_processed", {
           companyId: company.companyId,
-          companyName: company.companyName,
-          skuCount,
-          stripeEventId,
+          details: { companyName: company.companyName, skuCount, stripeEventId },
         });
       } catch (companyError) {
         const errorMessage =
@@ -326,8 +314,8 @@ export async function runDailySkuMeteringJob(
 
         logger.error("metering_job", "company_processing_failed", {
           companyId: company.companyId,
-          companyName: company.companyName,
           errorMessage,
+          details: { companyName: company.companyName },
         });
 
         // Don't throw; continue processing other companies
@@ -335,17 +323,18 @@ export async function runDailySkuMeteringJob(
     }
 
     logger.info("metering_job", "completed", {
-      totalCompanies: usageBasedCompanies.length,
-      successful: results.filter((r) => r.submitted).length,
-      failed: results.filter((r) => !r.submitted).length,
+      details: {
+        totalCompanies: usageBasedCompanies.length,
+        successful: results.filter((r) => r.submitted).length,
+        failed: results.filter((r) => !r.submitted).length,
+      },
     });
 
     return results;
   } catch (jobError) {
     logger.error("metering_job", "fatal_error", {
       errorMessage: jobError instanceof Error ? jobError.message : String(jobError),
-      errorStack:
-        jobError instanceof Error ? jobError.stack : undefined,
+      details: { errorStack: jobError instanceof Error ? jobError.stack : undefined },
     });
     throw jobError;
   }
@@ -363,7 +352,7 @@ export async function backfillSkuMetering(
 ): Promise<MeteringResult> {
   logger.info("metering_backfill", "started", {
     companyId,
-    asOfDate: asOfDate.toISOString(),
+    details: { asOfDate: asOfDate.toISOString() },
   });
 
   try {
@@ -400,8 +389,7 @@ export async function backfillSkuMetering(
 
     logger.info("metering_backfill", "completed", {
       companyId,
-      skuCount,
-      stripeEventId,
+      details: { skuCount, stripeEventId },
     });
 
     return result;
