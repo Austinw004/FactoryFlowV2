@@ -915,7 +915,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         selectedPlanId: planId,
         selectedBillingInterval: billingInterval,
         subscriptionStatus: 'trialing',
-        trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+        trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
       });
       res.json({ success: true });
     } catch (error: any) {
@@ -1313,10 +1313,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }).passthrough();
       const sanitizedBody = notifPrefsSchema.parse(req.body);
 
+      const { inAppEnabled, emailEnabled, pushEnabled, smsEnabled, ...restPrefs } = sanitizedBody;
       const prefs = await storage.upsertUserNotificationPreferences({
         userId,
         companyId: user.companyId,
-        ...sanitizedBody,
+        ...restPrefs,
+        ...(inAppEnabled !== undefined && { inAppEnabled: inAppEnabled ? 1 : 0 }),
+        ...(emailEnabled !== undefined && { emailEnabled: emailEnabled ? 1 : 0 }),
+        ...(pushEnabled !== undefined && { pushEnabled: pushEnabled ? 1 : 0 }),
+        ...(smsEnabled !== undefined && { smsEnabled: smsEnabled ? 1 : 0 }),
       });
       res.json(prefs);
     } catch (error: any) {
@@ -1412,7 +1417,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!validationResult) {
         validationResult = await runComprehensiveStressTest();
         // Cache validation for 5 minutes to avoid recomputation
-        globalCache.set(validationCacheKey, validationResult, 300);
+        globalCache.set(validationCacheKey, validationResult, 'default');
       }
       
       // Apply full confidence cap based on all validation tests
@@ -3051,7 +3056,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const items = req.body.items || [];
       // Batch-validate all SKU IDs in one query to avoid N+1
-      const skuIds = [...new Set(items.map((item: { skuId: string }) => item.skuId))];
+      const skuIds: string[] = [...new Set<string>(items.map((item: { skuId: string }) => item.skuId))];
       const companySkus = await storage.getSkus(user.companyId);
       const companySkuIds = new Set(companySkus.map(s => s.id));
       for (const skuId of skuIds) {
@@ -6008,7 +6013,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         byDepartment[e.department] = (byDepartment[e.department] || 0) + 1;
       });
       
-      const regime = regimeData?.currentRegime || "Healthy Expansion";
+      const regime = regimeData?.regime || "Healthy Expansion";
       const fdr = regimeData?.fdr || 1.0;
       
       // Generate regime-aware recommendations
@@ -8482,7 +8487,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const relevanceReasons: string[] = [];
         
         // Check if alert affects company's materials
-        const alertCommodities = (alert.affectedCommodities||alert.commodities||[]).map(c => c.toLowerCase());
+        const alertCommodities = (alert.affectedCommodities || []).map(c => c.toLowerCase());
         const matchingMaterials = companyContext.materials.filter(m => 
           alertCommodities.some(c => c.includes(m) || m.includes(c))
         );
@@ -8492,7 +8497,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Check if alert affects company's supplier regions
-        const alertRegions = (alert.affectedRegions||alert.regions||[]).map(r => r.toLowerCase());
+        const alertRegions = (alert.affectedRegions || []).map(r => r.toLowerCase());
         const matchingRegions = companyContext.supplierRegions.filter(r =>
           alertRegions.some(ar => ar.includes(r.toLowerCase()) || r.toLowerCase().includes(ar))
         );
@@ -8615,7 +8620,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Count by category
       for (const alert of alerts) {
         summary.byCategory[alert.category] = (summary.byCategory[alert.category] || 0) + 1;
-        for (const region of (alert.affectedRegions||alert.regions||[])) {
+        for (const region of (alert.affectedRegions || [])) {
           summary.byRegion[region] = (summary.byRegion[region] || 0) + 1;
         }
       }
@@ -8623,7 +8628,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get top commodities
       const commodityCounts: Record<string, number> = {};
       for (const alert of alerts) {
-        for (const commodity of (alert.affectedCommodities||alert.commodities||[])) {
+        for (const commodity of (alert.affectedCommodities || [])) {
           commodityCounts[commodity] = (commodityCounts[commodity] || 0) + 1;
         }
       }
@@ -11973,7 +11978,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const config = {
         baseUrl: connection.apiEndpoint,
         authMethod: connection.authMethod as any,
-        ...connection.credentials,
+        ...(connection as any).credentials,
       };
 
       const client = createErpClient(erpType, config);
@@ -11992,15 +11997,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.createErpSyncLog({
         connectionId: req.params.connectionId,
         syncType: fullSync ? 'full' : 'incremental',
+        direction: 'import',
+        startedAt: new Date(),
         status: Object.values(results).every((r: any) => r.success) ? 'success' : 'partial',
         recordsProcessed: Object.values(results).reduce((sum: number, r: any) => sum + (r.recordsProcessed || 0), 0),
-        duration: Object.values(results).reduce((sum: number, r: any) => sum + (r.duration || 0), 0),
-        details: results,
+        summary: results,
       });
 
       // Update connection last sync time
       await storage.updateErpConnection(req.params.connectionId, {
-        lastSyncAt: new Date(),
+        lastSync: new Date(),
         status: 'connected',
       });
 
@@ -12696,7 +12702,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Enrich with supplier details
       const enriched = await Promise.all(snapshots.map(async (snapshot) => {
-        const supplier = await storage.getSupplier(snapshot.supplierId, user.companyId);
+        const supplier = snapshot.supplierId ? await storage.getSupplier(snapshot.supplierId, user.companyId) : null;
         return { ...snapshot, supplier };
       }));
       
@@ -14349,19 +14355,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const regimeData = await economics.getCurrentRegime();
         economicRegime = regimeData.regime;
         fdrValue = regimeData.fdr;
-        regimeIntensity = regimeData.intensity || 50;
+        regimeIntensity = (regimeData as any).intensity || 50;
       } catch (e) {
         // Use defaults if economics API fails
       }
       
       // Calculate inventory metrics
-      const totalInventoryValue = materials.reduce((sum, m) => sum + (m.onHand * (m.unitCost || 0)), 0);
+      const totalInventoryValue = materials.reduce((sum, m) => sum + (m.onHand * ((m as any).unitCost || 0)), 0);
       const totalInventoryUnits = materials.reduce((sum, m) => sum + m.onHand, 0);
       
       // Calculate production metrics
       const activeMachinery = machinery.filter(m => m.status === "operational" || m.status === "running");
-      const avgOee = activeMachinery.length > 0 
-        ? activeMachinery.reduce((sum, m) => sum + (m.operatingEfficiency || 0), 0) / activeMachinery.length
+      const avgOee = activeMachinery.length > 0
+        ? activeMachinery.reduce((sum, m) => sum + ((m as any).operatingEfficiency || 0), 0) / activeMachinery.length
         : 0;
       
       // Create snapshot
@@ -14373,15 +14379,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         activeSkuCount: skus.length,
         activeMaterialCount: materials.length,
         activeSupplierCount: suppliers.length,
-        openOrderCount: allocations.filter(a => a.status === "pending").length,
+        openOrderCount: allocations.filter(a => (a as any).status === "pending").length,
         pendingRfqCount: rfqs.filter(r => r.status === "pending" || r.status === "sent").length,
         activeMachineryCount: activeMachinery.length,
         oeeScore: avgOee,
         economicRegime,
         fdrValue,
         regimeIntensity,
-        inventoryState: materials.map(m => ({ id: m.id, name: m.name, onHand: m.onHand, reorderPoint: m.reorderPoint })),
-        productionState: machinery.map(m => ({ id: m.id, name: m.name, status: m.status, efficiency: m.operatingEfficiency })),
+        inventoryState: materials.map(m => ({ id: m.id, name: m.name, onHand: m.onHand, reorderPoint: (m as any).reorderPoint })),
+        productionState: machinery.map(m => ({ id: m.id, name: m.name, status: m.status, efficiency: (m as any).operatingEfficiency })),
         supplyState: suppliers.map(s => ({ id: s.id, name: s.name, leadTime: s.leadTime })),
         activeAlertCount: 0,
         criticalAlertCount: 0,
@@ -15408,7 +15414,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/agentic/safe-mode", isAuthenticated, async (req: any, res) => {
     try {
       const authUserId = req.user.claims.sub;
-      const user = await storage.getUserByAuthId(authUserId);
+      const user = await storage.getUser(authUserId);
       if (!user?.companyId) return res.status(401).json({ error: "No company" });
       const config = await engine.getSafeMode(user.companyId);
       res.json(config || { safeModeEnabled: 1, overrideActions: [], readinessChecklistPassed: 0 });
@@ -15421,7 +15427,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/agentic/safe-mode", isAuthenticated, rateLimiters.api, async (req: any, res) => {
     try {
       const authUserId = req.user.claims.sub;
-      const user = await storage.getUserByAuthId(authUserId);
+      const user = await storage.getUser(authUserId);
       if (!user?.companyId) return res.status(401).json({ error: "No company" });
 
       const { safeModeEnabled, overrideActions, readinessChecklistPassed } = req.body;

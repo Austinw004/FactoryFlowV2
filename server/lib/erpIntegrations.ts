@@ -703,6 +703,15 @@ export class Dynamics365Client {
         return data;
     }
   }
+
+  async testConnection(): Promise<{ success: boolean; message: string; details?: any }> {
+    try {
+      await this.getAccessToken();
+      return { success: true, message: 'Dynamics 365 connection successful' };
+    } catch (error: any) {
+      return { success: false, message: error.message };
+    }
+  }
 }
 
 // ================================
@@ -819,6 +828,15 @@ export class NetSuiteErpClient {
         }));
       default:
         return data;
+    }
+  }
+
+  async testConnection(): Promise<{ success: boolean; message: string; details?: any }> {
+    try {
+      await this.request('customer', {});
+      return { success: true, message: 'NetSuite connection successful' };
+    } catch (error: any) {
+      return { success: false, message: error.message };
     }
   }
 }

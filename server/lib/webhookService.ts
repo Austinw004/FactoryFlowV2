@@ -258,9 +258,9 @@ export class WebhookService {
   }
 
   async fireAllocationComplete(
-    companyId: string, 
-    allocationId: number, 
-    allocationName: string, 
+    companyId: string,
+    allocationId: string,
+    allocationName: string,
     totalAllocationCost: number,
     budgetUtilization: number,
     totalProduction: number

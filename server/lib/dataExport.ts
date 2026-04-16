@@ -2,7 +2,7 @@ import { storage as globalStorage } from '../storage';
 import type { IStorage } from '../storage';
 
 export interface ExportOptions {
-  format: 'json' | 'csv' | 'excel';
+  format?: 'json' | 'csv' | 'excel';
   entities?: string[]; // Which entities to export (skus, materials, suppliers, etc.)
   companyName?: string; // Optional company name for export filename
 }

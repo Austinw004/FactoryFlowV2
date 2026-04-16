@@ -2,7 +2,7 @@ import { db } from "../db";
 import { structuredEventLog } from "@shared/schema";
 
 type LogLevel = "debug" | "info" | "warn" | "error" | "critical";
-type LogCategory = "automation" | "webhook" | "guardrail" | "regime" | "integration" | "auth" | "payment" | "health" | "system";
+type LogCategory = "automation" | "webhook" | "guardrail" | "regime" | "integration" | "auth" | "payment" | "health" | "system" | "sku_count" | "usage_event" | "stripe_meter_event" | "metering_job" | "metering_backfill";
 
 const LOG_LEVEL_PRIORITY: Record<LogLevel, number> = {
   debug: 0,
@@ -106,31 +106,31 @@ class StructuredLogger {
     }
   }
 
-  info(category: LogCategory, event: string, extra?: Partial<Omit<LogEntry, "level" | "category" | "event">>): void {
+  info(category: LogCategory, event: string, extra?: Partial<Omit<LogEntry, "level" | "category" | "event">> & Record<string, any>): void {
     this.log({ level: "info", category, event, ...extra });
   }
 
-  warn(category: LogCategory, event: string, extra?: Partial<Omit<LogEntry, "level" | "category" | "event">>): void {
+  warn(category: LogCategory, event: string, extra?: Partial<Omit<LogEntry, "level" | "category" | "event">> & Record<string, any>): void {
     this.log({ level: "warn", category, event, ...extra });
   }
 
-  error(category: LogCategory, event: string, extra?: Partial<Omit<LogEntry, "level" | "category" | "event">>): void {
+  error(category: LogCategory, event: string, extra?: Partial<Omit<LogEntry, "level" | "category" | "event">> & Record<string, any>): void {
     this.log({ level: "error", category, event, ...extra });
   }
 
-  critical(category: LogCategory, event: string, extra?: Partial<Omit<LogEntry, "level" | "category" | "event">>): void {
+  critical(category: LogCategory, event: string, extra?: Partial<Omit<LogEntry, "level" | "category" | "event">> & Record<string, any>): void {
     this.log({ level: "critical", category, event, ...extra });
   }
 
-  automation(event: string, extra?: Partial<Omit<LogEntry, "level" | "category" | "event">>): void {
+  automation(event: string, extra?: Partial<Omit<LogEntry, "level" | "category" | "event">> & Record<string, any>): void {
     this.log({ level: "info", category: "automation", event, ...extra });
   }
 
-  webhook(event: string, extra?: Partial<Omit<LogEntry, "level" | "category" | "event">>): void {
+  webhook(event: string, extra?: Partial<Omit<LogEntry, "level" | "category" | "event">> & Record<string, any>): void {
     this.log({ level: "info", category: "webhook", event, ...extra });
   }
 
-  guardrail(event: string, extra?: Partial<Omit<LogEntry, "level" | "category" | "event">>): void {
+  guardrail(event: string, extra?: Partial<Omit<LogEntry, "level" | "category" | "event">> & Record<string, any>): void {
     this.log({ level: "info", category: "guardrail", event, ...extra });
   }
 }
