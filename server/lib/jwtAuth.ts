@@ -22,15 +22,15 @@ export interface JwtPayload {
 }
 
 export function signAccessToken(payload: Omit<JwtPayload, "type">): string {
-  return jwt.sign({ ...payload, type: "access", jti: crypto.randomBytes(8).toString("hex") }, JWT_SECRET, { expiresIn: JWT_ACCESS_EXPIRES } as any);
+  return (jwt as any).sign({ ...payload, type: "access", jti: crypto.randomBytes(8).toString("hex") }, JWT_SECRET, { expiresIn: JWT_ACCESS_EXPIRES });
 }
 
 export function signRefreshToken(payload: Omit<JwtPayload, "type">): string {
-  return jwt.sign({ ...payload, type: "refresh", jti: crypto.randomBytes(16).toString("hex") }, JWT_SECRET, { expiresIn: JWT_REFRESH_EXPIRES } as any);
+  return (jwt as any).sign({ ...payload, type: "refresh", jti: crypto.randomBytes(16).toString("hex") }, JWT_SECRET, { expiresIn: JWT_REFRESH_EXPIRES });
 }
 
 export function verifyToken(token: string): JwtPayload {
-  return jwt.verify(token, JWT_SECRET) as unknown as JwtPayload;
+  return (jwt as any).verify(token, JWT_SECRET) as JwtPayload;
 }
 
 /**

@@ -534,8 +534,8 @@ export async function runEvaluation(config: EvalConfig): Promise<{ runId: number
   };
 
   const companyAllocations = await db.select().from(allocations).where(eq(allocations.companyId, config.companyId));
-  const totalAllocated = companyAllocations.reduce((a, alloc) => a + (alloc.allocatedUnits || 0), 0);
-  const totalDemand = companyAllocations.reduce((a, alloc) => a + (alloc.demandUnits || 0), 0);
+  const totalAllocated = (companyAllocations as any[]).reduce((a, alloc) => a + (alloc.allocatedUnits || 0), 0);
+  const totalDemand = (companyAllocations as any[]).reduce((a, alloc) => a + (alloc.demandUnits || 0), 0);
 
   const allocationMetrics: AllocationMetrics = {
     fillRate: totalDemand > 0 ? Math.min(1, totalAllocated / totalDemand) : 0,
@@ -547,7 +547,7 @@ export async function runEvaluation(config: EvalConfig): Promise<{ runId: number
 
   const companyPOs = await db.select().from(purchaseOrders).where(eq(purchaseOrders.companyId, config.companyId));
   const estimatedSavings = companyPOs.reduce((a, po) => {
-    const total = po.totalAmount || 0;
+    const total = (po as any).totalAmount ?? po.totalCost ?? 0;
     return a + total * 0.03;
   }, 0);
 

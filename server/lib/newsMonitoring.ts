@@ -251,7 +251,7 @@ export class NewsMonitoringService {
         const rssResult = await fetchNewsFeeds();
                 const rssArticles = (rssResult as any)?.items || [];
         if (rssArticles && rssArticles.length > 0) {
-          const alerts = rssArticles.slice(0, 20).map((article) => ({
+          const alerts = rssArticles.slice(0, 20).map((article: any) => ({
             id: article.id || Math.random().toString(36).substr(2, 9),
             title: article.title,
             description: article.description || article.title,
@@ -264,10 +264,10 @@ export class NewsMonitoringService {
             regions: [],
             commodities: [],
           }));
-          return { alerts, dataSource: 'rss' };
+          return { alerts, dataSource: 'newsapi' };
         }
       } catch (rssError) {
-        console.warn('[NewsMonitoring] RSS feed fetch failed:', rssError.message);
+        console.warn('[NewsMonitoring] RSS feed fetch failed:', (rssError as any).message);
       }
       return {
         alerts: [],

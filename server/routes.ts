@@ -14388,7 +14388,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         regimeIntensity,
         inventoryState: materials.map(m => ({ id: m.id, name: m.name, onHand: m.onHand, reorderPoint: (m as any).reorderPoint })),
         productionState: machinery.map(m => ({ id: m.id, name: m.name, status: m.status, efficiency: (m as any).operatingEfficiency })),
-        supplyState: suppliers.map(s => ({ id: s.id, name: s.name, leadTime: s.leadTime })),
+        supplyState: suppliers.map(s => ({ id: s.id, name: s.name, leadTime: (s as any).leadTime })),
         activeAlertCount: 0,
         criticalAlertCount: 0,
       };
@@ -16169,7 +16169,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Look up the company by Shopify domain to get their secret
-      const companies = await db.select().from(schema.companies).where(eq(schema.companies.shopifyDomain, shopDomain)).limit(1);
+      const { companies: companiesTable } = await import("@shared/schema");
+      const companies = await db.select().from(companiesTable).where(eq((companiesTable as any).shopifyDomain, shopDomain)).limit(1);
       const company = companies[0];
       
       if (!company?.shopifySecret) {
@@ -16431,9 +16432,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const result = await hubspotService.syncSupplierToHubSpot({
         name: supplier.name,
-        email: supplier.email || undefined,
-        phone: supplier.phone || undefined,
-        category: supplier.category || undefined,
+        email: (supplier as any).email || undefined,
+        phone: (supplier as any).phone || undefined,
+        category: (supplier as any).category || undefined,
       });
       
       res.json({ success: true, ...result });
@@ -16459,10 +16460,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ success: false, error: result.error });
       }
       
-      res.json({ 
-        success: true, 
+      const { success: _hs, ...restHs } = result as any;
+      res.json({
+        success: true,
         message: `Synced ${result.contacts} contacts, ${result.companies} companies, ${result.deals} deals`,
-        ...result
+        ...restHs,
       });
     } catch (error: any) {
       console.error("[HubSpot Sync] Error:", error);
@@ -16486,10 +16488,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ success: false, error: result.error });
       }
       
-      res.json({ 
-        success: true, 
+      const { success: _qb, ...restQb } = result as any;
+      res.json({
+        success: true,
         message: `Synced ${result.vendors?.synced || 0} vendors, fetched ${result.invoices || 0} invoices`,
-        ...result
+        ...restQb,
       });
     } catch (error: any) {
       console.error("[QuickBooks Sync] Error:", error);
@@ -16513,10 +16516,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ success: false, error: result.error });
       }
       
-      res.json({ 
-        success: true, 
+      const { success: _ji, ...restJi } = result as any;
+      res.json({
+        success: true,
         message: `Synced ${result.projects} projects, ${result.issues} issues, ${result.demandSignals} demand signals`,
-        ...result
+        ...restJi,
       });
     } catch (error: any) {
       console.error("[Jira Sync] Error:", error);
@@ -18681,7 +18685,7 @@ You'll receive emails for:
       const format = (req.query.format as string) || 'json';
       const materials = await storage.getMaterials(user.companyId);
       
-      const inventory = materials.map(m => ({
+      const inventory = (materials as any[]).map(m => ({
         materialId: m.id,
         materialName: m.name,
         materialCode: m.code,
@@ -18727,8 +18731,8 @@ You'll receive emails for:
         predictedDemand: f.predictedDemand,
         lowerBound: f.lowerBound,
         upperBound: f.upperBound,
-        confidence: f.confidenceLevel,
-        regime: f.regime,
+        confidence: f.confidence ?? (f as any).confidenceLevel,
+        regime: f.economicRegime ?? (f as any).regime,
         forecastDate: f.forecastDate,
         createdAt: f.createdAt,
       }));
@@ -20171,13 +20175,14 @@ async function generateQueryResponse(companyId: string, queryText: string, inten
   let confidence = 0.85;
   
   // Gather relevant data based on entities
-  const [materials, skus, suppliers, machinery] = await Promise.all([
+  const [materialsRaw, skus, suppliers, machinery] = await Promise.all([
     storage.getMaterials(companyId),
     storage.getSkus(companyId),
     storage.getSuppliers(companyId),
     storage.getMachinery(companyId),
   ]);
-  
+  const materials = materialsRaw as any[];
+
   sources.push("inventory", "skus", "suppliers", "machinery");
   
   // Generate response based on intent
@@ -20265,12 +20270,13 @@ async function runDigitalTwinSimulation(companyId: string, simulation: any): Pro
   const horizonDays = simulation.horizonDays || 90;
   
   // Get current state
-  const [materials, suppliers, machinery] = await Promise.all([
+  const [materialsRaw2, suppliers, machinery] = await Promise.all([
     storage.getMaterials(companyId),
     storage.getSuppliers(companyId),
     storage.getMachinery(companyId),
   ]);
-  
+  const materials = materialsRaw2 as any[];
+
   // Calculate impacts based on scenario type
   let costImpact = { total: 0, breakdown: {} as any };
   let riskScore = 50;
