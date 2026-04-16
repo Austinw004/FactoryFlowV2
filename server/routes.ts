@@ -873,16 +873,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  const onboardingOperationsSchema = z.object({
+    productionVolume: z.string().max(100).optional(),
+    annualProcurementSpend: z.union([z.string(), z.number()]).transform(String).optional(),
+    keyMaterials: z.union([z.array(z.string().max(100)), z.string().max(500)]).optional(),
+    erpSystem: z.string().max(100).optional(),
+    painPoints: z.union([z.array(z.string().max(200)), z.string().max(1000)]).optional(),
+    numberOfSuppliers: z.union([z.string(), z.number()]).transform(String).optional(),
+    numberOfFacilities: z.union([z.string(), z.number()]).transform(String).optional(),
+    topProducts: z.string().max(500).optional(),
+  });
+
   // Save operations intelligence during onboarding
   app.post('/api/onboarding/operations', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       if (!user || !user.companyId) return res.status(400).json({ error: "No company" });
-      const { productionVolume, annualProcurementSpend, keyMaterials, erpSystem, painPoints, numberOfSuppliers, numberOfFacilities, topProducts } = req.body;
-      // Note: operations-intelligence is opt-in; fields accept nullable user input
-      // with type coercion deferred to the storage layer. Retrofit to validateBody
-      // is deliberately held off until we finalize the schema shape in Q2.
+      const parsed = onboardingOperationsSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
+      const { productionVolume, annualProcurementSpend, keyMaterials, erpSystem, painPoints, numberOfSuppliers, numberOfFacilities, topProducts } = parsed.data;
       await storage.updateCompany(user.companyId, {
         productionVolume,
         annualProcurementSpend,
@@ -1046,19 +1056,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  const activityLogSchema = z.object({
+    activityType: z.string().min(1).max(100),
+    title: z.string().min(1).max(300),
+    description: z.string().max(1000).optional(),
+    entityType: z.string().max(100).optional(),
+    entityId: z.string().max(100).optional(),
+    category: z.string().max(100).optional(),
+    severity: z.enum(["info", "success", "warning", "error"]).optional(),
+    metadata: z.record(z.unknown()).optional(),
+  });
+
   app.post('/api/activity-logs', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
-      
+
       if (!user || !user.companyId) {
         return res.status(400).json({ error: "User has no associated company" });
       }
-      
+
+      const parsed = activityLogSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
+
       const activity = await storage.createActivityLog({
         companyId: user.companyId,
         userId,
-        ...req.body,
+        ...parsed.data,
       });
       res.status(201).json(activity);
     } catch (error: any) {
@@ -1188,13 +1212,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  const automationUpdateSchema = z.object({
+    name: z.string().min(1).max(200).optional(),
+    description: z.string().max(1000).optional(),
+    enabled: z.boolean().optional(),
+    triggerType: z.string().max(100).optional(),
+    triggerConditions: z.record(z.unknown()).optional(),
+    actionType: z.string().max(100).optional(),
+    actionConfig: z.record(z.unknown()).optional(),
+    priority: z.number().int().min(1).max(100).optional(),
+    category: z.string().max(100).optional(),
+  });
+
   app.put('/api/automations/:id', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       if (!user || !user.companyId) return res.status(400).json({ error: "No company" });
+      const parsed = automationUpdateSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
       const { updateRule } = await import("./lib/workflowEngine");
-      const rule = await updateRule(req.params.id, user.companyId, req.body);
+      const rule = await updateRule(req.params.id, user.companyId, parsed.data);
       if (!rule) return res.status(404).json({ error: "Rule not found" });
       res.json(rule);
     } catch (error: any) {
@@ -3234,6 +3272,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  const forecastPatchSchema = z.object({
+    actualDemand: z.number().nonnegative().optional(),
+    notes: z.string().max(1000).optional(),
+    modelVersion: z.string().max(50).optional(),
+  });
+
   app.patch("/api/multi-horizon-forecasts/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -3241,12 +3285,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
+      const parsed = forecastPatchSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
       const forecasts = await storage.getMultiHorizonForecasts(user.companyId);
       const forecast = forecasts.find(f => f.id === req.params.id);
       if (!forecast) {
         return res.status(404).json({ error: "Forecast not found" });
       }
-      const updated = await storage.updateMultiHorizonForecast(req.params.id, req.body);
+      const updated = await storage.updateMultiHorizonForecast(req.params.id, parsed.data);
       res.json(updated);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -13140,9 +13186,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Update supplier tier
+  const supplierTierUpdateSchema = z.object({
+    tier: z.number().int().min(1).max(10).optional(),
+    tierLabel: z.string().max(100).optional(),
+    region: z.string().max(100).optional(),
+    country: z.string().max(100).optional(),
+    riskRegion: z.number().int().min(0).max(1).optional(),
+    spendShare: z.number().min(0).max(100).optional(),
+    dependencyWeight: z.number().min(0).max(100).optional(),
+    alternativesCount: z.number().int().nonnegative().optional(),
+    dataConfidence: z.number().min(0).max(100).optional(),
+    dataSource: z.enum(["manual", "api", "inferred"]).optional(),
+  });
+
   app.patch("/api/supplier-tiers/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
     try {
-      const tier = await storage.updateSupplierTier(req.params.id, req.body);
+      const parsed = supplierTierUpdateSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
+      const tier = await storage.updateSupplierTier(req.params.id, parsed.data);
       if (!tier) {
         return res.status(404).json({ error: "Supplier tier not found" });
       }
