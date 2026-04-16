@@ -332,7 +332,7 @@ export default function Dashboard() {
         <div className="trial-banner px-6 py-4 mb-12 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <span className="dot bg-signal"></span>
-            <span className="text-sm">Free trial — <span className="text-bone">74 days remaining</span>. Add billing anytime.</span>
+            <span className="text-sm">Free trial — <span className="text-bone">{subscriptionData?.trialEndsAt ? `${Math.max(0, Math.ceil((new Date(subscriptionData.trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))} days remaining` : 'Active'}</span>. Add billing anytime.</span>
           </div>
           <a href="#/billing" className="text-xs uppercase tracking-[0.14em] text-signal hover:text-bone transition">Choose a plan →</a>
         </div>
@@ -340,32 +340,34 @@ export default function Dashboard() {
 
       <div className="mb-16">
         <div className="eyebrow mb-4">State of operations</div>
-        <h1 className="hero text-5xl">Everything is nominal.</h1>
+        <h1 className="hero text-5xl">{regime?.regime ? getRegimeDescription(regime.regime).split('.')[0] + '.' : 'Analyzing conditions.'}</h1>
         <p className="text-soft mt-5 max-w-xl leading-relaxed">
-          Three signals need attention today. No critical exposures.
+          {Array.isArray(skus) && skus.length > 0
+            ? `Tracking ${skus.length.toLocaleString()} SKU${skus.length === 1 ? '' : 's'}. ${regime?.regime === 'HEALTHY_EXPANSION' ? 'No critical exposures.' : 'Review current regime conditions.'}`
+            : 'Add your first SKU to start tracking operations.'}
         </p>
       </div>
 
       <div className="grid grid-cols-4 gap-px bg-line mb-20">
         <div className="bg-panel p-6">
-          <div className="eyebrow mb-4">Forecast accuracy</div>
-          <div className="text-3xl display">94.2<span className="text-muted text-lg">%</span></div>
-          <div className="mono text-xs text-good mt-3">+1.1% vs last week</div>
+          <div className="eyebrow mb-4">Regime</div>
+          <div className="text-3xl display">{regime?.regime ? regime.regime.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase()).split(' ').slice(0, 2).join(' ') : '—'}</div>
+          <div className="mono text-xs text-muted mt-3">{regime?.fdr != null ? `FDR: ${Number(regime.fdr).toFixed(2)}` : 'Awaiting data'}</div>
         </div>
         <div className="bg-panel p-6">
           <div className="eyebrow mb-4">Active SKUs</div>
-          <div className="text-3xl display">1,284</div>
-          <div className="mono text-xs text-muted mt-3">+12 this week</div>
+          <div className="text-3xl display">{Array.isArray(skus) ? skus.length.toLocaleString() : '—'}</div>
+          <div className="mono text-xs text-muted mt-3">{Array.isArray(skus) && skus.length > 0 ? 'Tracked' : 'None yet'}</div>
         </div>
         <div className="bg-panel p-6">
-          <div className="eyebrow mb-4">Exposure</div>
-          <div className="text-3xl display">$2.4<span className="text-muted text-lg">M</span></div>
-          <div className="mono text-xs text-bad mt-3">+3.2% vs last week</div>
+          <div className="eyebrow mb-4">Allocations</div>
+          <div className="text-3xl display">{Array.isArray(allocations) ? allocations.length.toLocaleString() : '—'}</div>
+          <div className="mono text-xs text-muted mt-3">{Array.isArray(allocations) && allocations.length > 0 ? 'Active' : 'None yet'}</div>
         </div>
         <div className="bg-panel p-6">
-          <div className="eyebrow mb-4">Signals open</div>
-          <div className="text-3xl display">3</div>
-          <div className="mono text-xs text-muted mt-3">2 low · 1 med</div>
+          <div className="eyebrow mb-4">Connection</div>
+          <div className="text-3xl display">{isConnected ? 'Live' : 'Offline'}</div>
+          <div className={`mono text-xs mt-3 ${isConnected ? 'text-good' : 'text-bad'}`}>{isConnected ? 'Real-time active' : 'Reconnecting...'}</div>
         </div>
       </div>
 
