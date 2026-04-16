@@ -120,7 +120,7 @@ export default function Dashboard() {
   const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const { data: regime, isLoading: regimeLoading, dataUpdatedAt: regimeUpdatedAt } = useQuery({
+  const { data: regime, isLoading: regimeLoading, dataUpdatedAt: regimeUpdatedAt } = useQuery<any>({
     queryKey: ["/api/economics/regime"],
     refetchInterval: 30000, // Refetch every 30 seconds as fallback
     enabled: !!user,
