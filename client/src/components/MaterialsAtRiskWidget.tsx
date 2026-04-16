@@ -106,7 +106,7 @@ export function MaterialsAtRiskWidget() {
               Materials at Risk
             </CardTitle>
             <CardDescription>
-              {materialsAtRisk.length} materials requiring attention
+              {materialsAtRisk.length} material{materialsAtRisk.length !== 1 ? 's' : ''} below safe inventory threshold — initiate procurement to avoid production delays
             </CardDescription>
           </div>
           <Badge variant="destructive">{materialsAtRisk.length}</Badge>
@@ -161,6 +161,13 @@ export function MaterialsAtRiskWidget() {
                 />
               </div>
               
+              <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                {item.riskScore >= 80
+                  ? "Critical: reorder immediately — at current consumption rates, production will be impacted before the next scheduled delivery."
+                  : item.riskScore >= 50
+                  ? "Initiate procurement now to avoid stockout. Confirm lead time with primary supplier before placing order."
+                  : "Schedule reorder to prevent reaching critical levels. Review reorder point and safety stock targets."}
+              </p>
               <div className="flex items-center gap-2 mt-3">
                 <Button
                   variant="outline"
@@ -170,7 +177,7 @@ export function MaterialsAtRiskWidget() {
                   data-testid={`button-procure-${item.material.id}`}
                 >
                   <TrendingDown className="h-3 w-3 mr-1" />
-                  Schedule Procurement
+                  {item.riskScore >= 80 ? "Create Purchase Order" : "Schedule Procurement"}
                 </Button>
               </div>
             </div>

@@ -64,6 +64,49 @@ function getRegimeDescription(regime: string): string {
   return regimeDescriptions[regime] || "Economic conditions are being analyzed.";
 }
 
+// Regime-specific procurement directives — the #1 action for the customer right now
+const regimeProcurementGuidance: Record<string, {
+  headline: string;
+  detail: string;
+  actionLabel: string;
+  actionPath: string;
+  borderColor: string;
+  bgColor: string;
+}> = {
+  HEALTHY_EXPANSION: {
+    headline: "Market conditions stable — good window to negotiate long-term supplier contracts.",
+    detail: "FDR below 1.2 signals alignment between financial markets and real economic output. Use this stability window to lock in multi-year agreements at current rates. Standard procurement pace is appropriate — no urgency to accelerate or defer.",
+    actionLabel: "View supplier contracts",
+    actionPath: "/procurement",
+    borderColor: "border-l-blue-500",
+    bgColor: "bg-blue-500/5",
+  },
+  ASSET_LED_GROWTH: {
+    headline: "Asset prices outpacing real economy — lock in contracts before input costs rise 8–12%.",
+    detail: "FDR between 1.2–1.8 signals financial markets running ahead of production capacity. This regime historically precedes material cost increases. Pre-purchase critical materials and lock in supplier agreements now, before the next pricing cycle.",
+    actionLabel: "Lock in contracts now",
+    actionPath: "/procurement",
+    borderColor: "border-l-amber-500",
+    bgColor: "bg-amber-500/5",
+  },
+  IMBALANCED_EXCESS: {
+    headline: "Significant market decoupling — defer non-critical purchases and protect cash position.",
+    detail: "FDR above 1.8 indicates an unsustainable gap between financial markets and real economic output. Renegotiate expiring contracts, pause discretionary spending, and build safety stock only on production-critical materials. Favorable correction ahead.",
+    actionLabel: "Review pending purchase orders",
+    actionPath: "/procurement",
+    borderColor: "border-l-red-500",
+    bgColor: "bg-red-500/5",
+  },
+  REAL_ECONOMY_LEAD: {
+    headline: "Counter-cyclical window open — favorable supplier terms available now.",
+    detail: "FDR above 2.5 means real economic output is outpacing financial markets. Suppliers are under pressure and open to better terms. Negotiate aggressively, lock in long-term agreements, and build strategic inventory while conditions favor buyers.",
+    actionLabel: "Start contract negotiations",
+    actionPath: "/procurement",
+    borderColor: "border-l-green-500",
+    bgColor: "bg-green-500/5",
+  },
+};
+
 export default function Dashboard() {
   const { toast } = useToast();
   const { user, isLoading: authLoading } = useAuth();
@@ -338,7 +381,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="mb-16">
+      <div className="mb-10">
         <div className="eyebrow mb-4">State of operations</div>
         <h1 className="hero text-5xl">{regime?.regime ? getRegimeDescription(regime.regime).split('.')[0] + '.' : 'Analyzing conditions.'}</h1>
         <p className="text-soft mt-5 max-w-xl leading-relaxed">
@@ -347,6 +390,34 @@ export default function Dashboard() {
             : 'Add your first SKU to start tracking operations.'}
         </p>
       </div>
+
+      {/* Command Center: Regime-Specific Procurement Directive */}
+      {regimeType !== 'UNKNOWN' && regimeProcurementGuidance[regimeType] && (
+        <div className={`mb-12 p-5 rounded-lg border-l-4 ${regimeProcurementGuidance[regimeType].borderColor} ${regimeProcurementGuidance[regimeType].bgColor}`}>
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-3 mb-2">
+                <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Today's Directive</span>
+                <span className="text-xs text-muted-foreground font-mono border border-border rounded px-1.5 py-0.5">FDR {fdr.toFixed(2)} · {friendlyRegime}</span>
+              </div>
+              <p className="text-sm font-semibold text-foreground mb-1.5">
+                {regimeProcurementGuidance[regimeType].headline}
+              </p>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {regimeProcurementGuidance[regimeType].detail}
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setLocation(regimeProcurementGuidance[regimeType].actionPath)}
+              className="shrink-0 mt-1"
+            >
+              {regimeProcurementGuidance[regimeType].actionLabel} →
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-4 gap-px bg-line mb-20">
         <div className="bg-panel p-6">

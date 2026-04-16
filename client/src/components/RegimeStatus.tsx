@@ -47,28 +47,32 @@ interface RegimeStatusProps {
   };
 }
 
-const regimeConfig: Record<Regime, { label: string; description: string; thresholdRange: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+const regimeConfig: Record<Regime, { label: string; description: string; procurementAction: string; thresholdRange: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   HEALTHY_EXPANSION: {
     label: "Healthy Expansion",
-    description: "Balanced growth. Standard procurement pace.",
+    description: "Financial markets and real economy are in alignment. Standard procurement pace is appropriate.",
+    procurementAction: "Lock in long-term supplier contracts at current stable rates. No urgency to accelerate or defer spend.",
     thresholdRange: "FDR < 1.2",
     variant: "default",
   },
   ASSET_LED_GROWTH: {
     label: "Asset-Led Growth",
-    description: "Assets outpacing real economy. Consider accelerating procurement.",
-    thresholdRange: "FDR 1.2 - 1.8",
+    description: "Financial markets outpacing real economic output. Input costs historically rise 8–12% in this regime.",
+    procurementAction: "Pre-purchase critical materials and lock in supplier contracts before the next pricing cycle.",
+    thresholdRange: "FDR 1.2 – 1.8",
     variant: "secondary",
   },
   IMBALANCED_EXCESS: {
     label: "Imbalanced Excess",
-    description: "Significant asset-real economy gap. Defer non-critical purchases.",
-    thresholdRange: "FDR 1.8 - 2.5",
+    description: "Unsustainable gap between asset markets and real output. Correction is likely ahead.",
+    procurementAction: "Defer non-critical purchases. Renegotiate expiring contracts. Hold safety stock only on production-critical materials.",
+    thresholdRange: "FDR 1.8 – 2.5",
     variant: "destructive",
   },
   REAL_ECONOMY_LEAD: {
     label: "Real Economy Lead",
-    description: "Counter-cyclical opportunity. Lock in favorable pricing.",
+    description: "Real output outpacing financial markets. Suppliers are under pressure and open to concessions.",
+    procurementAction: "Negotiate aggressively. Lock in multi-year agreements and build strategic inventory while conditions favor buyers.",
     thresholdRange: "FDR > 2.5",
     variant: "default",
   },
@@ -157,6 +161,10 @@ export function RegimeStatus({ regime, fdr: fdrProp, intensity, regimeEvidence, 
             )}
 
             <p className="text-xs text-muted-foreground pt-1">{config.description}</p>
+            <div className="mt-3 pt-3 border-t border-border">
+              <p className="text-xs font-medium text-foreground mb-0.5">Recommended action</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">{config.procurementAction}</p>
+            </div>
           </div>
 
           <div className="space-y-2 pl-4">

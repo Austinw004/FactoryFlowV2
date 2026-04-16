@@ -1,14 +1,17 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  AlertTriangle, 
-  TrendingDown, 
-  TrendingUp, 
+import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
+import {
+  AlertTriangle,
+  TrendingDown,
+  TrendingUp,
   DollarSign,
   Target,
   Package,
   Activity,
-  Maximize2
+  Maximize2,
+  ArrowRight
 } from "lucide-react";
 
 interface Signal {
@@ -20,6 +23,13 @@ interface Signal {
 interface PolicySignalsProps {
   signals: Signal[];
 }
+
+// Route each signal type to its most relevant page
+const signalRoutes: Record<string, string> = {
+  procurement: "/procurement",
+  inventory: "/inventory-management",
+  production: "/production-kpis",
+};
 
 // Type-aware signal configuration using composite keys: type:action
 const signalConfig: Record<string, { label: string; icon: any; color: string }> = {
@@ -91,6 +101,7 @@ const signalConfig: Record<string, { label: string; icon: any; color: string }> 
 };
 
 export function PolicySignals({ signals }: PolicySignalsProps) {
+  const [, setLocation] = useLocation();
   // Guard against invalid data
   if (!Array.isArray(signals) || signals.length === 0) {
     return (
@@ -146,9 +157,20 @@ export function PolicySignals({ signals }: PolicySignalsProps) {
                       <p className="text-xs text-muted-foreground leading-relaxed">
                         {signal.description}
                       </p>
+                      {signalRoutes[signal.type] && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 text-xs gap-1 px-0 mt-1"
+                          onClick={() => setLocation(signalRoutes[signal.type])}
+                        >
+                          Take action
+                          <ArrowRight className="h-3 w-3" />
+                        </Button>
+                      )}
                     </div>
                   </div>
-                  <Badge variant="outline" className="text-xs whitespace-nowrap">
+                  <Badge variant="outline" className="text-xs whitespace-nowrap self-start">
                     {signal.type}
                   </Badge>
                 </div>
