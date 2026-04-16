@@ -195,17 +195,17 @@ export interface IStorage {
   
   // SKUs
   getSkus(companyId: string): Promise<Sku[]>;
-  getSku(id: string): Promise<Sku | undefined>;
+  getSku(id: string, companyId: string): Promise<Sku | undefined>;
   createSku(sku: InsertSku): Promise<Sku>;
-  updateSku(id: string, sku: Partial<InsertSku>): Promise<Sku | undefined>;
-  deleteSku(id: string): Promise<void>;
-  
+  updateSku(id: string, sku: Partial<InsertSku>, companyId: string): Promise<Sku | undefined>;
+  deleteSku(id: string, companyId: string): Promise<void>;
+
   // Materials
   getMaterials(companyId: string): Promise<Material[]>;
-  getMaterial(id: string): Promise<Material | undefined>;
+  getMaterial(id: string, companyId: string): Promise<Material | undefined>;
   createMaterial(material: InsertMaterial): Promise<Material>;
-  updateMaterial(id: string, material: Partial<InsertMaterial>): Promise<Material | undefined>;
-  deleteMaterial(id: string): Promise<void>;
+  updateMaterial(id: string, material: Partial<InsertMaterial>, companyId: string): Promise<Material | undefined>;
+  deleteMaterial(id: string, companyId: string): Promise<void>;
   
   // BOMs
   getBomsForSku(skuId: string): Promise<Bom[]>;
@@ -215,10 +215,10 @@ export interface IStorage {
   
   // Suppliers
   getSuppliers(companyId: string): Promise<Supplier[]>;
-  getSupplier(id: string): Promise<Supplier | undefined>;
+  getSupplier(id: string, companyId: string): Promise<Supplier | undefined>;
   createSupplier(supplier: InsertSupplier): Promise<Supplier>;
-  updateSupplier(id: string, supplier: Partial<InsertSupplier>): Promise<Supplier | undefined>;
-  deleteSupplier(id: string): Promise<void>;
+  updateSupplier(id: string, supplier: Partial<InsertSupplier>, companyId: string): Promise<Supplier | undefined>;
+  deleteSupplier(id: string, companyId: string): Promise<void>;
   
   // Supplier Materials
   getSupplierMaterials(supplierId: string): Promise<SupplierMaterial[]>;
@@ -243,18 +243,18 @@ export interface IStorage {
   
   // Price Alerts
   getPriceAlerts(companyId: string): Promise<PriceAlert[]>;
-  getPriceAlert(id: string): Promise<PriceAlert | undefined>;
+  getPriceAlert(id: string, companyId: string): Promise<PriceAlert | undefined>;
   getActivePriceAlerts(companyId: string): Promise<PriceAlert[]>;
   createPriceAlert(alert: InsertPriceAlert): Promise<PriceAlert>;
-  updatePriceAlert(id: string, alert: Partial<InsertPriceAlert>): Promise<PriceAlert | undefined>;
-  deletePriceAlert(id: string): Promise<void>;
-  
+  updatePriceAlert(id: string, alert: Partial<InsertPriceAlert>, companyId: string): Promise<PriceAlert | undefined>;
+  deletePriceAlert(id: string, companyId: string): Promise<void>;
+
   // RFQs (Request for Quotations)
   getRfqs(companyId: string): Promise<Rfq[]>;
-  getRfq(id: string): Promise<Rfq | undefined>;
+  getRfq(id: string, companyId: string): Promise<Rfq | undefined>;
   createRfq(rfq: InsertRfq): Promise<Rfq>;
-  updateRfq(id: string, rfq: Partial<InsertRfq>): Promise<Rfq | undefined>;
-  deleteRfq(id: string): Promise<void>;
+  updateRfq(id: string, rfq: Partial<InsertRfq>, companyId: string): Promise<Rfq | undefined>;
+  deleteRfq(id: string, companyId: string): Promise<void>;
   
   // RFQ Quotes
   getRfqQuotes(rfqId: string): Promise<RfqQuote[]>;
@@ -4075,9 +4075,9 @@ export class DbStorage implements IStorage {
       .from(userRoleAssignments)
       .innerJoin(users, eq(userRoleAssignments.userId, users.id))
       .where(eq(userRoleAssignments.roleId, roleId));
-    return result;
+    return result as any[];
   }
-  
+
   // RBAC - Permissions
   async getAllPermissions(): Promise<Permission[]> {
     return await db.select().from(permissions);

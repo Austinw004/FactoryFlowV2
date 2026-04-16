@@ -228,7 +228,7 @@ export class ModelCalibrationEngine {
     
     // Price prediction based on commodity price trends
     const priceTrend = data.slice(Math.max(0, currentIndex - 6), currentIndex + 1)
-      .reduce((sum, d) => sum + d.commodityPrice, 0) / Math.min(7, currentIndex + 1);
+      .reduce((sum, d) => sum + (d.commodityPrice ?? 0), 0) / Math.min(7, currentIndex + 1);
     
     const predictedPrice = priceTrend * (1 + momentum * 0.1);
     
@@ -269,7 +269,7 @@ export class ModelCalibrationEngine {
     );
     
     // Filter by months
-    const filteredData = data.filter(d => {
+    const filteredData: any[] = data.filter((d: any) => {
       const month = d.date.getMonth() + 1;
       if (d.date.getFullYear() === timeFrame.startYear && month < timeFrame.startMonth) return false;
       if (d.date.getFullYear() === timeFrame.endYear && month > timeFrame.endMonth) return false;
@@ -312,7 +312,8 @@ export class ModelCalibrationEngine {
       }
       
       // Price MAPE
-      const priceError = Math.abs(prediction.predictedPrice - target.commodityPrice) / target.commodityPrice;
+      const targetPrice = target.commodityPrice ?? 1;
+      const priceError = Math.abs(prediction.predictedPrice - targetPrice) / targetPrice;
       totalPriceError += priceError;
     }
     
