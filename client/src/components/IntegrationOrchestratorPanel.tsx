@@ -118,7 +118,7 @@ function freshnessLabel(freshness: string) {
     case "recent": return "< 1 hr ago";
     case "stale": return "< 24 hrs ago";
     case "outdated": return "> 24 hrs ago";
-    default: return "No data";
+    default: return "Never synced";
   }
 }
 

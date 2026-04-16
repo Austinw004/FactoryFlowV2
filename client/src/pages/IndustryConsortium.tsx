@@ -124,9 +124,9 @@ export default function IndustryConsortium() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Benchmark Display - No Data Available */}
+              {/* Benchmark Display - awaiting peer contributions */}
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex items-center justify-between p-4 border rounded-lg" data-testid="benchmark-oee">
                   <div className="flex-1">
                     <h4 className="font-medium">Overall Equipment Effectiveness (OEE)</h4>
                     <p className="text-sm text-muted-foreground mt-1">
@@ -135,13 +135,13 @@ export default function IndustryConsortium() {
                   </div>
                   <div className="text-right">
                     <div className="text-2xl font-bold text-muted-foreground">—</div>
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      No data available
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      Unlocks at 5+ peers
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex items-center justify-between p-4 border rounded-lg" data-testid="benchmark-savings">
                   <div className="flex-1">
                     <h4 className="font-medium">Procurement Savings</h4>
                     <p className="text-sm text-muted-foreground mt-1">
@@ -150,13 +150,13 @@ export default function IndustryConsortium() {
                   </div>
                   <div className="text-right">
                     <div className="text-2xl font-bold text-muted-foreground">—</div>
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      No data available
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      Unlocks at 5+ peers
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex items-center justify-between p-4 border rounded-lg" data-testid="benchmark-turnover">
                   <div className="flex-1">
                     <h4 className="font-medium">Workforce Turnover</h4>
                     <p className="text-sm text-muted-foreground mt-1">
@@ -165,11 +165,15 @@ export default function IndustryConsortium() {
                   </div>
                   <div className="text-right">
                     <div className="text-2xl font-bold text-muted-foreground">—</div>
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      No data available
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      Unlocks at 5+ peers
                     </div>
                   </div>
                 </div>
+
+                <p className="text-xs text-muted-foreground pt-1">
+                  Benchmarks reveal anonymized medians once your consortium has five or more contributing members. Invite peers from Consortium Settings to speed this up.
+                </p>
               </div>
 
               <div className="pt-4">
