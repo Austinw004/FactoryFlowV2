@@ -60,9 +60,70 @@ const regimeDescriptions: Record<string, string> = {
   REAL_ECONOMY_LEAD: "Counter-cyclical opportunity. FDR > 2.5. Lock in favorable supplier terms while asset markets correct.",
 };
 
+// Regime-specific procurement action guidance — the "so what" for operations leaders
+const regimeProcurementGuidance: Record<string, {
+  headline: string;
+  actions: string[];
+  urgency: "stable" | "caution" | "urgent" | "opportunity";
+  cta: { label: string; path: string };
+}> = {
+  HEALTHY_EXPANSION: {
+    headline: "Market conditions are stable. Standard procurement pace is appropriate.",
+    actions: [
+      "Good time to negotiate long-term contracts — suppliers are not under pricing pressure.",
+      "Review reorder points for fast-moving materials and optimize safety stock levels.",
+      "Evaluate supplier consolidation opportunities to improve terms.",
+    ],
+    urgency: "stable",
+    cta: { label: "Review Active Contracts", path: "/supplier-risk" },
+  },
+  ASSET_LED_GROWTH: {
+    headline: "Asset prices are outpacing the real economy. Input costs likely to rise 8–12% this quarter.",
+    actions: [
+      "Lock in supplier contracts before the next pricing cycle — especially for metals and energy-adjacent materials.",
+      "Pre-purchase critical materials with long lead times to buffer against price increases.",
+      "Identify single-source dependencies and qualify backup suppliers now, while you still have time.",
+    ],
+    urgency: "caution",
+    cta: { label: "View Exposed Materials", path: "/supply-chain" },
+  },
+  IMBALANCED_EXCESS: {
+    headline: "Significant market decoupling detected. Procurement risk is elevated.",
+    actions: [
+      "Defer non-critical purchases — avoid locking in at peak prices.",
+      "Renegotiate expiring contracts immediately — leverage market uncertainty for better terms.",
+      "Build safety stock only on truly critical materials where stockout risk outweighs cost.",
+    ],
+    urgency: "urgent",
+    cta: { label: "Review At-Risk Materials", path: "/inventory" },
+  },
+  REAL_ECONOMY_LEAD: {
+    headline: "Counter-cyclical window open. Favorable terms are available now.",
+    actions: [
+      "Lock in multi-year supplier agreements while asset markets are correcting.",
+      "Accelerate planned purchases — real economy strength means your suppliers need volume.",
+      "Renegotiate your top 3 supplier contracts. Pricing power is in your favor.",
+    ],
+    urgency: "opportunity",
+    cta: { label: "Start Contract Negotiations", path: "/supplier-risk" },
+  },
+};
+
 function getRegimeDescription(regime: string): string {
   return regimeDescriptions[regime] || "Economic conditions are being analyzed.";
 }
+
+function getRegimeGuidance(regime: string) {
+  return regimeProcurementGuidance[regime] || null;
+}
+
+// Maps urgency level to visual treatment
+const urgencyStyles: Record<string, { banner: string; badge: string; dot: string }> = {
+  stable:      { banner: "border-emerald-500/30 bg-emerald-500/5",  badge: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",  dot: "bg-emerald-500" },
+  caution:     { banner: "border-amber-500/30 bg-amber-500/5",      badge: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",          dot: "bg-amber-500" },
+  urgent:      { banner: "border-red-500/30 bg-red-500/5",          badge: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",                  dot: "bg-red-500" },
+  opportunity: { banner: "border-blue-500/30 bg-blue-500/5",        badge: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",              dot: "bg-blue-500" },
+};
 
 export default function Dashboard() {
   const { toast } = useToast();
@@ -263,40 +324,70 @@ export default function Dashboard() {
 
   // Show empty state
   if (!hasData) {
+    // Show the live economic regime even with no operational data — first "aha" moment
+    const emptyGuidance = getRegimeGuidance(regimeType);
+    const emptyUrgency = emptyGuidance?.urgency ?? "stable";
+    const emptyStyles = urgencyStyles[emptyUrgency];
+
     return (
       <>
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-6 max-w-3xl">
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <h1 className="text-3xl font-semibold">Dashboard</h1>
-            <div className="flex items-center gap-2">
-              <Badge variant={isConnected ? "default" : "outline"} className="gap-1.5">
-                <Radio className={`h-3 w-3 ${isConnected ? 'animate-pulse' : ''}`} />
-                {isConnected ? 'Live Updates' : 'Connecting...'}
-              </Badge>
+            <div>
+              <div className="eyebrow text-xs mb-1">Your command center</div>
+              <h1 className="text-3xl font-semibold">Welcome to Prescient</h1>
             </div>
+            <Badge variant={isConnected ? "default" : "outline"} className="gap-1.5">
+              <Radio className={`h-3 w-3 ${isConnected ? 'animate-pulse' : ''}`} />
+              {isConnected ? 'Live' : 'Connecting...'}
+            </Badge>
           </div>
-          <Card className="p-12">
-            <div className="text-center space-y-6">
-              <Package className="h-16 w-16 mx-auto text-muted-foreground" />
+
+          {/* Live regime preview — show intelligence value before any data is added */}
+          {regimeType !== 'UNKNOWN' && emptyGuidance && (
+            <div className={`rounded-lg border p-5 ${emptyStyles.banner}`} data-testid="empty-regime-preview">
+              <div className="flex items-start gap-3 mb-3">
+                <span className={`mt-1.5 h-2.5 w-2.5 rounded-full shrink-0 ${emptyStyles.dot}`} />
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                    Live Economic Regime — {friendlyRegime} (FDR: {fdr.toFixed(2)})
+                  </p>
+                  <p className="text-sm font-medium text-foreground">{emptyGuidance.headline}</p>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground pl-5 leading-relaxed">
+                Once you add your materials and suppliers, this platform will tell you exactly which of your contracts to lock in, which purchases to defer, and which suppliers are exposed. Load sample data to see it in action.
+              </p>
+            </div>
+          )}
+
+          <Card className="p-8">
+            <div className="space-y-5">
               <div>
-                <h2 className="text-2xl font-semibold mb-2">Get Started</h2>
-                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                  Add your products, materials, and suppliers to start using the platform. 
-                  Or explore with sample data first.
+                <h2 className="text-xl font-semibold mb-1">Add your operation to get started</h2>
+                <p className="text-sm text-muted-foreground">
+                  Connect your materials, products, and suppliers — or load sample data to explore the platform's intelligence immediately.
                 </p>
               </div>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Button 
-                  onClick={() => setShowCreateSKU(true)}
-                  size="lg"
-                  data-testid="button-add-first-product"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Your First Product
-                </Button>
-                <Button 
-                  variant="outline"
-                  onClick={() => seedMutation.mutate()} 
+
+              {/* What you'll unlock */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {[
+                  { icon: TrendingUp, label: "Regime-driven signals", desc: "Know when to buy, defer, or renegotiate based on macro conditions" },
+                  { icon: AlertCircle, label: "Materials at risk", desc: "Single-source dependencies, stockout risk, and lead time alerts" },
+                  { icon: DollarSign, label: "Dollar-ranked actions", desc: "Every recommendation ranked by business impact in dollars" },
+                ].map(({ icon: Icon, label, desc }) => (
+                  <div key={label} className="p-3 rounded-md border bg-muted/20">
+                    <Icon className="h-4 w-4 text-primary mb-2" />
+                    <p className="text-xs font-semibold mb-0.5">{label}</p>
+                    <p className="text-xs text-muted-foreground">{desc}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button
+                  onClick={() => seedMutation.mutate()}
                   disabled={seedMutation.isPending}
                   size="lg"
                   data-testid="button-load-sample-data"
@@ -304,14 +395,23 @@ export default function Dashboard() {
                   {seedMutation.isPending ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Loading...
+                      Loading sample data...
                     </>
                   ) : (
                     <>
                       <Upload className="h-4 w-4 mr-2" />
-                      Load Sample Data
+                      See it in action — Load Sample Data
                     </>
                   )}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowCreateSKU(true)}
+                  size="lg"
+                  data-testid="button-add-first-product"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Your First Product
                 </Button>
               </div>
             </div>
@@ -338,18 +438,68 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="mb-16">
-        <div className="eyebrow mb-4">State of operations</div>
-        <h1 className="hero text-5xl">{regime?.regime ? getRegimeDescription(regime.regime).split('.')[0] + '.' : 'Analyzing conditions.'}</h1>
-        <p className="text-soft mt-5 max-w-xl leading-relaxed">
-          {Array.isArray(skus) && skus.length > 0
-            ? `Tracking ${skus.length.toLocaleString()} SKU${skus.length === 1 ? '' : 's'}. ${regime?.regime === 'HEALTHY_EXPANSION' ? 'No critical exposures.' : 'Review current regime conditions.'}`
-            : 'Add your first SKU to start tracking operations.'}
-        </p>
-      </div>
+      {/* Hero — command center header with regime-driven procurement guidance */}
+      {(() => {
+        const guidance = getRegimeGuidance(regimeType);
+        const urgency = guidance?.urgency ?? "stable";
+        const styles = urgencyStyles[urgency];
+        return (
+          <div className="mb-16">
+            <div className="eyebrow mb-4">State of operations</div>
+            <h1 className="hero text-5xl">{regime?.regime ? getRegimeDescription(regime.regime).split('.')[0] + '.' : 'Analyzing conditions.'}</h1>
+            <p className="text-soft mt-5 max-w-xl leading-relaxed">
+              {Array.isArray(skus) && skus.length > 0
+                ? `Tracking ${skus.length.toLocaleString()} SKU${skus.length === 1 ? '' : 's'}. ${regime?.regime === 'HEALTHY_EXPANSION' ? 'No critical exposures.' : 'Review current regime conditions.'}`
+                : 'Add your first SKU to start tracking operations.'}
+            </p>
 
-      <div className="grid grid-cols-4 gap-px bg-line mb-20">
-        <div className="bg-panel p-6">
+            {/* Regime procurement action banner — THE most important thing on the page */}
+            {guidance && (
+              <div className={`mt-8 rounded-lg border p-5 ${styles.banner}`} data-testid="regime-procurement-banner">
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    <span className={`mt-1.5 h-2.5 w-2.5 rounded-full shrink-0 ${styles.dot}`} />
+                    <div>
+                      <p className="font-semibold text-sm text-foreground mb-2">{guidance.headline}</p>
+                      <ul className="space-y-1">
+                        {guidance.actions.map((action, i) => (
+                          <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                            <span className="mt-0.5 shrink-0 font-mono text-muted-foreground/60">{i + 1}.</span>
+                            <span>{action}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="shrink-0 text-xs"
+                    onClick={() => setLocation(guidance.cta.path)}
+                    data-testid="regime-banner-cta"
+                  >
+                    {guidance.cta.label} →
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Regime-tinted stat grid — accent color shifts with market conditions */}
+      <div className={`grid grid-cols-4 gap-px mb-20 ${
+        regimeType === 'ASSET_LED_GROWTH'  ? 'bg-amber-500/20'  :
+        regimeType === 'IMBALANCED_EXCESS' ? 'bg-red-500/20'    :
+        regimeType === 'REAL_ECONOMY_LEAD' ? 'bg-blue-500/20'   :
+        'bg-line'
+      }`} data-testid="regime-stat-grid">
+        <div className={`p-6 ${
+          regimeType === 'ASSET_LED_GROWTH'  ? 'bg-amber-500/5'  :
+          regimeType === 'IMBALANCED_EXCESS' ? 'bg-red-500/5'    :
+          regimeType === 'REAL_ECONOMY_LEAD' ? 'bg-blue-500/5'   :
+          'bg-panel'
+        }`}>
           <div className="eyebrow mb-4">Regime</div>
           <div className="text-3xl display">{regime?.regime ? regime.regime.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase()).split(' ').slice(0, 2).join(' ') : '—'}</div>
           <div className="mono text-xs text-muted mt-3">{regime?.fdr != null ? `FDR: ${Number(regime.fdr).toFixed(2)}` : 'Awaiting data'}</div>
@@ -357,12 +507,16 @@ export default function Dashboard() {
         <div className="bg-panel p-6">
           <div className="eyebrow mb-4">Active SKUs</div>
           <div className="text-3xl display">{Array.isArray(skus) ? skus.length.toLocaleString() : '—'}</div>
-          <div className="mono text-xs text-muted mt-3">{Array.isArray(skus) && skus.length > 0 ? 'Tracked' : 'None yet'}</div>
+          <div className="mono text-xs text-muted mt-3">{Array.isArray(skus) && skus.length > 0 ? 'Products tracked' : 'None yet'}</div>
         </div>
         <div className="bg-panel p-6">
-          <div className="eyebrow mb-4">Allocations</div>
-          <div className="text-3xl display">{Array.isArray(allocations) ? allocations.length.toLocaleString() : '—'}</div>
-          <div className="mono text-xs text-muted mt-3">{Array.isArray(allocations) && allocations.length > 0 ? 'Active' : 'None yet'}</div>
+          <div className="eyebrow mb-4">Procurement Actions</div>
+          <div className={`text-3xl display ${policySignals.length > 0 ? (
+            regimeType === 'IMBALANCED_EXCESS' ? 'text-red-600 dark:text-red-400' :
+            regimeType === 'ASSET_LED_GROWTH'  ? 'text-amber-600 dark:text-amber-400' :
+            ''
+          ) : ''}`}>{policySignals.length > 0 ? policySignals.length.toLocaleString() : '—'}</div>
+          <div className="mono text-xs text-muted mt-3">{policySignals.length > 0 ? 'Regime-driven signals' : 'No active signals'}</div>
         </div>
         <div className="bg-panel p-6">
           <div className="eyebrow mb-4">Connection</div>
