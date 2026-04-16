@@ -45,11 +45,11 @@ SOC 2 Type II attestations.
 ## Detailed mapping (highlights — full table in `SECURITY.md`)
 
 ### 3.1 Access Control
-- **3.1.1** Limit system access to authorized users — ✅ `isAuthenticated` middleware; 728 of 732 routes gated.
+- **3.1.1** Limit system access to authorized users — ✅ `isAuthenticated` + `requireAuth` global middleware on all `/api/*` routes; public exceptions: Stripe config, health probes, auth endpoints.
 - **3.1.2** Limit access to permitted transactions — ✅ RBAC: owner / admin / super_admin / user / viewer.
 - **3.1.3** Control CUI flow — 🟨 tenant isolation enforced; CUI-specific tagging planned.
 - **3.1.5** Least privilege — ✅ default role on signup is `user`; elevation is explicit.
-- **3.1.8** Limit unsuccessful logon attempts — ✅ 10 per 15 min per IP via `rateLimiters.auth`.
+- **3.1.8** Limit unsuccessful logon attempts — ✅ 30 requests per minute per IP via `rateLimiters.auth` (server/lib/securityHardening.ts:539); sensitive ops at 3/min.
 
 ### 3.3 Audit & Accountability
 - **3.3.1** Create audit records — ✅ `audit_logs` with before/after diffs.
