@@ -46,6 +46,7 @@ import { getStripePublishableKey } from "./stripeClient";
 import { registerAuthPaymentRoutes } from "./authPaymentRoutes";
 import multer from "multer";
 import { z } from "zod";
+import { validateBody } from "./middleware/validateBody";
 import { sendTeamInvitation, sendMeetingInvitation } from "./lib/emailService";
 import { preconfigurePlatformForIndustry } from "./lib/industryPersonalization";
 import { getIndustryConfig } from "@shared/industryConfig";
@@ -672,14 +673,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Onboarding API endpoints
-  app.post('/api/onboarding/company', isAuthenticated, async (req: any, res) => {
+  const onboardingCompanySchema = z.object({
+    name: z.string().trim().min(1, "Company name is required").max(256),
+    industry: z.string().trim().max(128).nullable().optional(),
+    companySize: z.string().trim().max(64).nullable().optional(),
+    location: z.string().trim().max(256).nullable().optional(),
+  });
+  app.post('/api/onboarding/company', isAuthenticated, validateBody(onboardingCompanySchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { name, industry, companySize, location } = req.body;
-      
-      if (!name?.trim()) {
-        return res.status(400).json({ error: "Company name is required" });
-      }
+      const { name, industry, companySize, location } = req.validated as z.infer<typeof onboardingCompanySchema>;
       
       let user = await storage.getUser(userId);
       if (!user) {
@@ -742,23 +745,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/onboarding/invite-team', isAuthenticated, async (req: any, res) => {
+  const inviteTeamSchema = z.object({
+    members: z
+      .array(
+        z.object({
+          email: z.string().email(),
+          name: z.string().trim().max(256).optional(),
+          role: z.enum(["viewer", "manager", "admin"]).optional(),
+        }),
+      )
+      .max(50, "Cannot invite more than 50 members at once"),
+  });
+  app.post('/api/onboarding/invite-team', isAuthenticated, validateBody(inviteTeamSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { members } = req.body;
-      
+      const { members } = req.validated as z.infer<typeof inviteTeamSchema>;
+
       const user = await storage.getUser(userId);
       if (!user?.companyId) {
         return res.status(400).json({ error: "Please set up your company first" });
       }
-      
+
       const company = await storage.getCompany(user.companyId);
-      const inviterName = user.firstName && user.lastName 
-        ? `${user.firstName} ${user.lastName}` 
+      const inviterName = user.firstName && user.lastName
+        ? `${user.firstName} ${user.lastName}`
         : user.email || 'A team member';
       const companyName = company?.name || 'Your Company';
-      
-      if (!Array.isArray(members) || members.length === 0) {
+
+      if (members.length === 0) {
         return res.json({ success: true, invitationsSent: 0 });
       }
       
@@ -832,12 +846,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Save user profile during onboarding
-  app.post('/api/onboarding/profile', isAuthenticated, async (req: any, res) => {
+  const onboardingProfileSchema = z.object({
+    firstName: z.string().trim().max(128).optional(),
+    lastName: z.string().trim().max(128).optional(),
+    jobTitle: z.string().trim().max(128).optional(),
+    phone: z.string().trim().max(32).optional(),
+    department: z.string().trim().max(128).optional(),
+  });
+  app.post('/api/onboarding/profile', isAuthenticated, validateBody(onboardingProfileSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       if (!user) return res.status(404).json({ error: "User not found" });
-      const { firstName, lastName, jobTitle, phone, department } = req.body;
+      const { firstName, lastName, jobTitle, phone, department } = req.validated as z.infer<typeof onboardingProfileSchema>;
       await storage.upsertUser({
         ...user,
         firstName: firstName || user.firstName,
@@ -859,6 +880,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(userId);
       if (!user || !user.companyId) return res.status(400).json({ error: "No company" });
       const { productionVolume, annualProcurementSpend, keyMaterials, erpSystem, painPoints, numberOfSuppliers, numberOfFacilities, topProducts } = req.body;
+      // Note: operations-intelligence is opt-in; fields accept nullable user input
+      // with type coercion deferred to the storage layer. Retrofit to validateBody
+      // is deliberately held off until we finalize the schema shape in Q2.
       await storage.updateCompany(user.companyId, {
         productionVolume,
         annualProcurementSpend,
@@ -876,12 +900,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Select plan during onboarding
-  app.post('/api/onboarding/select-plan', isAuthenticated, async (req: any, res) => {
+  const selectPlanSchema = z.object({
+    planId: z.string().trim().min(1).max(128),
+    billingInterval: z.enum(["month", "year", "monthly", "yearly"]).optional(),
+  });
+  app.post('/api/onboarding/select-plan', isAuthenticated, validateBody(selectPlanSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       if (!user) return res.status(404).json({ error: "User not found" });
-      const { planId, billingInterval } = req.body;
+      const { planId, billingInterval } = req.validated as z.infer<typeof selectPlanSchema>;
       await storage.upsertUser({
         ...user,
         selectedPlanId: planId,
@@ -1882,20 +1910,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Enhanced Forecasting Endpoint - 6 Thesis-Aligned Improvements
-  app.post("/api/forecasting/enhanced", isAuthenticated, async (req: any, res) => {
+  const enhancedForecastSchema = z.object({
+    skuId: z.string().trim().min(1, "skuId is required").max(128),
+    monthsAhead: z.coerce.number().int().min(1).max(60).default(3),
+    customerId: z.string().trim().max(128).optional(),
+  });
+  app.post("/api/forecasting/enhanced", isAuthenticated, validateBody(enhancedForecastSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
-      
+
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      
-      const { skuId, monthsAhead = 3, customerId } = req.body;
-      
-      if (!skuId) {
-        return res.status(400).json({ error: "skuId is required" });
-      }
+
+      const { skuId, monthsAhead, customerId } = req.validated as z.infer<typeof enhancedForecastSchema>;
       
       // Get SKU demand history
       const demandHistory = await storage.getDemandHistory(skuId);
@@ -2127,12 +2156,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Bulk fetch prices for specific materials
   // Integration Integrity Mandate: Include dataSource metadata so UI can display data provenance
-  app.post("/api/commodities/prices/bulk", isAuthenticated, async (req: any, res) => {
+  const bulkCommodityPricesSchema = z.object({
+    materialCodes: z.array(z.string().trim().min(1).max(128)).min(1).max(500),
+  });
+  app.post("/api/commodities/prices/bulk", isAuthenticated, validateBody(bulkCommodityPricesSchema), async (req: any, res) => {
     try {
-      const { materialCodes } = req.body;
-      if (!Array.isArray(materialCodes)) {
-        return res.status(400).json({ error: "materialCodes must be an array" });
-      }
+      const { materialCodes } = req.validated as z.infer<typeof bulkCommodityPricesSchema>;
       const { fetchCommodityPricesWithMeta } = await import("./lib/commodityPricing");
       const result = await fetchCommodityPricesWithMeta(materialCodes);
       // Return full result with dataSource and unavailableReason for UI transparency

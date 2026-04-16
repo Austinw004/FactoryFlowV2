@@ -425,10 +425,10 @@ export default function Compliance() {
         </Card>
 
         {/* Expiration Countdown Alert */}
-        <Card className={`md:col-span-2 ${complianceScore?.alerts?.expiringDocuments > 0 ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950' : ''}`}>
+        <Card className={`md:col-span-2 ${(complianceScore?.alerts?.expiringDocuments ?? 0) > 0 ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950' : ''}`}>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className={`h-5 w-5 ${complianceScore?.alerts?.expiringDocuments > 0 ? 'text-yellow-600' : 'text-muted-foreground'}`} />
+              <AlertTriangle className={`h-5 w-5 ${(complianceScore?.alerts?.expiringDocuments ?? 0) > 0 ? 'text-yellow-600' : 'text-muted-foreground'}`} />
               30-Day Expiration Alert
             </CardTitle>
           </CardHeader>
@@ -451,9 +451,9 @@ export default function Compliance() {
                     <div className="text-sm text-muted-foreground">Upcoming Deadlines</div>
                   </div>
                 </div>
-                {complianceScore?.expiringDocuments?.length > 0 && (
+                {(complianceScore?.expiringDocuments?.length ?? 0) > 0 && (
                   <div className="text-sm space-y-1">
-                    {complianceScore.expiringDocuments.slice(0, 3).map((doc: any) => (
+                    {complianceScore?.expiringDocuments?.slice(0, 3).map((doc: any) => (
                       <div key={doc.id} className="flex items-center justify-between text-yellow-700 dark:text-yellow-300">
                         <span className="truncate">{doc.title}</span>
                         <span className="text-xs">

@@ -444,7 +444,7 @@ export default function Allocation() {
           )}
           <Button
             onClick={handleRunAllocation}
-            disabled={runAllocationMutation.isPending || (inventoryCapacityCheck?.materialsLowStock?.length > 0 && !lowStockAcknowledged)}
+            disabled={runAllocationMutation.isPending || ((inventoryCapacityCheck?.materialsLowStock?.length ?? 0) > 0 && !lowStockAcknowledged)}
             data-testid="button-run-allocation"
             className="w-full"
           >

@@ -4,9 +4,12 @@ import { PolicySignals } from "@/components/PolicySignals";
 import { AllocationTable } from "@/components/AllocationTable";
 import { EditableBudgetGauge } from "@/components/EditableBudgetGauge";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
+import { InfoTooltip } from "@/components/InfoTooltip";
 
-// Heavy Create*Dialog components are only mounted when the user opens a
-// dialog. Lazy-load them so the Dashboard entry chunk is smaller on cold load.
+// Below-the-fold and dialog-gated widgets are lazy-loaded so the initial
+// Dashboard paint only pays for what the user actually sees before scrolling.
+// Each of these groups >20kB of JS that was previously inlined into the
+// Dashboard entry chunk.
 const CreateSKUDialog = lazy(() =>
   import("@/components/CreateSKUDialog").then((m) => ({ default: m.CreateSKUDialog })),
 );
@@ -16,14 +19,24 @@ const CreateMaterialDialog = lazy(() =>
 const CreateSupplierDialog = lazy(() =>
   import("@/components/CreateSupplierDialog").then((m) => ({ default: m.CreateSupplierDialog })),
 );
-import { MaterialsAtRiskWidget } from "@/components/MaterialsAtRiskWidget";
-import { QuickWinsWidget } from "@/components/QuickWinsWidget";
-import { RegimeActionCards } from "@/components/RegimeActionCards";
-import { IndustryInsightsPanel, IndustryBanner } from "@/components/IndustryInsightsPanel";
-import { InfoTooltip } from "@/components/InfoTooltip";
-import { ActivityFeed } from "@/components/ActivityFeed";
-import { SmartInsightsCompact } from "@/components/SmartInsightsPanel";
-import { InsightPanel } from "@/components/InsightPanel";
+const MaterialsAtRiskWidget = lazy(() =>
+  import("@/components/MaterialsAtRiskWidget").then((m) => ({ default: m.MaterialsAtRiskWidget })),
+);
+const QuickWinsWidget = lazy(() =>
+  import("@/components/QuickWinsWidget").then((m) => ({ default: m.QuickWinsWidget })),
+);
+const IndustryInsightsPanel = lazy(() =>
+  import("@/components/IndustryInsightsPanel").then((m) => ({ default: m.IndustryInsightsPanel })),
+);
+const ActivityFeed = lazy(() =>
+  import("@/components/ActivityFeed").then((m) => ({ default: m.ActivityFeed })),
+);
+const SmartInsightsCompact = lazy(() =>
+  import("@/components/SmartInsightsPanel").then((m) => ({ default: m.SmartInsightsCompact })),
+);
+const InsightPanel = lazy(() =>
+  import("@/components/InsightPanel").then((m) => ({ default: m.InsightPanel })),
+);
 import { generateDashboardPDF } from "@/lib/pdfExport";
 import { TrendingUp, DollarSign, Package, AlertCircle, Plus, Upload, GitCompare, Loader2, Globe, Radio, Package2, Building2, Box, FileDown, Clock, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -583,13 +596,17 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 space-y-4">
-          <SmartInsightsCompact />
-          <IndustryInsightsPanel maxItems={4} />
+          <Suspense fallback={<div className="h-32 rounded-md bg-muted/20 animate-pulse" />}>
+            <SmartInsightsCompact />
+            <IndustryInsightsPanel maxItems={4} />
+          </Suspense>
         </div>
         <div className="space-y-4">
-          <InsightPanel compact />
-          <QuickWinsWidget />
-          <MaterialsAtRiskWidget />
+          <Suspense fallback={<div className="h-32 rounded-md bg-muted/20 animate-pulse" />}>
+            <InsightPanel compact />
+            <QuickWinsWidget />
+            <MaterialsAtRiskWidget />
+          </Suspense>
         </div>
       </div>
 
@@ -718,8 +735,10 @@ export default function Dashboard() {
         </p>
       </Card>
       
-      {/* Activity Feed */}
-      <ActivityFeed limit={10} />
+      {/* Activity Feed (below the fold — lazy-loaded) */}
+      <Suspense fallback={<div className="h-40 rounded-md bg-muted/20 animate-pulse" />}>
+        <ActivityFeed limit={10} />
+      </Suspense>
       
       {/* Creation Dialogs (lazy-loaded — no render until `open` is true) */}
       <Suspense fallback={null}>
