@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, AlertCircle, CheckCircle, Activity } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { humanizeError } from "@/lib/humanizeError";
 
 interface ScenarioResult {
   scenarioName: string;
@@ -66,10 +67,9 @@ export default function ScenarioPlanning() {
         description: `${data.scenarioName} analyzed with ${data.confidence}% confidence`,
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
-        title: "Simulation failed",
-        description: error.message,
+        ...humanizeError(error, "Simulation failed"),
         variant: "destructive",
       });
     },

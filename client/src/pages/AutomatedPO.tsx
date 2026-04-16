@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { humanizeError } from "@/lib/humanizeError";
 import { formatRegimeName } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -225,8 +226,8 @@ export default function AutomatedPO() {
       queryClient.invalidateQueries({ queryKey: ["/api/procurement/recommendations/pending"] });
       toast({ title: "Recommendation approved", description: "Queued for manual PO processing." });
     },
-    onError: (err: Error) => {
-      toast({ title: "Approval failed", description: err.message, variant: "destructive" });
+    onError: (err: unknown) => {
+      toast({ ...humanizeError(err, "Approval failed"), variant: "destructive" });
     },
   });
 
@@ -246,10 +247,10 @@ export default function AutomatedPO() {
         toast({ title: "Payment executed", description: `Transaction confirmed. Amount: $${(data.amountCharged / 100).toLocaleString()}` });
       }
     },
-    onError: (err: Error) => {
+    onError: (err: unknown) => {
       setExecutingId(null);
       setConfirmExec(null);
-      toast({ title: "Execution failed", description: err.message, variant: "destructive" });
+      toast({ ...humanizeError(err, "Execution failed"), variant: "destructive" });
     },
   });
 
@@ -262,8 +263,8 @@ export default function AutomatedPO() {
       queryClient.invalidateQueries({ queryKey: ["/api/po-rules"] });
       toast({ title: "Rule updated successfully" });
     },
-    onError: (error: Error) => {
-      toast({ title: "Error updating rule", description: error.message, variant: "destructive" });
+    onError: (error: unknown) => {
+      toast({ ...humanizeError(error, "Error updating rule"), variant: "destructive" });
     },
   });
 
@@ -276,8 +277,8 @@ export default function AutomatedPO() {
       queryClient.invalidateQueries({ queryKey: ["/api/po-rules"] });
       toast({ title: "Rule deleted successfully" });
     },
-    onError: (error: Error) => {
-      toast({ title: "Error deleting rule", description: error.message, variant: "destructive" });
+    onError: (error: unknown) => {
+      toast({ ...humanizeError(error, "Error deleting rule"), variant: "destructive" });
     },
   });
 
@@ -302,8 +303,8 @@ export default function AutomatedPO() {
       setShowRuleDialog(false);
       resetRuleForm();
     },
-    onError: (error: Error) => {
-      toast({ title: "Error creating rule", description: error.message, variant: "destructive" });
+    onError: (error: unknown) => {
+      toast({ ...humanizeError(error, "Error creating rule"), variant: "destructive" });
     }
   });
 
@@ -325,8 +326,8 @@ export default function AutomatedPO() {
       setShowPlaybookDialog(false);
       resetPlaybookForm();
     },
-    onError: (error: Error) => {
-      toast({ title: "Error creating playbook", description: error.message, variant: "destructive" });
+    onError: (error: unknown) => {
+      toast({ ...humanizeError(error, "Error creating playbook"), variant: "destructive" });
     }
   });
 
@@ -348,8 +349,8 @@ export default function AutomatedPO() {
       setShowErpDialog(false);
       resetErpForm();
     },
-    onError: (error: Error) => {
-      toast({ title: "Error creating connection", description: error.message, variant: "destructive" });
+    onError: (error: unknown) => {
+      toast({ ...humanizeError(error, "Error creating connection"), variant: "destructive" });
     }
   });
 

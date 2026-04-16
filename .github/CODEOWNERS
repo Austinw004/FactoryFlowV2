@@ -1,0 +1,50 @@
+# FactoryFlowV2 CODEOWNERS
+#
+# The FDR regime model is the product's competitive moat and must only change
+# with deliberate founder review. Anything in the paths below requires Austin's
+# approval before merge, regardless of which routine or contributor opened the PR.
+#
+# This is a hard rule. Do not add auto-merge or bypass policies for these paths.
+#
+# Syntax: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-security/customizing-your-repository/about-code-owners
+
+# Fallback — every file has an owner
+*                                       @Austinw004
+
+# ── FDR / regime / forecasting core (founder-only) ──────────────────────
+/server/lib/fdrOptimization.ts          @Austinw004
+/server/lib/fdrStressTest.ts            @Austinw004
+/server/lib/dualCircuitResearch.ts      @Austinw004
+/server/lib/regimeIntelligence.ts       @Austinw004
+/server/lib/regimeConstants.ts          @Austinw004
+/server/lib/regimeBacktest.ts           @Austinw004
+/server/lib/adaptiveForecasting.ts      @Austinw004
+/server/lib/enhancedForecasting.ts      @Austinw004
+/server/lib/forecasting.ts              @Austinw004
+/server/lib/forecastMonitoring.ts       @Austinw004
+/server/lib/forecastRetraining.ts       @Austinw004
+/server/lib/forecastPopulation.ts       @Austinw004
+/server/lib/commodityForecasting.ts     @Austinw004
+/server/lib/trustGuard.ts               @Austinw004
+/server/lib/adversarialValidation.ts    @Austinw004
+/server/lib/selfHealingEngine.ts        @Austinw004
+
+# ── Schema changes (table shape affects the moat) ───────────────────────
+/shared/schema.ts                       @Austinw004
+/drizzle.config.ts                      @Austinw004
+/server/storage.ts                      @Austinw004
+
+# ── Auth, audit, billing (SOC2-adjacent — founder review) ───────────────
+/server/replitAuth.ts                   @Austinw004
+/server/lib/auditLogger.ts              @Austinw004
+/server/lib/accessControl.ts            @Austinw004
+/server/lib/billingService.ts           @Austinw004
+/server/lib/credentialEncryption.ts     @Austinw004
+/server/stripeService.ts                @Austinw004
+/server/webhookHandlers.ts              @Austinw004
+
+# ── Governance docs ─────────────────────────────────────────────────────
+/docs/security/                         @Austinw004
+/docs/technical/                        @Austinw004
+/SECURITY.md                            @Austinw004
+/.github/CODEOWNERS                     @Austinw004

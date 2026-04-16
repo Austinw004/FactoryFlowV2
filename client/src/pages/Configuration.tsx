@@ -12,6 +12,7 @@ import { Settings, AlertCircle, Package, Building2, Zap, DollarSign, Bell, Save,
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { humanizeError } from "@/lib/humanizeError";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "wouter";
 import { ChevronRight } from "lucide-react";
@@ -85,10 +86,9 @@ export default function Configuration() {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/company/settings"] });
     },
-    onError: (error: Error) => {
+    onError: (error: unknown) => {
       toast({
-        title: "Error",
-        description: error.message,
+        ...humanizeError(error, "Couldn't save settings"),
         variant: "destructive",
       });
     },
@@ -1187,8 +1187,8 @@ function RoleManagement() {
       setInviteRoleId("");
       queryClient.invalidateQueries({ queryKey: ["/api/rbac/team/invitations"] });
     },
-    onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    onError: (error: unknown) => {
+      toast({ ...humanizeError(error, "Couldn't send invitation"), variant: "destructive" });
     },
   });
 
@@ -1210,8 +1210,8 @@ function RoleManagement() {
       setSelectedUserId(null);
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
     },
-    onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    onError: (error: unknown) => {
+      toast({ ...humanizeError(error, "Couldn't remove team member"), variant: "destructive" });
     },
   });
 
@@ -1222,8 +1222,8 @@ function RoleManagement() {
       toast({ title: "Success", description: "Role assigned successfully" });
       refetchUserRoles();
     },
-    onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    onError: (error: unknown) => {
+      toast({ ...humanizeError(error, "Couldn't assign role"), variant: "destructive" });
     },
   });
 
@@ -1234,8 +1234,8 @@ function RoleManagement() {
       toast({ title: "Success", description: "Role removed successfully" });
       refetchUserRoles();
     },
-    onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    onError: (error: unknown) => {
+      toast({ ...humanizeError(error, "Couldn't remove role"), variant: "destructive" });
     },
   });
 

@@ -13,6 +13,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { useToast } from "@/hooks/use-toast";
 import { Boxes, PlayCircle, AlertCircle, Clock, Plus, X, Package, WarehouseIcon, Info, CheckCircle2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { humanizeError } from "@/lib/humanizeError";
 import type { Allocation, AllocationResult, Material } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -155,10 +156,9 @@ export default function Allocation() {
         });
       }
     },
-    onError: (error: Error) => {
+    onError: (error: unknown) => {
       toast({
-        title: "Allocation Failed",
-        description: error.message,
+        ...humanizeError(error, "Allocation Failed"),
         variant: "destructive",
       });
     },
