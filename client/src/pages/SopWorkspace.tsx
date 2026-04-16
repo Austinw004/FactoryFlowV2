@@ -570,7 +570,7 @@ export default function SopWorkspace() {
                 {meetings?.length || 0}
               </div>
               <p className="text-xs text-muted-foreground">
-                Next: {meetings?.[0] ? format(new Date(meetings[0].nextMeetingDate || new Date()), "MMM d") : "Not scheduled"}
+                Next: {meetings?.[0] ? format(new Date((meetings[0] as any).nextMeetingDate || new Date()), "MMM d") : "Not scheduled"}
               </p>
             </CardContent>
           </Card>
@@ -1252,7 +1252,7 @@ export default function SopWorkspace() {
                             </div>
                           </div>
                         </CardHeader>
-                        {(meeting.notes || meeting.decisions) && (
+                        {(meeting.notes || (meeting as any).decisions) && (
                           <CardContent>
                             {meeting.notes && (
                               <>
@@ -1262,7 +1262,7 @@ export default function SopWorkspace() {
                                 </p>
                               </>
                             )}
-                            {meeting.decisions && Array.isArray(meeting.decisions) && meeting.decisions.length > 0 && (
+                            {(meeting as any).decisions && Array.isArray((meeting as any).decisions) && (meeting as any).decisions.length > 0 && (
                               <>
                                 <h4 className="text-sm font-semibold mb-2">Decisions:</h4>
                                 <ul className="text-sm text-muted-foreground list-disc list-inside" data-testid={`text-meeting-decisions-${meeting.id}`}>

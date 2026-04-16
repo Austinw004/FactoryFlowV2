@@ -125,8 +125,8 @@ export async function getBillingProfile(companyId: string): Promise<BillingProfi
 
 export async function upsertBillingProfile(input: {
   companyId: string;
-  billingEmail: string;
-  companyName: string;
+  billingEmail?: string;
+  companyName?: string;
   address?: Record<string, string>;
   taxId?: string;
   stripeCustomerId?: string;
@@ -140,8 +140,8 @@ export async function upsertBillingProfile(input: {
   if (existing) {
     const [updated] = await db.update(billingProfiles)
       .set({
-        billingEmail: input.billingEmail,
-        companyName: input.companyName,
+        ...(input.billingEmail !== undefined && { billingEmail: input.billingEmail }),
+        ...(input.companyName !== undefined && { companyName: input.companyName }),
         address: input.address ?? existing.address,
         taxId: input.taxId ?? existing.taxId,
         stripeCustomerId: input.stripeCustomerId ?? existing.stripeCustomerId,
@@ -158,8 +158,8 @@ export async function upsertBillingProfile(input: {
 
   const [created] = await db.insert(billingProfiles).values({
     companyId: input.companyId,
-    billingEmail: input.billingEmail,
-    companyName: input.companyName,
+    billingEmail: input.billingEmail ?? '',
+    companyName: input.companyName ?? '',
     address: input.address ?? null,
     taxId: input.taxId ?? null,
     stripeCustomerId: input.stripeCustomerId ?? null,

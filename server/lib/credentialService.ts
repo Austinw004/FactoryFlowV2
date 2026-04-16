@@ -86,7 +86,7 @@ export class CredentialService {
     companyId: string,
     integrationId: string,
     integrationName: string,
-    credentialType: "oauth2" | "api_key" | "basic_auth" | "token",
+    credentialType: "oauth2" | "api_key" | "basic_auth" | "token" | "webhook",
     credentials: DecryptedCredentials,
     userId?: string
   ): Promise<IntegrationCredential> {
