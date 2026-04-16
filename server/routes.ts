@@ -4406,7 +4406,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create compliance document
-  app.post("/api/compliance/documents", isAuthenticated, validateBody(insertComplianceDocumentSchema.omit({ id: true, companyId: true, createdBy: true, economicRegimeContext: true, createdAt: true, updatedAt: true })), async (req: any, res) => {
+  app.post("/api/compliance/documents", isAuthenticated, validateBody(insertComplianceDocumentSchema.omit({ companyId: true, createdBy: true, economicRegimeContext: true })), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4449,7 +4449,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create compliance regulation
-  app.post("/api/compliance/regulations", isAuthenticated, validateBody(insertComplianceRegulationSchema.omit({ id: true, companyId: true, createdAt: true, updatedAt: true })), async (req: any, res) => {
+  app.post("/api/compliance/regulations", isAuthenticated, validateBody(insertComplianceRegulationSchema.omit({ companyId: true })), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4487,7 +4487,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create compliance audit
-  app.post("/api/compliance/audits", isAuthenticated, validateBody(insertComplianceAuditSchema.omit({ id: true, companyId: true, economicRegime: true, fdrAtAudit: true, createdAt: true, updatedAt: true })), async (req: any, res) => {
+  app.post("/api/compliance/audits", isAuthenticated, validateBody(insertComplianceAuditSchema.omit({ companyId: true, economicRegime: true, fdrAtAudit: true })), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
