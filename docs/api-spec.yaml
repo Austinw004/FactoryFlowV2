@@ -10,7 +10,7 @@ info:
 
     All endpoints (except those explicitly marked public) require authentication
     via the session cookie produced by POST /api/auth/login.
-  version: "1.0.0"
+  version: "1.1.0"
   contact:
     name: Austin Wendler (CEO)
     email: austinwendler44@gmail.com
@@ -31,6 +31,8 @@ tags:
   - name: Smart Insights
   - name: Automations
   - name: Audit & Traceability
+  - name: Compliance
+  - name: Machinery
   - name: Webhooks
 
 components:
@@ -228,28 +230,8 @@ paths:
                 type: array
                 items: { $ref: "#/components/schemas/Material" }
 
-  /api/materials/at-risk:
-    get:
-      tags: [Materials & Inventory]
-      summary: Ranked Materials at Risk
-      parameters:
-        - in: query
-          name: limit
-          schema: { type: integer, default: 20, maximum: 100 }
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  allOf:
-                    - $ref: "#/components/schemas/Material"
-                    - type: object
-                      properties:
-                        riskScore: { type: number }
-                        dominantDriver: { type: string, enum: [volatility, supplier, coverage, regime] }
+  # NOTE: /api/materials/at-risk was removed from code — route no longer exists.
+  # See MaterialsAtRiskWidget which fetches data from /api/operations/attention instead.
 
   /api/purchase-orders:
     get:
@@ -373,16 +355,220 @@ paths:
                 properties:
                   valid: { type: boolean }
 
-  /api/webhooks/inbound/{integrationId}:
+  /api/compliance/documents:
+    get:
+      tags: [Compliance]
+      summary: List compliance documents for the company
+      responses:
+        "200": { description: OK }
     post:
-      tags: [Webhooks]
-      security: []
-      summary: Inbound webhook, per-integration HMAC signed
+      tags: [Compliance]
+      summary: Create a compliance document
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, type]
+              properties:
+                title: { type: string }
+                type: { type: string }
+                status: { type: string }
+                expiresAt: { type: string, format: date-time, nullable: true }
+      responses:
+        "201": { description: Created }
+        "400": { description: Validation failure }
+
+  /api/compliance/regulations:
+    get:
+      tags: [Compliance]
+      summary: List compliance regulations
+      responses:
+        "200": { description: OK }
+    post:
+      tags: [Compliance]
+      summary: Create a compliance regulation record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, jurisdiction]
+              properties:
+                name: { type: string }
+                jurisdiction: { type: string }
+                status: { type: string }
+      responses:
+        "201": { description: Created }
+        "400": { description: Validation failure }
+
+  /api/compliance/audits:
+    get:
+      tags: [Compliance]
+      summary: List compliance audits
+      responses:
+        "200": { description: OK }
+    post:
+      tags: [Compliance]
+      summary: Create a compliance audit record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [auditType]
+              properties:
+                auditType: { type: string }
+                scheduledDate: { type: string, format: date-time, nullable: true }
+      responses:
+        "201": { description: Created }
+        "400": { description: Validation failure }
+
+  /api/compliance/findings:
+    get:
+      tags: [Compliance]
+      summary: List audit findings
+      responses:
+        "200": { description: OK }
+    post:
+      tags: [Compliance]
+      summary: Create an audit finding
+      responses:
+        "201": { description: Created }
+        "400": { description: Validation failure }
+
+  /api/compliance/findings/{id}:
+    patch:
+      tags: [Compliance]
+      summary: Update an audit finding
       parameters:
         - in: path
-          name: integrationId
+          name: id
           required: true
           schema: { type: string }
       responses:
-        "202": { description: Accepted }
-        "401": { description: HMAC signature invalid }
+        "200": { description: OK }
+        "404": { description: Finding not found }
+
+  /api/machinery:
+    get:
+      tags: [Machinery]
+      summary: List machinery for the company
+      responses:
+        "200": { description: OK }
+    post:
+      tags: [Machinery]
+      summary: Create a machinery record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, type]
+              properties:
+                name: { type: string }
+                type: { type: string }
+                serialNumber: { type: string, nullable: true }
+                purchaseDate: { type: string, format: date-time, nullable: true }
+                purchaseCost: { type: number, nullable: true }
+      responses:
+        "201": { description: Created }
+
+  /api/machinery/{id}:
+    get:
+      tags: [Machinery]
+      summary: Get a single machine
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: OK }
+        "404": { description: Not found }
+    patch:
+      tags: [Machinery]
+      summary: Update a machine record
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: OK }
+    delete:
+      tags: [Machinery]
+      summary: Delete a machine
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "204": { description: Deleted }
+        "404": { description: Not found }
+
+  /api/machinery/{id}/maintenance:
+    get:
+      tags: [Machinery]
+      summary: List maintenance records for a machine
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: OK }
+    post:
+      tags: [Machinery]
+      summary: Log a maintenance event
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "201": { description: Created }
+
+  /api/webhooks/inbound/shopify:
+    post:
+      tags: [Webhooks]
+      security: []
+      summary: Inbound Shopify webhook (HMAC-SHA256 verified per company secret)
+      parameters:
+        - in: header
+          name: X-Shopify-Hmac-Sha256
+          required: true
+          schema: { type: string }
+        - in: header
+          name: X-Shopify-Shop-Domain
+          required: true
+          schema: { type: string }
+        - in: header
+          name: X-Shopify-Topic
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Accepted }
+        "401": { description: HMAC signature invalid or integration not configured }
+
+  /api/webhooks/inbound/n8n:
+    post:
+      tags: [Webhooks]
+      security: []
+      summary: Inbound n8n automation webhook (API key verified)
+      parameters:
+        - in: header
+          name: X-Company-Id
+          required: true
+          schema: { type: string }
+        - in: header
+          name: X-Api-Token
+          schema: { type: string }
+      responses:
+        "200": { description: Accepted }
+        "401": { description: Invalid API credentials }
