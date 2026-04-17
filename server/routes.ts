@@ -4409,16 +4409,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "User must be associated with a company" });
       }
 
-      // Get current economic regime for context
+      const { insertComplianceDocumentSchema } = await import("@shared/schema");
+      const parsed = insertComplianceDocumentSchema.safeParse({ ...req.body, companyId: user.companyId, createdBy: user.id });
+      if (!parsed.success) return res.status(400).json({ error: "Validation failed", fields: parsed.error.flatten().fieldErrors });
+
       await economics.fetch();
-      
+
       const document = await storage.createComplianceDocument({
-        ...req.body,
-        companyId: user.companyId,
-        createdBy: user.id,
+        ...parsed.data,
         economicRegimeContext: economics.regime,
       });
-      
+
       res.status(201).json(document);
     } catch (error: any) {
       console.error("Error creating compliance document:", error);
@@ -4452,11 +4453,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "User must be associated with a company" });
       }
 
-      const regulation = await storage.createComplianceRegulation({
-        ...req.body,
-        companyId: user.companyId,
-      });
-      
+      const { insertComplianceRegulationSchema } = await import("@shared/schema");
+      const parsed = insertComplianceRegulationSchema.safeParse({ ...req.body, companyId: user.companyId });
+      if (!parsed.success) return res.status(400).json({ error: "Validation failed", fields: parsed.error.flatten().fieldErrors });
+
+      const regulation = await storage.createComplianceRegulation(parsed.data);
+
       res.status(201).json(regulation);
     } catch (error: any) {
       console.error("Error creating compliance regulation:", error);
@@ -4490,16 +4492,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "User must be associated with a company" });
       }
 
-      // Get current economic regime and FDR
+      const { insertComplianceAuditSchema } = await import("@shared/schema");
+      const parsed = insertComplianceAuditSchema.safeParse({ ...req.body, companyId: user.companyId });
+      if (!parsed.success) return res.status(400).json({ error: "Validation failed", fields: parsed.error.flatten().fieldErrors });
+
       await economics.fetch();
-      
+
       const audit = await storage.createComplianceAudit({
-        ...req.body,
-        companyId: user.companyId,
+        ...parsed.data,
         economicRegime: economics.regime,
         fdrAtAudit: economics.fdr,
       });
-      
+
       res.status(201).json(audit);
     } catch (error: any) {
       console.error("Error creating compliance audit:", error);
@@ -4537,11 +4541,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "User must be associated with a company" });
       }
 
-      const finding = await storage.createAuditFinding({
-        ...req.body,
-        companyId: user.companyId,
-      });
-      
+      const { insertAuditFindingSchema } = await import("@shared/schema");
+      const parsed = insertAuditFindingSchema.safeParse({ ...req.body, companyId: user.companyId });
+      if (!parsed.success) return res.status(400).json({ error: "Validation failed", fields: parsed.error.flatten().fieldErrors });
+
+      const finding = await storage.createAuditFinding(parsed.data);
+
       res.status(201).json(finding);
     } catch (error: any) {
       console.error("Error creating audit finding:", error);
@@ -4558,11 +4563,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "User must be associated with a company" });
       }
 
-      const finding = await storage.updateAuditFinding(req.params.id, req.body);
+      const { updateAuditFindingSchema } = await import("@shared/schema");
+      const parsed = updateAuditFindingSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Validation failed", fields: parsed.error.flatten().fieldErrors });
+
+      const finding = await storage.updateAuditFinding(req.params.id, parsed.data);
       if (!finding) {
         return res.status(404).json({ error: "Finding not found" });
       }
-      
+
       res.json(finding);
     } catch (error: any) {
       console.error("Error updating audit finding:", error);
@@ -4982,16 +4991,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "User must be associated with a company" });
       }
 
-      // Get current economic regime
+      const { insertProductionRunSchema } = await import("@shared/schema");
+      const parsed = insertProductionRunSchema.safeParse({ ...req.body, companyId: user.companyId });
+      if (!parsed.success) return res.status(400).json({ error: "Validation failed", fields: parsed.error.flatten().fieldErrors });
+
       await economics.fetch();
-      
+
       const run = await storage.createProductionRun({
-        ...req.body,
-        companyId: user.companyId,
+        ...parsed.data,
         economicRegime: economics.regime,
         fdrAtStart: economics.fdr,
       });
-      
+
       res.status(201).json(run);
     } catch (error: any) {
       console.error("Error creating production run:", error);
