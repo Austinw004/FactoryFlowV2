@@ -22,10 +22,12 @@ import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
 import LandingPage from "@/pages/LandingPage";
 import DashboardHub from "@/pages/DashboardHub";
-import Onboarding from "@/pages/Onboarding";
 import SignUpPage from "@/pages/SignUpPage";
 import SignInPage from "@/pages/SignInPage";
-import Pricing from "@/pages/Pricing";
+
+// Auth-gated or rarely-visited pages — lazy-loaded to keep main bundle lean
+const Onboarding = lazy(() => import("@/pages/Onboarding"));
+const Pricing = lazy(() => import("@/pages/Pricing"));
 
 // Lazy-loaded pages — split into separate chunks for faster initial load
 const DemandHub = lazy(() => import("@/pages/DemandHub"));
