@@ -195,9 +195,15 @@ export default function LandingPage() {
           <div className="col-span-12 md:col-span-2 mono text-4xl display text-muted">01</div>
           <div className="col-span-12 md:col-span-10 md:pl-10 border-l hair">
             <h3 className="text-4xl display mb-5">Demand &amp; forecast.</h3>
-            <p className="text-soft max-w-2xl leading-relaxed">
-              Probabilistic forecasts with confidence bands, reconciled against live order flow and shipment telemetry.
+            <p className="text-soft max-w-2xl leading-relaxed mb-6">
+              Probabilistic SKU-level forecasts across 30, 60, 90, and 180-day horizons — with explicit confidence bands, reconciled against live order flow and shipment telemetry.
             </p>
+            <ul className="text-sm text-muted space-y-2 max-w-2xl leading-relaxed">
+              <li>— Multi-horizon forecasts with regime-aware model selection</li>
+              <li>— Forecast accuracy scorecards by SKU, region, and season</li>
+              <li>— Demand signal repository unifying orders, shipments, POS, and leading indicators</li>
+              <li>— S&amp;OP workspace with consensus forecasts and reconciliation</li>
+            </ul>
           </div>
         </div>
 
@@ -205,19 +211,68 @@ export default function LandingPage() {
           <div className="col-span-12 md:col-span-2 mono text-4xl display text-muted">02</div>
           <div className="col-span-12 md:col-span-10 md:pl-10 border-l hair">
             <h3 className="text-4xl display mb-5">Supplier &amp; commodity.</h3>
-            <p className="text-soft max-w-2xl leading-relaxed">
-              Counterparty risk scoring and commodity hedging signals drawn from market feeds and your own payment history.
+            <p className="text-soft max-w-2xl leading-relaxed mb-6">
+              30/60/90-day commodity price forecasts with named drivers (regime, inflation, tariffs, geopolitics) and forward-buy guidance. Counterparty risk scored from payment history, on-time delivery, and public financial signals.
             </p>
+            <ul className="text-sm text-muted space-y-2 max-w-2xl leading-relaxed">
+              <li>— Multi-tier supplier mapping — know who your suppliers' suppliers are</li>
+              <li>— Geopolitical risk monitoring with regional exposure scoring</li>
+              <li>— Supply chain traceability with chain-of-custody for regulated inputs</li>
+              <li>— Industry consortium benchmarking (opt-in, differential-privacy)</li>
+            </ul>
           </div>
         </div>
 
         <div className="grid grid-cols-12 gap-10">
           <div className="col-span-12 md:col-span-2 mono text-4xl display text-muted">03</div>
           <div className="col-span-12 md:col-span-10 md:pl-10 border-l hair">
-            <h3 className="text-4xl display mb-5">AI Advisor.</h3>
-            <p className="text-soft max-w-2xl leading-relaxed">
-              A model-in-the-loop copilot that cites its sources. Every recommendation is auditable and reversible.
+            <h3 className="text-4xl display mb-5">Procurement &amp; automation.</h3>
+            <p className="text-soft max-w-2xl leading-relaxed mb-6">
+              The action layer. Forecasts and risk signals feed agents that draft POs, generate RFQs, rebalance inventory, and escalate exceptions — under guardrails you set, with every action logged and reversible.
             </p>
+            <ul className="text-sm text-muted space-y-2 max-w-2xl leading-relaxed">
+              <li>— Automated purchase orders with configurable approval thresholds</li>
+              <li>— RFQ generation with multi-supplier scoring and award recommendations</li>
+              <li>— Action playbooks that codify your ops team's best moves</li>
+              <li>— Allocation engine for multi-plant, multi-SKU decisions under constraint</li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Also in the platform — compact strip of additional real capabilities */}
+        <div className="mt-20 pt-16 border-t hair">
+          <div className="eyebrow mb-10">Also in the platform</div>
+          <div className="grid md:grid-cols-3 gap-px bg-line" data-testid="section-capabilities-strip">
+            <div className="bg-ink p-8">
+              <div className="mono text-xs text-muted mb-3">04 · Agentic AI</div>
+              <div className="text-lg text-bone leading-tight mb-2">Four autonomy tiers, one audit trail.</div>
+              <div className="text-xs text-soft leading-relaxed">Suggest only → auto-draft → auto-execute → full autonomous. Per-agent guardrails, dollar caps, approval workflows. Every action cites its source and can be reversed.</div>
+            </div>
+            <div className="bg-ink p-8">
+              <div className="mono text-xs text-muted mb-3">05 · Operations &amp; maintenance</div>
+              <div className="text-lg text-bone leading-tight mb-2">Predictive, not reactive.</div>
+              <div className="text-xs text-soft leading-relaxed">Machinery health, predictive maintenance, production KPIs, workforce scheduling, and a shop-floor mode built for operators on the line.</div>
+            </div>
+            <div className="bg-ink p-8">
+              <div className="mono text-xs text-muted mb-3">06 · Inventory &amp; network</div>
+              <div className="text-lg text-bone leading-tight mb-2">Multi-echelon, multi-node.</div>
+              <div className="text-xs text-soft leading-relaxed">Safety-stock optimization, network visibility, ERP template library (NetSuite, SAP, Oracle, QuickBooks), and traceability from raw material to finished good.</div>
+            </div>
+            <div className="bg-ink p-8">
+              <div className="mono text-xs text-muted mb-3">07 · Strategy &amp; scenarios</div>
+              <div className="text-lg text-bone leading-tight mb-2">Model the decision before you make it.</div>
+              <div className="text-xs text-soft leading-relaxed">Digital twin of your operation. Scenario simulation for capex, outsourcing, tariff shocks. M&amp;A target screening. Peer benchmarking against anonymized industry data.</div>
+            </div>
+            <div className="bg-ink p-8">
+              <div className="mono text-xs text-muted mb-3">08 · Audit &amp; compliance</div>
+              <div className="text-lg text-bone leading-tight mb-2">Audit-grade by default.</div>
+              <div className="text-xs text-soft leading-relaxed">Immutable audit log on every mutation, 18-month retention. SOP workspace for controlled documents. Built for FDA, ISO 9001, and ITAR-adjacent environments.</div>
+            </div>
+            <div className="bg-ink p-8">
+              <div className="mono text-xs text-muted mb-3">09 · ROI &amp; impact</div>
+              <div className="text-lg text-bone leading-tight mb-2">Show the money.</div>
+              <div className="text-xs text-soft leading-relaxed">Verified-savings tracking per recommendation, ROI dashboard for the CFO, impact reporting for boards and grant programs. Proof before you renew, not just claims.</div>
+            </div>
           </div>
         </div>
       </div>
