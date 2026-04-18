@@ -8,6 +8,16 @@ import { runMigrations } from 'stripe-replit-sync';
 import { getStripeSync } from './stripeClient';
 import { WebhookHandlers } from './webhookHandlers';
 
+// Process-level safety net: without these, a single unhandled async rejection
+// in a background job can tear down the whole Node process and take the site
+// offline. Log loudly, keep running; a crash loop is worse than a logged error.
+process.on("unhandledRejection", (reason) => {
+  console.error("[UnhandledRejection]", reason);
+});
+process.on("uncaughtException", (err) => {
+  console.error("[UncaughtException]", err);
+});
+
 const app = express();
 app.use(compression());
 app.disable("x-powered-by");
