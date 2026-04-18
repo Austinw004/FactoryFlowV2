@@ -4525,7 +4525,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create compliance document
-  app.post("/api/compliance/documents", isAuthenticated, async (req: any, res) => {
+  const createComplianceDocumentSchema = z.object({
+    title: z.string().trim().min(1).max(500),
+    documentType: z.enum(["policy", "procedure", "certificate", "permit", "audit_report", "training_record"]),
+    regulationType: z.enum(["environmental", "safety", "labor", "quality", "financial", "data_privacy"]),
+    documentNumber: z.string().trim().max(100).optional(),
+    version: z.number().int().positive().optional(),
+    status: z.enum(["draft", "under_review", "approved", "active", "archived", "expired"]).optional(),
+    effectiveDate: z.string().optional().nullable(),
+    expirationDate: z.string().optional().nullable(),
+    nextReviewDate: z.string().optional().nullable(),
+    fileUrl: z.string().url().max(2048).optional().nullable(),
+    fileType: z.enum(["pdf", "docx", "xlsx"]).optional().nullable(),
+    fileSize: z.number().int().min(0).max(104857600).optional().nullable(),
+    description: z.string().max(5000).optional().nullable(),
+    issuingAuthority: z.string().trim().max(256).optional().nullable(),
+  });
+  app.post("/api/compliance/documents", isAuthenticated, validateBody(createComplianceDocumentSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4535,9 +4551,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get current economic regime for context
       await economics.fetch();
-      
+
       const document = await storage.createComplianceDocument({
-        ...req.body,
+        ...req.validated,
         companyId: user.companyId,
         createdBy: user.id,
         economicRegimeContext: economics.regime,
@@ -4568,7 +4584,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create compliance regulation
-  app.post("/api/compliance/regulations", isAuthenticated, async (req: any, res) => {
+  const createComplianceRegulationSchema = z.object({
+    name: z.string().trim().min(1).max(500),
+    regulationType: z.enum(["environmental", "safety", "labor", "quality", "financial", "data_privacy"]),
+    jurisdiction: z.enum(["federal", "state", "local", "international"]),
+    issuingBody: z.string().trim().min(1).max(256),
+    description: z.string().min(1).max(5000),
+    regulationCode: z.string().trim().max(100).optional().nullable(),
+    applicabilityStatus: z.enum(["applicable", "not_applicable", "under_review"]).optional(),
+    riskLevel: z.enum(["critical", "high", "medium", "low"]).optional().nullable(),
+    complianceStatus: z.enum(["compliant", "non_compliant", "partial", "pending_verification"]).optional(),
+    lastAuditDate: z.string().optional().nullable(),
+    nextAuditDate: z.string().optional().nullable(),
+    economicImpactNotes: z.string().max(2000).optional().nullable(),
+  });
+  app.post("/api/compliance/regulations", isAuthenticated, validateBody(createComplianceRegulationSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4577,7 +4607,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const regulation = await storage.createComplianceRegulation({
-        ...req.body,
+        ...req.validated,
         companyId: user.companyId,
       });
       
@@ -4653,7 +4683,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create audit finding
-  app.post("/api/compliance/findings", isAuthenticated, async (req: any, res) => {
+  const createAuditFindingSchema = z.object({
+    findingNumber: z.string().trim().min(1).max(100),
+    title: z.string().trim().min(1).max(500),
+    description: z.string().min(1).max(5000),
+    severity: z.enum(["critical", "major", "minor", "observation"]),
+    category: z.enum(["safety", "environmental", "quality", "documentation", "process"]),
+    status: z.enum(["open", "in_progress", "resolved", "closed", "overdue"]).optional(),
+    auditId: z.string().optional().nullable(),
+    assignedToName: z.string().trim().max(256).optional().nullable(),
+    dueDate: z.string().optional().nullable(),
+    rootCause: z.string().max(2000).optional().nullable(),
+    correctiveAction: z.string().max(2000).optional().nullable(),
+    preventiveAction: z.string().max(2000).optional().nullable(),
+    evidence: z.string().max(2000).optional().nullable(),
+  });
+  app.post("/api/compliance/findings", isAuthenticated, validateBody(createAuditFindingSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4662,7 +4707,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const finding = await storage.createAuditFinding({
-        ...req.body,
+        ...req.validated,
         companyId: user.companyId,
       });
       
@@ -4716,7 +4761,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create calendar event
-  app.post("/api/compliance/calendar", isAuthenticated, async (req: any, res) => {
+  const createCalendarEventSchema = z.object({
+    title: z.string().trim().min(1).max(500),
+    eventType: z.enum(["deadline", "renewal", "audit", "training", "inspection", "filing"]),
+    dueDate: z.string().min(1),
+    description: z.string().max(2000).optional().nullable(),
+    regulatoryBody: z.enum(["OSHA", "EPA", "ISO", "FDA", "STATE", "LOCAL"]).optional().nullable(),
+    reminderDays: z.number().int().min(0).max(365).optional().nullable(),
+    status: z.enum(["upcoming", "completed", "overdue", "dismissed"]).optional(),
+    relatedDocumentId: z.string().optional().nullable(),
+    isRecurring: z.boolean().optional(),
+    recurrencePattern: z.enum(["annual", "quarterly", "monthly"]).optional().nullable(),
+  });
+  app.post("/api/compliance/calendar", isAuthenticated, validateBody(createCalendarEventSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4725,7 +4782,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const event = await storage.createComplianceCalendarEvent({
-        ...req.body,
+        ...req.validated,
         companyId: user.companyId,
       });
       
@@ -5098,7 +5155,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create production run
-  app.post("/api/production/runs", isAuthenticated, async (req: any, res) => {
+  const createProductionRunSchema = z.object({
+    runNumber: z.string().trim().min(1).max(100),
+    startTime: z.string().min(1),
+    endTime: z.string().optional().nullable(),
+    status: z.enum(["in_progress", "completed", "aborted", "paused"]).optional(),
+    skuId: z.string().optional().nullable(),
+    machineryId: z.string().optional().nullable(),
+    plannedDuration: z.number().min(0).max(100000).optional().nullable(),
+    plannedUnits: z.number().int().min(0).max(10000000).optional().nullable(),
+    producedUnits: z.number().int().min(0).max(10000000).optional().nullable(),
+    goodUnits: z.number().int().min(0).max(10000000).optional().nullable(),
+    defectiveUnits: z.number().int().min(0).max(10000000).optional().nullable(),
+    cycleTime: z.number().min(0).optional().nullable(),
+    targetCycleTime: z.number().min(0).optional().nullable(),
+    downtime: z.number().min(0).optional().nullable(),
+    setupTime: z.number().min(0).optional().nullable(),
+    notes: z.string().max(2000).optional().nullable(),
+  });
+  app.post("/api/production/runs", isAuthenticated, validateBody(createProductionRunSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -5108,9 +5183,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get current economic regime
       await economics.fetch();
-      
+
       const run = await storage.createProductionRun({
-        ...req.body,
+        ...req.validated,
         companyId: user.companyId,
         economicRegime: economics.regime,
         fdrAtStart: economics.fdr,
