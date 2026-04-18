@@ -79,11 +79,43 @@ After you've done steps 1–4:
 | Weekly Monday 06:00 CT                        | `dependabot.yml` | Opens grouped npm + Actions update PRs         |
 | Dependabot PR opened                          | `dependabot-auto-merge.yml` | Auto-merges patch/minor bumps after CI passes  |
 
+## 6. Enable Replit auto-deploy from GitHub main
+
+This is the step that lets you stop signing into Replit to ship code.
+
+Replit workspace → **Deployments** tab → open your autoscale deployment:
+
+- Source: connect to `Austinw004/FactoryFlowV2` on branch `main`
+- Auto-deploy on push: enabled
+- Build command: `npm run build` (already in `.replit`)
+- Run command: `npm run start` (already in `.replit`)
+- Secrets: confirm all runtime env vars are in Tools → Secrets
+  (see `.replit.example` for the complete list)
+
+After this is on, the path becomes:
+
+1. Merge a PR into `main` (review happens in GitHub)
+2. CI workflow runs on the PR (typecheck + build)
+3. On merge, `db-push.yml` applies any schema changes (pauses for
+   your approval on the `production` environment)
+4. Replit picks up the new main SHA and rebuilds the autoscale deploy
+
+You can go to sleep between steps 2 and 4. You only need to be awake
+long enough to click "Approve" on db-push if schema changed.
+
+## URGENT — before using this workflow
+
+Read `SECURITY_ROTATION.md` at the repo root. The `.replit` file
+currently has `ENCRYPTION_KEY` and two Stripe test keys committed as
+plain-text values under `[userenv.shared]`. Rotate those first, move
+them to Replit Secrets, then come back here.
+
 ## What's NOT automated (yet)
 
-- Production code deploy to your runtime (Replit / Render / wherever).
-  Add that as a separate job once you've picked a target.
 - Email send-deliverability checks (SPF / DKIM / DMARC) for the new
   `info@prescient-labs.com` mailbox. Run a test inbound + outbound to
   the address from a Gmail account and confirm both directions work
   end-to-end before wiring it into customer-facing copy.
+- Preview deploys per PR. Replit doesn't do this natively. If you want
+  it, Vercel / Render can, but migrating hosting is a bigger decision
+  for a separate day.
