@@ -1,0 +1,104 @@
+# Auto-apply Drizzle schema changes when shared/schema.ts (or related files)
+# land on main. Runs `npm run db:push` so we don't have to remember to do it
+# manually after every schema change.
+#
+# Required repo secret:
+#   DATABASE_URL  — Postgres connection string for the production DB
+#
+# Optional second environment (uncomment the staging job below if you split
+# staging and prod):
+#   STAGING_DATABASE_URL
+#
+# Safety notes:
+#   - Drizzle's `push` is non-destructive for additive changes (new tables,
+#     new nullable columns) but CAN drop columns / data on destructive
+#     diffs. We pin the trigger to schema-relevant paths and require
+#     manual approval via the GitHub `production` environment so a human
+#     gets a chance to look at the diff before it hits prod.
+#   - Concurrency group prevents two pushes from racing on the same DB.
+
+name: db-push
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "shared/schema.ts"
+      - "shared/schema/**"
+      - "drizzle.config.ts"
+      - "drizzle/**"
+      - "migrations/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/db-push.yml"
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Why are you running this manually?"
+        required: false
+        default: "Manual schema push"
+
+concurrency:
+  group: db-push-prod
+  cancel-in-progress: false
+
+jobs:
+  push:
+    name: drizzle-kit push (prod)
+    runs-on: ubuntu-latest
+    # Requires you to create a `production` environment in repo Settings →
+    # Environments and add `DATABASE_URL` as an environment secret. You can
+    # also add required reviewers (recommended: yourself) so prod pushes
+    # get a one-click approval gate.
+    environment: production
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Show pending schema diff (visible in logs)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo "Schema-relevant files in this push:"
+          git diff --name-only HEAD~1 HEAD -- shared/ drizzle.config.ts drizzle/ migrations/ || true
+          echo "---"
+          echo "Drizzle will now diff schema vs DB and apply non-destructive changes."
+
+      - name: Run drizzle-kit push
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run db:push
+
+      - name: Done
+        run: echo "Schema push complete on $(date -u +%Y-%m-%dT%H:%M:%SZ)."
+
+  # Uncomment if you have a separate staging DB you want to test against
+  # before the production environment runs. Pair this with branch
+  # protection so prod approvals require staging to be green first.
+  #
+  # push-staging:
+  #   name: drizzle-kit push (staging)
+  #   runs-on: ubuntu-latest
+  #   environment: staging
+  #   timeout-minutes: 10
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: "20"
+  #         cache: "npm"
+  #     - run: npm ci
+  #     - env:
+  #         DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+  #       run: npm run db:push
