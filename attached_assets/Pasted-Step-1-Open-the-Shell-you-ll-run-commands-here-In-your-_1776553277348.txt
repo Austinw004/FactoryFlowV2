@@ -1,0 +1,29 @@
+Step 1 — Open the Shell (you'll run commands here)
+In your Replit workspace, look for the search bar or the "Tools" menu. Fastest way: press Ctrl+K (or Cmd+K on Mac), type Shell, press Enter. A terminal pane will open somewhere in your workspace. That's where you'll type openssl rand -hex 32.
+Alternatively: click the grid/puzzle-icon on the left sidebar labeled "Tools & files" → scroll the list → click Shell.
+Step 2 — Open the Secrets panel (you may already have it)
+Same Ctrl+K, type Secrets, Enter. You should see a panel with the list: ALPHA_VANTAGE_API_KEY, FRED_API_KEY, etc. (The same list I see in the screenshot I showed.) At the top-right of that panel there's a blue button reading "+ New Secret". That's the button to click.
+Step 3 — The rotation sequence
+In the Shell pane, type:
+openssl rand -hex 32
+Press Enter. A 64-character string like 4a7b9c2f... prints. Select it (triple-click the line to select), copy (Ctrl+C).
+Click + New Secret in the Secrets panel. A dialog opens with two fields:
+
+Key → type ENCRYPTION_KEY
+Value → paste the hex string (Ctrl+V)
+Click Add Secret (or Save).
+
+Repeat: openssl rand -hex 32 again (different output this time), copy, + New Secret, Key = CREDENTIAL_ENCRYPTION_KEY, Value = paste, Save.
+Step 4 — Roll the Stripe test keys
+Open a new browser tab, go to https://dashboard.stripe.com. Sign in. Top-right of the Stripe dashboard there's a toggle — make sure "Test mode" is ON (it's usually a switch next to your avatar). Then left sidebar: Developers → API keys.
+You'll see two test keys:
+
+Publishable key (pk_test_...) — visible in plain text
+Secret key (sk_test_...) — hidden behind a "Reveal" button
+
+Next to each, there's a "Roll key" option (might be under a ⋯ menu or a "Regenerate" button). Roll the publishable test key, copy the new value. Roll the secret test key, copy the new value.
+Step 5 — Add the Stripe secrets to Replit
+Back in Replit Secrets, + New Secret twice more:
+
+Key = TESTING_VITE_STRIPE_PUBLIC_KEY, Value = the new pk_test_...
+Key = TESTING_STRIPE_SECRET_KEY, Value = the new sk_test_...
