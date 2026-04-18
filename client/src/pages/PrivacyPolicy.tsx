@@ -26,7 +26,7 @@ export default function PrivacyPolicy() {
       <main className="pt-24 pb-16">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <h1 className="text-4xl font-bold mb-8">Privacy Policy</h1>
-          <p className="text-muted-foreground mb-8">Last updated: December 2025</p>
+          <p className="text-muted-foreground mb-8">Last updated: April 2026</p>
 
           <Card className="p-8 space-y-8">
             <section>
@@ -135,7 +135,7 @@ export default function PrivacyPolicy() {
                   <li>Withdraw consent</li>
                 </ul>
                 <p className="mt-2">
-                  To exercise these rights, contact us at privacy@prescientlabs.com.
+                  To exercise these rights, contact us at privacy@prescient-labs.com.
                 </p>
               </div>
             </section>
@@ -177,7 +177,7 @@ export default function PrivacyPolicy() {
               <div className="text-muted-foreground">
                 <p>For privacy-related questions or concerns, contact us at:</p>
                 <p className="mt-2">
-                  Email: privacy@prescientlabs.com<br />
+                  Email: privacy@prescient-labs.com<br />
                   Prescient Labs<br />
                   Data Protection Officer
                 </p>

@@ -26,7 +26,7 @@ export default function TermsOfService() {
       <main className="pt-24 pb-16">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <h1 className="text-4xl font-bold mb-8">Terms of Service</h1>
-          <p className="text-muted-foreground mb-8">Last updated: December 2025</p>
+          <p className="text-muted-foreground mb-8">Last updated: April 2026</p>
 
           <Card className="p-8 space-y-8">
             <section>
@@ -143,7 +143,7 @@ export default function TermsOfService() {
             <section>
               <h2 className="text-2xl font-semibold mb-4">12. Contact</h2>
               <p className="text-muted-foreground">
-                For questions about these Terms of Service, please contact us at legal@prescientlabs.com.
+                For questions about these Terms of Service, please contact us at legal@prescient-labs.com.
               </p>
             </section>
           </Card>

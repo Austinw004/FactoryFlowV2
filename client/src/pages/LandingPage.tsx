@@ -165,6 +165,24 @@ export default function LandingPage() {
           </div>
         </div>
         <div className="mt-8 mono text-xs text-muted">Under NDA. Named references available during evaluation.</div>
+
+        {/* Become a design partner — honest forward-looking CTA instead of fabricated testimonials */}
+        <div className="mt-12 border hair bg-panel p-8 md:p-10 flex flex-col md:flex-row items-start md:items-center gap-6 md:gap-10" data-testid="design-partner-cta">
+          <div className="flex-1">
+            <div className="eyebrow mb-2">Design partner cohort · open</div>
+            <div className="text-xl md:text-2xl text-bone leading-tight mb-2">Two seats open for Q3 2026.</div>
+            <p className="text-sm text-soft leading-relaxed max-w-2xl">
+              Discounted pricing, direct line to the founders, roadmap influence, and a named case study at program end (if you want one — anonymous is fine too). 90-day paid pilot, with verified-savings proof points before you commit to a full subscription.
+            </p>
+          </div>
+          <a
+            href="/contact?topic=pilot"
+            className="btn-primary text-sm px-5 py-2.5 whitespace-nowrap"
+            data-testid="link-design-partner"
+          >
+            Apply — design partner
+          </a>
+        </div>
       </div>
 
       <div className="divider relative z-10"></div>
@@ -344,6 +362,7 @@ export default function LandingPage() {
             <a href="/pricing" className="hover:text-bone transition">Pricing</a>
             <a href="/how-it-works" className="hover:text-bone transition">How it works</a>
             <a href="/security" className="hover:text-bone transition">Security</a>
+            <a href="/trust" className="hover:text-bone transition">Trust</a>
             <a href="/status" className="hover:text-bone transition">Status</a>
             <a href="/contact" className="hover:text-bone transition">Contact</a>
             <a href="/terms" className="hover:text-bone transition">Terms</a>

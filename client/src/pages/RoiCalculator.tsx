@@ -325,8 +325,8 @@ export default function RoiCalculator() {
               Start a Pilot
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
-            <Button size="lg" variant="outline" asChild data-testid="link-schedule-demo">
-              <a href="mailto:info@prescient-labs.com">Schedule Demo</a>
+            <Button size="lg" variant="outline" onClick={() => setLocation("/contact")} data-testid="button-schedule-demo">
+              Schedule Demo
             </Button>
           </div>
         </div>

@@ -316,8 +316,8 @@ export default function IntegrationChecklist() {
             <Button size="lg" onClick={() => setLocation("/pilot-program")} data-testid="button-view-pilot">
               View Pilot Program
             </Button>
-            <Button size="lg" variant="outline" asChild data-testid="link-contact-sales">
-              <a href="mailto:info@prescient-labs.com">Contact Sales</a>
+            <Button size="lg" variant="outline" onClick={() => setLocation("/contact")} data-testid="button-contact-sales">
+              Contact Sales
             </Button>
           </div>
         </div>

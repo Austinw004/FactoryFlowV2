@@ -14,6 +14,8 @@ interface ContactPayload {
   role: string;
   topic: string;
   message: string;
+  /** Honeypot — real users leave this empty; bots autofill every field. */
+  website: string;
 }
 
 export default function Contact() {
@@ -28,6 +30,7 @@ export default function Contact() {
     role: "",
     topic: "demo",
     message: "",
+    website: "",
   });
 
   const update = (k: keyof ContactPayload) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
@@ -43,13 +46,35 @@ export default function Contact() {
       });
       return;
     }
+    // Light client-side email shape check — server re-validates.
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      toast({
+        title: "Email looks off",
+        description: "Please double-check your email address — we want to be able to reply.",
+        variant: "destructive",
+      });
+      return;
+    }
     setSubmitting(true);
     try {
       await apiRequest("POST", "/api/contact-sales", form);
       setSubmitted(true);
-    } catch (err) {
-      // Graceful fallback: if the server endpoint isn't wired yet, open the
-      // user's mail client with the form contents. Better than a dead form.
+    } catch (err: any) {
+      // If the server responded with a 4xx validation error, show the humanized
+      // message — don't fall back to mailto (the user needs to fix their input).
+      const msg = String(err?.message || "");
+      const is4xx = /^4\d\d:/.test(msg);
+      if (is4xx) {
+        toast({
+          ...humanizeError(err, "Please check your input"),
+          variant: "destructive",
+        });
+        setSubmitting(false);
+        return;
+      }
+      // Genuine server reachability problem → open the user's mail client
+      // with the message pre-filled. We'd rather route the lead through any
+      // path than lose it.
       const subject = encodeURIComponent(
         `[${form.topic}] Prescient Labs inquiry — ${form.company || form.name}`,
       );
@@ -160,6 +185,25 @@ export default function Contact() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="border hair bg-panel p-10 space-y-6" data-testid="form-contact-sales">
+                {/* Honeypot — visually hidden, tab-stop disabled. Real users never see this.
+                    Bots that blindly fill every field will populate it and get silently dropped
+                    server-side. aria-hidden keeps screen readers from announcing it. */}
+                <div
+                  aria-hidden="true"
+                  style={{ position: "absolute", left: "-10000px", top: "auto", width: 1, height: 1, overflow: "hidden" }}
+                >
+                  <label htmlFor="website">Leave this field empty</label>
+                  <input
+                    id="website"
+                    name="website"
+                    type="text"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    value={form.website}
+                    onChange={update("website")}
+                  />
+                </div>
+
                 <div className="grid md:grid-cols-2 gap-5">
                   <div>
                     <label className="eyebrow block mb-2" htmlFor="name">Your name *</label>
@@ -168,6 +212,8 @@ export default function Contact() {
                       value={form.name}
                       onChange={update("name")}
                       required
+                      maxLength={200}
+                      autoComplete="name"
                       className="w-full bg-ink border hair px-3 py-2.5 text-sm text-bone focus:border-signal outline-none transition"
                       data-testid="input-name"
                     />
@@ -180,6 +226,8 @@ export default function Contact() {
                       value={form.email}
                       onChange={update("email")}
                       required
+                      maxLength={200}
+                      autoComplete="email"
                       className="w-full bg-ink border hair px-3 py-2.5 text-sm text-bone focus:border-signal outline-none transition"
                       data-testid="input-email"
                     />
@@ -193,6 +241,8 @@ export default function Contact() {
                       id="company"
                       value={form.company}
                       onChange={update("company")}
+                      maxLength={200}
+                      autoComplete="organization"
                       className="w-full bg-ink border hair px-3 py-2.5 text-sm text-bone focus:border-signal outline-none transition"
                       data-testid="input-company"
                     />
@@ -204,6 +254,8 @@ export default function Contact() {
                       placeholder="e.g. Director of Operations"
                       value={form.role}
                       onChange={update("role")}
+                      maxLength={200}
+                      autoComplete="organization-title"
                       className="w-full bg-ink border hair px-3 py-2.5 text-sm text-bone focus:border-signal outline-none transition placeholder:text-muted"
                       data-testid="input-role"
                     />
@@ -237,10 +289,14 @@ export default function Contact() {
                     value={form.message}
                     onChange={update("message")}
                     required
+                    maxLength={5000}
                     placeholder="What you make, rough revenue range, what's broken about your current forecasting/procurement, and anything else that would help us come back with a useful answer."
                     className="w-full bg-ink border hair px-3 py-2.5 text-sm text-bone focus:border-signal outline-none transition placeholder:text-muted resize-y"
                     data-testid="textarea-message"
                   />
+                  <div className="mono text-xs text-muted mt-1 text-right">
+                    {form.message.length}/5000
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between pt-4 border-t hair">
@@ -271,6 +327,7 @@ export default function Contact() {
         <nav className="flex items-center gap-6 text-xs">
           <a href="/pricing" className="hover:text-bone transition">Pricing</a>
           <a href="/security" className="hover:text-bone transition">Security</a>
+          <a href="/trust" className="hover:text-bone transition">Trust</a>
           <a href="/status" className="hover:text-bone transition">Status</a>
           <a href="/contact" className="hover:text-bone transition">Contact</a>
           <a href="/terms" className="hover:text-bone transition">Terms</a>

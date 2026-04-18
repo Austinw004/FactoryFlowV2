@@ -289,6 +289,9 @@ export default function SecurityFaq() {
             <Button size="lg" asChild data-testid="link-contact-security">
               <a href="mailto:security@prescient-labs.com">Email security@prescient-labs.com</a>
             </Button>
+            <Button size="lg" variant="outline" onClick={() => setLocation("/trust")} data-testid="button-trust-center">
+              Trust Center
+            </Button>
             <Button size="lg" variant="outline" onClick={() => setLocation("/contact")} data-testid="button-contact-sales">
               Talk to Sales
             </Button>

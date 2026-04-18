@@ -1,0 +1,14 @@
+# Prescient Labs — Security Contact
+# https://tools.ietf.org/html/rfc9116
+
+Contact: mailto:security@prescient-labs.com
+Expires: 2027-04-17T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://prescient-labs.com/.well-known/security.txt
+Policy: https://prescient-labs.com/security
+Acknowledgments: https://prescient-labs.com/trust
+
+# Please report security vulnerabilities to security@prescient-labs.com.
+# We acknowledge reports within 1 business day and provide a status update within 5 business days.
+# We do not currently operate a bug bounty, but we credit researchers (with permission) on our Trust Center.
+# Please do not perform DoS testing, social engineering against our staff, or testing against customer tenants.

@@ -5,17 +5,16 @@ import { SEOHead } from "@/components/SEOHead";
 /**
  * /status — public status page.
  *
- * This page does live client-side health checks against a small set of
- * public endpoints so an enterprise evaluator can see at a glance whether
- * the platform is up. It is NOT a replacement for a third-party uptime
- * service (Statuspage.io, status.io, Betterstack). Recommend wiring one
- * in for:
- *   - Historic uptime %
- *   - Incident timeline and post-mortems
- *   - Scheduled-maintenance notices
- *   - Email/SMS subscriber list
+ * Two layers of truth:
+ *   1. Live client-side probes every 30s against /api/health and /.
+ *      These reflect "is it up RIGHT NOW, from your browser".
+ *   2. Server-side probe history (30 days, 1h buckets) served by
+ *      /api/status/summary + /api/status/history. Shows the uptime bar
+ *      and 30-day uptime %.
  *
- * For now, this page is honest about what it does and what it doesn't.
+ * No external status provider. We own the numbers. When we ship durable
+ * retention for incidents and scheduled maintenance, it replaces the
+ * in-memory ring buffer server-side — the client doesn't change.
  */
 
 type ProbeState = "checking" | "ok" | "degraded" | "down";
@@ -45,6 +44,42 @@ interface ProbeResult {
   checkedAt: Date | null;
 }
 
+interface HistoryBucket {
+  ts: number;
+  status: "ok" | "degraded" | "down" | "unknown";
+  latencyMs: number | null;
+}
+
+interface HistoryPayload {
+  windowHours: number;
+  buckets: {
+    api: HistoryBucket[];
+    app: HistoryBucket[];
+    db: HistoryBucket[];
+  };
+  meta: {
+    startedAt: number;
+    storageKind: string;
+    retentionHours: number;
+    note: string;
+  };
+}
+
+interface SummaryPayload {
+  uptime: {
+    api: { uptimePct: number | null; sampleCount: number; windowHours: number };
+    app: { uptimePct: number | null; sampleCount: number; windowHours: number };
+    db: { uptimePct: number | null; sampleCount: number; windowHours: number };
+  };
+  meta: {
+    startedAt: number;
+    storageKind: string;
+    retentionHours: number;
+    note: string;
+  };
+  generatedAt: string;
+}
+
 async function probe(path: string): Promise<ProbeResult> {
   const start = typeof performance !== "undefined" ? performance.now() : Date.now();
   try {
@@ -64,7 +99,7 @@ async function probe(path: string): Promise<ProbeResult> {
   }
 }
 
-function indicatorColor(state: ProbeState): string {
+function indicatorColor(state: ProbeState | HistoryBucket["status"]): string {
   switch (state) {
     case "ok":
       return "bg-green-500";
@@ -72,6 +107,8 @@ function indicatorColor(state: ProbeState): string {
       return "bg-amber-500";
     case "down":
       return "bg-red-500";
+    case "unknown":
+      return "bg-muted/40";
     case "checking":
     default:
       return "bg-muted animate-pulse";
@@ -92,6 +129,12 @@ function stateLabel(state: ProbeState): string {
   }
 }
 
+function formatUptime(pct: number | null): string {
+  if (pct == null) return "—";
+  if (pct >= 99.995) return "99.99%";
+  return `${pct.toFixed(2)}%`;
+}
+
 export default function Status() {
   const [, setLocation] = useLocation();
   const [results, setResults] = useState<Record<string, ProbeResult>>(() =>
@@ -99,6 +142,8 @@ export default function Status() {
       PROBES.map((p) => [p.path, { state: "checking" as ProbeState, latencyMs: null, checkedAt: null }]),
     ),
   );
+  const [history, setHistory] = useState<HistoryPayload | null>(null);
+  const [summary, setSummary] = useState<SummaryPayload | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -111,6 +156,30 @@ export default function Status() {
     };
     run();
     const interval = setInterval(run, 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Fetch the server-side history once on mount, then every 5 min.
+  useEffect(() => {
+    let cancelled = false;
+    const fetchHistory = async () => {
+      try {
+        const [h, s] = await Promise.all([
+          fetch("/api/status/history", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)),
+          fetch("/api/status/summary", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)),
+        ]);
+        if (cancelled) return;
+        if (h) setHistory(h);
+        if (s) setSummary(s);
+      } catch {
+        // Best-effort — the status page still works without history.
+      }
+    };
+    fetchHistory();
+    const interval = setInterval(fetchHistory, 5 * 60 * 1000);
     return () => {
       cancelled = true;
       clearInterval(interval);
@@ -144,11 +213,17 @@ export default function Status() {
     },
   }[overall];
 
+  // Map client probe paths to server-side probe names for the uptime bar.
+  const probeNameForPath: Record<string, "api" | "app"> = {
+    "/api/health": "api",
+    "/": "app",
+  };
+
   return (
     <div className="min-h-screen bg-ink text-bone font-sans">
       <SEOHead
         title="Status — Prescient Labs"
-        description="Live operational status for Prescient Labs. Real-time checks on the core API and web app."
+        description="Live operational status for Prescient Labs. Real-time checks on the core API and web app, 30-day uptime bar."
         canonicalUrl="https://prescient-labs.com/status"
       />
 
@@ -187,42 +262,84 @@ export default function Status() {
         <div className="border hair bg-panel">
           {PROBES.map((p, idx) => {
             const r = results[p.path];
+            const probeName = probeNameForPath[p.path];
+            const buckets = probeName && history ? history.buckets[probeName] : [];
+            const uptimePct = probeName && summary ? summary.uptime[probeName]?.uptimePct : null;
+
             return (
               <div
                 key={p.path}
-                className={`px-6 py-5 flex items-center justify-between ${idx > 0 ? "border-t hair" : ""}`}
+                className={`px-6 py-5 ${idx > 0 ? "border-t hair" : ""}`}
                 data-testid={`probe-${p.label.toLowerCase().replace(/\W+/g, "-")}`}
               >
-                <div className="flex items-center gap-4">
-                  <div className={`w-2.5 h-2.5 rounded-full ${indicatorColor(r.state)}`}></div>
-                  <div>
-                    <div className="text-base text-bone">{p.label}</div>
-                    <div className="text-xs text-muted mt-1">{p.description}</div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-2.5 h-2.5 rounded-full ${indicatorColor(r.state)}`}></div>
+                    <div>
+                      <div className="text-base text-bone">{p.label}</div>
+                      <div className="text-xs text-muted mt-1">{p.description}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="mono text-xs text-soft">{stateLabel(r.state)}</div>
+                    <div className="mono text-xs text-muted mt-1">
+                      {r.latencyMs != null ? `${r.latencyMs}ms` : "—"}
+                    </div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="mono text-xs text-soft">{stateLabel(r.state)}</div>
-                  <div className="mono text-xs text-muted mt-1">
-                    {r.latencyMs != null ? `${r.latencyMs}ms` : "—"}
+
+                {/* 30-day uptime bar — shows one pip per hour, coloured by worst-case bucket status */}
+                {buckets.length > 0 && (
+                  <div className="mt-5">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="mono text-[10px] text-muted uppercase tracking-wider">30-day uptime</div>
+                      <div className="mono text-[10px] text-soft">
+                        {formatUptime(uptimePct ?? null)}
+                      </div>
+                    </div>
+                    <div
+                      className="flex gap-[1px] h-6 w-full"
+                      data-testid={`uptime-bar-${probeName}`}
+                    >
+                      {buckets.map((b, i) => (
+                        <div
+                          key={`${probeName}-${i}`}
+                          className={`flex-1 min-w-0 ${indicatorColor(b.status)}`}
+                          title={`${new Date(b.ts).toLocaleString()} · ${b.status}${
+                            b.latencyMs != null ? ` · ${b.latencyMs}ms` : ""
+                          }`}
+                        ></div>
+                      ))}
+                    </div>
+                    <div className="flex items-center justify-between mt-2 mono text-[10px] text-muted">
+                      <span>30 days ago</span>
+                      <span>now</span>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             );
           })}
         </div>
 
         <div className="mt-8 text-xs mono text-muted">
-          Checks run every 30 seconds from your browser. Refresh to re-probe immediately.
+          Live probes run every 30 seconds from your browser. Uptime bar refreshes every 5 minutes.
         </div>
 
-        {/* Honest disclosure — better than faking 99.99% uptime */}
+        {summary?.meta?.note && (
+          <div className="mt-4 text-xs text-muted max-w-2xl leading-relaxed">
+            {summary.meta.note}
+          </div>
+        )}
+
+        {/* Honest disclosure — we want enterprise buyers to see exactly what this page is and isn't */}
         <div className="mt-16 border-t hair pt-10">
           <div className="eyebrow mb-4">About this page</div>
           <p className="text-soft text-sm leading-relaxed max-w-2xl mb-4">
-            This page runs live checks from your browser against two public endpoints. It does <em>not</em> yet publish historic uptime, incident timelines, or subscribe-for-notifications — those ship alongside our Statuspage.io integration in the next release.
+            We publish live probes from your browser plus a 30-day uptime bar fed from server-side self-checks every 5 minutes. We do <em>not</em> yet publish incident timelines, subscriber notifications, or scheduled-maintenance notices — those ship alongside durable probe-history retention in the next release.
           </p>
           <p className="text-soft text-sm leading-relaxed max-w-2xl">
-            For active incidents, subscribe to <a href="mailto:status@prescient-labs.com" className="text-bone hover:text-signal transition">status@prescient-labs.com</a>. For urgent enterprise outages, your dedicated Slack channel is the fastest path.
+            For active incidents, email <a href="mailto:status@prescient-labs.com" className="text-bone hover:text-signal transition">status@prescient-labs.com</a>. Enterprise customers on the Performance or Tenant VPC tier have a dedicated Slack channel for the fastest path.
           </p>
         </div>
       </div>
@@ -236,6 +353,7 @@ export default function Status() {
         <nav className="flex items-center gap-6 text-xs">
           <a href="/pricing" className="hover:text-bone transition">Pricing</a>
           <a href="/security" className="hover:text-bone transition">Security</a>
+          <a href="/trust" className="hover:text-bone transition">Trust</a>
           <a href="/status" className="hover:text-bone transition">Status</a>
           <a href="/contact" className="hover:text-bone transition">Contact</a>
           <a href="/terms" className="hover:text-bone transition">Terms</a>

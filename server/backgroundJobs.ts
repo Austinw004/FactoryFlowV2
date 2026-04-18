@@ -11,6 +11,9 @@ import { createBenchmarkAggregationService } from './lib/benchmarkAggregation';
 import { logAudit } from './lib/auditLogger';
 import { AutomationEngine } from './lib/automationEngine';
 import { withJobLock } from './lib/distributedLock';
+import { recordProbe } from './lib/probeHistory';
+import { db } from './db';
+import { sql } from 'drizzle-orm';
 import { 
   classifyRegimeFromFDR, 
   classifyRegimeWithHysteresis,
@@ -1143,6 +1146,32 @@ async function dataRetentionJob() {
   }
 }
 
+/**
+ * Self-probe job — populates the /status page history even when no customer
+ * is watching. Every 5 min we run a cheap SELECT 1 and record the result so
+ * the uptime bar on /status has real data to display.
+ */
+async function selfProbeHealth() {
+  const start = Date.now();
+  try {
+    await db.execute(sql`SELECT 1`);
+    const latency = Date.now() - start;
+    recordProbe({
+      name: 'db',
+      status: latency > 1000 ? 'degraded' : 'ok',
+      latencyMs: latency,
+    });
+    recordProbe({
+      name: 'api',
+      status: 'ok',
+      latencyMs: latency,
+    });
+  } catch {
+    recordProbe({ name: 'db', status: 'down', latencyMs: Date.now() - start });
+    recordProbe({ name: 'api', status: 'degraded', latencyMs: Date.now() - start });
+  }
+}
+
 const jobConfigs: BackgroundJobConfig[] = [
   { name: 'Economic Data Updates', intervalMs: 5 * 60 * 1000, enabled: true },
   { name: 'Sensor Readings Generation', intervalMs: 30 * 1000, enabled: true },
@@ -1159,6 +1188,7 @@ const jobConfigs: BackgroundJobConfig[] = [
   { name: 'Automation Maintenance', intervalMs: 60 * 60 * 1000, enabled: true },
   { name: 'Automation Queue Worker', intervalMs: 30 * 1000, enabled: true },
   { name: 'Data Retention', intervalMs: 24 * 60 * 60 * 1000, enabled: true },
+  { name: 'Self-Probe Health', intervalMs: 5 * 60 * 1000, enabled: true },
 ];
 
 export function startBackgroundJobs() {
@@ -1180,6 +1210,7 @@ export function startBackgroundJobs() {
     automationMaintenanceJob,
     automationQueueWorkerJob,
     dataRetentionJob,
+    selfProbeHealth,
   ];
   
   jobConfigs.forEach((config, index) => {

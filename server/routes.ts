@@ -22,7 +22,14 @@ import { getCompanyRegimeIntelligence } from "./lib/regimeIntelligence";
 import { buildRegimeEvidence, type RegimeEvidence } from "./lib/regimeConstants";
 import { AllocationEngine } from "./lib/allocation";
 import { setupWebSocket, getConnectedClientCount } from "./websocket";
-import { applySecurityHardening, securityMonitor, rateLimiters } from "./lib/securityHardening";
+import {
+  applySecurityHardening,
+  securityMonitor,
+  rateLimiters,
+  createRateLimitMiddleware,
+  sanitizeString,
+  sanitizeEmail,
+} from "./lib/securityHardening";
 import { 
   calculateSupplierRiskScore, 
   getFDRRiskMultiplier, 
@@ -586,22 +593,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/health', async (req, res) => {
     try {
       const startTime = Date.now();
-      
+
       // Check database connectivity with a lightweight query
-      let dbStatus = 'healthy';
+      let dbStatus: 'ok' | 'down' = 'ok';
+      let dbLatency = 0;
+      const dbStart = Date.now();
       try {
         await db.execute(sql`SELECT 1`);
+        dbLatency = Date.now() - dbStart;
       } catch {
-        dbStatus = 'unhealthy';
+        dbStatus = 'down';
+        dbLatency = Date.now() - dbStart;
       }
-      const dbLatency = Date.now() - startTime;
-      
+
       // Get cache stats
       const cacheStats = globalCache.getStats();
-      
+
       // Get WebSocket connection count
       const wsConnections = getConnectedClientCount();
-      
+
+      const totalLatency = Date.now() - startTime;
+
+      // Record a sample for the /status history rollup
+      try {
+        const { recordProbe } = await import("./lib/probeHistory");
+        recordProbe({
+          name: "api",
+          status: totalLatency > 2000 ? "degraded" : "ok",
+          latencyMs: totalLatency,
+        });
+        recordProbe({
+          name: "db",
+          status: dbStatus === "down" ? "down" : dbLatency > 1000 ? "degraded" : "ok",
+          latencyMs: dbLatency,
+        });
+      } catch {
+        // Never let telemetry break /api/health.
+      }
+
+      if (dbStatus === "down") {
+        return res.status(503).json({
+          status: 'degraded',
+          timestamp: new Date().toISOString(),
+          error: 'database unreachable',
+          checks: {
+            database: { status: 'down', latencyMs: dbLatency },
+          },
+        });
+      }
+
       res.json({
         status: 'healthy',
         timestamp: new Date().toISOString(),
@@ -614,13 +654,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
       });
     } catch (error: any) {
+      try {
+        const { recordProbe } = await import("./lib/probeHistory");
+        recordProbe({ name: "api", status: "down", latencyMs: null });
+      } catch {}
       res.status(503).json({
         status: 'unhealthy',
         timestamp: new Date().toISOString(),
-        error: error.message,
+        error: 'internal error',
       });
     }
   });
+
+  // Public status endpoints — drive the /status page. Read-only, cheap, not rate-limited
+  // beyond the global limiter because they're safe to scrape.
+  app.get('/api/status/summary', async (_req, res) => {
+    try {
+      const { getUptimeSummary, getProbeMeta } = await import("./lib/probeHistory");
+      res.json({
+        uptime: getUptimeSummary(24 * 30),
+        meta: getProbeMeta(),
+        generatedAt: new Date().toISOString(),
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: "status_unavailable" });
+    }
+  });
+
+  app.get('/api/status/history', async (req, res) => {
+    try {
+      const hoursRaw = Number.parseInt(String(req.query.hours || "720"), 10);
+      const hours = Number.isFinite(hoursRaw) ? Math.min(24 * 30, Math.max(1, hoursRaw)) : 720;
+      const { getHourlyBuckets, getProbeMeta } = await import("./lib/probeHistory");
+      res.json({
+        windowHours: hours,
+        buckets: getHourlyBuckets(hours),
+        meta: getProbeMeta(),
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: "status_unavailable" });
+    }
+  });
+
+  // Public contact / sales lead endpoint — no auth. Defence-in-depth:
+  //   - IP rate limit: 5 per 15 min window (good humans, not bots)
+  //   - Honeypot: if the "website" field is populated, silently drop (spam)
+  //   - Hard input caps + sanitization
+  //   - Always 200 unless validation fails so the client's mailto fallback
+  //     doesn't fire after we've already captured the lead.
+  app.post(
+    '/api/contact-sales',
+    createRateLimitMiddleware(5, 15 * 60 * 1000, (req) => {
+      const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim()
+        || req.ip
+        || 'unknown';
+      return `contact_sales:${ip}`;
+    }),
+    async (req, res) => {
+      try {
+        const body = req.body || {};
+
+        // Honeypot — real browsers leave this empty; bots fill every field.
+        if (typeof body.website === 'string' && body.website.trim().length > 0) {
+          return res.status(200).json({ ok: true });
+        }
+
+        const name = sanitizeString(String(body.name || '')).slice(0, 200);
+        const email = sanitizeEmail(String(body.email || '')).slice(0, 200);
+        const company = sanitizeString(String(body.company || '')).slice(0, 200);
+        const role = sanitizeString(String(body.role || '')).slice(0, 200);
+        const topicRaw = String(body.topic || 'other');
+        const allowedTopics = new Set([
+          'demo', 'pilot', 'enterprise', 'integration', 'security', 'press', 'other',
+        ]);
+        const topic = allowedTopics.has(topicRaw) ? topicRaw : 'other';
+        const message = sanitizeString(String(body.message || '')).slice(0, 5000);
+
+        // Minimum viable contact — need a reachable email and a reason.
+        if (!name.trim() || !email.trim() || !message.trim()) {
+          return res.status(400).json({
+            error: 'Please include your name, email, and a short message.',
+          });
+        }
+        // Basic email shape check — we already sanitized, this is belt-and-suspenders.
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          return res.status(400).json({ error: 'Please enter a valid email address.' });
+        }
+
+        const { captureLead } = await import("./lib/leadCapture");
+        const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip;
+        const result = await captureLead({
+          name,
+          email,
+          company: company || undefined,
+          role: role || undefined,
+          topic,
+          message,
+          receivedAt: new Date().toISOString(),
+          ip,
+          userAgent: String(req.headers['user-agent'] || '').slice(0, 500),
+          referer: String(req.headers['referer'] || '').slice(0, 500),
+        });
+
+        if (!result.ok) {
+          // Extremely rare (disk write failed). Let the client fall back.
+          return res.status(500).json({ error: 'We could not save your message. Please email sales@prescient-labs.com directly.' });
+        }
+        return res.status(200).json({ ok: true, emailed: result.emailed });
+      } catch (err: any) {
+        console.error('[contact-sales] unexpected error:', err?.message || err);
+        return res.status(500).json({ error: 'Please email sales@prescient-labs.com directly.' });
+      }
+    },
+  );
 
   // Auth endpoints — supports both Replit session auth and JWT Bearer auth
   app.get('/api/auth/user', async (req: any, res, next) => {

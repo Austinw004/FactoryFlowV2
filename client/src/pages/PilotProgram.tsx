@@ -452,11 +452,9 @@ export default function PilotProgram() {
             Schedule a discovery call to discuss your procurement spend and estimated savings potential. No commitment required.
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
-            <Button size="lg" variant="secondary" asChild data-testid="link-schedule-call">
-              <a href="mailto:info@prescient-labs.com">
-                Schedule Discovery Call
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </a>
+            <Button size="lg" variant="secondary" onClick={() => setLocation("/contact")} data-testid="button-schedule-call">
+              Schedule Discovery Call
+              <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
             <Button 
               size="lg" 
