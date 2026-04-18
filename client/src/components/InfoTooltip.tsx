@@ -81,7 +81,6 @@ export function InfoTooltip({ term, className = "" }: InfoTooltipProps) {
   const definition = tooltipDefinitions[term];
   
   if (!definition) {
-    console.warn(`InfoTooltip: Unknown term "${term}"`);
     return null;
   }
   
