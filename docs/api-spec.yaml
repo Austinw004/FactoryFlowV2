@@ -10,7 +10,12 @@ info:
 
     All endpoints (except those explicitly marked public) require authentication
     via the session cookie produced by POST /api/auth/login.
-  version: "1.0.0"
+
+    **Sync status (2026-04-18):** This file documents ~16 of 576 routes. The
+    backend has grown significantly since initial spec creation. See GitHub
+    issue #39 for the dead-route audit. Full spec generation is tracked as
+    a roadmap item.
+  version: "1.1.0"
   contact:
     name: Austin Wendler (CEO)
     email: austinwendler44@gmail.com

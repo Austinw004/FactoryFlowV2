@@ -37,7 +37,6 @@ const SmartInsightsCompact = lazy(() =>
 const InsightPanel = lazy(() =>
   import("@/components/InsightPanel").then((m) => ({ default: m.InsightPanel })),
 );
-import { generateDashboardPDF } from "@/lib/pdfExport";
 import { TrendingUp, DollarSign, Package, AlertCircle, Plus, Upload, GitCompare, Loader2, Globe, Radio, Package2, Building2, Box, FileDown, Clock, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -472,7 +471,8 @@ export default function Dashboard() {
           <Button 
             variant="outline"
             size="sm"
-            onClick={() => {
+            onClick={async () => {
+              const { generateDashboardPDF } = await import("@/lib/pdfExport");
               const success = generateDashboardPDF({
                 companyName: user?.firstName ? `${user.firstName}'s Company` : 'Prescient Labs',
                 exportDate: new Date().toLocaleDateString(),

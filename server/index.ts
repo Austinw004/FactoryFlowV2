@@ -24,6 +24,14 @@ app.use(
     referrerPolicy: { policy: "strict-origin-when-cross-origin" },
   }),
 );
+// Permissions-Policy: lock down sensitive browser APIs not used by this app.
+app.use((_req, res, next) => {
+  res.setHeader(
+    "Permissions-Policy",
+    "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()",
+  );
+  next();
+});
 
 // Startup env validation — fail fast before binding port
 (function validateEnv() {
