@@ -34,6 +34,15 @@ GitHub → **Settings → Actions → General**:
 - Workflow permissions: "Read and write permissions" (so the meta-routine
   PRs can be opened from a routine using the GH connector)
 
+## 3.5. Allow auto-merge
+
+GitHub → **Settings → General → Pull Requests**:
+
+- Allow auto-merge: enabled
+
+This lets the `dependabot-auto-merge` workflow squash-merge passing
+patch/minor dep bumps without you clicking anything.
+
 ## 4. (Recommended) Branch protection on `main`
 
 GitHub → **Settings → Branches → Add rule**:
@@ -68,6 +77,7 @@ After you've done steps 1–4:
 | Pull request → `main`                         | `ci.yml`         | Same as above; result becomes the PR check     |
 | Manual: Actions → db-push → Run workflow      | `db-push.yml`    | Same flow with optional `reason` input         |
 | Weekly Monday 06:00 CT                        | `dependabot.yml` | Opens grouped npm + Actions update PRs         |
+| Dependabot PR opened                          | `dependabot-auto-merge.yml` | Auto-merges patch/minor bumps after CI passes  |
 
 ## What's NOT automated (yet)
 
