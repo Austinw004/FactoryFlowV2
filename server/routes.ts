@@ -3636,7 +3636,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Resolve a prediction with actual outcome
-  app.post("/api/prediction-outcomes/:id/resolve", isAuthenticated, async (req: any, res) => {
+  const predictionOutcomeResolveSchema = z.object({
+    actualValue: z.string().min(1).max(500),
+    actualDirection: z.string().max(50).optional(),
+    wasAccurate: z.boolean().optional(),
+    errorMagnitude: z.number().optional(),
+  });
+
+  app.post("/api/prediction-outcomes/:id/resolve", isAuthenticated, validateBody(predictionOutcomeResolveSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -3645,11 +3652,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { id } = req.params;
-      const { actualValue, actualDirection, wasAccurate, errorMagnitude } = req.body;
-
-      if (!actualValue) {
-        return res.status(400).json({ error: "actualValue is required" });
-      }
+      const { actualValue, actualDirection, wasAccurate, errorMagnitude } = req.validated as z.infer<typeof predictionOutcomeResolveSchema>;
 
       const result = await db
         .update(predictionOutcomes)
@@ -3690,17 +3693,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/forecast-degradation-alerts/:id/resolve", isAuthenticated, async (req: any, res) => {
+  const forecastAlertResolveSchema = z.object({
+    actionTaken: z.string().min(1).max(1000),
+  });
+
+  app.post("/api/forecast-degradation-alerts/:id/resolve", isAuthenticated, validateBody(forecastAlertResolveSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      const { actionTaken } = req.body;
-      if (!actionTaken) {
-        return res.status(400).json({ error: "actionTaken is required" });
-      }
+      const { actionTaken } = req.validated as z.infer<typeof forecastAlertResolveSchema>;
       const alert = await storage.resolveForecastAlert(req.params.id, actionTaken, userId);
       res.json(alert);
     } catch (error: any) {
@@ -7820,13 +7824,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Generate approval workflow for a PO
-  app.post("/api/purchase-orders/workflow/generate", isAuthenticated, async (req: any, res) => {
+  const poWorkflowGenerateSchema = z.object({
+    poValue: z.number().positive().max(1_000_000_000),
+    materialId: z.string().min(1).max(128),
+    supplierId: z.string().min(1).max(128),
+  });
+
+  app.post("/api/purchase-orders/workflow/generate", isAuthenticated, validateBody(poWorkflowGenerateSchema), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
       if (!user?.companyId) {
         return res.status(400).json({ error: "User has no company" });
       }
-      const { poValue, materialId, supplierId } = req.body;
+      const { poValue, materialId, supplierId } = req.validated as z.infer<typeof poWorkflowGenerateSchema>;
       const workflow = await poEngine.generateApprovalWorkflow(
         poValue,
         materialId,
@@ -7945,13 +7955,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get recommended playbook based on FDR/regime
-  app.post("/api/negotiation-playbooks/recommend", isAuthenticated, async (req: any, res) => {
+  const playbookRecommendSchema = z.object({
+    fdr: z.number().min(0).max(100),
+    regime: z.string().min(1).max(100),
+  });
+
+  app.post("/api/negotiation-playbooks/recommend", isAuthenticated, validateBody(playbookRecommendSchema), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
       if (!user?.companyId) {
         return res.status(400).json({ error: "User has no company" });
       }
-      const { fdr, regime } = req.body;
+      const { fdr, regime } = req.validated as z.infer<typeof playbookRecommendSchema>;
       const playbook = await poEngine.getRecommendedPlaybook(fdr, regime, user.companyId);
       res.json(playbook);
     } catch (error: any) {
@@ -8934,7 +8949,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AI ASSISTANT ENDPOINTS
   // ============================================================
 
-  app.post("/api/ai/chat", isAuthenticated, async (req: any, res) => {
+  const aiChatSchema = z.object({
+    message: z.string().min(1).max(10000),
+    conversationId: z.string().max(128).optional(),
+  });
+
+  app.post("/api/ai/chat", isAuthenticated, validateBody(aiChatSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -8942,14 +8962,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "No company associated with user" });
       }
 
-      const { message, conversationId } = req.body;
-      if (!message || typeof message !== 'string') {
-        return res.status(400).json({ error: "Message is required" });
-      }
+      const { message, conversationId } = req.validated as z.infer<typeof aiChatSchema>;
 
       const { aiAssistantService } = await import("./lib/aiAssistant");
       const response = await aiAssistantService.chat(user.companyId, message, conversationId);
-      
+
       res.json(response);
     } catch (error: any) {
       console.error('AI chat error:', error);
@@ -8958,7 +8975,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Agentic AI Chat endpoint with autonomous action capabilities
-  app.post("/api/ai/agentic-chat", isAuthenticated, async (req: any, res) => {
+  app.post("/api/ai/agentic-chat", isAuthenticated, validateBody(aiChatSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -8966,14 +8983,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "No company associated with user" });
       }
 
-      const { message, conversationId } = req.body;
-      if (!message || typeof message !== 'string') {
-        return res.status(400).json({ error: "Message is required" });
-      }
+      const { message, conversationId } = req.validated as z.infer<typeof aiChatSchema>;
 
       const { aiAssistantService } = await import("./lib/aiAssistant");
       const response = await aiAssistantService.chat(user.companyId, message, conversationId);
-      
+
       res.json(response);
     } catch (error: any) {
       console.error('Agentic AI chat error:', error);
