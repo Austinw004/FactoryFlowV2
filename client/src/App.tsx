@@ -48,6 +48,8 @@ const IntegrationChecklist = lazy(() => import("@/pages/IntegrationChecklist"));
 const PilotProgram = lazy(() => import("@/pages/PilotProgram"));
 const RoiCalculator = lazy(() => import("@/pages/RoiCalculator"));
 const SecurityFaq = lazy(() => import("@/pages/SecurityFaq"));
+const Contact = lazy(() => import("@/pages/Contact"));
+const Status = lazy(() => import("@/pages/Status"));
 const LandingPageVariantA = lazy(() => import("@/pages/LandingPageVariantA"));
 const LandingPageVariantB = lazy(() => import("@/pages/LandingPageVariantB"));
 const LandingPageVariantC = lazy(() => import("@/pages/LandingPageVariantC"));
@@ -138,6 +140,8 @@ function Router() {
         <Route path="/pilot-program" component={PilotProgram} />
         <Route path="/roi-calculator" component={RoiCalculator} />
         <Route path="/security" component={SecurityFaq} />
+        <Route path="/contact" component={Contact} />
+        <Route path="/status" component={Status} />
         <Route path="/signup" component={SignUpPage} />
         <Route path="/signin" component={SignInPage} />
         <Route path="/preview/variant-a" component={LandingPageVariantA} />

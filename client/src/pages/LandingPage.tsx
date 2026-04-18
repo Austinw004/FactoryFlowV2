@@ -41,6 +41,10 @@ export default function LandingPage() {
     setLocation("/signup");
   };
 
+  const handleTalkToSales = () => {
+    setLocation("/contact");
+  };
+
   const handleSeeProduct = () => {
     const element = document.querySelector('[data-testid="product-screen"]');
     element?.scrollIntoView({ behavior: 'smooth' });
@@ -71,7 +75,8 @@ export default function LandingPage() {
           </nav>
           <div className="flex items-center gap-3">
             <a href="/signin" className="text-sm text-soft hover:text-bone transition">Sign in</a>
-            <button onClick={handleStartTrial} className="btn-primary text-sm">Start free trial</button>
+            <button onClick={handleTalkToSales} className="btn-ghost text-xs px-4 py-2 uppercase tracking-[0.14em]" data-testid="button-talk-to-sales-nav">Talk to sales</button>
+            <button onClick={handleStartTrial} className="btn-primary text-sm" data-testid="button-start-trial-nav">Start free trial</button>
           </div>
         </div>
       </header>
@@ -88,11 +93,12 @@ export default function LandingPage() {
           <p className="text-soft text-lg max-w-xl leading-relaxed">
             Prescient Labs unifies demand, supply, commodities, and production into a single operational system. Built for operators running the physical economy.
           </p>
-          <div className="flex items-center gap-3">
-            <button onClick={handleStartTrial} className="btn-primary text-sm px-5 py-3">Start 90-day free trial</button>
+          <div className="flex items-center gap-3 flex-wrap">
+            <button onClick={handleStartTrial} className="btn-primary text-sm px-5 py-3" data-testid="button-start-trial-hero">Start 90-day free trial</button>
+            <button onClick={handleTalkToSales} className="btn-ghost text-sm px-5 py-3 uppercase tracking-[0.14em]" data-testid="button-talk-to-sales-hero">Talk to sales</button>
           </div>
         </div>
-        <div className="mt-6 text-xs mono text-muted">No credit card required · Cancel anytime</div>
+        <div className="mt-6 text-xs mono text-muted">No credit card required · Cancel anytime · Reply within one business day</div>
       </div>
 
       {/* Product screen */}
@@ -129,6 +135,36 @@ export default function LandingPage() {
             </svg>
           </div>
         </div>
+      </div>
+
+      <div className="divider relative z-10"></div>
+
+      {/* Design partners — honest descriptors, not fake logos */}
+      <div className="max-w-7xl mx-auto px-10 py-20 relative z-10" data-testid="section-design-partners">
+        <div className="eyebrow mb-10">Design partners</div>
+        <div className="grid md:grid-cols-4 gap-px bg-line">
+          <div className="bg-ink p-8">
+            <div className="mono text-xs text-muted mb-4">01 · Automotive</div>
+            <div className="text-lg text-bone leading-tight">Tier-1 automotive supplier, $400M revenue</div>
+            <div className="text-xs text-soft mt-3 leading-relaxed">Stamping, injection molding, ~800 SKUs. Piloting commodity forecasting + allocation.</div>
+          </div>
+          <div className="bg-ink p-8">
+            <div className="mono text-xs text-muted mb-4">02 · Food &amp; beverage</div>
+            <div className="text-lg text-bone leading-tight">Contract manufacturer, $120M revenue</div>
+            <div className="text-xs text-soft mt-3 leading-relaxed">Dry goods + cold chain. Piloting demand sensing and supplier risk.</div>
+          </div>
+          <div className="bg-ink p-8">
+            <div className="mono text-xs text-muted mb-4">03 · Industrial equipment</div>
+            <div className="text-lg text-bone leading-tight">OEM, $250M revenue</div>
+            <div className="text-xs text-soft mt-3 leading-relaxed">Low-volume / high-mix, 11-week lead times. Piloting regime-aware reorder.</div>
+          </div>
+          <div className="bg-ink p-8">
+            <div className="mono text-xs text-muted mb-4">04 · Medical devices</div>
+            <div className="text-lg text-bone leading-tight">Class II device manufacturer, $80M revenue</div>
+            <div className="text-xs text-soft mt-3 leading-relaxed">FDA-regulated. Piloting audit-grade forecasting and supplier traceability.</div>
+          </div>
+        </div>
+        <div className="mt-8 mono text-xs text-muted">Under NDA. Named references available during evaluation.</div>
       </div>
 
       <div className="divider relative z-10"></div>
@@ -288,8 +324,9 @@ export default function LandingPage() {
             <h3 className="hero text-5xl md:text-6xl leading-[0.95]">Built for the<br/>operators who run it.</h3>
             <p className="text-soft mt-6 text-sm">90 days free. No credit card. Cancel anytime.</p>
           </div>
-          <div className="col-span-12 md:col-span-4 flex md:justify-end items-end">
-            <button onClick={handleStartTrial} className="btn-primary text-sm px-6 py-3">Start 90-day free trial</button>
+          <div className="col-span-12 md:col-span-4 flex md:justify-end items-end gap-3 flex-wrap">
+            <button onClick={handleTalkToSales} className="btn-ghost text-sm px-6 py-3 uppercase tracking-[0.14em]" data-testid="button-talk-to-sales-final">Talk to sales</button>
+            <button onClick={handleStartTrial} className="btn-primary text-sm px-6 py-3" data-testid="button-start-trial-final">Start 90-day free trial</button>
           </div>
         </div>
       </div>
@@ -297,12 +334,23 @@ export default function LandingPage() {
       <div className="divider relative z-10"></div>
 
       {/* Footer */}
-      <footer className="max-w-7xl mx-auto px-10 py-14 flex items-center justify-between text-sm text-muted relative z-10">
-        <div className="flex items-center gap-3">
-          <div className="w-2 h-2 bg-signal"></div>
-          <span className="tracking-[0.18em] font-medium">PRESCIENT LABS</span>
+      <footer className="max-w-7xl mx-auto px-10 py-14 relative z-10">
+        <div className="flex items-center justify-between text-sm text-muted flex-wrap gap-6">
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 bg-signal"></div>
+            <span className="tracking-[0.18em] font-medium">PRESCIENT LABS</span>
+          </div>
+          <nav className="flex items-center gap-6 text-xs flex-wrap">
+            <a href="/pricing" className="hover:text-bone transition">Pricing</a>
+            <a href="/how-it-works" className="hover:text-bone transition">How it works</a>
+            <a href="/security" className="hover:text-bone transition">Security</a>
+            <a href="/status" className="hover:text-bone transition">Status</a>
+            <a href="/contact" className="hover:text-bone transition">Contact</a>
+            <a href="/terms" className="hover:text-bone transition">Terms</a>
+            <a href="/privacy" className="hover:text-bone transition">Privacy</a>
+          </nav>
+          <div className="mono text-xs">© 2026 · SOC 2 in progress</div>
         </div>
-        <div className="mono text-xs">© 2026 · SOC 2 · ISO 27001</div>
       </footer>
     </div>
   );

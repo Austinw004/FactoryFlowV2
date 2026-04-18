@@ -42,6 +42,49 @@ export function Pricing() {
     }
   };
 
+  const handlePlanCta = (planId: string) => {
+    if (planId === "performance") {
+      setLocation("/contact");
+    } else {
+      handleStartTrial();
+    }
+  };
+
+  const pricingFaqs = [
+    {
+      q: "What happens when my 90-day free trial ends?",
+      a: "We send reminders 30, 14, and 3 days before your trial ends. If you haven't picked a paid plan by the end of the trial, your account pauses read-only for 30 days so you can export your data or resume at any time — we don't auto-charge and we don't delete anything without warning.",
+    },
+    {
+      q: "Can I switch plans later?",
+      a: "Yes, any time. Upgrades are prorated and effective immediately. Downgrades take effect at your next billing period so you don't lose features mid-cycle.",
+    },
+    {
+      q: "How is a \"user seat\" defined?",
+      a: "A seat is one named user with login access. Read-only dashboard viewers (executive dashboards, kiosk mode on the plant floor) don't count against your seat cap. Every paid plan includes unlimited read-only viewers.",
+    },
+    {
+      q: "Are there onboarding or setup fees?",
+      a: "No. Starter and Growth onboarding is self-serve — we guide you through ERP connection and your first forecast in about an hour. Performance and Tenant VPC deployments include white-glove onboarding at no extra cost; a dedicated solutions engineer handles the integration with your IT team.",
+    },
+    {
+      q: "Do you charge per API call?",
+      a: "The fixed-price plans (Starter, Growth, Performance) include generous API quotas that cover normal operational use. Usage-Based is metered by forecast runs and API calls — you see a live counter in your billing dashboard. Heavy integrations (real-time pricing streams, automated PO workflows) fit more naturally on Growth or Performance.",
+    },
+    {
+      q: "What does \"15% of verified savings\" mean on the Performance tier?",
+      a: "Instead of a flat monthly fee, you pay 15% of the documented inventory savings, freight savings, and commodity-hedging wins the platform delivers — measured against a baseline we establish together during the first 60 days. If we don't save you money, you don't pay us. Minimum contract: 12 months.",
+    },
+    {
+      q: "Do you offer a money-back guarantee?",
+      a: "Every paid plan has a 60-day prorated refund if the platform isn't delivering measurable results — no contract language gymnastics, just a clean refund. Annual plans are refunded prorated to the day.",
+    },
+    {
+      q: "Who should I talk to for procurement / security / legal questions?",
+      a: "Email sales@prescient-labs.com for commercial questions, security@prescient-labs.com for security reviews (SIG, CAIQ, DPA), or book a 30-minute call from the Contact page. Typical enterprise evaluation — from first call to signed MSA — is four to six weeks.",
+    },
+  ];
+
   const plans = [
     {
       name: "Starter",
@@ -160,13 +203,14 @@ export function Pricing() {
                 </div>
 
                 <button
-                  onClick={handleStartTrial}
+                  onClick={() => handlePlanCta(plan.id)}
                   className={`${
                     tier === plan.id.split("_")[1] ? "btn-ghost" : "btn-primary"
                   } text-xs px-6 py-2 mb-10 w-full`}
+                  data-testid={`button-cta-${plan.id}`}
                 >
                   {tier === plan.id.split("_")[1] ? "Current Plan" : plan.cta}
-                  {!plan.id.includes("performance") && <ArrowRight className="w-3 h-3 inline ml-2" />}
+                  <ArrowRight className="w-3 h-3 inline ml-2" />
                 </button>
 
                 <div className="space-y-3">
@@ -216,6 +260,34 @@ export function Pricing() {
 
           <div className="divider"></div>
 
+          {/* FAQ */}
+          <div className="py-14">
+            <div className="eyebrow mb-8">Frequently asked</div>
+            <div className="grid md:grid-cols-2 gap-x-14 gap-y-10">
+              {pricingFaqs.map((item, idx) => (
+                <div key={idx} data-testid={`pricing-faq-${idx}`}>
+                  <h3 className="text-base text-bone font-medium mb-3 leading-snug">
+                    {item.q}
+                  </h3>
+                  <p className="text-sm text-soft leading-relaxed">{item.a}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-12 text-sm text-muted">
+              Still have questions?{" "}
+              <button
+                onClick={() => setLocation("/contact")}
+                className="text-bone hover:text-signal transition underline underline-offset-4"
+                data-testid="link-contact-from-faq"
+              >
+                Talk to sales
+              </button>{" "}
+              — we reply within one US business day.
+            </div>
+          </div>
+
+          <div className="divider"></div>
+
           {/* Final CTA */}
           <div className="py-14">
             <div className="grid grid-cols-12 gap-10">
@@ -227,7 +299,14 @@ export function Pricing() {
                   Start your free trial today. No credit card required. Full platform access for 90 days.
                 </p>
               </div>
-              <div className="col-span-12 md:col-span-4 flex md:justify-end items-end">
+              <div className="col-span-12 md:col-span-4 flex md:justify-end items-end gap-3 flex-wrap">
+                <button
+                  onClick={() => setLocation("/contact")}
+                  className="btn-ghost text-sm px-6 py-3"
+                  data-testid="button-talk-to-sales-final"
+                >
+                  Talk to sales
+                </button>
                 <button onClick={handleStartTrial} className="btn-primary text-sm px-6 py-3">
                   Start 90-day free trial
                 </button>

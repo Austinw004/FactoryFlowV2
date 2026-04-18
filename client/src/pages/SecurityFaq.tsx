@@ -46,23 +46,27 @@ export default function SecurityFaq() {
       questions: [
         {
           q: "Where is my data stored?",
-          a: "Your data is stored in secure, SOC 2 compliant data centers in the United States. Enterprise customers can request data residency in specific regions (EU, APAC) where available.",
+          a: "Your data is stored in secure, SOC 2 compliant data centers in the United States (US-East, primary) with hot-standby replication in US-West. Enterprise customers on the Tenant VPC deployment can specify region — EU (Frankfurt) and APAC (Sydney) are available on request. All storage is on encrypted managed-Postgres with point-in-time recovery.",
+        },
+        {
+          q: "Who are your subprocessors?",
+          a: "The current list of subprocessors that may process customer data: (1) AWS — primary hosting and managed Postgres, US-East/US-West; (2) Stripe — billing and payment processing; (3) OpenAI and Anthropic — AI inference for forecasting copilot features (your raw data is never used to train their models; we operate under their zero-retention enterprise API terms); (4) Resend — transactional email (invitations, alerts, password resets); (5) Sentry — error telemetry with PII scrubbing enabled. We give 30 days' notice before adding or swapping a subprocessor. Email security@prescient-labs.com for the signed subprocessor addendum.",
         },
         {
           q: "Who can access my data?",
-          a: "Only authorized members of your organization can access your data. Prescient Labs employees cannot view your data without explicit permission, and all access is logged. Our support team may request temporary access for troubleshooting, which requires your approval.",
+          a: "Only authorized members of your organization can access your data. Prescient Labs employees cannot view your production data without explicit, time-bound customer authorization, and all access is logged immutably. Our support team may request temporary read-only access for troubleshooting — this requires your written approval and expires automatically in 24 hours.",
         },
         {
           q: "Is my data used to train your AI models?",
-          a: "No. Your company's data is never used to train shared models or improve predictions for other customers. Your forecasting models are trained exclusively on your own historical data.",
+          a: "No. Your company's data is never used to train shared models or improve predictions for other customers. Your forecasting models are trained exclusively on your own historical data. Our third-party LLM providers (OpenAI, Anthropic) operate under zero-retention enterprise API terms — your prompts and responses are not retained or used for training.",
         },
         {
           q: "Can my competitors see my data through benchmarking?",
-          a: "No. The peer benchmarking consortium uses differential privacy and anonymization techniques. Only aggregated, anonymized statistics are shared - never raw data, company names, or identifiable information. You control what data, if any, you contribute to benchmarking.",
+          a: "No. The peer benchmarking consortium uses differential privacy and anonymization techniques. Only aggregated, anonymized statistics are shared — never raw data, company names, or identifiable information. Benchmarking is strictly opt-in — you control what data, if any, you contribute.",
         },
         {
           q: "What happens to my data if I cancel?",
-          a: "Upon cancellation, you can export all your data. After a 30-day grace period, your data is permanently deleted from our systems, including all backups. We provide a certificate of deletion upon request.",
+          a: "Upon cancellation, you have 30 days to export all of your data via the self-serve export tool or request a final bulk export from support. After the 30-day grace period, your data is permanently deleted from production and backups within 14 days, and we issue a signed certificate of deletion on request.",
         },
       ],
     },
@@ -88,7 +92,7 @@ export default function SecurityFaq() {
       questions: [
         {
           q: "Are you SOC 2 certified?",
-          a: "We are currently pursuing SOC 2 Type II certification, with completion expected in Q2 2025. We can provide our current security documentation and complete vendor security questionnaires upon request.",
+          a: "We are pursuing SOC 2 Type II certification with audit kickoff planned for Q3 2026. In the interim we operate under a documented security program aligned with the SOC 2 Trust Services Criteria — encryption, access control, audit logging, incident response, change management. We can share our current security whitepaper, complete SIG / CAIQ questionnaires, and sign a Data Processing Agreement (DPA) today. Email security@prescient-labs.com to request.",
         },
         {
           q: "Are you GDPR compliant?",
@@ -100,7 +104,11 @@ export default function SecurityFaq() {
         },
         {
           q: "Can you complete our vendor security questionnaire?",
-          a: "Yes. We regularly complete security questionnaires (SIG, CAIQ, custom) for enterprise customers. Contact our security team at info@prescient-labs.com to request.",
+          a: "Yes. We regularly complete SIG Lite, SIG Core, CAIQ v4, and custom questionnaires for enterprise customers. Typical turnaround is 5 business days. Email security@prescient-labs.com with your questionnaire and target signature date.",
+        },
+        {
+          q: "Will you sign a Data Processing Agreement (DPA) / BAA?",
+          a: "Yes. We can sign a DPA modeled on GDPR Article 28 with Standard Contractual Clauses for EU data transfers. HIPAA BAA is available for healthcare-adjacent deployments. Both can be executed before you sign an MSA. Email security@prescient-labs.com to receive our standard DPA template.",
         },
       ],
     },
@@ -117,11 +125,11 @@ export default function SecurityFaq() {
         },
         {
           q: "What is your uptime target?",
-          a: "We architect for high availability with redundant infrastructure. Enterprise customers can negotiate custom SLAs with defined uptime targets and financial credits for downtime.",
+          a: "Our public target is 99.9% monthly uptime for the core platform, measured via external synthetic checks. Live status is published at /status. Enterprise customers on the Performance or Tenant VPC tier receive a contractual 99.95% SLA with financial credits for downtime — terms are negotiated in the MSA.",
         },
         {
           q: "How do you handle security incidents?",
-          a: "We have a documented incident response plan with defined severity levels and response times. Customers are notified within 24 hours of any incident affecting their data. We provide post-incident reports for all significant events.",
+          a: "We have a documented incident response plan with defined severity levels. For any incident that affects customer data (Sev 1 or Sev 2), we notify the customer security contact within 24 hours of confirmation, with a preliminary root-cause summary within 72 hours and a full post-incident report within 10 business days. Our production RTO is 4 hours and RPO is 1 hour; disaster-recovery failover is tested quarterly.",
         },
         {
           q: "Is your API secure?",
@@ -149,11 +157,11 @@ export default function SecurityFaq() {
   ];
 
   const complianceStatus = [
-    { name: "SOC 2 Type II", status: "In Progress", target: "Q2 2025" },
+    { name: "SOC 2 Type II", status: "In Progress", target: "Audit kickoff Q3 2026" },
     { name: "GDPR Compliance", status: "Compliant", target: "" },
     { name: "CCPA Compliance", status: "Compliant", target: "" },
-    { name: "ISO 27001", status: "Planned", target: "2025" },
-    { name: "HIPAA", status: "Not Applicable", target: "" },
+    { name: "ISO 27001", status: "Planned", target: "2027" },
+    { name: "HIPAA BAA", status: "Available on request", target: "" },
   ];
 
   return (
@@ -279,10 +287,10 @@ export default function SecurityFaq() {
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <Button size="lg" asChild data-testid="link-contact-security">
-              <a href="mailto:info@prescient-labs.com">Contact Security Team</a>
+              <a href="mailto:security@prescient-labs.com">Email security@prescient-labs.com</a>
             </Button>
-            <Button size="lg" variant="outline" onClick={() => setLocation("/integration-checklist")} data-testid="button-view-integrations">
-              View Integration Guide
+            <Button size="lg" variant="outline" onClick={() => setLocation("/contact")} data-testid="button-contact-sales">
+              Talk to Sales
             </Button>
           </div>
         </div>
