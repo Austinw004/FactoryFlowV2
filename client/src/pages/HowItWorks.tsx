@@ -418,14 +418,28 @@ export default function HowItWorks() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-muted-foreground">
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="p-3 rounded-lg border bg-card">
               <p className="font-medium text-foreground text-sm mb-1">AI Assistant</p>
               <p className="text-xs">Ask questions directly in the platform for instant answers.</p>
             </div>
             <div className="p-3 rounded-lg border bg-card">
               <p className="font-medium text-foreground text-sm mb-1">Email Support</p>
-              <p className="text-xs">support@prescient-labs.com for detailed questions.</p>
+              <p className="text-xs">
+                <a href="mailto:support@prescient-labs.com" className="underline hover:text-foreground">
+                  support@prescient-labs.com
+                </a>{" "}
+                for detailed questions.
+              </p>
+            </div>
+            <div className="p-3 rounded-lg border bg-card">
+              <p className="font-medium text-foreground text-sm mb-1">General Inquiries</p>
+              <p className="text-xs">
+                <a href="mailto:info@prescient-labs.com" className="underline hover:text-foreground">
+                  info@prescient-labs.com
+                </a>{" "}
+                for anything else.
+              </p>
             </div>
             <div className="p-3 rounded-lg border bg-card">
               <p className="font-medium text-foreground text-sm mb-1">Account Manager</p>

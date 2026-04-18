@@ -358,6 +358,7 @@ export default function Status() {
           <a href="/contact" className="hover:text-bone transition">Contact</a>
           <a href="/terms" className="hover:text-bone transition">Terms</a>
           <a href="/privacy" className="hover:text-bone transition">Privacy</a>
+          <a href="mailto:info@prescient-labs.com" className="hover:text-bone transition">info@prescient-labs.com</a>
         </nav>
         <div className="mono text-xs">© 2026</div>
       </footer>

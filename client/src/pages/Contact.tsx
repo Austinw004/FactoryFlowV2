@@ -6,6 +6,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { humanizeError } from "@/lib/humanizeError";
 
 const SALES_EMAIL = "sales@prescient-labs.com";
+const INFO_EMAIL = "info@prescient-labs.com";
 
 interface ContactPayload {
   name: string;
@@ -141,13 +142,28 @@ export default function Contact() {
             <div className="border-t hair pt-8 space-y-6 text-sm text-soft">
               <div>
                 <div className="eyebrow mb-2">Prefer email?</div>
-                <a
-                  href={`mailto:${SALES_EMAIL}`}
-                  className="text-bone hover:text-signal transition"
-                  data-testid="link-sales-email"
-                >
-                  {SALES_EMAIL}
-                </a>
+                <div className="space-y-1">
+                  <div>
+                    <a
+                      href={`mailto:${SALES_EMAIL}`}
+                      className="text-bone hover:text-signal transition"
+                      data-testid="link-sales-email"
+                    >
+                      {SALES_EMAIL}
+                    </a>
+                    <span className="text-muted ml-2 text-xs">— pilots & pricing</span>
+                  </div>
+                  <div>
+                    <a
+                      href={`mailto:${INFO_EMAIL}`}
+                      className="text-bone hover:text-signal transition"
+                      data-testid="link-info-email"
+                    >
+                      {INFO_EMAIL}
+                    </a>
+                    <span className="text-muted ml-2 text-xs">— anything else</span>
+                  </div>
+                </div>
               </div>
               <div>
                 <div className="eyebrow mb-2">Response time</div>
@@ -332,6 +348,7 @@ export default function Contact() {
           <a href="/contact" className="hover:text-bone transition">Contact</a>
           <a href="/terms" className="hover:text-bone transition">Terms</a>
           <a href="/privacy" className="hover:text-bone transition">Privacy</a>
+          <a href="mailto:info@prescient-labs.com" className="hover:text-bone transition">info@prescient-labs.com</a>
         </nav>
         <div className="mono text-xs">© 2026</div>
       </footer>
