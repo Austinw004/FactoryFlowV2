@@ -1,0 +1,45 @@
+# Dependabot — keeps npm and GitHub Actions deps from rotting silently.
+# Weekly cadence so PRs are batched, not noisy.
+#
+# Tweak `open-pull-requests-limit` if you want fewer/more concurrent
+# update PRs. Major-version bumps are grouped to keep review time low.
+
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/Chicago"
+    open-pull-requests-limit: 5
+    groups:
+      drizzle:
+        patterns:
+          - "drizzle*"
+      react:
+        patterns:
+          - "react"
+          - "react-*"
+          - "@radix-ui/*"
+      tooling:
+        patterns:
+          - "typescript"
+          - "vite"
+          - "esbuild"
+          - "@types/*"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/Chicago"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "ci(deps)"

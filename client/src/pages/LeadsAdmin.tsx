@@ -41,7 +41,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Inbox, Mail, RefreshCw, Search, Shield, ChevronDown } from "lucide-react";
+import { Inbox, Mail, RefreshCw, Search, Shield } from "lucide-react";
 
 type LeadStatus =
   | "new"
