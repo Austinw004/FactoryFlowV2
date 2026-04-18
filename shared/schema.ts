@@ -9780,3 +9780,65 @@ export const insertAutomationRuleSchema = createInsertSchema(automationRules).om
 export type AutomationRule = typeof automationRules.$inferSelect;
 export type InsertAutomationRule = z.infer<typeof insertAutomationRuleSchema>;
 export type AutomationExecution = typeof automationExecutions.$inferSelect;
+
+/**
+ * Contact / sales inquiries — inbound leads from the public /contact form
+ * (POST /api/contact-sales). Pre-conversion, so deliberately NOT scoped to
+ * a companyId — these are people we don't have a tenant for yet.
+ *
+ * Status enum drives the lightweight pipeline view at /internal/leads:
+ *   new       → fresh, no human has looked at it
+ *   triaged   → reviewed, decision deferred (waiting on info)
+ *   replied   → human responded
+ *   qualified → moved to the active sales pipeline
+ *   won       → closed/won (tag with referenced company once known)
+ *   lost      → closed/lost (note the reason)
+ *   spam      → bot or junk; counts toward abuse signal
+ */
+export const contactInquiries = pgTable(
+  "contact_inquiries",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    receivedAt: timestamp("received_at").notNull().defaultNow(),
+    name: text("name").notNull(),
+    email: text("email").notNull(),
+    company: text("company"),
+    role: text("role"),
+    topic: text("topic").notNull().default("other"), // demo|pilot|enterprise|integration|security|press|other
+    message: text("message").notNull(),
+    // Request metadata for abuse triage; never used for marketing.
+    ip: text("ip"),
+    userAgent: text("user_agent"),
+    referer: text("referer"),
+    // Sales pipeline state.
+    status: text("status").notNull().default("new"), // new|triaged|replied|qualified|won|lost|spam
+    notes: text("notes"), // free-form internal notes (CSM/BDR scratch pad)
+    assignedTo: varchar("assigned_to").references(() => users.id, { onDelete: "set null" }),
+    // Mirror of best-effort transactional email send result.
+    emailedAt: timestamp("emailed_at"),
+    // For analytics — how often did the same email keep submitting?
+    submissionCount: integer("submission_count").notNull().default(1),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("contact_inquiries_received_at_idx").on(table.receivedAt),
+    index("contact_inquiries_email_idx").on(table.email),
+    index("contact_inquiries_status_idx").on(table.status),
+  ],
+);
+
+export const insertContactInquirySchema = createInsertSchema(contactInquiries).omit({
+  id: true,
+  receivedAt: true,
+  updatedAt: true,
+  submissionCount: true,
+  emailedAt: true,
+  status: true,
+  notes: true,
+  assignedTo: true,
+});
+export type ContactInquiry = typeof contactInquiries.$inferSelect;
+export type InsertContactInquiry = z.infer<typeof insertContactInquirySchema>;
+

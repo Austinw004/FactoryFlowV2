@@ -8,6 +8,7 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { attachRbacUser, requirePermission } from "./middleware/rbac";
 import rbacRoutes from "./routes/rbac";
 import platformAnalyticsRoutes from "./routes/platformAnalytics";
+import leadsAdminRoutes from "./routes/leadsAdmin";
 import { initializePermissions, initializeDefaultRoles } from "./lib/rbac";
 import { logAudit } from "./lib/auditLogger";
 import { AutomationEngine } from "./lib/automationEngine";
@@ -585,6 +586,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Platform Analytics routes (owner-only, not visible to customers)
   app.use('/api/platform', platformAnalyticsRoutes);
+
+  // Internal admin routes — sales-leads inbox, gated behind isPlatformAdmin.
+  // PII-bearing rows (name, work email, IP) live behind this gate.
+  app.use('/api/internal', leadsAdminRoutes);
 
   // Integration Orchestrator routes
   registerIntegrationOrchestratorRoutes(app, isAuthenticated, rateLimiters);

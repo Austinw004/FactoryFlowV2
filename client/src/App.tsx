@@ -41,6 +41,7 @@ const CommodityForecasts = lazy(() => import("@/pages/CommodityForecasts"));
 const ApiDocumentation = lazy(() => import("@/pages/ApiDocumentation"));
 const PlatformAnalytics = lazy(() => import("@/pages/PlatformAnalytics"));
 const PlatformOwnerAnalytics = lazy(() => import("@/pages/PlatformOwnerAnalytics"));
+const LeadsAdmin = lazy(() => import("@/pages/LeadsAdmin"));
 const AgenticAI = lazy(() => import("@/pages/AgenticAI"));
 const TermsOfService = lazy(() => import("@/pages/TermsOfService"));
 const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
@@ -154,7 +155,7 @@ function Router() {
     );
   }
 
-  const bypassOnboardingRoutes = ["/internal/poa"];
+  const bypassOnboardingRoutes = ["/internal/poa", "/internal/leads"];
   const shouldBypassOnboarding = bypassOnboardingRoutes.includes(location);
 
   if (needsOnboarding && !shouldBypassOnboarding) {
@@ -238,6 +239,7 @@ function Router() {
       <Route path="/api-docs" component={ApiDocumentation} />
       <Route path="/platform-analytics" component={PlatformAnalytics} />
       <Route path="/internal/poa" component={PlatformOwnerAnalytics} />
+      <Route path="/internal/leads" component={LeadsAdmin} />
       <Route path="/integrations" component={Integrations} />
       <Route path="/webhook-integrations" component={WebhookIntegrations} />
       <Route path="/automations" component={Automations} />
