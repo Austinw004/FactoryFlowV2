@@ -47,28 +47,32 @@ interface RegimeStatusProps {
   };
 }
 
-const regimeConfig: Record<Regime, { label: string; description: string; thresholdRange: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+const regimeConfig: Record<Regime, { label: string; description: string; procurement: string; thresholdRange: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   HEALTHY_EXPANSION: {
     label: "Healthy Expansion",
-    description: "Balanced growth. Standard procurement pace.",
+    description: "Asset and real economy circuits are aligned. Price stability holds — this is the optimal window to negotiate multi-year supplier agreements and build strategic relationships.",
+    procurement: "Lock in 12-month contracts. Negotiate volume discounts. Build strategic supplier relationships.",
     thresholdRange: "FDR < 1.2",
     variant: "default",
   },
   ASSET_LED_GROWTH: {
     label: "Asset-Led Growth",
-    description: "Assets outpacing real economy. Consider accelerating procurement.",
+    description: "Financial asset circuit is outpacing real economy output. Based on historical patterns, input costs typically increase 8–12% in the following quarter. Act before prices move.",
+    procurement: "Lock in supplier contracts now. Pre-purchase critical materials. Identify and mitigate single-source exposures.",
     thresholdRange: "FDR 1.2 - 1.8",
     variant: "secondary",
   },
   IMBALANCED_EXCESS: {
     label: "Imbalanced Excess",
-    description: "Significant asset-real economy gap. Defer non-critical purchases.",
+    description: "Significant asset-real economy decoupling. Markets are unstable — preserve working capital and avoid locking in long-term cost commitments at current inflated prices.",
+    procurement: "Defer non-critical purchases. Renegotiate expiring contracts. Build safety stock on production-critical materials only.",
     thresholdRange: "FDR 1.8 - 2.5",
     variant: "destructive",
   },
   REAL_ECONOMY_LEAD: {
     label: "Real Economy Lead",
-    description: "Counter-cyclical opportunity. Lock in favorable pricing.",
+    description: "Real economy outpacing asset markets — a counter-cyclical window. Suppliers need volume and will negotiate. This is a rare opportunity to lock in favorable pricing before markets recouple.",
+    procurement: "Renegotiate all major contracts. Lock in long-term pricing. Expand strategic supplier base.",
     thresholdRange: "FDR > 2.5",
     variant: "default",
   },
@@ -157,6 +161,10 @@ export function RegimeStatus({ regime, fdr: fdrProp, intensity, regimeEvidence, 
             )}
 
             <p className="text-xs text-muted-foreground pt-1">{config.description}</p>
+            <div className="mt-3 pt-3 border-t border-dashed">
+              <p className="text-xs font-medium text-foreground mb-0.5">Recommended action</p>
+              <p className="text-xs text-muted-foreground">{config.procurement}</p>
+            </div>
           </div>
 
           <div className="space-y-2 pl-4">

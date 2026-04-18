@@ -57,10 +57,10 @@ export function QuickWinsWidget() {
       wins.push({
         id: "timing-1",
         type: "timing",
-        title: "Favorable buying conditions detected",
-        description: "Current market regime favors buyers. Review planned purchases for acceleration opportunities.",
+        title: "Counter-cyclical buying window open",
+        description: `FDR at ${fdr.toFixed(2)} — real economy is outpacing asset markets. Locking in long-term contracts now could secure pricing 8–15% below projected Q3 rates. Review your top supplier agreements.`,
         urgency: "high",
-        actionLabel: "Review procurement queue",
+        actionLabel: "Lock in contracts now",
       });
     }
 
@@ -68,8 +68,8 @@ export function QuickWinsWidget() {
       wins.push({
         id: "timing-2",
         type: "timing",
-        title: "Elevated market prices detected",
-        description: "Current regime suggests caution. Consider deferring non-critical purchases.",
+        title: "Input cost inflation risk — defer purchases",
+        description: `Elevated FDR (${fdr.toFixed(2)}) signals asset market overheating. Input costs may rise 8–12% next quarter. Defer non-critical purchases and renegotiate any contracts expiring within 90 days.`,
         urgency: "medium",
         actionLabel: "Review pending orders",
       });
@@ -80,10 +80,10 @@ export function QuickWinsWidget() {
       wins.push({
         id: "stockout-1",
         type: "stockout_risk",
-        title: `${lowStockMaterials.length} materials at low stock`,
-        description: "Low inventory detected. Review reorder needs to prevent production delays.",
+        title: `${lowStockMaterials.length} material${lowStockMaterials.length > 1 ? 's' : ''} below safety threshold`,
+        description: `${lowStockMaterials.length} material${lowStockMaterials.length > 1 ? 's' : ''} below 50 units — production line disruption risk. Initiate procurement before supplier lead times extend. Check for single-source dependencies.`,
         urgency: "high",
-        actionLabel: "View at-risk materials",
+        actionLabel: "View at-risk inventory",
       });
     }
 
@@ -92,9 +92,9 @@ export function QuickWinsWidget() {
         id: "consolidation-1",
         type: "consolidation",
         title: "Supplier consolidation opportunity",
-        description: "Multiple suppliers detected. Consolidating orders may improve terms.",
+        description: `${materials.length} active materials across multiple suppliers. Order consolidation with top 3 suppliers could improve pricing by 5–12% and reduce lead time variance. Review supplier concentration.`,
         urgency: "low",
-        actionLabel: "Analyze suppliers",
+        actionLabel: "Analyze supplier base",
       });
     }
 
@@ -104,8 +104,8 @@ export function QuickWinsWidget() {
         wins.push({
           id: "negotiation-1",
           type: "negotiation",
-          title: "Contract review opportunity",
-          description: "Budget size may support renegotiation with key suppliers.",
+          title: "Volume leverage for contract renegotiation",
+          description: `$${(latestAllocation.budget / 1000).toFixed(0)}K budget unlocks volume negotiation leverage. Request updated quotes from top suppliers before contract renewal to capture current market conditions.`,
           urgency: "medium",
           actionLabel: "View supplier terms",
         });

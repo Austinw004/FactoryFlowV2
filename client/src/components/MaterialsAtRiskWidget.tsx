@@ -161,7 +161,16 @@ export function MaterialsAtRiskWidget() {
                 />
               </div>
               
-              <div className="flex items-center gap-2 mt-3">
+              <p className="text-xs text-muted-foreground mt-2">
+                {item.riskScore >= 100
+                  ? 'Action: Place emergency PO immediately. Check supplier lead times and alternatives.'
+                  : item.riskScore >= 80
+                  ? 'Action: Qualify backup supplier or increase safety stock to 6 weeks.'
+                  : item.riskScore >= 50
+                  ? 'Action: Accelerate next PO and adjust reorder point upward.'
+                  : 'Action: Review demand forecast and initiate procurement cycle.'}
+              </p>
+              <div className="flex items-center gap-2 mt-2">
                 <Button
                   variant="outline"
                   size="sm"
@@ -170,7 +179,7 @@ export function MaterialsAtRiskWidget() {
                   data-testid={`button-procure-${item.material.id}`}
                 >
                   <TrendingDown className="h-3 w-3 mr-1" />
-                  Schedule Procurement
+                  {item.riskScore >= 100 ? 'Emergency Procurement' : item.riskScore >= 80 ? 'Find Alternatives' : 'Schedule Procurement'}
                 </Button>
               </div>
             </div>

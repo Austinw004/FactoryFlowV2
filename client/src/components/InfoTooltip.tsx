@@ -12,12 +12,12 @@ interface InfoTooltipProps {
 
 const tooltipDefinitions: Record<string, { title: string; description: string }> = {
   fdr: {
-    title: "Financial-to-Real Divergence (FDR)",
-    description: "A score measuring the gap between financial markets and the real economy. Higher scores indicate potential overheating; lower scores suggest healthy alignment."
+    title: "Financial-Real Decoupling (FDR)",
+    description: "Measures the gap between asset market activity and real economic output. FDR < 1.2: markets aligned, lock in long-term contracts. FDR 1.2–1.8: costs rising, accelerate procurement. FDR 1.8–2.5: significant decoupling, defer purchases. FDR > 2.5: counter-cyclical opportunity, renegotiate aggressively."
   },
   regime: {
     title: "Economic Regime",
-    description: "The current state of the economy based on market signals. Regimes include Healthy Expansion (buy normally), Asset-Led Growth (lock in prices), Imbalanced Excess (defer purchases), and Real Economy Lead (buy aggressively)."
+    description: "The current market state determined by the Financial-Real Decoupling (FDR) model. Healthy Expansion: negotiate long-term contracts. Asset-Led Growth: lock in prices before 8–12% cost increases. Imbalanced Excess: defer non-critical purchases, protect cash. Real Economy Lead: rare counter-cyclical window, renegotiate all major contracts."
   },
   mape: {
     title: "Mean Absolute Percentage Error (MAPE)",

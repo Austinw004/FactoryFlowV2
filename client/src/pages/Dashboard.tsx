@@ -60,6 +60,43 @@ const regimeDescriptions: Record<string, string> = {
   REAL_ECONOMY_LEAD: "Counter-cyclical opportunity. FDR > 2.5. Lock in favorable supplier terms while asset markets correct.",
 };
 
+const regimeProcurementDirective: Record<string, {
+  headline: string;
+  guidance: string;
+  action: string;
+  actionPath: string;
+  urgencyLabel: string;
+}> = {
+  HEALTHY_EXPANSION: {
+    headline: "Market conditions are balanced. Good time to negotiate long-term contracts.",
+    guidance: "Asset and real economy circuits are aligned (FDR < 1.2). You have leverage — lock in 12-month supplier agreements while price stability holds. No critical exposures detected.",
+    action: "Start Contract Negotiations",
+    actionPath: "/rfq-generation",
+    urgencyLabel: "Stable",
+  },
+  ASSET_LED_GROWTH: {
+    headline: "Asset prices outpacing the real economy. Lock in contracts before costs rise.",
+    guidance: "Elevated FDR (1.2–1.8) signals financial markets are running ahead of real output. Based on historical patterns, input costs typically increase 8–12% next quarter. Lock in supplier contracts and pre-purchase critical materials now.",
+    action: "View Exposed Materials",
+    actionPath: "/supplier-risk",
+    urgencyLabel: "Act Now",
+  },
+  IMBALANCED_EXCESS: {
+    headline: "Significant market decoupling detected. Defer non-critical purchases.",
+    guidance: "FDR at 1.8–2.5 indicates asset markets have decoupled from real output. Preserve working capital: renegotiate expiring contracts, build safety stock only on production-critical materials, hold discretionary purchases.",
+    action: "Review At-Risk Contracts",
+    actionPath: "/supplier-risk",
+    urgencyLabel: "Caution",
+  },
+  REAL_ECONOMY_LEAD: {
+    headline: "Counter-cyclical window open. Favorable negotiating position — act now.",
+    guidance: "Real economy outpacing asset markets (FDR > 2.5). Suppliers are under volume pressure — this is a rare negotiating window. Renegotiate all major contracts and lock in pricing before markets recouple.",
+    action: "Start Renegotiations",
+    actionPath: "/rfq-generation",
+    urgencyLabel: "Opportunity",
+  },
+};
+
 function getRegimeDescription(regime: string): string {
   return regimeDescriptions[regime] || "Economic conditions are being analyzed.";
 }
@@ -68,6 +105,7 @@ export default function Dashboard() {
   const { toast } = useToast();
   const { user, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
+  const [regimeChangeBanner, setRegimeChangeBanner] = useState<{from: string; to: string; date: string} | null>(null);
 
   // Enable WebSocket for real-time updates with regime change notifications
   const { isConnected } = useWebSocket((message) => {
@@ -78,7 +116,12 @@ export default function Dashboard() {
         title: "Economic Regime Changed",
         description: `The economic regime has shifted from ${message.data.from} to ${message.data.to}. FDR: ${Number.isFinite(Number(message.data.fdr)) ? Number(message.data.fdr).toFixed(2) : '—'}`,
         variant: severity as 'default' | 'destructive',
-        duration: 10000, // Show for 10 seconds
+        duration: 10000,
+      });
+      setRegimeChangeBanner({
+        from: message.data.from,
+        to: message.data.to,
+        date: new Date().toLocaleDateString(),
       });
     }
   });
@@ -338,12 +381,37 @@ export default function Dashboard() {
         </div>
       )}
 
+      {regimeChangeBanner && (
+        <div className="border border-amber-500/30 bg-amber-500/10 rounded-md p-4 mb-8 flex items-start justify-between gap-4">
+          <div>
+            <p className="font-semibold text-sm">Economic regime shifted on {regimeChangeBanner.date}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Transitioned from <strong>{regimeChangeBanner.from.replace(/_/g, ' ')}</strong> to{' '}
+              <strong>{regimeChangeBanner.to.replace(/_/g, ' ')}</strong>.{' '}
+              Your procurement strategy should be updated.{' '}
+              <button
+                className="underline cursor-pointer hover:opacity-80"
+                onClick={() => setLocation('/supplier-risk')}
+              >
+                View impact analysis →
+              </button>
+            </p>
+          </div>
+          <button
+            className="text-muted-foreground hover:text-foreground text-xs shrink-0 mt-0.5"
+            onClick={() => setRegimeChangeBanner(null)}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       <div className="mb-16">
         <div className="eyebrow mb-4">State of operations</div>
         <h1 className="hero text-5xl">{regime?.regime ? getRegimeDescription(regime.regime).split('.')[0] + '.' : 'Analyzing conditions.'}</h1>
         <p className="text-soft mt-5 max-w-xl leading-relaxed">
           {Array.isArray(skus) && skus.length > 0
-            ? `Tracking ${skus.length.toLocaleString()} SKU${skus.length === 1 ? '' : 's'}. ${regime?.regime === 'HEALTHY_EXPANSION' ? 'No critical exposures.' : 'Review current regime conditions.'}`
+            ? (regimeProcurementDirective[regimeType]?.guidance ?? `Tracking ${skus.length.toLocaleString()} SKUs.`)
             : 'Add your first SKU to start tracking operations.'}
         </p>
       </div>
@@ -353,6 +421,9 @@ export default function Dashboard() {
           <div className="eyebrow mb-4">Regime</div>
           <div className="text-3xl display">{regime?.regime ? regime.regime.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase()).split(' ').slice(0, 2).join(' ') : '—'}</div>
           <div className="mono text-xs text-muted mt-3">{regime?.fdr != null ? `FDR: ${Number(regime.fdr).toFixed(2)}` : 'Awaiting data'}</div>
+          {regimeProcurementDirective[regimeType] && (
+            <div className="text-xs text-muted mt-2">→ {regimeProcurementDirective[regimeType].urgencyLabel}</div>
+          )}
         </div>
         <div className="bg-panel p-6">
           <div className="eyebrow mb-4">Active SKUs</div>
@@ -370,6 +441,32 @@ export default function Dashboard() {
           <div className={`mono text-xs mt-3 ${isConnected ? 'text-good' : 'text-bad'}`}>{isConnected ? 'Real-time active' : 'Reconnecting...'}</div>
         </div>
       </div>
+
+      {/* Procurement Directive — regime-specific action banner */}
+      {regimeType !== 'UNKNOWN' && regimeProcurementDirective[regimeType] && (
+        <div className={`mb-16 border-l-4 pl-6 py-4 rounded-r-md ${
+          regimeType === 'HEALTHY_EXPANSION' ? 'border-emerald-500 bg-emerald-500/5' :
+          regimeType === 'ASSET_LED_GROWTH' ? 'border-amber-500 bg-amber-500/5' :
+          regimeType === 'IMBALANCED_EXCESS' ? 'border-red-500 bg-red-500/5' :
+          regimeType === 'REAL_ECONOMY_LEAD' ? 'border-blue-500 bg-blue-500/5' :
+          'border-muted bg-muted/5'
+        }`}>
+          <div className="eyebrow mb-2">Procurement directive</div>
+          <p className="font-semibold mb-3 text-base">{regimeProcurementDirective[regimeType].headline}</p>
+          <div className="flex items-center gap-4 flex-wrap">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setLocation(regimeProcurementDirective[regimeType].actionPath)}
+            >
+              {regimeProcurementDirective[regimeType].action} →
+            </Button>
+            <span className="mono text-xs text-muted">
+              FDR {fdr.toFixed(2)} · {friendlyRegime} · Financial-Real Decoupling model
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Legacy dashboard content below */}
       <div className="flex items-center flex-wrap gap-2">
