@@ -35,6 +35,7 @@ import { Link, useLocation } from "wouter";
 import { SidebarTour } from "@/components/GuidedTour";
 import { useUnifiedData } from "@/contexts/UnifiedDataContext";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 
 const overviewItems = [
   {
@@ -159,6 +160,18 @@ const bottomMenuItems = [
 export function AppSidebar() {
   const [location] = useLocation();
   const { inventory, suppliers, commodities, isLoading } = useUnifiedData();
+  const { user } = useAuth();
+
+  const operatorName = (() => {
+    if (!user) return "—";
+    const first = user.firstName?.trim();
+    const last = user.lastName?.trim();
+    if (first && last) return `${first.charAt(0)}. ${last}`;
+    if (first) return first;
+    if (last) return last;
+    if (user.email) return user.email.split("@")[0];
+    return "Operator";
+  })();
 
   const { data: landingMode } = useQuery<{ enabled: boolean }>({
     queryKey: ["/api/landing-mode"],
@@ -286,7 +299,7 @@ export function AppSidebar() {
       <SidebarFooter className="border-t border-line px-6 py-5">
         <div className="space-y-3">
           <div className="eyebrow">Operator</div>
-          <div className="text-sm">A. Wendler</div>
+          <div className="text-sm truncate" data-testid="sidebar-operator-name">{operatorName}</div>
           <div className="mono text-xs text-muted">Prescient Labs</div>
         </div>
       </SidebarFooter>

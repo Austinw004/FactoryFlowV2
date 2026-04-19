@@ -1,11 +1,8 @@
 User-agent: *
 Allow: /
-Disallow: /api/
-Disallow: /dashboard
-Disallow: /configuration
-Disallow: /billing
-Disallow: /admin
-Disallow: /debug
+
+# Authenticated surfaces require login; no need to enumerate them here.
+Disallow: /internal/
 
 # Sitemap
 Sitemap: https://prescient-labs.com/sitemap.xml
