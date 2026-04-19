@@ -1175,7 +1175,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Seed data endpoint (for demo purposes)
-  app.post('/api/seed', isAuthenticated, async (req: any, res) => {
+  // Gated behind manage_users permission AND (in prod) explicit enable flag.
+  // Without this gate, any authenticated user could spawn a new company +
+  // assign themselves admin — a privilege-escalation risk.
+  app.post('/api/seed', isAuthenticated, requirePermission('manage_users'), async (req: any, res) => {
+    if (process.env.NODE_ENV === 'production' && process.env.ENABLE_SEED_ENDPOINT !== 'true') {
+      return res.status(403).json({ error: "Seed endpoint is disabled in production." });
+    }
     try {
       const userId = req.user.claims.sub;
       let user = await storage.getUser(userId);

@@ -223,6 +223,99 @@ export async function resetPassword(input: z.infer<typeof resetPasswordSchema>) 
   return { message: "Password updated successfully. All active sessions have been invalidated." };
 }
 
+// ─── Change Password (authenticated) ─────────────────────────────────────────
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z.string()
+    .min(8,  "Password must be at least 8 characters")
+    .regex(/[A-Z]/,        "Password must contain at least one uppercase letter")
+    .regex(/[0-9]/,        "Password must contain at least one number")
+    .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
+});
+
+export async function changePassword(userId: string, input: z.infer<typeof changePasswordSchema>) {
+  const { currentPassword, newPassword } = changePasswordSchema.parse(input);
+
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  if (!user) {
+    throw Object.assign(new Error("User not found."), { code: "USER_NOT_FOUND", status: 404 });
+  }
+
+  if (!user.passwordHash) {
+    throw Object.assign(
+      new Error("Account has no password set. Use your original sign-in method or reset via email."),
+      { code: "NO_PASSWORD", status: 400 },
+    );
+  }
+
+  const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!valid) {
+    throw Object.assign(new Error("Current password is incorrect."), { code: "INVALID_PASSWORD", status: 400 });
+  }
+
+  // Reject unchanged password
+  const sameAsOld = await bcrypt.compare(newPassword, user.passwordHash);
+  if (sameAsOld) {
+    throw Object.assign(
+      new Error("New password must be different from your current password."),
+      { code: "PASSWORD_UNCHANGED", status: 400 },
+    );
+  }
+
+  const newHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+
+  await Promise.all([
+    db.update(users).set({ passwordHash: newHash, updatedAt: new Date() }).where(eq(users.id, userId)),
+    // Revoke all other refresh sessions (the current session remains via JWT TTL)
+    db.update(authSessions)
+      .set({ revokedAt: new Date() })
+      .where(and(eq(authSessions.userId, userId), sql`revoked_at IS NULL`)),
+  ]);
+
+  return { message: "Password updated successfully." };
+}
+
+// ─── Update Profile (authenticated) ──────────────────────────────────────────
+
+export const updateProfileSchema = z.object({
+  name:       z.string().min(1).max(100).optional(),
+  firstName:  z.string().min(1).max(50).optional().nullable(),
+  lastName:   z.string().min(1).max(50).optional().nullable(),
+  jobTitle:   z.string().max(100).optional().nullable(),
+  department: z.string().max(100).optional().nullable(),
+  phone:      z.string().max(30).optional().nullable(),
+});
+
+export async function updateProfile(userId: string, input: z.infer<typeof updateProfileSchema>) {
+  const data = updateProfileSchema.parse(input);
+
+  const patch: Record<string, unknown> = { updatedAt: new Date() };
+  for (const [k, v] of Object.entries(data)) {
+    if (v !== undefined) patch[k] = v === "" ? null : v;
+  }
+
+  const [updated] = await db.update(users).set(patch).where(eq(users.id, userId)).returning({
+    id:         users.id,
+    email:      users.email,
+    name:       users.name,
+    firstName:  users.firstName,
+    lastName:   users.lastName,
+    jobTitle:   users.jobTitle,
+    department: users.department,
+    phone:      users.phone,
+    username:   users.username,
+    role:       users.role,
+    companyId:  users.companyId,
+  });
+
+  if (!updated) {
+    throw Object.assign(new Error("User not found."), { code: "USER_NOT_FOUND", status: 404 });
+  }
+
+  return { user: updated };
+}
+
 // ─── Forgot Username ──────────────────────────────────────────────────────────
 
 export async function forgotUsername(input: z.infer<typeof forgotUsernameSchema>) {

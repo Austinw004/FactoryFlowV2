@@ -57,6 +57,9 @@ const LandingPageVariantA = lazy(() => import("@/pages/LandingPageVariantA"));
 const LandingPageVariantB = lazy(() => import("@/pages/LandingPageVariantB"));
 const LandingPageVariantC = lazy(() => import("@/pages/LandingPageVariantC"));
 const NotificationSettings = lazy(() => import("@/pages/NotificationSettings"));
+const ForgotPasswordPage = lazy(() => import("@/pages/ForgotPasswordPage"));
+const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage"));
+const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
 const ShopFloorMode = lazy(() => import("@/pages/ShopFloorMode"));
 const Integrations = lazy(() => import("@/pages/Integrations"));
 const WebhookIntegrations = lazy(() => import("@/pages/WebhookIntegrations"));
@@ -149,6 +152,8 @@ function Router() {
           <Route path="/status" component={Status} />
           <Route path="/signup" component={SignUpPage} />
           <Route path="/signin" component={SignInPage} />
+          <Route path="/forgot-password" component={ForgotPasswordPage} />
+          <Route path="/reset-password" component={ResetPasswordPage} />
           <Route path="/auth/callback" component={AuthCallback} />
           <Route path="/preview/variant-a" component={LandingPageVariantA} />
           <Route path="/preview/variant-b" component={LandingPageVariantB} />
@@ -184,6 +189,10 @@ function Router() {
       <Route path="/strategy" component={StrategyDigitalTwinRoute} />
       <Route path="/configuration" component={Configuration} />
       <Route path="/notification-settings" component={NotificationSettings} />
+      <Route path="/settings" component={SettingsPage} />
+      <Route path="/settings/:tab" component={SettingsPage} />
+      <Route path="/profile" component={SettingsPage} />
+      <Route path="/reset-password" component={ResetPasswordPage} />
       <Route path="/how-it-works" component={HowItWorks} />
       <Route path="/sop-workflows" component={SopWorkflows} />
 

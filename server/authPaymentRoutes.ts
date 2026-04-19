@@ -35,6 +35,7 @@ import { z } from "zod";
 import {
   signup, login, logout, forgotPassword, resetPassword,
   forgotUsername, refreshAccessToken,
+  changePassword, updateProfile,
   signupSchema, loginSchema, forgotPasswordSchema,
   resetPasswordSchema, forgotUsernameSchema,
 } from "./lib/emailAuthService";
@@ -435,6 +436,11 @@ export function registerAuthPaymentRoutes(app: Express): void {
         id: user.id,
         email: user.email,
         name: user.name,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        jobTitle: user.jobTitle,
+        department: user.department,
+        phone: user.phone,
         username: user.username,
         role: user.role,
         companyId: user.companyId,
@@ -442,6 +448,67 @@ export function registerAuthPaymentRoutes(app: Express): void {
       company: company ? { id: company.id, name: company.name } : null,
       trial: trialInfo,
     });
+  }));
+
+  /** GET /api/user/profile — authenticated user's editable profile */
+  app.get("/api/user/profile", requireJwt, handle(async (req, res) => {
+    const authUser = getAuthUser(req);
+    if (!authUser) { apiError(res, 401, "UNAUTHORIZED", "Authentication required."); return; }
+
+    const { users: usersSchema } = await import("@shared/schema");
+    const [user] = await db
+      .select({
+        id: usersSchema.id,
+        email: usersSchema.email,
+        name: usersSchema.name,
+        firstName: usersSchema.firstName,
+        lastName: usersSchema.lastName,
+        username: usersSchema.username,
+        jobTitle: usersSchema.jobTitle,
+        department: usersSchema.department,
+        phone: usersSchema.phone,
+        role: usersSchema.role,
+        companyId: usersSchema.companyId,
+      })
+      .from(usersSchema)
+      .where(eq(usersSchema.id, authUser.id))
+      .limit(1);
+
+    if (!user) { apiError(res, 404, "NOT_FOUND", "User not found."); return; }
+    res.json({ user });
+  }));
+
+  /** PUT /api/user/profile — update display-name, job title, etc. */
+  app.put("/api/user/profile", requireJwt, handle(async (req, res) => {
+    const authUser = getAuthUser(req);
+    if (!authUser) { apiError(res, 401, "UNAUTHORIZED", "Authentication required."); return; }
+
+    const result = await updateProfile(authUser.id, req.body);
+    await logAudit({
+      req,
+      action: "update",
+      entityType: "user",
+      entityId: authUser.id,
+      changes: { fields: Object.keys(req.body ?? {}) },
+      notes: "profile updated by user",
+    }).catch(() => {});
+    res.json(result);
+  }));
+
+  /** POST /api/user/password — change password while signed in */
+  app.post("/api/user/password", requireJwt, rateLimiters.sensitive, handle(async (req, res) => {
+    const authUser = getAuthUser(req);
+    if (!authUser) { apiError(res, 401, "UNAUTHORIZED", "Authentication required."); return; }
+
+    const result = await changePassword(authUser.id, req.body);
+    await logAudit({
+      req,
+      action: "update",
+      entityType: "user",
+      entityId: authUser.id,
+      notes: "password changed by user",
+    }).catch(() => {});
+    res.json(result);
   }));
 
   // ═══════════════════════════════════════════════════════════════════════════
