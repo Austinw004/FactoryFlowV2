@@ -64,7 +64,7 @@ export default function AuthCallback() {
     // Small timeout so the token is visible to React Query before the redirect
     // triggers a protected-route check.
     const t = setTimeout(() => {
-      setLocation(isNew ? "/welcome" : "/");
+      setLocation(isNew ? "/onboarding" : "/");
     }, 50);
     return () => clearTimeout(t);
   }, [setLocation]);
