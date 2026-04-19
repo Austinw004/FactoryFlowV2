@@ -185,7 +185,7 @@ export default function SecurityFaq() {
           <Badge className="mb-4">Security & Compliance</Badge>
           <h1 className="text-4xl font-bold mb-4">Security FAQ</h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Your data security is our top priority. Here's everything you need to know about how we protect your information.
+            How we protect your manufacturing data.
           </p>
         </div>
       </section>
@@ -299,10 +299,7 @@ export default function SecurityFaq() {
             <Database className="h-12 w-12 mx-auto mb-4 text-primary" />
             <h3 className="text-xl font-semibold mb-4">Our Commitment to You</h3>
             <p className="text-muted-foreground">
-              We understand that manufacturing data is sensitive and critical to your operations. 
-              We treat your data with the same care we would treat our own. Your trust is the 
-              foundation of our business, and we are committed to earning it every day through 
-              transparent practices, robust security, and responsive support.
+              We protect manufacturing data with the same rigor we apply to our own operations. See our controls and certifications above, and reach out if you need anything else.
             </p>
           </Card>
         </div>

@@ -537,7 +537,7 @@ export default function Onboarding() {
                 <Building2 className="w-5 h-5 text-primary" />
                 Set up your organization
               </CardTitle>
-              <CardDescription>This information powers supply chain intelligence tailored to your industry and scale.</CardDescription>
+              <CardDescription>We use this to configure forecasts and insights for your operation.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="space-y-2">
@@ -711,8 +711,7 @@ export default function Onboarding() {
                 Operations intelligence
               </CardTitle>
               <CardDescription>
-                This is how we supercharge your experience. The more we know, the more accurate our forecasts, procurement
-                recommendations, and risk alerts become — from day one.
+                Detailed operations data improves forecast accuracy and procurement recommendations from day one.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">

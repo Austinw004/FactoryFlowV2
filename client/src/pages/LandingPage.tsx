@@ -54,7 +54,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-ink text-bone font-sans">
       <SEOHead
         title="Prescient Labs — Software for the industrial floor"
-        description="Prescient Labs unifies demand, supply, commodities, and production into a single operational system. Built for operators running the physical economy."
+        description="Prescient Labs unifies demand, supply, commodities, and production into a single operational system. Built for manufacturing operators."
       />
 
       {/* Grain texture overlay */}
@@ -90,7 +90,7 @@ export default function LandingPage() {
         </h1>
         <div className="mt-14 flex items-start justify-between gap-10 flex-wrap">
           <p className="text-soft text-lg max-w-xl leading-relaxed">
-            Prescient Labs unifies demand, supply, commodities, and production into a single operational system. Built for operators running the physical economy.
+            Prescient Labs unifies demand, supply, commodities, and production into a single operational system. Built for manufacturing operators.
           </p>
           <div className="flex items-center gap-3 flex-wrap">
             <button onClick={handleStartTrial} className="btn-primary text-sm px-5 py-3" data-testid="button-start-trial-hero">Start 90-day free trial</button>

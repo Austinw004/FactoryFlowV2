@@ -296,7 +296,7 @@ export function Pricing() {
             <div className="grid grid-cols-12 gap-10">
               <div className="col-span-12 md:col-span-8">
                 <h2 className="hero text-4xl md:text-5xl leading-tight mb-4">
-                  Ready to transform your operations?
+                  Ready to get started?
                 </h2>
                 <p className="text-soft text-base">
                   Start your free trial today. No credit card required. Full platform access for 90 days.
