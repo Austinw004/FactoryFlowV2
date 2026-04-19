@@ -21,13 +21,13 @@ import { useAuth } from "@/hooks/useAuth";
 // Core pages — loaded eagerly for instant navigation for instant navigation
 import NotFound from "@/pages/not-found";
 import LandingPage from "@/pages/LandingPage";
-import DashboardHub from "@/pages/DashboardHub";
-import Onboarding from "@/pages/Onboarding";
-import SignUpPage from "@/pages/SignUpPage";
-import SignInPage from "@/pages/SignInPage";
-import Pricing from "@/pages/Pricing";
 
 // Lazy-loaded pages — split into separate chunks for faster initial load
+const DashboardHub = lazy(() => import("@/pages/DashboardHub"));
+const Onboarding = lazy(() => import("@/pages/Onboarding"));
+const SignUpPage = lazy(() => import("@/pages/SignUpPage"));
+const SignInPage = lazy(() => import("@/pages/SignInPage"));
+const Pricing = lazy(() => import("@/pages/Pricing"));
 const DemandHub = lazy(() => import("@/pages/DemandHub"));
 const ProcurementHub = lazy(() => import("@/pages/ProcurementHub"));
 const OperationsHub = lazy(() => import("@/pages/OperationsHub"));
@@ -162,10 +162,12 @@ function Router() {
 
   if (needsOnboarding && !shouldBypassOnboarding) {
     return (
-      <Switch>
-        <Route path="/onboarding" component={Onboarding} />
-        <Route component={Onboarding} />
-      </Switch>
+      <Suspense fallback={<PageLoadingFallback />}>
+        <Switch>
+          <Route path="/onboarding" component={Onboarding} />
+          <Route component={Onboarding} />
+        </Switch>
+      </Suspense>
     );
   }
 

@@ -577,100 +577,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Attach RBAC user to all authenticated API requests (not frontend static files)
-  // Uses unified auth that supports both JWT Bearer and Replit session
-  app.use('/api', requireAuth, attachRbacUser);
-
-  // RBAC routes (roles, permissions, user role assignments)
-  app.use('/api/rbac', rbacRoutes);
-
-  // Platform Analytics routes (owner-only, not visible to customers)
-  app.use('/api/platform', platformAnalyticsRoutes);
-
-  // Internal admin routes — sales-leads inbox, gated behind isPlatformAdmin.
-  // PII-bearing rows (name, work email, IP) live behind this gate.
-  app.use('/api/internal', leadsAdminRoutes);
-
-  // Integration Orchestrator routes
-  registerIntegrationOrchestratorRoutes(app, isAuthenticated, rateLimiters);
-
-  // Health check endpoint for monitoring
-  app.get('/api/health', async (req, res) => {
-    try {
-      const startTime = Date.now();
-
-      // Check database connectivity with a lightweight query
-      let dbStatus: 'ok' | 'down' = 'ok';
-      let dbLatency = 0;
-      const dbStart = Date.now();
-      try {
-        await db.execute(sql`SELECT 1`);
-        dbLatency = Date.now() - dbStart;
-      } catch {
-        dbStatus = 'down';
-        dbLatency = Date.now() - dbStart;
-      }
-
-      // Get cache stats
-      const cacheStats = globalCache.getStats();
-
-      // Get WebSocket connection count
-      const wsConnections = getConnectedClientCount();
-
-      const totalLatency = Date.now() - startTime;
-
-      // Record a sample for the /status history rollup
-      try {
-        const { recordProbe } = await import("./lib/probeHistory");
-        recordProbe({
-          name: "api",
-          status: totalLatency > 2000 ? "degraded" : "ok",
-          latencyMs: totalLatency,
-        });
-        recordProbe({
-          name: "db",
-          status: dbStatus === "down" ? "down" : dbLatency > 1000 ? "degraded" : "ok",
-          latencyMs: dbLatency,
-        });
-      } catch {
-        // Never let telemetry break /api/health.
-      }
-
-      if (dbStatus === "down") {
-        return res.status(503).json({
-          status: 'degraded',
-          timestamp: new Date().toISOString(),
-          error: 'database unreachable',
-          checks: {
-            database: { status: 'down', latencyMs: dbLatency },
-          },
-        });
-      }
-
-      res.json({
-        status: 'healthy',
-        timestamp: new Date().toISOString(),
-        version: '1.0.0',
-        uptime: process.uptime(),
-        checks: {
-          database: { status: 'ok', latencyMs: dbLatency },
-          cache: { status: 'ok', activeEntries: cacheStats.size },
-          websocket: { status: 'ok', connections: wsConnections },
-        },
-      });
-    } catch (error: any) {
-      try {
-        const { recordProbe } = await import("./lib/probeHistory");
-        recordProbe({ name: "api", status: "down", latencyMs: null });
-      } catch {}
-      res.status(503).json({
-        status: 'unhealthy',
-        timestamp: new Date().toISOString(),
-        error: 'internal error',
-      });
-    }
-  });
-
   // Public status endpoints — drive the /status page. Read-only, cheap, not rate-limited
   // beyond the global limiter because they're safe to scrape.
   app.get('/api/status/summary', async (_req, res) => {
@@ -772,6 +678,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     },
   );
+
+  // Attach RBAC user to all authenticated API requests (not frontend static files)
+  // Uses unified auth that supports both JWT Bearer and Replit session
+  app.use('/api', requireAuth, attachRbacUser);
+
+  // RBAC routes (roles, permissions, user role assignments)
+  app.use('/api/rbac', rbacRoutes);
+
+  // Platform Analytics routes (owner-only, not visible to customers)
+  app.use('/api/platform', platformAnalyticsRoutes);
+
+  // Internal admin routes — sales-leads inbox, gated behind isPlatformAdmin.
+  // PII-bearing rows (name, work email, IP) live behind this gate.
+  app.use('/api/internal', leadsAdminRoutes);
+
+  // Integration Orchestrator routes
+  registerIntegrationOrchestratorRoutes(app, isAuthenticated, rateLimiters);
+
+  // Health check endpoint for monitoring
+  app.get('/api/health', async (req, res) => {
+    try {
+      const startTime = Date.now();
+
+      // Check database connectivity with a lightweight query
+      let dbStatus: 'ok' | 'down' = 'ok';
+      let dbLatency = 0;
+      const dbStart = Date.now();
+      try {
+        await db.execute(sql`SELECT 1`);
+        dbLatency = Date.now() - dbStart;
+      } catch {
+        dbStatus = 'down';
+        dbLatency = Date.now() - dbStart;
+      }
+
+      // Get cache stats
+      const cacheStats = globalCache.getStats();
+
+      // Get WebSocket connection count
+      const wsConnections = getConnectedClientCount();
+
+      const totalLatency = Date.now() - startTime;
+
+      // Record a sample for the /status history rollup
+      try {
+        const { recordProbe } = await import("./lib/probeHistory");
+        recordProbe({
+          name: "api",
+          status: totalLatency > 2000 ? "degraded" : "ok",
+          latencyMs: totalLatency,
+        });
+        recordProbe({
+          name: "db",
+          status: dbStatus === "down" ? "down" : dbLatency > 1000 ? "degraded" : "ok",
+          latencyMs: dbLatency,
+        });
+      } catch {
+        // Never let telemetry break /api/health.
+      }
+
+      if (dbStatus === "down") {
+        return res.status(503).json({
+          status: 'degraded',
+          timestamp: new Date().toISOString(),
+          error: 'database unreachable',
+          checks: {
+            database: { status: 'down', latencyMs: dbLatency },
+          },
+        });
+      }
+
+      res.json({
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        version: '1.0.0',
+        uptime: process.uptime(),
+        checks: {
+          database: { status: 'ok', latencyMs: dbLatency },
+          cache: { status: 'ok', activeEntries: cacheStats.size },
+          websocket: { status: 'ok', connections: wsConnections },
+        },
+      });
+    } catch (error: any) {
+      try {
+        const { recordProbe } = await import("./lib/probeHistory");
+        recordProbe({ name: "api", status: "down", latencyMs: null });
+      } catch {}
+      res.status(503).json({
+        status: 'unhealthy',
+        timestamp: new Date().toISOString(),
+        error: 'internal error',
+      });
+    }
+  });
 
   // Auth endpoints — supports both Replit session auth and JWT Bearer auth
   app.get('/api/auth/user', async (req: any, res, next) => {
@@ -3243,7 +3243,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      const items = req.body.items || [];
+      const items: unknown[] = Array.isArray(req.body.items) ? req.body.items : [];
+      if (items.length > 500) {
+        return res.status(400).json({ error: "Bulk upload limited to 500 items per request" });
+      }
       // Batch-validate all SKU IDs in one query to avoid N+1
       const skuIds: string[] = [...new Set<string>(items.map((item: { skuId: string }) => item.skuId))];
       const companySkus = await storage.getSkus(user.companyId);
@@ -3380,7 +3383,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      const forecasts = req.body.forecasts || [];
+      const forecasts: unknown[] = Array.isArray(req.body.forecasts) ? req.body.forecasts : [];
+      if (forecasts.length > 500) {
+        return res.status(400).json({ error: "Bulk upload limited to 500 forecasts per request" });
+      }
       const validated = forecasts.map((f: any) => insertMultiHorizonForecastSchema.parse({
         ...f,
         companyId: user.companyId,

@@ -11,7 +11,7 @@ info:
     All endpoints (except those explicitly marked public) require authentication
     via the session cookie produced by POST /api/auth/login.
 
-    **Sync status (2026-04-18):** This file documents ~16 of 576 routes. The
+    **Sync status (2026-04-19):** This file documents ~19 of 576 routes (added public status + contact-sales endpoints). The
     backend has grown significantly since initial spec creation. See GitHub
     issue #39 for the dead-route audit. Full spec generation is tracked as
     a roadmap item.
@@ -28,6 +28,7 @@ servers:
     description: Local development
 
 tags:
+  - name: Public
   - name: Authentication
   - name: Economics & Regime
   - name: Materials & Inventory
@@ -377,6 +378,82 @@ paths:
                 type: object
                 properties:
                   valid: { type: boolean }
+
+  /api/status/summary:
+    get:
+      tags: [Public]
+      security: []
+      summary: 30-day uptime summary (public, unauthenticated)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  uptime: { type: number, description: "Uptime percentage 0–100" }
+                  meta: { type: object }
+                  generatedAt: { type: string, format: date-time }
+
+  /api/status/history:
+    get:
+      tags: [Public]
+      security: []
+      summary: Hourly probe-history buckets for the uptime chart (public, unauthenticated)
+      parameters:
+        - in: query
+          name: hours
+          schema: { type: integer, default: 720, maximum: 720 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  windowHours: { type: integer }
+                  buckets: { type: array, items: { type: object } }
+                  meta: { type: object }
+
+  /api/contact-sales:
+    post:
+      tags: [Public]
+      security: []
+      summary: Submit a sales / contact-us lead (public, unauthenticated)
+      description: |
+        Rate-limited to 5 requests per 15 minutes per IP.
+        Honeypot field `website` must be empty.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, message]
+              properties:
+                name:    { type: string, maxLength: 200 }
+                email:   { type: string, format: email, maxLength: 200 }
+                company: { type: string, maxLength: 200 }
+                role:    { type: string, maxLength: 200 }
+                topic:
+                  type: string
+                  enum: [demo, pilot, enterprise, integration, security, press, other]
+                message: { type: string, maxLength: 5000 }
+                website: { type: string, description: "Honeypot — must be empty" }
+      responses:
+        "200":
+          description: Lead captured
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  emailed: { type: boolean }
+        "400": { description: Validation error }
+        "429": { description: Rate limit exceeded }
 
   /api/webhooks/inbound/{integrationId}:
     post:
