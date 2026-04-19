@@ -11,8 +11,10 @@ function getEncryptionKey(): Buffer {
     return encryptionKeyCache;
   }
 
-  const masterKey = process.env.CREDENTIAL_ENCRYPTION_KEY;
-  
+  // `.trim()` tolerates trailing whitespace/newlines that some Secrets
+  // UIs silently append when the value is pasted.
+  const masterKey = (process.env.CREDENTIAL_ENCRYPTION_KEY ?? '').trim();
+
   if (!masterKey || masterKey.length < 32) {
     console.warn("[SECURITY] CREDENTIAL_ENCRYPTION_KEY not set or too short. Generating ephemeral key for this session.");
     console.warn("[SECURITY] Credentials encrypted with ephemeral key will be lost on restart.");

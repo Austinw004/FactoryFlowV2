@@ -1,14 +1,27 @@
 import crypto from 'crypto';
 import { Request, Response, NextFunction } from 'express';
 
-// Require encryption key at startup - fail fast if not provided
-if (!process.env.ENCRYPTION_KEY) {
+// Require encryption key at startup - fail fast if not provided.
+// `.trim()` tolerates trailing whitespace/newlines that some Secrets
+// UIs silently append when the value is pasted.
+const RAW_ENCRYPTION_KEY = (process.env.ENCRYPTION_KEY ?? '').trim();
+
+if (!RAW_ENCRYPTION_KEY) {
   console.error('[Security] FATAL: ENCRYPTION_KEY environment variable must be set');
   console.error('[Security] Generate one with: openssl rand -hex 32');
   process.exit(1);
 }
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
+if (RAW_ENCRYPTION_KEY.length !== 64 || !/^[0-9a-fA-F]{64}$/.test(RAW_ENCRYPTION_KEY)) {
+  console.error(
+    `[Security] FATAL: ENCRYPTION_KEY must be exactly 64 hex chars (32 bytes). ` +
+      `Got length=${RAW_ENCRYPTION_KEY.length}. ` +
+      `Generate a valid key with: openssl rand -hex 32`,
+  );
+  process.exit(1);
+}
+
+const ENCRYPTION_KEY = RAW_ENCRYPTION_KEY;
 const ENCRYPTION_IV_LENGTH = 16;
 const ENCRYPTION_ALGORITHM = 'aes-256-cbc';
 
