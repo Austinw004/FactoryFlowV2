@@ -7,12 +7,30 @@ import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 
+// OIDC discovery is an HTTP call to the Replit issuer. It is intentionally
+// NOT awaited at boot — autoscale instances may not be able to reach the
+// Replit OIDC issuer promptly, and blocking the port bind on that network
+// round-trip caused repeated deploy failures. Discovery is lazy (on first
+// /api/login request) and timeout-guarded.
+const OIDC_DISCOVERY_TIMEOUT_MS = 5000;
+
 const getOidcConfig = memoize(
   async () => {
-    return await client.discovery(
-      new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
-      process.env.REPL_ID!
-    );
+    if (!process.env.REPL_ID) {
+      throw new Error("REPL_ID not set — Replit OIDC disabled");
+    }
+    return await Promise.race([
+      client.discovery(
+        new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
+        process.env.REPL_ID
+      ),
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error(`OIDC discovery timed out after ${OIDC_DISCOVERY_TIMEOUT_MS}ms`)),
+          OIDC_DISCOVERY_TIMEOUT_MS,
+        ),
+      ),
+    ]);
   },
   { maxAge: 3600 * 1000 }
 );
@@ -65,7 +83,10 @@ export async function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  const config = await getOidcConfig();
+  // NOTE: we intentionally do NOT await getOidcConfig() at boot. See
+  // comment on getOidcConfig above — autoscale boot would hang on that
+  // network round-trip. Discovery happens lazily on the first /api/login
+  // request and is timeout-guarded.
 
   const verify: VerifyFunction = async (
     tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
@@ -79,9 +100,10 @@ export async function setupAuth(app: Express) {
 
   const registeredStrategies = new Set<string>();
 
-  const ensureStrategy = (domain: string) => {
+  const ensureStrategy = async (domain: string) => {
     const strategyName = `replitauth:${domain}`;
     if (!registeredStrategies.has(strategyName)) {
+      const config = await getOidcConfig();
       const strategy = new Strategy(
         {
           name: strategyName,
@@ -99,31 +121,47 @@ export async function setupAuth(app: Express) {
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
-  app.get("/api/login", (req, res, next) => {
-    ensureStrategy(req.hostname);
+  app.get("/api/login", async (req, res, next) => {
+    try {
+      await ensureStrategy(req.hostname);
+    } catch (err: any) {
+      console.error("[Auth] Replit OIDC unavailable:", err?.message || err);
+      return res.status(503).json({ error: "Replit sign-in temporarily unavailable" });
+    }
     passport.authenticate(`replitauth:${req.hostname}`, {
       prompt: "login consent",
       scope: ["openid", "email", "profile", "offline_access"],
     })(req, res, next);
   });
 
-  app.get("/api/callback", (req, res, next) => {
-    ensureStrategy(req.hostname);
+  app.get("/api/callback", async (req, res, next) => {
+    try {
+      await ensureStrategy(req.hostname);
+    } catch (err: any) {
+      console.error("[Auth] Replit OIDC unavailable during callback:", err?.message || err);
+      return res.redirect("/signin?error=oidc_unavailable");
+    }
     passport.authenticate(`replitauth:${req.hostname}`, {
       successReturnToOrRedirect: "/",
       failureRedirect: "/api/login",
     })(req, res, next);
   });
 
-  app.get("/api/logout", (req, res) => {
-    req.logout(() => {
-      res.redirect(
-        client.buildEndSessionUrl(config, {
-          client_id: process.env.REPL_ID!,
-          post_logout_redirect_uri: `${req.protocol}://${req.hostname}`,
-        }).href
-      );
-    });
+  app.get("/api/logout", async (req, res) => {
+    try {
+      const config = await getOidcConfig();
+      req.logout(() => {
+        res.redirect(
+          client.buildEndSessionUrl(config, {
+            client_id: process.env.REPL_ID!,
+            post_logout_redirect_uri: `${req.protocol}://${req.hostname}`,
+          }).href
+        );
+      });
+    } catch {
+      // Fallback — if OIDC is unavailable, just clear the session and go home
+      req.logout(() => res.redirect("/"));
+    }
   });
 }
 

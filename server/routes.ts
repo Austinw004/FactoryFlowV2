@@ -543,10 +543,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return isAuthenticated(req, res, next);
   };
 
-  // Initialize RBAC system on startup
-  console.log("[RBAC] Initializing permissions...");
-  await initializePermissions();
-  console.log("[RBAC] Permissions initialized successfully");
+  // Initialize RBAC system in the background — do NOT await here, or a cold
+  // Neon DB handshake can block the port bind and fail autoscale health
+  // checks. The insert is idempotent (ON CONFLICT DO NOTHING), so it's safe
+  // to run fire-and-forget after routes are registered.
+  console.log("[RBAC] Scheduling permission initialization (non-blocking)...");
+  initializePermissions()
+    .then(() => console.log("[RBAC] Permissions initialized successfully"))
+    .catch((err) => console.error("[RBAC] Permission init failed (non-fatal):", err?.message || err));
 
   // Kubernetes-style health probes (unauthenticated)
   app.get("/healthz", async (_req, res) => {
