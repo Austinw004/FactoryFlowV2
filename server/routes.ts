@@ -544,9 +544,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // Initialize RBAC system on startup
-  console.log("[RBAC] Initializing permissions...");
   await initializePermissions();
-  console.log("[RBAC] Permissions initialized successfully");
 
   // Kubernetes-style health probes (unauthenticated)
   app.get("/healthz", async (_req, res) => {
@@ -836,15 +834,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         // Initialize default roles for the new company
-        console.log(`[RBAC] Initializing default roles for company ${company.id}`);
         await initializeDefaultRoles(company.id);
         
         // Assign Admin role to the first user
         const adminRole = await storage.getRoleByName(company.id, "Admin");
         if (adminRole) {
           await storage.assignRoleToUser(userId, adminRole.id, company.id, userId);
-          console.log(`[RBAC] Assigned Admin role to user ${userId}`);
-        }
+          }
         
         // Update user with company
         user = await storage.upsertUser({
@@ -852,7 +848,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           companyId: company.id,
         });
         
-        console.log(`[Auth] Auto-created company ${company.id} for user ${userId}`);
       }
       
       res.json(user);
@@ -888,13 +883,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           companySize: companySize || null,
           location: location || null,
         });
-        console.log(`[Onboarding] Updated company ${user.companyId} for user ${userId}`);
         
         // Pre-configure platform based on industry selection
         if (industry) {
           const preconfigResult = await preconfigurePlatformForIndustry(user.companyId, industry, storage);
-          console.log(`[Onboarding] Pre-configuration complete: ${preconfigResult.materialsCreated} materials created`);
-        }
+          }
       } else {
         // Create new company
         const company = await storage.createCompany({
@@ -919,13 +912,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           companyId: company.id,
         });
         
-        console.log(`[Onboarding] Created company ${company.id} for user ${userId}`);
         
         // Pre-configure platform based on industry selection
         if (industry) {
           const preconfigResult = await preconfigurePlatformForIndustry(company.id, industry, storage);
-          console.log(`[Onboarding] Pre-configuration complete: ${preconfigResult.materialsCreated} materials created`);
-        }
+          }
       }
       
       res.json({ success: true });
@@ -1019,7 +1010,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           emailSent: emailResult.success,
         });
         
-        console.log(`[Onboarding] Invitation ${emailResult.success ? 'sent' : 'created (email failed)'} for ${member.email} (role: ${member.role})`);
       }
       
       const successCount = emailResults.filter(r => r.success).length;
@@ -1127,7 +1117,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/onboarding/payment-method', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      console.log(`[Onboarding] Payment method intent recorded for user ${userId} (Stripe integration pending)`);
       res.json({ success: true, message: "Payment method recorded. Stripe integration pending." });
     } catch (error: any) {
       res.status(500).json({ error: "Failed to save payment method" });
@@ -1149,7 +1138,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         onboardingComplete: 1,
       });
       
-      console.log(`[Onboarding] Completed for user ${userId}`);
       res.json({ success: true });
     } catch (error: any) {
       console.error("Onboarding complete error:", error);
@@ -1191,15 +1179,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         // Initialize default roles for the new company
-        console.log(`[RBAC] Initializing default roles for company ${company.id}`);
         await initializeDefaultRoles(company.id);
         
         // Assign Admin role to the first user
         const adminRole = await storage.getRoleByName(company.id, "Admin");
         if (adminRole) {
           await storage.assignRoleToUser(userId, adminRole.id, company.id, userId);
-          console.log(`[RBAC] Assigned Admin role to user ${userId}`);
-        }
+          }
         
         // Update user with company
         user = await storage.upsertUser({
@@ -1218,7 +1204,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       globalCache.invalidate(`masterData:materials:${companyId}`);
       globalCache.invalidate(`masterData:suppliers:${companyId}`);
       globalCache.invalidate(`masterData:allocations:${companyId}`);
-      console.log(`[Seed] Invalidated cache for company ${companyId}`);
       
       res.json({ message: "Seed data created successfully", result });
     } catch (error: any) {
