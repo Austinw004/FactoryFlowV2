@@ -132,26 +132,28 @@ function Router() {
 
   if (!isAuthenticated) {
     return (
-      <Switch>
-        <Route path="/" component={LandingPage} />
-        <Route path="/terms" component={TermsOfService} />
-        <Route path="/privacy" component={PrivacyPolicy} />
-        <Route path="/how-it-works" component={HowItWorks} />
-        <Route path="/pricing" component={Pricing} />
-        <Route path="/integration-checklist" component={IntegrationChecklist} />
-        <Route path="/pilot-program" component={PilotProgram} />
-        <Route path="/roi-calculator" component={RoiCalculator} />
-        <Route path="/security" component={SecurityFaq} />
-        <Route path="/trust" component={TrustCenter} />
-        <Route path="/contact" component={Contact} />
-        <Route path="/status" component={Status} />
-        <Route path="/signup" component={SignUpPage} />
-        <Route path="/signin" component={SignInPage} />
-        <Route path="/preview/variant-a" component={LandingPageVariantA} />
-        <Route path="/preview/variant-b" component={LandingPageVariantB} />
-        <Route path="/preview/variant-c" component={LandingPageVariantC} />
-        <Route component={LandingPage} />
-      </Switch>
+      <Suspense fallback={<PageLoadingFallback />}>
+        <Switch>
+          <Route path="/" component={LandingPage} />
+          <Route path="/terms" component={TermsOfService} />
+          <Route path="/privacy" component={PrivacyPolicy} />
+          <Route path="/how-it-works" component={HowItWorks} />
+          <Route path="/pricing" component={Pricing} />
+          <Route path="/integration-checklist" component={IntegrationChecklist} />
+          <Route path="/pilot-program" component={PilotProgram} />
+          <Route path="/roi-calculator" component={RoiCalculator} />
+          <Route path="/security" component={SecurityFaq} />
+          <Route path="/trust" component={TrustCenter} />
+          <Route path="/contact" component={Contact} />
+          <Route path="/status" component={Status} />
+          <Route path="/signup" component={SignUpPage} />
+          <Route path="/signin" component={SignInPage} />
+          <Route path="/preview/variant-a" component={LandingPageVariantA} />
+          <Route path="/preview/variant-b" component={LandingPageVariantB} />
+          <Route path="/preview/variant-c" component={LandingPageVariantC} />
+          <Route component={LandingPage} />
+        </Switch>
+      </Suspense>
     );
   }
 
