@@ -5,7 +5,9 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { humanizeError } from "@/lib/humanizeError";
 
-const SALES_EMAIL = "sales@prescient-labs.com";
+// Single inbox — all customer-facing channels route to info@ so no
+// message falls through the cracks while we're a small team.
+const SALES_EMAIL = "info@prescient-labs.com";
 const INFO_EMAIL = "info@prescient-labs.com";
 
 interface ContactPayload {
@@ -168,12 +170,6 @@ export default function Contact() {
               <div>
                 <div className="eyebrow mb-2">Response time</div>
                 <div className="text-bone">Within one US business day.</div>
-              </div>
-              <div>
-                <div className="eyebrow mb-2">Best fit</div>
-                <div className="text-bone leading-relaxed">
-                  Mid-market manufacturers ($25M–$1B revenue) with a real ERP and a plant director who wakes up thinking about commodity volatility.
-                </div>
               </div>
             </div>
           </div>

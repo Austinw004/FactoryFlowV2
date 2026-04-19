@@ -81,7 +81,7 @@ export function Pricing() {
     },
     {
       q: "Who should I talk to for procurement / security / legal questions?",
-      a: "Email sales@prescient-labs.com for commercial questions, security@prescient-labs.com for security reviews (SIG, CAIQ, DPA), or book a 30-minute call from the Contact page. Typical enterprise evaluation — from first call to signed MSA — is four to six weeks.",
+      a: "Email info@prescient-labs.com for commercial questions, info@prescient-labs.com for security reviews (SIG, CAIQ, DPA), or book a 30-minute call from the Contact page. Typical enterprise evaluation — from first call to signed MSA — is four to six weeks.",
     },
   ];
 

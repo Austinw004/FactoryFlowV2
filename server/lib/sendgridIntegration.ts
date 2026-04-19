@@ -173,7 +173,7 @@ export class SendGridIntegration {
         return null;
       }
 
-      const fromEmail = "noreply@prescientlabs.io";
+      const fromEmail = "info@prescient-labs.com";
 
       return await this.sendEmail(
         supplier.contactEmail,
@@ -198,7 +198,7 @@ export class SendGridIntegration {
       }
 
       const suppliers = await storage.getSuppliers(this.companyId);
-      const fromEmail = "noreply@prescientlabs.io";
+      const fromEmail = "info@prescient-labs.com";
 
       for (const supplier of suppliers.slice(0, 10)) {
         if (!supplier.contactEmail) continue;

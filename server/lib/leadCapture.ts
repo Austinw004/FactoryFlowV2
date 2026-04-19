@@ -27,7 +27,7 @@ import { sql } from "drizzle-orm";
 import { sendEmail } from "./emailService";
 
 const LEADS_DIR = path.resolve(process.cwd(), "data");
-const SALES_INBOX = process.env.SALES_INBOX_EMAIL || "sales@prescient-labs.com";
+const SALES_INBOX = process.env.SALES_INBOX_EMAIL || "info@prescient-labs.com";
 
 export interface InboundLead {
   name: string;
@@ -176,7 +176,7 @@ export async function captureLead(lead: InboundLead): Promise<CaptureResult> {
       subject,
       text,
       html,
-      from: { name: "Prescient Labs Website", email: "noreply@prescient-labs.com" },
+      from: { name: "Prescient Labs Website", email: "info@prescient-labs.com" },
     });
     emailed = result.success;
     if (!result.success) {

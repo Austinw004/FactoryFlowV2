@@ -91,7 +91,7 @@ export async function sendEmail(options: EmailOptions, companyId?: string): Prom
       subject: options.subject,
       from: options.from || {
         name: 'Prescient Labs',
-        email: 'noreply@prescientlabs.io'
+        email: 'info@prescient-labs.com'
       },
       to: options.to
     };

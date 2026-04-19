@@ -135,7 +135,7 @@ export default function PrivacyPolicy() {
                   <li>Withdraw consent</li>
                 </ul>
                 <p className="mt-2">
-                  To exercise these rights, contact us at privacy@prescient-labs.com.
+                  To exercise these rights, contact us at info@prescient-labs.com.
                 </p>
               </div>
             </section>
@@ -177,7 +177,7 @@ export default function PrivacyPolicy() {
               <div className="text-muted-foreground">
                 <p>For privacy-related questions or concerns, contact us at:</p>
                 <p className="mt-2">
-                  Email: privacy@prescient-labs.com<br />
+                  Email: info@prescient-labs.com<br />
                   Prescient Labs<br />
                   Data Protection Officer
                 </p>

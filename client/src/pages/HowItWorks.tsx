@@ -426,8 +426,8 @@ export default function HowItWorks() {
             <div className="p-3 rounded-lg border bg-card">
               <p className="font-medium text-foreground text-sm mb-1">Email Support</p>
               <p className="text-xs">
-                <a href="mailto:support@prescient-labs.com" className="underline hover:text-foreground">
-                  support@prescient-labs.com
+                <a href="mailto:info@prescient-labs.com" className="underline hover:text-foreground">
+                  info@prescient-labs.com
                 </a>{" "}
                 for detailed questions.
               </p>

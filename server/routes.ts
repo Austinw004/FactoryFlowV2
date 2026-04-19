@@ -791,12 +791,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         if (!result.ok) {
           // Extremely rare (disk write failed). Let the client fall back.
-          return res.status(500).json({ error: 'We could not save your message. Please email sales@prescient-labs.com directly.' });
+          return res.status(500).json({ error: 'We could not save your message. Please email info@prescient-labs.com directly.' });
         }
         return res.status(200).json({ ok: true, emailed: result.emailed });
       } catch (err: any) {
         console.error('[contact-sales] unexpected error:', err?.message || err);
-        return res.status(500).json({ error: 'Please email sales@prescient-labs.com directly.' });
+        return res.status(500).json({ error: 'Please email info@prescient-labs.com directly.' });
       }
     },
   );
@@ -984,7 +984,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Create invitation link
         const baseUrl = process.env.REPLIT_DEV_DOMAIN 
           ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-          : 'https://prescientlabs.io';
+          : 'https://prescient-labs.com';
         const inviteLink = `${baseUrl}/invite/${token}`;
         
         // Send invitation email
@@ -16297,7 +16297,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "sections": [{
           "activityTitle": "Prescient Labs Connection Test",
           "activitySubtitle": new Date().toISOString(),
-          "activityImage": "https://prescientlabs.io/icon.png",
+          "activityImage": "https://prescient-labs.com/icon.png",
           "facts": [{
             "name": "Status",
             "value": "Connected successfully"

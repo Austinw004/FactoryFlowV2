@@ -123,7 +123,7 @@ export default function TrustCenter() {
         </h1>
         <p className="text-soft text-lg leading-relaxed max-w-3xl mb-12">
           We built this page so vendor due-diligence doesn't have to be a three-week email thread. If something you need isn't here, email{" "}
-          <a href="mailto:security@prescient-labs.com" className="text-bone hover:text-signal transition">security@prescient-labs.com</a>
+          <a href="mailto:info@prescient-labs.com" className="text-bone hover:text-signal transition">info@prescient-labs.com</a>
           {" "}and we'll respond within one US business day.
         </p>
 
@@ -135,7 +135,7 @@ export default function TrustCenter() {
               12-page overview of our security program — architecture, controls, data flow.
             </p>
             <a
-              href="mailto:security@prescient-labs.com?subject=Request%3A%20Security%20Whitepaper"
+              href="mailto:info@prescient-labs.com?subject=Request%3A%20Security%20Whitepaper"
               className="btn-primary text-xs px-4 py-2 uppercase tracking-[0.14em] inline-block"
               data-testid="link-request-whitepaper"
             >
@@ -148,7 +148,7 @@ export default function TrustCenter() {
               Our standard Data Processing Agreement with Standard Contractual Clauses. BAA on request.
             </p>
             <a
-              href="mailto:security@prescient-labs.com?subject=Request%3A%20DPA%2FBAA"
+              href="mailto:info@prescient-labs.com?subject=Request%3A%20DPA%2FBAA"
               className="btn-primary text-xs px-4 py-2 uppercase tracking-[0.14em] inline-block"
               data-testid="link-request-dpa"
             >
@@ -161,7 +161,7 @@ export default function TrustCenter() {
               Completed SIG Lite / SIG Core / CAIQ v4 questionnaires. 5-business-day turnaround for custom questionnaires.
             </p>
             <a
-              href="mailto:security@prescient-labs.com?subject=Request%3A%20SIG%2FCAIQ"
+              href="mailto:info@prescient-labs.com?subject=Request%3A%20SIG%2FCAIQ"
               className="btn-primary text-xs px-4 py-2 uppercase tracking-[0.14em] inline-block"
               data-testid="link-request-sig"
             >
@@ -223,7 +223,7 @@ export default function TrustCenter() {
             <div>
               <div className="eyebrow mb-2">Subprocessors</div>
               <p className="text-sm text-muted max-w-xl leading-relaxed">
-                The current list of subprocessors that may process customer data. We give 30 days' notice before adding or swapping any subprocessor — email <a href="mailto:security@prescient-labs.com" className="text-soft hover:text-bone transition">security@prescient-labs.com</a> to subscribe.
+                The current list of subprocessors that may process customer data. We give 30 days' notice before adding or swapping any subprocessor — email <a href="mailto:info@prescient-labs.com" className="text-soft hover:text-bone transition">info@prescient-labs.com</a> to subscribe.
               </p>
             </div>
             <div className="mono text-xs text-muted">Updated {new Date().toISOString().slice(0, 10)}</div>
@@ -281,8 +281,8 @@ export default function TrustCenter() {
           </div>
           <div className="mt-6 text-sm text-muted">
             Report a vulnerability:{" "}
-            <a href="mailto:security@prescient-labs.com" className="text-soft hover:text-bone transition">
-              security@prescient-labs.com
+            <a href="mailto:info@prescient-labs.com" className="text-soft hover:text-bone transition">
+              info@prescient-labs.com
             </a>
             {" "}·{" "}
             <a href="/.well-known/security.txt" className="text-soft hover:text-bone transition">
@@ -306,7 +306,7 @@ export default function TrustCenter() {
               Talk to sales
             </button>
             <a
-              href="mailto:security@prescient-labs.com"
+              href="mailto:info@prescient-labs.com"
               className="btn-ghost text-sm px-5 py-2.5 uppercase tracking-[0.14em]"
               data-testid="link-security-team"
             >

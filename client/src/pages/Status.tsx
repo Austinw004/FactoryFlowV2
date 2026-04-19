@@ -205,7 +205,7 @@ export default function Status() {
     },
     down: {
       headline: "Outage detected.",
-      subline: "One or more endpoints are unreachable. We're on it — email support@prescient-labs.com for updates.",
+      subline: "One or more endpoints are unreachable. We're on it — email info@prescient-labs.com for updates.",
     },
     checking: {
       headline: "Running checks…",
@@ -339,7 +339,7 @@ export default function Status() {
             We publish live probes from your browser plus a 30-day uptime bar fed from server-side self-checks every 5 minutes. We do <em>not</em> yet publish incident timelines, subscriber notifications, or scheduled-maintenance notices — those ship alongside durable probe-history retention in the next release.
           </p>
           <p className="text-soft text-sm leading-relaxed max-w-2xl">
-            For active incidents, email <a href="mailto:status@prescient-labs.com" className="text-bone hover:text-signal transition">status@prescient-labs.com</a>. Enterprise customers on the Performance or Tenant VPC tier have a dedicated Slack channel for the fastest path.
+            For active incidents, email <a href="mailto:info@prescient-labs.com" className="text-bone hover:text-signal transition">info@prescient-labs.com</a>. Enterprise customers on the Performance or Tenant VPC tier have a dedicated Slack channel for the fastest path.
           </p>
         </div>
       </div>

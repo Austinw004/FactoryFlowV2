@@ -143,7 +143,7 @@ export default function TermsOfService() {
             <section>
               <h2 className="text-2xl font-semibold mb-4">12. Contact</h2>
               <p className="text-muted-foreground">
-                For questions about these Terms of Service, please contact us at legal@prescient-labs.com.
+                For questions about these Terms of Service, please contact us at info@prescient-labs.com.
               </p>
             </section>
           </Card>

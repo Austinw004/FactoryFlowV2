@@ -389,17 +389,17 @@ const sdkExamples: Record<string, string> = {
   ].join('\n'),
   curl: [
     '# Get current economic regime',
-    'curl -X GET "https://api.prescientlabs.io/v1/regime" \\',
+    'curl -X GET "https://api.prescient-labs.com/v1/regime" \\',
     '  -H "Authorization: Bearer YOUR_API_KEY" \\',
     '  -H "Content-Type: application/json"',
     '',
     '# Get demand forecast for a SKU',
-    'curl -X GET "https://api.prescientlabs.io/v1/forecasts/123" \\',
+    'curl -X GET "https://api.prescient-labs.com/v1/forecasts/123" \\',
     '  -H "Authorization: Bearer YOUR_API_KEY" \\',
     '  -H "Content-Type: application/json"',
     '',
     '# Run allocation optimization',
-    'curl -X POST "https://api.prescientlabs.io/v1/allocations/optimize" \\',
+    'curl -X POST "https://api.prescient-labs.com/v1/allocations/optimize" \\',
     '  -H "Authorization: Bearer YOUR_API_KEY" \\',
     '  -H "Content-Type: application/json" \\',
     "  -d '{",
@@ -410,7 +410,7 @@ const sdkExamples: Record<string, string> = {
     "  }'",
     '',
     '# Register webhook',
-    'curl -X POST "https://api.prescientlabs.io/v1/webhooks" \\',
+    'curl -X POST "https://api.prescient-labs.com/v1/webhooks" \\',
     '  -H "Authorization: Bearer YOUR_API_KEY" \\',
     '  -H "Content-Type: application/json" \\',
     "  -d '{",
@@ -692,7 +692,7 @@ export default function ApiDocumentation() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <code className="text-xs bg-muted px-2 py-1 rounded">api.prescientlabs.io/openapi.json</code>
+                <code className="text-xs bg-muted px-2 py-1 rounded">api.prescient-labs.com/openapi.json</code>
                 <p className="text-xs text-muted-foreground mt-2">
                   Generate clients in any language
                 </p>

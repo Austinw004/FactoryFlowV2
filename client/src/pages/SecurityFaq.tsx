@@ -50,7 +50,7 @@ export default function SecurityFaq() {
         },
         {
           q: "Who are your subprocessors?",
-          a: "The current list of subprocessors that may process customer data: (1) AWS — primary hosting and managed Postgres, US-East/US-West; (2) Stripe — billing and payment processing; (3) OpenAI and Anthropic — AI inference for forecasting copilot features (your raw data is never used to train their models; we operate under their zero-retention enterprise API terms); (4) Resend — transactional email (invitations, alerts, password resets); (5) Sentry — error telemetry with PII scrubbing enabled. We give 30 days' notice before adding or swapping a subprocessor. Email security@prescient-labs.com for the signed subprocessor addendum.",
+          a: "The current list of subprocessors that may process customer data: (1) AWS — primary hosting and managed Postgres, US-East/US-West; (2) Stripe — billing and payment processing; (3) OpenAI and Anthropic — AI inference for forecasting copilot features (your raw data is never used to train their models; we operate under their zero-retention enterprise API terms); (4) Resend — transactional email (invitations, alerts, password resets); (5) Sentry — error telemetry with PII scrubbing enabled. We give 30 days' notice before adding or swapping a subprocessor. Email info@prescient-labs.com for the signed subprocessor addendum.",
         },
         {
           q: "Who can access my data?",
@@ -92,7 +92,7 @@ export default function SecurityFaq() {
       questions: [
         {
           q: "Are you SOC 2 certified?",
-          a: "We are pursuing SOC 2 Type II certification with audit kickoff planned for Q3 2026. In the interim we operate under a documented security program aligned with the SOC 2 Trust Services Criteria — encryption, access control, audit logging, incident response, change management. We can share our current security whitepaper, complete SIG / CAIQ questionnaires, and sign a Data Processing Agreement (DPA) today. Email security@prescient-labs.com to request.",
+          a: "We are pursuing SOC 2 Type II certification with audit kickoff planned for Q3 2026. In the interim we operate under a documented security program aligned with the SOC 2 Trust Services Criteria — encryption, access control, audit logging, incident response, change management. We can share our current security whitepaper, complete SIG / CAIQ questionnaires, and sign a Data Processing Agreement (DPA) today. Email info@prescient-labs.com to request.",
         },
         {
           q: "Are you GDPR compliant?",
@@ -104,11 +104,11 @@ export default function SecurityFaq() {
         },
         {
           q: "Can you complete our vendor security questionnaire?",
-          a: "Yes. We regularly complete SIG Lite, SIG Core, CAIQ v4, and custom questionnaires for enterprise customers. Typical turnaround is 5 business days. Email security@prescient-labs.com with your questionnaire and target signature date.",
+          a: "Yes. We regularly complete SIG Lite, SIG Core, CAIQ v4, and custom questionnaires for enterprise customers. Typical turnaround is 5 business days. Email info@prescient-labs.com with your questionnaire and target signature date.",
         },
         {
           q: "Will you sign a Data Processing Agreement (DPA) / BAA?",
-          a: "Yes. We can sign a DPA modeled on GDPR Article 28 with Standard Contractual Clauses for EU data transfers. HIPAA BAA is available for healthcare-adjacent deployments. Both can be executed before you sign an MSA. Email security@prescient-labs.com to receive our standard DPA template.",
+          a: "Yes. We can sign a DPA modeled on GDPR Article 28 with Standard Contractual Clauses for EU data transfers. HIPAA BAA is available for healthcare-adjacent deployments. Both can be executed before you sign an MSA. Email info@prescient-labs.com to receive our standard DPA template.",
         },
       ],
     },
@@ -287,7 +287,7 @@ export default function SecurityFaq() {
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <Button size="lg" asChild data-testid="link-contact-security">
-              <a href="mailto:security@prescient-labs.com">Email security@prescient-labs.com</a>
+              <a href="mailto:info@prescient-labs.com">Email info@prescient-labs.com</a>
             </Button>
             <Button size="lg" variant="outline" onClick={() => setLocation("/trust")} data-testid="button-trust-center">
               Trust Center
