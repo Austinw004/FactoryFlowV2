@@ -121,6 +121,11 @@ import {
   predictionOutcomes,
   insertPredictionOutcomeSchema,
   automationSafeMode,
+  insertComplianceDocumentSchema,
+  insertComplianceRegulationSchema,
+  insertProductionRunSchema,
+  updateProductionRunSchema,
+  updatePurchaseOrderSchema,
 } from "@shared/schema";
 
 const economics = new DualCircuitEconomics();
@@ -4563,8 +4568,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get current economic regime for context
       await economics.fetch();
       
+      const parsed = insertComplianceDocumentSchema.omit({ companyId: true, createdBy: true, economicRegimeContext: true }).safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Validation failed", fields: parsed.error.flatten().fieldErrors });
       const document = await storage.createComplianceDocument({
-        ...req.body,
+        ...parsed.data,
         companyId: user.companyId,
         createdBy: user.id,
         economicRegimeContext: economics.regime,
@@ -4603,8 +4610,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "User must be associated with a company" });
       }
 
+      const parsed = insertComplianceRegulationSchema.omit({ companyId: true }).safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Validation failed", fields: parsed.error.flatten().fieldErrors });
       const regulation = await storage.createComplianceRegulation({
-        ...req.body,
+        ...parsed.data,
         companyId: user.companyId,
       });
       
@@ -5136,8 +5145,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get current economic regime
       await economics.fetch();
       
+      const parsed = insertProductionRunSchema.omit({ companyId: true, economicRegime: true, fdrAtStart: true }).safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Validation failed", fields: parsed.error.flatten().fieldErrors });
       const run = await storage.createProductionRun({
-        ...req.body,
+        ...parsed.data,
         companyId: user.companyId,
         economicRegime: economics.regime,
         fdrAtStart: economics.fdr,
@@ -5159,7 +5170,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "User must be associated with a company" });
       }
 
-      const run = await storage.updateProductionRun(req.params.id, req.body);
+      const parsed = updateProductionRunSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Validation failed", fields: parsed.error.flatten().fieldErrors });
+      const run = await storage.updateProductionRun(req.params.id, parsed.data);
       
       // If run is completed, calculate OEE and create production metric
       if (run.status === "completed" && run.endTime) {
@@ -6751,7 +6764,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const order = await storage.updatePurchaseOrder(req.params.id, user.companyId, req.body);
+      const parsed = updatePurchaseOrderSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Validation failed", fields: parsed.error.flatten().fieldErrors });
+      const order = await storage.updatePurchaseOrder(req.params.id, user.companyId, parsed.data);
       if (!order) {
         return res.status(404).json({ error: "Purchase order not found" });
       }
