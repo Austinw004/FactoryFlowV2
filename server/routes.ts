@@ -493,8 +493,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register enterprise auth + payments routes (before isAuthenticated middleware)
   registerAuthPaymentRoutes(app);
 
+  // Public /api paths that bypass the global auth gate. These are the
+  // routes a visitor can reach without signing in — the landing-page
+  // contact form, the /status page feeds, health probes, etc.
+  //
+  // WHY an allowlist and not "register before the middleware":
+  // Express processes middleware in registration order, and several
+  // public handlers historically lived *below* `app.use('/api', requireAuth)`,
+  // which silently broke them with 401s in production. An explicit
+  // allowlist is easier to audit and harder to regress than route
+  // ordering.
+  //
+  // Paths are matched against `req.path` (the portion after `/api`), so
+  // entries start with `/`. Use endsWith-safe comparisons — exact match
+  // only, no prefix matching, so `/contact-sales/admin` would NOT bypass.
+  const PUBLIC_API_PATHS: ReadonlySet<string> = new Set([
+    "/contact-sales",
+    "/health",
+    "/status/summary",
+    "/status/history",
+    "/stripe/config",
+    "/stripe/products",
+  ]);
+
   // Unified auth middleware — supports both JWT Bearer and Replit session
   const requireAuth: import("express").RequestHandler = (req: any, res, next) => {
+    // Public-path bypass. When mounted as `app.use('/api', requireAuth)`,
+    // req.path is relative to `/api` (e.g. "/contact-sales").
+    if (PUBLIC_API_PATHS.has(req.path)) {
+      return next();
+    }
     // If JWT middleware already decoded a Bearer token, normalize to req.user format
     if (req.jwtUser?.sub) {
       if (!req.user) {
