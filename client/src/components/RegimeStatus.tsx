@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Activity, ShieldCheck, AlertTriangle, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Activity, ShieldCheck, AlertTriangle, TrendingUp, TrendingDown, Minus, CheckCircle2, XCircle, Eye } from "lucide-react";
 import { InfoTooltip } from "@/components/InfoTooltip";
 
 type Regime = "HEALTHY_EXPANSION" | "ASSET_LED_GROWTH" | "IMBALANCED_EXCESS" | "REAL_ECONOMY_LEAD";
@@ -72,6 +72,35 @@ const regimeConfig: Record<Regime, { label: string; description: string; thresho
     thresholdRange: "FDR > 2.5",
     variant: "default",
   },
+};
+
+type ActionItem = { type: "do" | "watch" | "avoid"; text: string };
+
+const regimeActions: Record<Regime, ActionItem[]> = {
+  HEALTHY_EXPANSION: [
+    { type: "do", text: "Negotiate long-term supplier contracts — stable conditions favor buyers" },
+    { type: "do", text: "Maintain standard safety stock levels — no need to over-build" },
+    { type: "watch", text: "Monitor FDR for movement toward 1.2 — that signals regime shift" },
+    { type: "avoid", text: "Don't rush procurement — pricing is stable and timing is not urgent" },
+  ],
+  ASSET_LED_GROWTH: [
+    { type: "do", text: "Lock in contracts for critical materials before the next pricing cycle" },
+    { type: "do", text: "Pre-purchase 8–12 weeks of high-exposure materials now" },
+    { type: "watch", text: "Monitor single-source suppliers — they will raise prices first" },
+    { type: "avoid", text: "Avoid deferring procurement — input costs are trending higher" },
+  ],
+  IMBALANCED_EXCESS: [
+    { type: "do", text: "Renegotiate all contracts expiring within 90 days" },
+    { type: "do", text: "Build safety stock on critical-path materials only" },
+    { type: "watch", text: "Watch for FDR stabilization — that's your signal to resume normal pace" },
+    { type: "avoid", text: "Defer spot purchases on non-essential materials until regime stabilizes" },
+  ],
+  REAL_ECONOMY_LEAD: [
+    { type: "do", text: "Lock in multi-year supplier agreements — this window typically lasts 4–8 weeks" },
+    { type: "do", text: "Accelerate procurement of capital materials at current favorable terms" },
+    { type: "watch", text: "Watch for FDR rising above 1.2 — counter-cyclical windows close fast" },
+    { type: "avoid", text: "Don't wait for better terms — current conditions are already favorable" },
+  ],
 };
 
 function ConfidenceBar({ label, value, testId, tooltip }: { label: string; value: number; testId?: string; tooltip?: string }) {
@@ -181,6 +210,21 @@ export function RegimeStatus({ regime, fdr: fdrProp, intensity, regimeEvidence, 
             <span className="text-muted-foreground">
               Transition probability to <span className="font-medium">{intelligence.transitionPrediction.predictedRegime}</span>: {Math.round(transitionProbability * 100)}%
             </span>
+          </div>
+        )}
+
+        {/* Operational action steps for current regime */}
+        {regimeActions[regime] && (
+          <div className="pt-2 border-t space-y-2" data-testid="regime-action-steps">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">This week: what to do</p>
+            {regimeActions[regime].map((item, i) => (
+              <div key={i} className="flex items-start gap-2 text-xs">
+                {item.type === "do" && <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0 mt-0.5" />}
+                {item.type === "watch" && <Eye className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />}
+                {item.type === "avoid" && <XCircle className="h-3.5 w-3.5 text-red-500 shrink-0 mt-0.5" />}
+                <span className={item.type === "avoid" ? "text-muted-foreground" : "text-foreground/80"}>{item.text}</span>
+              </div>
+            ))}
           </div>
         )}
       </div>
