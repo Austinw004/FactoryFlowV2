@@ -19,22 +19,19 @@ fi
 
 APPLY="${1:-}"
 
-# Find every table + column that has a FK referencing companies.id
+# Find every table that has a `company_id` column (regardless of whether a FK
+# constraint currently exists). This catches tables whose FK to companies is
+# missing — exactly the case drizzle-kit is trying to add.
 read -r -d '' DISCOVER_SQL <<'SQL' || true
 SELECT
-  tc.table_name AS child_table,
-  kcu.column_name AS child_col
-FROM information_schema.table_constraints tc
-JOIN information_schema.key_column_usage kcu
-  ON tc.constraint_name = kcu.constraint_name
- AND tc.table_schema    = kcu.table_schema
-JOIN information_schema.constraint_column_usage ccu
-  ON ccu.constraint_name = tc.constraint_name
- AND ccu.table_schema    = tc.table_schema
-WHERE tc.constraint_type = 'FOREIGN KEY'
-  AND ccu.table_name     = 'companies'
-  AND ccu.column_name    = 'id'
-ORDER BY tc.table_name;
+  c.table_name AS child_table,
+  c.column_name AS child_col
+FROM information_schema.columns c
+WHERE c.table_schema = 'public'
+  AND c.column_name   = 'company_id'
+  AND c.table_name   <> 'companies'
+  AND c.table_name IN (SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE')
+ORDER BY c.table_name;
 SQL
 
 mapfile -t ROWS < <(psql "$DATABASE_URL" -At -F '|' -c "$DISCOVER_SQL")
