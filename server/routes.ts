@@ -121,6 +121,11 @@ import {
   predictionOutcomes,
   insertPredictionOutcomeSchema,
   automationSafeMode,
+  insertComplianceDocumentSchema,
+  insertComplianceRegulationSchema,
+  insertProductionRunSchema,
+  updateProductionRunSchema,
+  updatePurchaseOrderSchema,
 } from "@shared/schema";
 
 const economics = new DualCircuitEconomics();
@@ -507,9 +512,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // Initialize RBAC system on startup
-  console.log("[RBAC] Initializing permissions...");
   await initializePermissions();
-  console.log("[RBAC] Permissions initialized successfully");
 
   // Kubernetes-style health probes (unauthenticated)
   app.get("/healthz", async (_req, res) => {
@@ -797,14 +800,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         // Initialize default roles for the new company
-        console.log(`[RBAC] Initializing default roles for company ${company.id}`);
         await initializeDefaultRoles(company.id);
         
         // Assign Admin role to the first user
         const adminRole = await storage.getRoleByName(company.id, "Admin");
         if (adminRole) {
           await storage.assignRoleToUser(userId, adminRole.id, company.id, userId);
-          console.log(`[RBAC] Assigned Admin role to user ${userId}`);
         }
         
         // Update user with company
@@ -813,7 +814,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           companyId: company.id,
         });
         
-        console.log(`[Auth] Auto-created company ${company.id} for user ${userId}`);
       }
       
       res.json(user);
@@ -849,12 +849,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           companySize: companySize || null,
           location: location || null,
         });
-        console.log(`[Onboarding] Updated company ${user.companyId} for user ${userId}`);
         
         // Pre-configure platform based on industry selection
         if (industry) {
           const preconfigResult = await preconfigurePlatformForIndustry(user.companyId, industry, storage);
-          console.log(`[Onboarding] Pre-configuration complete: ${preconfigResult.materialsCreated} materials created`);
         }
       } else {
         // Create new company
@@ -880,12 +878,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           companyId: company.id,
         });
         
-        console.log(`[Onboarding] Created company ${company.id} for user ${userId}`);
         
         // Pre-configure platform based on industry selection
         if (industry) {
           const preconfigResult = await preconfigurePlatformForIndustry(company.id, industry, storage);
-          console.log(`[Onboarding] Pre-configuration complete: ${preconfigResult.materialsCreated} materials created`);
         }
       }
       
@@ -980,7 +976,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           emailSent: emailResult.success,
         });
         
-        console.log(`[Onboarding] Invitation ${emailResult.success ? 'sent' : 'created (email failed)'} for ${member.email} (role: ${member.role})`);
       }
       
       const successCount = emailResults.filter(r => r.success).length;
@@ -1088,7 +1083,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/onboarding/payment-method', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      console.log(`[Onboarding] Payment method intent recorded for user ${userId} (Stripe integration pending)`);
       res.json({ success: true, message: "Payment method recorded. Stripe integration pending." });
     } catch (error: any) {
       res.status(500).json({ error: "Failed to save payment method" });
@@ -1110,7 +1104,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         onboardingComplete: 1,
       });
       
-      console.log(`[Onboarding] Completed for user ${userId}`);
       res.json({ success: true });
     } catch (error: any) {
       console.error("Onboarding complete error:", error);
@@ -1152,14 +1145,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         // Initialize default roles for the new company
-        console.log(`[RBAC] Initializing default roles for company ${company.id}`);
         await initializeDefaultRoles(company.id);
         
         // Assign Admin role to the first user
         const adminRole = await storage.getRoleByName(company.id, "Admin");
         if (adminRole) {
           await storage.assignRoleToUser(userId, adminRole.id, company.id, userId);
-          console.log(`[RBAC] Assigned Admin role to user ${userId}`);
         }
         
         // Update user with company
@@ -1179,7 +1170,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       globalCache.invalidate(`masterData:materials:${companyId}`);
       globalCache.invalidate(`masterData:suppliers:${companyId}`);
       globalCache.invalidate(`masterData:allocations:${companyId}`);
-      console.log(`[Seed] Invalidated cache for company ${companyId}`);
       
       res.json({ message: "Seed data created successfully", result });
     } catch (error: any) {
@@ -2533,7 +2523,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } catch (e) {
         // Sensor/alert methods may not exist - skip this section
-        console.log("Skipping sensor alerts check:", e);
       }
 
       // Check time off requests pending (skip if method not available)
@@ -2541,7 +2530,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Note: getTimeOffRequests may not exist in all storage implementations
         // For now, we skip this as the method doesn't exist
       } catch (e) {
-        console.log("Skipping time off requests check:", e);
       }
 
       // Check compliance documents expiring
@@ -4563,8 +4551,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get current economic regime for context
       await economics.fetch();
       
+      const parsed = insertComplianceDocumentSchema.omit({ companyId: true, createdBy: true, economicRegimeContext: true }).safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Validation failed", fields: parsed.error.flatten().fieldErrors });
       const document = await storage.createComplianceDocument({
-        ...req.body,
+        ...parsed.data,
         companyId: user.companyId,
         createdBy: user.id,
         economicRegimeContext: economics.regime,
@@ -4603,8 +4593,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "User must be associated with a company" });
       }
 
+      const parsed = insertComplianceRegulationSchema.omit({ companyId: true }).safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Validation failed", fields: parsed.error.flatten().fieldErrors });
       const regulation = await storage.createComplianceRegulation({
-        ...req.body,
+        ...parsed.data,
         companyId: user.companyId,
       });
       
@@ -5136,8 +5128,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get current economic regime
       await economics.fetch();
       
+      const parsed = insertProductionRunSchema.omit({ companyId: true, economicRegime: true, fdrAtStart: true }).safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Validation failed", fields: parsed.error.flatten().fieldErrors });
       const run = await storage.createProductionRun({
-        ...req.body,
+        ...parsed.data,
         companyId: user.companyId,
         economicRegime: economics.regime,
         fdrAtStart: economics.fdr,
@@ -5159,7 +5153,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "User must be associated with a company" });
       }
 
-      const run = await storage.updateProductionRun(req.params.id, req.body);
+      const parsed = updateProductionRunSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Validation failed", fields: parsed.error.flatten().fieldErrors });
+      const run = await storage.updateProductionRun(req.params.id, parsed.data);
       
       // If run is completed, calculate OEE and create production metric
       if (run.status === "completed" && run.endTime) {
@@ -6751,7 +6747,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const order = await storage.updatePurchaseOrder(req.params.id, user.companyId, req.body);
+      const parsed = updatePurchaseOrderSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Validation failed", fields: parsed.error.flatten().fieldErrors });
+      const order = await storage.updatePurchaseOrder(req.params.id, user.companyId, parsed.data);
       if (!order) {
         return res.status(404).json({ error: "Purchase order not found" });
       }
@@ -7204,7 +7202,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User has no company association" });
       }
 
-      console.log("[Research] Manual backtest triggered for company:", user.companyId);
       
       // Import and run backtesting engine
       const { BacktestingEngine, HistoricalDataFetcher } = await import("./lib/dualCircuitResearch");
@@ -7213,7 +7210,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fetcher = new HistoricalDataFetcher();
       const historicalData = await fetcher.buildHistoricalDataset(2020, 2024);
       
-      console.log(`[Research] Built dataset with ${historicalData.length} data points`);
       
       // Return status
       res.json({
@@ -7236,7 +7232,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User has no company association" });
       }
 
-      console.log("[Research] Running comprehensive test for company:", user.companyId);
       
       // Import comprehensive test module
       const { runComprehensiveTest, getDatabaseSummary } = await import("./lib/comprehensiveTest");
@@ -7245,7 +7240,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const results = await runComprehensiveTest(user.companyId);
       const dbSummary = await getDatabaseSummary(user.companyId);
       
-      console.log(`[Research] Comprehensive test complete: ${results.totalPredictions} predictions analyzed`);
       
       res.json({
         ...results,
@@ -9221,7 +9215,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { startYear, endYear, horizonMonths } = req.body;
       
-      console.log('[Backtest] Starting historical validation with real data integration...');
       
       const results = await backtestEngine.runBacktest(
         user.companyId!,
@@ -13832,7 +13825,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (emailPromises.length > 0) {
           Promise.allSettled(emailPromises).then(results => {
             const sent = results.filter(r => r.status === 'fulfilled').length;
-            console.log(`[S&OP] Sent ${sent}/${emailPromises.length} meeting invitations`);
           });
         }
       }
@@ -13840,7 +13832,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Handle in-app alerts (log for now - can be extended with notification system)
       if (sendInAppAlerts && attendees && Array.isArray(attendees)) {
         const attendeeCount = attendees.length;
-        console.log(`[S&OP] In-app alerts queued for ${attendeeCount} attendees for meeting ${meeting.id}`);
         // Future enhancement: Store notifications in a notifications table
         // and deliver via WebSocket for real-time alerts
       }
@@ -16376,7 +16367,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const topic = req.headers["x-shopify-topic"] as string;
       
       if (!hmacHeader || !shopDomain) {
-        console.log("Shopify webhook missing required headers");
         return res.status(401).json({ error: "Missing authentication headers" });
       }
       
@@ -16386,7 +16376,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const company = companies[0];
       
       if (!company?.shopifySecret) {
-        console.log(`No Shopify secret configured for domain: ${shopDomain}`);
         return res.status(401).json({ error: "Shopify integration not configured" });
       }
       
@@ -16403,19 +16392,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For enhanced security in production, capture raw body before parsing
       // For now, we use a relaxed check that logs mismatches but allows processing
       if (computedHmac !== hmacHeader) {
-        console.log("Shopify webhook HMAC mismatch - rejecting request");
         return res.status(401).json({ error: "Invalid HMAC signature" });
       }
       
-      console.log(`Shopify webhook received: ${topic} from ${shopDomain}`);
       
       // Process based on topic
       if (topic === "orders/create" || topic === "orders/fulfilled") {
-        console.log("Processing Shopify order as demand signal");
       } else if (topic === "inventory_levels/update") {
-        console.log("Processing Shopify inventory update");
       } else if (topic === "products/update") {
-        console.log("Processing Shopify product update");
       }
       
       res.status(200).json({ received: true });
@@ -16446,7 +16430,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const { action, data } = req.body;
-      console.log(`n8n webhook received for company ${companyId}: action=${action}`, data);
       
       // Process based on action
       if (action === "create_demand_signal") {
@@ -19305,7 +19288,6 @@ You'll receive emails for:
         authUserId
       );
       
-      console.log(`[Credentials] User ${authUserId} stored credentials for ${integrationId}`);
       res.json({ success: true, message: "Credentials stored securely" });
     } catch (error: any) {
       console.error("Error storing credentials:", error);
@@ -19334,7 +19316,6 @@ You'll receive emails for:
       const { CredentialService } = await import("./lib/credentialService");
       await CredentialService.deleteCredentials(user.companyId, integrationId);
       
-      console.log(`[Credentials] User ${authUserId} deleted credentials for ${integrationId}`);
       res.json({ success: true, message: "Credentials deleted" });
     } catch (error: any) {
       console.error("Error deleting credentials:", error);
