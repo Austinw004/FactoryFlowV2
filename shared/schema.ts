@@ -527,6 +527,7 @@ export const suppliers = pgTable(
       .references(() => companies.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     contactEmail: text("contact_email"),
+    materialCategories: text("material_categories").array(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [index("suppliers_company_idx").on(table.companyId)],
