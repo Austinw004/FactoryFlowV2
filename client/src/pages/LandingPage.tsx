@@ -75,7 +75,6 @@ export default function LandingPage() {
           </nav>
           <div className="flex items-center gap-3">
             <a href="/signin" className="text-sm text-soft hover:text-bone transition">Sign in</a>
-            <button onClick={handleTalkToSales} className="btn-ghost text-xs px-4 py-2" data-testid="button-contact-us-nav">Contact Us</button>
             <button onClick={handleStartTrial} className="btn-primary text-sm" data-testid="button-start-trial-nav">Start free trial</button>
           </div>
         </div>
