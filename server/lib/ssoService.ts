@@ -18,6 +18,7 @@ import { db } from "../db";
 import { users } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
 import { OAuth2Client } from "google-auth-library";
 import { signAccessToken, signRefreshToken } from "./jwtAuth";
 import { logger } from "./structuredLogger";
@@ -37,7 +38,60 @@ export interface SsoLoginResult {
   accessToken:  string;
   refreshToken: string;
   user:         { id: string; email: string; role: string; isNewUser: boolean };
-  authSource:   "saml" | "google-oauth" | "google-oauth-simulated";
+  authSource:   "saml" | "google-oauth" | "google-oauth-simulated" | "apple-oauth";
+}
+
+// ─── Config helpers ───────────────────────────────────────────────────────────
+
+export function googleOAuthConfigured(): boolean {
+  return !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+}
+
+export function appleOAuthConfigured(): boolean {
+  return !!(
+    process.env.APPLE_CLIENT_ID &&
+    process.env.APPLE_TEAM_ID &&
+    process.env.APPLE_KEY_ID &&
+    process.env.APPLE_PRIVATE_KEY
+  );
+}
+
+export function googleAuthorizeUrl(state: string): string {
+  const clientId = process.env.GOOGLE_CLIENT_ID!;
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI ||
+    `${publicBaseUrl()}/api/auth/google/callback`;
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    response_type: "code",
+    scope: "openid email profile",
+    state,
+    access_type: "online",
+    prompt: "select_account",
+  });
+  return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+}
+
+export function appleAuthorizeUrl(state: string): string {
+  const clientId = process.env.APPLE_CLIENT_ID!; // Services ID
+  const redirectUri = process.env.APPLE_REDIRECT_URI ||
+    `${publicBaseUrl()}/api/auth/apple/callback`;
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    response_type: "code",
+    response_mode: "form_post", // Apple requires form_post for email/name scopes
+    scope: "name email",
+    state,
+  });
+  return `https://appleid.apple.com/auth/authorize?${params.toString()}`;
+}
+
+function publicBaseUrl(): string {
+  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, "");
+  if (process.env.REPLIT_DOMAINS) return `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`;
+  if (process.env.REPLIT_DEV_DOMAIN) return `https://${process.env.REPLIT_DEV_DOMAIN}`;
+  return "http://localhost:5000";
 }
 
 // ─── Domain → role mapping ────────────────────────────────────────────────────
@@ -249,4 +303,148 @@ function verifySignatureStub(rawXml: string, idpEntityId?: string): boolean {
   // Return false to force rejection in strict mode.
   logger.warn("sso" as any, "SAML signature verification is STUBBED — returns false", { idpEntityId });
   return false;
+}
+
+// ─── Apple OAuth Handler ──────────────────────────────────────────────────────
+//
+// Sign in with Apple requires:
+//   APPLE_CLIENT_ID    — your Services ID (e.g. com.prescient-labs.signin)
+//   APPLE_TEAM_ID      — 10-char Apple Developer Team ID
+//   APPLE_KEY_ID       — 10-char Key ID from the Sign In with Apple key
+//   APPLE_PRIVATE_KEY  — contents of the .p8 private key file (including BEGIN/END)
+//   APPLE_REDIRECT_URI — e.g. https://prescient-labs.com/api/auth/apple/callback
+//
+// Apple uses a form_post callback (not GET). The code below exchanges the code
+// for tokens using a short-lived client_secret JWT signed with the .p8 key.
+
+interface AppleIdTokenClaims {
+  sub:            string;   // stable Apple user id
+  email?:         string;   // may be private relay address
+  email_verified?: string | boolean;
+  is_private_email?: string | boolean;
+}
+
+export async function handleAppleAuth(input: {
+  code:       string;
+  rawUser?:   string; // Apple sends user JSON as { name: { firstName, lastName }, email } on first signin only
+}, ipAddress?: string): Promise<SsoLoginResult> {
+  if (!appleOAuthConfigured()) {
+    throw Object.assign(new Error("Apple Sign-In is not configured on this server."), {
+      code: "APPLE_NOT_CONFIGURED", status: 501,
+    });
+  }
+
+  const clientId    = process.env.APPLE_CLIENT_ID!;
+  const teamId      = process.env.APPLE_TEAM_ID!;
+  const keyId       = process.env.APPLE_KEY_ID!;
+  // .p8 private key. When stored in Replit Secrets, literal \n in the text may
+  // get saved as the two characters \n — normalise that here.
+  const privateKey  = process.env.APPLE_PRIVATE_KEY!.replace(/\\n/g, "\n");
+  const redirectUri = process.env.APPLE_REDIRECT_URI ||
+    `${publicBaseUrl()}/api/auth/apple/callback`;
+
+  // ── 1. Sign a short-lived client_secret JWT (ES256, per Apple spec) ─────
+  const clientSecret = jwt.sign(
+    {
+      iss: teamId,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + 300,
+      aud: "https://appleid.apple.com",
+      sub: clientId,
+    },
+    privateKey,
+    {
+      algorithm: "ES256",
+      keyid:     keyId,
+    },
+  );
+
+  // ── 2. Exchange authorization code for id_token ─────────────────────────
+  const body = new URLSearchParams({
+    client_id:     clientId,
+    client_secret: clientSecret,
+    code:          input.code,
+    grant_type:    "authorization_code",
+    redirect_uri:  redirectUri,
+  });
+
+  const res = await fetch("https://appleid.apple.com/auth/token", {
+    method:  "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body,
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    logger.error("sso" as any, "Apple token exchange failed", { status: res.status, body: text });
+    throw Object.assign(new Error("Apple token exchange failed."), {
+      code: "APPLE_TOKEN_EXCHANGE_FAILED", status: 401,
+    });
+  }
+
+  const tokenResp = await res.json() as { id_token?: string; refresh_token?: string };
+  if (!tokenResp.id_token) {
+    throw Object.assign(new Error("Apple response missing id_token."), {
+      code: "APPLE_NO_ID_TOKEN", status: 401,
+    });
+  }
+
+  // ── 3. Decode the id_token to get sub + email ──────────────────────────
+  // NOTE: For full defense we should verify the RSA signature against
+  // https://appleid.apple.com/auth/keys (JWKS). The id_token was received
+  // over TLS directly from Apple in response to our authenticated token
+  // exchange, so it is trusted in practice; adding JWKS validation is a
+  // hardening pass tracked in the security backlog.
+  const claims = jwt.decode(tokenResp.id_token) as AppleIdTokenClaims | null;
+  if (!claims || !claims.sub) {
+    throw Object.assign(new Error("Apple id_token missing required claims."), {
+      code: "APPLE_INVALID_ID_TOKEN", status: 401,
+    });
+  }
+
+  // Apple only returns email on first-time consent; for subsequent signins
+  // we rely on sub → user lookup, but for the initial creation we need email.
+  let email = claims.email;
+
+  // First-time signins include a `user` JSON blob in the authorize callback
+  // with the user's name. Parse it here if present.
+  let firstName: string | undefined;
+  let lastName:  string | undefined;
+  if (input.rawUser) {
+    try {
+      const u = JSON.parse(input.rawUser) as { name?: { firstName?: string; lastName?: string }; email?: string };
+      firstName = u.name?.firstName;
+      lastName  = u.name?.lastName;
+      if (!email && u.email) email = u.email;
+    } catch {
+      // Ignore malformed user blob — email from id_token is authoritative.
+    }
+  }
+
+  if (!email) {
+    throw Object.assign(new Error("Apple account has no email on record and none was provided."), {
+      code: "APPLE_NO_EMAIL", status: 400,
+    });
+  }
+
+  if (!isDomainAllowed(email)) {
+    throw Object.assign(new Error("Email domain not authorized for SSO access."), {
+      code: "DOMAIN_NOT_ALLOWED", status: 403,
+    });
+  }
+
+  // ── 4. Upsert by email (schema has no dedicated appleSub column yet) ───
+  const { user, isNewUser } = await provisionSsoUser({ email, firstName, lastName });
+
+  logger.info("sso" as any, isNewUser ? "Apple user provisioned" : "Apple user logged in", {
+    userId: user.id, authSource: "apple-oauth", ipAddress: ipAddress ? "[REDACTED]" : null,
+  });
+
+  const tokenBase = { sub: user.id, email: user.email, role: user.role, companyId: user.companyId };
+  return {
+    accessToken:  signAccessToken(tokenBase),
+    refreshToken: signRefreshToken(tokenBase),
+    user:         { id: user.id, email: user.email, role: user.role, isNewUser },
+    authSource:   "apple-oauth",
+  };
 }

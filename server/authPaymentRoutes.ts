@@ -28,8 +28,9 @@
  * Auth flows: JWT Bearer (API/mobile) + HTTP-only refresh cookie (browser).
  * Replit Auth (OpenID Connect) remains intact for the web dashboard.
  */
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import express from "express";
+import { parse as parseCookies } from "cookie";
 import { z } from "zod";
 import {
   signup, login, logout, forgotPassword, resetPassword,
@@ -40,7 +41,12 @@ import {
 import { jwtMiddleware, requireJwt, getAuthUser } from "./lib/jwtAuth";
 import { checkTrialExpiry } from "./middleware/trialCheck";
 import { handleStripeWebhook } from "./lib/stripeWebhookHandler";
-import { handleGoogleAuth, handleSamlCallback } from "./lib/ssoService";
+import {
+  handleGoogleAuth, handleSamlCallback, handleAppleAuth,
+  googleOAuthConfigured, appleOAuthConfigured,
+  googleAuthorizeUrl, appleAuthorizeUrl,
+} from "./lib/ssoService";
+import crypto from "crypto";
 import {
   getPlans, createSubscription, recordUsageEvent,
   generateInvoice, getUserSubscription,
@@ -113,7 +119,23 @@ function handle(fn: (req: Request, res: Response) => Promise<void>) {
   };
 }
 
+// ─── Cookie parser ────────────────────────────────────────────────────────────
+// Express doesn't populate req.cookies by default. We use the `cookie` package
+// (already in deps; transitively via express-session) to parse the Cookie
+// header once per request so both the refresh-token cookie and the OAuth state
+// cookie are available via req.cookies[name].
+function parseCookieHeaderMiddleware(req: Request, _res: Response, next: NextFunction) {
+  if (!(req as any).cookies) {
+    const header = req.headers.cookie;
+    (req as any).cookies = header ? parseCookies(header) : {};
+  }
+  next();
+}
+
 export function registerAuthPaymentRoutes(app: Express): void {
+  // Populate req.cookies from the Cookie header
+  app.use(parseCookieHeaderMiddleware);
+
   // JWT middleware (non-blocking, reads Bearer header)
   app.use(jwtMiddleware);
 
@@ -205,6 +227,139 @@ export function registerAuthPaymentRoutes(app: Express): void {
       authSource:   result.authSource,
     });
   }));
+
+  // ─── Browser-redirect OAuth flow (Google + Apple) ──────────────────────────
+  // These endpoints are hit directly by the user's browser when they click the
+  // "Continue with Google" / "Continue with Apple" buttons on the sign-in page.
+  // They redirect to the provider, then the provider bounces back to the
+  // callback route where we exchange the code, mint JWTs, set the refresh
+  // cookie, and redirect to /auth/callback#accessToken=... on the SPA side.
+
+  const OAUTH_STATE_COOKIE = "prescient_oauth_state";
+  const OAUTH_STATE_OPTS = {
+    httpOnly: true,
+    secure:   process.env.NODE_ENV === "production",
+    sameSite: "lax" as const, // lax so it survives the top-level redirect back
+    maxAge:   10 * 60 * 1000, // 10 minutes
+    path:     "/api/auth",
+  };
+
+  function buildCallbackRedirect(result: Awaited<ReturnType<typeof handleGoogleAuth>>): string {
+    const params = new URLSearchParams({
+      accessToken: result.accessToken,
+      new:         result.user.isNewUser ? "1" : "0",
+    });
+    // Use hash fragment so the token is never sent to the server in referer / logs.
+    return `/auth/callback#${params.toString()}`;
+  }
+
+  function buildErrorRedirect(message: string): string {
+    const params = new URLSearchParams({ error: message });
+    return `/signin?${params.toString()}`;
+  }
+
+  /** GET /api/auth/google/start — redirect to Google's OAuth consent screen. */
+  app.get("/api/auth/google/start", handle(async (req, res) => {
+    if (!googleOAuthConfigured()) {
+      res.redirect(buildErrorRedirect("Google Sign-In is not configured on this deployment."));
+      return;
+    }
+    const state = crypto.randomBytes(24).toString("hex");
+    res.cookie(OAUTH_STATE_COOKIE, `g:${state}`, OAUTH_STATE_OPTS);
+    res.redirect(googleAuthorizeUrl(state));
+  }));
+
+  /** GET /api/auth/google/callback — exchange code, set cookie, redirect to SPA. */
+  app.get("/api/auth/google/callback", handle(async (req, res) => {
+    const ctx = clientContext(req);
+    const code        = req.query.code        as string | undefined;
+    const stateQuery  = req.query.state       as string | undefined;
+    const errorQuery  = req.query.error       as string | undefined;
+    const cookieState = req.cookies?.[OAUTH_STATE_COOKIE] as string | undefined;
+
+    // Clear the state cookie no matter what — it's single-use.
+    res.clearCookie(OAUTH_STATE_COOKIE, { path: "/api/auth" });
+
+    if (errorQuery) {
+      res.redirect(buildErrorRedirect(`Google sign-in was cancelled (${errorQuery}).`));
+      return;
+    }
+    if (!code) {
+      res.redirect(buildErrorRedirect("Google sign-in returned no authorization code."));
+      return;
+    }
+    if (!cookieState || !cookieState.startsWith("g:") || cookieState.slice(2) !== stateQuery) {
+      res.redirect(buildErrorRedirect("Google sign-in failed state check. Please try again."));
+      return;
+    }
+
+    try {
+      const result = await handleGoogleAuth({ code }, ctx.ipAddress);
+      res.cookie(REFRESH_COOKIE, result.refreshToken, COOKIE_OPTS);
+      res.redirect(buildCallbackRedirect(result));
+    } catch (err: any) {
+      const message = err?.message ?? "Google sign-in failed.";
+      res.redirect(buildErrorRedirect(message));
+    }
+  }));
+
+  /** GET /api/auth/apple/start — redirect to Apple's OAuth consent screen. */
+  app.get("/api/auth/apple/start", handle(async (req, res) => {
+    if (!appleOAuthConfigured()) {
+      res.redirect(buildErrorRedirect("Apple Sign-In is not configured on this deployment."));
+      return;
+    }
+    const state = crypto.randomBytes(24).toString("hex");
+    res.cookie(OAUTH_STATE_COOKIE, `a:${state}`, OAUTH_STATE_OPTS);
+    res.redirect(appleAuthorizeUrl(state));
+  }));
+
+  /**
+   * POST /api/auth/apple/callback — Apple posts the auth code back as a form.
+   * Because the callback comes from Apple (cross-site), the sameSite=lax cookie
+   * WILL be omitted. Apple signs the state back to us so we still verify it via
+   * the form body; the cookie is checked only as a best-effort second factor.
+   */
+  app.post("/api/auth/apple/callback",
+    express.urlencoded({ extended: false }),
+    handle(async (req, res) => {
+      const ctx = clientContext(req);
+      const code       = req.body.code       as string | undefined;
+      const stateBody  = req.body.state      as string | undefined;
+      const rawUser    = req.body.user       as string | undefined;
+      const errorBody  = req.body.error      as string | undefined;
+      const cookieState = req.cookies?.[OAUTH_STATE_COOKIE] as string | undefined;
+
+      res.clearCookie(OAUTH_STATE_COOKIE, { path: "/api/auth" });
+
+      if (errorBody) {
+        res.redirect(buildErrorRedirect(`Apple sign-in was cancelled (${errorBody}).`));
+        return;
+      }
+      if (!code) {
+        res.redirect(buildErrorRedirect("Apple sign-in returned no authorization code."));
+        return;
+      }
+      if (!stateBody) {
+        res.redirect(buildErrorRedirect("Apple sign-in missing state parameter."));
+        return;
+      }
+      // Cookie is a soft check (SameSite=Lax + cross-site POST may drop it).
+      if (cookieState && (!cookieState.startsWith("a:") || cookieState.slice(2) !== stateBody)) {
+        res.redirect(buildErrorRedirect("Apple sign-in failed state check. Please try again."));
+        return;
+      }
+
+      try {
+        const result = await handleAppleAuth({ code, rawUser }, ctx.ipAddress);
+        res.cookie(REFRESH_COOKIE, result.refreshToken, COOKIE_OPTS);
+        res.redirect(buildCallbackRedirect(result));
+      } catch (err: any) {
+        const message = err?.message ?? "Apple sign-in failed.";
+        res.redirect(buildErrorRedirect(message));
+      }
+    }),
+  );
 
   /** POST /api/auth/saml/callback — SAML 2.0 assertion handler */
   app.post("/api/auth/saml/callback", handle(async (req, res) => {

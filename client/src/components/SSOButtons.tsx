@@ -1,18 +1,12 @@
-import { useToast } from "@/hooks/use-toast";
-
 interface SSOButtonsProps {
   mode?: "signup" | "login";
 }
 
 export function SSOButtons({ mode = "signup" }: SSOButtonsProps) {
-  const { toast } = useToast();
-
-  const handleSSO = (provider: "Google" | "Apple") => {
-    toast({
-      title: `${provider} sign-in is launching soon`,
-      description:
-        "We're finalizing our enterprise SSO rollout. For now, please continue with your work email.",
-    });
+  const handleSSO = (provider: "google" | "apple") => {
+    // Top-level navigation to the start endpoint. The server generates a state
+    // value, sets a short-lived cookie, and redirects to the provider.
+    window.location.href = `/api/auth/${provider}/start`;
   };
 
   const verb = mode === "signup" ? "Sign up" : "Continue";
@@ -21,7 +15,7 @@ export function SSOButtons({ mode = "signup" }: SSOButtonsProps) {
     <div className="space-y-3">
       <button
         type="button"
-        onClick={() => handleSSO("Google")}
+        onClick={() => handleSSO("google")}
         data-testid="button-sso-google"
         className="flex w-full items-center justify-center gap-3 rounded-md border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover-elevate active-elevate-2"
       >
@@ -36,7 +30,7 @@ export function SSOButtons({ mode = "signup" }: SSOButtonsProps) {
 
       <button
         type="button"
-        onClick={() => handleSSO("Apple")}
+        onClick={() => handleSSO("apple")}
         data-testid="button-sso-apple"
         className="flex w-full items-center justify-center gap-3 rounded-md border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover-elevate active-elevate-2"
       >

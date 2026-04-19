@@ -25,6 +25,7 @@ import DashboardHub from "@/pages/DashboardHub";
 import Onboarding from "@/pages/Onboarding";
 import SignUpPage from "@/pages/SignUpPage";
 import SignInPage from "@/pages/SignInPage";
+import AuthCallback from "@/pages/AuthCallback";
 import Pricing from "@/pages/Pricing";
 
 // Lazy-loaded pages — split into separate chunks for faster initial load
@@ -148,6 +149,7 @@ function Router() {
           <Route path="/status" component={Status} />
           <Route path="/signup" component={SignUpPage} />
           <Route path="/signin" component={SignInPage} />
+          <Route path="/auth/callback" component={AuthCallback} />
           <Route path="/preview/variant-a" component={LandingPageVariantA} />
           <Route path="/preview/variant-b" component={LandingPageVariantB} />
           <Route path="/preview/variant-c" component={LandingPageVariantC} />
@@ -256,6 +258,9 @@ function Router() {
       {/* Federal grant-readiness surfaces */}
       <Route path="/impact" component={ImpactDashboard} />
       <Route path="/training" component={Training} />
+
+      {/* OAuth callback — routes through even if already authenticated */}
+      <Route path="/auth/callback" component={AuthCallback} />
 
       <Route component={NotFound} />
     </Switch>
