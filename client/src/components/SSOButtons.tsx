@@ -2,6 +2,12 @@ interface SSOButtonsProps {
   mode?: "signup" | "login";
 }
 
+// Apple Sign-In is parked until we enroll in the Apple Developer Program
+// ($99/yr). Server routes at /api/auth/apple/{start,callback} remain wired —
+// flip this to `true` to surface the button once APPLE_CLIENT_ID,
+// APPLE_TEAM_ID, APPLE_KEY_ID, and APPLE_PRIVATE_KEY are set in prod secrets.
+const APPLE_ENABLED = false;
+
 export function SSOButtons({ mode = "signup" }: SSOButtonsProps) {
   const handleSSO = (provider: "google" | "apple") => {
     // Top-level navigation to the start endpoint. The server generates a state
@@ -28,17 +34,19 @@ export function SSOButtons({ mode = "signup" }: SSOButtonsProps) {
         <span>{verb} with Google</span>
       </button>
 
-      <button
-        type="button"
-        onClick={() => handleSSO("apple")}
-        data-testid="button-sso-apple"
-        className="flex w-full items-center justify-center gap-3 rounded-md border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover-elevate active-elevate-2"
-      >
-        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
-        </svg>
-        <span>{verb} with Apple</span>
-      </button>
+      {APPLE_ENABLED && (
+        <button
+          type="button"
+          onClick={() => handleSSO("apple")}
+          data-testid="button-sso-apple"
+          className="flex w-full items-center justify-center gap-3 rounded-md border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover-elevate active-elevate-2"
+        >
+          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+          </svg>
+          <span>{verb} with Apple</span>
+        </button>
+      )}
 
       <div className="relative my-2">
         <div className="absolute inset-0 flex items-center">
