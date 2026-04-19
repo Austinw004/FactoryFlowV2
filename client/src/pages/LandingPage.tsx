@@ -102,38 +102,6 @@ export default function LandingPage() {
 
       <div className="divider relative z-10"></div>
 
-      {/* Where we are — honest, pre-revenue posture. No fake logos, no fake NDAs. */}
-      <div className="max-w-7xl mx-auto px-10 py-20 relative z-10" data-testid="section-where-we-are">
-        <div className="eyebrow mb-10">Where we are</div>
-        <div className="grid md:grid-cols-12 gap-10">
-          <div className="md:col-span-5">
-            <h3 className="text-3xl md:text-4xl display leading-tight mb-5">
-              Early. Honest about it.
-            </h3>
-            <p className="text-soft leading-relaxed text-base max-w-xl">
-              Prescient Labs is a pre-revenue company building the first version of this platform in the open. We don&apos;t have paying customers yet and we&apos;re not going to fake any.
-            </p>
-          </div>
-          <div className="md:col-span-7 md:pl-10 md:border-l hair">
-            <p className="text-soft leading-relaxed text-sm mb-4">
-              What we&apos;re looking for: two to four design partners for the first cohort. Mid-market manufacturers with a real ERP, a plant director who feels commodity volatility in their gut, and a willingness to tell us the truth about what works and what doesn&apos;t.
-            </p>
-            <p className="text-soft leading-relaxed text-sm mb-6">
-              What design partners get: a heavily discounted 90-day paid pilot, a direct line to the founders, meaningful influence on the roadmap, and — if the numbers land — a named case study (anonymous is also fine). If the platform doesn&apos;t save you money against a baseline we measure together, you don&apos;t pay for the subscription after the pilot.
-            </p>
-            <a
-              href="/contact?topic=pilot"
-              className="btn-primary text-sm px-5 py-2.5 inline-block"
-              data-testid="link-design-partner"
-            >
-              Apply — design partner cohort
-            </a>
-          </div>
-        </div>
-      </div>
-
-      <div className="divider relative z-10"></div>
-
       {/* Capabilities */}
       <div id="platform" className="max-w-7xl mx-auto px-10 py-28 relative z-10">
         <div className="eyebrow mb-16">Platform</div>
