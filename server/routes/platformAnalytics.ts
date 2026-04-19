@@ -5,41 +5,57 @@ import { platformAnalyticsService } from "../lib/platformAnalytics";
 const router = Router();
 
 const requirePlatformAdmin = async (req: any, res: any, next: any) => {
-  const user = req.user;
-  if (!user?.claims?.sub) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
+  try {
+    const user = req.user;
+    if (!user?.claims?.sub) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
 
-  const isPlatformAdmin = await platformAnalyticsService.isPlatformAdmin(user.claims.sub);
-  if (!isPlatformAdmin) {
-    return res.status(403).json({ 
-      error: "Access denied. Platform admin privileges required.",
-      code: "PLATFORM_ADMIN_REQUIRED"
+    const isPlatformAdmin = await platformAnalyticsService.isPlatformAdmin(user.claims.sub);
+    if (!isPlatformAdmin) {
+      return res.status(403).json({
+        error: "Access denied. Platform admin privileges required.",
+        code: "PLATFORM_ADMIN_REQUIRED"
+      });
+    }
+
+    req.platformAdmin = await platformAnalyticsService.getPlatformAdmin(user.claims.sub);
+    next();
+  } catch (error) {
+    console.error("[requirePlatformAdmin] Error:", error);
+    res.status(500).json({
+      error: "We couldn't verify your access. Please try again.",
+      code: "INTERNAL_ERROR",
     });
   }
-
-  req.platformAdmin = await platformAnalyticsService.getPlatformAdmin(user.claims.sub);
-  next();
 };
 
 router.get("/check-access", isAuthenticated, async (req: any, res) => {
-  const user = req.user;
-  if (!user?.claims?.sub) {
-    return res.json({ isPlatformAdmin: false });
+  try {
+    const user = req.user;
+    if (!user?.claims?.sub) {
+      return res.json({ isPlatformAdmin: false });
+    }
+
+    const isPlatformAdmin = await platformAnalyticsService.isPlatformAdmin(user.claims.sub);
+    const admin = isPlatformAdmin
+      ? await platformAnalyticsService.getPlatformAdmin(user.claims.sub)
+      : null;
+
+    res.json({
+      isPlatformAdmin,
+      admin: admin ? {
+        role: admin.role,
+        accessLevel: admin.accessLevel,
+      } : null
+    });
+  } catch (error) {
+    console.error("[GET /check-access] Error:", error);
+    res.status(500).json({
+      error: "We couldn't check platform admin access. Please try again.",
+      code: "INTERNAL_ERROR",
+    });
   }
-
-  const isPlatformAdmin = await platformAnalyticsService.isPlatformAdmin(user.claims.sub);
-  const admin = isPlatformAdmin 
-    ? await platformAnalyticsService.getPlatformAdmin(user.claims.sub) 
-    : null;
-
-  res.json({ 
-    isPlatformAdmin, 
-    admin: admin ? {
-      role: admin.role,
-      accessLevel: admin.accessLevel,
-    } : null
-  });
 });
 
 router.get("/metrics", isAuthenticated, requirePlatformAdmin, async (req: any, res) => {
