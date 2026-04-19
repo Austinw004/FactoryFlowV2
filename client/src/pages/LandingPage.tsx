@@ -75,7 +75,6 @@ export default function LandingPage() {
           </nav>
           <div className="flex items-center gap-3">
             <a href="/signin" className="text-sm text-soft hover:text-bone transition">Sign in</a>
-            <button onClick={handleTalkToSales} className="btn-ghost text-xs px-4 py-2 uppercase tracking-[0.14em]" data-testid="button-talk-to-sales-nav">Talk to sales</button>
             <button onClick={handleStartTrial} className="btn-primary text-sm" data-testid="button-start-trial-nav">Start free trial</button>
           </div>
         </div>
@@ -95,46 +94,10 @@ export default function LandingPage() {
           </p>
           <div className="flex items-center gap-3 flex-wrap">
             <button onClick={handleStartTrial} className="btn-primary text-sm px-5 py-3" data-testid="button-start-trial-hero">Start 90-day free trial</button>
-            <button onClick={handleTalkToSales} className="btn-ghost text-sm px-5 py-3 uppercase tracking-[0.14em]" data-testid="button-talk-to-sales-hero">Talk to sales</button>
+            <button onClick={handleTalkToSales} className="btn-ghost text-sm px-5 py-3" data-testid="button-contact-us-hero">Contact Us</button>
           </div>
         </div>
         <div className="mt-6 text-xs mono text-muted">No credit card required · Cancel anytime · Reply within one business day</div>
-      </div>
-
-      {/* Product screen */}
-      <div className="max-w-7xl mx-auto px-10 pb-32 relative z-10">
-        <div className="border hair bg-panel" data-testid="product-screen">
-          <div className="h-10 border-b hair px-4 flex items-center gap-2">
-            <span className="dot bg-muted"></span>
-            <span className="dot bg-muted"></span>
-            <span className="dot bg-muted"></span>
-            <span className="mono text-xs text-muted ml-4">prescient-labs.prescient-labs.com / overview</span>
-          </div>
-          <div className="p-10">
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <div className="eyebrow mb-2">State of operations</div>
-                <div className="text-2xl display">Everything is nominal.</div>
-              </div>
-              <span className="mono text-xs text-muted">14:22 UTC · live</span>
-            </div>
-            <div className="grid grid-cols-4 gap-px bg-line mb-10">
-              <div className="bg-panel p-5"><div className="eyebrow mb-3">Forecast acc.</div><div className="text-2xl display">94.2%</div></div>
-              <div className="bg-panel p-5"><div className="eyebrow mb-3">Active SKUs</div><div className="text-2xl display">1,284</div></div>
-              <div className="bg-panel p-5"><div className="eyebrow mb-3">Exposure</div><div className="text-2xl display">$2.4M</div></div>
-              <div className="bg-panel p-5"><div className="eyebrow mb-3">Signals</div><div className="text-2xl display">3</div></div>
-            </div>
-            <svg viewBox="0 0 800 160" className="w-full h-40">
-              <line x1="0" y1="140" x2="800" y2="140" stroke="#1A1B1E"/>
-              <line x1="0" y1="90"  x2="800" y2="90"  stroke="#1A1B1E" strokeDasharray="2 4"/>
-              <line x1="0" y1="40"  x2="800" y2="40"  stroke="#1A1B1E" strokeDasharray="2 4"/>
-              <path d="M0,100 C80,80 160,65 240,70 C320,75 400,50 480,40 C560,30 640,45 720,50 L800,55 L800,90 C720,85 640,80 560,70 C480,60 400,85 320,100 C240,110 160,105 80,115 L0,130 Z" fill="#D9B56B" opacity="0.07"/>
-              <polyline points="0,120 100,100 200,85 300,70 400,55 500,45 600,50 700,48 800,52" fill="none" stroke="#D9B56B" strokeWidth="1.5" strokeDasharray="4 4"/>
-              <polyline points="0,130 100,115 200,95 300,80 400,65 500,58 600,62 700,58" fill="none" stroke="#F2F2F2" strokeWidth="1.5"/>
-              <circle cx="700" cy="58" r="3" fill="#F2F2F2"/>
-            </svg>
-          </div>
-        </div>
       </div>
 
       <div className="divider relative z-10"></div>
@@ -196,13 +159,12 @@ export default function LandingPage() {
           <div className="col-span-12 md:col-span-10 md:pl-10 border-l hair">
             <h3 className="text-4xl display mb-5">Supplier &amp; commodity.</h3>
             <p className="text-soft max-w-2xl leading-relaxed mb-6">
-              30/60/90-day commodity price forecasts with named drivers (regime, inflation, tariffs, geopolitics) and forward-buy guidance. Counterparty risk scored from payment history, on-time delivery, and public financial signals.
+              30/60/90-day commodity price forecasts with named drivers (regime, inflation, tariffs, geopolitics) and forward-buy guidance. Counterparty risk scored from your own payment history and on-time delivery record.
             </p>
             <ul className="text-sm text-muted space-y-2 max-w-2xl leading-relaxed">
               <li>— Multi-tier supplier mapping — know who your suppliers' suppliers are</li>
               <li>— Geopolitical risk monitoring with regional exposure scoring</li>
               <li>— Supply chain traceability with chain-of-custody for regulated inputs</li>
-              <li>— Industry consortium benchmarking (opt-in, differential-privacy)</li>
             </ul>
           </div>
         </div>
@@ -230,32 +192,32 @@ export default function LandingPage() {
             <div className="bg-ink p-8">
               <div className="mono text-xs text-muted mb-3">04 · Agentic AI</div>
               <div className="text-lg text-bone leading-tight mb-2">Four autonomy tiers, one audit trail.</div>
-              <div className="text-xs text-soft leading-relaxed">Start in suggest-only, graduate to auto-draft, then execute-with-approval, then fully autonomous. Every tier enforces per-agent guardrails, dollar caps, and approval workflows, and every action cites its source and is reversible.</div>
+              <div className="text-xs text-soft leading-relaxed">Agents start in suggest-only mode and graduate at your pace — first to auto-draft, then to execute-with-approval, and finally to full autonomy if you want it. Every tier respects per-agent guardrails, dollar caps, and approval workflows. Every action cites the data it used, and every action can be reversed.</div>
             </div>
             <div className="bg-ink p-8">
               <div className="mono text-xs text-muted mb-3">05 · Operations &amp; maintenance</div>
               <div className="text-lg text-bone leading-tight mb-2">Predictive, not reactive.</div>
-              <div className="text-xs text-soft leading-relaxed">Track machinery health, flag predictive-maintenance windows, surface production KPIs, schedule the workforce, and ship a shop-floor mode built for operators on the line.</div>
+              <div className="text-xs text-soft leading-relaxed">Monitor machinery health, flag predictive-maintenance windows before they become breakdowns, track production KPIs, and schedule the workforce. Operators on the line get a shop-floor mode built for the way they actually work.</div>
             </div>
             <div className="bg-ink p-8">
               <div className="mono text-xs text-muted mb-3">06 · Inventory &amp; network</div>
               <div className="text-lg text-bone leading-tight mb-2">Multi-echelon, multi-node.</div>
-              <div className="text-xs text-soft leading-relaxed">Optimize safety stock, see the full distribution network, pull in ERP templates for NetSuite, SAP, Oracle, and QuickBooks, and trace every unit from raw material to finished good.</div>
+              <div className="text-xs text-soft leading-relaxed">Optimize safety stock across every location and see your full distribution network in one view. ERP templates for NetSuite, SAP, Oracle, and QuickBooks get you started quickly, and traceability follows every unit from raw material to finished good.</div>
             </div>
             <div className="bg-ink p-8">
               <div className="mono text-xs text-muted mb-3">07 · Strategy &amp; scenarios</div>
               <div className="text-lg text-bone leading-tight mb-2">Model the decision before you make it.</div>
-              <div className="text-xs text-soft leading-relaxed">Run a digital twin of your operation. Simulate capex, outsourcing, and tariff-shock scenarios. Screen M&amp;A targets and benchmark against anonymized industry peers.</div>
+              <div className="text-xs text-soft leading-relaxed">Run a digital twin of your operation and simulate capex decisions, outsourcing moves, and tariff shocks before you commit. Screen M&amp;A targets and benchmark your results against anonymized industry peers.</div>
             </div>
             <div className="bg-ink p-8">
               <div className="mono text-xs text-muted mb-3">08 · Audit &amp; compliance</div>
               <div className="text-lg text-bone leading-tight mb-2">Audit-grade by default.</div>
-              <div className="text-xs text-soft leading-relaxed">Every mutation writes an immutable audit log with 18-month retention. A controlled-document SOP workspace ships built-in. Designed for FDA, ISO 9001, and ITAR-adjacent environments.</div>
+              <div className="text-xs text-soft leading-relaxed">Every mutation writes an immutable, insert-only audit log. A controlled-document SOP workspace ships built in, and the platform is designed for FDA, ISO 9001, and ITAR-adjacent environments.</div>
             </div>
             <div className="bg-ink p-8">
               <div className="mono text-xs text-muted mb-3">09 · ROI &amp; impact</div>
               <div className="text-lg text-bone leading-tight mb-2">Show the money.</div>
-              <div className="text-xs text-soft leading-relaxed">Track verified savings per recommendation, build an ROI dashboard for the CFO, and produce impact reports for boards and grant programs. Proof before renewal — not claims.</div>
+              <div className="text-xs text-soft leading-relaxed">Every recommendation carries a verified-savings number. Your CFO gets an ROI dashboard, and your board or grant program gets an impact report. Proof before you renew — not just claims.</div>
             </div>
           </div>
         </div>
@@ -271,7 +233,7 @@ export default function LandingPage() {
             <h3 className="text-4xl display">Connect your stack.</h3>
           </div>
           <p className="text-soft text-sm max-w-sm leading-relaxed">
-            40+ native integrations across ERP, e-commerce, shipping, CRM, finance, support, and analytics.
+            Connectors across ERP, e-commerce, shipping, CRM, finance, support, and analytics. Depth varies by integration — ask us what's production-ready today.
           </p>
         </div>
 
@@ -298,12 +260,12 @@ export default function LandingPage() {
           <div className="bg-ink p-10">
             <div className="mono text-xs text-muted mb-8">01</div>
             <div className="text-2xl display mb-4">Managed cloud</div>
-            <p className="text-soft text-sm leading-relaxed">Hosted on AWS. Fastest onboarding. SOC 2 Type II audit in progress.</p>
+            <p className="text-soft text-sm leading-relaxed">Hosted cloud — fastest onboarding. Security posture documented on the Trust page.</p>
           </div>
           <div className="bg-ink p-10">
             <div className="mono text-xs text-muted mb-8">02</div>
             <div className="text-2xl display mb-4">Tenant VPC</div>
-            <p className="text-soft text-sm leading-relaxed">Dedicated infrastructure in your AWS account. Available on the Performance plan.</p>
+            <p className="text-soft text-sm leading-relaxed">Dedicated infrastructure in your own cloud account. On the roadmap for design-partner customers — talk to us about timing.</p>
           </div>
           <div className="bg-ink p-10">
             <div className="mono text-xs text-muted mb-8">03</div>
@@ -382,7 +344,7 @@ export default function LandingPage() {
             <p className="text-soft mt-6 text-sm">90 days free. No credit card. Cancel anytime.</p>
           </div>
           <div className="col-span-12 md:col-span-4 flex md:justify-end items-end gap-3 flex-wrap">
-            <button onClick={handleTalkToSales} className="btn-ghost text-sm px-6 py-3 uppercase tracking-[0.14em]" data-testid="button-talk-to-sales-final">Talk to sales</button>
+            <button onClick={handleTalkToSales} className="btn-ghost text-sm px-6 py-3" data-testid="button-contact-us-final">Contact Us</button>
             <button onClick={handleStartTrial} className="btn-primary text-sm px-6 py-3" data-testid="button-start-trial-final">Start 90-day free trial</button>
           </div>
         </div>
@@ -413,7 +375,7 @@ export default function LandingPage() {
               info@prescient-labs.com
             </a>
           </nav>
-          <div className="mono text-xs">© 2026 · SOC 2 in progress</div>
+          <div className="mono text-xs">© 2026 Prescient Labs, Inc.</div>
         </div>
       </footer>
     </div>
