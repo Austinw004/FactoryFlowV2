@@ -46,27 +46,27 @@ export default function SecurityFaq() {
       questions: [
         {
           q: "Where is my data stored?",
-          a: "Your data is stored in secure, SOC 2 compliant data centers in the United States (US-East, primary) with hot-standby replication in US-West. Enterprise customers on the Tenant VPC deployment can specify region — EU (Frankfurt) and APAC (Sydney) are available on request. All storage is on encrypted managed-Postgres with point-in-time recovery.",
+          a: "Your data is stored on managed Postgres inside our hosting platform, running in a US AWS region. Multi-region deployment (EU, APAC) is on the roadmap for Tenant VPC customers but is not available today. Storage is encrypted at rest and backed up with point-in-time recovery (currently 7 days by hosting provider default).",
         },
         {
           q: "Who are your subprocessors?",
-          a: "The current list of subprocessors that may process customer data: (1) AWS — primary hosting and managed Postgres, US-East/US-West; (2) Stripe — billing and payment processing; (3) OpenAI and Anthropic — AI inference for forecasting copilot features (your raw data is never used to train their models; we operate under their zero-retention enterprise API terms); (4) Resend — transactional email (invitations, alerts, password resets); (5) Sentry — error telemetry with PII scrubbing enabled. We give 30 days' notice before adding or swapping a subprocessor. Email info@prescient-labs.com for the signed subprocessor addendum.",
+          a: "The current list of subprocessors that may process customer data: (1) Replit / AWS — application hosting and managed Postgres; (2) Stripe — billing and payment processing; (3) OpenAI and Anthropic — LLM inference for AI copilot features, operated under their zero-retention API terms so your prompts are not used for training; (4) SendPulse — transactional email (invitations, alerts, password resets). We will give 30 days' notice before adding or swapping a subprocessor. Email info@prescient-labs.com to subscribe to the notification list or request a signed subprocessor addendum.",
         },
         {
           q: "Who can access my data?",
-          a: "Only authorized members of your organization can access your data. Prescient Labs employees cannot view your production data without explicit, time-bound customer authorization, and all access is logged immutably. Our support team may request temporary read-only access for troubleshooting — this requires your written approval and expires automatically in 24 hours.",
+          a: "Only authorized members of your organization can access your data through the application. Prescient Labs is a small team; no staff member has routine access to customer production data. For troubleshooting, any access requires the customer's explicit written approval and is logged in the application audit trail.",
         },
         {
           q: "Is my data used to train your AI models?",
-          a: "No. Your company's data is never used to train shared models or improve predictions for other customers. Your forecasting models are trained exclusively on your own historical data. Our third-party LLM providers (OpenAI, Anthropic) operate under zero-retention enterprise API terms — your prompts and responses are not retained or used for training.",
+          a: "No. Your company's data is never used to train shared models or improve predictions for other customers. Our third-party LLM providers (OpenAI, Anthropic) are operated under zero-retention API terms — your prompts and responses are not retained or used for training by them either.",
         },
         {
-          q: "Can my competitors see my data through benchmarking?",
-          a: "No. The peer benchmarking consortium uses differential privacy and anonymization techniques. Only aggregated, anonymized statistics are shared — never raw data, company names, or identifiable information. Benchmarking is strictly opt-in — you control what data, if any, you contribute.",
+          q: "Is peer benchmarking available?",
+          a: "Peer benchmarking is a roadmap feature. It is not available today. When we ship it, it will be strictly opt-in, aggregated, and anonymized — you will control what data, if any, you contribute.",
         },
         {
           q: "What happens to my data if I cancel?",
-          a: "Upon cancellation, you have 30 days to export all of your data via the self-serve export tool or request a final bulk export from support. After the 30-day grace period, your data is permanently deleted from production and backups within 14 days, and we issue a signed certificate of deletion on request.",
+          a: "Upon cancellation, you have 30 days to export all of your data via the self-serve export tool or by requesting a final export from support. After the 30-day grace period, your data is removed from production. Full deletion from backups follows the backup retention window (7 days today). We will provide written confirmation of deletion on request.",
         },
       ],
     },
@@ -74,16 +74,16 @@ export default function SecurityFaq() {
       category: "Authentication & Access",
       questions: [
         {
-          q: "What authentication methods do you support?",
-          a: "We support Single Sign-On (SSO) via SAML 2.0 and OIDC, including integrations with Okta, Azure AD, Google Workspace, and other identity providers. Multi-factor authentication (MFA) is available and can be enforced at the organization level.",
+          q: "What authentication methods do you support today?",
+          a: "Email/password with bcrypt hashing, optional TOTP-based multi-factor authentication, and session revocation on password change. SAML 2.0 / OIDC single sign-on is on the roadmap for enterprise customers — it is not shipped today.",
         },
         {
           q: "How do you handle user permissions?",
-          a: "We use role-based access control (RBAC) with predefined roles (Admin, Manager, Viewer) and the ability to create custom roles. Permissions can be scoped to specific data sets, SKU categories, or features.",
+          a: "We use role-based access control (RBAC) with predefined roles (Admin, Manager, Viewer). Custom roles and per-resource permissions are on the roadmap.",
         },
         {
           q: "Can I integrate with my existing identity provider?",
-          a: "Yes. We support SAML 2.0 and OIDC for enterprise SSO integration. Most enterprise identity providers (Okta, Azure AD, OneLogin, Ping) work out of the box.",
+          a: "Not yet. SSO via SAML 2.0 and OIDC is on the roadmap and a priority for enterprise contracts. If SSO is a must-have for you today, tell us during evaluation — it helps us prioritize.",
         },
       ],
     },
@@ -92,23 +92,19 @@ export default function SecurityFaq() {
       questions: [
         {
           q: "Are you SOC 2 certified?",
-          a: "We are pursuing SOC 2 Type II certification with audit kickoff planned for Q3 2026. In the interim we operate under a documented security program aligned with the SOC 2 Trust Services Criteria — encryption, access control, audit logging, incident response, change management. We can share our current security whitepaper, complete SIG / CAIQ questionnaires, and sign a Data Processing Agreement (DPA) today. Email info@prescient-labs.com to request.",
+          a: "No. We have not started a SOC 2 audit. We plan to engage a CPA firm to begin the readiness assessment once we have design partners live in production. Until we complete an audit, we will not claim SOC 2 status. In the interim, we can describe our controls honestly and answer any security questionnaire you send us. Email info@prescient-labs.com.",
         },
         {
           q: "Are you GDPR compliant?",
-          a: "Yes. We comply with GDPR requirements for data processing, including data subject rights, data portability, and breach notification. We can sign a Data Processing Agreement (DPA) upon request.",
-        },
-        {
-          q: "Do you have a security certification for manufacturing?",
-          a: "We follow IEC 62443 guidelines for industrial automation security. While not formally certified, our security practices align with manufacturing industry requirements.",
+          a: "We can sign a Data Processing Agreement modeled on GDPR Article 28 with Standard Contractual Clauses. This is a self-attestation — we have not been audited for GDPR by a third party, and no third party has certified us. If that distinction matters for your procurement process, please tell us early.",
         },
         {
           q: "Can you complete our vendor security questionnaire?",
-          a: "Yes. We regularly complete SIG Lite, SIG Core, CAIQ v4, and custom questionnaires for enterprise customers. Typical turnaround is 5 business days. Email info@prescient-labs.com with your questionnaire and target signature date.",
+          a: "Yes. Send us your SIG, CAIQ, or custom questionnaire and we will answer it directly and honestly, including \"not yet\" on items we haven't shipped. Typical turnaround is 5 business days. Email info@prescient-labs.com.",
         },
         {
           q: "Will you sign a Data Processing Agreement (DPA) / BAA?",
-          a: "Yes. We can sign a DPA modeled on GDPR Article 28 with Standard Contractual Clauses for EU data transfers. HIPAA BAA is available for healthcare-adjacent deployments. Both can be executed before you sign an MSA. Email info@prescient-labs.com to receive our standard DPA template.",
+          a: "DPA: yes, we can sign a DPA modeled on GDPR Article 28 with Standard Contractual Clauses. BAA: not today. We do not currently sign Business Associate Agreements. If your use case is healthcare-adjacent, talk to us before evaluating further.",
         },
       ],
     },
@@ -117,23 +113,23 @@ export default function SecurityFaq() {
       questions: [
         {
           q: "How is data encrypted?",
-          a: "All data in transit is encrypted using TLS 1.3. Data at rest is encrypted using AES-256. Database encryption keys are managed through a secure key management service with automatic rotation.",
+          a: "All data in transit uses TLS 1.3. Data at rest is encrypted with AES-256 via the managed Postgres and object storage provided by our hosting platform. Tenant-supplied integration credentials (ERP passwords, API keys you enter into the platform) are additionally encrypted with AES-256-GCM using a master key held only in runtime secrets.",
         },
         {
           q: "Do you perform penetration testing?",
-          a: "Yes. We conduct annual third-party penetration tests and continuous vulnerability scanning. Critical findings are addressed within 24 hours, high severity within 7 days.",
+          a: "Not yet. We run automated dependency scanning (Dependabot) and practice secure-by-default development, but we have not yet commissioned a third-party penetration test. We plan to before we initiate a SOC 2 audit.",
         },
         {
           q: "What is your uptime target?",
-          a: "Our public target is 99.9% monthly uptime for the core platform, measured via external synthetic checks. Live status is published at /status. Enterprise customers on the Performance or Tenant VPC tier receive a contractual 99.95% SLA with financial credits for downtime — terms are negotiated in the MSA.",
+          a: "We target 99.9% monthly uptime for the core platform and publish live status at /status. We do not offer a contractual financial-credit SLA today. If you need one for procurement, tell us — we will negotiate terms in the MSA.",
         },
         {
           q: "How do you handle security incidents?",
-          a: "We have a documented incident response plan with defined severity levels. For any incident that affects customer data (Sev 1 or Sev 2), we notify the customer security contact within 24 hours of confirmation, with a preliminary root-cause summary within 72 hours and a full post-incident report within 10 business days. Our production RTO is 4 hours and RPO is 1 hour; disaster-recovery failover is tested quarterly.",
+          a: "We will notify affected customers within 72 hours of confirming any incident that involves their data and publish a written post-mortem for Sev 1 / Sev 2 incidents within 10 business days of resolution. Prescient Labs is a small team, so incident response is a single on-call rotation rather than a 24x7 SOC; we will be explicit about that in any security review.",
         },
         {
           q: "Is your API secure?",
-          a: "Yes. API access requires authentication via API keys or OAuth 2.0 tokens. All API traffic is encrypted, rate-limited, and logged. IP whitelisting is available for enterprise customers.",
+          a: "API access requires authenticated session tokens. All API traffic is encrypted in transit, rate-limited, and logged. OAuth 2.0 for third-party integrations and IP allowlisting are on the roadmap.",
         },
       ],
     },
@@ -142,26 +138,26 @@ export default function SecurityFaq() {
       questions: [
         {
           q: "How do you back up data?",
-          a: "Databases are backed up continuously with point-in-time recovery capability. We maintain backups for 30 days, with snapshots stored in geographically separate regions.",
+          a: "The managed Postgres provided by our hosting platform performs continuous backups with point-in-time recovery (currently 7 days by default). Longer retention and geographically separated backup regions are on the roadmap.",
         },
         {
           q: "What is your disaster recovery plan?",
-          a: "We maintain hot standby infrastructure in a separate availability zone with automatic failover. Our RTO (Recovery Time Objective) is 4 hours, RPO (Recovery Point Objective) is 1 hour for production systems.",
+          a: "We have a written DR runbook but have not yet executed a formal DR drill. Measured RTO (Recovery Time Objective) and RPO (Recovery Point Objective) values will be published on the Trust Center once we complete our first drill.",
         },
         {
           q: "What happens if Prescient Labs goes out of business?",
-          a: "We maintain a source code escrow agreement and documented data export procedures. In the unlikely event of business discontinuation, customers receive 90 days notice and full data export capability.",
+          a: "We do not have a source code escrow agreement today. In the event of business discontinuation, customers will receive written notice and a full data export in standard formats (CSV, JSON). If escrow is a contract requirement for you, tell us early — we can arrange it.",
         },
       ],
     },
   ];
 
   const complianceStatus = [
-    { name: "SOC 2 Type II", status: "In Progress", target: "Audit kickoff Q3 2026" },
-    { name: "GDPR Compliance", status: "Compliant", target: "" },
-    { name: "CCPA Compliance", status: "Compliant", target: "" },
-    { name: "ISO 27001", status: "Planned", target: "2027" },
-    { name: "HIPAA BAA", status: "Available on request", target: "" },
+    { name: "SOC 2 Type II", status: "Not yet", target: "Audit not yet initiated" },
+    { name: "GDPR (DPA available)", status: "Self-attested", target: "DPA can be signed today" },
+    { name: "CCPA / CPRA", status: "Self-attested", target: "We do not sell data" },
+    { name: "ISO 27001", status: "Planned", target: "After SOC 2" },
+    { name: "HIPAA BAA", status: "Not offered today", target: "—" },
   ];
 
   return (
@@ -220,9 +216,9 @@ export default function SecurityFaq() {
               {complianceStatus.map((item, idx) => (
                 <div key={idx} className="flex items-center justify-between py-3 border-b last:border-0">
                   <div className="flex items-center gap-3">
-                    {item.status === "Compliant" ? (
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                    ) : item.status === "In Progress" ? (
+                    {item.status === "Self-attested" ? (
+                      <CheckCircle className="h-5 w-5 text-muted-foreground" />
+                    ) : item.status === "Planned" ? (
                       <AlertTriangle className="h-5 w-5 text-yellow-600" />
                     ) : (
                       <Globe className="h-5 w-5 text-muted-foreground" />
@@ -230,10 +226,7 @@ export default function SecurityFaq() {
                     <span className="font-medium">{item.name}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge 
-                      variant={item.status === "Compliant" ? "default" : "secondary"}
-                      className={item.status === "Compliant" ? "bg-green-600" : ""}
-                    >
+                    <Badge variant="secondary">
                       {item.status}
                     </Badge>
                     {item.target && (

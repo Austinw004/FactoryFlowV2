@@ -65,7 +65,7 @@ export function Pricing() {
     },
     {
       q: "Are there onboarding or setup fees?",
-      a: "No. Starter and Growth onboarding is self-serve — we guide you through ERP connection and your first forecast in about an hour. Performance and Tenant VPC deployments include white-glove onboarding at no extra cost; a dedicated solutions engineer handles the integration with your IT team.",
+      a: "No. Starter and Growth onboarding is self-serve — we guide you through ERP connection and your first forecast in about an hour. Performance-tier customers get direct, unbilled onboarding support from the founders; we handle the integration with your IT team ourselves while the company is small.",
     },
     {
       q: "Do you charge per API call?",
@@ -81,7 +81,7 @@ export function Pricing() {
     },
     {
       q: "Who should I talk to for procurement / security / legal questions?",
-      a: "Email info@prescient-labs.com for commercial questions, info@prescient-labs.com for security reviews (SIG, CAIQ, DPA), or book a 30-minute call from the Contact page. Typical enterprise evaluation — from first call to signed MSA — is four to six weeks.",
+      a: "Email info@prescient-labs.com for anything commercial, security-review, or legal. You will get one of the founders, not a canned reply. We reply within one US business day.",
     },
   ];
 
@@ -243,16 +243,19 @@ export function Pricing() {
                 </ul>
               </div>
               <div>
-                <h3 className="display text-2xl mb-4">Enterprise Add-ons</h3>
+                <h3 className="display text-2xl mb-4">Enterprise add-ons</h3>
                 <ul className="space-y-3 text-sm text-soft">
-                  <li>• Custom integrations & API access</li>
-                  <li>• Dedicated success team</li>
-                  <li>• Advanced security (air-gapped, VPC)</li>
-                  <li>• Single sign-on (SSO/SAML)</li>
-                  <li>• Custom workflows & automations</li>
-                  <li>• Audit trail & compliance reporting</li>
-                  <li>• Multi-team access & role-based controls</li>
-                  <li>• White-label deployment option</li>
+                  <li>• API access and custom integrations</li>
+                  <li>• Audit trail on all customer-facing mutations</li>
+                  <li>• Multi-team access and role-based controls</li>
+                  <li>• Direct-to-founders support on Performance tier</li>
+                </ul>
+                <h3 className="display text-base mt-8 mb-3 text-muted">On the roadmap</h3>
+                <ul className="space-y-2 text-xs text-muted">
+                  <li>• Single sign-on (SSO via SAML 2.0 / OIDC)</li>
+                  <li>• Tenant VPC deployment in your AWS account</li>
+                  <li>• Air-gapped / on-prem appliance</li>
+                  <li>• Multi-region data residency (EU, APAC)</li>
                 </ul>
               </div>
             </div>

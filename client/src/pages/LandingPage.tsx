@@ -139,49 +139,33 @@ export default function LandingPage() {
 
       <div className="divider relative z-10"></div>
 
-      {/* Design partners — honest descriptors, not fake logos */}
-      <div className="max-w-7xl mx-auto px-10 py-20 relative z-10" data-testid="section-design-partners">
-        <div className="eyebrow mb-10">Design partners</div>
-        <div className="grid md:grid-cols-4 gap-px bg-line">
-          <div className="bg-ink p-8">
-            <div className="mono text-xs text-muted mb-4">01 · Automotive</div>
-            <div className="text-lg text-bone leading-tight">Tier-1 automotive supplier, $400M revenue</div>
-            <div className="text-xs text-soft mt-3 leading-relaxed">Stamping, injection molding, ~800 SKUs. Piloting commodity forecasting + allocation.</div>
-          </div>
-          <div className="bg-ink p-8">
-            <div className="mono text-xs text-muted mb-4">02 · Food &amp; beverage</div>
-            <div className="text-lg text-bone leading-tight">Contract manufacturer, $120M revenue</div>
-            <div className="text-xs text-soft mt-3 leading-relaxed">Dry goods + cold chain. Piloting demand sensing and supplier risk.</div>
-          </div>
-          <div className="bg-ink p-8">
-            <div className="mono text-xs text-muted mb-4">03 · Industrial equipment</div>
-            <div className="text-lg text-bone leading-tight">OEM, $250M revenue</div>
-            <div className="text-xs text-soft mt-3 leading-relaxed">Low-volume / high-mix, 11-week lead times. Piloting regime-aware reorder.</div>
-          </div>
-          <div className="bg-ink p-8">
-            <div className="mono text-xs text-muted mb-4">04 · Medical devices</div>
-            <div className="text-lg text-bone leading-tight">Class II device manufacturer, $80M revenue</div>
-            <div className="text-xs text-soft mt-3 leading-relaxed">FDA-regulated. Piloting audit-grade forecasting and supplier traceability.</div>
-          </div>
-        </div>
-        <div className="mt-8 mono text-xs text-muted">Under NDA. Named references available during evaluation.</div>
-
-        {/* Become a design partner — honest forward-looking CTA instead of fabricated testimonials */}
-        <div className="mt-12 border hair bg-panel p-8 md:p-10 flex flex-col md:flex-row items-start md:items-center gap-6 md:gap-10" data-testid="design-partner-cta">
-          <div className="flex-1">
-            <div className="eyebrow mb-2">Design partner cohort · open</div>
-            <div className="text-xl md:text-2xl text-bone leading-tight mb-2">Two seats open for Q3 2026.</div>
-            <p className="text-sm text-soft leading-relaxed max-w-2xl">
-              Discounted pricing, direct line to the founders, roadmap influence, and a named case study at program end (if you want one — anonymous is fine too). 90-day paid pilot, with verified-savings proof points before you commit to a full subscription.
+      {/* Where we are — honest, pre-revenue posture. No fake logos, no fake NDAs. */}
+      <div className="max-w-7xl mx-auto px-10 py-20 relative z-10" data-testid="section-where-we-are">
+        <div className="eyebrow mb-10">Where we are</div>
+        <div className="grid md:grid-cols-12 gap-10">
+          <div className="md:col-span-5">
+            <h3 className="text-3xl md:text-4xl display leading-tight mb-5">
+              Early. Honest about it.
+            </h3>
+            <p className="text-soft leading-relaxed text-base max-w-xl">
+              Prescient Labs is a pre-revenue company building the first version of this platform in the open. We don&apos;t have paying customers yet and we&apos;re not going to fake any.
             </p>
           </div>
-          <a
-            href="/contact?topic=pilot"
-            className="btn-primary text-sm px-5 py-2.5 whitespace-nowrap"
-            data-testid="link-design-partner"
-          >
-            Apply — design partner
-          </a>
+          <div className="md:col-span-7 md:pl-10 md:border-l hair">
+            <p className="text-soft leading-relaxed text-sm mb-4">
+              What we&apos;re looking for: two to four design partners for the first cohort. Mid-market manufacturers with a real ERP, a plant director who feels commodity volatility in their gut, and a willingness to tell us the truth about what works and what doesn&apos;t.
+            </p>
+            <p className="text-soft leading-relaxed text-sm mb-6">
+              What design partners get: a heavily discounted 90-day paid pilot, a direct line to the founders, meaningful influence on the roadmap, and — if the numbers land — a named case study (anonymous is also fine). If the platform doesn&apos;t save you money against a baseline we measure together, you don&apos;t pay for the subscription after the pilot.
+            </p>
+            <a
+              href="/contact?topic=pilot"
+              className="btn-primary text-sm px-5 py-2.5 inline-block"
+              data-testid="link-design-partner"
+            >
+              Apply — design partner cohort
+            </a>
+          </div>
         </div>
       </div>
 
@@ -246,32 +230,32 @@ export default function LandingPage() {
             <div className="bg-ink p-8">
               <div className="mono text-xs text-muted mb-3">04 · Agentic AI</div>
               <div className="text-lg text-bone leading-tight mb-2">Four autonomy tiers, one audit trail.</div>
-              <div className="text-xs text-soft leading-relaxed">Suggest only → auto-draft → auto-execute → full autonomous. Per-agent guardrails, dollar caps, approval workflows. Every action cites its source and can be reversed.</div>
+              <div className="text-xs text-soft leading-relaxed">Start in suggest-only, graduate to auto-draft, then execute-with-approval, then fully autonomous. Every tier enforces per-agent guardrails, dollar caps, and approval workflows, and every action cites its source and is reversible.</div>
             </div>
             <div className="bg-ink p-8">
               <div className="mono text-xs text-muted mb-3">05 · Operations &amp; maintenance</div>
               <div className="text-lg text-bone leading-tight mb-2">Predictive, not reactive.</div>
-              <div className="text-xs text-soft leading-relaxed">Machinery health, predictive maintenance, production KPIs, workforce scheduling, and a shop-floor mode built for operators on the line.</div>
+              <div className="text-xs text-soft leading-relaxed">Track machinery health, flag predictive-maintenance windows, surface production KPIs, schedule the workforce, and ship a shop-floor mode built for operators on the line.</div>
             </div>
             <div className="bg-ink p-8">
               <div className="mono text-xs text-muted mb-3">06 · Inventory &amp; network</div>
               <div className="text-lg text-bone leading-tight mb-2">Multi-echelon, multi-node.</div>
-              <div className="text-xs text-soft leading-relaxed">Safety-stock optimization, network visibility, ERP template library (NetSuite, SAP, Oracle, QuickBooks), and traceability from raw material to finished good.</div>
+              <div className="text-xs text-soft leading-relaxed">Optimize safety stock, see the full distribution network, pull in ERP templates for NetSuite, SAP, Oracle, and QuickBooks, and trace every unit from raw material to finished good.</div>
             </div>
             <div className="bg-ink p-8">
               <div className="mono text-xs text-muted mb-3">07 · Strategy &amp; scenarios</div>
               <div className="text-lg text-bone leading-tight mb-2">Model the decision before you make it.</div>
-              <div className="text-xs text-soft leading-relaxed">Digital twin of your operation. Scenario simulation for capex, outsourcing, tariff shocks. M&amp;A target screening. Peer benchmarking against anonymized industry data.</div>
+              <div className="text-xs text-soft leading-relaxed">Run a digital twin of your operation. Simulate capex, outsourcing, and tariff-shock scenarios. Screen M&amp;A targets and benchmark against anonymized industry peers.</div>
             </div>
             <div className="bg-ink p-8">
               <div className="mono text-xs text-muted mb-3">08 · Audit &amp; compliance</div>
               <div className="text-lg text-bone leading-tight mb-2">Audit-grade by default.</div>
-              <div className="text-xs text-soft leading-relaxed">Immutable audit log on every mutation, 18-month retention. SOP workspace for controlled documents. Built for FDA, ISO 9001, and ITAR-adjacent environments.</div>
+              <div className="text-xs text-soft leading-relaxed">Every mutation writes an immutable audit log with 18-month retention. A controlled-document SOP workspace ships built-in. Designed for FDA, ISO 9001, and ITAR-adjacent environments.</div>
             </div>
             <div className="bg-ink p-8">
               <div className="mono text-xs text-muted mb-3">09 · ROI &amp; impact</div>
               <div className="text-lg text-bone leading-tight mb-2">Show the money.</div>
-              <div className="text-xs text-soft leading-relaxed">Verified-savings tracking per recommendation, ROI dashboard for the CFO, impact reporting for boards and grant programs. Proof before you renew, not just claims.</div>
+              <div className="text-xs text-soft leading-relaxed">Track verified savings per recommendation, build an ROI dashboard for the CFO, and produce impact reports for boards and grant programs. Proof before renewal — not claims.</div>
             </div>
           </div>
         </div>
@@ -314,17 +298,17 @@ export default function LandingPage() {
           <div className="bg-ink p-10">
             <div className="mono text-xs text-muted mb-8">01</div>
             <div className="text-2xl display mb-4">Managed cloud</div>
-            <p className="text-soft text-sm leading-relaxed">SOC 2 Type II. Fastest onboarding.</p>
+            <p className="text-soft text-sm leading-relaxed">Hosted on AWS. Fastest onboarding. SOC 2 Type II audit in progress.</p>
           </div>
           <div className="bg-ink p-10">
             <div className="mono text-xs text-muted mb-8">02</div>
             <div className="text-2xl display mb-4">Tenant VPC</div>
-            <p className="text-soft text-sm leading-relaxed">Dedicated infrastructure inside your cloud account.</p>
+            <p className="text-soft text-sm leading-relaxed">Dedicated infrastructure in your AWS account. Available on the Performance plan.</p>
           </div>
           <div className="bg-ink p-10">
             <div className="mono text-xs text-muted mb-8">03</div>
             <div className="text-2xl display mb-4">Air-gapped</div>
-            <p className="text-soft text-sm leading-relaxed">On-prem appliance for ITAR-controlled environments.</p>
+            <p className="text-soft text-sm leading-relaxed">On-prem appliance for ITAR-adjacent environments. On the roadmap — talk to us about timing.</p>
           </div>
         </div>
       </div>

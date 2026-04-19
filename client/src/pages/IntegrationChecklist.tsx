@@ -134,12 +134,12 @@ export default function IntegrationChecklist() {
   const securityChecklist = [
     { item: "Data encrypted in transit (TLS 1.3)", included: true },
     { item: "Data encrypted at rest (AES-256)", included: true },
-    { item: "SOC 2 Type II compliance", included: "In Progress" },
-    { item: "GDPR compliant data handling", included: true },
+    { item: "SOC 2 Type II audit", included: "Not yet" },
+    { item: "GDPR-aligned DPA (self-attested)", included: true },
     { item: "Role-based access control (RBAC)", included: true },
-    { item: "Single Sign-On (SSO) support", included: true },
+    { item: "Single Sign-On (SSO / SAML / OIDC)", included: "On roadmap" },
     { item: "Audit logging", included: true },
-    { item: "Data residency options", included: "Enterprise" },
+    { item: "Multi-region data residency", included: "On roadmap" },
   ];
 
   return (
@@ -293,8 +293,6 @@ export default function IntegrationChecklist() {
                   <span className="text-sm">{item.item}</span>
                   {item.included === true ? (
                     <Badge variant="default" className="bg-green-600">Included</Badge>
-                  ) : item.included === "In Progress" ? (
-                    <Badge variant="secondary">In Progress</Badge>
                   ) : (
                     <Badge variant="outline">{item.included}</Badge>
                   )}

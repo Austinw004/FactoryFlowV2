@@ -2,45 +2,50 @@ import { useLocation } from "wouter";
 import { SEOHead } from "@/components/SEOHead";
 
 /**
- * /trust — enterprise-grade Trust Center.
+ * /trust — Trust Center.
  *
  * This page is the one we point procurement, infosec, and CISOs at. It is
  * intentionally separate from the /security FAQ: /security answers
- * *questions*, /trust *documents the program*. Two different audiences.
+ * *questions*, /trust *documents the program*.
  *
- * The content is written so we can say everything here in a live SOC 2
- * audit without having to walk anything back. If we can't ship it, we
- * don't claim it.
+ * Ground rule for every line on this page: if we can't back it up in a
+ * live audit today, we don't claim it. Aspirational items are labelled
+ * "Not yet", "Planned", or "On the roadmap" — never "Compliant" or
+ * "Available" unless we can actually deliver it to a customer this week.
  */
+
+// Everything on this page describes controls that are actually in place today.
+// Anything aspirational is labeled "Planned" or "On request" — never "Available"
+// or "Compliant" unless we can back it up in a live audit.
 
 const SUBPROCESSORS = [
   {
-    name: "Amazon Web Services",
-    purpose: "Primary cloud hosting, managed Postgres, S3 object storage, KMS.",
+    name: "Amazon Web Services (via Replit)",
+    purpose: "Application hosting, managed Postgres, object storage, KMS. Replit Autoscale runs on AWS.",
     dataCategories: "Production data, encrypted backups, application logs.",
-    region: "us-east-1 (primary), us-west-2 (DR standby)",
-    compliance: "SOC 1/2/3, ISO 27001, PCI-DSS, HIPAA-eligible.",
+    region: "United States",
+    compliance: "AWS: SOC 1/2/3, ISO 27001, PCI-DSS, HIPAA-eligible. Replit: SOC 2 Type II.",
   },
   {
     name: "Stripe",
     purpose: "Billing, invoicing, payment processing.",
-    dataCategories: "Customer name, billing email, payment method metadata (no PANs ever touch our infrastructure).",
+    dataCategories: "Customer name, billing email, payment method metadata (no card numbers touch our infrastructure).",
     region: "United States",
     compliance: "PCI-DSS Level 1, SOC 1/2, ISO 27001.",
   },
   {
     name: "OpenAI",
-    purpose: "LLM inference for forecasting copilot and natural-language querying.",
+    purpose: "LLM inference for AI copilot and natural-language querying.",
     dataCategories: "Task-bounded prompts derived from customer data — never raw tabular datasets.",
     region: "United States",
-    compliance: "SOC 2 Type II. Zero-retention Enterprise API terms — no training on customer data.",
+    compliance: "SOC 2 Type II. Operated under zero-retention API terms — no training on customer data.",
   },
   {
     name: "Anthropic",
-    purpose: "LLM inference for forecasting copilot (redundant provider).",
+    purpose: "LLM inference for AI copilot (alternate provider).",
     dataCategories: "Task-bounded prompts derived from customer data.",
     region: "United States",
-    compliance: "SOC 2 Type II. Zero-retention Enterprise API terms — no training on customer data.",
+    compliance: "SOC 2 Type II. Operated under zero-retention API terms — no training on customer data.",
   },
   {
     name: "SendPulse",
@@ -49,39 +54,32 @@ const SUBPROCESSORS = [
     region: "EU (primary), US (fallback)",
     compliance: "GDPR-compliant, ISO 27001 (hosting provider).",
   },
-  {
-    name: "Sentry",
-    purpose: "Application error telemetry.",
-    dataCategories: "Error stack traces, request metadata — PII scrubbing enabled, no request bodies.",
-    region: "United States",
-    compliance: "SOC 2 Type II, ISO 27001, HIPAA BAA available.",
-  },
 ];
 
 const CERTIFICATIONS = [
-  { name: "SOC 2 Type II", status: "In progress", detail: "Audit kickoff Q3 2026 with a Big Four firm. Trust Services Criteria (security, availability, confidentiality) scoped." },
-  { name: "GDPR", status: "Compliant", detail: "DPA template available. Standard Contractual Clauses for EU transfers. DSR requests fulfilled within 30 days." },
-  { name: "CCPA / CPRA", status: "Compliant", detail: "Do-not-sell honored by default (we don't sell data). Consumer rights request handling in place." },
-  { name: "HIPAA BAA", status: "Available on request", detail: "For healthcare-adjacent deployments (device manufacturers, medical supply chains)." },
-  { name: "ISO 27001", status: "Planned", detail: "Target 2027, post-SOC-2. ISMS already modelled on ISO 27001 Annex A controls." },
+  { name: "SOC 2 Type II", status: "Not yet", detail: "We have not started a SOC 2 audit. Planning to engage a CPA firm once we have design partners live in production. We will update this page when we kick off." },
+  { name: "GDPR", status: "Self-attested", detail: "We can sign a Data Processing Agreement modeled on GDPR Article 28 with Standard Contractual Clauses. We are not audited against GDPR — no third party has certified this." },
+  { name: "CCPA / CPRA", status: "Self-attested", detail: "We do not sell customer data. We will handle consumer rights requests (access, deletion, correction) received at info@prescient-labs.com." },
+  { name: "HIPAA BAA", status: "Not offered yet", detail: "We do not currently sign BAAs. If your use case is healthcare-adjacent, email us and we'll tell you honestly whether we're the right fit today." },
+  { name: "ISO 27001", status: "Not planned for now", detail: "ISO 27001 is on the long-term roadmap, after SOC 2. We will not claim it until we have it." },
 ];
 
 const SECURITY_CONTROLS = [
-  { label: "Encryption in transit", value: "TLS 1.3 minimum. HSTS enabled. Certificates via ACM + auto-rotation." },
-  { label: "Encryption at rest", value: "AES-256 on all managed Postgres volumes and S3 buckets. Keys in AWS KMS with automatic rotation." },
-  { label: "Access control", value: "RBAC with least-privilege. Prescient Labs staff cannot read customer production data without time-bound, logged, customer-approved access." },
-  { label: "Audit logging", value: "Every customer-facing mutation written to an immutable audit log with 18-month retention." },
-  { label: "Authentication", value: "Email/password with bcrypt, SAML 2.0 + OIDC SSO for enterprise, optional MFA (TOTP), session fingerprinting." },
-  { label: "Secrets management", value: "No secrets in source. Runtime secrets in AWS Secrets Manager with per-service IAM roles." },
-  { label: "Vulnerability management", value: "Continuous dependency scanning (Dependabot, Snyk). Quarterly penetration tests. Critical CVEs patched within 24h." },
-  { label: "Backup & DR", value: "Point-in-time recovery up to 35 days. Quarterly DR drills. RTO 4h, RPO 1h." },
-  { label: "Incident response", value: "24h customer notification SLA. 72h preliminary RCA. 10 business day post-mortem for Sev 1/2." },
+  { label: "Encryption in transit", value: "TLS 1.3 on all public endpoints. HSTS enabled. Certificates managed and auto-rotated by our hosting provider." },
+  { label: "Encryption at rest", value: "AES-256 on managed Postgres and object storage provided by our hosting platform. Tenant-supplied integration credentials are encrypted with AES-256-GCM using a master key held only in runtime secrets." },
+  { label: "Access control", value: "Role-based access inside the application. Prescient Labs staff do not have routine access to customer production data. Any access for troubleshooting requires the customer's explicit approval and is logged in the application audit trail." },
+  { label: "Audit logging", value: "Authentication events and customer-facing mutations are written to an application audit log. Retention is bounded by the database backup policy (currently 30 days); longer retention is on the roadmap." },
+  { label: "Authentication", value: "Email/password with bcrypt hashing, optional TOTP MFA, and session revocation on password change. SAML 2.0 / OIDC SSO is on the roadmap for enterprise customers — not yet shipped." },
+  { label: "Secrets management", value: "No secrets in source control. Runtime secrets live in the hosting platform's secrets manager, injected as environment variables at process start." },
+  { label: "Vulnerability management", value: "Automated dependency scanning via Dependabot with auto-merge for low-risk patch updates. We have not yet commissioned a third-party penetration test; we plan to before SOC 2 audit kickoff." },
+  { label: "Backup & DR", value: "Managed Postgres with point-in-time recovery (provider default, 7 days). We have not run a formal DR drill. RTO / RPO will be measured and published once we do." },
+  { label: "Incident response", value: "We will notify affected customers within 72 hours of confirming any incident that involves their data, and publish a written post-mortem. Small team — a single on-call rotation, not a 24x7 SOC." },
 ];
 
 const DATA_RESIDENCY = [
-  { region: "United States", availability: "Default. All shared-tenancy deployments.", standbyRegion: "us-west-2" },
-  { region: "European Union (Frankfurt)", availability: "Available on the Tenant VPC plan.", standbyRegion: "eu-central-1 + eu-west-1" },
-  { region: "Asia-Pacific (Sydney)", availability: "Available on request (Tenant VPC).", standbyRegion: "ap-southeast-2" },
+  { region: "United States", availability: "All deployments run in the US today.", standbyRegion: "Managed by our hosting provider" },
+  { region: "European Union", availability: "Not available today. EU residency is on the roadmap for Tenant VPC customers — ask us about timing.", standbyRegion: "—" },
+  { region: "Asia-Pacific", availability: "Not available today.", standbyRegion: "—" },
 ];
 
 export default function TrustCenter() {
@@ -127,15 +125,15 @@ export default function TrustCenter() {
           {" "}and we'll respond within one US business day.
         </p>
 
-        {/* Quick request CTAs — these are what procurement actually wants */}
+        {/* Quick request CTAs — honest about what we can actually turn around today */}
         <div className="grid md:grid-cols-3 gap-px bg-line mb-20" data-testid="cta-request-strip">
           <div className="bg-panel p-8">
-            <div className="eyebrow mb-3">Security whitepaper</div>
+            <div className="eyebrow mb-3">Security summary</div>
             <p className="text-sm text-soft leading-relaxed mb-5">
-              12-page overview of our security program — architecture, controls, data flow.
+              One-page summary of the controls on this page, suitable for forwarding to your security team. Written on request, turnaround 2 business days.
             </p>
             <a
-              href="mailto:info@prescient-labs.com?subject=Request%3A%20Security%20Whitepaper"
+              href="mailto:info@prescient-labs.com?subject=Request%3A%20Security%20Summary"
               className="btn-primary text-xs px-4 py-2 uppercase tracking-[0.14em] inline-block"
               data-testid="link-request-whitepaper"
             >
@@ -143,12 +141,12 @@ export default function TrustCenter() {
             </a>
           </div>
           <div className="bg-panel p-8">
-            <div className="eyebrow mb-3">DPA / BAA</div>
+            <div className="eyebrow mb-3">DPA</div>
             <p className="text-sm text-soft leading-relaxed mb-5">
-              Our standard Data Processing Agreement with Standard Contractual Clauses. BAA on request.
+              Standard Data Processing Agreement with Standard Contractual Clauses for EU transfers. We can sign today.
             </p>
             <a
-              href="mailto:info@prescient-labs.com?subject=Request%3A%20DPA%2FBAA"
+              href="mailto:info@prescient-labs.com?subject=Request%3A%20DPA"
               className="btn-primary text-xs px-4 py-2 uppercase tracking-[0.14em] inline-block"
               data-testid="link-request-dpa"
             >
@@ -156,16 +154,16 @@ export default function TrustCenter() {
             </a>
           </div>
           <div className="bg-panel p-8">
-            <div className="eyebrow mb-3">SIG / CAIQ</div>
+            <div className="eyebrow mb-3">Security questionnaire</div>
             <p className="text-sm text-soft leading-relaxed mb-5">
-              Completed SIG Lite / SIG Core / CAIQ v4 questionnaires. 5-business-day turnaround for custom questionnaires.
+              Send us your SIG, CAIQ, or custom questionnaire. We answer honestly — which includes saying "not yet" where applicable. Turnaround typically 5 business days.
             </p>
             <a
-              href="mailto:info@prescient-labs.com?subject=Request%3A%20SIG%2FCAIQ"
+              href="mailto:info@prescient-labs.com?subject=Request%3A%20Security%20Questionnaire"
               className="btn-primary text-xs px-4 py-2 uppercase tracking-[0.14em] inline-block"
               data-testid="link-request-sig"
             >
-              Request
+              Send questionnaire
             </a>
           </div>
         </div>
@@ -254,29 +252,30 @@ export default function TrustCenter() {
           </div>
         </section>
 
-        {/* Incident response */}
+        {/* Incident response — written commitments, not contractually-audited SLAs. */}
         <section className="mb-20" data-testid="section-incidents">
           <div className="eyebrow mb-6">Incident response</div>
-          <div className="border hair bg-panel p-8 grid md:grid-cols-4 gap-8">
+          <div className="border hair bg-panel p-8 grid md:grid-cols-3 gap-8">
             <div>
               <div className="mono text-xs text-muted uppercase tracking-wider mb-2">Notification</div>
-              <div className="text-2xl display">24h</div>
-              <div className="text-xs text-soft leading-relaxed mt-2">to security contact on Sev 1 / Sev 2</div>
-            </div>
-            <div>
-              <div className="mono text-xs text-muted uppercase tracking-wider mb-2">Preliminary RCA</div>
               <div className="text-2xl display">72h</div>
-              <div className="text-xs text-soft leading-relaxed mt-2">root-cause summary</div>
+              <div className="text-xs text-soft leading-relaxed mt-2">
+                Affected customers notified within 72 hours of confirming any incident involving their data.
+              </div>
             </div>
             <div>
               <div className="mono text-xs text-muted uppercase tracking-wider mb-2">Post-mortem</div>
               <div className="text-2xl display">10d</div>
-              <div className="text-xs text-soft leading-relaxed mt-2">business days for full report</div>
+              <div className="text-xs text-soft leading-relaxed mt-2">
+                Written post-mortem for Sev 1 / Sev 2 incidents within 10 business days of resolution.
+              </div>
             </div>
             <div>
               <div className="mono text-xs text-muted uppercase tracking-wider mb-2">RTO / RPO</div>
-              <div className="text-2xl display">4h / 1h</div>
-              <div className="text-xs text-soft leading-relaxed mt-2">production disaster recovery</div>
+              <div className="text-2xl display">TBD</div>
+              <div className="text-xs text-soft leading-relaxed mt-2">
+                We have not run a formal DR exercise yet. Target values will be published after the first drill.
+              </div>
             </div>
           </div>
           <div className="mt-6 text-sm text-muted">
@@ -295,7 +294,7 @@ export default function TrustCenter() {
         <section className="border-t hair pt-12">
           <h2 className="text-3xl display mb-4">Still reviewing?</h2>
           <p className="text-soft text-sm leading-relaxed max-w-2xl mb-8">
-            We answer procurement questionnaires, security reviews, and legal redlines directly. Most enterprise evaluations close in 4–6 weeks from first conversation.
+            We answer procurement questionnaires, security reviews, and legal redlines directly — one of the founders, not a canned reply. Reply within one US business day.
           </p>
           <div className="flex flex-wrap gap-3">
             <button
