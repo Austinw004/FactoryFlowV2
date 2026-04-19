@@ -514,6 +514,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     "/status/history",
     "/stripe/config",
     "/stripe/products",
+    // OAuth browser-redirect endpoints. A visitor clicking "Continue with
+    // Google" / "Continue with Apple" on /signin is by definition NOT
+    // authenticated yet, so these MUST bypass the gate. The `/start` routes
+    // 302 to the provider; the `/callback` routes exchange the code, mint
+    // JWTs, and bounce back to the SPA at /auth/callback#accessToken=…
+    "/auth/google/start",
+    "/auth/google/callback",
+    "/auth/apple/start",
+    "/auth/apple/callback",
   ]);
 
   // Unified auth middleware — supports both JWT Bearer and Replit session
