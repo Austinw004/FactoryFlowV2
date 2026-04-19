@@ -44,10 +44,22 @@ integrations = ["javascript_log_in_with_replit:1.0.0", "javascript_database:1.0.
 
 [userenv]
 
-[userenv.shared]
-ENCRYPTION_KEY = "4b373b98f181b23ddd962ad9c3d73e1f13297b93f9d02903983cdf97e7519187"
-TESTING_VITE_STRIPE_PUBLIC_KEY = "pk_test_51SZFrW9F4Ysa19m8rfX4euq4MSWRB1nBjIw0km1UkvudrZKUKdod5xS333StKRijHGDScb9hNxhaIrgMxKMkKoDC00JcaNJl85"
-TESTING_STRIPE_SECRET_KEY = "sk_test_51SZFrW9F4Ysa19m81xsXhQImTK9A9wBX7eujhtW5etcXtKbTm5lZL7BnBBwNnywDOe9OE3D5axMEU42Dg6rk5NH600Ip0Pirh8"
+# [userenv.shared] is intentionally empty.
+#
+# Required runtime secrets — set these in Replit Secrets (Tools → Secrets),
+# NOT here. Committing secrets to .replit leaks them to git history.
+# See SECURITY_ROTATION.md for rotation procedure.
+#
+# Required:
+#   - DATABASE_URL                       (Postgres connection string)
+#   - ENCRYPTION_KEY                     (openssl rand -hex 32)
+#   - CREDENTIAL_ENCRYPTION_KEY          (openssl rand -hex 32)
+#   - SESSION_SECRET                     (any 32+ char random string)
+#   - SENDPULSE_USER_ID, SENDPULSE_SECRET (transactional email)
+#   - STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY (live mode)
+#   - TESTING_STRIPE_SECRET_KEY, TESTING_VITE_STRIPE_PUBLIC_KEY (test mode)
+#   - OPENAI_API_KEY                     (if AI features enabled)
+#   - SALES_INBOX_EMAIL                  (defaults to sales@prescient-labs.com)
 
 [userenv.development]
 APP_ENV = "development"
