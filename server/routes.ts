@@ -4591,7 +4591,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create compliance document
-  app.post("/api/compliance/documents", isAuthenticated, async (req: any, res) => {
+  const createComplianceDocumentBodySchema = z.object({
+    title: z.string().trim().min(1).max(500),
+    documentType: z.enum(["policy", "procedure", "certificate", "permit", "audit_report", "training_record"]),
+    regulationType: z.enum(["environmental", "safety", "labor", "quality", "financial", "data_privacy"]),
+    documentNumber: z.string().max(100).optional().nullable(),
+    version: z.number().int().min(1).max(9999).optional(),
+    status: z.enum(["draft", "under_review", "approved", "active", "archived", "expired"]).optional(),
+    effectiveDate: z.string().optional().nullable(),
+    expirationDate: z.string().optional().nullable(),
+    fileUrl: z.string().url().max(2000).optional().nullable(),
+    fileType: z.enum(["pdf", "docx", "xlsx"]).optional().nullable(),
+    fileSize: z.number().int().min(0).max(104857600).optional().nullable(),
+    description: z.string().max(5000).optional().nullable(),
+    tags: z.array(z.string().max(100)).max(50).optional().nullable(),
+    issuingAuthority: z.string().max(500).optional().nullable(),
+    nextReviewDate: z.string().optional().nullable(),
+    metadata: z.record(z.unknown()).optional().nullable(),
+  });
+  app.post("/api/compliance/documents", isAuthenticated, validateBody(createComplianceDocumentBodySchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4634,7 +4652,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create compliance regulation
-  app.post("/api/compliance/regulations", isAuthenticated, async (req: any, res) => {
+  const createComplianceRegulationBodySchema = z.object({
+    name: z.string().trim().min(1).max(500),
+    regulationType: z.enum(["environmental", "safety", "labor", "quality", "financial", "data_privacy"]),
+    jurisdiction: z.enum(["federal", "state", "local", "international"]),
+    issuingBody: z.string().trim().min(1).max(300),
+    regulationCode: z.string().max(100).optional().nullable(),
+    description: z.string().trim().min(1).max(5000),
+    requirements: z.record(z.unknown()).optional().nullable(),
+    applicabilityStatus: z.enum(["applicable", "not_applicable", "under_review"]).optional(),
+    riskLevel: z.enum(["critical", "high", "medium", "low"]).optional().nullable(),
+    complianceStatus: z.enum(["compliant", "non_compliant", "partial", "pending_verification"]).optional(),
+    lastAuditDate: z.string().optional().nullable(),
+    nextAuditDate: z.string().optional().nullable(),
+    relatedDocuments: z.array(z.string().max(100)).max(50).optional().nullable(),
+    economicImpactNotes: z.string().max(5000).optional().nullable(),
+  });
+  app.post("/api/compliance/regulations", isAuthenticated, validateBody(createComplianceRegulationBodySchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4672,7 +4706,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create compliance audit
-  app.post("/api/compliance/audits", isAuthenticated, async (req: any, res) => {
+  const createComplianceAuditBodySchema = z.object({
+    auditName: z.string().trim().min(1).max(500),
+    auditType: z.enum(["internal", "external", "certification", "regulatory"]),
+    regulationType: z.enum(["environmental", "safety", "labor", "quality", "financial", "data_privacy"]),
+    auditor: z.string().trim().min(1).max(300),
+    scheduledDate: z.string(),
+    completedDate: z.string().optional().nullable(),
+    status: z.enum(["scheduled", "in_progress", "completed", "failed"]).optional(),
+    overallResult: z.enum(["pass", "pass_with_findings", "fail"]).optional().nullable(),
+    score: z.number().min(0).max(100).optional().nullable(),
+    findings: z.array(z.record(z.unknown())).max(500).optional().nullable(),
+    correctiveActions: z.array(z.record(z.unknown())).max(500).optional().nullable(),
+    followUpDate: z.string().optional().nullable(),
+    documentPackageUrl: z.string().url().max(2000).optional().nullable(),
+    notes: z.string().max(10000).optional().nullable(),
+  });
+  app.post("/api/compliance/audits", isAuthenticated, validateBody(createComplianceAuditBodySchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4719,7 +4769,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create audit finding
-  app.post("/api/compliance/findings", isAuthenticated, async (req: any, res) => {
+  const createAuditFindingBodySchema = z.object({
+    auditId: z.string().max(100).optional().nullable(),
+    findingNumber: z.string().trim().min(1).max(100),
+    title: z.string().trim().min(1).max(500),
+    description: z.string().trim().min(1).max(10000),
+    severity: z.enum(["critical", "major", "minor", "observation"]).optional(),
+    category: z.enum(["safety", "environmental", "quality", "documentation", "process"]),
+    status: z.enum(["open", "in_progress", "resolved", "closed", "overdue"]).optional(),
+    assignedTo: z.string().max(100).optional().nullable(),
+    assignedToName: z.string().max(300).optional().nullable(),
+    dueDate: z.string().optional().nullable(),
+    closedDate: z.string().optional().nullable(),
+    rootCause: z.string().max(5000).optional().nullable(),
+    correctiveAction: z.string().max(5000).optional().nullable(),
+    preventiveAction: z.string().max(5000).optional().nullable(),
+    evidence: z.string().max(2000).optional().nullable(),
+  });
+  app.post("/api/compliance/findings", isAuthenticated, validateBody(createAuditFindingBodySchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -5164,7 +5231,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create production run
-  app.post("/api/production/runs", isAuthenticated, async (req: any, res) => {
+  const createProductionRunBodySchema = z.object({
+    skuId: z.string().max(100).optional().nullable(),
+    machineryId: z.string().max(100).optional().nullable(),
+    runNumber: z.string().trim().min(1).max(100),
+    startTime: z.string(),
+    endTime: z.string().optional().nullable(),
+    status: z.enum(["in_progress", "completed", "aborted", "paused"]).optional(),
+    plannedDuration: z.number().min(0).max(99999).optional().nullable(),
+    actualDuration: z.number().min(0).max(99999).optional().nullable(),
+    plannedUnits: z.number().int().min(0).max(10000000).optional().nullable(),
+    producedUnits: z.number().int().min(0).max(10000000).optional().nullable(),
+    goodUnits: z.number().int().min(0).max(10000000).optional().nullable(),
+    defectiveUnits: z.number().int().min(0).max(10000000).optional().nullable(),
+    cycleTime: z.number().min(0).optional().nullable(),
+    targetCycleTime: z.number().min(0).optional().nullable(),
+    downtime: z.number().min(0).max(99999).optional().nullable(),
+    setupTime: z.number().min(0).max(99999).optional().nullable(),
+    notes: z.string().max(5000).optional().nullable(),
+  });
+  app.post("/api/production/runs", isAuthenticated, validateBody(createProductionRunBodySchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
