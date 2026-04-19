@@ -1,14 +1,17 @@
 #!/usr/bin/env bash
-# Purge orphaned rows whose company_id points at a non-existent company.
+# Purge orphaned rows whose <child_col> points at a non-existent <parent_table> row.
 #
 # Why this exists: early test data + historical schema without ON DELETE CASCADE
-# left behind rows that reference deleted companies. drizzle-kit push refuses
+# left behind rows that reference deleted parent rows. drizzle-kit push refuses
 # to add FK constraints when orphans exist. This script sweeps every table that
-# has a foreign key to companies.id and deletes the orphans in one pass.
+# has the given <child_col>, counts orphans against <parent_table>.id, and
+# deletes them on --apply.
 #
 # Usage:
-#   ./scripts/cleanup-orphans.sh              # dry-run: counts only
-#   ./scripts/cleanup-orphans.sh --apply      # actually delete
+#   ./scripts/cleanup-orphans.sh                               # companies/company_id dry-run
+#   ./scripts/cleanup-orphans.sh --apply                       # companies/company_id apply
+#   ./scripts/cleanup-orphans.sh ai_agents agent_id            # ai_agents/agent_id dry-run
+#   ./scripts/cleanup-orphans.sh ai_agents agent_id --apply    # ai_agents/agent_id apply
 
 set -euo pipefail
 
@@ -17,27 +20,55 @@ if [ -z "${DATABASE_URL:-}" ]; then
   exit 1
 fi
 
-APPLY="${1:-}"
+# Parse args: [parent_table] [child_col] [--apply]
+PARENT_TABLE="companies"
+CHILD_COL="company_id"
+APPLY=""
 
-# Find every table that has a `company_id` column (regardless of whether a FK
-# constraint currently exists). This catches tables whose FK to companies is
-# missing — exactly the case drizzle-kit is trying to add.
-read -r -d '' DISCOVER_SQL <<'SQL' || true
+for arg in "$@"; do
+  case "$arg" in
+    --apply)
+      APPLY="--apply"
+      ;;
+    *)
+      if [ "$PARENT_TABLE" = "companies" ] && [ "$arg" != "companies" ] && [ "$CHILD_COL" = "company_id" ] && [ "$#" -ge 2 ]; then
+        PARENT_TABLE="$arg"
+      elif [ "$CHILD_COL" = "company_id" ] && [ "$PARENT_TABLE" != "companies" ]; then
+        CHILD_COL="$arg"
+      fi
+      ;;
+  esac
+done
+
+# Simpler positional parse: override via explicit args
+if [ "${1:-}" != "--apply" ] && [ -n "${1:-}" ]; then
+  PARENT_TABLE="$1"
+fi
+if [ "${2:-}" != "--apply" ] && [ -n "${2:-}" ]; then
+  CHILD_COL="$2"
+fi
+
+echo "Parent table: $PARENT_TABLE"
+echo "Child column: $CHILD_COL"
+echo
+
+# Find every table that has <CHILD_COL>.
+DISCOVER_SQL="
 SELECT
   c.table_name AS child_table,
   c.column_name AS child_col
 FROM information_schema.columns c
 WHERE c.table_schema = 'public'
-  AND c.column_name   = 'company_id'
-  AND c.table_name   <> 'companies'
+  AND c.column_name  = '$CHILD_COL'
+  AND c.table_name  <> '$PARENT_TABLE'
   AND c.table_name IN (SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE')
 ORDER BY c.table_name;
-SQL
+"
 
 mapfile -t ROWS < <(psql "$DATABASE_URL" -At -F '|' -c "$DISCOVER_SQL")
 
 if [ "${#ROWS[@]}" -eq 0 ]; then
-  echo "No tables reference companies.id. Nothing to clean."
+  echo "No tables have column $CHILD_COL. Nothing to clean."
   exit 0
 fi
 
@@ -52,7 +83,7 @@ declare -a DIRTY_COUNTS=()
 for row in "${ROWS[@]}"; do
   tbl="${row%%|*}"
   col="${row##*|}"
-  count=$(psql "$DATABASE_URL" -At -c "SELECT COUNT(*) FROM \"$tbl\" WHERE \"$col\" IS NOT NULL AND \"$col\" NOT IN (SELECT id FROM companies);")
+  count=$(psql "$DATABASE_URL" -At -c "SELECT COUNT(*) FROM \"$tbl\" WHERE \"$col\" IS NOT NULL AND \"$col\" NOT IN (SELECT id FROM \"$PARENT_TABLE\");")
   printf "  %-40s %s.%s = %s orphan(s)\n" "$tbl" "$tbl" "$col" "$count"
   if [ "$count" -gt 0 ]; then
     DIRTY_TABLES+=("$tbl")
@@ -73,7 +104,7 @@ fi
 if [ "$APPLY" != "--apply" ]; then
   echo
   echo "This was a DRY RUN. Re-run with --apply to actually delete:"
-  echo "    ./scripts/cleanup-orphans.sh --apply"
+  echo "    ./scripts/cleanup-orphans.sh $PARENT_TABLE $CHILD_COL --apply"
   exit 0
 fi
 
@@ -84,7 +115,7 @@ for i in "${!DIRTY_TABLES[@]}"; do
   col="${DIRTY_COLS[$i]}"
   cnt="${DIRTY_COUNTS[$i]}"
   echo "  Deleting $cnt orphan(s) from $tbl..."
-  psql "$DATABASE_URL" -c "DELETE FROM \"$tbl\" WHERE \"$col\" IS NOT NULL AND \"$col\" NOT IN (SELECT id FROM companies);" >/dev/null
+  psql "$DATABASE_URL" -c "DELETE FROM \"$tbl\" WHERE \"$col\" IS NOT NULL AND \"$col\" NOT IN (SELECT id FROM \"$PARENT_TABLE\");" >/dev/null
 done
 
 echo
