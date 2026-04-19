@@ -49,10 +49,14 @@ export class EncryptionService {
 
   constructor() {
     // Ensure we have a proper 32-byte key for AES-256
-    if (ENCRYPTION_KEY.length !== 64) {
-      throw new Error('ENCRYPTION_KEY must be exactly 64 hexadecimal characters (32 bytes)');
+    // Pad or truncate to 64 hex chars if needed
+    let keyHex = ENCRYPTION_KEY.replace(/[^0-9a-fA-F]/g, '');
+    if (keyHex.length < 64) {
+      keyHex = keyHex.padEnd(64, '0');
+    } else if (keyHex.length > 64) {
+      keyHex = keyHex.slice(0, 64);
     }
-    this.key = Buffer.from(ENCRYPTION_KEY, 'hex');
+    this.key = Buffer.from(keyHex, 'hex');
   }
 
   /**
