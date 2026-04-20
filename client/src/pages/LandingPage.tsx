@@ -205,16 +205,26 @@ export default function LandingPage() {
           </p>
         </div>
 
-        {Object.entries(integrationsByCategory).map(([category, integrations]) => (
-          <div key={category} className="mb-10">
-            <div className="eyebrow mb-5">{category}</div>
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-px bg-line">
-              {integrations.map((name) => (
-                <div key={name} className="integration-tile bg-ink">{name}</div>
-              ))}
+        {Object.entries(integrationsByCategory).map(([category, integrations]) => {
+          // Pad each row to a multiple of 6 so empty grid cells don't show
+          // the grey bg-line color through the gap.
+          const padded = integrations.length % 6 === 0
+            ? 0
+            : 6 - (integrations.length % 6);
+          return (
+            <div key={category} className="mb-10">
+              <div className="eyebrow mb-5">{category}</div>
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-px bg-line">
+                {integrations.map((name) => (
+                  <div key={name} className="integration-tile bg-ink">{name}</div>
+                ))}
+                {Array.from({ length: padded }).map((_, i) => (
+                  <div key={`pad-${category}-${i}`} className="integration-tile bg-ink" aria-hidden="true" />
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         <div className="mt-10 mono text-xs text-muted">Plus webhook and REST API for anything custom.</div>
       </div>
