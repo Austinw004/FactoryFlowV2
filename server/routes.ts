@@ -4433,7 +4433,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update RFQ
-  app.patch("/api/rfqs/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+  const rfqUpdateSchema = z.object({
+    status: z.enum(["draft","pending_approval","sent","quotes_received","awarded","cancelled"]).optional(),
+    title: z.string().min(1).max(500).optional(),
+    description: z.string().max(5000).optional(),
+    dueDate: z.string().optional(),
+    totalBudget: z.number().positive().optional(),
+    currency: z.string().length(3).optional(),
+    notes: z.string().max(5000).optional(),
+    selectedQuoteId: z.string().optional(),
+    quotesReceived: z.number().int().min(0).optional(),
+  });
+  app.patch("/api/rfqs/:id", isAuthenticated, rateLimiters.api, validateBody(rfqUpdateSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4446,14 +4457,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "RFQ not found" });
       }
 
-      const updatedRfq = await storage.updateRfq(req.params.id, req.body, user.companyId);
+      const updatedRfq = await storage.updateRfq(req.params.id, req.validated as any, user.companyId);
       
       await logAudit({
         action: "update",
         entityType: "rfq",
         entityId: req.params.id,
         notes: `Updated RFQ ${existingRfq.rfqNumber}`,
-        changes: req.body,
+        changes: req.validated as any,
         req,
       });
 
@@ -4601,7 +4612,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create compliance document
-  app.post("/api/compliance/documents", isAuthenticated, async (req: any, res) => {
+  const createComplianceDocumentSchema = z.object({
+    title: z.string().min(1).max(500),
+    documentType: z.enum(["policy","procedure","certificate","permit","audit_report","training_record"]),
+    regulationType: z.enum(["environmental","safety","labor","quality","financial","data_privacy"]),
+    documentNumber: z.string().max(100).optional(),
+    version: z.number().int().min(1).optional(),
+    status: z.enum(["draft","under_review","approved","active","archived","expired"]).optional(),
+    effectiveDate: z.string().optional().nullable(),
+    expirationDate: z.string().optional().nullable(),
+    fileUrl: z.string().url().max(2000).optional().nullable(),
+    fileType: z.enum(["pdf","docx","xlsx"]).optional().nullable(),
+    fileSize: z.number().int().min(0).optional().nullable(),
+    description: z.string().max(5000).optional().nullable(),
+    tags: z.array(z.string().max(100)).max(50).optional().nullable(),
+    issuingAuthority: z.string().max(500).optional().nullable(),
+    nextReviewDate: z.string().optional().nullable(),
+    metadata: z.record(z.unknown()).optional().nullable(),
+  });
+  app.post("/api/compliance/documents", isAuthenticated, validateBody(createComplianceDocumentSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4611,9 +4640,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get current economic regime for context
       await economics.fetch();
-      
+
       const document = await storage.createComplianceDocument({
-        ...req.body,
+        ...(req.validated as any),
         companyId: user.companyId,
         createdBy: user.id,
         economicRegimeContext: economics.regime,
@@ -4644,7 +4673,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create compliance regulation
-  app.post("/api/compliance/regulations", isAuthenticated, async (req: any, res) => {
+  const createComplianceRegulationSchema = z.object({
+    name: z.string().min(1).max(500),
+    regulationType: z.enum(["environmental","safety","labor","quality","financial","data_privacy"]),
+    jurisdiction: z.enum(["federal","state","local","international"]),
+    issuingBody: z.string().min(1).max(200),
+    regulationCode: z.string().max(100).optional().nullable(),
+    description: z.string().min(1).max(5000),
+    requirements: z.record(z.unknown()).optional().nullable(),
+    applicabilityStatus: z.enum(["applicable","not_applicable","under_review"]).optional(),
+    riskLevel: z.enum(["critical","high","medium","low"]).optional().nullable(),
+    complianceStatus: z.enum(["compliant","non_compliant","partial","pending_verification"]).optional(),
+    lastAuditDate: z.string().optional().nullable(),
+    nextAuditDate: z.string().optional().nullable(),
+    relatedDocuments: z.array(z.string()).max(50).optional().nullable(),
+    economicImpactNotes: z.string().max(5000).optional().nullable(),
+  });
+  app.post("/api/compliance/regulations", isAuthenticated, validateBody(createComplianceRegulationSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4653,7 +4698,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const regulation = await storage.createComplianceRegulation({
-        ...req.body,
+        ...(req.validated as any),
         companyId: user.companyId,
       });
       
@@ -4729,7 +4774,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create audit finding
-  app.post("/api/compliance/findings", isAuthenticated, async (req: any, res) => {
+  const createAuditFindingSchema = z.object({
+    auditId: z.string().optional().nullable(),
+    findingNumber: z.string().min(1).max(100),
+    title: z.string().min(1).max(500),
+    description: z.string().min(1).max(5000),
+    severity: z.enum(["critical","major","minor","observation"]).optional(),
+    category: z.enum(["safety","environmental","quality","documentation","process"]),
+    status: z.enum(["open","in_progress","resolved","closed","overdue"]).optional(),
+    assignedTo: z.string().optional().nullable(),
+    assignedToName: z.string().max(200).optional().nullable(),
+    dueDate: z.string().optional().nullable(),
+    rootCause: z.string().max(5000).optional().nullable(),
+    correctiveAction: z.string().max(5000).optional().nullable(),
+    preventiveAction: z.string().max(5000).optional().nullable(),
+    evidence: z.string().max(2000).optional().nullable(),
+  });
+  const updateAuditFindingSchema = createAuditFindingSchema.partial().extend({
+    closedDate: z.string().optional().nullable(),
+    verifiedBy: z.string().optional().nullable(),
+    verifiedAt: z.string().optional().nullable(),
+  });
+  app.post("/api/compliance/findings", isAuthenticated, validateBody(createAuditFindingSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4738,10 +4804,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const finding = await storage.createAuditFinding({
-        ...req.body,
+        ...(req.validated as any),
         companyId: user.companyId,
       });
-      
+
       res.status(201).json(finding);
     } catch (error: any) {
       console.error("Error creating audit finding:", error);
@@ -4750,7 +4816,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update audit finding
-  app.patch("/api/compliance/findings/:id", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/compliance/findings/:id", isAuthenticated, validateBody(updateAuditFindingSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4758,7 +4824,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "User must be associated with a company" });
       }
 
-      const finding = await storage.updateAuditFinding(req.params.id, req.body);
+      const finding = await storage.updateAuditFinding(req.params.id, req.validated as any);
       if (!finding) {
         return res.status(404).json({ error: "Finding not found" });
       }
