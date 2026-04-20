@@ -1,9 +1,22 @@
 import crypto from 'crypto';
 import { Request, Response, NextFunction } from 'express';
 
-// Require encryption key at startup - fail fast if not provided.
-// `.trim()` tolerates trailing whitespace/newlines that some Secrets
-// UIs silently append when the value is pasted.
+// Require encryption key at startup — fail fast if invalid.
+//
+// Rules, in order:
+//   1. `.trim()` strips trailing whitespace/newline ONLY. Some Secrets UIs
+//      silently append a newline when you paste. That's the only
+//      "cleanup" we do — we never strip non-hex characters or pad/truncate
+//      the key to a target length. Silently massaging a wrong key into a
+//      different 64-char string would produce a DIFFERENT encryption key
+//      than intended and silently corrupt any data already encrypted with
+//      the correct key. Loud crash > silent wrong key.
+//   2. If the result is empty → FATAL, exit.
+//   3. If the result is not exactly 64 hex chars → FATAL, exit.
+//
+// Do NOT "fix" this by padding or truncating. If you see a validation
+// failure in logs, regenerate the key with `openssl rand -hex 32` and
+// paste the full 64-char output into Secrets with no prefix/suffix.
 const RAW_ENCRYPTION_KEY = (process.env.ENCRYPTION_KEY ?? '').trim();
 
 if (!RAW_ENCRYPTION_KEY) {
@@ -16,7 +29,8 @@ if (RAW_ENCRYPTION_KEY.length !== 64 || !/^[0-9a-fA-F]{64}$/.test(RAW_ENCRYPTION
   console.error(
     `[Security] FATAL: ENCRYPTION_KEY must be exactly 64 hex chars (32 bytes). ` +
       `Got length=${RAW_ENCRYPTION_KEY.length}. ` +
-      `Generate a valid key with: openssl rand -hex 32`,
+      `Generate a valid key with: openssl rand -hex 32 ` +
+      `and paste the full output — do not truncate, pad, or edit.`,
   );
   process.exit(1);
 }
@@ -48,15 +62,13 @@ export class EncryptionService {
   private readonly key: Buffer;
 
   constructor() {
-    // Ensure we have a proper 32-byte key for AES-256
-    // Pad or truncate to 64 hex chars if needed
-    let keyHex = ENCRYPTION_KEY.replace(/[^0-9a-fA-F]/g, '');
-    if (keyHex.length < 64) {
-      keyHex = keyHex.padEnd(64, '0');
-    } else if (keyHex.length > 64) {
-      keyHex = keyHex.slice(0, 64);
-    }
-    this.key = Buffer.from(keyHex, 'hex');
+    // ENCRYPTION_KEY is already validated at module load: exactly 64 hex
+    // chars, nothing else. We intentionally do NOT strip/pad/truncate here
+    // — doing so would silently convert a malformed key into a different
+    // 64-char value and corrupt every encrypted record written with the
+    // "correct" key. Validation already refuses to let the process start
+    // with a bad key, so this is a straight hex→Buffer conversion.
+    this.key = Buffer.from(ENCRYPTION_KEY, 'hex');
   }
 
   /**
@@ -359,8 +371,28 @@ export function securityHeadersMiddleware(req: Request, res: Response, next: Nex
 // SESSION SECURITY
 // ============================================================================
 
+// SESSION_SECRET must be stable across process restarts AND across all
+// Autoscale instances. A per-process random fallback would hand each
+// instance a different secret, silently invalidating every session cookie
+// signed by any other instance. server/index.ts already fatal-exits if
+// neither SESSION_SECRET nor JWT_SECRET is set, so the fallback below only
+// fires in local dev — and even then we log loudly so it's obvious.
+const SESSION_SECRET = (() => {
+  const explicit = process.env.SESSION_SECRET || process.env.JWT_SECRET;
+  if (explicit && explicit.length >= 16) return explicit;
+  if (process.env.NODE_ENV === 'production') {
+    console.error('[Security] FATAL: SESSION_SECRET must be set in production');
+    process.exit(1);
+  }
+  console.warn(
+    '[Security] WARNING: generating ephemeral SESSION_SECRET for local dev. ' +
+      'Sessions will reset on every restart. Set SESSION_SECRET to silence this.',
+  );
+  return crypto.randomBytes(32).toString('hex');
+})();
+
 export const sessionConfig = {
-  secret: process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex'),
+  secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {
