@@ -2538,17 +2538,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             count: activeWarningAlerts.length,
           });
         }
-      } catch (e) {
-        // Sensor/alert methods may not exist - skip this section
-        console.log("Skipping sensor alerts check:", e);
-      }
-
-      // Check time off requests pending (skip if method not available)
-      try {
-        // Note: getTimeOffRequests may not exist in all storage implementations
-        // For now, we skip this as the method doesn't exist
-      } catch (e) {
-        console.log("Skipping time off requests check:", e);
+      } catch {
+        // Sensor/alert methods may not exist in all storage implementations
       }
 
       // Check compliance documents expiring
