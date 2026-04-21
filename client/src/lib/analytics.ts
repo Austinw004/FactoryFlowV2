@@ -34,7 +34,7 @@ class Analytics {
     this.queue.push(event);
     this.persistEvents();
 
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && import.meta.env.DEV) {
       console.debug("[Analytics]", name, properties);
     }
   }
