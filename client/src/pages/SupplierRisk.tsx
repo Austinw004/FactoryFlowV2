@@ -509,7 +509,7 @@ function CalculateRiskDialog({
       queryClient.invalidateQueries({ queryKey: ["/api/supplier-risk/summary"] });
       toast({ 
         title: "Risk scores calculated", 
-        description: `Successfully evaluated ${data.summary.successful} suppliers.` 
+        description: `Successfully evaluated ${data?.summary?.successful ?? 0} suppliers.`
       });
       onOpenChange(false);
       onCalculated();
