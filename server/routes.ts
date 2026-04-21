@@ -121,6 +121,13 @@ import {
   predictionOutcomes,
   insertPredictionOutcomeSchema,
   automationSafeMode,
+  insertComplianceDocumentSchema,
+  insertComplianceRegulationSchema,
+  insertComplianceAuditSchema,
+  insertAuditFindingSchema,
+  updateAuditFindingSchema,
+  insertComplianceCalendarEventSchema,
+  updateComplianceCalendarEventSchema,
 } from "@shared/schema";
 
 const economics = new DualCircuitEconomics();
@@ -4383,8 +4390,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  const updateRfqSchema = z.object({
+    status: z.enum(["draft", "pending_approval", "sent", "quotes_received", "awarded", "cancelled"]).optional(),
+    notes: z.string().max(5000).optional(),
+    dueDate: z.coerce.date().optional(),
+    requestedQuantity: z.number().int().min(1).optional(),
+    targetPrice: z.number().min(0).optional(),
+    supplierId: z.string().max(100).optional(),
+    quotesReceived: z.number().int().min(0).optional(),
+    awardedSupplierId: z.string().max(100).optional(),
+    awardedPrice: z.number().min(0).optional(),
+    awardedAt: z.coerce.date().optional(),
+    sentAt: z.coerce.date().optional(),
+    approvedBy: z.string().max(100).optional(),
+    approvedAt: z.coerce.date().optional(),
+  });
+
   // Update RFQ
-  app.patch("/api/rfqs/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+  app.patch("/api/rfqs/:id", isAuthenticated, rateLimiters.api, validateBody(updateRfqSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4397,14 +4420,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "RFQ not found" });
       }
 
-      const updatedRfq = await storage.updateRfq(req.params.id, req.body, user.companyId);
+      const updatedRfq = await storage.updateRfq(req.params.id, req.validated as any, user.companyId);
       
       await logAudit({
         action: "update",
         entityType: "rfq",
         entityId: req.params.id,
         notes: `Updated RFQ ${existingRfq.rfqNumber}`,
-        changes: req.body,
+        changes: req.validated,
         req,
       });
 
@@ -4552,7 +4575,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create compliance document
-  app.post("/api/compliance/documents", isAuthenticated, async (req: any, res) => {
+  app.post("/api/compliance/documents", isAuthenticated, validateBody(insertComplianceDocumentSchema.omit({ companyId: true, createdBy: true, economicRegimeContext: true })), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4562,9 +4585,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get current economic regime for context
       await economics.fetch();
-      
+
       const document = await storage.createComplianceDocument({
-        ...req.body,
+        ...(req.validated as any),
         companyId: user.companyId,
         createdBy: user.id,
         economicRegimeContext: economics.regime,
@@ -4595,7 +4618,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create compliance regulation
-  app.post("/api/compliance/regulations", isAuthenticated, async (req: any, res) => {
+  app.post("/api/compliance/regulations", isAuthenticated, validateBody(insertComplianceRegulationSchema.omit({ companyId: true })), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4604,7 +4627,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const regulation = await storage.createComplianceRegulation({
-        ...req.body,
+        ...(req.validated as any),
         companyId: user.companyId,
       });
       
@@ -4633,7 +4656,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create compliance audit
-  app.post("/api/compliance/audits", isAuthenticated, async (req: any, res) => {
+  app.post("/api/compliance/audits", isAuthenticated, validateBody(insertComplianceAuditSchema.omit({ companyId: true, economicRegime: true, fdrAtAudit: true })), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4643,9 +4666,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get current economic regime and FDR
       await economics.fetch();
-      
+
       const audit = await storage.createComplianceAudit({
-        ...req.body,
+        ...(req.validated as any),
         companyId: user.companyId,
         economicRegime: economics.regime,
         fdrAtAudit: economics.fdr,
@@ -4680,7 +4703,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create audit finding
-  app.post("/api/compliance/findings", isAuthenticated, async (req: any, res) => {
+  app.post("/api/compliance/findings", isAuthenticated, validateBody(insertAuditFindingSchema.omit({ companyId: true })), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4689,7 +4712,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const finding = await storage.createAuditFinding({
-        ...req.body,
+        ...(req.validated as any),
         companyId: user.companyId,
       });
       
@@ -4701,7 +4724,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update audit finding
-  app.patch("/api/compliance/findings/:id", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/compliance/findings/:id", isAuthenticated, validateBody(updateAuditFindingSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4709,7 +4732,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "User must be associated with a company" });
       }
 
-      const finding = await storage.updateAuditFinding(req.params.id, req.body);
+      const finding = await storage.updateAuditFinding(req.params.id, req.validated as any);
       if (!finding) {
         return res.status(404).json({ error: "Finding not found" });
       }
@@ -4743,7 +4766,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create calendar event
-  app.post("/api/compliance/calendar", isAuthenticated, async (req: any, res) => {
+  app.post("/api/compliance/calendar", isAuthenticated, validateBody(insertComplianceCalendarEventSchema.omit({ companyId: true })), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4752,7 +4775,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const event = await storage.createComplianceCalendarEvent({
-        ...req.body,
+        ...(req.validated as any),
         companyId: user.companyId,
       });
       
@@ -4764,7 +4787,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update calendar event
-  app.patch("/api/compliance/calendar/:id", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/compliance/calendar/:id", isAuthenticated, validateBody(updateComplianceCalendarEventSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4772,7 +4795,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "User must be associated with a company" });
       }
 
-      const event = await storage.updateComplianceCalendarEvent(req.params.id, req.body);
+      const event = await storage.updateComplianceCalendarEvent(req.params.id, req.validated as any);
       if (!event) {
         return res.status(404).json({ error: "Event not found" });
       }
