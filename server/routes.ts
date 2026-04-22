@@ -6766,7 +6766,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update purchase order (e.g., status changes from email integration)
-  app.patch("/api/purchase-orders/:id", isAuthenticated, async (req: any, res) => {
+  const updatePurchaseOrderSchema = z.object({
+    status: z.enum(["draft", "pending", "approved", "sent", "confirmed", "received", "cancelled"]).optional(),
+    materialId: z.string().uuid().optional(),
+    supplierId: z.string().uuid().optional(),
+    quantity: z.number().positive().optional(),
+    unitCost: z.number().nonnegative().optional(),
+    expectedDeliveryDate: z.string().datetime().optional(),
+    notes: z.string().max(2000).optional(),
+    companyId: z.string().uuid().optional(),
+  });
+  app.patch("/api/purchase-orders/:id", isAuthenticated, validateBody(updatePurchaseOrderSchema), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
       if (!user || !user.companyId) {
@@ -6779,28 +6789,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Purchase order not found" });
       }
 
+      const body = req.validated as any;
+
       // Prevent companyId tampering
-      if (req.body.companyId && req.body.companyId !== user.companyId) {
+      if (body.companyId && body.companyId !== user.companyId) {
         return res.status(403).json({ error: "Cannot change company ownership" });
       }
 
       // Verify new material if changing
-      if (req.body.materialId && req.body.materialId !== existingOrder.materialId) {
-        const material = await storage.getMaterial(req.body.materialId, user.companyId);
+      if (body.materialId && body.materialId !== existingOrder.materialId) {
+        const material = await storage.getMaterial(body.materialId, user.companyId);
         if (!material || material.companyId !== user.companyId) {
           return res.status(403).json({ error: "Material not found in your company" });
         }
       }
 
       // Verify new supplier if changing
-      if (req.body.supplierId && req.body.supplierId !== existingOrder.supplierId) {
-        const supplier = await storage.getSupplier(req.body.supplierId, user.companyId);
+      if (body.supplierId && body.supplierId !== existingOrder.supplierId) {
+        const supplier = await storage.getSupplier(body.supplierId, user.companyId);
         if (!supplier || supplier.companyId !== user.companyId) {
           return res.status(403).json({ error: "Supplier not found in your company" });
         }
       }
 
-      const order = await storage.updatePurchaseOrder(req.params.id, user.companyId, req.body);
+      const order = await storage.updatePurchaseOrder(req.params.id, user.companyId, body);
       if (!order) {
         return res.status(404).json({ error: "Purchase order not found" });
       }
@@ -8590,26 +8602,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const scenarioEngine = new ScenarioPlanningEngine(storage);
 
   // Run scenario simulation
-  app.post("/api/scenarios/simulate", isAuthenticated, async (req: any, res) => {
+  const scenarioSimulateSchema = z.object({
+    scenarioName: z.string().trim().max(200).optional(),
+    description: z.string().max(2000).optional(),
+    fdrDelta: z.number().min(-5).max(5).optional(),
+    newRegime: z.string().max(100).optional(),
+    commodityPriceChange: z.number().min(-100).max(1000).optional(),
+    affectedCommodities: z.array(z.string().max(100)).max(50).optional(),
+    demandChange: z.number().min(-100).max(1000).optional(),
+    affectedSKUs: z.array(z.string().max(100)).max(100).optional(),
+    durationMonths: z.number().int().min(1).max(120).optional(),
+    currentFDR: z.number().min(0).max(10).optional(),
+    currentRegime: z.string().max(100).optional(),
+    baseRevenue: z.number().nonnegative().optional(),
+    baseCosts: z.number().nonnegative().optional(),
+    baseMargin: z.number().min(0).max(100).optional(),
+  });
+  app.post("/api/scenarios/simulate", isAuthenticated, validateBody(scenarioSimulateSchema), async (req: any, res) => {
     try {
+      const b = req.validated as any;
       const input: ScenarioInput = {
-        scenarioName: req.body.scenarioName || 'Unnamed Scenario',
-        description: req.body.description,
-        fdrDelta: parseFloat(req.body.fdrDelta) || 0,
-        newRegime: req.body.newRegime,
-        commodityPriceChange: parseFloat(req.body.commodityPriceChange) || 0,
-        affectedCommodities: req.body.affectedCommodities,
-        demandChange: parseFloat(req.body.demandChange) || 0,
-        affectedSKUs: req.body.affectedSKUs,
-        durationMonths: parseInt(req.body.durationMonths) || 12,
+        scenarioName: b.scenarioName ?? 'Unnamed Scenario',
+        description: b.description,
+        fdrDelta: b.fdrDelta ?? 0,
+        newRegime: b.newRegime,
+        commodityPriceChange: b.commodityPriceChange ?? 0,
+        affectedCommodities: b.affectedCommodities,
+        demandChange: b.demandChange ?? 0,
+        affectedSKUs: b.affectedSKUs,
+        durationMonths: b.durationMonths ?? 12,
       };
 
       const currentContext = {
-        currentFDR: parseFloat(req.body.currentFDR) || 1.0,
-        currentRegime: req.body.currentRegime || 'Healthy Expansion',
-        baseRevenue: parseFloat(req.body.baseRevenue) || 10000000,
-        baseCosts: parseFloat(req.body.baseCosts) || 7000000,
-        baseMargin: parseFloat(req.body.baseMargin) || 30,
+        currentFDR: b.currentFDR ?? 1.0,
+        currentRegime: b.currentRegime ?? 'Healthy Expansion',
+        baseRevenue: b.baseRevenue ?? 10000000,
+        baseCosts: b.baseCosts ?? 7000000,
+        baseMargin: b.baseMargin ?? 30,
       };
 
       const result = await scenarioEngine.runScenario(input, currentContext);
@@ -11404,7 +11433,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create ROI metric
-  app.post("/api/roi/metrics", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+  const roiMetricSchema = z.object({
+    metricType: z.enum(["procurement_savings", "forecast_accuracy", "time_saved", "inventory_reduction"]),
+    periodStart: z.string().datetime(),
+    periodEnd: z.string().datetime(),
+    value: z.number().finite(),
+    unit: z.enum(["dollars", "percent", "hours", "units"]),
+    baselineValue: z.number().finite().optional(),
+    improvement: z.number().finite().optional(),
+    improvementPercent: z.number().min(-100).max(10000).optional(),
+    economicRegime: z.string().max(100).optional(),
+    fdrAtPeriod: z.number().min(0).max(10).optional(),
+    source: z.string().max(200).optional(),
+    details: z.record(z.unknown()).optional(),
+  });
+  app.post("/api/roi/metrics", isAuthenticated, rateLimiters.api, validateBody(roiMetricSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -11413,16 +11456,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const metric = await storage.createRoiMetric({
-        ...req.body,
+        ...req.validated as any,
         companyId: user.companyId,
       });
-      
+
       await logAudit({
         action: "create",
         entityType: "roi_metric",
         entityId: metric.id,
-        changes: req.body,
-        notes: `Created ROI metric: ${req.body.metricType}`,
+        changes: req.validated,
+        notes: `Created ROI metric: ${(req.validated as any).metricType}`,
         req,
       });
       
@@ -12611,7 +12654,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Create new simulation
-  app.post("/api/simulations", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+  const createSimulationSchema = z.object({
+    name: z.string().trim().min(1).max(200),
+    description: z.string().max(2000).optional(),
+    baseFdrValue: z.number().min(0).max(10).optional(),
+    baseRegime: z.string().max(100).optional(),
+    baseCommodityInputs: z.record(z.unknown()).optional(),
+  });
+  app.post("/api/simulations", isAuthenticated, rateLimiters.api, validateBody(createSimulationSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -12619,14 +12669,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User not associated with a company" });
       }
       
+      const body = req.validated as { name: string; description?: string; baseFdrValue?: number; baseRegime?: string; baseCommodityInputs?: Record<string, unknown> };
       const simulation = await storage.createScenarioSimulation({
         companyId: user.companyId,
         createdById: userId,
-        name: req.body.name,
-        description: req.body.description,
-        baseFdrValue: req.body.baseFdrValue || 1.0,
-        baseRegime: req.body.baseRegime || "balanced",
-        baseCommodityInputs: req.body.baseCommodityInputs,
+        name: body.name,
+        description: body.description,
+        baseFdrValue: body.baseFdrValue ?? 1.0,
+        baseRegime: body.baseRegime ?? "balanced",
+        baseCommodityInputs: body.baseCommodityInputs,
         status: "draft",
       });
       
@@ -13361,7 +13412,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Create or update supplier tier
-  app.post("/api/supplier-tiers", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+  const createSupplierTierSchema = z.object({
+    supplierId: z.string().uuid(),
+    tier: z.number().int().min(1).max(10).optional(),
+    tierLabel: z.string().max(100).optional(),
+    region: z.string().max(100).optional(),
+    country: z.string().max(100).optional(),
+    riskRegion: z.number().int().min(0).max(1).optional(),
+    spendShare: z.number().min(0).max(100).optional(),
+    dependencyWeight: z.number().min(0).max(100).optional(),
+    alternativesCount: z.number().int().nonnegative().optional(),
+    dataConfidence: z.number().min(0).max(100).optional(),
+    dataSource: z.enum(["manual", "api", "inferred"]).optional(),
+  });
+  app.post("/api/supplier-tiers", isAuthenticated, rateLimiters.api, validateBody(createSupplierTierSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -13369,14 +13433,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User not associated with a company" });
       }
       
-      const existingTier = await storage.getSupplierTierBySupplier(req.body.supplierId);
+      const body = req.validated as any;
+      const existingTier = await storage.getSupplierTierBySupplier(body.supplierId);
       if (existingTier) {
-        const updated = await storage.updateSupplierTier(existingTier.id, req.body);
+        const updated = await storage.updateSupplierTier(existingTier.id, body);
         return res.json(updated);
       }
-      
+
       const tier = await storage.createSupplierTier({
-        ...req.body,
+        ...body,
         companyId: user.companyId,
       });
       res.status(201).json(tier);
