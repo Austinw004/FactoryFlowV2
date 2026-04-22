@@ -23,23 +23,28 @@ const requirePlatformAdmin = async (req: any, res: any, next: any) => {
 };
 
 router.get("/check-access", isAuthenticated, async (req: any, res) => {
-  const user = req.user;
-  if (!user?.claims?.sub) {
-    return res.json({ isPlatformAdmin: false });
+  try {
+    const user = req.user;
+    if (!user?.claims?.sub) {
+      return res.json({ isPlatformAdmin: false });
+    }
+
+    const isPlatformAdmin = await platformAnalyticsService.isPlatformAdmin(user.claims.sub);
+    const admin = isPlatformAdmin
+      ? await platformAnalyticsService.getPlatformAdmin(user.claims.sub)
+      : null;
+
+    res.json({
+      isPlatformAdmin,
+      admin: admin ? {
+        role: admin.role,
+        accessLevel: admin.accessLevel,
+      } : null
+    });
+  } catch (error) {
+    console.error("[GET /api/platform/check-access] Error:", error);
+    res.status(500).json({ isPlatformAdmin: false, error: "Failed to verify admin access" });
   }
-
-  const isPlatformAdmin = await platformAnalyticsService.isPlatformAdmin(user.claims.sub);
-  const admin = isPlatformAdmin 
-    ? await platformAnalyticsService.getPlatformAdmin(user.claims.sub) 
-    : null;
-
-  res.json({ 
-    isPlatformAdmin, 
-    admin: admin ? {
-      role: admin.role,
-      accessLevel: admin.accessLevel,
-    } : null
-  });
 });
 
 router.get("/metrics", isAuthenticated, requirePlatformAdmin, async (req: any, res) => {
