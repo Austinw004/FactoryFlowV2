@@ -37,7 +37,7 @@ const SmartInsightsCompact = lazy(() =>
 const InsightPanel = lazy(() =>
   import("@/components/InsightPanel").then((m) => ({ default: m.InsightPanel })),
 );
-import { TrendingUp, DollarSign, Package, AlertCircle, Plus, Upload, GitCompare, Loader2, Globe, Radio, Package2, Building2, Box, FileDown, Clock, RefreshCw } from "lucide-react";
+import { TrendingUp, DollarSign, Package, AlertCircle, Plus, Upload, GitCompare, Loader2, Globe, Radio, Package2, Building2, Box, FileDown, Clock, RefreshCw, CheckCircle, ArrowRight, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -62,6 +62,68 @@ const regimeDescriptions: Record<string, string> = {
 function getRegimeDescription(regime: string): string {
   return regimeDescriptions[regime] || "Economic conditions are being analyzed.";
 }
+
+const regimeCommandConfig: Record<string, {
+  urgency: string;
+  headline: string;
+  detail: string;
+  actionPath: string;
+  actionLabel: string;
+  borderColor: string;
+  bgColor: string;
+  iconColor: string;
+  labelColor: string;
+  Icon: any;
+}> = {
+  HEALTHY_EXPANSION: {
+    urgency: "Normal Operations",
+    headline: "Market conditions are stable. Good time to negotiate long-term contracts.",
+    detail: "Standard procurement pace recommended. Use this window to rationalize your supplier base, lock in volume discounts, and build strategic supplier relationships.",
+    actionPath: "/procurement",
+    actionLabel: "Review Contracts",
+    borderColor: "border-l-green-500",
+    bgColor: "bg-green-500/5",
+    iconColor: "text-green-600",
+    labelColor: "text-green-700 dark:text-green-400",
+    Icon: CheckCircle,
+  },
+  ASSET_LED_GROWTH: {
+    urgency: "Action Window — Lock In Contracts Now",
+    headline: "Asset prices outpacing the real economy. Pre-purchase critical materials before the next pricing cycle.",
+    detail: "This regime historically precedes 8–12% input cost increases. Lock in supplier contracts, accelerate open POs, and pre-purchase 4–6 weeks of buffer stock on sole-source materials.",
+    actionPath: "/materials",
+    actionLabel: "View Exposed Materials",
+    borderColor: "border-l-amber-500",
+    bgColor: "bg-amber-500/5",
+    iconColor: "text-amber-600",
+    labelColor: "text-amber-700 dark:text-amber-400",
+    Icon: TrendingUp,
+  },
+  IMBALANCED_EXCESS: {
+    urgency: "Caution — Defer Non-Critical Purchases",
+    headline: "Significant market decoupling detected. Renegotiate expiring contracts before they auto-renew.",
+    detail: "Real economy stress is elevated. Build safety stock on sole-source materials only. Defer all discretionary procurement until conditions normalize. Renegotiate contracts expiring in the next 60 days.",
+    actionPath: "/supplier-risk",
+    actionLabel: "View Supplier Risks",
+    borderColor: "border-l-red-500",
+    bgColor: "bg-red-500/5",
+    iconColor: "text-red-600",
+    labelColor: "text-red-700 dark:text-red-400",
+    Icon: AlertCircle,
+  },
+  REAL_ECONOMY_LEAD: {
+    urgency: "Opportunity Window — Favorable Terms Available",
+    headline: "Counter-cyclical conditions. Lock in long-term supply agreements while asset markets correct.",
+    detail: "Real economy holding while asset markets pull back. Negotiate aggressively on multi-year supplier agreements. Qualify alternative suppliers. This window historically closes within 60–90 days.",
+    actionPath: "/procurement",
+    actionLabel: "Start Negotiations",
+    borderColor: "border-l-blue-500",
+    bgColor: "bg-blue-500/5",
+    iconColor: "text-blue-600",
+    labelColor: "text-blue-700 dark:text-blue-400",
+    Icon: Zap,
+  },
+};
 
 export default function Dashboard() {
   const { toast } = useToast();
@@ -262,30 +324,68 @@ export default function Dashboard() {
 
   // Show empty state
   if (!hasData) {
+    const currentRegimeCmd = regimeCommandConfig[regimeType] || regimeCommandConfig.HEALTHY_EXPANSION;
+    const CurrentCmdIcon = currentRegimeCmd.Icon;
     return (
       <>
-        <div className="p-6 space-y-6">
+        <div className="p-8 max-w-5xl space-y-6">
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <h1 className="text-3xl font-semibold">Dashboard</h1>
-            <div className="flex items-center gap-2">
-              <Badge variant={isConnected ? "default" : "outline"} className="gap-1.5">
-                <Radio className={`h-3 w-3 ${isConnected ? 'animate-pulse' : ''}`} />
-                {isConnected ? 'Live Updates' : 'Connecting...'}
-              </Badge>
+            <div>
+              <div className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-1">Command Center</div>
+              <h1 className="text-3xl font-semibold">Your Operations Dashboard</h1>
             </div>
+            <Badge variant={isConnected ? "default" : "outline"} className="gap-1.5">
+              <Radio className={`h-3 w-3 ${isConnected ? 'animate-pulse' : ''}`} />
+              {isConnected ? 'Live Updates' : 'Connecting...'}
+            </Badge>
           </div>
-          <Card className="p-12">
-            <div className="text-center space-y-6">
-              <Package className="h-16 w-16 mx-auto text-muted-foreground" />
+
+          {/* FDR regime preview — show the engine even before data is loaded */}
+          {regimeType !== 'UNKNOWN' && (
+            <div className={`border-l-4 rounded-r-lg p-5 ${currentRegimeCmd.borderColor} ${currentRegimeCmd.bgColor}`}>
+              <div className="flex items-start gap-3">
+                <CurrentCmdIcon className={`h-5 w-5 shrink-0 mt-0.5 ${currentRegimeCmd.iconColor}`} />
+                <div>
+                  <p className={`text-xs font-semibold uppercase tracking-wider mb-1 ${currentRegimeCmd.labelColor}`}>
+                    Current Economic Regime: {friendlyRegime} — FDR {fdr.toFixed(2)}
+                  </p>
+                  <p className="text-sm font-medium text-foreground mb-1">{currentRegimeCmd.headline}</p>
+                  <p className="text-xs text-muted-foreground">{currentRegimeCmd.detail}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <Card className="p-10">
+            <div className="text-center space-y-5">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-primary/10">
+                <TrendingUp className="h-7 w-7 text-primary" />
+              </div>
               <div>
-                <h2 className="text-2xl font-semibold mb-2">Get Started</h2>
-                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                  Add your products, materials, and suppliers to start using the platform. 
-                  Or explore with sample data first.
+                <h2 className="text-xl font-semibold mb-2">Connect your supply chain data</h2>
+                <p className="text-sm text-muted-foreground max-w-lg mx-auto leading-relaxed">
+                  Add your SKUs, materials, and suppliers to unlock regime-driven procurement guidance.
+                  The platform will tell you <em>when</em> to buy, <em>when</em> to defer, and <em>which suppliers</em> carry the most risk — based on live economic conditions.
                 </p>
               </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl mx-auto text-left my-4">
+                <div className="p-3 rounded-lg border bg-card/50">
+                  <div className="text-xs font-medium mb-1 text-foreground">FDR Regime Model</div>
+                  <p className="text-xs text-muted-foreground">Detects when asset markets decouple from the real economy — so you know exactly when to lock in contracts.</p>
+                </div>
+                <div className="p-3 rounded-lg border bg-card/50">
+                  <div className="text-xs font-medium mb-1 text-foreground">Supplier Intelligence</div>
+                  <p className="text-xs text-muted-foreground">See delivery performance, geographic risk, and alternative suppliers for every material in one place.</p>
+                </div>
+                <div className="p-3 rounded-lg border bg-card/50">
+                  <div className="text-xs font-medium mb-1 text-foreground">Demand Forecasting</div>
+                  <p className="text-xs text-muted-foreground">Forecasts that automatically adjust to the economic regime — with confidence intervals, not just a single number.</p>
+                </div>
+              </div>
+
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Button 
+                <Button
                   onClick={() => setShowCreateSKU(true)}
                   size="lg"
                   data-testid="button-add-first-product"
@@ -293,9 +393,9 @@ export default function Dashboard() {
                   <Plus className="h-4 w-4 mr-2" />
                   Add Your First Product
                 </Button>
-                <Button 
+                <Button
                   variant="outline"
-                  onClick={() => seedMutation.mutate()} 
+                  onClick={() => seedMutation.mutate()}
                   disabled={seedMutation.isPending}
                   size="lg"
                   data-testid="button-load-sample-data"
@@ -303,16 +403,17 @@ export default function Dashboard() {
                   {seedMutation.isPending ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Loading...
+                      Loading Sample Data...
                     </>
                   ) : (
                     <>
                       <Upload className="h-4 w-4 mr-2" />
-                      Load Sample Data
+                      Explore with Sample Data
                     </>
                   )}
                 </Button>
               </div>
+              <p className="text-xs text-muted-foreground">Sample data includes a live regime transition, at-risk suppliers, and procurement recommendations.</p>
             </div>
           </Card>
         </div>
@@ -370,9 +471,41 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Regime-aware procurement command — the #1 thing to act on today */}
+      {regimeType !== 'UNKNOWN' && (() => {
+        const cmd = regimeCommandConfig[regimeType] || regimeCommandConfig.HEALTHY_EXPANSION;
+        const CmdIcon = cmd.Icon;
+        return (
+          <div className={`border-l-4 rounded-r-lg p-5 mb-8 ${cmd.borderColor} ${cmd.bgColor}`}>
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  <CmdIcon className={`h-4 w-4 shrink-0 ${cmd.iconColor}`} />
+                  <span className={`text-xs font-semibold uppercase tracking-wider ${cmd.labelColor}`}>
+                    {cmd.urgency}
+                  </span>
+                  <span className="text-xs text-muted-foreground font-mono">
+                    FDR {fdr.toFixed(2)} — {friendlyRegime}
+                  </span>
+                </div>
+                <p className="text-sm font-semibold text-foreground mb-1">{cmd.headline}</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">{cmd.detail}</p>
+              </div>
+              <button
+                className={`shrink-0 flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md border transition-colors ${cmd.iconColor} border-current hover:opacity-80`}
+                onClick={() => setLocation(cmd.actionPath)}
+              >
+                {cmd.actionLabel}
+                <ArrowRight className="h-3 w-3" />
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Legacy dashboard content below */}
       <div className="flex items-center flex-wrap gap-2">
-        <h1 className="text-3xl font-semibold">Dashboard</h1>
+        <h2 className="text-xl font-semibold text-muted-foreground">Operations Detail</h2>
         <div className="flex items-center gap-2 px-3 py-1.5 ml-4 rounded-md border bg-muted/30" data-testid="data-freshness-indicator">
           <Clock className="h-3.5 w-3.5 text-muted-foreground" />
           <div className="flex items-center gap-3 text-xs">

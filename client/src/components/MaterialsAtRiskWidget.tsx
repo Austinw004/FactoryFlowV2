@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Package, TrendingDown } from "lucide-react";
+import { AlertTriangle, Package, TrendingDown, ShieldAlert } from "lucide-react";
 import { useLocation } from "wouter";
 import type { Material } from "@shared/schema";
 
@@ -11,6 +11,7 @@ interface MaterialRisk {
   material: Material;
   riskScore: number;
   reason: string;
+  recommendation: string;
   inventoryLevel: number; // percentage
 }
 
@@ -26,31 +27,36 @@ export function MaterialsAtRiskWidget() {
       const onHand = material.onHand || 0;
       const inbound = material.inbound || 0;
       const total = onHand + inbound;
-      
-      // Simple risk calculation (in production, would factor in demand, lead time, etc.)
+
       let riskScore = 0;
       let reason = "";
-      
+      let recommendation = "";
+
       if (total === 0) {
         riskScore = 100;
-        reason = "Zero inventory";
+        reason = "Zero inventory — production stoppage risk";
+        recommendation = "Issue emergency PO immediately. Qualify backup supplier if sole-sourced.";
       } else if (total < 100) {
         riskScore = 80;
-        reason = "Critically low stock";
+        reason = "Critically low stock — days of supply < 1 week";
+        recommendation = "Schedule procurement now. Check if expedited shipping can reduce lead time.";
       } else if (total < 500) {
         riskScore = 50;
-        reason = "Low inventory";
+        reason = "Low inventory — below safety stock threshold";
+        recommendation = "Increase next PO quantity by 30–50% or add a second supplier to reduce reorder risk.";
       } else if (inbound === 0 && onHand < 1000) {
         riskScore = 30;
-        reason = "No inbound orders";
+        reason = "No inbound orders — replenishment gap detected";
+        recommendation = "Confirm open PO status with supplier. Create a new PO if replenishment is overdue.";
       }
-      
-      const inventoryLevel = Math.min(100, (total / 1000) * 100); // Assume 1000 is full stock
-      
+
+      const inventoryLevel = Math.min(100, (total / 1000) * 100);
+
       return {
         material,
         riskScore,
         reason,
+        recommendation,
         inventoryLevel,
       };
     })
@@ -106,7 +112,7 @@ export function MaterialsAtRiskWidget() {
               Materials at Risk
             </CardTitle>
             <CardDescription>
-              {materialsAtRisk.length} materials requiring attention
+              {materialsAtRisk.length} material{materialsAtRisk.length !== 1 ? 's' : ''} need{materialsAtRisk.length === 1 ? 's' : ''} action — ranked by severity
             </CardDescription>
           </div>
           <Badge variant="destructive">{materialsAtRisk.length}</Badge>
@@ -135,15 +141,17 @@ export function MaterialsAtRiskWidget() {
                       ? "secondary"
                       : "outline"
                   }
-                  className="text-xs"
+                  className="text-xs shrink-0 ml-2"
                 >
-                  {item.reason}
+                  {item.riskScore >= 80 ? "Critical" : item.riskScore >= 50 ? "High" : "Medium"}
                 </Badge>
               </div>
-              
-              <div className="space-y-1">
+
+              <p className="text-xs text-muted-foreground mb-2">{item.reason}</p>
+
+              <div className="space-y-1 mb-2">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">Inventory Level</span>
+                  <span className="text-muted-foreground">On Hand</span>
                   <span className="font-mono font-medium">
                     {item.material.onHand} {item.material.unit}
                     {item.material.inbound > 0 && ` (+${item.material.inbound} inbound)`}
@@ -151,7 +159,7 @@ export function MaterialsAtRiskWidget() {
                 </div>
                 <Progress
                   value={item.inventoryLevel}
-                  className={`h-2 ${
+                  className={`h-1.5 ${
                     item.riskScore >= 80
                       ? "[&>div]:bg-destructive"
                       : item.riskScore >= 50
@@ -160,19 +168,22 @@ export function MaterialsAtRiskWidget() {
                   }`}
                 />
               </div>
-              
-              <div className="flex items-center gap-2 mt-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 text-xs"
-                  onClick={() => setLocation(`/rfq-generation?materialId=${item.material.id}`)}
-                  data-testid={`button-procure-${item.material.id}`}
-                >
-                  <TrendingDown className="h-3 w-3 mr-1" />
-                  Schedule Procurement
-                </Button>
+
+              <div className="flex items-start gap-1.5 mb-3 p-2 rounded bg-muted/40">
+                <ShieldAlert className="h-3 w-3 text-muted-foreground shrink-0 mt-0.5" />
+                <p className="text-xs text-muted-foreground leading-relaxed">{item.recommendation}</p>
               </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full text-xs"
+                onClick={() => setLocation(`/rfq-generation?materialId=${item.material.id}`)}
+                data-testid={`button-procure-${item.material.id}`}
+              >
+                <TrendingDown className="h-3 w-3 mr-1" />
+                Create Procurement Request
+              </Button>
             </div>
           ))}
         </div>
