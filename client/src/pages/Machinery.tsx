@@ -18,7 +18,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { Machinery, InsertMachinery, MaintenanceRecord, InsertMaintenanceRecord } from "@shared/schema";
 import { insertMachinerySchema, insertMaintenanceRecordSchema } from "@shared/schema";
-import { z } from "zod";
+import { z } from "zod/v4";
 
 type DepreciationSchedule = {
   currentValue: number;
@@ -298,7 +298,7 @@ function AddMachineForm({ onSuccess, onCancel }: {
   const { toast } = useToast();
   
   const form = useForm<z.infer<typeof machineryFormSchema>>({
-    resolver: zodResolver(machineryFormSchema),
+    resolver: zodResolver(machineryFormSchema as any),
     defaultValues: {
       name: "",
       manufacturer: "",
@@ -798,7 +798,7 @@ function AddMaintenanceForm({ machine, onSuccess, onCancel }: {
   const { toast } = useToast();
   
   const form = useForm<z.infer<typeof maintenanceFormSchema>>({
-    resolver: zodResolver(maintenanceFormSchema),
+    resolver: zodResolver(maintenanceFormSchema as any),
     defaultValues: {
       maintenanceType: "preventive",
       description: "",
