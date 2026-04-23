@@ -34,9 +34,6 @@ class Analytics {
     this.queue.push(event);
     this.persistEvents();
 
-    if (typeof window !== "undefined") {
-      console.debug("[Analytics]", name, properties);
-    }
   }
 
   pageView(pageName: string) {
