@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Activity, ShieldCheck, AlertTriangle, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Activity, ShieldCheck, AlertTriangle, TrendingUp, TrendingDown, Minus, CheckCircle2 } from "lucide-react";
 import { InfoTooltip } from "@/components/InfoTooltip";
 
 type Regime = "HEALTHY_EXPANSION" | "ASSET_LED_GROWTH" | "IMBALANCED_EXCESS" | "REAL_ECONOMY_LEAD";
@@ -47,30 +47,50 @@ interface RegimeStatusProps {
   };
 }
 
-const regimeConfig: Record<Regime, { label: string; description: string; thresholdRange: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+const regimeConfig: Record<Regime, { label: string; description: string; thresholdRange: string; variant: "default" | "secondary" | "destructive" | "outline"; actions: string[] }> = {
   HEALTHY_EXPANSION: {
     label: "Healthy Expansion",
     description: "Balanced growth. Standard procurement pace.",
     thresholdRange: "FDR < 1.2",
     variant: "default",
+    actions: [
+      "Negotiate multi-year contracts for high-volume materials",
+      "Review and rationalize your supplier base",
+      "Optimize safety stock to standard levels",
+    ],
   },
   ASSET_LED_GROWTH: {
     label: "Asset-Led Growth",
-    description: "Assets outpacing real economy. Consider accelerating procurement.",
+    description: "Assets outpacing real economy. Lock in supplier contracts before pricing cycle.",
     thresholdRange: "FDR 1.2 - 1.8",
     variant: "secondary",
+    actions: [
+      "Lock in supplier contracts for critical materials now",
+      "Pre-purchase 4–6 weeks of buffer stock on sole-source materials",
+      "Expedite contract renewals due within 90 days",
+    ],
   },
   IMBALANCED_EXCESS: {
     label: "Imbalanced Excess",
-    description: "Significant asset-real economy gap. Defer non-critical purchases.",
+    description: "Significant market decoupling. Defer non-critical purchases.",
     thresholdRange: "FDR 1.8 - 2.5",
     variant: "destructive",
+    actions: [
+      "Defer non-critical purchases — wait for market correction",
+      "Renegotiate contracts expiring in the next 60 days",
+      "Build safety stock on sole-source materials only",
+    ],
   },
   REAL_ECONOMY_LEAD: {
     label: "Real Economy Lead",
-    description: "Counter-cyclical opportunity. Lock in favorable pricing.",
+    description: "Counter-cyclical opportunity. Lock in favorable supplier terms.",
     thresholdRange: "FDR > 2.5",
     variant: "default",
+    actions: [
+      "Secure long-term supply agreements at current favorable pricing",
+      "Qualify alternative suppliers while switching costs are low",
+      "Expand safety stock on strategic materials",
+    ],
   },
 };
 
@@ -183,6 +203,18 @@ export function RegimeStatus({ regime, fdr: fdrProp, intensity, regimeEvidence, 
             </span>
           </div>
         )}
+
+        <div className="border-t pt-3 mt-1" data-testid="section-procurement-actions">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">What to do now</p>
+          <div className="space-y-1.5">
+            {config.actions.map((action, i) => (
+              <div key={i} className="flex items-start gap-2 text-xs">
+                <CheckCircle2 className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                <span className="text-foreground/80">{action}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </Card>
   );
