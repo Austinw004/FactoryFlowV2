@@ -11,6 +11,7 @@ interface QuickWin {
   type: "timing" | "negotiation" | "consolidation" | "stockout_risk";
   title: string;
   description: string;
+  why: string;
   urgency: "high" | "medium" | "low";
   actionLabel: string;
 }
@@ -57,10 +58,11 @@ export function QuickWinsWidget() {
       wins.push({
         id: "timing-1",
         type: "timing",
-        title: "Favorable buying conditions detected",
-        description: "Current market regime favors buyers. Review planned purchases for acceleration opportunities.",
+        title: "Counter-cyclical buying window open",
+        description: "Real economy is outpacing asset markets. Supplier terms are currently favorable.",
+        why: "Why now: FDR below 0.8 signals real economic strength relative to financial markets — a rare buyer's window that typically closes within 4–8 weeks.",
         urgency: "high",
-        actionLabel: "Review procurement queue",
+        actionLabel: "Lock in contracts now",
       });
     }
 
@@ -68,10 +70,11 @@ export function QuickWinsWidget() {
       wins.push({
         id: "timing-2",
         type: "timing",
-        title: "Elevated market prices detected",
-        description: "Current regime suggests caution. Consider deferring non-critical purchases.",
+        title: "Defer non-critical purchases",
+        description: "Asset markets are materially ahead of real output. Spot pricing is elevated.",
+        why: `Why: FDR at ${fdr.toFixed(2)} indicates financial market overheating. Historically precedes 8–12% input cost spikes. Wait for stabilization before non-essential purchases.`,
         urgency: "medium",
-        actionLabel: "Review pending orders",
+        actionLabel: "Review pending purchase orders",
       });
     }
 
@@ -80,10 +83,11 @@ export function QuickWinsWidget() {
       wins.push({
         id: "stockout-1",
         type: "stockout_risk",
-        title: `${lowStockMaterials.length} materials at low stock`,
-        description: "Low inventory detected. Review reorder needs to prevent production delays.",
+        title: `${lowStockMaterials.length} material${lowStockMaterials.length > 1 ? 's' : ''} at stockout risk`,
+        description: `${lowStockMaterials.map((m: any) => m.name || m.code).slice(0, 2).join(', ')}${lowStockMaterials.length > 2 ? ` +${lowStockMaterials.length - 2} more` : ''} — all below 50 units on hand.`,
+        why: "Why urgent: Any of these materials can halt dependent production lines if not replenished within 1–2 weeks.",
         urgency: "high",
-        actionLabel: "View at-risk materials",
+        actionLabel: "View at-risk inventory",
       });
     }
 
@@ -92,9 +96,10 @@ export function QuickWinsWidget() {
         id: "consolidation-1",
         type: "consolidation",
         title: "Supplier consolidation opportunity",
-        description: "Multiple suppliers detected. Consolidating orders may improve terms.",
+        description: `${materials.length} active materials across your supply base. Consolidating volume may unlock better terms.`,
+        why: "Why: Suppliers typically offer 5–15% better pricing at higher volume tiers. Consolidating orders from fragmented suppliers can reduce total material cost.",
         urgency: "low",
-        actionLabel: "Analyze suppliers",
+        actionLabel: "Analyze supplier network",
       });
     }
 
@@ -104,10 +109,11 @@ export function QuickWinsWidget() {
         wins.push({
           id: "negotiation-1",
           type: "negotiation",
-          title: "Contract review opportunity",
-          description: "Budget size may support renegotiation with key suppliers.",
+          title: "Annual contract renegotiation window",
+          description: `Allocation budget of $${(latestAllocation.budget / 1000).toFixed(0)}K gives you negotiating leverage with key suppliers.`,
+          why: "Why: Suppliers are more flexible on pricing and payment terms when approached before contract renewal deadlines. Most annual contracts reset Q1.",
           urgency: "medium",
-          actionLabel: "View supplier terms",
+          actionLabel: "Review supplier contracts",
         });
       }
     }
@@ -199,17 +205,20 @@ export function QuickWinsWidget() {
                   <Icon className="h-4 w-4 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-medium text-sm truncate">{win.title}</span>
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className="font-medium text-sm">{win.title}</span>
                     <Badge variant="outline" className={`text-xs ${getUrgencyColor(win.urgency)}`}>
                       {win.urgency}
                     </Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground line-clamp-2">{win.description}</p>
-                  <div className="flex items-center justify-end mt-2">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                  <p className="text-xs text-muted-foreground mb-1.5">{win.description}</p>
+                  {win.why && (
+                    <p className="text-xs text-muted-foreground/70 italic leading-relaxed mb-1.5">{win.why}</p>
+                  )}
+                  <div className="flex items-center justify-end">
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       className="h-6 text-xs gap-1 px-2"
                       onClick={(e) => {
                         e.stopPropagation();

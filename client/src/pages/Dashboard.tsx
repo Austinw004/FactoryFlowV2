@@ -37,7 +37,7 @@ const SmartInsightsCompact = lazy(() =>
 const InsightPanel = lazy(() =>
   import("@/components/InsightPanel").then((m) => ({ default: m.InsightPanel })),
 );
-import { TrendingUp, DollarSign, Package, AlertCircle, Plus, Upload, GitCompare, Loader2, Globe, Radio, Package2, Building2, Box, FileDown, Clock, RefreshCw } from "lucide-react";
+import { TrendingUp, DollarSign, Package, AlertCircle, Plus, Upload, GitCompare, Loader2, Globe, Radio, Package2, Building2, Box, FileDown, Clock, RefreshCw, Zap, X, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -63,21 +63,102 @@ function getRegimeDescription(regime: string): string {
   return regimeDescriptions[regime] || "Economic conditions are being analyzed.";
 }
 
+interface RegimeCommand {
+  guidance: string;
+  detail: string;
+  urgency: "stable" | "caution" | "urgent" | "opportunity";
+  primaryCTA: string;
+  primaryPath: string;
+  secondaryCTA: string;
+  secondaryPath: string;
+  borderColor: string;
+  bgColor: string;
+  badgeColor: string;
+  icon: string;
+}
+
+const regimeCommandConfig: Record<string, RegimeCommand> = {
+  HEALTHY_EXPANSION: {
+    guidance: "Market conditions are stable. Good time to negotiate long-term contracts.",
+    detail: "Asset and real economy circuits are in equilibrium. Supplier terms are favorable. Lock in agreements before conditions shift — stable windows close without warning.",
+    urgency: "stable",
+    primaryCTA: "Start Contract Negotiations",
+    primaryPath: "/multi-tier-mapping",
+    secondaryCTA: "Review Supplier Terms",
+    secondaryPath: "/supplier-risk",
+    borderColor: "border-blue-500/30",
+    bgColor: "bg-blue-500/5",
+    badgeColor: "bg-blue-500/15 text-blue-400 border-blue-500/30",
+    icon: "✓",
+  },
+  ASSET_LED_GROWTH: {
+    guidance: "Asset prices outpacing real economy. Input costs likely to rise 8–12% this quarter.",
+    detail: "The FDR model is detecting financial market overheating relative to real output. Historically this precedes procurement cost increases. Lock in contracts and pre-purchase critical materials before the next pricing cycle.",
+    urgency: "caution",
+    primaryCTA: "View Exposed Materials",
+    primaryPath: "/inventory",
+    secondaryCTA: "Run Procurement Analysis",
+    secondaryPath: "/procurement",
+    borderColor: "border-amber-500/40",
+    bgColor: "bg-amber-500/8",
+    badgeColor: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+    icon: "⚠",
+  },
+  IMBALANCED_EXCESS: {
+    guidance: "Significant market decoupling detected. Defer non-critical purchases now.",
+    detail: "Asset markets have materially decoupled from real economic output. Renegotiate all contracts expiring within 90 days. Build safety stock on critical-path materials only — avoid spot purchases on anything non-essential.",
+    urgency: "urgent",
+    primaryCTA: "Review Expiring Contracts",
+    primaryPath: "/multi-tier-mapping",
+    secondaryCTA: "Identify Critical Materials",
+    secondaryPath: "/inventory",
+    borderColor: "border-red-500/40",
+    bgColor: "bg-red-500/8",
+    badgeColor: "bg-red-500/15 text-red-400 border-red-500/30",
+    icon: "!",
+  },
+  REAL_ECONOMY_LEAD: {
+    guidance: "Counter-cyclical window open. Lock in supplier agreements while asset markets correct.",
+    detail: "Real economic output is leading asset markets — a rare favorable condition for buyers. Multi-year agreements locked in now will provide cost certainty through the next cycle. This window typically lasts 4–8 weeks.",
+    urgency: "opportunity",
+    primaryCTA: "Lock In Supplier Agreements",
+    primaryPath: "/multi-tier-mapping",
+    secondaryCTA: "View Procurement Queue",
+    secondaryPath: "/procurement",
+    borderColor: "border-green-500/30",
+    bgColor: "bg-green-500/5",
+    badgeColor: "bg-green-500/15 text-green-400 border-green-500/30",
+    icon: "→",
+  },
+};
+
 export default function Dashboard() {
   const { toast } = useToast();
   const { user, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
 
+  const [regimeChangedEvent, setRegimeChangedEvent] = useState<{
+    from: string;
+    to: string;
+    fdr: number;
+    timestamp: string;
+  } | null>(null);
+
   // Enable WebSocket for real-time updates with regime change notifications
   const { isConnected } = useWebSocket((message) => {
     if (message.type === 'regime_change' && message.data) {
       const severity = message.data.severity === 'high' ? 'destructive' : 'default';
-      
+      setRegimeChangedEvent({
+        from: message.data.from,
+        to: message.data.to,
+        fdr: Number.isFinite(Number(message.data.fdr)) ? Number(message.data.fdr) : 1.0,
+        timestamp: new Date().toISOString(),
+      });
       toast({
         title: "Economic Regime Changed",
         description: `The economic regime has shifted from ${message.data.from} to ${message.data.to}. FDR: ${Number.isFinite(Number(message.data.fdr)) ? Number(message.data.fdr).toFixed(2) : '—'}`,
         variant: severity as 'default' | 'destructive',
-        duration: 10000, // Show for 10 seconds
+        duration: 10000,
       });
     }
   });
@@ -347,7 +428,7 @@ export default function Dashboard() {
         </p>
       </div>
 
-      <div className="grid grid-cols-4 gap-px bg-line mb-20">
+      <div className="grid grid-cols-4 gap-px bg-line mb-8">
         <div className="bg-panel p-6">
           <div className="eyebrow mb-4">Regime</div>
           <div className="text-3xl display">{regime?.regime ? regime.regime.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase()).split(' ').slice(0, 2).join(' ') : '—'}</div>
@@ -370,10 +451,65 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Legacy dashboard content below */}
+      {/* Regime Change Event Banner — appears when WebSocket detects a regime shift */}
+      {regimeChangedEvent && (
+        <div className="mb-8 p-4 rounded-lg border-2 border-amber-500/50 bg-amber-500/10" data-testid="banner-regime-change">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <Zap className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-sm text-amber-300">
+                  Regime Shifted: {regimeLabels[regimeChangedEvent.from] || regimeChangedEvent.from} → {regimeLabels[regimeChangedEvent.to] || regimeChangedEvent.to}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  FDR moved to {regimeChangedEvent.fdr.toFixed(2)}. Your procurement strategy should be updated. Review the guidance below and take action before the window closes.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button size="sm" variant="outline" className="text-xs border-amber-500/40 text-amber-300 hover:bg-amber-500/10" onClick={() => setLocation('/strategic-analysis')}>
+                View Impact Analysis <ChevronRight className="h-3 w-3 ml-1" />
+              </Button>
+              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setRegimeChangedEvent(null)}>
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Regime Command Intelligence Banner */}
+      {regimeType !== 'UNKNOWN' && (() => {
+        const cmd = regimeCommandConfig[regimeType] || regimeCommandConfig.HEALTHY_EXPANSION;
+        return (
+          <div className={`mb-12 p-5 rounded-lg border ${cmd.borderColor} ${cmd.bgColor}`} data-testid="banner-regime-command">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${cmd.badgeColor}`}>
+                    {cmd.icon} {friendlyRegime} · Procurement Guidance
+                  </span>
+                  <span className="mono text-xs text-muted">FDR {fdr.toFixed(2)} <InfoTooltip term="fdr" /></span>
+                </div>
+                <p className="text-sm font-semibold mb-1">{cmd.guidance}</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">{cmd.detail}</p>
+              </div>
+              <div className="flex flex-col gap-2 shrink-0">
+                <Button size="sm" onClick={() => setLocation(cmd.primaryPath)} className="text-xs">
+                  {cmd.primaryCTA} <ChevronRight className="h-3 w-3 ml-1" />
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setLocation(cmd.secondaryPath)} className="text-xs">
+                  {cmd.secondaryCTA}
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Action bar & data freshness */}
       <div className="flex items-center flex-wrap gap-2">
-        <h1 className="text-3xl font-semibold">Dashboard</h1>
-        <div className="flex items-center gap-2 px-3 py-1.5 ml-4 rounded-md border bg-muted/30" data-testid="data-freshness-indicator">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border bg-muted/30" data-testid="data-freshness-indicator">
           <Clock className="h-3.5 w-3.5 text-muted-foreground" />
           <div className="flex items-center gap-3 text-xs">
             <span className="flex items-center gap-1">
