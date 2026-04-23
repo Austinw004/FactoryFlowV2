@@ -491,7 +491,9 @@ export function registerAuthPaymentRoutes(app: Express): void {
       entityId: authUser.id,
       changes: { fields: Object.keys(req.body ?? {}) },
       notes: "profile updated by user",
-    }).catch(() => {});
+    }).catch((auditErr) => {
+      console.error("[authPaymentRoutes] Audit log failed for profile update:", auditErr);
+    });
     res.json(result);
   }));
 
@@ -507,7 +509,9 @@ export function registerAuthPaymentRoutes(app: Express): void {
       entityType: "user",
       entityId: authUser.id,
       notes: "password changed by user",
-    }).catch(() => {});
+    }).catch((auditErr) => {
+      console.error("[authPaymentRoutes] Audit log failed for password change:", auditErr);
+    });
     res.json(result);
   }));
 

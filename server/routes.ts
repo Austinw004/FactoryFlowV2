@@ -807,7 +807,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const { recordProbe } = await import("./lib/probeHistory");
         recordProbe({ name: "api", status: "down", latencyMs: null });
-      } catch {}
+      } catch (probeError) {
+        console.error("[health] Failed to record probe during error handler:", probeError);
+      }
       res.status(503).json({
         status: 'unhealthy',
         timestamp: new Date().toISOString(),
@@ -19204,8 +19206,16 @@ You'll receive emails for:
   });
   
   app.get("/api/oauth/supported", isAuthenticated, async (_req, res) => {
-    const { OAuthService } = await import("./lib/oauthService");
-    res.json({ integrations: OAuthService.getSupportedIntegrations() });
+    try {
+      const { OAuthService } = await import("./lib/oauthService");
+      res.json({ integrations: OAuthService.getSupportedIntegrations() });
+    } catch (error) {
+      console.error("[GET /api/oauth/supported] Error:", error);
+      res.status(500).json({
+        error: "We couldn't load supported integrations. Please try again.",
+        code: "INTERNAL_ERROR",
+      });
+    }
   });
   
   app.post("/api/oauth/refresh/:integrationId", isAuthenticated, async (req: any, res) => {
