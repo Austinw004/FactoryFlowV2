@@ -102,6 +102,9 @@ import {
   insertRfqSchema,
   insertRfqQuoteSchema,
   insertBenchmarkSubmissionSchema,
+  insertComplianceDocumentSchema,
+  insertComplianceRegulationSchema,
+  insertComplianceAuditSchema,
   insertSopMeetingTemplateSchema,
   insertSopMeetingSchema,
   insertSopMeetingAttendeeSchema,
@@ -4432,6 +4435,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  const updateRfqSchema = z.object({
+    title: z.string().min(1).max(500).optional(),
+    description: z.string().max(5000).optional().nullable(),
+    requestedQuantity: z.number().positive().optional(),
+    unit: z.string().max(50).optional(),
+    priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
+    dueDate: z.string().datetime().optional().nullable(),
+    expectedDeliveryDate: z.string().datetime().optional().nullable(),
+    status: z.enum(["draft", "pending_approval", "sent", "quotes_received", "awarded", "cancelled"]).optional(),
+    targetSupplierIds: z.array(z.string()).max(100).optional(),
+    notes: z.string().max(5000).optional().nullable(),
+    internalNotes: z.string().max(5000).optional().nullable(),
+  });
+
   // Update RFQ
   app.patch("/api/rfqs/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
     try {
@@ -4441,19 +4458,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User not associated with a company" });
       }
 
+      const parsed = updateRfqSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Validation failed", issues: parsed.error.issues });
+      }
+
       const existingRfq = await storage.getRfq(req.params.id, user.companyId);
       if (!existingRfq) {
         return res.status(404).json({ error: "RFQ not found" });
       }
 
-      const updatedRfq = await storage.updateRfq(req.params.id, req.body, user.companyId);
-      
+      const updatedRfq = await storage.updateRfq(req.params.id, parsed.data as any, user.companyId);
+
       await logAudit({
         action: "update",
         entityType: "rfq",
         entityId: req.params.id,
         notes: `Updated RFQ ${existingRfq.rfqNumber}`,
-        changes: req.body,
+        changes: parsed.data,
         req,
       });
 
@@ -4609,16 +4631,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "User must be associated with a company" });
       }
 
+      const parsed = insertComplianceDocumentSchema.omit({ companyId: true, createdBy: true, economicRegimeContext: true }).safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Validation failed", issues: parsed.error.issues });
+      }
+
       // Get current economic regime for context
       await economics.fetch();
-      
+
       const document = await storage.createComplianceDocument({
-        ...req.body,
+        ...parsed.data,
         companyId: user.companyId,
         createdBy: user.id,
         economicRegimeContext: economics.regime,
       });
-      
+
       res.status(201).json(document);
     } catch (error: any) {
       console.error("Error creating compliance document:", error);
@@ -4652,11 +4679,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "User must be associated with a company" });
       }
 
+      const parsed = insertComplianceRegulationSchema.omit({ companyId: true }).safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Validation failed", issues: parsed.error.issues });
+      }
+
       const regulation = await storage.createComplianceRegulation({
-        ...req.body,
+        ...parsed.data,
         companyId: user.companyId,
       });
-      
+
       res.status(201).json(regulation);
     } catch (error: any) {
       console.error("Error creating compliance regulation:", error);
@@ -4690,16 +4722,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "User must be associated with a company" });
       }
 
+      const parsed = insertComplianceAuditSchema.omit({ companyId: true, economicRegime: true, fdrAtAudit: true }).safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Validation failed", issues: parsed.error.issues });
+      }
+
       // Get current economic regime and FDR
       await economics.fetch();
-      
+
       const audit = await storage.createComplianceAudit({
-        ...req.body,
+        ...parsed.data,
         companyId: user.companyId,
         economicRegime: economics.regime,
         fdrAtAudit: economics.fdr,
       });
-      
+
       res.status(201).json(audit);
     } catch (error: any) {
       console.error("Error creating compliance audit:", error);
