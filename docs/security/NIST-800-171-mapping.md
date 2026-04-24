@@ -5,7 +5,7 @@ requirements in **NIST SP 800-171 Rev. 2**, which is the baseline for DoD
 Controlled Unclassified Information (CUI) handling and the foundation of
 **CMMC 2.0 Level 2**.
 
-**Version:** 1.1 · **Last updated:** 2026-04-18 · **Maintainer:** Austin Wendler
+**Version:** 1.2 · **Last updated:** 2026-04-24 · **Maintainer:** Austin Wendler
 
 Status legend:
 - ✅ implemented
@@ -45,8 +45,8 @@ SOC 2 Type II attestations.
 ## Detailed mapping (highlights — full table in `SECURITY.md`)
 
 ### 3.1 Access Control
-- **3.1.1** Limit system access to authorized users — ✅ `isAuthenticated` middleware; 728 of 732 routes gated.
-- **3.1.2** Limit access to permitted transactions — ✅ RBAC: owner / admin / super_admin / user / viewer.
+- **3.1.1** Limit system access to authorized users — ✅ `isAuthenticated` middleware; all user-facing routes gated. SSO config, SCIM provisioning, audit-config, and agentic safe-mode now also gated behind explicit `requirePermission()` checks added 2026-04-24.
+- **3.1.2** Limit access to permitted transactions — ✅ RBAC: owner / admin / super_admin / user / viewer. Privilege-sensitive endpoints (SSO, SCIM, audit export config, agentic safe-mode toggle) now require `manage_integrations`, `manage_company_settings`, or `manage_safe_mode` permissions.
 - **3.1.3** Control CUI flow — 🟨 tenant isolation enforced; CUI-specific tagging planned.
 - **3.1.5** Least privilege — ✅ default role on signup is `user`; elevation is explicit.
 - **3.1.8** Limit unsuccessful logon attempts — ✅ 10 per 15 min per IP via `rateLimiters.auth`.
