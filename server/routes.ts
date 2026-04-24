@@ -3285,14 +3285,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/demand-history/bulk", isAuthenticated, async (req: any, res) => {
+  const bulkDemandHistorySchema = z.object({
+    items: z.array(z.object({
+      skuId: z.string().trim().min(1).max(128),
+      units: z.number().int().nonnegative().max(100_000_000),
+      date: z.string().optional(),
+      channel: z.string().trim().max(64).optional(),
+      region: z.string().trim().max(64).optional(),
+      customerId: z.string().trim().max(128).optional(),
+      notes: z.string().max(500).optional(),
+    })).min(1, "At least one item is required").max(1000, "Maximum 1000 items per bulk import"),
+  });
+
+  app.post("/api/demand-history/bulk", isAuthenticated, validateBody(bulkDemandHistorySchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      const items = req.body.items || [];
+      const items = (req.validated as any).items || [];
       // Batch-validate all SKU IDs in one query to avoid N+1
       const skuIds: string[] = [...new Set<string>(items.map((item: { skuId: string }) => item.skuId))];
       const companySkus = await storage.getSkus(user.companyId);
@@ -6416,8 +6428,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  const createPayrollSchema = z.object({
+    employeeId: z.string().trim().min(1, "Employee ID required").max(128),
+    payPeriodStart: z.string().min(1, "Pay period start required"),
+    payPeriodEnd: z.string().min(1, "Pay period end required"),
+    baseSalary: z.number().nonnegative().max(10_000_000),
+    hoursWorked: z.number().nonnegative().max(744).optional(),
+    overtimeHours: z.number().nonnegative().max(300).optional(),
+    overtimeRate: z.number().nonnegative().max(10_000).optional(),
+    bonuses: z.number().nonnegative().max(10_000_000).optional(),
+    deductions: z.number().nonnegative().max(10_000_000).optional(),
+    taxWithheld: z.number().nonnegative().max(10_000_000).optional(),
+    netPay: z.number().nonnegative().max(10_000_000).optional(),
+    paymentMethod: z.enum(["direct_deposit", "check", "wire"]).optional(),
+    status: z.enum(["draft", "approved", "paid"]).default("draft"),
+    notes: z.string().max(2000).optional(),
+  });
+
   // Create employee payroll record
-  app.post("/api/workforce/payroll", isAuthenticated, async (req: any, res) => {
+  app.post("/api/workforce/payroll", isAuthenticated, validateBody(createPayrollSchema), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
       if (!user || !user.companyId) {
@@ -6736,8 +6765,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  const createPurchaseOrderSchema = z.object({
+    materialId: z.string().trim().min(1, "Material ID required").max(128),
+    supplierId: z.string().trim().min(1, "Supplier ID required").max(128),
+    quantity: z.number().int().positive().max(10_000_000),
+    unitCost: z.number().positive().max(100_000_000),
+    totalCost: z.number().positive().max(1_000_000_000).optional(),
+    currency: z.string().length(3).toUpperCase().default("USD"),
+    expectedDeliveryDate: z.string().optional(),
+    status: z.enum(["draft", "pending", "approved", "shipped", "received", "cancelled"]).default("draft"),
+    notes: z.string().max(5000).optional(),
+    poNumber: z.string().trim().max(64).optional(),
+    priority: z.enum(["low", "normal", "high", "urgent"]).optional(),
+    deliveryAddress: z.string().max(512).optional(),
+  });
+
   // Create purchase order
-  app.post("/api/purchase-orders", isAuthenticated, async (req: any, res) => {
+  app.post("/api/purchase-orders", isAuthenticated, validateBody(createPurchaseOrderSchema), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
       if (!user || !user.companyId) {
@@ -8589,27 +8633,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const scenarioEngine = new ScenarioPlanningEngine(storage);
 
+  const scenarioSimulateSchema = z.object({
+    scenarioName: z.string().trim().max(256).default("Unnamed Scenario"),
+    description: z.string().max(2000).optional(),
+    fdrDelta: z.coerce.number().min(-5).max(5).default(0),
+    newRegime: z.enum(["HEALTHY_EXPANSION", "ASSET_LED_GROWTH", "IMBALANCED_EXCESS", "REAL_ECONOMY_LEAD", "balanced"]).optional(),
+    commodityPriceChange: z.coerce.number().min(-100).max(1000).default(0),
+    affectedCommodities: z.array(z.string().trim().max(64)).max(100).optional(),
+    demandChange: z.coerce.number().min(-100).max(500).default(0),
+    affectedSKUs: z.array(z.string().trim().max(128)).max(500).optional(),
+    durationMonths: z.coerce.number().int().min(1).max(120).default(12),
+    currentFDR: z.coerce.number().min(0).max(20).default(1.0),
+    currentRegime: z.enum(["HEALTHY_EXPANSION", "ASSET_LED_GROWTH", "IMBALANCED_EXCESS", "REAL_ECONOMY_LEAD", "balanced"]).default("balanced"),
+    baseRevenue: z.coerce.number().nonnegative().max(1e12).default(10_000_000),
+    baseCosts: z.coerce.number().nonnegative().max(1e12).default(7_000_000),
+    baseMargin: z.coerce.number().min(-100).max(100).default(30),
+  });
+
   // Run scenario simulation
-  app.post("/api/scenarios/simulate", isAuthenticated, async (req: any, res) => {
+  app.post("/api/scenarios/simulate", isAuthenticated, validateBody(scenarioSimulateSchema), async (req: any, res) => {
     try {
+      const validated = req.validated as any;
       const input: ScenarioInput = {
-        scenarioName: req.body.scenarioName || 'Unnamed Scenario',
-        description: req.body.description,
-        fdrDelta: parseFloat(req.body.fdrDelta) || 0,
-        newRegime: req.body.newRegime,
-        commodityPriceChange: parseFloat(req.body.commodityPriceChange) || 0,
-        affectedCommodities: req.body.affectedCommodities,
-        demandChange: parseFloat(req.body.demandChange) || 0,
-        affectedSKUs: req.body.affectedSKUs,
-        durationMonths: parseInt(req.body.durationMonths) || 12,
+        scenarioName: validated.scenarioName,
+        description: validated.description,
+        fdrDelta: validated.fdrDelta,
+        newRegime: validated.newRegime,
+        commodityPriceChange: validated.commodityPriceChange,
+        affectedCommodities: validated.affectedCommodities,
+        demandChange: validated.demandChange,
+        affectedSKUs: validated.affectedSKUs,
+        durationMonths: validated.durationMonths,
       };
 
       const currentContext = {
-        currentFDR: parseFloat(req.body.currentFDR) || 1.0,
-        currentRegime: req.body.currentRegime || 'Healthy Expansion',
-        baseRevenue: parseFloat(req.body.baseRevenue) || 10000000,
-        baseCosts: parseFloat(req.body.baseCosts) || 7000000,
-        baseMargin: parseFloat(req.body.baseMargin) || 30,
+        currentFDR: validated.currentFDR,
+        currentRegime: validated.currentRegime,
+        baseRevenue: validated.baseRevenue,
+        baseCosts: validated.baseCosts,
+        baseMargin: validated.baseMargin,
       };
 
       const result = await scenarioEngine.runScenario(input, currentContext);
@@ -9239,8 +9301,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const { HistoricalBacktestingEngine } = await import("./lib/historicalBacktesting");
   const backtestEngine = new HistoricalBacktestingEngine(storage);
 
+  const backtestRunSchema = z.object({
+    startYear: z.coerce.number().int().min(2000).max(new Date().getFullYear()).default(2015),
+    endYear: z.coerce.number().int().min(2000).max(new Date().getFullYear()).default(2023),
+    horizonMonths: z.coerce.number().int().min(1).max(24).default(6),
+  }).refine(
+    (d) => d.endYear >= d.startYear,
+    { message: "endYear must be >= startYear", path: ["endYear"] }
+  ).refine(
+    (d) => d.endYear - d.startYear <= 20,
+    { message: "Backtest window cannot exceed 20 years", path: ["endYear"] }
+  );
+
   // Run historical backtest
-  app.post("/api/backtest/run", isAuthenticated, async (req: any, res) => {
+  app.post("/api/backtest/run", isAuthenticated, validateBody(backtestRunSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       let user = await storage.getUser(userId);
@@ -9268,7 +9342,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const { startYear, endYear, horizonMonths } = req.body;
+      const { startYear, endYear, horizonMonths } = req.validated as any;
       
       console.log('[Backtest] Starting historical validation with real data integration...');
       
@@ -11036,7 +11110,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/demand-signals/batch", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+  const demandSignalBatchSchema = z.object({
+    signals: z.array(z.object({
+      signalType: z.enum(["order", "forecast", "market", "promotional", "seasonal", "custom"]),
+      sourceId: z.string().trim().max(128).optional(),
+      value: z.number().min(-1e9).max(1e9),
+      unit: z.string().trim().max(32).optional(),
+      signalDate: z.string().optional(),
+      confidence: z.number().min(0).max(1).optional(),
+      metadata: z.record(z.string(), z.unknown()).optional(),
+      notes: z.string().max(1000).optional(),
+      skuId: z.string().trim().max(128).optional(),
+      materialId: z.string().trim().max(128).optional(),
+    })).min(1, "At least one signal required").max(500, "Maximum 500 signals per batch"),
+  });
+
+  app.post("/api/demand-signals/batch", isAuthenticated, rateLimiters.api, validateBody(demandSignalBatchSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -11044,10 +11133,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User not associated with a company" });
       }
       
-      const { signals } = req.body;
-      if (!Array.isArray(signals)) {
-        return res.status(400).json({ error: "signals must be an array" });
-      }
+      const { signals } = req.validated as any;
       
       const { insertDemandSignalSchema } = await import("@shared/schema");
       const createdSignals = [];
@@ -12687,8 +12773,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  const simulationVariantSchema = z.object({
+    label: z.string().trim().min(1, "Label is required").max(128),
+    fdrValue: z.coerce.number().min(0).max(10),
+    regime: z.enum(["HEALTHY_EXPANSION", "ASSET_LED_GROWTH", "IMBALANCED_EXCESS", "REAL_ECONOMY_LEAD", "balanced"]),
+    commodityAdjustments: z.record(z.string().max(64), z.number().min(-100).max(500)).optional()
+      .refine((v) => !v || Object.keys(v).length <= 50, "Maximum 50 commodity adjustments"),
+    isBaseline: z.boolean().optional().default(false),
+    allocationImpact: z.number().min(-100).max(100).optional(),
+    forecastImpact: z.number().min(-100).max(100).optional(),
+    comparisonMeta: z.record(z.string(), z.unknown()).optional(),
+  });
+
   // Add variant to simulation
-  app.post("/api/simulations/:id/variants", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+  app.post("/api/simulations/:id/variants", isAuthenticated, rateLimiters.api, validateBody(simulationVariantSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -13725,8 +13823,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  const sopMeetingCreateSchema = z.object({
+    title: z.string().trim().max(256).optional(),
+    meetingType: z.enum(["monthly_sop", "demand_review", "supply_review", "financial_review", "executive_review"]).default("monthly_sop"),
+    meetingDate: z.string().optional(),
+    meetingTime: z.string().regex(/^\d{2}:\d{2}$/, "Time must be HH:MM").optional(),
+    scheduledStart: z.string().optional(),
+    scheduledEnd: z.string().optional(),
+    planningHorizonStart: z.string().optional(),
+    planningHorizonEnd: z.string().optional(),
+    agenda: z.string().max(5000).optional(),
+    keyDecisions: z.string().max(5000).optional(),
+    nextMeetingDate: z.string().optional(),
+    attendees: z.array(z.object({
+      userId: z.string().max(128),
+      name: z.string().trim().max(256).optional(),
+      email: z.string().email().optional(),
+      role: z.string().max(64).optional(),
+    })).max(100, "Cannot add more than 100 attendees").optional(),
+    sendEmailInvites: z.boolean().optional().default(false),
+    sendInAppAlerts: z.boolean().optional().default(false),
+    externalEmails: z.array(z.string().email()).max(50, "Maximum 50 external emails").optional(),
+  });
+
   // Create meeting
-  app.post("/api/sop/meetings", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+  app.post("/api/sop/meetings", isAuthenticated, rateLimiters.api, validateBody(sopMeetingCreateSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -14204,8 +14325,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  const sopApprovalChainSchema = z.object({
+    name: z.string().trim().min(1, "Chain name is required").max(256),
+    description: z.string().max(1000).optional(),
+    triggerType: z.enum(["scenario_approval", "po_approval", "forecast_sign_off", "manual"]),
+    triggerThreshold: z.number().positive().optional(),
+    isActive: z.boolean().optional().default(true),
+    steps: z.array(z.object({
+      stepName: z.string().trim().min(1).max(128),
+      approverRole: z.string().trim().max(64).optional(),
+      approverUserId: z.string().max(128).optional(),
+      approvalThreshold: z.number().int().min(1).max(100).optional(),
+      escalationHours: z.number().int().positive().max(720).optional(),
+      isParallel: z.boolean().optional().default(false),
+    })).min(1, "At least one approval step is required").max(20, "Maximum 20 approval steps"),
+  });
+
   // Create approval chain
-  app.post("/api/sop/approval-chains", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+  app.post("/api/sop/approval-chains", isAuthenticated, rateLimiters.api, validateBody(sopApprovalChainSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -14331,11 +14468,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  const sopApprovalActionSchema = z.object({
+    action: z.enum(["approved", "rejected", "delegated", "returned"]),
+    comments: z.string().trim().max(2000).optional(),
+    delegatedTo: z.string().max(128).optional(),
+  }).refine(
+    (d) => !(d.action === "delegated" && !d.delegatedTo),
+    { message: "delegatedTo is required when action is 'delegated'", path: ["delegatedTo"] }
+  );
+
   // Take action on approval request (approve/reject/delegate)
-  app.post("/api/sop/approvals/:id/action", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+  app.post("/api/sop/approvals/:id/action", isAuthenticated, rateLimiters.api, validateBody(sopApprovalActionSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { action, comments, delegatedTo } = req.body;
+      const { action, comments, delegatedTo } = req.validated as any;
       
       const request = await storage.getSopApprovalRequest(req.params.id);
       if (!request) {
@@ -15685,7 +15831,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/agentic/safe-mode", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+  app.patch("/api/agentic/safe-mode", isAuthenticated, requirePermission('manage_safe_mode'), rateLimiters.api, async (req: any, res) => {
     try {
       const authUserId = req.user.claims.sub;
       const user = await storage.getUser(authUserId);
@@ -20140,7 +20286,7 @@ You'll receive emails for:
     }
   });
 
-  app.post("/api/sso/config", isAuthenticated, async (req: any, res) => {
+  app.post("/api/sso/config", isAuthenticated, requirePermission('manage_integrations'), async (req: any, res) => {
     try {
       const user = req.user;
       const { provider, ...config } = req.body;
@@ -20153,7 +20299,7 @@ You'll receive emails for:
     }
   });
 
-  app.delete("/api/sso/config/:provider", isAuthenticated, async (req: any, res) => {
+  app.delete("/api/sso/config/:provider", isAuthenticated, requirePermission('manage_integrations'), async (req: any, res) => {
     try {
       const user = req.user;
       const { deleteSsoConfig } = await import("./lib/enterpriseIdentity");
@@ -20164,7 +20310,7 @@ You'll receive emails for:
     }
   });
 
-  app.post("/api/scim/users", isAuthenticated, async (req: any, res) => {
+  app.post("/api/scim/users", isAuthenticated, requirePermission('manage_integrations'), async (req: any, res) => {
     try {
       const user = req.user;
       const { externalId, ...userData } = req.body;
@@ -20177,7 +20323,7 @@ You'll receive emails for:
     }
   });
 
-  app.delete("/api/scim/users/:externalId", isAuthenticated, async (req: any, res) => {
+  app.delete("/api/scim/users/:externalId", isAuthenticated, requirePermission('manage_integrations'), async (req: any, res) => {
     try {
       const user = req.user;
       const { scimDeprovisionUser } = await import("./lib/enterpriseIdentity");
@@ -20353,7 +20499,7 @@ You'll receive emails for:
     }
   });
 
-  app.post("/api/audit/config", isAuthenticated, async (req: any, res) => {
+  app.post("/api/audit/config", isAuthenticated, requirePermission('manage_company_settings'), async (req: any, res) => {
     try {
       const user = req.user;
       const { upsertAuditExportConfig } = await import("./lib/enterpriseIdentity");
