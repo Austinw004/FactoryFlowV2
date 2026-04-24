@@ -78,7 +78,9 @@ export class MAIntelligencePopulationService {
             targetEmployees: target.employees,
           });
           targetsCreated++;
-        } catch (error) {}
+        } catch (error) {
+          console.warn('[M&A] acquisition target insert skipped:', (error as Error).message);
+        }
       }
     }
 
@@ -98,7 +100,9 @@ export class MAIntelligencePopulationService {
             currentRegime: currentRegime,
           });
           targetsCreated++;
-        } catch (error) {}
+        } catch (error) {
+          console.warn('[M&A] divestiture target insert skipped:', (error as Error).message);
+        }
       }
     }
 
@@ -114,7 +118,9 @@ export class MAIntelligencePopulationService {
           currentRegime: currentRegime,
         });
         recommendationsGenerated++;
-      } catch (error) {}
+      } catch (error) {
+        console.warn('[M&A] recommendation insert skipped:', (error as Error).message);
+      }
     }
 
     console.log(`[M&A] Created ${targetsCreated} targets, ${recommendationsGenerated} recommendations`);
