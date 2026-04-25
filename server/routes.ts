@@ -3668,7 +3668,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const predictionResolveSchema = z.object({
-    actualValue: z.number(),
+    actualValue: z.union([z.string(), z.number()]).transform(String),
     actualDirection: z.string().max(50).optional(),
     wasAccurate: z.boolean().optional(),
     errorMagnitude: z.number().optional(),
