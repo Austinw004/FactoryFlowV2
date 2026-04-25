@@ -3684,8 +3684,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  const predictionResolveSchema = z.object({
+    actualValue: z.number(),
+    actualDirection: z.string().max(50).optional(),
+    wasAccurate: z.boolean().optional(),
+    errorMagnitude: z.number().optional(),
+  });
+
   // Resolve a prediction with actual outcome
-  app.post("/api/prediction-outcomes/:id/resolve", isAuthenticated, async (req: any, res) => {
+  app.post("/api/prediction-outcomes/:id/resolve", isAuthenticated, validateBody(predictionResolveSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -3694,11 +3701,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { id } = req.params;
-      const { actualValue, actualDirection, wasAccurate, errorMagnitude } = req.body;
-
-      if (!actualValue) {
-        return res.status(400).json({ error: "actualValue is required" });
-      }
+      const { actualValue, actualDirection, wasAccurate, errorMagnitude } = req.validated as z.infer<typeof predictionResolveSchema>;
 
       const result = await db
         .update(predictionOutcomes)
@@ -3739,17 +3742,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/forecast-degradation-alerts/:id/resolve", isAuthenticated, async (req: any, res) => {
+  const forecastAlertResolveSchema = z.object({
+    actionTaken: z.string().min(1).max(1000),
+  });
+
+  app.post("/api/forecast-degradation-alerts/:id/resolve", isAuthenticated, validateBody(forecastAlertResolveSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      const { actionTaken } = req.body;
-      if (!actionTaken) {
-        return res.status(400).json({ error: "actionTaken is required" });
-      }
+      const { actionTaken } = req.validated as z.infer<typeof forecastAlertResolveSchema>;
       const alert = await storage.resolveForecastAlert(req.params.id, actionTaken, userId);
       res.json(alert);
     } catch (error: any) {
@@ -7348,14 +7352,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/features/:featureKey", isAuthenticated, async (req: any, res) => {
+  const featureToggleSchema = z.object({ enabled: z.boolean() });
+
+  app.put("/api/features/:featureKey", isAuthenticated, validateBody(featureToggleSchema), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
       if (!user || !user.companyId) {
         return res.status(400).json({ error: "User has no company" });
       }
 
-      const { enabled } = req.body;
+      const { enabled } = req.validated as z.infer<typeof featureToggleSchema>;
       const toggle = await storage.updateFeatureToggle(user.companyId, req.params.featureKey, enabled ? 1 : 0);
       res.json(toggle);
     } catch (error: any) {
@@ -7868,14 +7874,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  const poWorkflowSchema = z.object({
+    poValue: z.number().positive(),
+    materialId: z.string().min(1).max(100),
+    supplierId: z.string().min(1).max(100),
+  });
+
   // Generate approval workflow for a PO
-  app.post("/api/purchase-orders/workflow/generate", isAuthenticated, async (req: any, res) => {
+  app.post("/api/purchase-orders/workflow/generate", isAuthenticated, validateBody(poWorkflowSchema), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
       if (!user?.companyId) {
         return res.status(400).json({ error: "User has no company" });
       }
-      const { poValue, materialId, supplierId } = req.body;
+      const { poValue, materialId, supplierId } = req.validated as z.infer<typeof poWorkflowSchema>;
       const workflow = await poEngine.generateApprovalWorkflow(
         poValue,
         materialId,
@@ -7993,14 +8005,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  const playbookRecommendSchema = z.object({
+    fdr: z.number().min(0).max(100),
+    regime: z.string().min(1).max(100),
+  });
+
   // Get recommended playbook based on FDR/regime
-  app.post("/api/negotiation-playbooks/recommend", isAuthenticated, async (req: any, res) => {
+  app.post("/api/negotiation-playbooks/recommend", isAuthenticated, validateBody(playbookRecommendSchema), async (req: any, res) => {
     try {
       const user = await storage.getUser(req.user.claims.sub);
       if (!user?.companyId) {
         return res.status(400).json({ error: "User has no company" });
       }
-      const { fdr, regime } = req.body;
+      const { fdr, regime } = req.validated as z.infer<typeof playbookRecommendSchema>;
       const playbook = await poEngine.getRecommendedPlaybook(fdr, regime, user.companyId);
       res.json(playbook);
     } catch (error: any) {
