@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { CreditCard, ArrowRight, Loader2, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { usePlans } from "@/hooks/usePlans";
+import { apiRequest } from "@/lib/queryClient";
 
 interface SubscriptionData {
   subscription: any;
@@ -51,26 +52,79 @@ export function Billing() {
     performance:   { monthly: null, annual: null },
   };
 
-  const handleUpgrade = (plan: string) => {
-    window.location.href = `/api/stripe/checkout?plan=${plan}&period=${billingPeriod}`;
+  // Map a plan name + the billing period toggle to the corresponding Stripe
+  // priceId from BILLING_PLANS (server-authoritative, surfaced via /api/billing/plans).
+  // Returns null for plans that don't sell self-serve via Checkout (Performance →
+  // Talk to Sales).
+  const resolvePriceId = (plan: string): string | null => {
+    const useAnnual = billingPeriod === "annual";
+    switch (plan) {
+      case "starter":
+        return (useAnnual ? livePlans.starter.annualStripePriceId : livePlans.starter.monthlyStripePriceId) ?? null;
+      case "growth":
+        return (useAnnual ? livePlans.growth.annualStripePriceId : livePlans.growth.monthlyStripePriceId) ?? null;
+      case "usage-based":
+        return livePlans.usageBased.monthlyStripePriceId ?? null;
+      case "performance":
+        return null; // Sales-led
+      default:
+        return null;
+    }
+  };
+
+  const handleUpgrade = async (plan: string) => {
+    if (plan === "performance") {
+      setLocation("/contact");
+      return;
+    }
+    const priceId = resolvePriceId(plan);
+    if (!priceId) {
+      toast({
+        variant: "destructive",
+        title: "Plan not configured",
+        description: "This plan isn't wired to a Stripe price yet. Email info@prescient-labs.com.",
+      });
+      return;
+    }
+    try {
+      const res = await apiRequest("POST", "/api/stripe/checkout", {
+        priceId,
+        withTrial: !isTrialing && !tier, // First-time users get the 90-day trial
+      });
+      const data = await res.json();
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        toast({ variant: "destructive", description: "Couldn't start checkout. Try again." });
+      }
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Checkout failed",
+        description: err?.message ?? "Couldn't reach Stripe. Try again in a minute.",
+      });
+    }
   };
 
   const downloadInvoice = async (invoiceId: string) => {
+    // Stripe hosts a customer-facing invoice URL with download options for
+    // every invoice. Open that in a new tab — better UX (responsive, branded,
+    // works for refunded/voided invoices too) than serving raw PDF bytes
+    // ourselves, and avoids needing a separate /api/stripe/invoices/:id/pdf
+    // route on the server.
     try {
-      const response = await fetch(`/api/stripe/invoices/${invoiceId}/pdf`);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `invoice-${invoiceId}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (error) {
+      const res = await apiRequest("GET", `/api/stripe/invoices/${invoiceId}`);
+      const data = await res.json();
+      const url = data?.hostedInvoiceUrl ?? data?.invoicePdf;
+      if (url) {
+        window.open(url, "_blank", "noopener,noreferrer");
+      } else {
+        toast({ variant: "destructive", description: "Invoice URL not available." });
+      }
+    } catch (err: any) {
       toast({
         variant: "destructive",
-        description: "Failed to download invoice",
+        description: err?.message ?? "Failed to download invoice",
       });
     }
   };

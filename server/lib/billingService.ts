@@ -22,6 +22,20 @@ import { logger } from "./structuredLogger";
 // ─── Plan Definitions ─────────────────────────────────────────────────────────
 // All features are available on all plans. These are billing configurations only.
 
+// Stripe price IDs sourced from the live Prescient Labs Stripe account
+// (acct_1SZFrW9F4Ysa19m8) on 2026-04-25 via Stripe API. These are the
+// authoritative IDs that /api/stripe/checkout uses to spin up Checkout
+// sessions. If you create a new Price in Stripe (e.g. for a coupon or
+// new tier) update the matching field here — the server side won't
+// pick it up automatically.
+//
+// Override per-environment by setting STRIPE_PRICE_<KEY>_<INTERVAL> env
+// vars (e.g. STRIPE_PRICE_STARTER_MONTHLY=price_xxxx) — useful if you
+// keep separate test vs live prices and want to swap without a redeploy.
+
+const stripePriceId = (key: string, fallback: string): string =>
+  process.env[`STRIPE_PRICE_${key}`]?.trim() || fallback;
+
 export const BILLING_PLANS = {
   monthly_starter: {
     id:          "monthly_starter",
@@ -33,6 +47,7 @@ export const BILLING_PLANS = {
     intervalCount: 1,
     type:        "subscription" as const,
     featureGating: false,     // All features included
+    stripePriceId: stripePriceId("STARTER_MONTHLY", "price_1TLvZh9F4Ysa19m8rrNdtZ7b"),
   },
   monthly_growth: {
     id:          "monthly_growth",
@@ -44,6 +59,7 @@ export const BILLING_PLANS = {
     intervalCount: 1,
     type:        "subscription" as const,
     featureGating: false,
+    stripePriceId: stripePriceId("GROWTH_MONTHLY", "price_1TLvZj9F4Ysa19m86mw8fPZb"),
   },
   annual_starter: {
     id:          "annual_starter",
@@ -55,6 +71,7 @@ export const BILLING_PLANS = {
     intervalCount: 1,
     type:        "subscription" as const,
     featureGating: false,
+    stripePriceId: stripePriceId("STARTER_ANNUAL", "price_1TLvZi9F4Ysa19m8DGXyivla"),
   },
   annual_growth: {
     id:          "annual_growth",
@@ -66,6 +83,7 @@ export const BILLING_PLANS = {
     intervalCount: 1,
     type:        "subscription" as const,
     featureGating: false,
+    stripePriceId: stripePriceId("GROWTH_ANNUAL", "price_1TLvZk9F4Ysa19m8idqygXcf"),
   },
   usage_based: {
     id:           "usage_based",
@@ -79,6 +97,7 @@ export const BILLING_PLANS = {
     interval:     "month" as const,
     type:         "usage" as const,
     featureGating: false,
+    stripePriceId: stripePriceId("USAGE_MONTHLY", "price_1TLvZl9F4Ysa19m8JUrRFfRo"),
   },
   performance: {
     id:              "performance",

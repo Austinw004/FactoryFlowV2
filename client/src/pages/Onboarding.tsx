@@ -479,8 +479,25 @@ export default function Onboarding() {
       toast({ title: "Invalid card number", description: "Please enter a valid card number", variant: "destructive" });
       return;
     }
-    if (!cardExpiry.match(/^\d{2}\/\d{2}$/)) {
+    // Validate MM/YY format AND that the values are sensible (month 01-12, year
+    // not in the past). Previous regex `/^\d{2}\/\d{2}$/` accepted "99/99" as
+    // valid which would silently fail when the card was actually charged.
+    const expMatch = cardExpiry.match(/^(\d{2})\/(\d{2})$/);
+    if (!expMatch) {
       toast({ title: "Invalid expiry", description: "Please enter expiry as MM/YY", variant: "destructive" });
+      return;
+    }
+    const expMonth = parseInt(expMatch[1], 10);
+    const expYear  = 2000 + parseInt(expMatch[2], 10);
+    const now = new Date();
+    const currentYear  = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    if (expMonth < 1 || expMonth > 12) {
+      toast({ title: "Invalid expiry month", description: "Month must be between 01 and 12", variant: "destructive" });
+      return;
+    }
+    if (expYear < currentYear || (expYear === currentYear && expMonth < currentMonth)) {
+      toast({ title: "Card expired", description: "Please enter a card that hasn't expired", variant: "destructive" });
       return;
     }
     if (cardCvc.length < 3 || cardCvc.length > 4) {

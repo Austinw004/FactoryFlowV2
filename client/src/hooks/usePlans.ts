@@ -42,6 +42,8 @@ interface RawPlan {
   type: "subscription" | "usage" | "performance";
   disclaimer?: string;
   cta?: readonly string[] | string[];
+  /** Stripe Price ID — used by /api/stripe/checkout to spin up Checkout sessions. */
+  stripePriceId?: string;
 }
 
 interface PlansApiResponse {
@@ -56,6 +58,10 @@ export interface PlanGroup {
   /** Dollars (priceCents / 100). Matches what the UI displays. */
   monthly: number | null;
   annual: number | null;
+  /** Stripe Price ID for the monthly cadence — pass this to /api/stripe/checkout. */
+  monthlyStripePriceId: string | null;
+  /** Stripe Price ID for the annual cadence — pass this to /api/stripe/checkout. */
+  annualStripePriceId: string | null;
 }
 
 export interface UsageBasedPlan {
@@ -63,6 +69,7 @@ export interface UsageBasedPlan {
   baseSkus: number;
   overagePerSku: number;
   monthlyCap: number;
+  monthlyStripePriceId: string | null;
 }
 
 export interface PerformancePlan {
@@ -85,13 +92,24 @@ export interface NormalizedPlans {
 // ──────────────────────────────────────────────────────────────────────────────
 
 export const FALLBACK_PLANS: NormalizedPlans = {
-  starter:    { monthly: 299, annual: 2990 },
-  growth:     { monthly: 799, annual: 7990 },
+  starter: {
+    monthly: 299,
+    annual:  2990,
+    monthlyStripePriceId: null,
+    annualStripePriceId:  null,
+  },
+  growth: {
+    monthly: 799,
+    annual:  7990,
+    monthlyStripePriceId: null,
+    annualStripePriceId:  null,
+  },
   usageBased: {
     monthlyBase: 199,
     baseSkus:    100,
     overagePerSku: 2,
     monthlyCap:  799,
+    monthlyStripePriceId: null,
   },
   performance: {
     monthlyBase:          100,
@@ -118,16 +136,21 @@ function normalize(raw: RawPlan[] | undefined): NormalizedPlans {
     starter: {
       monthly: dollars(byId.monthly_starter?.priceCents) ?? FALLBACK_PLANS.starter.monthly,
       annual:  dollars(byId.annual_starter?.priceCents)  ?? FALLBACK_PLANS.starter.annual,
+      monthlyStripePriceId: byId.monthly_starter?.stripePriceId ?? null,
+      annualStripePriceId:  byId.annual_starter?.stripePriceId  ?? null,
     },
     growth: {
       monthly: dollars(byId.monthly_growth?.priceCents) ?? FALLBACK_PLANS.growth.monthly,
       annual:  dollars(byId.annual_growth?.priceCents)  ?? FALLBACK_PLANS.growth.annual,
+      monthlyStripePriceId: byId.monthly_growth?.stripePriceId ?? null,
+      annualStripePriceId:  byId.annual_growth?.stripePriceId  ?? null,
     },
     usageBased: {
       monthlyBase:   dollars(byId.usage_based?.baseFeeCents)    ?? FALLBACK_PLANS.usageBased.monthlyBase,
       baseSkus:      byId.usage_based?.baseSkus                 ?? FALLBACK_PLANS.usageBased.baseSkus,
       overagePerSku: parseFloat(byId.usage_based?.overageRate ?? "") || FALLBACK_PLANS.usageBased.overagePerSku,
       monthlyCap:    dollars(byId.usage_based?.monthlyCapCents) ?? FALLBACK_PLANS.usageBased.monthlyCap,
+      monthlyStripePriceId: byId.usage_based?.stripePriceId ?? null,
     },
     performance: {
       monthlyBase:          dollars(byId.performance?.baseFeeCents)         ?? FALLBACK_PLANS.performance.monthlyBase,

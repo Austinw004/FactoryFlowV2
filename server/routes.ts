@@ -15206,6 +15206,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Single-invoice fetch — Billing.tsx hits this when the customer clicks the
+  // download icon on an invoice row. Returns Stripe's hosted invoice URL +
+  // raw PDF URL; the client opens hostedInvoiceUrl in a new tab. We do NOT
+  // proxy the PDF bytes ourselves: Stripe's hosted page is already authed,
+  // responsive, branded with Prescient Labs, and works for refunded/voided
+  // invoices that bare-PDF download would mangle.
+  //
+  // Authorization: ensures the requested invoice belongs to the calling user
+  // (matches against their stripeCustomerId). 403s if the invoice belongs to
+  // a different customer — defends against forced-id enumeration.
+  app.get("/api/stripe/invoices/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const invoiceId = String(req.params.id || "");
+      if (!invoiceId.startsWith("in_")) {
+        return res.status(400).json({ error: "Invalid invoice id" });
+      }
+      const userId = req.user.claims.sub;
+      const user = await stripeService.getUser(userId);
+      if (!user?.stripeCustomerId) {
+        return res.status(404).json({ error: "No Stripe customer for user" });
+      }
+
+      const stripe = await (await import('./stripeClient')).getUncachableStripeClient();
+      const inv = await stripe.invoices.retrieve(invoiceId);
+
+      if (inv.customer !== user.stripeCustomerId) {
+        return res.status(403).json({ error: "Invoice does not belong to this user" });
+      }
+
+      res.json({
+        id:                inv.id,
+        number:            inv.number,
+        status:            inv.status,
+        total:             inv.total,
+        amountPaid:        inv.amount_paid,
+        currency:          inv.currency,
+        created:           inv.created,
+        hostedInvoiceUrl:  inv.hosted_invoice_url,
+        invoicePdf:        inv.invoice_pdf,
+      });
+    } catch (error: any) {
+      const code = error?.statusCode === 404 ? 404 : 500;
+      console.error("Error fetching invoice:", error?.message || error);
+      res.status(code).json({ error: code === 404 ? "Invoice not found" : "Failed to fetch invoice" });
+    }
+  });
+
   // ============================================================================
   // AGENTIC AI ROUTES - Autonomous Actions & Intelligent Automation
   // ============================================================================
