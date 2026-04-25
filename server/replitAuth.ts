@@ -166,9 +166,36 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
+  // ── JWT-first path ─────────────────────────────────────────────────────
+  // Users who signed in via Google OAuth or email/password get JWT access
+  // tokens (Bearer header) — NOT a Passport session. The jwtMiddleware
+  // (mounted globally before this handler runs) decodes the Bearer token
+  // and populates req.jwtUser. The unified requireAuth in routes.ts
+  // additionally normalizes that into req.user.claims.sub.
+  //
+  // Without this short-circuit, JWT-authed users hit `req.isAuthenticated()`
+  // (Passport-only check), which returns false because they don't have a
+  // Passport session — so every protected endpoint would 401 them. That was
+  // breaking onboarding (POST /api/onboarding/company → 401 → user stuck on
+  // Step 1) and every other isAuthenticated-gated route after a JWT login.
+  const jwtUser = (req as any).jwtUser;
+  if (jwtUser?.sub) {
+    // Make sure downstream `req.user.claims.sub` lookups also work even if
+    // the unified requireAuth wasn't run first.
+    if (!req.user || !(req.user as any).claims) {
+      (req as any).user = { claims: { sub: jwtUser.sub, email: jwtUser.email } };
+    }
+    return next();
+  }
+  if ((req.user as any)?.claims?.sub && !(req.user as any)?.expires_at) {
+    // Already normalized by requireAuth — pass through.
+    return next();
+  }
+
+  // ── Original Replit OIDC / Passport session path ───────────────────────
   const user = req.user as any;
 
-  if (!req.isAuthenticated() || !user.expires_at) {
+  if (!req.isAuthenticated() || !user?.expires_at) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
