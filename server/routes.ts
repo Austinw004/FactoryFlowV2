@@ -1119,7 +1119,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         selectedPlanId: planId,
         selectedBillingInterval: billingInterval,
         subscriptionStatus: 'trialing',
-        trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+        // 90-day trial — matches marketing copy on Pricing.tsx, Onboarding
+        // Step 5 ("90-day free trial starts today"), and the Stripe Checkout
+        // trial_period_days in /api/stripe/checkout. Keep all three in sync.
+        trialEndsAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
       });
       res.json({ success: true });
     } catch (error: any) {
@@ -15082,13 +15085,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
       
-      // Create checkout session with optional 14-day trial (only if never used before)
+      // Create checkout session with optional 90-day trial (only if never used before).
+      // 90 days matches the marketing copy on Pricing.tsx and Onboarding.tsx —
+      // changing one without the other broke trust ("14-day" in Onboarding vs
+      // "90-day" everywhere else). Single source of truth: bump them together.
       const session = await stripeService.createCheckoutSession(
         customerId,
         priceId,
         `${baseUrl}/billing?success=true`,
         `${baseUrl}/pricing?canceled=true`,
-        allowTrial ? 14 : undefined
+        allowTrial ? 90 : undefined
       );
 
       res.json({ url: session.url });

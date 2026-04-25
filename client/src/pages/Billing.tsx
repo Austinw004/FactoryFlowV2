@@ -114,7 +114,7 @@ export function Billing() {
                     </p>
                   </div>
                   <button
-                    onClick={() => setLocation("/billing")}
+                    onClick={() => setLocation("/pricing")}
                     className="btn-primary text-sm px-4 py-2 ml-6 shrink-0"
                   >
                     Choose a plan

@@ -1002,7 +1002,7 @@ export default function Onboarding() {
                 Choose your plan
               </CardTitle>
               <CardDescription>
-                All plans include every module and feature. Your 14-day free trial starts today.
+                All plans include every module and feature. Your 90-day free trial starts today.
               </CardDescription>
 
               <div className="flex items-center justify-center gap-2 pt-4">
