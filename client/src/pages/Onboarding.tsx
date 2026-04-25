@@ -1,6 +1,6 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -264,6 +264,37 @@ export default function Onboarding() {
   const [jobTitle, setJobTitle] = useState("");
   const [phone, setPhone] = useState("");
   const [department, setDepartment] = useState("");
+
+  // Pre-fill profile fields from the authenticated user record. The First/Last
+  // Name inputs previously showed "Austin"/"Wendler" only as placeholder text
+  // while the bound state was empty string — clicking Continue silently failed
+  // validation because !firstName.trim() / !lastName.trim() were true. Pulling
+  // the real values from /api/auth/user (populated by the OAuth provider, or
+  // by the user's previous onboarding attempt) makes the validation pass and
+  // also lets returning customers re-enter onboarding without re-typing.
+  const { data: authUser } = useQuery<{
+    firstName?: string | null;
+    lastName?: string | null;
+    name?: string | null;
+    jobTitle?: string | null;
+    department?: string | null;
+    phone?: string | null;
+  }>({
+    queryKey: ["/api/auth/user"],
+  });
+  useEffect(() => {
+    if (!authUser) return;
+    // Fall back to splitting display-name when first/last aren't separately set
+    // (some Google profiles return only `name`).
+    const split = (authUser.name ?? "").trim().split(/\s+/);
+    const first = authUser.firstName ?? split[0] ?? "";
+    const last  = authUser.lastName  ?? split.slice(1).join(" ") ?? "";
+    setFirstName((curr) => curr || first);
+    setLastName((curr) => curr || last);
+    setJobTitle((curr) => curr || authUser.jobTitle || "");
+    setDepartment((curr) => curr || authUser.department || "");
+    setPhone((curr) => curr || authUser.phone || "");
+  }, [authUser]);
 
   // Step 3: Operations Intelligence
   const [productionVolume, setProductionVolume] = useState("");
