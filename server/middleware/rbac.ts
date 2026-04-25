@@ -109,7 +109,18 @@ export function requireAllPermissions(...permissionNames: PermissionName[]) {
   };
 }
 
-// Helper to attach user info from session to request for RBAC
+// Helper to attach user info from session to request for RBAC.
+//
+// Source priority:
+//   1. Passport session  (legacy Replit OIDC sign-in)
+//   2. JWT Bearer        (Google OAuth + email/password — req.jwtUser)
+//   3. Normalized user   (req.user.claims.sub — set by routes.ts requireAuth)
+//
+// Without sources 2 + 3, every requirePermission-gated endpoint (the entire
+// RBAC surface — /api/users, /api/rbac/*, manage_team flows) returned 401
+// for JWT-authed customers because their req.session.passport was empty.
+// This was the same root pattern that broke isAuthenticated for the
+// onboarding flow earlier in the launch sweep.
 export async function attachRbacUser(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   try {
     let userId: string | undefined;
@@ -119,6 +130,21 @@ export async function attachRbacUser(req: AuthenticatedRequest, res: Response, n
       const sessionUser = (req.session as any).passport.user;
       userId = sessionUser.claims?.sub || sessionUser.id;
       email = sessionUser.claims?.email || sessionUser.email;
+    }
+
+    if (!userId) {
+      const jwtUser = (req as any).jwtUser;
+      if (jwtUser?.sub) {
+        userId = jwtUser.sub;
+        email = email || jwtUser.email;
+      }
+    }
+    if (!userId) {
+      const claims = (req as any).user?.claims;
+      if (claims?.sub) {
+        userId = claims.sub;
+        email = email || claims.email;
+      }
     }
 
     if (!userId) {

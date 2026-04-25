@@ -10975,7 +10975,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/demand-signals/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+  app.get("/api/demand-signals/:id", isAuthenticated, rateLimiters.api, async (req: any, res, next) => {
+    // Express matches routes in registration order. /api/demand-signals/:id
+    // is registered BEFORE the literal /api/demand-signals/aggregates and
+    // /api/demand-signals/analytics routes, so without this guard the
+    // parametric route would always win and the literal handlers would
+    // never be reached (every call returned 404 because no signal has
+    // id === "aggregates" / "analytics"). next('route') tells Express to
+    // skip this handler and try the next matching route.
+    if (req.params.id === "aggregates" || req.params.id === "analytics") {
+      return next("route");
+    }
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
