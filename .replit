@@ -65,4 +65,3 @@ integrations = ["javascript_log_in_with_replit:1.0.0", "javascript_database:1.0.
 APP_ENV = "development"
 
 [userenv.shared]
-APP_URL = "https://prescient-labs.com"
