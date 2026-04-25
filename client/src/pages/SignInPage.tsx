@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff, ArrowRight, Loader2 } from "lucide-react";
+import { AlertCircle, Eye, EyeOff, ArrowRight, Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
@@ -21,6 +21,24 @@ export default function SignInPage() {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Surface OAuth errors that come back via /signin?error=... — without this,
+  // a failed Google/Apple sign-in silently lands the user back on a normal
+  // signin page with no indication of what went wrong. Strip the param after
+  // reading it so a refresh doesn't keep the banner visible forever.
+  const [oauthError, setOauthError] = useState<string | null>(null);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const err = params.get("error");
+    if (err) {
+      setOauthError(err);
+      params.delete("error");
+      const qs = params.toString();
+      const url = `${window.location.pathname}${qs ? `?${qs}` : ""}`;
+      window.history.replaceState({}, "", url);
+    }
+  }, []);
 
   function validate() {
     const errs: Record<string, string> = {};
@@ -93,6 +111,16 @@ export default function SignInPage() {
               Welcome back. Enter your credentials to continue.
             </p>
           </div>
+
+          {oauthError && (
+            <div
+              role="alert"
+              className="mb-4 flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
+            >
+              <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+              <span>{oauthError}</span>
+            </div>
+          )}
 
           <SSOButtons mode="login" />
 

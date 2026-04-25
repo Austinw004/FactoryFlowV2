@@ -198,7 +198,16 @@ export async function handleGoogleAuth(input: {
     // ── Real Google OAuth exchange ─────────────────────────────────────────
     const clientId = process.env.GOOGLE_CLIENT_ID!;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET!;
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${process.env.REPLIT_DEV_DOMAIN ? 'https://' + process.env.REPLIT_DEV_DOMAIN : 'http://localhost:5000'}/api/auth/google/callback`;
+    // CRITICAL: this MUST match the redirect_uri sent at /api/auth/google/start.
+    // OAuth 2.0 §4.1.3 requires the redirect_uri at token exchange to be
+    // byte-identical to the one used during the initial authorization request.
+    // Use the same publicBaseUrl() helper so APP_URL=https://prescient-labs.com
+    // is honored on both legs of the flow. Previously this fell back to
+    // REPLIT_DEV_DOMAIN, producing https://factory-flow-*.replit.app/... which
+    // did not match the prescient-labs.com URL sent at /start, causing every
+    // sign-in to fail with redirect_uri_mismatch and bounce to /signin.
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI ||
+      `${publicBaseUrl()}/api/auth/google/callback`;
 
     const oauthClient = new OAuth2Client(clientId, clientSecret, redirectUri);
     const { tokens } = await oauthClient.getToken(input.code);
