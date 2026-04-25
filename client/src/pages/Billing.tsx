@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { CreditCard, ArrowRight, Loader2, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { usePlans } from "@/hooks/usePlans";
 
 interface SubscriptionData {
   subscription: any;
@@ -40,11 +41,14 @@ export function Billing() {
   const isTrialing = status === "trialing";
   const trialEndsAt = subscriptionData?.trialEndsAt;
 
+  // Pricing fetched from server's BILLING_PLANS — single source of truth.
+  // See client/src/hooks/usePlans.ts.
+  const livePlans = usePlans();
   const tierPricing = {
-    starter: { monthly: 299, annual: 2990 },
-    growth: { monthly: 799, annual: 7990 },
-    "usage-based": { monthly: 199, annual: null },
-    performance: { monthly: null, annual: null },
+    starter:       livePlans.starter,
+    growth:        livePlans.growth,
+    "usage-based": { monthly: livePlans.usageBased.monthlyBase, annual: null },
+    performance:   { monthly: null, annual: null },
   };
 
   const handleUpgrade = (plan: string) => {
@@ -183,13 +187,14 @@ export function Billing() {
                 <div className="bg-panel p-8 flex flex-col">
                   <div className="text-sm text-soft mb-6">Starter</div>
                   <div className="text-3xl display mb-1">
-                    ${billingPeriod === "monthly" ? "299" : "2,990"}
+                    ${(billingPeriod === "monthly" ? livePlans.starter.monthly : livePlans.starter.annual)?.toLocaleString("en-US")}
                     <span className="text-base text-muted">
                       {billingPeriod === "monthly" ? "/mo" : "/yr"}
                     </span>
                   </div>
                   <div className="text-xs text-muted mb-8">
-                    {billingPeriod === "annual" && "Save $598 per year"}
+                    {billingPeriod === "annual" && livePlans.starter.monthly && livePlans.starter.annual &&
+                      `Save $${(livePlans.starter.monthly * 12 - livePlans.starter.annual).toLocaleString("en-US")} per year`}
                   </div>
                   <button
                     onClick={() => handleUpgrade("starter")}
@@ -203,13 +208,14 @@ export function Billing() {
                 <div className="bg-panel p-8 flex flex-col">
                   <div className="text-sm text-soft mb-6">Growth</div>
                   <div className="text-3xl display mb-1">
-                    ${billingPeriod === "monthly" ? "799" : "7,990"}
+                    ${(billingPeriod === "monthly" ? livePlans.growth.monthly : livePlans.growth.annual)?.toLocaleString("en-US")}
                     <span className="text-base text-muted">
                       {billingPeriod === "monthly" ? "/mo" : "/yr"}
                     </span>
                   </div>
                   <div className="text-xs text-muted mb-8">
-                    {billingPeriod === "annual" && "Save $1,598 per year"}
+                    {billingPeriod === "annual" && livePlans.growth.monthly && livePlans.growth.annual &&
+                      `Save $${(livePlans.growth.monthly * 12 - livePlans.growth.annual).toLocaleString("en-US")} per year`}
                   </div>
                   <button
                     onClick={() => handleUpgrade("growth")}
@@ -223,7 +229,7 @@ export function Billing() {
                 <div className="bg-panel p-8 flex flex-col">
                   <div className="text-sm text-soft mb-6">Usage-Based</div>
                   <div className="text-3xl display mb-1">
-                    $199<span className="text-base text-muted">/mo</span>
+                    ${livePlans.usageBased.monthlyBase}<span className="text-base text-muted">/mo</span>
                   </div>
                   <div className="text-xs text-muted mb-8">+ metered usage charges</div>
                   <button
@@ -241,7 +247,7 @@ export function Billing() {
                 >
                   <div className="text-sm text-signal mb-6">Performance</div>
                   <div className="text-3xl display mb-1">
-                    15<span className="text-base text-muted">%</span>
+                    {Math.round(livePlans.performance.feePercentageDefault * 100)}<span className="text-base text-muted">%</span>
                   </div>
                   <div className="text-xs text-muted mb-8">of verified savings</div>
                   <button

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { usePlans } from "@/hooks/usePlans";
 import { Check, ArrowRight } from "lucide-react";
 
 interface SubscriptionData {
@@ -33,6 +34,11 @@ export function Pricing() {
 
   const tier = subscriptionData?.tier;
   const isTrialing = subscriptionData?.status === "trialing";
+
+  // Pricing fetched from server's BILLING_PLANS — single source of truth.
+  // Falls back to current production prices on load/error so the page never
+  // flashes blank or wrong values. See client/src/hooks/usePlans.ts.
+  const livePlans = usePlans();
 
   const handleStartTrial = () => {
     if (user) {
@@ -88,8 +94,8 @@ export function Pricing() {
   const plans = [
     {
       name: "Starter",
-      monthlyPrice: 299,
-      annualPrice: 2990,
+      monthlyPrice: livePlans.starter.monthly,
+      annualPrice:  livePlans.starter.annual,
       description: "Perfect for getting started with demand forecasting",
       features: features.slice(0, 5),
       cta: isTrialing ? "Current Plan" : "Start 90-day free trial",
@@ -98,8 +104,8 @@ export function Pricing() {
     },
     {
       name: "Growth",
-      monthlyPrice: 799,
-      annualPrice: 7990,
+      monthlyPrice: livePlans.growth.monthly,
+      annualPrice:  livePlans.growth.annual,
       description: "For teams managing complex supply chains",
       features: features,
       cta: isTrialing ? "Current Plan" : "Start 90-day free trial",
@@ -108,7 +114,7 @@ export function Pricing() {
     },
     {
       name: "Usage-Based",
-      monthlyPrice: 199,
+      monthlyPrice: livePlans.usageBased.monthlyBase,
       annualPrice: null,
       description: "Pay for what you use, no long-term commitment",
       features: ["All Starter features", "+ metered usage charges"],
@@ -120,7 +126,7 @@ export function Pricing() {
       name: "Performance",
       monthlyPrice: null,
       annualPrice: null,
-      description: "15% of verified savings",
+      description: `${Math.round(livePlans.performance.feePercentageDefault * 100)}% of verified savings`,
       features: ["Everything in Growth", "Dedicated success team", "Custom integrations"],
       cta: "Contact Sales",
       highlighted: false,

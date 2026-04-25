@@ -1,10 +1,16 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { SEOHead } from "@/components/SEOHead";
+import { usePlans, annualAsMonthly } from "@/hooks/usePlans";
 
 export default function LandingPage() {
   const [, setLocation] = useLocation();
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("monthly");
+
+  // Pricing from server's BILLING_PLANS — single source of truth across the
+  // marketing site. Falls back to current production values on load/error.
+  // See client/src/hooks/usePlans.ts.
+  const livePlans = usePlans();
 
   // All 40 integrations from the codebase
   const integrationsByCategory = {
@@ -278,32 +284,32 @@ export default function LandingPage() {
           <div className="bg-ink p-10">
             <div className="text-sm text-soft mb-10">Starter</div>
             <div className="text-4xl display mb-1">
-              {billingPeriod === 'monthly' ? '$299' : '$2,990'}
+              ${(billingPeriod === 'monthly' ? livePlans.starter.monthly : livePlans.starter.annual)?.toLocaleString('en-US')}
               <span className="text-base text-muted">{billingPeriod === 'monthly' ? '/mo' : '/yr'}</span>
             </div>
-            {billingPeriod === 'annual' && <div className="mono text-xs text-muted mt-3">$249/mo billed annually</div>}
+            {billingPeriod === 'annual' && <div className="mono text-xs text-muted mt-3">${annualAsMonthly(livePlans.starter)}/mo billed annually</div>}
             {billingPeriod === 'monthly' && <div className="mono text-xs text-muted mt-3">Billed monthly</div>}
             <button onClick={handleStartTrial} className="btn-ghost text-xs px-4 py-2 inline-block mt-8 uppercase tracking-[0.14em]">Start trial</button>
           </div>
           <div className="bg-ink p-10">
             <div className="text-sm text-soft mb-10">Growth</div>
             <div className="text-4xl display mb-1">
-              {billingPeriod === 'monthly' ? '$799' : '$7,990'}
+              ${(billingPeriod === 'monthly' ? livePlans.growth.monthly : livePlans.growth.annual)?.toLocaleString('en-US')}
               <span className="text-base text-muted">{billingPeriod === 'monthly' ? '/mo' : '/yr'}</span>
             </div>
-            {billingPeriod === 'annual' && <div className="mono text-xs text-muted mt-3">$666/mo billed annually</div>}
+            {billingPeriod === 'annual' && <div className="mono text-xs text-muted mt-3">${annualAsMonthly(livePlans.growth)}/mo billed annually</div>}
             {billingPeriod === 'monthly' && <div className="mono text-xs text-muted mt-3">Billed monthly</div>}
             <button onClick={handleStartTrial} className="btn-ghost text-xs px-4 py-2 inline-block mt-8 uppercase tracking-[0.14em]">Start trial</button>
           </div>
           <div className="bg-ink p-10">
             <div className="text-sm text-soft mb-10">Usage-based</div>
-            <div className="text-4xl display mb-1">$199<span className="text-base text-muted">/mo</span></div>
+            <div className="text-4xl display mb-1">${livePlans.usageBased.monthlyBase}<span className="text-base text-muted">/mo</span></div>
             <div className="mono text-xs text-muted mt-3">+ metered usage</div>
             <button onClick={handleStartTrial} className="btn-ghost text-xs px-4 py-2 inline-block mt-8 uppercase tracking-[0.14em]">Start trial</button>
           </div>
           <div className="bg-ink p-10 border-l" style={{borderLeftColor:'rgba(217, 181, 107, 0.3)'}}>
             <div className="text-sm text-signal mb-10">Performance</div>
-            <div className="text-4xl display mb-1">15<span className="text-base text-muted">%</span></div>
+            <div className="text-4xl display mb-1">{Math.round(livePlans.performance.feePercentageDefault * 100)}<span className="text-base text-muted">%</span></div>
             <div className="mono text-xs text-muted mt-3">of verified savings</div>
             <button onClick={handleStartTrial} className="btn-ghost text-xs px-4 py-2 inline-block mt-8 uppercase tracking-[0.14em]">Start trial</button>
           </div>
