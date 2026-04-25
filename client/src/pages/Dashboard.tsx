@@ -316,9 +316,17 @@ export default function Dashboard() {
             </div>
           </Card>
         </div>
-        <Suspense fallback={null}>
-          <CreateSKUDialog open={showCreateSKU} onOpenChange={setShowCreateSKU} />
-        </Suspense>
+        {showCreateSKU && (
+          <Suspense
+            fallback={
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            }
+          >
+            <CreateSKUDialog open={showCreateSKU} onOpenChange={setShowCreateSKU} />
+          </Suspense>
+        )}
       </>
     );
   }
@@ -742,12 +750,20 @@ export default function Dashboard() {
         <ActivityFeed limit={10} />
       </Suspense>
       
-      {/* Creation Dialogs (lazy-loaded — no render until `open` is true) */}
-      <Suspense fallback={null}>
-        <CreateSKUDialog open={showCreateSKU} onOpenChange={setShowCreateSKU} />
-        <CreateMaterialDialog open={showCreateMaterial} onOpenChange={setShowCreateMaterial} />
-        <CreateSupplierDialog open={showCreateSupplier} onOpenChange={setShowCreateSupplier} />
-      </Suspense>
+      {/* Creation Dialogs (lazy-loaded — chunk only fetched when user opens one) */}
+      {(showCreateSKU || showCreateMaterial || showCreateSupplier) && (
+        <Suspense
+          fallback={
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          }
+        >
+          {showCreateSKU && <CreateSKUDialog open={showCreateSKU} onOpenChange={setShowCreateSKU} />}
+          {showCreateMaterial && <CreateMaterialDialog open={showCreateMaterial} onOpenChange={setShowCreateMaterial} />}
+          {showCreateSupplier && <CreateSupplierDialog open={showCreateSupplier} onOpenChange={setShowCreateSupplier} />}
+        </Suspense>
+      )}
     </div>
   );
 }
