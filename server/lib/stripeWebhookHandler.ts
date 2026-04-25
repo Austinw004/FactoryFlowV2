@@ -52,6 +52,67 @@ export async function handleStripeWebhook(req: Request, res: Response): Promise<
 
 async function routeEvent(event: any): Promise<void> {
   switch (event.type) {
+    // ── Checkout completion ───────────────────────────────────────────────────
+    // Fires the moment a customer finishes Stripe Checkout. Without this case,
+    // the user's stripeCustomerId / stripeSubscriptionId are never set on
+    // their user record, and every subsequent webhook (subscription.updated,
+    // invoice.paid) silently no-ops because their WHERE clause filters by
+    // stripeCustomerId — which is NULL.
+    case "checkout.session.completed": {
+      const session    = event.data.object;
+      const customerId = (session.customer as string | null) ?? null;
+      const subId      = (session.subscription as string | null) ?? null;
+      const customerEmail = (session.customer_details?.email
+        ?? session.customer_email
+        ?? null) as string | null;
+
+      if (!customerId) {
+        log("warn", `checkout.session.completed had no customer (session=${session.id}) — skipped`);
+        break;
+      }
+
+      // Try to attach stripeCustomerId / stripeSubscriptionId to the user.
+      // We trust two link points in order:
+      //   (1) metadata.userId set when we created the Checkout session
+      //   (2) the email captured by Stripe Checkout
+      const metaUserId = session.metadata?.userId as string | undefined;
+
+      let updated = 0;
+      if (metaUserId) {
+        const r = await db
+          .update(users)
+          .set({
+            stripeCustomerId:     customerId,
+            stripeSubscriptionId: subId,
+            subscriptionStatus:   "active",
+            updatedAt:            new Date(),
+          })
+          .where(eq(users.id, metaUserId))
+          .returning({ id: users.id });
+        updated = r.length;
+      }
+      if (updated === 0 && customerEmail) {
+        const r = await db
+          .update(users)
+          .set({
+            stripeCustomerId:     customerId,
+            stripeSubscriptionId: subId,
+            subscriptionStatus:   "active",
+            updatedAt:            new Date(),
+          })
+          .where(eq(users.email, customerEmail))
+          .returning({ id: users.id });
+        updated = r.length;
+      }
+
+      if (updated === 0) {
+        log("warn", `checkout.session.completed couldn't find a user (customer=${customerId}, email=${customerEmail ?? "?"})`);
+      } else {
+        log("info", `checkout.session.completed — linked customer=${customerId} sub=${subId} → active`);
+      }
+      break;
+    }
+
     // ── Subscription lifecycle ────────────────────────────────────────────────
     case "invoice.paid": {
       const invoice = event.data.object;
