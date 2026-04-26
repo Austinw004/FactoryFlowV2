@@ -15,6 +15,7 @@ import {
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
+import type { Json } from "drizzle-zod";
 import { z } from "zod";
 
 // Session storage table for Replit Auth
@@ -71,7 +72,7 @@ export const users = pgTable("users", {
   // of supported keys and their UI copy. Legal-relevant ones (peerBenchmarking,
   // aiTraining, marketingComms) are timestamped on toggle so we can prove
   // when consent was given for audit / GDPR purposes.
-  dataPreferences: jsonb("data_preferences"),
+  dataPreferences: jsonb("data_preferences").$type<Json>(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

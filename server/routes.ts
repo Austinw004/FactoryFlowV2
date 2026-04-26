@@ -121,6 +121,15 @@ import {
   predictionOutcomes,
   insertPredictionOutcomeSchema,
   automationSafeMode,
+  insertComplianceDocumentSchema,
+  insertComplianceRegulationSchema,
+  insertComplianceAuditSchema,
+  insertAuditFindingSchema,
+  updateAuditFindingSchema,
+  insertComplianceCalendarEventSchema,
+  updateComplianceCalendarEventSchema,
+  insertProductionRunSchema,
+  updateProductionRunSchema,
 } from "@shared/schema";
 
 const economics = new DualCircuitEconomics();
@@ -4710,7 +4719,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create compliance document
-  app.post("/api/compliance/documents", isAuthenticated, async (req: any, res) => {
+  app.post("/api/compliance/documents", isAuthenticated, validateBody(insertComplianceDocumentSchema.omit({ companyId: true, createdBy: true, economicRegimeContext: true })), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4753,7 +4762,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create compliance regulation
-  app.post("/api/compliance/regulations", isAuthenticated, async (req: any, res) => {
+  app.post("/api/compliance/regulations", isAuthenticated, validateBody(insertComplianceRegulationSchema.omit({ companyId: true })), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4791,7 +4800,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create compliance audit
-  app.post("/api/compliance/audits", isAuthenticated, async (req: any, res) => {
+  app.post("/api/compliance/audits", isAuthenticated, validateBody(insertComplianceAuditSchema.omit({ companyId: true })), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4838,7 +4847,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create audit finding
-  app.post("/api/compliance/findings", isAuthenticated, async (req: any, res) => {
+  app.post("/api/compliance/findings", isAuthenticated, validateBody(insertAuditFindingSchema.omit({ companyId: true })), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4859,7 +4868,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update audit finding
-  app.patch("/api/compliance/findings/:id", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/compliance/findings/:id", isAuthenticated, validateBody(updateAuditFindingSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4901,7 +4910,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create calendar event
-  app.post("/api/compliance/calendar", isAuthenticated, async (req: any, res) => {
+  app.post("/api/compliance/calendar", isAuthenticated, validateBody(insertComplianceCalendarEventSchema.omit({ companyId: true })), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4922,7 +4931,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update calendar event
-  app.patch("/api/compliance/calendar/:id", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/compliance/calendar/:id", isAuthenticated, validateBody(updateComplianceCalendarEventSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -5283,7 +5292,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create production run
-  app.post("/api/production/runs", isAuthenticated, async (req: any, res) => {
+  app.post("/api/production/runs", isAuthenticated, validateBody(insertProductionRunSchema.omit({ companyId: true, economicRegime: true, fdrAtStart: true })), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -5309,7 +5318,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update production run (e.g., mark as completed)
-  app.patch("/api/production/runs/:id", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/production/runs/:id", isAuthenticated, validateBody(updateProductionRunSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
