@@ -19,6 +19,10 @@ const MAX_RECONNECT_DELAY_MS = 16000;
 const HEARTBEAT_INTERVAL_MS = 25000;
 const HEARTBEAT_TIMEOUT_MS = 10000;
 
+const debugLog = (...args: unknown[]) => {
+  if (import.meta.env.DEV) console.log(...args);
+};
+
 // Map server entity names to client query keys to invalidate.
 // Keep in sync with server/websocket.ts broadcast entities.
 const INVALIDATION_MAP: Record<string, string[]> = {
@@ -108,7 +112,7 @@ export function useWebSocket(onMessage?: MessageHandler) {
 
       ws.onopen = () => {
         clearTimeout(connectTimeoutRef.current);
-        console.log('[WebSocket] Connected');
+        debugLog('[WebSocket] Connected');
         reconnectAttemptsRef.current = 0;
         setIsConnected(true);
         startHeartbeat();
@@ -128,7 +132,7 @@ export function useWebSocket(onMessage?: MessageHandler) {
         }
 
         if (message.type === 'connection_established') {
-          if (message.message) console.log('[WebSocket]', message.message);
+          if (message.message) debugLog('[WebSocket]', message.message);
           return;
         }
 
@@ -173,14 +177,14 @@ export function useWebSocket(onMessage?: MessageHandler) {
           );
           // Add jitter to avoid stampede on mass reconnect
           const jittered = delay + Math.floor(Math.random() * 500);
-          console.log(`[WebSocket] Disconnected. Reconnecting in ${jittered}ms (attempt ${reconnectAttemptsRef.current + 1}/${MAX_RECONNECT_ATTEMPTS})`);
+          debugLog(`[WebSocket] Disconnected. Reconnecting in ${jittered}ms (attempt ${reconnectAttemptsRef.current + 1}/${MAX_RECONNECT_ATTEMPTS})`);
 
           reconnectTimeoutRef.current = setTimeout(() => {
             reconnectAttemptsRef.current++;
             connect();
           }, jittered);
         } else {
-          console.log('[WebSocket] Max reconnect attempts reached. Real-time updates paused.');
+          debugLog('[WebSocket] Max reconnect attempts reached. Real-time updates paused.');
         }
       };
     } catch (error) {
