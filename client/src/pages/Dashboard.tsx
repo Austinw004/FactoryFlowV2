@@ -1,5 +1,6 @@
 import { KPICard } from "@/components/KPICard";
 import { RegimeStatus } from "@/components/RegimeStatus";
+import { RegimeProcurementGuidance } from "@/components/RegimeProcurementGuidance";
 import { PolicySignals } from "@/components/PolicySignals";
 import { AllocationTable } from "@/components/AllocationTable";
 import { EditableBudgetGauge } from "@/components/EditableBudgetGauge";
@@ -68,11 +69,19 @@ export default function Dashboard() {
   const { user, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
 
+  // Track the previous regime so the dashboard can render a visible
+  // "shifted from X to Y" callout, not just a transient toast.
+  const [previousRegime, setPreviousRegime] = useState<string | undefined>(undefined);
+
   // Enable WebSocket for real-time updates with regime change notifications
   const { isConnected } = useWebSocket((message) => {
     if (message.type === 'regime_change' && message.data) {
       const severity = message.data.severity === 'high' ? 'destructive' : 'default';
-      
+
+      if (message.data.from && message.data.to && message.data.from !== message.data.to) {
+        setPreviousRegime(message.data.from);
+      }
+
       toast({
         title: "Economic Regime Changed",
         description: `The economic regime has shifted from ${message.data.from} to ${message.data.to}. FDR: ${Number.isFinite(Number(message.data.fdr)) ? Number(message.data.fdr).toFixed(2) : '—'}`,
@@ -337,7 +346,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="mb-16">
+      <div className="mb-10">
         <div className="eyebrow mb-4">State of operations</div>
         <h1 className="hero text-5xl">{regime?.regime ? getRegimeDescription(regime.regime).split('.')[0] + '.' : 'Analyzing conditions.'}</h1>
         <p className="text-soft mt-5 max-w-xl leading-relaxed">
@@ -345,6 +354,15 @@ export default function Dashboard() {
             ? `Tracking ${skus.length.toLocaleString()} SKU${skus.length === 1 ? '' : 's'}. ${regime?.regime === 'HEALTHY_EXPANSION' ? 'No critical exposures.' : 'Review current regime conditions.'}`
             : 'Add your first SKU to start tracking operations.'}
         </p>
+      </div>
+
+      <div className="mb-12">
+        <RegimeProcurementGuidance
+          regime={regimeType}
+          fdr={fdr}
+          confidence={regimeIntelligence?.confidence?.overall}
+          previousRegime={previousRegime}
+        />
       </div>
 
       <div className="grid grid-cols-4 gap-px bg-line mb-20">
