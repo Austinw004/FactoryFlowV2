@@ -1,22 +1,9 @@
 import crypto from 'crypto';
 import { Request, Response, NextFunction } from 'express';
 
-// Require encryption key at startup — fail fast if invalid.
-//
-// Rules, in order:
-//   1. `.trim()` strips trailing whitespace/newline ONLY. Some Secrets UIs
-//      silently append a newline when you paste. That's the only
-//      "cleanup" we do — we never strip non-hex characters or pad/truncate
-//      the key to a target length. Silently massaging a wrong key into a
-//      different 64-char string would produce a DIFFERENT encryption key
-//      than intended and silently corrupt any data already encrypted with
-//      the correct key. Loud crash > silent wrong key.
-//   2. If the result is empty → FATAL, exit.
-//   3. If the result is not exactly 64 hex chars → FATAL, exit.
-//
-// Do NOT "fix" this by padding or truncating. If you see a validation
-// failure in logs, regenerate the key with `openssl rand -hex 32` and
-// paste the full 64-char output into Secrets with no prefix/suffix.
+// Require encryption key at startup - fail fast if not provided.
+// `.trim()` tolerates trailing whitespace/newlines that some Secrets
+// UIs silently append when the value is pasted.
 const RAW_ENCRYPTION_KEY = (process.env.ENCRYPTION_KEY ?? '').trim();
 
 if (!RAW_ENCRYPTION_KEY) {
@@ -29,8 +16,7 @@ if (RAW_ENCRYPTION_KEY.length !== 64 || !/^[0-9a-fA-F]{64}$/.test(RAW_ENCRYPTION
   console.error(
     `[Security] FATAL: ENCRYPTION_KEY must be exactly 64 hex chars (32 bytes). ` +
       `Got length=${RAW_ENCRYPTION_KEY.length}. ` +
-      `Generate a valid key with: openssl rand -hex 32 ` +
-      `and paste the full output — do not truncate, pad, or edit.`,
+      `Generate a valid key with: openssl rand -hex 32`,
   );
   process.exit(1);
 }
