@@ -19419,8 +19419,16 @@ You'll receive emails for:
   });
   
   app.get("/api/oauth/supported", isAuthenticated, async (_req, res) => {
-    const { OAuthService } = await import("./lib/oauthService");
-    res.json({ integrations: OAuthService.getSupportedIntegrations() });
+    try {
+      const { OAuthService } = await import("./lib/oauthService");
+      res.json({ integrations: OAuthService.getSupportedIntegrations() });
+    } catch (error: any) {
+      console.error("[GET /api/oauth/supported] Error:", error);
+      res.status(500).json({
+        error: "We couldn't load supported integrations. Please try again.",
+        code: "INTERNAL_ERROR",
+      });
+    }
   });
   
   app.post("/api/oauth/refresh/:integrationId", isAuthenticated, async (req: any, res) => {
