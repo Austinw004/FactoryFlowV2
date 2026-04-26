@@ -37,6 +37,25 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        // Split vendor code into stable chunks so a code-only deploy
+        // doesn't invalidate the user's React/Query/Radix cache.
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return undefined;
+          if (id.includes("/react/") || id.includes("/react-dom/") || id.includes("/scheduler/")) {
+            return "vendor-react";
+          }
+          if (id.includes("/@tanstack/")) return "vendor-query";
+          if (id.includes("/@radix-ui/")) return "vendor-radix";
+          if (id.includes("/lucide-react/") || id.includes("/lucide/")) return "vendor-icons";
+          if (id.includes("/@stripe/")) return "vendor-stripe";
+          if (id.includes("/recharts/") || id.includes("/d3-")) return "vendor-charts";
+          if (id.includes("/date-fns/") || id.includes("/dayjs/")) return "vendor-date";
+          return undefined;
+        },
+      },
+    },
   },
   server: {
     fs: {
