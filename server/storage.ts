@@ -176,7 +176,7 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   getUsersByCompany(companyId: string): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
-  upsertUser(user: UpsertUser): Promise<User>;
+  upsertUser(user: UpsertUser | Partial<User>): Promise<User>;
   
   // Companies
   getCompany(id: string): Promise<Company | undefined>;
@@ -1024,7 +1024,7 @@ export class DbStorage implements IStorage {
     return user;
   }
 
-  async upsertUser(userData: UpsertUser): Promise<User> {
+  async upsertUser(userData: UpsertUser | Partial<User>): Promise<User> {
     // First check if a user with this email already exists (different from id conflict)
     if (userData.email) {
       const existingByEmail = await db.select().from(users).where(eq(users.email, userData.email));
