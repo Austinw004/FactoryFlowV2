@@ -52,7 +52,6 @@ import { createRfqGenerationService } from "./lib/rfqGeneration";
 import { stripeService } from "./stripeService";
 import { getStripePublishableKey } from "./stripeClient";
 import { registerAuthPaymentRoutes } from "./authPaymentRoutes";
-import { registerDigestPublicRoutes, registerDigestRoutes } from "./routines/digestRoutes";
 import multer from "multer";
 import { z } from "zod";
 import { validateBody } from "./middleware/validateBody";
@@ -577,12 +576,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Public API routes that don't require authentication (must be registered BEFORE global auth middleware)
-
-  // Digest token-link routes (confirm/reject/prompt-back). Auth is provided
-  // by the per-digest 256-bit random token in the URL — these must remain
-  // reachable from a user's email client without a session cookie.
-  registerDigestPublicRoutes(app);
-
   // Stripe public config
   app.get("/api/stripe/config", async (_req, res) => {
     try {
@@ -742,12 +735,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Internal admin routes — sales-leads inbox, gated behind isPlatformAdmin.
   // PII-bearing rows (name, work email, IP) live behind this gate.
   app.use('/api/internal', leadsAdminRoutes);
-
-  // Daily routine digest — meta-routine that runs the six reporting jobs,
-  // emails a summary, and accepts confirm/reject + prompt-back replies.
-  // The token-link sub-routes are public (auth via per-digest random token);
-  // the run/dryRun trigger requires login.
-  registerDigestRoutes(app);
 
   // Integration Orchestrator routes
   registerIntegrationOrchestratorRoutes(app, isAuthenticated, rateLimiters);

@@ -12,9 +12,6 @@ import { logAudit } from './lib/auditLogger';
 import { AutomationEngine } from './lib/automationEngine';
 import { withJobLock } from './lib/distributedLock';
 import { recordProbe } from './lib/probeHistory';
-import { runDigestRoutine } from './routines/digestRoutine';
-import { users } from '@shared/schema';
-import { eq } from 'drizzle-orm';
 import { db } from './db';
 import { sql } from 'drizzle-orm';
 import { 
@@ -1175,55 +1172,6 @@ async function selfProbeHealth() {
   }
 }
 
-// Daily digest meta-routine. Runs the six reporting jobs in sequence,
-// captures results + proposed changes, and emails each admin user. The
-// scheduler ticks every hour; the body short-circuits unless the local
-// hour matches DIGEST_HOUR_LOCAL (defaults to 8am). Lock TTL on the
-// outer job prevents two pods from sending two emails on the same hour.
-const DIGEST_HOUR_LOCAL = Number(process.env.DIGEST_HOUR_LOCAL ?? "8");
-let lastDigestDate: string | null = null;
-
-async function runDailyDigest(): Promise<void> {
-  const now = new Date();
-  const localHour = now.getHours();
-  const localDate = now.toISOString().slice(0, 10);
-
-  if (localHour !== DIGEST_HOUR_LOCAL) {
-    return;
-  }
-  if (lastDigestDate === localDate) {
-    console.log('[Digest] Already ran today; skipping');
-    return;
-  }
-  lastDigestDate = localDate;
-
-  console.log(`[Digest] Daily run starting at local hour=${localHour}`);
-  // Pull every admin-flagged user. For now we treat any user whose role
-  // role is 'admin' OR who is the sole user in their company as the
-  // recipient. Refine the WHERE clause when you have multi-admin orgs.
-  const adminUsers = await db
-    .select({ id: users.id, email: users.email, companyId: users.companyId, role: users.role })
-    .from(users)
-    .where(eq(users.role, 'admin'));
-
-  if (adminUsers.length === 0) {
-    console.log('[Digest] No admin users; skipping');
-    return;
-  }
-
-  for (const u of adminUsers) {
-    try {
-      await runDigestRoutine({
-        userId: u.id,
-        companyId: u.companyId ?? null,
-        sendEmail: true,
-      });
-    } catch (err) {
-      console.error(`[Digest] Run failed for user=${u.id}:`, err);
-    }
-  }
-}
-
 const jobConfigs: BackgroundJobConfig[] = [
   { name: 'Economic Data Updates', intervalMs: 5 * 60 * 1000, enabled: true },
   { name: 'Sensor Readings Generation', intervalMs: 30 * 1000, enabled: true },
@@ -1241,8 +1189,6 @@ const jobConfigs: BackgroundJobConfig[] = [
   { name: 'Automation Queue Worker', intervalMs: 30 * 1000, enabled: true },
   { name: 'Data Retention', intervalMs: 24 * 60 * 60 * 1000, enabled: true },
   { name: 'Self-Probe Health', intervalMs: 5 * 60 * 1000, enabled: true },
-  // Daily digest meta-routine. Ticks hourly; runs once per day at DIGEST_HOUR_LOCAL.
-  { name: 'Daily Routine Digest', intervalMs: 60 * 60 * 1000, enabled: true },
 ];
 
 export function startBackgroundJobs() {
@@ -1265,7 +1211,6 @@ export function startBackgroundJobs() {
     automationQueueWorkerJob,
     dataRetentionJob,
     selfProbeHealth,
-    runDailyDigest,
   ];
   
   jobConfigs.forEach((config, index) => {
