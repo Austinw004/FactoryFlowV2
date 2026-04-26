@@ -121,6 +121,11 @@ import {
   predictionOutcomes,
   insertPredictionOutcomeSchema,
   automationSafeMode,
+  insertComplianceDocumentSchema,
+  insertComplianceRegulationSchema,
+  insertComplianceAuditSchema,
+  insertAuditFindingSchema,
+  insertComplianceCalendarEventSchema,
 } from "@shared/schema";
 
 const economics = new DualCircuitEconomics();
@@ -4503,9 +4508,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate request body
       const validationResult = insertRfqSchema.safeParse(req.body);
       if (!validationResult.success) {
-        return res.status(400).json({ 
-          error: "Validation failed", 
-          details: validationResult.error.errors 
+        return res.status(400).json({
+          error: "Validation failed",
+          details: validationResult.error.issues
         });
       }
 
@@ -4660,9 +4665,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (!validationResult.success) {
-        return res.status(400).json({ 
-          error: "Validation failed", 
-          details: validationResult.error.errors 
+        return res.status(400).json({
+          error: "Validation failed",
+          details: validationResult.error.issues
         });
       }
 
@@ -4710,7 +4715,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create compliance document
-  app.post("/api/compliance/documents", isAuthenticated, async (req: any, res) => {
+  app.post(
+    "/api/compliance/documents",
+    isAuthenticated,
+    validateBody(
+      insertComplianceDocumentSchema.omit({
+        companyId: true,
+        createdBy: true,
+        economicRegimeContext: true,
+      }),
+    ),
+    async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4720,14 +4735,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get current economic regime for context
       await economics.fetch();
-      
+
       const document = await storage.createComplianceDocument({
-        ...req.body,
+        ...(req.validated as any),
         companyId: user.companyId,
         createdBy: user.id,
         economicRegimeContext: economics.regime,
       });
-      
+
       res.status(201).json(document);
     } catch (error: any) {
       console.error("Error creating compliance document:", error);
@@ -4753,7 +4768,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create compliance regulation
-  app.post("/api/compliance/regulations", isAuthenticated, async (req: any, res) => {
+  app.post(
+    "/api/compliance/regulations",
+    isAuthenticated,
+    validateBody(insertComplianceRegulationSchema.omit({ companyId: true })),
+    async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4762,10 +4781,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const regulation = await storage.createComplianceRegulation({
-        ...req.body,
+        ...(req.validated as any),
         companyId: user.companyId,
       });
-      
+
       res.status(201).json(regulation);
     } catch (error: any) {
       console.error("Error creating compliance regulation:", error);
@@ -4791,7 +4810,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create compliance audit
-  app.post("/api/compliance/audits", isAuthenticated, async (req: any, res) => {
+  app.post(
+    "/api/compliance/audits",
+    isAuthenticated,
+    validateBody(
+      insertComplianceAuditSchema.omit({
+        companyId: true,
+        economicRegime: true,
+        fdrAtAudit: true,
+      }),
+    ),
+    async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4801,14 +4830,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get current economic regime and FDR
       await economics.fetch();
-      
+
       const audit = await storage.createComplianceAudit({
-        ...req.body,
+        ...(req.validated as any),
         companyId: user.companyId,
         economicRegime: economics.regime,
         fdrAtAudit: economics.fdr,
       });
-      
+
       res.status(201).json(audit);
     } catch (error: any) {
       console.error("Error creating compliance audit:", error);
@@ -4838,7 +4867,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create audit finding
-  app.post("/api/compliance/findings", isAuthenticated, async (req: any, res) => {
+  app.post(
+    "/api/compliance/findings",
+    isAuthenticated,
+    validateBody(insertAuditFindingSchema.omit({ companyId: true })),
+    async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4847,10 +4880,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const finding = await storage.createAuditFinding({
-        ...req.body,
+        ...(req.validated as any),
         companyId: user.companyId,
       });
-      
+
       res.status(201).json(finding);
     } catch (error: any) {
       console.error("Error creating audit finding:", error);
@@ -4901,7 +4934,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create calendar event
-  app.post("/api/compliance/calendar", isAuthenticated, async (req: any, res) => {
+  app.post(
+    "/api/compliance/calendar",
+    isAuthenticated,
+    validateBody(insertComplianceCalendarEventSchema.omit({ companyId: true })),
+    async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -4910,10 +4947,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const event = await storage.createComplianceCalendarEvent({
-        ...req.body,
+        ...(req.validated as any),
         companyId: user.companyId,
       });
-      
+
       res.status(201).json(event);
     } catch (error: any) {
       console.error("Error creating calendar event:", error);

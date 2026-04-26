@@ -22,7 +22,18 @@
  */
 
 import type { Request, Response, NextFunction } from "express";
-import type { ZodTypeAny, infer as ZodInfer } from "zod";
+
+// Schema type compatible with both v3 and v4 zod surfaces.
+// drizzle-zod 0.8 emits v4 schemas; ad-hoc inline z.object(...) from "zod"
+// stays on v3. Both expose .safeParse() and a ZodError with .issues, which is
+// all this middleware needs, so we only require that minimal shape here.
+type SchemaLike<TInput = unknown, TOutput = unknown> = {
+  safeParse: (input: TInput) => {
+    success: boolean;
+    data?: TOutput;
+    error?: { issues: ReadonlyArray<{ path: PropertyKey[]; message: string }> };
+  };
+};
 
 declare global {
   namespace Express {
@@ -32,13 +43,13 @@ declare global {
   }
 }
 
-export function validateBody<T extends ZodTypeAny>(schema: T) {
+export function validateBody<T extends SchemaLike>(schema: T) {
   return (req: Request, res: Response, next: NextFunction) => {
     const result = schema.safeParse(req.body);
     if (!result.success) {
       const fields: Record<string, string> = {};
-      for (const issue of result.error.issues) {
-        const path = issue.path.join(".") || "_";
+      for (const issue of result.error!.issues) {
+        const path = issue.path.map(String).join(".") || "_";
         if (!fields[path]) fields[path] = issue.message;
       }
       return res.status(400).json({ error: "Validation failed", fields });
@@ -50,13 +61,13 @@ export function validateBody<T extends ZodTypeAny>(schema: T) {
 
 // Convenience helper — matching shape of req.query / req.params validation is
 // a common follow-up need.
-export function validateQuery<T extends ZodTypeAny>(schema: T) {
+export function validateQuery<T extends SchemaLike>(schema: T) {
   return (req: Request, res: Response, next: NextFunction) => {
     const result = schema.safeParse(req.query);
     if (!result.success) {
       const fields: Record<string, string> = {};
-      for (const issue of result.error.issues) {
-        const path = issue.path.join(".") || "_";
+      for (const issue of result.error!.issues) {
+        const path = issue.path.map(String).join(".") || "_";
         if (!fields[path]) fields[path] = issue.message;
       }
       return res.status(400).json({ error: "Query validation failed", fields });
@@ -67,6 +78,6 @@ export function validateQuery<T extends ZodTypeAny>(schema: T) {
 }
 
 /** Helper to read validated body as a typed value. */
-export function getValidated<T extends ZodTypeAny>(req: Request): ZodInfer<T> {
-  return req.validated as ZodInfer<T>;
+export function getValidated<T>(req: Request): T {
+  return req.validated as T;
 }

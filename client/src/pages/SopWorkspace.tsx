@@ -28,7 +28,7 @@ import {
 } from "@shared/schema";
 import { Plus, Calendar, TrendingUp, FileText, CheckCircle2, AlertCircle, Clock, Users, Mail, Bell, X, UserPlus } from "lucide-react";
 import { format } from "date-fns";
-import { z } from "zod";
+import { z } from "zod/v4";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
