@@ -78,6 +78,7 @@ import {
   Maximize2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatDistanceToNow } from "date-fns";
 
@@ -304,6 +305,15 @@ const conversationalStarters = [
 
 export default function AgenticAI() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  // Greet the customer by their nickname (Settings → Profile) when set,
+  // otherwise their full first name. Never use just an initial — always
+  // a real word. Falls back to a generic friendly form when no name is
+  // on file, which only happens before onboarding completes.
+  const greetingName =
+    (user?.nickname && user.nickname.trim()) ||
+    (user?.firstName && user.firstName.trim()) ||
+    "there";
   const [selectedAgent, setSelectedAgent] = useState<AiAgent | null>(null);
   const [selectedRule, setSelectedRule] = useState<AutomationRule | null>(null);
   const [showRuleBuilder, setShowRuleBuilder] = useState(false);
@@ -1246,7 +1256,7 @@ export default function AgenticAI() {
                             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center">
                               <Sparkles className="h-8 w-8 text-purple-500" />
                             </div>
-                            <h3 className="font-semibold text-xl mb-2">Hi! I'm your AI Assistant</h3>
+                            <h3 className="font-semibold text-xl mb-2">Hi {greetingName} — how can we operate today?</h3>
                           </div>
                           
                           <div className="max-w-lg mx-auto mb-6">

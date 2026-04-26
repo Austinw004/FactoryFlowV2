@@ -282,6 +282,10 @@ export const updateProfileSchema = z.object({
   name:       z.string().min(1).max(100).optional(),
   firstName:  z.string().min(1).max(50).optional().nullable(),
   lastName:   z.string().min(1).max(50).optional().nullable(),
+  // Optional preferred-name override used by the AI Advisor and other
+  // in-product greetings. Empty string is normalized to null on write so
+  // the AI falls back to firstName.
+  nickname:   z.string().max(50).optional().nullable(),
   jobTitle:   z.string().max(100).optional().nullable(),
   department: z.string().max(100).optional().nullable(),
   phone:      z.string().max(30).optional().nullable(),
@@ -301,6 +305,7 @@ export async function updateProfile(userId: string, input: z.infer<typeof update
     name:       users.name,
     firstName:  users.firstName,
     lastName:   users.lastName,
+    nickname:   users.nickname,
     jobTitle:   users.jobTitle,
     department: users.department,
     phone:      users.phone,

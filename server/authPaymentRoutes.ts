@@ -463,6 +463,7 @@ export function registerAuthPaymentRoutes(app: Express): void {
         name: usersSchema.name,
         firstName: usersSchema.firstName,
         lastName: usersSchema.lastName,
+        nickname: usersSchema.nickname,
         username: usersSchema.username,
         jobTitle: usersSchema.jobTitle,
         department: usersSchema.department,

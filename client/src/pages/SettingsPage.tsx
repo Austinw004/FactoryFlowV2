@@ -231,6 +231,20 @@ function ProfileTab() {
             />
           </div>
           <div>
+            <Label htmlFor="nickname">Nickname (optional)</Label>
+            <Input
+              id="nickname"
+              value={(form.nickname as string) ?? ""}
+              onChange={(e) => set("nickname", e.target.value)}
+              placeholder="e.g. Mike"
+              className="mt-1.5"
+              data-testid="input-nickname"
+            />
+            <p className="text-xs text-muted-foreground mt-1.5">
+              What the AI Advisor and other in-product greetings call you. Leave blank to use your first name.
+            </p>
+          </div>
+          <div>
             <Label htmlFor="phone">Phone</Label>
             <Input
               id="phone"

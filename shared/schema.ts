@@ -61,6 +61,14 @@ export const users = pgTable("users", {
   jobTitle: text("job_title"),
   phone: text("phone"),
   department: text("department"),
+  // ── Personalization ──────────────────────────────────────────────────────
+  // Optional override for what the AI Advisor and other in-product greetings
+  // call the user. When unset, surfaces use firstName. Customers set this in
+  // Settings → Profile (e.g. "Mike" instead of "Michael", or "M.O." instead
+  // of "Michael Okafor"). Keep separate from `name` (display name on
+  // user-facing artifacts like email signatures) so a user can prefer "Mike"
+  // in conversation but still appear as "Michael Okafor" on a PO.
+  nickname: text("nickname"),
   selectedPlanId: text("selected_plan_id"),
   selectedBillingInterval: text("selected_billing_interval"),
   // ── Data preferences (consent-based opt-ins) ──────────────────────────────
