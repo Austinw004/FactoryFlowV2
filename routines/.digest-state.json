@@ -1,0 +1,66 @@
+{
+  "digestDate": "2026-04-26",
+  "priorDigestDate": null,
+  "priorReplyChecksum": null,
+  "emailDispatch": {
+    "attempted": true,
+    "success": false,
+    "reason": "sendpulse-api package not installed in routine sandbox; node_modules absent. Logged at /tmp/digest-failures.jsonl."
+  },
+  "decisionsNeeded": [
+    {
+      "id": 1,
+      "routine": "Big Boi",
+      "ref": "PR #129",
+      "summary": "TSC 317 → 6, +5 compliance validators, postcss patched. CI red on 6 residual zodResolver hits documented in #128.",
+      "question": "Approve and squash-merge to main? Or hold until #128 is resolved so CI is green at merge time?"
+    },
+    {
+      "id": 2,
+      "routine": "Optimus",
+      "ref": "PR #122",
+      "summary": "+688 lines on dashboard surface; new RegimeProcurementGuidance + prescriptive Why rationale across PolicySignals/MaterialsAtRisk/QuickWins.",
+      "question": "Approve, request changes, or defer until trial signups stabilize?"
+    },
+    {
+      "id": 3,
+      "routine": "Daily Boost / Palantard Grade",
+      "ref": "PR #117 vs PR #121 (potential conflict)",
+      "summary": "Both modify client/src/hooks/useWebSocket.ts with the same intent (gate info logs to DEV).",
+      "question": "Merge #121 first (broader fix, includes WS gate) and close #117 as superseded? Or merge #117 first as the minimal change?"
+    },
+    {
+      "id": 4,
+      "routine": "Weekly Clean",
+      "ref": "PR #130",
+      "summary": "Security headers hardened, Zod tightened on 6 routes, vendor chunk 557→212 kB, api-spec/NIST refreshed. CI red is the persistent #128 root cause.",
+      "question": "Approve and merge as-is, or want the 5 spawned issues triaged first (#124–#128)?"
+    },
+    {
+      "id": 5,
+      "routine": "Meta-routine",
+      "ref": "PR #123",
+      "summary": "Adds two empty .gitkeep'd directories (.claude/agents, .claude/commands). No behavior change.",
+      "question": "Merge (cheap), close (you don’t want a .claude/ in-tree), or hold until you've decided where routine definitions live?"
+    },
+    {
+      "id": 6,
+      "routine": "All routines (cross-cutting)",
+      "ref": "Issue #128",
+      "summary": "zod / drizzle-zod / @hookform/resolvers three-way version conflict keeping CI red on every PR in window. Option A: bump @hookform/resolvers 3→4/5 + react-hook-form 7.55+ + smoke ~40 form dialogs. Option B: @ts-expect-error on each zodResolver(...) until next major-version sweep.",
+      "question": "Pick A or B (or a third option), and which routine should own the work?"
+    }
+  ],
+  "perRoutineStatus": {
+    "Big Boi":         { "status": "activity", "items": ["PR #129", "PR #116"] },
+    "Optimus":         { "status": "activity", "items": ["PR #122"] },
+    "Daily Boost":     { "status": "activity", "items": ["PR #117"] },
+    "Palantard Grade": { "status": "activity", "items": ["PR #121", "Issue #120"] },
+    "Weekly Clean":    { "status": "activity", "items": ["PR #130", "PR #99 (still open)", "Issues #124-#128"] },
+    "Code Review":     { "status": "silent",   "items": [] }
+  },
+  "atAGlance": { "clean": 1, "needYourEyes": 5, "blocking": 0 },
+  "notable": [
+    "Commit 72eb9d7 (feat(routines): daily meta-digest with apply-on-approve flow) was pushed and reverted on the same day in 681e504. Surfaced for visibility, no action requested."
+  ]
+}
