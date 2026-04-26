@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { StripePaymentForm } from "@/components/StripePaymentForm";
 import {
   Building2, Users, Rocket, Check, X, Loader2, Mail, UserPlus,
   MapPin, User, CreditCard, Crown, Zap, BarChart3, Shield,
@@ -1116,27 +1117,26 @@ export default function Onboarding() {
           </Card>
         )}
 
-        {/* ─── Step 6: Trial confirmation (no card collected here) ──────────
-             Previously collected raw PAN / CVC into plaintext <Input> fields
-             with a "powered by Stripe" badge — that is NOT PCI-compliant
-             and would have failed any compliance audit. PCI scope reduction
-             requires either Stripe Elements (iframe-isolated card fields,
-             tokenized client-side) or Stripe Checkout (hosted page).
-             Adding the @stripe/stripe-js + @stripe/react-stripe-js
-             integration is a separate body of work; in the meantime we
-             defer card collection to the Billing page (which uses Stripe
-             Checkout via /api/stripe/checkout — fully PCI-compliant). The
-             90-day free trial means customers don't *need* a card today.
+        {/* ─── Step 6: Stripe Elements card collection (PCI-compliant) ──────
+             Card data is collected inside Stripe-hosted iframes via the
+             PaymentElement component. Raw PAN never enters our JS context
+             or our server — Stripe.js tokenizes client-side, then we
+             confirm a server-created SetupIntent. The resulting payment
+             method is attached to the user's Stripe customer for the
+             eventual subscription charge after the 90-day trial.
+
+             Customer can also skip — the trial doesn't require a card.
+             They'll be prompted to add one in Settings → Billing later.
         */}
         {step === 6 && (
           <Card data-testid="card-onboarding-payment" className="border-0 shadow-xl shadow-black/5">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-primary" />
-                Trial — no card required
+                <CreditCard className="w-5 h-5 text-primary" />
+                Add a payment method
               </CardTitle>
               <CardDescription>
-                Your 90-day free trial starts immediately. Add a payment method anytime before it ends — you'll never be charged without confirming.
+                Optional. Add it now to keep access uninterrupted when your 90-day trial ends — you won't be charged today.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -1144,35 +1144,17 @@ export default function Onboarding() {
                 <Shield className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">90-day free trial — no charge today</p>
-                  <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">Full access to every module. Cancel any time — if you don't add a payment method, your trial simply ends and you keep read-only access to your data.</p>
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
+                    Cancel before day 90 and you'll never be billed. After day 90, your saved card is charged for the plan you picked on the previous step.
+                  </p>
                 </div>
               </div>
 
-              <div className="rounded-lg border border-border p-4">
-                <div className="flex items-start gap-3">
-                  <CreditCard className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" />
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">When you're ready to add a payment method</p>
-                    <p className="text-xs text-muted-foreground">
-                      Visit <span className="font-mono text-foreground">Settings → Billing</span> from the dashboard.
-                      Your card goes through Stripe Checkout — same secure flow used by Lyft, Slack,
-                      and Notion. Prescient Labs never sees or stores raw card data.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="flex gap-3">
-                <Button variant="outline" onClick={() => setStep(5)} className="h-11">
-                  <ArrowLeft className="w-4 h-4 mr-2" /> Back
-                </Button>
-                <Button onClick={() => setStep(7)} className="flex-1 h-11" data-testid="button-continue-to-launch">
-                  Start my 90-day trial
-                  <ChevronRight className="w-4 h-4 ml-2" />
-                </Button>
-              </div>
+              <StripePaymentForm
+                onSuccess={() => setStep(7)}
+                onSkip={() => setStep(7)}
+                onBack={() => setStep(5)}
+              />
             </CardContent>
           </Card>
         )}

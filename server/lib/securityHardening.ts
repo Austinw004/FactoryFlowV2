@@ -331,18 +331,25 @@ export function inputSanitizationMiddleware(req: Request, res: Response, next: N
  * Security headers middleware (Helmet-like)
  */
 export function securityHeadersMiddleware(req: Request, res: Response, next: NextFunction) {
-  // Prevent clickjacking
-  res.setHeader('X-Frame-Options', 'DENY');
-  
+  // Clickjacking protection.
+  // We deliberately do NOT set X-Frame-Options: DENY because Replit's
+  // Publishing → Preview tab embeds the deployed app in an iframe served
+  // from a Replit subdomain, and DENY breaks that with a 403. Instead we
+  // rely on Content-Security-Policy frame-ancestors below, which lets us
+  // allowlist Replit's preview origin AND self while still blocking every
+  // other site (the modern, header-of-record way to prevent clickjacking).
+  // See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/frame-ancestors
+  // X-Frame-Options is left unset — modern browsers prefer frame-ancestors.
+
   // Prevent MIME sniffing
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  
+
   // Enable XSS protection
   res.setHeader('X-XSS-Protection', '1; mode=block');
-  
+
   // Referrer policy
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  
+
   // Content Security Policy — tighter in production, permissive in development
   const isProduction = process.env.NODE_ENV === 'production';
   const scriptSrc = isProduction
@@ -351,9 +358,15 @@ export function securityHeadersMiddleware(req: Request, res: Response, next: Nex
   const styleSrc = isProduction
     ? "style-src 'self' https://fonts.googleapis.com"
     : "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com";
+  // frame-ancestors: who can iframe US?
+  //   - 'self' — our own app (modal flows, etc.)
+  //   - https://*.replit.com / https://*.replit.dev — Replit's IDE Preview tab
+  //   - https://*.replit.app — the Replit deployment subdomain (Preview proxies through this)
+  // Anything else is denied — clickjacking still blocked.
+  const frameAncestors = "frame-ancestors 'self' https://*.replit.com https://*.replit.dev https://*.replit.app";
   res.setHeader(
     'Content-Security-Policy',
-    `default-src 'self'; ${scriptSrc}; ${styleSrc}; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' wss: https:; frame-src 'self' https://js.stripe.com;`
+    `default-src 'self'; ${scriptSrc}; ${styleSrc}; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' wss: https: https://api.stripe.com; frame-src 'self' https://js.stripe.com https://hooks.stripe.com; ${frameAncestors};`
   );
   
   // Strict Transport Security (HSTS) - only in production with HTTPS

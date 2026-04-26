@@ -1130,15 +1130,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Payment method placeholder (Stripe approval pending)
-  app.post('/api/onboarding/payment-method', isAuthenticated, async (req: any, res) => {
+  /**
+   * POST /api/onboarding/payment-method/setup-intent
+   *
+   * Creates a Stripe SetupIntent so the customer can save a payment method
+   * during onboarding without being charged. Returns the client_secret;
+   * the frontend uses Stripe Elements (PaymentElement) to confirm the
+   * SetupIntent client-side, which keeps raw PAN out of our servers
+   * (PCI scope reduction — only Stripe's iframe sees the card).
+   *
+   * Flow:
+   *   1) Client hits this endpoint → server upserts a Stripe customer for
+   *      the user (if they don't already have one) and creates a SetupIntent
+   *      tied to that customer.
+   *   2) Server returns { clientSecret, customerId }.
+   *   3) Client mounts <Elements stripe={stripePromise} options={{ clientSecret }}>,
+   *      collects the card via PaymentElement, calls stripe.confirmSetup(...).
+   *   4) On success, the resulting payment method is automatically attached
+   *      to the customer (because we passed customer when creating the
+   *      SetupIntent), and Stripe will use it for the eventual subscription
+   *      charge after the trial expires.
+   */
+  app.post('/api/onboarding/payment-method/setup-intent', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      console.log(`[Onboarding] Payment method intent recorded for user ${userId} (Stripe integration pending)`);
-      res.json({ success: true, message: "Payment method recorded. Stripe integration pending." });
+      const user = await stripeService.getUser(userId);
+      if (!user) return res.status(404).json({ error: "User not found" });
+
+      // Ensure a Stripe customer exists for this user; cache the id on the
+      // user record so we don't create duplicates on retry.
+      let customerId = user.stripeCustomerId;
+      if (!customerId) {
+        const customer = await stripeService.createCustomer(
+          user.email || "",
+          user.id,
+          user.name || undefined,
+        );
+        await stripeService.updateUserStripeInfo(user.id, { stripeCustomerId: customer.id });
+        customerId = customer.id;
+      }
+
+      const stripe = await (await import('./stripeClient')).getUncachableStripeClient();
+      const setupIntent = await stripe.setupIntents.create({
+        customer: customerId,
+        payment_method_types: ['card'],
+        usage: 'off_session', // future subscription charges happen without the customer present
+        metadata: { userId, source: 'onboarding-step6' },
+      });
+
+      res.json({
+        clientSecret: setupIntent.client_secret,
+        customerId,
+        setupIntentId: setupIntent.id,
+      });
     } catch (error: any) {
-      res.status(500).json({ error: "Failed to save payment method" });
+      console.error("Error creating SetupIntent:", error?.message || error);
+      res.status(500).json({ error: "Failed to start payment method setup" });
     }
+  });
+
+  /**
+   * POST /api/onboarding/payment-method/confirm
+   *
+   * Called by the client after stripe.confirmSetup() succeeds. We look up
+   * the SetupIntent in Stripe to verify it actually completed and belongs
+   * to this user's customer, then mark the user as having a default
+   * payment method on file. The actual payment method is already attached
+   * to the Stripe customer by Stripe's confirm flow — we just record the
+   * link and set it as the customer's default for invoices.
+   */
+  app.post('/api/onboarding/payment-method/confirm', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const setupIntentId = String(req.body?.setupIntentId || "");
+      if (!setupIntentId.startsWith("seti_")) {
+        return res.status(400).json({ error: "Invalid setup intent id" });
+      }
+
+      const user = await stripeService.getUser(userId);
+      if (!user || !user.stripeCustomerId) {
+        return res.status(400).json({ error: "User has no Stripe customer record" });
+      }
+
+      const stripe = await (await import('./stripeClient')).getUncachableStripeClient();
+      const intent = await stripe.setupIntents.retrieve(setupIntentId);
+
+      if (intent.customer !== user.stripeCustomerId) {
+        return res.status(403).json({ error: "Setup intent does not belong to this user" });
+      }
+      if (intent.status !== 'succeeded') {
+        return res.status(400).json({ error: `SetupIntent not succeeded (status=${intent.status})` });
+      }
+
+      // Make this the customer's default payment method for invoices so
+      // the eventual trial-ends charge uses it.
+      const paymentMethodId = intent.payment_method as string | null;
+      if (paymentMethodId) {
+        await stripe.customers.update(user.stripeCustomerId, {
+          invoice_settings: { default_payment_method: paymentMethodId },
+        });
+      }
+
+      console.log(`[Onboarding] Payment method confirmed for user ${userId} (pm=${paymentMethodId})`);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error confirming SetupIntent:", error?.message || error);
+      res.status(500).json({ error: "Failed to confirm payment method" });
+    }
+  });
+
+  // Legacy endpoint — redirects clients still using the old API. Returns
+  // success with a no-op message so anything still hitting it doesn't crash.
+  app.post('/api/onboarding/payment-method', isAuthenticated, async (req: any, res) => {
+    const userId = req.user.claims.sub;
+    console.log(`[Onboarding] Legacy /payment-method called for user ${userId} — clients should migrate to /setup-intent + /confirm`);
+    res.json({ success: true, deprecated: true, message: "Use /api/onboarding/payment-method/setup-intent + /confirm instead." });
   });
 
   app.post('/api/onboarding/complete', isAuthenticated, async (req: any, res) => {

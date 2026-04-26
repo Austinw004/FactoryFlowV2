@@ -13,15 +13,22 @@ app.use(compression());
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
 
-// Security headers — keep CSP off (Vite + Stripe + many third-party scripts);
-// HSTS is set by upstream Replit/Vercel proxy. We still want frame protection,
-// referrer policy, X-Content-Type-Options, etc.
+// Security headers — keep CSP off here (set by securityHeadersMiddleware
+// in server/lib/securityHardening.ts which has the full directive list
+// including frame-ancestors). HSTS is set by upstream Replit proxy.
+//
+// CRITICAL: frameguard MUST be disabled. Helmet's default sends
+// X-Frame-Options: SAMEORIGIN, which Replit's Preview tab can't satisfy
+// (it iframes us from a different replit.app subdomain) and breaks the
+// IDE preview with a 403. Clickjacking is still prevented by the
+// Content-Security-Policy frame-ancestors directive in securityHardening.
 app.use(
   helmet({
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
     crossOriginResourcePolicy: { policy: "cross-origin" },
     referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+    frameguard: false,
   }),
 );
 // Permissions-Policy: lock down sensitive browser APIs not used by this app.
