@@ -11,14 +11,24 @@ export default {
         sm: ".1875rem", /* 3px */
       },
       colors: {
-        // Palantir dark design tokens
-        ink: "#000000",
-        panel: "#0A0B0D",
-        line: "#1A1B1E",
-        muted: "#6A6E76",
-        soft: "#A1A4AB",
-        bone: "#F2F2F2",
-        signal: "#D9B56B",
+        // Brand palette — keep this small. The whole identity is
+        // ink + bone + ONE warm accent. Adding more colors makes the app
+        // look like a status console; the homepage looks premium because
+        // it doesn't.
+        ink: "#000000",       // background
+        panel: "#0A0B0D",     // card surface
+        line: "#1A1B1E",      // borders, hairlines
+        muted: "#6A6E76",     // tertiary text, helper labels
+        soft: "#A1A4AB",      // body text on dark
+        bone: "#F2F2F2",      // primary text, white-ish
+        // signal — the ONE accent. Anthropic burnt-orange "Tropical Tan"
+        // (#CC785C) ± a touch warmer to play well on pure black. Replaces
+        // the previous gold #D9B56B which read too bright next to the
+        // status greens/reds and made the UI feel rainbow.
+        signal: "#CC785C",
+        // Status colors — only used for actual status semantics (good /
+        // warning / bad). Do NOT use these for decoration. Tones chosen
+        // to sit near the orange in chroma so they don't fight it.
         good: "#7FB09A",
         bad: "#C47A6E",
         // Flat / base colors (regular buttons)

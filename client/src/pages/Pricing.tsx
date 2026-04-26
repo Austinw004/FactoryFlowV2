@@ -189,7 +189,7 @@ export function Pricing() {
                 } ${plan.id === "performance" ? "border-l" : ""}`}
                 style={
                   plan.id === "performance"
-                    ? { borderLeftColor: "rgba(217, 181, 107, 0.3)" }
+                    ? { borderLeftColor: "rgba(204, 120, 92, 0.3)" }
                     : {}
                 }
               >

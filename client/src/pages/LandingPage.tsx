@@ -307,7 +307,7 @@ export default function LandingPage() {
             <div className="mono text-xs text-muted mt-3">+ metered usage</div>
             <button onClick={handleStartTrial} className="btn-ghost text-xs px-4 py-2 inline-block mt-8 uppercase tracking-[0.14em]">Start trial</button>
           </div>
-          <div className="bg-ink p-10 border-l" style={{borderLeftColor:'rgba(217, 181, 107, 0.3)'}}>
+          <div className="bg-ink p-10 border-l" style={{borderLeftColor:'rgba(204, 120, 92, 0.3)'}}>
             <div className="text-sm text-signal mb-10">Performance</div>
             <div className="text-4xl display mb-1">{Math.round(livePlans.performance.feePercentageDefault * 100)}<span className="text-base text-muted">%</span></div>
             <div className="mono text-xs text-muted mt-3">of verified savings</div>

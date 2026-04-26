@@ -297,7 +297,7 @@ export function Billing() {
 
                 <div
                   className="bg-panel p-8 flex flex-col border-l"
-                  style={{ borderLeftColor: "rgba(217, 181, 107, 0.3)" }}
+                  style={{ borderLeftColor: "rgba(204, 120, 92, 0.3)" }}
                 >
                   <div className="text-sm text-signal mb-6">Performance</div>
                   <div className="text-3xl display mb-1">
