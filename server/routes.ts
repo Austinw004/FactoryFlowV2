@@ -180,16 +180,18 @@ function calculateProcurementImpact(
   baseRegime: string,
   variantRegime: string
 ): number {
-  // FDR impact: Higher FDR typically means higher procurement costs
+  // PROPRIETARY METHODOLOGY — server-only, must never appear in API
+  // responses. Coefficients below are calibration constants for the
+  // procurement-impact model. Return only the final number from this
+  // function; never serialize the constants themselves.
   const fdrDelta = variantFdrValue - baseFdrValue;
-  let fdrImpact = fdrDelta * 5; // 5% cost change per 1.0 FDR change
-  
-  // Regime impact adjustments
+  let fdrImpact = fdrDelta * 5;
+
   const regimeImpacts: Record<string, number> = {
     HEALTHY_EXPANSION: 0,
-    ASSET_LED_GROWTH: 8, // Higher costs due to inflation expectations
-    IMBALANCED_EXCESS: 15, // Highest costs in bubble territory
-    REAL_ECONOMY_LEAD: -10, // Lower costs in opportunity zone
+    ASSET_LED_GROWTH: 8,
+    IMBALANCED_EXCESS: 15,
+    REAL_ECONOMY_LEAD: -10,
     balanced: 0,
   };
   
@@ -254,24 +256,26 @@ function calculateBudgetImpact(
   return Math.round(budgetImpact * 100) / 100;
 }
 
-// Calculate overall risk score for a scenario variant
+// Calculate overall risk score for a scenario variant.
+// PROPRIETARY METHODOLOGY — server-only. Thresholds and weights below are
+// the risk-scoring calibration. Return only the final 0-100 number from
+// this function; never expose the breakpoints or the regimeRisks map in
+// any API response.
 function calculateVariantRiskScore(
   fdrValue: number,
   regime: string,
   commodityAdjustments: any
 ): number {
-  let riskScore = 50; // Base risk
-  
-  // FDR risk contribution
+  let riskScore = 50;
+
   if (fdrValue > 1.5) {
-    riskScore += 25; // High financial excess
+    riskScore += 25;
   } else if (fdrValue > 1.2) {
     riskScore += 15;
   } else if (fdrValue < 0.8) {
-    riskScore -= 10; // Favorable conditions
+    riskScore -= 10;
   }
-  
-  // Regime risk contribution
+
   const regimeRisks: Record<string, number> = {
     HEALTHY_EXPANSION: -10,
     ASSET_LED_GROWTH: 10,

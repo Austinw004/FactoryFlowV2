@@ -266,7 +266,12 @@ export async function updateExternalEconomicData() {
             webhookService.fireRegimeChange(companyId, transitionDetails.previousRegime, confirmedRegime, clampedFdr)
               .catch(err => console.error(`Webhook error (regime_change) for company ${companyId}:`, err));
             
-            // Broadcast dedicated regime change message via WebSocket
+            // Broadcast dedicated regime change message via WebSocket.
+            // Customer-facing payload: from, to, fdr, severity. The
+            // persistence-enforcement internals (hysteresis, confirmation
+            // count, days-in-prior-regime) are deliberately NOT emitted —
+            // they reveal the classifier methodology and live in audit
+            // logs for internal review only.
             broadcastUpdate({
               type: 'regime_change',
               entity: 'economic_regime',
@@ -278,9 +283,6 @@ export async function updateExternalEconomicData() {
                 to: confirmedRegime,
                 fdr: clampedFdr,
                 severity: (transitionDetails.previousRegime === 'IMBALANCED_EXCESS' || confirmedRegime === 'IMBALANCED_EXCESS') ? 'high' : 'medium',
-                persistenceFiltered: true,
-                confirmations: transitionDetails.confirmationCount,
-                daysInPreviousRegime: transitionDetails.daysInPreviousRegime,
               },
             });
           }

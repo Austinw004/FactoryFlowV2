@@ -156,7 +156,7 @@ const apiEndpoints = [
   },
   "marketTiming": {
     "recommendation": "accelerate_purchases",
-    "confidence": 0.85,
+    "confidence": 0.80,
     "horizon": "30_days"
   },
   "lastUpdated": "2024-01-28T12:00:00Z"
@@ -247,9 +247,9 @@ const apiEndpoints = [
   "symbol": "COPPER",
   "currentPrice": 8542.50,
   "forecasts": {
-    "30day": { "price": 8650, "confidence": 0.78, "direction": "up" },
-    "60day": { "price": 8820, "confidence": 0.65, "direction": "up" },
-    "90day": { "price": 8950, "confidence": 0.52, "direction": "up" }
+    "30day": { "price": 8650, "confidence": 0.80, "direction": "up" },
+    "60day": { "price": 8820, "confidence": 0.70, "direction": "up" },
+    "90day": { "price": 8950, "confidence": 0.60, "direction": "up" }
   },
   "regime": "healthy_expansion",
   "regimeImpact": "positive"

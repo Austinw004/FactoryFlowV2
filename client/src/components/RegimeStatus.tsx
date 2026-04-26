@@ -47,29 +47,31 @@ interface RegimeStatusProps {
   };
 }
 
-const regimeConfig: Record<Regime, { label: string; description: string; thresholdRange: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+// Regime config shows the customer-facing label, the recommendation, and a
+// neutral severity for badge styling. The underlying classifier boundaries
+// (where FDR transitions between regimes) and any persistence enforcement
+// internals are intentionally NOT exposed in the UI — those are proprietary
+// methodology, kept on the server. The customer sees the result, not the
+// formula.
+const regimeConfig: Record<Regime, { label: string; description: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   HEALTHY_EXPANSION: {
     label: "Healthy Expansion",
     description: "Balanced growth. Standard procurement pace.",
-    thresholdRange: "FDR < 1.2",
     variant: "default",
   },
   ASSET_LED_GROWTH: {
     label: "Asset-Led Growth",
     description: "Assets outpacing real economy. Consider accelerating procurement.",
-    thresholdRange: "FDR 1.2 - 1.8",
     variant: "secondary",
   },
   IMBALANCED_EXCESS: {
     label: "Imbalanced Excess",
     description: "Significant asset-real economy gap. Defer non-critical purchases.",
-    thresholdRange: "FDR 1.8 - 2.5",
     variant: "destructive",
   },
   REAL_ECONOMY_LEAD: {
     label: "Real Economy Lead",
     description: "Counter-cyclical opportunity. Lock in favorable pricing.",
-    thresholdRange: "FDR > 2.5",
     variant: "default",
   },
 };
@@ -137,17 +139,10 @@ export function RegimeStatus({ regime, fdr: fdrProp, intensity, regimeEvidence, 
               </div>
             </div>
 
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-muted-foreground">Threshold Range</span>
-              <span className="font-mono text-xs tabular-nums" data-testid="text-threshold-range">{config.thresholdRange}</span>
-            </div>
-
-            {regimeEvidence && (
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-muted-foreground">Distance to Next</span>
-                <span className="font-mono text-xs tabular-nums" data-testid="text-distance-threshold">{Number.isFinite(regimeEvidence.distanceToNextThreshold) ? regimeEvidence.distanceToNextThreshold.toFixed(2) : '—'}</span>
-              </div>
-            )}
+            {/* Threshold Range and Distance-to-Next are intentionally NOT
+                shown — they expose the classifier's exact decision
+                boundaries. The customer sees their score and the regime
+                label; the methodology stays proprietary. */}
 
             {regimeEvidence && regimeEvidence.regimeDurationDays > 0 && (
               <div className="flex justify-between items-center text-sm">
