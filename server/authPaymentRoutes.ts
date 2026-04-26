@@ -495,6 +495,92 @@ export function registerAuthPaymentRoutes(app: Express): void {
     res.json(result);
   }));
 
+  /**
+   * GET /api/user/data-preferences — read consent toggles from
+   * Settings → Data & Personalization. Returns the stored prefs object
+   * (may be null for users who haven't visited the tab yet — the client
+   * merges with its own DEFAULT_PREFS).
+   */
+  app.get("/api/user/data-preferences", requireJwt, handle(async (req, res) => {
+    const authUser = getAuthUser(req);
+    if (!authUser) { apiError(res, 401, "UNAUTHORIZED", "Authentication required."); return; }
+
+    const { users: usersSchema } = await import("@shared/schema");
+    const [row] = await db
+      .select({ preferences: usersSchema.dataPreferences })
+      .from(usersSchema)
+      .where(eq(usersSchema.id, authUser.id))
+      .limit(1);
+
+    res.json({ preferences: row?.preferences ?? {} });
+  }));
+
+  /**
+   * PATCH /api/user/data-preferences — atomically merge new toggles into
+   * the stored prefs object. Stamps a `<key>At` ISO timestamp on every
+   * key that flips on (and clears it on flip-off) for legally-relevant
+   * consent items so we can prove when consent was given.
+   */
+  app.patch("/api/user/data-preferences", requireJwt, handle(async (req, res) => {
+    const authUser = getAuthUser(req);
+    if (!authUser) { apiError(res, 401, "UNAUTHORIZED", "Authentication required."); return; }
+
+    const incoming = (req.body?.preferences ?? {}) as Record<string, boolean>;
+    if (typeof incoming !== "object" || Array.isArray(incoming)) {
+      apiError(res, 400, "BAD_REQUEST", "preferences must be an object");
+      return;
+    }
+
+    // Allowlist of legally-relevant keys that get a consent timestamp.
+    // Mirror the `legalRelevant: true` set in client/src/pages/SettingsPage.tsx.
+    const TRACKED = new Set([
+      "aiTraining",
+      "peerBenchmarking",
+      "productUpdates",
+      "shareWithSalesEngineer",
+    ]);
+
+    const { users: usersSchema } = await import("@shared/schema");
+    const [existing] = await db
+      .select({ preferences: usersSchema.dataPreferences })
+      .from(usersSchema)
+      .where(eq(usersSchema.id, authUser.id))
+      .limit(1);
+
+    const prev = (existing?.preferences ?? {}) as Record<string, unknown>;
+    const merged: Record<string, unknown> = { ...prev };
+    const now = new Date().toISOString();
+    const flipped: string[] = [];
+
+    for (const [k, vRaw] of Object.entries(incoming)) {
+      const v = !!vRaw;
+      const wasOn = !!prev[k];
+      merged[k] = v;
+      if (TRACKED.has(k) && v !== wasOn) {
+        merged[`${k}At`] = v ? now : null;
+        flipped.push(`${k}=${v}`);
+      }
+    }
+
+    await db
+      .update(usersSchema)
+      .set({ dataPreferences: merged as any, updatedAt: new Date() })
+      .where(eq(usersSchema.id, authUser.id));
+
+    if (flipped.length > 0) {
+      await logAudit({
+        req,
+        action: "update",
+        entityType: "user",
+        entityId: authUser.id,
+        changes: { dataPreferences: flipped },
+        notes: "data-preference consent toggle",
+      }).catch(() => {});
+    }
+
+    res.json({ preferences: merged, success: true });
+  }));
+
   /** POST /api/user/password — change password while signed in */
   app.post("/api/user/password", requireJwt, rateLimiters.sensitive, handle(async (req, res) => {
     const authUser = getAuthUser(req);

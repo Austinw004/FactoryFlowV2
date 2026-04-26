@@ -181,6 +181,17 @@
     @apply border-border;
   }
 
+  /* Reserve space for the scrollbar even when the page is short. Without
+     this, switching between tabs of different heights (e.g. a tall Profile
+     tab vs. a short Notifications tab in /settings) shows / hides the
+     scrollbar and shifts the entire layout horizontally — sidebar moves,
+     tab labels jump. scrollbar-gutter is widely supported across modern
+     browsers; the overflow-y:scroll is the fallback for older Safari. */
+  html {
+    scrollbar-gutter: stable;
+    overflow-y: scroll;
+  }
+
   body {
     @apply font-sans antialiased bg-background text-foreground;
     letter-spacing: var(--tracking-normal);

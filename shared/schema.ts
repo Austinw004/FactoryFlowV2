@@ -63,6 +63,15 @@ export const users = pgTable("users", {
   department: text("department"),
   selectedPlanId: text("selected_plan_id"),
   selectedBillingInterval: text("selected_billing_interval"),
+  // ── Data preferences (consent-based opt-ins) ──────────────────────────────
+  // Customers explicitly toggle these in Settings → Data & Personalization.
+  // Stored as a JSON object so we can add new opt-ins without a migration.
+  // Each consumer of a preference must `?? false` — absence ≠ consent.
+  // See client/src/pages/SettingsPage.tsx (DataTab) for the canonical list
+  // of supported keys and their UI copy. Legal-relevant ones (peerBenchmarking,
+  // aiTraining, marketingComms) are timestamped on toggle so we can prove
+  // when consent was given for audit / GDPR purposes.
+  dataPreferences: jsonb("data_preferences"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
