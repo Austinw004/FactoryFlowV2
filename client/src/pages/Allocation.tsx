@@ -371,13 +371,14 @@ export default function Allocation() {
             {useDirectMaterials && (
               <div className="space-y-3 mt-3">
                 {materialRequirements.map((req, index) => {
-                  const materialOptions = catalogData?.materials.map((material) => ({
+                  const materials = catalogData?.materials ?? [];
+                  const materialOptions = materials.map((material) => ({
                     value: material.code,
                     label: `${material.name} (${material.unit})`,
                     category: material.category,
-                  })) || [];
-                  
-                  const selectedMaterial = catalogData?.materials.find(m => m.code === req.materialId);
+                  }));
+
+                  const selectedMaterial = materials.find(m => m.code === req.materialId);
                   
                   return (
                     <div key={index} className="grid grid-cols-[1fr,auto,auto] gap-2 items-end">
@@ -480,13 +481,14 @@ function AllocationCard({ allocation }: { allocation: Allocation }) {
     enabled: !!allocation.id,
   });
 
-  const totalAllocated = details?.results.reduce((sum, r) => sum + r.allocatedUnits, 0) || 0;
-  const avgFillRate = details?.results.length
-    ? (details.results.reduce((sum, r) => sum + r.fillRate, 0) / details.results.length) * 100
+  const results = details?.results ?? [];
+  const totalAllocated = results.reduce((sum, r) => sum + r.allocatedUnits, 0);
+  const avgFillRate = results.length
+    ? (results.reduce((sum, r) => sum + r.fillRate, 0) / results.length) * 100
     : 0;
 
-  const avgDaysOfInventory = details?.results.length
-    ? details.results.reduce((sum, r) => sum + (r.daysOfInventory || 0), 0) / details.results.length
+  const avgDaysOfInventory = results.length
+    ? results.reduce((sum, r) => sum + (r.daysOfInventory || 0), 0) / results.length
     : null;
 
   const hasDuration = allocation.budgetDurationValue && allocation.budgetDurationUnit;

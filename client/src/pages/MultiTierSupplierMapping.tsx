@@ -837,7 +837,7 @@ export default function MultiTierSupplierMapping() {
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {analysisData?.singleSourceDependencies.map((dep) => (
+                      {(analysisData?.singleSourceDependencies ?? []).map((dep) => (
                         <div key={dep.supplierId} className="p-3 border rounded-lg">
                           <div className="flex items-center justify-between">
                             <div>
@@ -870,7 +870,7 @@ export default function MultiTierSupplierMapping() {
                   <Skeleton className="h-[300px] w-full" />
                 ) : (
                   <div className="space-y-4">
-                    {analysisData?.tierDistribution.map((td) => (
+                    {(analysisData?.tierDistribution ?? []).map((td) => (
                       <div key={td.tier}>
                         <div className="flex justify-between text-sm mb-1">
                           <span>Tier {td.tier}</span>
@@ -951,7 +951,7 @@ export default function MultiTierSupplierMapping() {
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {analysisData?.highRiskRegionSuppliers.map((supplier) => (
+                      {(analysisData?.highRiskRegionSuppliers ?? []).map((supplier) => (
                         <div key={supplier.supplierId} className="p-3 border rounded-lg border-destructive/30 bg-destructive/5">
                           <div className="flex items-center justify-between mb-2">
                             <div className="font-medium">{supplier.supplierName}</div>
@@ -996,7 +996,7 @@ export default function MultiTierSupplierMapping() {
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {analysisData?.countryConcentration.map((cc) => (
+                      {(analysisData?.countryConcentration ?? []).map((cc) => (
                         <div key={cc.country} className="p-3 border rounded-lg">
                           <div className="flex items-center justify-between mb-2">
                             <div className="font-medium">{cc.country}</div>
