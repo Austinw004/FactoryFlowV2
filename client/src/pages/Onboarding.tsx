@@ -1116,70 +1116,61 @@ export default function Onboarding() {
           </Card>
         )}
 
-        {/* ─── Step 6: Payment Method ──────────────────────────────────── */}
+        {/* ─── Step 6: Trial confirmation (no card collected here) ──────────
+             Previously collected raw PAN / CVC into plaintext <Input> fields
+             with a "powered by Stripe" badge — that is NOT PCI-compliant
+             and would have failed any compliance audit. PCI scope reduction
+             requires either Stripe Elements (iframe-isolated card fields,
+             tokenized client-side) or Stripe Checkout (hosted page).
+             Adding the @stripe/stripe-js + @stripe/react-stripe-js
+             integration is a separate body of work; in the meantime we
+             defer card collection to the Billing page (which uses Stripe
+             Checkout via /api/stripe/checkout — fully PCI-compliant). The
+             90-day free trial means customers don't *need* a card today.
+        */}
         {step === 6 && (
           <Card data-testid="card-onboarding-payment" className="border-0 shadow-xl shadow-black/5">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <CreditCard className="w-5 h-5 text-primary" />
-                Payment method
+                <Shield className="w-5 h-5 text-primary" />
+                Trial — no card required
               </CardTitle>
               <CardDescription>
-                Add a card now or skip — you won't be charged until your 14-day free trial ends.
+                Your 90-day free trial starts immediately. Add a payment method anytime before it ends — you'll never be charged without confirming.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="flex items-center gap-3 p-4 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg border border-emerald-200 dark:border-emerald-800">
-                <Shield className="w-5 h-5 text-emerald-600 shrink-0" />
+              <div className="flex items-start gap-3 p-4 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                <Shield className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">14-day free trial — no charge today</p>
-                  <p className="text-xs text-emerald-600 dark:text-emerald-400">Cancel anytime before your trial ends and you won't be billed.</p>
+                  <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">90-day free trial — no charge today</p>
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">Full access to every module. Cancel any time — if you don't add a payment method, your trial simply ends and you keep read-only access to your data.</p>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="cardName">Name on Card</Label>
-                  <Input id="cardName" data-testid="input-card-name" placeholder="Austin Wendler" value={cardName} onChange={(e) => setCardName(e.target.value)} className="h-11" />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="cardNumber">Card Number</Label>
-                  <div className="relative">
-                    <Input id="cardNumber" data-testid="input-card-number" placeholder="4242 4242 4242 4242" value={cardNumber} onChange={(e) => setCardNumber(formatCardNumber(e.target.value))} maxLength={19} className="h-11" />
-                    <CreditCard className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
+              <div className="rounded-lg border border-border p-4">
+                <div className="flex items-start gap-3">
+                  <CreditCard className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" />
                   <div className="space-y-2">
-                    <Label htmlFor="cardExpiry">Expiry</Label>
-                    <Input id="cardExpiry" data-testid="input-card-expiry" placeholder="MM/YY" value={cardExpiry} onChange={(e) => setCardExpiry(formatExpiry(e.target.value))} maxLength={5} className="h-11" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="cardCvc">CVC</Label>
-                    <Input id="cardCvc" data-testid="input-card-cvc" placeholder="123" value={cardCvc} onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, "").slice(0, 4))} maxLength={4} className="h-11" />
+                    <p className="text-sm font-medium">When you're ready to add a payment method</p>
+                    <p className="text-xs text-muted-foreground">
+                      Visit <span className="font-mono text-foreground">Settings → Billing</span> from the dashboard.
+                      Your card goes through Stripe Checkout — same secure flow used by Lyft, Slack,
+                      and Notion. Prescient Labs never sees or stores raw card data.
+                    </p>
                   </div>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Shield className="w-3.5 h-3.5" />
-                <span>Encrypted and secure. We never store raw card data — powered by Stripe.</span>
               </div>
 
               <Separator />
 
               <div className="flex gap-3">
-                <Button variant="outline" onClick={() => setStep(5)} className="h-11"><ArrowLeft className="w-4 h-4 mr-2" /> Back</Button>
-                <Button onClick={handlePaymentSubmit} className="flex-1 h-11" data-testid="button-continue-to-launch" disabled={savePaymentMethodMutation.isPending}>
-                  {savePaymentMethodMutation.isPending ? (
-                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</>
-                  ) : cardNumber ? (
-                    <>Save & Continue <ChevronRight className="w-4 h-4 ml-2" /></>
-                  ) : (
-                    <>Skip for Now <ChevronRight className="w-4 h-4 ml-2" /></>
-                  )}
+                <Button variant="outline" onClick={() => setStep(5)} className="h-11">
+                  <ArrowLeft className="w-4 h-4 mr-2" /> Back
+                </Button>
+                <Button onClick={() => setStep(7)} className="flex-1 h-11" data-testid="button-continue-to-launch">
+                  Start my 90-day trial
+                  <ChevronRight className="w-4 h-4 ml-2" />
                 </Button>
               </div>
             </CardContent>

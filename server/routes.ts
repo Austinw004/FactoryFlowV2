@@ -10473,6 +10473,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Onboarding endpoints
+  // ──────────────────────────────────────────────────────────────────────────
+  // Stub endpoints to satisfy frontend pages that previously hit non-existent
+  // routes. Each returns valid shape so React Query doesn't throw — the UI
+  // renders the baseline / empty state described in each consuming page's
+  // header comment. Real data integrations will replace these stubs as
+  // sensors / impact telemetry come online.
+  // ──────────────────────────────────────────────────────────────────────────
+
+  /**
+   * GET /api/impact/metrics — Impact Dashboard data.
+   * Consumed by client/src/pages/ImpactDashboard.tsx. Returns the five
+   * canonical metric families (hours_saved, defect_rate, inventory_turns,
+   * otd, energy_cost) in "baseline" confidence so the dashboard renders
+   * honestly from day-1 ("baseline only" is the page's documented fallback).
+   * Replace this with a real telemetry query once sensors are wired and
+   * baseline measurements have been captured.
+   */
+  app.get("/api/impact/metrics", isAuthenticated, async (_req: any, res) => {
+    res.json({
+      asOf: new Date().toISOString(),
+      metrics: [
+        { id: "hours_saved",     label: "Operator hours saved",   description: "Time freed up by automation each week",  baseline: 0,  current: 0,  delta: null, valueUnit: "hrs", direction: "up-good",   confidence: "baseline" },
+        { id: "defect_rate",     label: "Defect rate",            description: "Production defects per 10,000 units",     baseline: 0,  current: 0,  delta: null, valueUnit: "ppm", direction: "down-good", confidence: "baseline" },
+        { id: "inventory_turns", label: "Inventory turns",        description: "Times inventory cycles per year",         baseline: 0,  current: 0,  delta: null,                  direction: "up-good",   confidence: "baseline" },
+        { id: "otd",             label: "On-time delivery",       description: "Orders delivered by promised date",       baseline: 0,  current: 0,  delta: null, valueUnit: "%",   direction: "up-good",   confidence: "baseline" },
+        { id: "energy_cost",     label: "Energy cost / unit",     description: "Cost of energy per unit produced",        baseline: 0,  current: 0,  delta: null, valueUnit: "$",   direction: "down-good", confidence: "baseline" },
+      ],
+    });
+  });
+
+  /**
+   * GET /api/sensor-alerts and POST /api/sensor-alerts — shop-floor manual
+   * issue reporting. Consumed by client/src/pages/ShopFloorMode.tsx.
+   * In the absence of a sensor_alerts table, GET returns an empty list and
+   * POST acknowledges the report (logs only). Once a real sensor_alerts
+   * table lands in shared/schema.ts, swap these for db.insert / db.select.
+   */
+  app.get("/api/sensor-alerts", isAuthenticated, async (_req: any, res) => {
+    res.json([]);
+  });
+  app.post("/api/sensor-alerts", isAuthenticated, async (req: any, res) => {
+    const userId = req.user?.claims?.sub;
+    console.log("[SensorAlert] (stub) reported", { userId, body: req.body });
+    res.json({ id: `alert_stub_${Date.now()}`, status: "acknowledged" });
+  });
+
   app.get("/api/onboarding/status", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
