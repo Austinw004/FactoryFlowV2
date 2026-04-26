@@ -734,14 +734,14 @@ export default function Dashboard() {
             <TrendingUp className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
             <div className="text-sm space-y-1">
               <p className="font-semibold text-foreground">
-                Market Insight: {fdr >= 1.5 ? 'Financial markets are outpacing the real economy — consider deferring major purchases' : fdr >= 1.0 ? 'Moderate market divergence detected — standard procurement pace recommended' : 'Real economy is strong — favorable conditions for locking in supplier terms'}
+                Market insight: {fdr >= 1.8 ? 'Significant decoupling — defer non-critical purchases and renegotiate active contracts before the price correction.' : fdr >= 1.2 ? 'Asset markets are running ahead of the real economy — lock in supplier contracts on critical materials this quarter.' : fdr >= 1.0 ? 'Balanced regime — run normal procurement cadence and front-run the next cycle on long-term contracts.' : 'Counter-cyclical window — favorable terms available; renegotiate expiring agreements while asset markets correct.'}
               </p>
               <p className="text-muted-foreground">
-                Current FDR ratio of {fdr.toFixed(2)} indicates <strong>{friendlyRegime}</strong> regime. 
-                {dataSource === 'external' && ' The platform is gathering data from 15+ external APIs including FRED, Alpha Vantage, DBnomics, World Bank, IMF, OECD, and Trading Economics to calculate real-time FDR.'}
-                {dataSource === 'fallback' && ' Using simulated economic data while external APIs are unavailable.'}
-                {dataSource === 'balance_sheet' && ' Calculated from internal balance sheet and income statement data.'}
-                {' '}All forecasts, allocations, and procurement signals are automatically adjusted based on the current economic regime.
+                Current FDR ratio of {fdr.toFixed(2)} indicates <strong>{friendlyRegime}</strong> regime.
+                {dataSource === 'external' && ' Live signal sourced from FRED, Alpha Vantage, DBnomics, World Bank, IMF, OECD, and Trading Economics.'}
+                {dataSource === 'fallback' && ' Using fallback estimates while external sources reconnect.'}
+                {dataSource === 'balance_sheet' && ' Calculated from your imported balance sheet and income statement data.'}
+                {' '}Forecasts, allocations, and procurement signals across the platform are auto-adjusted to this regime.
               </p>
             </div>
           </div>
