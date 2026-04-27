@@ -5,6 +5,8 @@ import { AllocationTable } from "@/components/AllocationTable";
 import { EditableBudgetGauge } from "@/components/EditableBudgetGauge";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { InfoTooltip } from "@/components/InfoTooltip";
+import { RegimeProcurementGuidance } from "@/components/RegimeProcurementGuidance";
+import { RegimeChangeBanner } from "@/components/RegimeChangeBanner";
 
 // Below-the-fold and dialog-gated widgets are lazy-loaded so the initial
 // Dashboard paint only pays for what the user actually sees before scrolling.
@@ -68,11 +70,33 @@ export default function Dashboard() {
   const { user, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
 
+  // Track the most recent regime change so we can surface it as a persistent
+  // banner on the dashboard, not just a transient toast. This is the single
+  // most important event in the FDR model — it directly changes which
+  // procurement playbook the customer should run.
+  const [regimeChange, setRegimeChange] = useState<{
+    from: string;
+    to: string;
+    fdr: number | string;
+    changedAt: number;
+    severity?: "low" | "medium" | "high";
+  } | null>(null);
+  const [regimeChangeDismissed, setRegimeChangeDismissed] = useState(false);
+
   // Enable WebSocket for real-time updates with regime change notifications
   const { isConnected } = useWebSocket((message) => {
     if (message.type === 'regime_change' && message.data) {
       const severity = message.data.severity === 'high' ? 'destructive' : 'default';
-      
+
+      setRegimeChange({
+        from: message.data.from,
+        to: message.data.to,
+        fdr: message.data.fdr,
+        changedAt: Date.now(),
+        severity: message.data.severity,
+      });
+      setRegimeChangeDismissed(false);
+
       toast({
         title: "Economic Regime Changed",
         description: `The economic regime has shifted from ${message.data.from} to ${message.data.to}. FDR: ${Number.isFinite(Number(message.data.fdr)) ? Number(message.data.fdr).toFixed(2) : '—'}`,
@@ -337,14 +361,33 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="mb-16">
-        <div className="eyebrow mb-4">State of operations</div>
-        <h1 className="hero text-5xl">{regime?.regime ? getRegimeDescription(regime.regime).split('.')[0] + '.' : 'Analyzing conditions.'}</h1>
-        <p className="text-soft mt-5 max-w-xl leading-relaxed">
-          {Array.isArray(skus) && skus.length > 0
-            ? `Tracking ${skus.length.toLocaleString()} SKU${skus.length === 1 ? '' : 's'}. ${regime?.regime === 'HEALTHY_EXPANSION' ? 'No critical exposures.' : 'Review current regime conditions.'}`
-            : 'Add your first SKU to start tracking operations.'}
-        </p>
+      <div className="mb-12 space-y-6">
+        <div>
+          <div className="eyebrow mb-4">State of operations</div>
+          <h1 className="hero text-5xl">{regime?.regime ? getRegimeDescription(regime.regime).split('.')[0] + '.' : 'Analyzing conditions.'}</h1>
+          <p className="text-soft mt-5 max-w-xl leading-relaxed">
+            {Array.isArray(skus) && skus.length > 0
+              ? `Tracking ${skus.length.toLocaleString()} SKU${skus.length === 1 ? '' : 's'}. ${regime?.regime === 'HEALTHY_EXPANSION' ? 'No critical exposures.' : 'Review current regime conditions.'}`
+              : 'Add your first SKU to start tracking operations.'}
+          </p>
+        </div>
+
+        {regimeChange && !regimeChangeDismissed && (
+          <RegimeChangeBanner
+            change={regimeChange}
+            onDismiss={() => setRegimeChangeDismissed(true)}
+          />
+        )}
+
+        <RegimeProcurementGuidance
+          regime={regimeType}
+          fdr={fdr}
+          confidencePct={
+            regimeIntelligence?.confidence?.overall != null
+              ? Math.round(Number(regimeIntelligence.confidence.overall) * 100)
+              : undefined
+          }
+        />
       </div>
 
       <div className="grid grid-cols-4 gap-px bg-line mb-20">

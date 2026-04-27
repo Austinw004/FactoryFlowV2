@@ -11,7 +11,26 @@ interface MaterialRisk {
   material: Material;
   riskScore: number;
   reason: string;
+  recommendation: string;
   inventoryLevel: number; // percentage
+}
+
+// Map raw "reason" strings to a customer-readable next step. The widget is
+// useless if it shows a problem without telling the plant director what to do
+// about it — this map closes that gap.
+function recommendationFor(reason: string): string {
+  switch (reason) {
+    case "Zero inventory":
+      return "Stockout in progress. Issue an emergency PO or qualify a backup supplier today.";
+    case "Critically low stock":
+      return "Lead time likely exceeds remaining cover. Place a PO this week and review safety stock.";
+    case "Low inventory":
+      return "Trending toward reorder point. Confirm the next PO is in flight and cover is sufficient.";
+    case "No inbound orders":
+      return "On-hand will deplete with no replenishment scheduled. Open a PO before the reorder point is breached.";
+    default:
+      return "Review coverage and confirm replenishment plan.";
+  }
 }
 
 export function MaterialsAtRiskWidget() {
@@ -51,6 +70,7 @@ export function MaterialsAtRiskWidget() {
         material,
         riskScore,
         reason,
+        recommendation: recommendationFor(reason),
         inventoryLevel,
       };
     })
@@ -161,17 +181,31 @@ export function MaterialsAtRiskWidget() {
                 />
               </div>
               
-              <div className="flex items-center gap-2 mt-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 text-xs"
-                  onClick={() => setLocation(`/rfq-generation?materialId=${item.material.id}`)}
-                  data-testid={`button-procure-${item.material.id}`}
-                >
-                  <TrendingDown className="h-3 w-3 mr-1" />
-                  Schedule Procurement
-                </Button>
+              <div className="mt-3 pt-3 border-t border-border/50">
+                <p className="text-[11px] text-muted-foreground leading-relaxed mb-2">
+                  <span className="font-medium text-foreground/80">Recommended:</span> {item.recommendation}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="flex-1 text-xs"
+                    onClick={() => setLocation(`/rfq-generation?materialId=${item.material.id}`)}
+                    data-testid={`button-procure-${item.material.id}`}
+                  >
+                    <TrendingDown className="h-3 w-3 mr-1" />
+                    Schedule Procurement
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => setLocation('/supplier-risk')}
+                    data-testid={`button-find-alt-${item.material.id}`}
+                  >
+                    Find Alternatives
+                  </Button>
+                </div>
               </div>
             </div>
           ))}
