@@ -36,6 +36,7 @@ import { SidebarTour } from "@/components/GuidedTour";
 import { useUnifiedData } from "@/contexts/UnifiedDataContext";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { PrescientMark } from "@/components/PrescientMark";
 
 const overviewItems = [
   {
@@ -164,6 +165,11 @@ export function AppSidebar() {
 
   const operatorName = (() => {
     if (!user) return "—";
+    // Honor the nickname override (Settings → Profile) the same way the AI
+    // greeting does. When the user has not set one, fall back to a tighter
+    // "F. Lastname" format that matches the design's footer treatment.
+    const nickname = user.nickname?.trim();
+    if (nickname) return nickname;
     const first = user.firstName?.trim();
     const last = user.lastName?.trim();
     if (first && last) return `${first.charAt(0)}. ${last}`;
@@ -172,6 +178,15 @@ export function AppSidebar() {
     if (user.email) return user.email.split("@")[0];
     return "Operator";
   })();
+
+  // Company name shown beneath the operator. Falls back to "Prescient Labs"
+  // when the user hasn't completed the company-onboarding step. We pull
+  // from /api/user/profile rather than baking the value into useAuth so the
+  // sidebar reflects mid-session company changes.
+  const { data: profile } = useQuery<{ user?: { companyName?: string | null } }>({
+    queryKey: ["/api/user/profile"],
+  });
+  const companyName = profile?.user?.companyName?.trim() || "Prescient Labs";
 
   const { data: landingMode } = useQuery<{ enabled: boolean }>({
     queryKey: ["/api/landing-mode"],
@@ -259,10 +274,15 @@ export function AppSidebar() {
   return (
     <Sidebar className="bg-ink border-r border-line">
       <SidebarHeader className="px-6 py-5 border-b border-line h-16 flex items-center">
-        <div className="flex items-center gap-3 w-full">
-          <div className="w-2 h-2 bg-signal"></div>
+        {/* Brand block: animated globe mark + wordmark. The mark
+            communicates "live telemetry" and replaces the previous
+            placeholder 2x2 square. The wordmark uses the same letter-
+            spacing as on the marketing site for cross-surface
+            consistency. */}
+        <Link href="/" className="flex items-center gap-3 w-full" data-testid="sidebar-brand-link">
+          <PrescientMark size={20} className="shrink-0 text-bone" />
           <span className="text-sm tracking-[0.18em] font-medium">PRESCIENT LABS</span>
-        </div>
+        </Link>
       </SidebarHeader>
 
       <SidebarContent className="flex flex-col px-2 pt-2">
@@ -297,10 +317,19 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="border-t border-line px-6 py-5">
-        <div className="space-y-3">
-          <div className="eyebrow">Operator</div>
-          <div className="text-sm truncate" data-testid="sidebar-operator-name">{operatorName}</div>
-          <div className="mono text-xs text-muted">Prescient Labs</div>
+        {/* Operator block — matches the design's footer treatment.
+            The eyebrow is small and tracked; the name is regular weight,
+            slightly larger; the company sits below in muted color. */}
+        <div className="space-y-1.5">
+          <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">
+            Operator
+          </div>
+          <div className="text-sm truncate" data-testid="sidebar-operator-name">
+            {operatorName}
+          </div>
+          <div className="text-xs text-muted-foreground truncate" data-testid="sidebar-operator-company">
+            {companyName}
+          </div>
         </div>
       </SidebarFooter>
 

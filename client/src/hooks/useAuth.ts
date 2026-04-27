@@ -6,6 +6,9 @@ interface AuthUser {
   email: string | null;
   firstName: string | null;
   lastName: string | null;
+  // Optional preferred-name override the customer set in Settings → Profile.
+  // AI Advisor + sidebar footer prefer this when set; falls back to firstName.
+  nickname: string | null;
   profileImageUrl: string | null;
   companyId: string | null;
   onboardingComplete: number | null;
