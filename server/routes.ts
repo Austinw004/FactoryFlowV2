@@ -52,6 +52,7 @@ import { createRfqGenerationService } from "./lib/rfqGeneration";
 import { stripeService } from "./stripeService";
 import { getStripePublishableKey } from "./stripeClient";
 import { registerAuthPaymentRoutes } from "./authPaymentRoutes";
+import { registerSensorIngestRoutes } from "./routes/sensorIngestRoutes";
 import multer from "multer";
 import { z } from "zod";
 import { validateBody } from "./middleware/validateBody";
@@ -496,6 +497,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register enterprise auth + payments routes (before isAuthenticated middleware)
   registerAuthPaymentRoutes(app);
+
+  // Sensor ingest routes — authenticated by per-company API key, not by
+  // session, so they MUST be registered before the global session gate.
+  registerSensorIngestRoutes(app);
 
   // Public /api paths that bypass the global auth gate. These are the
   // routes a visitor can reach without signing in — the landing-page

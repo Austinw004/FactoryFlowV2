@@ -325,17 +325,36 @@ export async function updateExternalEconomicData() {
   }
 }
 
+// Synthetic sensor reading generator — DEMO MODE ONLY.
+//
+// This used to run in production every 30 seconds and write Math.random()-
+// based values, statuses, and "ML predictions" to every customer's database.
+// That is a credibility / legal risk: any customer auditing their data
+// would see fabricated readings labelled as real sensor output.
+//
+// The function is now guarded by the DEMO_MODE environment variable. In
+// production DEMO_MODE is unset and this function is a no-op. Real sensor
+// readings flow in via POST /api/sensors/ingest from the customer's edge
+// gateway / MQTT bridge / OPC-UA bridge — see server/routes/sensorIngestRoutes.ts
+// and docs/SENSOR_INTEGRATION.md.
+//
+// We keep the generator behind a flag (instead of deleting it) so it can be
+// turned on for self-hosted demos against a synthetic "Demo Co" without
+// shipping fake data to real customers.
 export async function generateSensorReadings() {
+  if (process.env.DEMO_MODE !== "1") {
+    return; // production no-op
+  }
   try {
     const companies = await getActiveCompanyIds();
-    
+
     for (const companyId of companies) {
       const sensors = await storage.getEquipmentSensors(companyId);
-      
+
       for (const sensor of sensors.slice(0, 10)) {
         const normalValue = 50 + Math.random() * 50;
         const isAnomaly = Math.random() < 0.05;
-        const value = isAnomaly 
+        const value = isAnomaly
           ? (Math.random() < 0.5 ? 10 : 95)
           : normalValue;
         
