@@ -621,10 +621,26 @@ export default function MultiTierSupplierMapping() {
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
                   </div>
                 ) : filteredNodes.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                    <Network className="h-12 w-12 mb-4 opacity-50" />
-                    <p className="text-lg font-medium">No supplier network data</p>
-                    <p className="text-sm">Add suppliers and configure tier relationships to visualize your network</p>
+                  // Honest empty state. Tier-1 / tier-2 mapping needs the
+                  // customer to have actually registered suppliers and
+                  // their relationships — until then we show a Connect CTA
+                  // rather than a graph populated from synthetic seed data.
+                  <div className="flex flex-col items-center justify-center h-full text-muted-foreground space-y-3 text-center px-6">
+                    <Network className="h-12 w-12 opacity-50" />
+                    <p className="text-lg font-medium">No supplier network data yet</p>
+                    <p className="text-sm max-w-md">
+                      Multi-tier mapping needs your registered suppliers and
+                      their tier relationships. Connect your supplier list
+                      from your ERP, or register them manually, to start
+                      visualizing risk concentration across tiers.
+                    </p>
+                    <a
+                      href="/suppliers"
+                      className="text-sm font-semibold text-signal hover:underline"
+                      data-testid="link-supplier-mapping-connect"
+                    >
+                      Add or import suppliers →
+                    </a>
                   </div>
                 ) : (
                   <svg width="100%" height="100%" style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'center' }}>

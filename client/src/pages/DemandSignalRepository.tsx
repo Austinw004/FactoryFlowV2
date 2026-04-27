@@ -1000,16 +1000,41 @@ export default function DemandSignalRepository() {
                   </Table>
                 </div>
               ) : (
+                // Differentiate "no signal sources connected yet" (the
+                // customer hasn't wired any inbound signal source — POS,
+                // CRM, marketing, weather, news) from "sources connected
+                // but quiet". Both are honest empty states; only the first
+                // requires an integration step.
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <Radio className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium">No Signals Recorded</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Start recording demand signals from your configured sources
-                  </p>
-                  <Button onClick={() => setShowAddSignalDialog(true)} data-testid="button-empty-add-signal">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Signal
-                  </Button>
+                  {sources && sources.length > 0 ? (
+                    <>
+                      <h3 className="text-lg font-medium">No signals received yet</h3>
+                      <p className="text-muted-foreground mb-4 max-w-md">
+                        Your {sources.length} configured source
+                        {sources.length === 1 ? "" : "s"} haven't pushed any
+                        signals yet. New signals appear here automatically as
+                        they arrive — or add one manually below.
+                      </p>
+                      <Button onClick={() => setShowAddSignalDialog(true)} data-testid="button-empty-add-signal">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Signal
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <h3 className="text-lg font-medium">No demand signal sources connected</h3>
+                      <p className="text-muted-foreground mb-4 max-w-md">
+                        Demand signals come from your point-of-sale, CRM,
+                        marketing analytics, weather, or news feeds. Connect
+                        a source to see live signals appear here.
+                      </p>
+                      <Button onClick={() => setShowAddSourceDialog(true)} data-testid="button-empty-add-source-from-signals">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Connect a source
+                      </Button>
+                    </>
+                  )}
                 </div>
               )}
             </CardContent>
