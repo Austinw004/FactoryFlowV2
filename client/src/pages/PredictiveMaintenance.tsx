@@ -415,11 +415,36 @@ export default function PredictiveMaintenance() {
           {alertsLoading ? (
             <Card><CardContent className="p-6">Loading alerts...</CardContent></Card>
           ) : alerts.length === 0 ? (
-            <Card>
-              <CardContent className="p-6 text-center text-muted-foreground">
-                No active alerts. Your equipment is running smoothly.
-              </CardContent>
-            </Card>
+            // Differentiate "no sensors connected yet" from "sensors connected,
+            // all running cleanly". The first case demands a Connect-Your-
+            // Equipment CTA; the second is a happy empty state. Saying
+            // "running smoothly" when no data is flowing is misleading.
+            sensors.length === 0 ? (
+              <Card>
+                <CardContent className="p-6 text-center space-y-3">
+                  <div className="text-muted-foreground">
+                    No sensor data is flowing into Prescient yet — register
+                    your equipment and connect your edge gateway to see live
+                    health and predictive alerts.
+                  </div>
+                  <a
+                    href="/docs/SENSOR_INTEGRATION.md"
+                    className="inline-block text-sm font-semibold text-signal hover:underline"
+                    data-testid="link-sensor-integration-docs"
+                  >
+                    Connect your equipment →
+                  </a>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className="p-6 text-center text-muted-foreground">
+                  No active alerts in the last window. Readings from your{" "}
+                  {sensors.length} connected sensor{sensors.length === 1 ? "" : "s"}{" "}
+                  are within configured thresholds.
+                </CardContent>
+              </Card>
+            )
           ) : (
             <div className="space-y-4">
               {alerts.map((alert: any) => (

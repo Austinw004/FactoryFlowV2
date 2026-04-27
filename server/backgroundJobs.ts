@@ -34,6 +34,30 @@ interface BackgroundJobConfig {
 const jobs: Map<string, NodeJS.Timeout> = new Map();
 const webhookService = new WebhookService(storage);
 
+// ──────────────────────────────────────────────────────────────────────────
+// DEMO_MODE guard.
+//
+// Several of the background jobs below were originally written to FABRICATE
+// data — random sensor values, random ML predictions, random workforce
+// assignments, random supply-chain events, random downtime events. That is
+// a credibility / legal risk in production: a customer auditing their data
+// would see synthetic rows labeled as live operational telemetry.
+//
+// Functions that do data fabrication now guard their bodies with
+// `if (isDemoMode()) return;` so they short-circuit unless the operator
+// explicitly opts into demo mode by setting DEMO_MODE=1 in env. Production
+// runs with DEMO_MODE unset and these functions are no-ops; demo or
+// self-hosted-pilot environments can flip the flag to populate dashboards
+// against a synthetic Demo Co tenant.
+//
+// Real data flows in via the per-domain ingest endpoints
+// (/api/sensors/ingest etc.) and the existing CRUD APIs the customer
+// posts to from their ERP / MES / scheduling system.
+// ──────────────────────────────────────────────────────────────────────────
+function isDemoMode(): boolean {
+  return process.env.DEMO_MODE === "1";
+}
+
 type EconomicRegime = Regime;
 
 export function calculateEconomicRegime(fdr: number): EconomicRegime {
@@ -325,17 +349,34 @@ export async function updateExternalEconomicData() {
   }
 }
 
+// Synthetic sensor reading generator — DEMO MODE ONLY.
+//
+// This used to run in production every 30 seconds and write Math.random()-
+// based values, statuses, and "ML predictions" to every customer's database.
+// That is a credibility / legal risk: any customer auditing their data
+// would see fabricated readings labelled as real sensor output.
+//
+// The function is now guarded by the DEMO_MODE environment variable. In
+// production DEMO_MODE is unset and this function is a no-op. Real sensor
+// readings flow in via POST /api/sensors/ingest from the customer's edge
+// gateway / MQTT bridge / OPC-UA bridge — see server/routes/sensorIngestRoutes.ts
+// and docs/SENSOR_INTEGRATION.md.
+//
+// We keep the generator behind a flag (instead of deleting it) so it can be
+// turned on for self-hosted demos against a synthetic "Demo Co" without
+// shipping fake data to real customers.
 export async function generateSensorReadings() {
+  if (!isDemoMode()) return; // production no-op — see DEMO_MODE guard above
   try {
     const companies = await getActiveCompanyIds();
-    
+
     for (const companyId of companies) {
       const sensors = await storage.getEquipmentSensors(companyId);
-      
+
       for (const sensor of sensors.slice(0, 10)) {
         const normalValue = 50 + Math.random() * 50;
         const isAnomaly = Math.random() < 0.05;
-        const value = isAnomaly 
+        const value = isAnomaly
           ? (Math.random() < 0.5 ? 10 : 95)
           : normalValue;
         
@@ -472,17 +513,23 @@ export async function updateCommodityPrices() {
 }
 
 export async function regenerateMLPredictions() {
+  // DEMO MODE ONLY — this function fabricates demand predictions with
+  // Math.random() (random base value, random noise, random ML-model label,
+  // random accuracy). In production we don't synthesize predictions — they
+  // come out of the real forecast retrainer (runForecastRetraining) on top
+  // of the customer's actual demand history posted to /api/demand-history.
+  if (!isDemoMode()) return;
   try {
     const companies = await getActiveCompanyIds();
     let totalPredictions = 0;
-    
+
     for (const companyId of companies) {
       const materials = await storage.getMaterials(companyId);
       const skus = await storage.getSkus(companyId);
-      
+
       for (const material of materials.slice(0, 3)) {
         const forecastDays = 7;
-        
+
         // Find a related SKU for this material (if any exist)
         // This links material-based predictions to SKUs for consistency
         const relatedSku = skus.length > 0 ? skus[Math.floor(Math.random() * skus.length)] : null;
@@ -541,13 +588,20 @@ export async function regenerateMLPredictions() {
 }
 
 export async function updateSupplyChainRisk() {
+  // DEMO MODE ONLY — this fabricates traceability_events with random event
+  // types and random "Facility N" locations. In production, traceability
+  // events flow in from the customer's WMS / ERP via the existing CRUD
+  // endpoints (POST /api/traceability-events, /api/material-batches/:id/
+  // events). Real geopolitical / supply-chain risk surfacing happens in
+  // updateExternalEconomicData and via the news-ingestion pipeline.
+  if (!isDemoMode()) return;
   try {
     const companies = await getActiveCompanyIds();
     let totalEvents = 0;
-    
+
     for (const companyId of companies) {
       const batches = await storage.getMaterialBatches(companyId);
-      
+
       for (const batch of batches.slice(0, 10)) {
         if (Math.random() < 0.2) {
           const eventTypes = ['received', 'inspected', 'moved', 'used_in_production', 'shipped'] as const;
@@ -596,18 +650,26 @@ export async function updateSupplyChainRisk() {
 }
 
 export async function updateWorkforceMetrics() {
+  // DEMO MODE ONLY — this used to randomly create staff_assignment rows
+  // (Math.random() < 0.2 per company per tick). Production workforce data
+  // comes from the customer's HRMS / scheduling system, posted to the
+  // existing CRUD endpoints (POST /api/employees, /api/work-shifts,
+  // /api/staff-assignments). When customers haven't connected their
+  // scheduling source yet, the workforce dashboard correctly shows an
+  // empty state instead of fake assignments.
+  if (!isDemoMode()) return;
   try {
     const companies = await getActiveCompanyIds();
     let totalAssignments = 0;
-    
+
     for (const companyId of companies) {
       const employees = await storage.getEmployees(companyId);
       const shifts = await storage.getWorkShifts(companyId);
-      
+
       if (shifts.length > 0 && employees.length > 0) {
         const shift = shifts[0];
         const employee = employees[0];
-        
+
         if (Math.random() < 0.2) {
           const assignment = await storage.createStaffAssignment({
             shiftId: shift.id,
@@ -650,13 +712,20 @@ export async function updateWorkforceMetrics() {
 }
 
 export async function updateProductionKPIs() {
+  // DEMO MODE ONLY — this fabricates downtime_events with random severity
+  // and random event types on a 10% per-tick basis. Real production KPIs
+  // come from the customer's MES / OEE source, posted to the existing CRUD
+  // endpoints (POST /api/production-runs, /api/downtime-events). The
+  // forecast retrainer + accuracy tracker (runForecastRetraining,
+  // trackForecastAccuracy) operate on the real data only and are NOT gated.
+  if (!isDemoMode()) return;
   try {
     const companies = await getActiveCompanyIds();
     let totalEvents = 0;
-    
+
     for (const companyId of companies) {
       const runs = await storage.getProductionRuns(companyId);
-      
+
       for (const run of runs.slice(0, 5)) {
         if (run.status === 'in_progress' && Math.random() < 0.1) {
           const event = await storage.createDowntimeEvent({

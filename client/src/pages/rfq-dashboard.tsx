@@ -72,6 +72,19 @@ export default function RfqDashboard() {
     enabled: false, // Only fetch on manual scan
   });
 
+  // Suppliers + materials are the inputs RFQ generation needs. We use these
+  // to differentiate "no RFQs yet" (because nothing's been generated) from
+  // "no source data yet" (because the customer hasn't connected suppliers
+  // and materials). The CTAs are different: the first invites a click, the
+  // second invites an integration.
+  const { data: suppliers = [] } = useQuery<{ id: string }[]>({
+    queryKey: ["/api/suppliers"],
+  });
+  const { data: materials = [] } = useQuery<{ id: string }[]>({
+    queryKey: ["/api/materials"],
+  });
+  const hasSourceData = suppliers.length > 0 && materials.length > 0;
+
   // Auto-generate RFQs mutation
   const autoGenerateMutation = useMutation({
     mutationFn: async () => {
@@ -308,9 +321,34 @@ export default function RfqDashboard() {
               Loading RFQs...
             </div>
           ) : rfqs.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground" data-testid="text-no-rfqs">
-              No RFQs generated yet. Click "Generate RFQs" to create automated requests.
-            </div>
+            // Differentiate "no RFQs in this window" (customer should click
+            // Generate) from "no source data connected yet" (customer needs
+            // to connect suppliers + materials first). Saying "click Generate
+            // RFQs" when neither is connected is misleading — the click
+            // would do nothing useful.
+            !hasSourceData ? (
+              <div className="text-center py-8 text-muted-foreground space-y-3" data-testid="text-rfq-needs-source">
+                <p>
+                  RFQ generation needs your supplier list and your material/SKU
+                  catalog. Connect those first — the RFQs will then generate
+                  automatically against your real procurement context.
+                </p>
+                <a
+                  href="/integrations"
+                  className="inline-block text-sm font-semibold text-signal hover:underline"
+                  data-testid="link-rfq-connect-source"
+                >
+                  Connect suppliers and materials →
+                </a>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground" data-testid="text-no-rfqs">
+                No RFQs in this window. Click "Generate RFQs" to scan for
+                opportunities against your {suppliers.length} supplier
+                {suppliers.length === 1 ? "" : "s"} and {materials.length} material
+                {materials.length === 1 ? "" : "s"}.
+              </div>
+            )
           ) : (
             <div className="overflow-x-auto">
               <Table>
