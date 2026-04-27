@@ -813,10 +813,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
       });
     } catch (error: any) {
+      console.error('[Health] Health check failed:', error);
       try {
         const { recordProbe } = await import("./lib/probeHistory");
         recordProbe({ name: "api", status: "down", latencyMs: null });
-      } catch {}
+      } catch (probeErr) {
+        console.error('[Health] Failed to record down-probe:', probeErr);
+      }
       res.status(503).json({
         status: 'unhealthy',
         timestamp: new Date().toISOString(),
