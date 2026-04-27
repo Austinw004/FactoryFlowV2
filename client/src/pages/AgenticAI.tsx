@@ -1371,7 +1371,7 @@ export default function AgenticAI() {
                       <Button
                         onClick={() => handleSendChat()}
                         disabled={!chatInput.trim() || chatMutation.isPending}
-                        className="bg-purple-600 hover:bg-purple-700"
+                        className="bg-signal text-ink hover:bg-signal/90"
                         data-testid="button-send-chat"
                       >
                         {chatMutation.isPending ? (
