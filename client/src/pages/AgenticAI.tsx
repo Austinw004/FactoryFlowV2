@@ -1102,19 +1102,20 @@ export default function AgenticAI() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
+      {/* Page header — the global topbar already shows the
+          "Intelligence / AI Advisor" breadcrumb, so we don't repeat the
+          page title here. The right rail keeps the regime badge (so the
+          operator always knows the current regime when authoring agents)
+          and the New Agent shortcut. The Bot icon was removed from the
+          left rail because the sidebar already has the same icon next
+          to "AI Advisor". */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3" data-testid="text-page-title">
-              <Bot className="h-8 w-8 text-primary" />
-              Agentic AI Control Center
-            </h1>
-            <p className="text-muted-foreground" data-testid="text-page-description">
-              Configure autonomous AI agents that take intelligent actions on your behalf
-            </p>
-          </div>
+          <p className="text-sm text-muted-foreground max-w-xl" data-testid="text-page-description">
+            Configure autonomous AI agents that take intelligent actions on your behalf, grounded in your live regime and operations data.
+          </p>
           <div className="flex items-center gap-3">
-            <Badge variant="outline" className="px-3 py-1">
+            <Badge variant="outline" className="px-3 py-1" data-testid="badge-current-regime">
               <Activity className="h-3 w-3 mr-1" />
               Current Regime: <span className="font-bold ml-1">{formatRegimeName(currentRegime)}</span>
             </Badge>
