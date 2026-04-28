@@ -432,7 +432,7 @@ function IssueReporting() {
             </Button>
             <Button
               variant={severity === "High" ? "default" : "outline"}
-              className={`h-14 text-base ${severity === "High" ? "bg-orange-600 hover:bg-orange-700" : ""}`}
+              className={`h-14 text-base ${severity === "High" ? "bg-bad/80 text-bone hover:bg-bad" : ""}`}
               onClick={() => setSeverity("High")}
               data-testid="button-severity-high"
             >
@@ -440,7 +440,7 @@ function IssueReporting() {
             </Button>
             <Button
               variant={severity === "Medium" ? "default" : "outline"}
-              className={`h-14 text-base ${severity === "Medium" ? "bg-yellow-600 hover:bg-yellow-700" : ""}`}
+              className={`h-14 text-base ${severity === "Medium" ? "bg-signal/80 text-ink hover:bg-signal" : ""}`}
               onClick={() => setSeverity("Medium")}
               data-testid="button-severity-medium"
             >
