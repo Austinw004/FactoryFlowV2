@@ -465,10 +465,10 @@ export default function PeerBenchmarking() {
         <Card data-testid="card-privacy-status">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Privacy Status</CardTitle>
-            <Shield className="h-4 w-4 text-blue-600" />
+            <Shield className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600" data-testid="text-privacy-status">Protected</div>
+            <div className="text-2xl font-bold text-muted-foreground" data-testid="text-privacy-status">Protected</div>
             <p className="text-xs text-muted-foreground">All data anonymized</p>
           </CardContent>
         </Card>
@@ -526,14 +526,14 @@ export default function PeerBenchmarking() {
                           </div>
                           <div className="text-right">
                             {insight.isAbove ? (
-                              <div className="flex items-center gap-2 text-red-600">
+                              <div className="flex items-center gap-2 text-bad">
                                 <TrendingUp className="w-4 h-4" />
                                 <span className="font-semibold" data-testid={`text-diff-${idx}`}>
                                   +{Math.abs(insight.percentDiff).toFixed(1)}%
                                 </span>
                               </div>
                             ) : (
-                              <div className="flex items-center gap-2 text-green-600">
+                              <div className="flex items-center gap-2 text-good">
                                 <TrendingDown className="w-4 h-4" />
                                 <span className="font-semibold" data-testid={`text-diff-${idx}`}>
                                   {insight.percentDiff.toFixed(1)}%
@@ -739,7 +739,7 @@ export default function PeerBenchmarking() {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-start gap-3">
-            <Shield className="w-5 h-5 text-blue-600 mt-0.5" />
+            <Shield className="w-5 h-5 text-muted-foreground mt-0.5" />
             <div>
               <p className="font-medium">Complete Anonymization</p>
               <p className="text-sm text-muted-foreground">
@@ -748,7 +748,7 @@ export default function PeerBenchmarking() {
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <Shield className="w-5 h-5 text-blue-600 mt-0.5" />
+            <Shield className="w-5 h-5 text-muted-foreground mt-0.5" />
             <div>
               <p className="font-medium">Aggregation Only</p>
               <p className="text-sm text-muted-foreground">
@@ -757,7 +757,7 @@ export default function PeerBenchmarking() {
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <Shield className="w-5 h-5 text-blue-600 mt-0.5" />
+            <Shield className="w-5 h-5 text-muted-foreground mt-0.5" />
             <div>
               <p className="font-medium">Opt-Out Anytime</p>
               <p className="text-sm text-muted-foreground">

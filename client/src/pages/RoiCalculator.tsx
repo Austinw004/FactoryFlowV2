@@ -210,7 +210,7 @@ export default function RoiCalculator() {
                 </Card>
                 <Card className="p-6">
                   <div className="text-sm text-muted-foreground mb-1">ROI</div>
-                  <div className="text-3xl font-bold text-green-600">{formatPercent(roi)}</div>
+                  <div className="text-3xl font-bold text-good">{formatPercent(roi)}</div>
                 </Card>
               </div>
 
@@ -226,18 +226,18 @@ export default function RoiCalculator() {
                         <div className="text-xs text-muted-foreground">Counter-cyclical timing opportunities</div>
                       </div>
                     </div>
-                    <div className="font-semibold text-green-600">{formatCurrency(procurementSavings)}</div>
+                    <div className="font-semibold text-good">{formatCurrency(procurementSavings)}</div>
                   </div>
 
                   <div className="flex items-center justify-between py-2 border-b">
                     <div className="flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4 text-blue-600" />
+                      <TrendingUp className="h-4 w-4 text-muted-foreground" />
                       <div>
                         <div className="font-medium">Carrying Cost Reduction</div>
                         <div className="text-xs text-muted-foreground">Better forecasting = lower inventory</div>
                       </div>
                     </div>
-                    <div className="font-semibold text-blue-600">{formatCurrency(carryingCostSavings)}</div>
+                    <div className="font-semibold text-muted-foreground">{formatCurrency(carryingCostSavings)}</div>
                   </div>
 
                   <div className="flex items-center justify-between py-2 border-b">

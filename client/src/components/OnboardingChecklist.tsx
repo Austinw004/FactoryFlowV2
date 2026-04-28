@@ -153,7 +153,7 @@ export function OnboardingChecklist({
                       {step.title}
                     </p>
                     {step.completed && (
-                      <span className="text-xs text-green-600 font-medium flex-shrink-0">
+                      <span className="text-xs text-good font-medium flex-shrink-0">
                         ✓ Done
                       </span>
                     )}

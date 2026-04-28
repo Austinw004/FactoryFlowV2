@@ -212,7 +212,7 @@ export function StripePaymentForm({ onSuccess, onSkip, onBack }: StripePaymentFo
   if (loadError) {
     return (
       <div className="space-y-4">
-        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-800 dark:text-amber-300">
+        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-sm text-signal">
           {loadError}
         </div>
         <div className="flex gap-3 pt-2">

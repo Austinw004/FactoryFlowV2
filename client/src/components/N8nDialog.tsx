@@ -259,7 +259,7 @@ export function N8nDialog({ open, onOpenChange }: N8nDialogProps) {
 
           <TabsContent value="inbound" className="space-y-4 mt-4">
             <div className="rounded-md bg-green-500/10 p-3 text-sm">
-              <p className="font-medium text-green-600">Receive actions from n8n</p>
+              <p className="font-medium text-good">Receive actions from n8n</p>
               <p className="text-muted-foreground mt-1">
                 Send data to Prescient Labs from your n8n workflows.
               </p>

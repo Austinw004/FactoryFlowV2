@@ -436,7 +436,7 @@ export default function Procurement() {
             <Boxes className="h-4 w-4" />
             <span className="hidden sm:inline">Materials</span>
             {lowStockMaterials.length > 0 && (
-              <Badge variant="secondary" className="ml-1 bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30">
+              <Badge variant="secondary" className="ml-1 bg-signal/15 text-signal dark:bg-signal/15">
                 {lowStockMaterials.length}
               </Badge>
             )}
@@ -453,8 +453,8 @@ export default function Procurement() {
           <div className="grid gap-4 md:grid-cols-2">
             <Card className="hover-elevate cursor-pointer" onClick={() => setActiveTab("materials")}>
               <CardContent className="flex items-center gap-4 p-6">
-                <div className="p-3 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                  <Package className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                <div className="p-3 rounded-lg bg-muted/15 dark:bg-muted/15">
+                  <Package className="h-6 w-6 text-muted-foreground" />
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold">Material Inventory</h3>
@@ -468,7 +468,7 @@ export default function Procurement() {
 
             <Card className="hover-elevate cursor-pointer" onClick={() => setActiveTab("suppliers")}>
               <CardContent className="flex items-center gap-4 p-6">
-                <div className="p-3 rounded-lg bg-green-100 dark:bg-green-900/30">
+                <div className="p-3 rounded-lg bg-good/15 dark:bg-good/15">
                   <Users className="h-6 w-6 text-good" />
                 </div>
                 <div className="flex-1">
@@ -533,7 +533,7 @@ export default function Procurement() {
                         <p className="text-xs text-muted-foreground">{material.code}</p>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="text-sm text-yellow-600 font-medium">{material.onHand} {material.unit}</span>
+                        <span className="text-sm text-signal font-medium">{material.onHand} {material.unit}</span>
                         <Button 
                           size="sm" 
                           variant="outline"
@@ -611,7 +611,7 @@ export default function Procurement() {
                           <CardDescription className="flex items-center gap-2 mt-1">
                             <span className="font-mono text-xs">{material.code}</span>
                             {isLowStock && (
-                              <Badge variant="secondary" className="text-yellow-600 bg-yellow-100 dark:bg-yellow-900/30 text-xs">
+                              <Badge variant="secondary" className="text-signal bg-signal/15 dark:bg-signal/15 text-xs">
                                 Low Stock
                               </Badge>
                             )}

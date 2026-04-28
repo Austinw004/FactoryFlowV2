@@ -194,11 +194,11 @@ export default function HistoricalBacktesting() {
                     </Badge>
                   </div>
                   {results.dataSource === 'real_api' ? (
-                    <p className="text-sm text-green-700 dark:text-green-300">
+                    <p className="text-sm text-good">
                       Results based on real historical data from FRED and Alpha Vantage APIs.
                     </p>
                   ) : (
-                    <p className="text-sm text-yellow-700 dark:text-yellow-300" data-testid="text-data-warning">
+                    <p className="text-sm text-signal" data-testid="text-data-warning">
                       {results.dataSourceWarning || 'Results based on synthetic/fallback data. For research and testing purposes only.'}
                     </p>
                   )}
@@ -378,7 +378,7 @@ export default function HistoricalBacktesting() {
                   }
                 </p>
                 {results.dataSource === 'synthetic' && (
-                  <p className="text-sm text-yellow-600 mt-2">
+                  <p className="text-sm text-signal mt-2">
                     Note: These results use synthetic fallback data and should not be treated as verified performance metrics.
                   </p>
                 )}

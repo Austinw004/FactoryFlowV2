@@ -224,7 +224,7 @@ export default function EventMonitoring() {
             <AlertTriangle className="h-4 w-4 text-bad" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{summary?.bySeverity?.critical || 0}</div>
+            <div className="text-2xl font-bold text-bad">{summary?.bySeverity?.critical || 0}</div>
             <p className="text-xs text-muted-foreground">Require immediate action</p>
           </CardContent>
         </Card>
@@ -235,7 +235,7 @@ export default function EventMonitoring() {
             <AlertTriangle className="h-4 w-4 text-signal" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{summary?.bySeverity?.high || 0}</div>
+            <div className="text-2xl font-bold text-signal">{summary?.bySeverity?.high || 0}</div>
             <p className="text-xs text-muted-foreground">Significant impact expected</p>
           </CardContent>
         </Card>

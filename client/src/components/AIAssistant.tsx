@@ -438,7 +438,7 @@ export function AIAssistant() {
                       {agenticStats && (
                         <div className="grid grid-cols-2 gap-2 text-center">
                           <div className="p-2 bg-muted rounded-lg">
-                            <p className="text-lg font-bold text-green-600">{agenticStats?.completedToday || 0}</p>
+                            <p className="text-lg font-bold text-good">{agenticStats?.completedToday || 0}</p>
                             <p className="text-[10px] text-muted-foreground">Actions Today</p>
                           </div>
                           <div className="p-2 bg-muted rounded-lg">
@@ -642,7 +642,7 @@ export function AIAssistant() {
                             </div>
                             
                             {action.estimatedImpact && (
-                              <div className="flex items-center gap-2 text-xs text-green-600 mb-2">
+                              <div className="flex items-center gap-2 text-xs text-good mb-2">
                                 <TrendingUp className="h-3 w-3" />
                                 <span>${action.estimatedImpact.costSavings?.toLocaleString()} savings</span>
                                 <span className="text-muted-foreground">

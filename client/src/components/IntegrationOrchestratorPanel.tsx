@@ -341,7 +341,7 @@ export function IntegrationOrchestratorPanel() {
                               {conn.connection!.status}
                             </Badge>
                             {conn.paymentCritical && (
-                              <Badge variant="outline" className="text-xs border-amber-500 text-amber-600">
+                              <Badge variant="outline" className="text-xs border-amber-500 text-signal">
                                 <Shield className="w-3 h-3 mr-1" /> Payment-Critical
                               </Badge>
                             )}
@@ -351,7 +351,7 @@ export function IntegrationOrchestratorPanel() {
                               </Badge>
                             )}
                             {conn.connection!.isVerified && (
-                              <Badge variant="outline" className="text-xs border-green-500 text-green-600">
+                              <Badge variant="outline" className="text-xs border-green-500 text-good">
                                 <CheckCircle className="w-3 h-3 mr-1" /> Verified
                               </Badge>
                             )}

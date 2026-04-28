@@ -737,7 +737,7 @@ function SimulationDetail({
                 <div className="grid gap-4 md:grid-cols-2">
                   <Card>
                     <CardHeader>
-                      <CardTitle className="text-base flex items-center gap-2 text-green-600">
+                      <CardTitle className="text-base flex items-center gap-2 text-good">
                         <TrendingUp className="h-4 w-4" />
                         Best Case Scenario
                       </CardTitle>
@@ -758,7 +758,7 @@ function SimulationDetail({
 
                   <Card>
                     <CardHeader>
-                      <CardTitle className="text-base flex items-center gap-2 text-red-600">
+                      <CardTitle className="text-base flex items-center gap-2 text-bad">
                         <TrendingDown className="h-4 w-4" />
                         Worst Case Scenario
                       </CardTitle>
@@ -803,7 +803,7 @@ function SimulationDetail({
                         </span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <Package className="h-4 w-4 mt-0.5 text-blue-600" />
+                        <Package className="h-4 w-4 mt-0.5 text-muted-foreground" />
                         <span>
                           Inventory strategy recommendations vary significantly - consider regime-specific policies.
                         </span>

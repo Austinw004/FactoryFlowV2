@@ -143,7 +143,7 @@ export function LookerDialog({ open, onOpenChange }: LookerDialogProps) {
                 <div className="rounded-md bg-blue-500/10 p-3 text-sm">
                   <div className="flex items-center gap-2">
                     <Database className="w-4 h-4 text-blue-500" />
-                    <span className="font-medium text-blue-600 dark:text-blue-400">Available Data Endpoints</span>
+                    <span className="font-medium text-muted-foreground">Available Data Endpoints</span>
                   </div>
                   <p className="text-muted-foreground mt-1">
                     These REST API endpoints return JSON data compatible with Looker's data source connectors.
@@ -196,7 +196,7 @@ export function LookerDialog({ open, onOpenChange }: LookerDialogProps) {
                 <div className="rounded-md bg-amber-500/10 p-3 text-sm">
                   <div className="flex items-center gap-2">
                     <BarChart3 className="w-4 h-4 text-signal" />
-                    <span className="font-medium text-amber-600">Looker Studio / Looker Setup</span>
+                    <span className="font-medium text-signal">Looker Studio / Looker Setup</span>
                   </div>
                 </div>
 
@@ -262,7 +262,7 @@ export function LookerDialog({ open, onOpenChange }: LookerDialogProps) {
                 <div className="rounded-md bg-green-500/10 p-3 text-sm">
                   <div className="flex items-center gap-2">
                     <Database className="w-4 h-4 text-good" />
-                    <span className="font-medium text-green-600">LookML Template</span>
+                    <span className="font-medium text-good">LookML Template</span>
                   </div>
                   <p className="text-muted-foreground mt-1">
                     Use this template as a starting point for your Looker models.

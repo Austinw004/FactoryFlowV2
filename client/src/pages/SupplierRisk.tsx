@@ -294,10 +294,10 @@ function SupplierRiskRow({
           <TooltipContent className="p-3">
             <p className="text-xs font-medium mb-1">Risk Score Thresholds</p>
             <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-              <span className="text-green-600">Low:</span><span>0-24</span>
-              <span className="text-yellow-600">Medium:</span><span>25-49</span>
-              <span className="text-orange-600">High:</span><span>50-74</span>
-              <span className="text-red-600">Critical:</span><span>75+</span>
+              <span className="text-good">Low:</span><span>0-24</span>
+              <span className="text-signal">Medium:</span><span>25-49</span>
+              <span className="text-signal">High:</span><span>50-74</span>
+              <span className="text-bad">Critical:</span><span>75+</span>
             </div>
           </TooltipContent>
         </ShadcnTooltip>
@@ -728,14 +728,14 @@ export default function SupplierRisk() {
                     {summary.criticalSuppliers.map((s) => (
                       <div 
                         key={s.id}
-                        className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-950/30 rounded-lg cursor-pointer hover-elevate"
+                        className="flex items-center justify-between p-3 bg-bad/15 dark:bg-bad/15 rounded-lg cursor-pointer hover-elevate"
                         onClick={() => handleViewDetails(s)}
                       >
                         <div className="flex items-center gap-2">
                           <XCircle className="h-4 w-4 text-bad" />
                           <span className="font-medium">{s.supplier?.name || s.supplierId}</span>
                         </div>
-                        <span className="font-bold text-red-600">{s.adjustedScore.toFixed(0)}</span>
+                        <span className="font-bold text-bad">{s.adjustedScore.toFixed(0)}</span>
                       </div>
                     ))}
                   </div>

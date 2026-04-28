@@ -521,28 +521,28 @@ export default function ProductionKPIs() {
                     <div className="space-y-2 text-sm">
                       <p className="font-medium">Production Strategy:</p>
                       {regime.regime === "HEALTHY_EXPANSION" && (
-                        <div className="bg-green-50 dark:bg-green-950 p-3 rounded-lg border border-green-200 dark:border-green-800">
+                        <div className="bg-good/15 dark:bg-green-950 p-3 rounded-lg border border-good/30 dark:border-good/30">
                           <p className="text-green-900 dark:text-green-100">
                             <strong>Optimize for Growth:</strong> Invest in capacity expansion and automation. Focus on scaling production to meet increasing demand while maintaining quality standards.
                           </p>
                         </div>
                       )}
                       {regime.regime === "ASSET_LED_GROWTH" && (
-                        <div className="bg-orange-50 dark:bg-orange-950 p-3 rounded-lg border border-orange-200 dark:border-orange-800">
+                        <div className="bg-signal/15 dark:bg-orange-950 p-3 rounded-lg border border-signal/30 dark:border-signal/30">
                           <p className="text-orange-900 dark:text-orange-100">
                             <strong>Balance Expansion with Efficiency:</strong> Focus on productivity improvements over capacity additions. Optimize existing lines before adding new equipment.
                           </p>
                         </div>
                       )}
                       {regime.regime === "IMBALANCED_EXCESS" && (
-                        <div className="bg-red-50 dark:bg-red-950 p-3 rounded-lg border border-red-200 dark:border-red-800">
+                        <div className="bg-bad/15 dark:bg-red-950 p-3 rounded-lg border border-bad/30 dark:border-bad/30">
                           <p className="text-red-900 dark:text-red-100">
                             <strong>Defensive Posture:</strong> Reduce production costs and improve margins. Delay non-critical capex. Focus on operational efficiency and waste reduction.
                           </p>
                         </div>
                       )}
                       {regime.regime === "REAL_ECONOMY_LEAD" && (
-                        <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <div className="bg-muted/15 dark:bg-blue-950 p-3 rounded-lg border border-muted/30 dark:border-muted/30">
                           <p className="text-blue-900 dark:text-blue-100">
                             <strong>Capitalize on Growth:</strong> Increase capacity to meet demand surge. Lock in favorable supplier contracts. This is the time to invest aggressively in production capability.
                           </p>
@@ -574,7 +574,7 @@ export default function ProductionKPIs() {
                   </div>
                 )}
                 {aggregateStats.avgAvailability < 80 && (
-                  <div className="flex items-start gap-2 p-3 bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                  <div className="flex items-start gap-2 p-3 bg-signal/15 dark:bg-yellow-950 border border-signal/30 dark:border-signal/30 rounded-lg">
                     <Clock className="h-5 w-5 text-signal flex-shrink-0 mt-0.5" />
                     <div className="text-sm">
                       <p className="font-semibold text-yellow-900 dark:text-yellow-100">High Downtime</p>
@@ -585,7 +585,7 @@ export default function ProductionKPIs() {
                   </div>
                 )}
                 {aggregateStats.avgQuality < 95 && (
-                  <div className="flex items-start gap-2 p-3 bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded-lg">
+                  <div className="flex items-start gap-2 p-3 bg-signal/15 dark:bg-orange-950 border border-signal/30 dark:border-signal/30 rounded-lg">
                     <AlertTriangle className="h-5 w-5 text-signal flex-shrink-0 mt-0.5" />
                     <div className="text-sm">
                       <p className="font-semibold text-orange-900 dark:text-orange-100">Quality Concerns</p>
@@ -596,7 +596,7 @@ export default function ProductionKPIs() {
                   </div>
                 )}
                 {aggregateStats.avgOEE >= 85 && (
-                  <div className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+                  <div className="flex items-start gap-2 p-3 bg-good/15 dark:bg-green-950 border border-good/30 dark:border-good/30 rounded-lg">
                     <Zap className="h-5 w-5 text-good flex-shrink-0 mt-0.5" />
                     <div className="text-sm">
                       <p className="font-semibold text-green-900 dark:text-green-100">World-Class Performance</p>
@@ -642,19 +642,19 @@ export default function ProductionKPIs() {
               <div>
                 <h3 className="font-semibold mb-3">OEE Benchmarks</h3>
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between p-2 bg-green-50 dark:bg-green-950 rounded">
+                  <div className="flex items-center justify-between p-2 bg-good/15 dark:bg-green-950 rounded">
                     <span className="font-medium">World Class</span>
                     <Badge className="bg-green-600">85%+</Badge>
                   </div>
-                  <div className="flex items-center justify-between p-2 bg-blue-50 dark:bg-blue-950 rounded">
+                  <div className="flex items-center justify-between p-2 bg-muted/15 dark:bg-blue-950 rounded">
                     <span className="font-medium">Good</span>
                     <Badge className="bg-blue-600">75-85%</Badge>
                   </div>
-                  <div className="flex items-center justify-between p-2 bg-yellow-50 dark:bg-yellow-950 rounded">
+                  <div className="flex items-center justify-between p-2 bg-signal/15 dark:bg-yellow-950 rounded">
                     <span className="font-medium">Fair / Typical</span>
                     <Badge className="bg-yellow-600">60-75%</Badge>
                   </div>
-                  <div className="flex items-center justify-between p-2 bg-red-50 dark:bg-red-950 rounded">
+                  <div className="flex items-center justify-between p-2 bg-bad/15 dark:bg-red-950 rounded">
                     <span className="font-medium">Poor / Needs Improvement</span>
                     <Badge variant="destructive">&lt;60%</Badge>
                   </div>

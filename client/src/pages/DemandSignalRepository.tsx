@@ -826,7 +826,7 @@ export default function DemandSignalRepository() {
                         </TableCell>
                         <TableCell>
                           {source.isActive ? (
-                            <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
+                            <Badge className="bg-green-500/10 text-good border-green-500/20">
                               <CheckCircle2 className="h-3 w-3 mr-1" />
                               Active
                             </Badge>
@@ -980,7 +980,7 @@ export default function DemandSignalRepository() {
                           <TableCell>{signal.region || "-"}</TableCell>
                           <TableCell>
                             {signal.isProcessed ? (
-                              <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
+                              <Badge className="bg-green-500/10 text-good border-green-500/20">
                                 <CheckCircle2 className="h-3 w-3 mr-1" />
                                 Processed
                               </Badge>

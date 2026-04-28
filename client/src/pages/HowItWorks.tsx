@@ -148,7 +148,7 @@ export default function HowItWorks() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="p-4 rounded-lg border bg-card">
               <div className="flex items-center gap-2 mb-2">
-                <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-500/30">Favorable</Badge>
+                <Badge variant="outline" className="bg-green-500/10 text-good border-green-500/30">Favorable</Badge>
               </div>
               <p className="text-sm text-muted-foreground">
                 Good time to buy. Conditions support building inventory and locking in competitive prices.
@@ -156,7 +156,7 @@ export default function HowItWorks() {
             </div>
             <div className="p-4 rounded-lg border bg-card">
               <div className="flex items-center gap-2 mb-2">
-                <Badge variant="outline" className="bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30">Stable</Badge>
+                <Badge variant="outline" className="bg-blue-500/10 text-muted-foreground border-blue-500/30">Stable</Badge>
               </div>
               <p className="text-sm text-muted-foreground">
                 Normal operations. Maintain regular purchasing patterns and production schedules.
@@ -164,7 +164,7 @@ export default function HowItWorks() {
             </div>
             <div className="p-4 rounded-lg border bg-card">
               <div className="flex items-center gap-2 mb-2">
-                <Badge variant="outline" className="bg-orange-500/10 text-orange-700 border-orange-500/30">Transitioning</Badge>
+                <Badge variant="outline" className="bg-orange-500/10 text-signal border-orange-500/30">Transitioning</Badge>
               </div>
               <p className="text-sm text-muted-foreground">
                 Conditions are shifting. Pay closer attention to signals and be ready to adjust strategy.
@@ -172,7 +172,7 @@ export default function HowItWorks() {
             </div>
             <div className="p-4 rounded-lg border bg-card">
               <div className="flex items-center gap-2 mb-2">
-                <Badge variant="outline" className="bg-red-500/10 text-red-700 border-red-500/30">Cautious</Badge>
+                <Badge variant="outline" className="bg-red-500/10 text-bad border-red-500/30">Cautious</Badge>
               </div>
               <p className="text-sm text-muted-foreground">
                 Consider slowing purchases. Preserve cash and wait for better conditions before committing.

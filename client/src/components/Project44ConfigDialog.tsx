@@ -69,7 +69,7 @@ export function Project44ConfigDialog({ open, onOpenChange }: Project44ConfigDia
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Truck className="h-5 w-5 text-blue-600" />
+            <Truck className="h-5 w-5 text-muted-foreground" />
             Configure project44
           </DialogTitle>
           <DialogDescription>

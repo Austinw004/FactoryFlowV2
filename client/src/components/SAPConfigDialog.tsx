@@ -72,7 +72,7 @@ export function SAPConfigDialog({ open, onOpenChange }: SAPConfigDialogProps) {
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-blue-700" />
+            <Building2 className="h-5 w-5 text-muted-foreground" />
             Configure SAP S/4HANA
           </DialogTitle>
           <DialogDescription>

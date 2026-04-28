@@ -361,7 +361,7 @@ export default function CommodityForecasts() {
           </div>
 
           {summary.urgentActions.length > 0 && (
-            <Card className="border-yellow-500/50 bg-yellow-50/50 dark:bg-yellow-950/10" data-testid="card-urgent-actions">
+            <Card className="border-yellow-500/50 bg-signal/15/50 dark:bg-signal/15" data-testid="card-urgent-actions">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Zap className="h-5 w-5 text-signal" />

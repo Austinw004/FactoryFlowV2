@@ -146,7 +146,7 @@ export function EmailConfigDialog({ open, onOpenChange }: EmailConfigDialogProps
                 </div>
               ) : (
                 <div className="rounded-md bg-amber-500/10 p-3 text-sm">
-                  <div className="flex items-start gap-2 text-amber-600">
+                  <div className="flex items-start gap-2 text-signal">
                     <AlertTriangle className="w-4 h-4 mt-0.5" />
                     <div>
                       <p className="font-medium">Email service not fully configured</p>
