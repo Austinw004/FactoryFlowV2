@@ -295,7 +295,7 @@ export function FedExConfigDialog({ open, onOpenChange }: FedExConfigDialogProps
               </>
             ) : testSuccess ? (
               <>
-                <CheckCircle2 className="w-4 h-4 mr-2 text-green-500" />
+                <CheckCircle2 className="w-4 h-4 mr-2 text-good" />
                 Connection Verified
               </>
             ) : (

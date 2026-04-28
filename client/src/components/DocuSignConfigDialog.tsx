@@ -148,7 +148,7 @@ export function DocuSignConfigDialog({ open, onOpenChange }: DocuSignConfigDialo
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div className="p-2 bg-yellow-500/10 rounded-lg">
-              <FileSignature className="w-6 h-6 text-yellow-600" />
+              <FileSignature className="w-6 h-6 text-signal" />
             </div>
             <div>
               <DialogTitle>Connect DocuSign</DialogTitle>
@@ -278,7 +278,7 @@ export function DocuSignConfigDialog({ open, onOpenChange }: DocuSignConfigDialo
               </>
             ) : testSuccess ? (
               <>
-                <CheckCircle2 className="w-4 h-4 mr-2 text-green-500" />
+                <CheckCircle2 className="w-4 h-4 mr-2 text-good" />
                 Connection Verified
               </>
             ) : (

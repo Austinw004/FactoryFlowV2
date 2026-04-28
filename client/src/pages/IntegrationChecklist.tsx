@@ -195,7 +195,7 @@ export default function IntegrationChecklist() {
                   <ul className="space-y-2">
                     {tier.features.map((feature, fIdx) => (
                       <li key={fIdx} className="flex items-start gap-2 text-sm">
-                        <Check className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                        <Check className="h-4 w-4 text-good shrink-0 mt-0.5" />
                         <span>{feature}</span>
                       </li>
                     ))}

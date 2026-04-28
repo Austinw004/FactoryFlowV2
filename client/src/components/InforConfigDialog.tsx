@@ -72,7 +72,7 @@ export function InforConfigDialog({ open, onOpenChange }: InforConfigDialogProps
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-orange-500" />
+            <Building2 className="h-5 w-5 text-signal" />
             Configure Infor CloudSuite
           </DialogTitle>
           <DialogDescription>

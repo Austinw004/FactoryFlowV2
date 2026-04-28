@@ -69,7 +69,7 @@ export function ZendeskConfigDialog({ open, onOpenChange }: ZendeskConfigDialogP
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-green-500" />
+            <Users className="h-5 w-5 text-good" />
             Configure Zendesk
           </DialogTitle>
           <DialogDescription>

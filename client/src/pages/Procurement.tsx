@@ -409,8 +409,8 @@ export default function Procurement() {
                   className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 min-w-[280px] flex-shrink-0"
                   data-testid={`recommendation-${index}`}
                 >
-                  {rec.type === 'warning' && <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0" />}
-                  {rec.type === 'opportunity' && <Zap className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />}
+                  {rec.type === 'warning' && <AlertTriangle className="h-4 w-4 text-signal mt-0.5 flex-shrink-0" />}
+                  {rec.type === 'opportunity' && <Zap className="h-4 w-4 text-good mt-0.5 flex-shrink-0" />}
                   {rec.type === 'action' && <CheckCircle2 className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -436,7 +436,7 @@ export default function Procurement() {
             <Boxes className="h-4 w-4" />
             <span className="hidden sm:inline">Materials</span>
             {lowStockMaterials.length > 0 && (
-              <Badge variant="secondary" className="ml-1 bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-500">
+              <Badge variant="secondary" className="ml-1 bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30">
                 {lowStockMaterials.length}
               </Badge>
             )}
@@ -469,7 +469,7 @@ export default function Procurement() {
             <Card className="hover-elevate cursor-pointer" onClick={() => setActiveTab("suppliers")}>
               <CardContent className="flex items-center gap-4 p-6">
                 <div className="p-3 rounded-lg bg-green-100 dark:bg-green-900/30">
-                  <Users className="h-6 w-6 text-green-600 dark:text-green-400" />
+                  <Users className="h-6 w-6 text-good" />
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold">Supplier Network</h3>
@@ -516,7 +516,7 @@ export default function Procurement() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2 text-base">
-                    <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                    <AlertTriangle className="h-4 w-4 text-signal" />
                     Low Stock Materials
                   </CardTitle>
                   <Button variant="outline" size="sm" onClick={() => setActiveTab("materials")} data-testid="button-view-all-low-stock">

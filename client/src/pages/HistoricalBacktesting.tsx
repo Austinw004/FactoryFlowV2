@@ -175,9 +175,9 @@ export default function HistoricalBacktesting() {
             <CardContent className="pt-4 pb-4">
               <div className="flex items-start gap-3">
                 {results.dataSource === 'synthetic' ? (
-                  <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+                  <AlertTriangle className="h-5 w-5 text-signal flex-shrink-0 mt-0.5" />
                 ) : (
-                  <Database className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                  <Database className="h-5 w-5 text-good flex-shrink-0 mt-0.5" />
                 )}
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
@@ -378,7 +378,7 @@ export default function HistoricalBacktesting() {
                   }
                 </p>
                 {results.dataSource === 'synthetic' && (
-                  <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2">
+                  <p className="text-sm text-yellow-600 mt-2">
                     Note: These results use synthetic fallback data and should not be treated as verified performance metrics.
                   </p>
                 )}

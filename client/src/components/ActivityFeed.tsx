@@ -47,9 +47,9 @@ const activityIcons: Record<string, typeof Activity> = {
 
 const severityColors: Record<string, string> = {
   info: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-  success: "bg-green-500/10 text-green-600 dark:text-green-400",
-  warning: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
-  error: "bg-red-500/10 text-red-600 dark:text-red-400",
+  success: "bg-green-500/10 text-green-600",
+  warning: "bg-yellow-500/10 text-yellow-600",
+  error: "bg-red-500/10 text-red-600",
 };
 
 const severityIcons: Record<string, typeof CheckCircle> = {

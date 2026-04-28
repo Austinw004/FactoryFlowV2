@@ -68,7 +68,7 @@ export function MailchimpConfigDialog({ open, onOpenChange }: MailchimpConfigDia
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5 text-yellow-500" />
+            <Mail className="h-5 w-5 text-signal" />
             Configure Mailchimp
           </DialogTitle>
           <DialogDescription>

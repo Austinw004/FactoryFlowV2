@@ -534,7 +534,7 @@ export default function MultiTierSupplierMapping() {
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-2 mb-1">
-              <AlertTriangle className="h-4 w-4 text-orange-500" />
+              <AlertTriangle className="h-4 w-4 text-signal" />
               <span className="text-sm text-muted-foreground">Single Source</span>
             </div>
             <div className="text-2xl font-bold text-orange-500" data-testid="stat-single-source">
@@ -545,7 +545,7 @@ export default function MultiTierSupplierMapping() {
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-2 mb-1">
-              <MapPin className="h-4 w-4 text-red-500" />
+              <MapPin className="h-4 w-4 text-bad" />
               <span className="text-sm text-muted-foreground">High-Risk Region</span>
             </div>
             <div className="text-2xl font-bold text-red-500" data-testid="stat-high-risk-region">
@@ -835,7 +835,7 @@ export default function MultiTierSupplierMapping() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-orange-500" />
+                  <AlertTriangle className="h-4 w-4 text-signal" />
                   Single-Source Dependencies
                 </CardTitle>
                 <CardDescription>Suppliers with no alternatives in the supply chain</CardDescription>
@@ -848,7 +848,7 @@ export default function MultiTierSupplierMapping() {
                     </div>
                   ) : analysisData?.singleSourceDependencies.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
-                      <CheckCircle2 className="h-8 w-8 text-green-500 mb-2" />
+                      <CheckCircle2 className="h-8 w-8 text-good mb-2" />
                       <p>No single-source dependencies detected</p>
                     </div>
                   ) : (
@@ -949,7 +949,7 @@ export default function MultiTierSupplierMapping() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-red-500" />
+                  <MapPin className="h-4 w-4 text-bad" />
                   High-Risk Region Suppliers
                 </CardTitle>
                 <CardDescription>Suppliers located in regions with elevated risk</CardDescription>
@@ -962,7 +962,7 @@ export default function MultiTierSupplierMapping() {
                     </div>
                   ) : analysisData?.highRiskRegionSuppliers.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
-                      <CheckCircle2 className="h-8 w-8 text-green-500 mb-2" />
+                      <CheckCircle2 className="h-8 w-8 text-good mb-2" />
                       <p>No suppliers in high-risk regions</p>
                     </div>
                   ) : (
@@ -1055,7 +1055,7 @@ export default function MultiTierSupplierMapping() {
               <ScrollArea className="h-[400px]">
                 {!alerts || alerts.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-12">
-                    <CheckCircle2 className="h-12 w-12 text-green-500 mb-4" />
+                    <CheckCircle2 className="h-12 w-12 text-good mb-4" />
                     <p className="text-lg font-medium">No Active Alerts</p>
                     <p className="text-sm">Your supplier network is healthy</p>
                   </div>

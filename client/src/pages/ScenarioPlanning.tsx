@@ -247,9 +247,9 @@ export default function ScenarioPlanning() {
                   <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Cash Flow Impact</CardTitle>
                     {result.cashFlowImpact >= 0 ? (
-                      <TrendingUp className="h-4 w-4 text-green-600" />
+                      <TrendingUp className="h-4 w-4 text-good" />
                     ) : (
-                      <TrendingDown className="h-4 w-4 text-red-600" />
+                      <TrendingDown className="h-4 w-4 text-bad" />
                     )}
                   </CardHeader>
                   <CardContent>
@@ -279,9 +279,9 @@ export default function ScenarioPlanning() {
                   <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Margin Impact</CardTitle>
                     {result.marginImpact >= 0 ? (
-                      <TrendingUp className="h-4 w-4 text-green-600" />
+                      <TrendingUp className="h-4 w-4 text-good" />
                     ) : (
-                      <TrendingDown className="h-4 w-4 text-red-600" />
+                      <TrendingDown className="h-4 w-4 text-bad" />
                     )}
                   </CardHeader>
                   <CardContent>
@@ -348,7 +348,7 @@ export default function ScenarioPlanning() {
                   <div className="space-y-3">
                     {result.risks.map((risk, idx) => (
                       <div key={idx} className="flex items-start gap-3 p-3 border rounded-lg" data-testid={`risk-${idx}`}>
-                        <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5" />
+                        <AlertCircle className="h-5 w-5 text-signal mt-0.5" />
                         <div className="flex-1">
                           <h4 className="font-medium">{risk.factor}</h4>
                           <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">

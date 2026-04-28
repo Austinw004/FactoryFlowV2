@@ -205,7 +205,7 @@ export default function PilotProgram() {
                 <ul className="space-y-2 mb-4">
                   {phase.activities.map((activity, aIdx) => (
                     <li key={aIdx} className="flex items-start gap-2 text-sm text-muted-foreground">
-                      <Check className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                      <Check className="h-4 w-4 text-good shrink-0 mt-0.5" />
                       <span>{activity}</span>
                     </li>
                   ))}
@@ -293,7 +293,7 @@ export default function PilotProgram() {
               <ul className="space-y-2">
                 {successFeeModel.included.map((item, idx) => (
                   <li key={idx} className="flex items-start gap-2 text-sm">
-                    <Check className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                    <Check className="h-4 w-4 text-good shrink-0 mt-0.5" />
                     <span>{item}</span>
                   </li>
                 ))}
@@ -308,7 +308,7 @@ export default function PilotProgram() {
               <ul className="space-y-2">
                 {successFeeModel.verification.map((item, idx) => (
                   <li key={idx} className="flex items-start gap-2 text-sm">
-                    <Check className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                    <Check className="h-4 w-4 text-good shrink-0 mt-0.5" />
                     <span>{item}</span>
                   </li>
                 ))}
@@ -347,7 +347,7 @@ export default function PilotProgram() {
               "30-day post-pilot support",
             ].map((item, idx) => (
               <div key={idx} className="flex items-center gap-2 text-sm">
-                <Check className="h-4 w-4 text-green-500 shrink-0" />
+                <Check className="h-4 w-4 text-good shrink-0" />
                 <span>{item}</span>
               </div>
             ))}
@@ -420,19 +420,19 @@ export default function PilotProgram() {
 
               <div className="mt-8 pt-6 border-t">
                 <div className="flex items-start gap-3 p-4 rounded-lg bg-green-500/10 border border-green-500/20">
-                  <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0 mt-0.5" />
+                  <CheckCircle2 className="h-5 w-5 text-good shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-medium text-green-800 dark:text-green-400">4+ Yes answers?</p>
-                    <p className="text-sm text-green-700 dark:text-green-500">
+                    <p className="font-medium text-green-800">4+ Yes answers?</p>
+                    <p className="text-sm text-green-700">
                       You're an excellent candidate for a pilot. Let's discuss your specific situation.
                     </p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20 mt-3">
-                  <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                  <AlertCircle className="h-5 w-5 text-signal shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-medium text-amber-800 dark:text-amber-400">Fewer than 4?</p>
-                    <p className="text-sm text-amber-700 dark:text-amber-500">
+                    <p className="font-medium text-amber-800">Fewer than 4?</p>
+                    <p className="text-sm text-amber-700">
                       We may still be able to help. Book a call to explore options tailored to your situation.
                     </p>
                   </div>

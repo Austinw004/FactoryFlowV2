@@ -109,7 +109,7 @@ export default function BulkTest() {
             {scenarioResults && (
               <div className="flex flex-col gap-4 mt-4">
                 <div className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  <CheckCircle className="h-5 w-5 text-good" />
                   <span className="font-semibold">
                     {scenarioResults.totalScenarios} Scenarios Complete
                   </span>
@@ -196,7 +196,7 @@ export default function BulkTest() {
             {geoResults && (
               <div className="flex flex-col gap-4 mt-4">
                 <div className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  <CheckCircle className="h-5 w-5 text-good" />
                   <span className="font-semibold">
                     {geoResults.totalAssessments} Assessments Complete
                   </span>

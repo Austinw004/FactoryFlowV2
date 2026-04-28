@@ -148,7 +148,7 @@ export function UPSConfigDialog({ open, onOpenChange }: UPSConfigDialogProps) {
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div className="p-2 bg-amber-500/10 rounded-lg">
-              <Truck className="w-6 h-6 text-amber-600" />
+              <Truck className="w-6 h-6 text-signal" />
             </div>
             <div>
               <DialogTitle>Connect UPS</DialogTitle>
@@ -283,7 +283,7 @@ export function UPSConfigDialog({ open, onOpenChange }: UPSConfigDialogProps) {
               </>
             ) : testSuccess ? (
               <>
-                <CheckCircle2 className="w-4 h-4 mr-2 text-green-500" />
+                <CheckCircle2 className="w-4 h-4 mr-2 text-good" />
                 Connection Verified
               </>
             ) : (

@@ -35,7 +35,7 @@ export function OfflineIndicator() {
       className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2.5 rounded-lg shadow-lg border transition-all duration-300 ${
         online
           ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400"
-          : "bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400"
+          : "bg-amber-500/10 border-amber-500/30 text-amber-700"
       }`}
     >
       {online ? (

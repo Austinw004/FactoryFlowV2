@@ -104,10 +104,10 @@ const categoryLabels: Record<string, string> = {
 };
 
 const severityColors: Record<string, string> = {
-  critical: 'bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30',
-  high: 'bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30',
-  medium: 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 border-yellow-500/30',
-  low: 'bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30'
+  critical: 'bg-red-500/15 text-red-700 border-red-500/30',
+  high: 'bg-orange-500/15 text-orange-700 border-orange-500/30',
+  medium: 'bg-yellow-500/15 text-yellow-700 border-yellow-500/30',
+  low: 'bg-green-500/15 text-green-700 border-green-500/30'
 };
 
 export default function EventMonitoring() {
@@ -221,7 +221,7 @@ export default function EventMonitoring() {
         <Card data-testid="card-critical-alerts">
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Critical</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-500" />
+            <AlertTriangle className="h-4 w-4 text-bad" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">{summary?.bySeverity?.critical || 0}</div>
@@ -232,7 +232,7 @@ export default function EventMonitoring() {
         <Card data-testid="card-high-alerts">
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">High Priority</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-orange-500" />
+            <AlertTriangle className="h-4 w-4 text-signal" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">{summary?.bySeverity?.high || 0}</div>
@@ -310,7 +310,7 @@ export default function EventMonitoring() {
             <Card className="border-amber-500/30 bg-amber-500/5" data-testid="card-data-unavailable">
               <CardContent className="py-8">
                 <div className="flex flex-col items-center text-center gap-4">
-                  <AlertTriangle className="h-12 w-12 text-amber-500" />
+                  <AlertTriangle className="h-12 w-12 text-signal" />
                   <div>
                     <h3 className="text-lg font-semibold text-foreground">Event Monitoring Initializing</h3>
                     <p className="text-sm text-muted-foreground mt-1 max-w-md">

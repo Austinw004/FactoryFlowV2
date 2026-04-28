@@ -155,9 +155,9 @@ export function SageX3ConfigDialog({ open, onOpenChange }: SageX3ConfigDialogPro
               {testMutation.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
               ) : testMutation.isSuccess ? (
-                <CheckCircle2 className="h-4 w-4 mr-2 text-green-500" />
+                <CheckCircle2 className="h-4 w-4 mr-2 text-good" />
               ) : testMutation.isError ? (
-                <XCircle className="h-4 w-4 mr-2 text-red-500" />
+                <XCircle className="h-4 w-4 mr-2 text-bad" />
               ) : null}
               Test Connection
             </Button>

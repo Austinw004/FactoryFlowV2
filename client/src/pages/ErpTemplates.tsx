@@ -585,7 +585,7 @@ function Step4Test({
             {state.testStatus === 'success' && (
               <>
                 <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4">
-                  <CheckCircle2 className="h-8 w-8 text-green-600" />
+                  <CheckCircle2 className="h-8 w-8 text-good" />
                 </div>
                 <h3 className="font-semibold text-lg text-green-600 mb-2">Connection Successful!</h3>
                 <p className="text-muted-foreground text-center mb-2">
@@ -601,7 +601,7 @@ function Step4Test({
             {state.testStatus === 'error' && (
               <>
                 <div className="h-16 w-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
-                  <XCircle className="h-8 w-8 text-red-600" />
+                  <XCircle className="h-8 w-8 text-bad" />
                 </div>
                 <h3 className="font-semibold text-lg text-red-600 mb-2">Connection Failed</h3>
                 <p className="text-muted-foreground text-center mb-4">
@@ -689,21 +689,21 @@ function Step5Complete({
         <CardContent className="p-6">
           <div className="flex items-start gap-4">
             <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
-              <Sparkles className="h-5 w-5 text-green-600" />
+              <Sparkles className="h-5 w-5 text-good" />
             </div>
             <div>
               <h3 className="font-semibold mb-1">What happens next?</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-600" />
+                  <Check className="h-4 w-4 text-good" />
                   Initial data sync will start automatically
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-600" />
+                  <Check className="h-4 w-4 text-good" />
                   {state.selectedModules.length} modules will be synced ({state.selectedModules.join(', ')})
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-600" />
+                  <Check className="h-4 w-4 text-good" />
                   Data will sync {state.syncFrequency === 'realtime' ? 'in real-time' : state.syncFrequency === 'manual' ? 'when you trigger it' : `every ${state.syncFrequency}`}
                 </li>
               </ul>

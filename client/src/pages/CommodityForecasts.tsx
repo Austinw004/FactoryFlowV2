@@ -92,9 +92,9 @@ function formatCurrency(value: number, currency: string = 'USD'): string {
 function TrendIcon({ trend }: { trend: 'rising' | 'falling' | 'stable' }) {
   switch (trend) {
     case 'rising':
-      return <TrendingUp className="h-4 w-4 text-green-500" />;
+      return <TrendingUp className="h-4 w-4 text-good" />;
     case 'falling':
-      return <TrendingDown className="h-4 w-4 text-red-500" />;
+      return <TrendingDown className="h-4 w-4 text-bad" />;
     case 'stable':
       return <Minus className="h-4 w-4 text-muted-foreground" />;
   }
@@ -102,9 +102,9 @@ function TrendIcon({ trend }: { trend: 'rising' | 'falling' | 'stable' }) {
 
 function VolatilityBadge({ volatility }: { volatility: 'low' | 'medium' | 'high' }) {
   const variants: Record<string, string> = {
-    low: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400',
-    medium: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400',
-    high: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400',
+    low: 'bg-green-100 dark:bg-green-900/30 text-green-700',
+    medium: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700',
+    high: 'bg-red-100 dark:bg-red-900/30 text-red-700',
   };
   return (
     <Badge className={variants[volatility]}>
@@ -185,19 +185,19 @@ function ForecastCard({ forecast }: { forecast: PriceForecast }) {
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="p-2 rounded-lg bg-muted/50">
             <p className="text-xs text-muted-foreground">30 Day</p>
-            <p className={`text-sm font-semibold ${forecast.forecasts.days30.changePercent > 0 ? 'text-green-600 dark:text-green-400' : forecast.forecasts.days30.changePercent < 0 ? 'text-red-600 dark:text-red-400' : ''}`}>
+            <p className={`text-sm font-semibold ${forecast.forecasts.days30.changePercent > 0 ? 'text-green-600' : forecast.forecasts.days30.changePercent < 0 ? 'text-red-600' : ''}`}>
               {forecast.forecasts.days30.changePercent > 0 ? '+' : ''}{forecast.forecasts.days30.changePercent}%
             </p>
           </div>
           <div className="p-2 rounded-lg bg-muted/50">
             <p className="text-xs text-muted-foreground">60 Day</p>
-            <p className={`text-sm font-semibold ${forecast.forecasts.days60.changePercent > 0 ? 'text-green-600 dark:text-green-400' : forecast.forecasts.days60.changePercent < 0 ? 'text-red-600 dark:text-red-400' : ''}`}>
+            <p className={`text-sm font-semibold ${forecast.forecasts.days60.changePercent > 0 ? 'text-green-600' : forecast.forecasts.days60.changePercent < 0 ? 'text-red-600' : ''}`}>
               {forecast.forecasts.days60.changePercent > 0 ? '+' : ''}{forecast.forecasts.days60.changePercent}%
             </p>
           </div>
           <div className="p-2 rounded-lg bg-muted/50">
             <p className="text-xs text-muted-foreground">90 Day</p>
-            <p className={`text-sm font-semibold ${forecast.forecasts.days90.changePercent > 0 ? 'text-green-600 dark:text-green-400' : forecast.forecasts.days90.changePercent < 0 ? 'text-red-600 dark:text-red-400' : ''}`}>
+            <p className={`text-sm font-semibold ${forecast.forecasts.days90.changePercent > 0 ? 'text-green-600' : forecast.forecasts.days90.changePercent < 0 ? 'text-red-600' : ''}`}>
               {forecast.forecasts.days90.changePercent > 0 ? '+' : ''}{forecast.forecasts.days90.changePercent}%
             </p>
           </div>
@@ -306,15 +306,15 @@ export default function CommodityForecasts() {
               <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Avg 30-Day Change</CardTitle>
                 {summary.avgChange30Day > 0 ? (
-                  <ArrowUpRight className="h-4 w-4 text-green-500" />
+                  <ArrowUpRight className="h-4 w-4 text-good" />
                 ) : summary.avgChange30Day < 0 ? (
-                  <ArrowDownRight className="h-4 w-4 text-red-500" />
+                  <ArrowDownRight className="h-4 w-4 text-bad" />
                 ) : (
                   <Minus className="h-4 w-4 text-muted-foreground" />
                 )}
               </CardHeader>
               <CardContent>
-                <div className={`text-2xl font-bold ${summary.avgChange30Day > 0 ? 'text-green-600 dark:text-green-400' : summary.avgChange30Day < 0 ? 'text-red-600 dark:text-red-400' : ''}`}>
+                <div className={`text-2xl font-bold ${summary.avgChange30Day > 0 ? 'text-green-600' : summary.avgChange30Day < 0 ? 'text-red-600' : ''}`}>
                   {summary.avgChange30Day > 0 ? '+' : ''}{summary.avgChange30Day}%
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -327,15 +327,15 @@ export default function CommodityForecasts() {
               <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Avg 90-Day Change</CardTitle>
                 {summary.avgChange90Day > 0 ? (
-                  <ArrowUpRight className="h-4 w-4 text-green-500" />
+                  <ArrowUpRight className="h-4 w-4 text-good" />
                 ) : summary.avgChange90Day < 0 ? (
-                  <ArrowDownRight className="h-4 w-4 text-red-500" />
+                  <ArrowDownRight className="h-4 w-4 text-bad" />
                 ) : (
                   <Minus className="h-4 w-4 text-muted-foreground" />
                 )}
               </CardHeader>
               <CardContent>
-                <div className={`text-2xl font-bold ${summary.avgChange90Day > 0 ? 'text-green-600 dark:text-green-400' : summary.avgChange90Day < 0 ? 'text-red-600 dark:text-red-400' : ''}`}>
+                <div className={`text-2xl font-bold ${summary.avgChange90Day > 0 ? 'text-green-600' : summary.avgChange90Day < 0 ? 'text-red-600' : ''}`}>
                   {summary.avgChange90Day > 0 ? '+' : ''}{summary.avgChange90Day}%
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -347,7 +347,7 @@ export default function CommodityForecasts() {
             <Card data-testid="card-summary-urgent">
               <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Urgent Actions</CardTitle>
-                <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                <AlertTriangle className="h-4 w-4 text-signal" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold" data-testid="text-urgent-count">
@@ -364,7 +364,7 @@ export default function CommodityForecasts() {
             <Card className="border-yellow-500/50 bg-yellow-50/50 dark:bg-yellow-950/10" data-testid="card-urgent-actions">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <Zap className="h-5 w-5 text-yellow-500" />
+                  <Zap className="h-5 w-5 text-signal" />
                   Urgent Price Actions
                 </CardTitle>
                 <CardDescription>
@@ -386,7 +386,7 @@ export default function CommodityForecasts() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className={`font-semibold ${item.forecasts.days30.changePercent > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                        <p className={`font-semibold ${item.forecasts.days30.changePercent > 0 ? 'text-green-600' : 'text-red-600'}`}>
                           {item.forecasts.days30.changePercent > 0 ? '+' : ''}{item.forecasts.days30.changePercent}%
                         </p>
                         <p className="text-xs text-muted-foreground">30-day forecast</p>

@@ -152,7 +152,7 @@ export function SlackConfigDialog({ open, onOpenChange }: SlackConfigDialogProps
           <DialogTitle className="flex items-center gap-2">
             Slack Integration
             {status?.slack.configured && (
-              <CheckCircle className="w-4 h-4 text-green-500" />
+              <CheckCircle className="w-4 h-4 text-good" />
             )}
           </DialogTitle>
           <DialogDescription>
@@ -218,7 +218,7 @@ export function SlackConfigDialog({ open, onOpenChange }: SlackConfigDialogProps
               {status?.slack.configured && (
                 <div className="rounded-md bg-green-500/10 p-3 text-sm">
                   <div className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <CheckCircle className="w-4 h-4 text-good" />
                     <span>Slack is connected to {status.slack.channel}</span>
                   </div>
                 </div>

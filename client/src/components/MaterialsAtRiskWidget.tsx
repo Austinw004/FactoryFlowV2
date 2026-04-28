@@ -82,7 +82,7 @@ export function MaterialsAtRiskWidget() {
       <Card data-testid="card-materials-at-risk">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5 text-green-600" />
+            <Package className="h-5 w-5 text-good" />
             Materials at Risk
           </CardTitle>
           <CardDescription>All materials have healthy inventory levels</CardDescription>
@@ -102,7 +102,7 @@ export function MaterialsAtRiskWidget() {
         <div className="flex items-start justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-yellow-600" />
+              <AlertTriangle className="h-5 w-5 text-signal" />
               Materials at Risk
             </CardTitle>
             <CardDescription>

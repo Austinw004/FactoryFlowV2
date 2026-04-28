@@ -124,11 +124,11 @@ function freshnessLabel(freshness: string) {
 
 function statusIcon(status: string) {
   switch (status) {
-    case "healthy": return <CheckCircle className="w-4 h-4 text-green-500" />;
+    case "healthy": return <CheckCircle className="w-4 h-4 text-good" />;
     case "connected": return <Wifi className="w-4 h-4 text-blue-500" />;
     case "syncing": return <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />;
-    case "degraded": return <AlertTriangle className="w-4 h-4 text-amber-500" />;
-    case "failed": return <XCircle className="w-4 h-4 text-red-500" />;
+    case "degraded": return <AlertTriangle className="w-4 h-4 text-signal" />;
+    case "failed": return <XCircle className="w-4 h-4 text-bad" />;
     case "disabled": return <WifiOff className="w-4 h-4 text-muted-foreground" />;
     default: return <Clock className="w-4 h-4 text-muted-foreground" />;
   }
@@ -211,7 +211,7 @@ export function IntegrationOrchestratorPanel() {
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <div className="p-2 bg-green-500/10 rounded-lg">
-              <Wifi className="w-5 h-5 text-green-500" />
+              <Wifi className="w-5 h-5 text-good" />
             </div>
             <div>
               <p className="text-xl font-bold" data-testid="text-orch-connected">{connectedIntegrations.length}</p>
@@ -222,7 +222,7 @@ export function IntegrationOrchestratorPanel() {
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <div className="p-2 bg-green-500/10 rounded-lg">
-              <CheckCircle className="w-5 h-5 text-green-500" />
+              <CheckCircle className="w-5 h-5 text-good" />
             </div>
             <div>
               <p className="text-xl font-bold" data-testid="text-orch-healthy">{healthyCount}</p>
@@ -233,7 +233,7 @@ export function IntegrationOrchestratorPanel() {
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <div className="p-2 bg-amber-500/10 rounded-lg">
-              <AlertTriangle className="w-5 h-5 text-amber-500" />
+              <AlertTriangle className="w-5 h-5 text-signal" />
             </div>
             <div>
               <p className="text-xl font-bold" data-testid="text-orch-degraded">{degradedCount}</p>
@@ -244,7 +244,7 @@ export function IntegrationOrchestratorPanel() {
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <div className="p-2 bg-red-500/10 rounded-lg">
-              <XCircle className="w-5 h-5 text-red-500" />
+              <XCircle className="w-5 h-5 text-bad" />
             </div>
             <div>
               <p className="text-xl font-bold" data-testid="text-orch-failed">{failedCount}</p>
@@ -438,7 +438,7 @@ export function IntegrationOrchestratorPanel() {
           ) : unresolvedDeadLetters.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center">
-                <CheckCircle className="w-12 h-12 mx-auto text-green-500 mb-4" />
+                <CheckCircle className="w-12 h-12 mx-auto text-good mb-4" />
                 <h3 className="font-semibold mb-2">Queue Clear</h3>
                 <p className="text-sm text-muted-foreground">
                   No unresolved dead letter events. All event processing is healthy.
@@ -453,7 +453,7 @@ export function IntegrationOrchestratorPanel() {
                     <div className="flex items-start justify-between gap-4 flex-wrap">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <XCircle className="w-4 h-4 text-red-500 shrink-0" />
+                          <XCircle className="w-4 h-4 text-bad shrink-0" />
                           <span className="font-medium text-sm">{dl.eventType}</span>
                           <Badge variant="outline" className="text-xs">{dl.integrationId}</Badge>
                           <Badge variant="secondary" className="text-xs">
@@ -526,9 +526,9 @@ export function IntegrationOrchestratorPanel() {
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           {dep.hasProvider ? (
-                            <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
+                            <CheckCircle className="w-4 h-4 text-good shrink-0" />
                           ) : (
-                            <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
+                            <AlertTriangle className="w-4 h-4 text-bad shrink-0" />
                           )}
                           <div className="min-w-0">
                             <span className="text-sm font-medium capitalize">{dep.objectType.replace(/_/g, " ")}</span>

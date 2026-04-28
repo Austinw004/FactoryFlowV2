@@ -277,7 +277,7 @@ export default function InventoryOptimization() {
                         <TableRow key={opt.id} data-testid={`row-optimization-${opt.id}`}>
                           <TableCell className="font-medium">{material?.name || opt.materialId}</TableCell>
                           <TableCell>{opt.currentStock.toFixed(0)}</TableCell>
-                          <TableCell className="font-medium text-green-600 dark:text-green-400">
+                          <TableCell className="font-medium text-green-600">
                             {opt.optimalStock.toFixed(0)}
                           </TableCell>
                           <TableCell>{opt.reorderPoint.toFixed(0)}</TableCell>
@@ -415,7 +415,7 @@ export default function InventoryOptimization() {
                       {rec.estimatedSavings && (
                         <div>
                           <div className="text-muted-foreground">Estimated Savings</div>
-                          <div className="font-bold text-green-600 dark:text-green-400 flex items-center gap-1">
+                          <div className="font-bold text-green-600 flex items-center gap-1">
                             <DollarSign className="h-4 w-4" />
                             {rec.estimatedSavings.toLocaleString()}
                           </div>

@@ -192,7 +192,7 @@ export function AmazonSellerConfigDialog({ open, onOpenChange }: AmazonSellerCon
               disabled={isTesting || !sellerId || !accessKeyId || !secretAccessKey}
               data-testid="button-test-amazon"
             >
-              {isTesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : testSuccess ? <CheckCircle className="mr-2 h-4 w-4 text-green-500" /> : null}
+              {isTesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : testSuccess ? <CheckCircle className="mr-2 h-4 w-4 text-good" /> : null}
               {testSuccess ? "Connected" : "Test Connection"}
             </Button>
             <a

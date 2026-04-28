@@ -448,7 +448,7 @@ export function CSVImportExportDialog({ open, onOpenChange }: CSVImportExportDia
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <FileCheck className="w-5 h-5 text-green-500" />
+                    <FileCheck className="w-5 h-5 text-good" />
                     <div>
                       <p className="font-medium">{selectedFile?.name}</p>
                       <p className="text-xs text-muted-foreground">
@@ -503,7 +503,7 @@ export function CSVImportExportDialog({ open, onOpenChange }: CSVImportExportDia
                 <Card className="border-amber-500/50 bg-amber-500/5">
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3">
-                      <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5" />
+                      <AlertTriangle className="w-5 h-5 text-signal mt-0.5" />
                       <div>
                         <p className="font-medium text-sm">Column Mapping</p>
                         <p className="text-xs text-muted-foreground mb-2">
@@ -551,9 +551,9 @@ export function CSVImportExportDialog({ open, onOpenChange }: CSVImportExportDia
                 <div className={`p-4 rounded-lg ${importResult.failed === 0 ? "bg-green-500/10" : "bg-amber-500/10"}`}>
                   <div className="flex items-center gap-3 mb-4">
                     {importResult.failed === 0 ? (
-                      <CheckCircle className="w-8 h-8 text-green-500" />
+                      <CheckCircle className="w-8 h-8 text-good" />
                     ) : (
-                      <AlertCircle className="w-8 h-8 text-amber-500" />
+                      <AlertCircle className="w-8 h-8 text-signal" />
                     )}
                     <div>
                       <p className="font-semibold text-lg">
@@ -634,7 +634,7 @@ export function CSVImportExportDialog({ open, onOpenChange }: CSVImportExportDia
                     data-testid="card-format-csv"
                   >
                     <CardContent className="p-4 flex items-center gap-3">
-                      <FileSpreadsheet className="w-8 h-8 text-green-500" />
+                      <FileSpreadsheet className="w-8 h-8 text-good" />
                       <div>
                         <p className="font-medium">CSV</p>
                         <p className="text-xs text-muted-foreground">Open in Excel, Google Sheets</p>

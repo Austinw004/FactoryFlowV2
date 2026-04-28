@@ -259,7 +259,7 @@ export function SnowflakeConfigDialog({ open, onOpenChange }: SnowflakeConfigDia
             {isTesting ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
             ) : testSuccess ? (
-              <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+              <CheckCircle className="h-4 w-4 mr-2 text-good" />
             ) : null}
             Test Connection
           </Button>

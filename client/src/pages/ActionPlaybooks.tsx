@@ -166,7 +166,7 @@ function PlaybookCard({ playbook }: { playbook: ActionPlaybook }) {
             <span>{actions.length} actions</span>
           </div>
           {criticalActions > 0 && (
-            <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
+            <div className="flex items-center gap-2 text-sm text-red-600">
               <AlertTriangle className="h-4 w-4" />
               <span>{criticalActions} critical</span>
             </div>
@@ -232,14 +232,14 @@ function PlaybookCard({ playbook }: { playbook: ActionPlaybook }) {
           
           {playbook.expectedOutcomes && playbook.expectedOutcomes.length > 0 && (
             <div>
-              <h4 className="font-medium mb-3 flex items-center gap-2 text-green-600 dark:text-green-400">
+              <h4 className="font-medium mb-3 flex items-center gap-2 text-green-600">
                 <CheckCircle2 className="h-4 w-4" />
                 Expected Outcomes
               </h4>
               <ul className="space-y-2">
                 {playbook.expectedOutcomes.map((outcome, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm">
-                    <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-green-600 dark:text-green-400 mt-0.5" />
+                    <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-good mt-0.5" />
                     {outcome}
                   </li>
                 ))}
@@ -433,7 +433,7 @@ export default function ActionPlaybooks() {
       {relevantPlaybooks.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-yellow-600" />
+            <AlertTriangle className="h-5 w-5 text-signal" />
             <h2 className="text-lg font-semibold">Playbooks for Current Regime</h2>
           </div>
           <div className="space-y-4">

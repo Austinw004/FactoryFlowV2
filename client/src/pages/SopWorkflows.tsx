@@ -226,7 +226,7 @@ function DashboardCards({ dashboard }: { dashboard: SopDashboard }) {
         <CardContent>
           <div className="text-2xl font-bold" data-testid="text-open-gaps">{dashboard.reconciliation.openItems}</div>
           {dashboard.reconciliation.criticalGaps > 0 && (
-            <div className="flex items-center gap-1 text-red-600 dark:text-red-400">
+            <div className="flex items-center gap-1 text-red-600">
               <AlertCircle className="h-3 w-3" />
               <span className="text-xs">{dashboard.reconciliation.criticalGaps} critical</span>
             </div>
@@ -242,7 +242,7 @@ function DashboardCards({ dashboard }: { dashboard: SopDashboard }) {
         <CardContent>
           <div className="text-2xl font-bold" data-testid="text-pending-approvals">{dashboard.approvals.pending}</div>
           {dashboard.approvals.urgent > 0 && (
-            <div className="flex items-center gap-1 text-orange-600 dark:text-orange-400">
+            <div className="flex items-center gap-1 text-orange-600">
               <AlertCircle className="h-3 w-3" />
               <span className="text-xs">{dashboard.approvals.urgent} urgent</span>
             </div>
@@ -568,7 +568,7 @@ function MeetingsTab() {
 
       {inProgressMeetings.length > 0 && (
         <div className="space-y-3">
-          <h4 className="text-sm font-medium text-green-600 dark:text-green-400 flex items-center gap-2">
+          <h4 className="text-sm font-medium text-green-600 flex items-center gap-2">
             <Play className="h-4 w-4" />
             In Progress
           </h4>
@@ -672,7 +672,7 @@ function ReconciliationItemCard({ item }: { item: SopReconciliationItem }) {
           </div>
           <div>
             <span className="text-muted-foreground">Gap</span>
-            <div className={`font-medium ${gapIsNegative ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+            <div className={`font-medium ${gapIsNegative ? 'text-red-600' : 'text-green-600'}`}>
               {gapIsNegative ? '-' : '+'}{Math.abs(item.gapQuantity).toLocaleString()}
             </div>
           </div>
@@ -781,7 +781,7 @@ function ReconciliationTab() {
         <>
           {(criticalItems.length > 0 || highItems.length > 0) && (
             <div className="space-y-3">
-              <h4 className="text-sm font-medium text-red-600 dark:text-red-400 flex items-center gap-2">
+              <h4 className="text-sm font-medium text-red-600 flex items-center gap-2">
                 <AlertCircle className="h-4 w-4" />
                 Critical & High Priority ({criticalItems.length + highItems.length})
               </h4>
@@ -938,7 +938,7 @@ function ApprovalsTab() {
         </Card>
       ) : (
         <div className="space-y-3">
-          <h4 className="text-sm font-medium text-orange-600 dark:text-orange-400 flex items-center gap-2">
+          <h4 className="text-sm font-medium text-orange-600 flex items-center gap-2">
             <Clock className="h-4 w-4" />
             Pending Approval ({pendingRequests.length})
           </h4>
@@ -1073,15 +1073,15 @@ export default function SopWorkflows() {
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950">
-                        <div className="font-medium text-red-600 dark:text-red-400">Critical</div>
+                        <div className="font-medium text-red-600">Critical</div>
                         <div className="text-2xl font-bold">{dashboard.reconciliation.byPriority.critical}</div>
                       </div>
                       <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-950">
-                        <div className="font-medium text-orange-600 dark:text-orange-400">High</div>
+                        <div className="font-medium text-orange-600">High</div>
                         <div className="text-2xl font-bold">{dashboard.reconciliation.byPriority.high}</div>
                       </div>
                       <div className="p-3 rounded-lg bg-yellow-50 dark:bg-yellow-950">
-                        <div className="font-medium text-yellow-600 dark:text-yellow-400">Medium</div>
+                        <div className="font-medium text-yellow-600">Medium</div>
                         <div className="text-2xl font-bold">{dashboard.reconciliation.byPriority.medium}</div>
                       </div>
                       <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900">

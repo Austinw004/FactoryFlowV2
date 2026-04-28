@@ -137,7 +137,7 @@ export function HubSpotConfigDialog({ open, onOpenChange }: HubSpotConfigDialogP
             <SiHubspot className="w-5 h-5 text-[#ff7a59]" />
             HubSpot CRM Integration
             {isConfigured && (
-              <CheckCircle className="w-4 h-4 text-green-500" />
+              <CheckCircle className="w-4 h-4 text-good" />
             )}
           </DialogTitle>
           <DialogDescription>
@@ -206,7 +206,7 @@ export function HubSpotConfigDialog({ open, onOpenChange }: HubSpotConfigDialogP
               {isConfigured && (
                 <div className="rounded-md bg-green-500/10 p-3 text-sm">
                   <div className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <CheckCircle className="w-4 h-4 text-good" />
                     <span>HubSpot is connected</span>
                   </div>
                 </div>

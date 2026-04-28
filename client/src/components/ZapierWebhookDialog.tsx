@@ -281,7 +281,7 @@ export function ZapierWebhookDialog({ open, onOpenChange }: ZapierWebhookDialogP
 
           <TabsContent value="inbound" className="space-y-4 mt-4">
             <div className="rounded-md bg-green-500/10 p-3 text-sm">
-              <p className="font-medium text-green-600 dark:text-green-400">Receive actions from Zapier/Make</p>
+              <p className="font-medium text-green-600">Receive actions from Zapier/Make</p>
               <p className="text-muted-foreground mt-1">
                 Send data to Prescient Labs from your Zapier Zaps or Make Scenarios.
               </p>

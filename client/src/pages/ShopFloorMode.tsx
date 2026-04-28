@@ -138,7 +138,7 @@ function ProductionQuickEntry() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <PlayCircle className="h-5 w-5 text-green-600" />
+          <PlayCircle className="h-5 w-5 text-good" />
           Log Production Run
         </CardTitle>
         <CardDescription>Quick entry for shift production data</CardDescription>
@@ -265,7 +265,7 @@ function MaintenanceQuickEntry() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Wrench className="h-5 w-5 text-amber-600" />
+          <Wrench className="h-5 w-5 text-signal" />
           Log Maintenance Complete
         </CardTitle>
         <CardDescription>Mark maintenance as done</CardDescription>
@@ -397,7 +397,7 @@ function IssueReporting() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <AlertTriangle className="h-5 w-5 text-red-600" />
+          <AlertTriangle className="h-5 w-5 text-bad" />
           Report Equipment Issue
         </CardTitle>
         <CardDescription>Flag problems for maintenance team</CardDescription>

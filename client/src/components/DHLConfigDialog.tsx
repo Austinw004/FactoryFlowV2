@@ -69,7 +69,7 @@ export function DHLConfigDialog({ open, onOpenChange }: DHLConfigDialogProps) {
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Truck className="h-5 w-5 text-yellow-500" />
+            <Truck className="h-5 w-5 text-signal" />
             Configure DHL Express
           </DialogTitle>
           <DialogDescription>

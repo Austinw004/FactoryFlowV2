@@ -225,7 +225,7 @@ export function AppSidebar() {
     if (url === "/procurement" && commodities.rising > 2) {
       return (
         <Badge
-          className="ml-auto h-5 min-w-5 px-1.5 text-[10px] font-medium bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 border border-yellow-500/20"
+          className="ml-auto h-5 min-w-5 px-1.5 text-[10px] font-medium bg-yellow-500/15 text-signal border border-yellow-500/20"
           data-testid="badge-procurement-commodities"
         >
           {commodities.rising}

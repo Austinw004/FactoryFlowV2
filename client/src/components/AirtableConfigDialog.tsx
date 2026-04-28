@@ -68,7 +68,7 @@ export function AirtableConfigDialog({ open, onOpenChange }: AirtableConfigDialo
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Database className="h-5 w-5 text-yellow-500" />
+            <Database className="h-5 w-5 text-signal" />
             Configure Airtable
           </DialogTitle>
           <DialogDescription>

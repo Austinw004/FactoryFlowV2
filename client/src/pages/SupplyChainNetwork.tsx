@@ -59,18 +59,18 @@ export default function SupplyChainNetwork() {
   const getSeverityColor = (severity: string) => {
     const colors = {
       low: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-      medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
-      high: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
-      critical: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+      medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30',
+      high: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30',
+      critical: 'bg-red-100 text-red-800 dark:bg-red-900/30',
     };
     return colors[severity as keyof typeof colors] || 'bg-gray-100 text-gray-800';
   };
 
   const getHealthIcon = (score?: number | null) => {
     if (!score) return <Activity className="w-4 h-4 text-gray-400" data-testid="icon-health-unknown" />;
-    if (score >= 80) return <TrendingUp className="w-4 h-4 text-green-500" data-testid="icon-health-good" />;
-    if (score >= 50) return <Activity className="w-4 h-4 text-yellow-500" data-testid="icon-health-moderate" />;
-    return <TrendingDown className="w-4 h-4 text-red-500" data-testid="icon-health-poor" />;
+    if (score >= 80) return <TrendingUp className="w-4 h-4 text-good" data-testid="icon-health-good" />;
+    if (score >= 50) return <Activity className="w-4 h-4 text-signal" data-testid="icon-health-moderate" />;
+    return <TrendingDown className="w-4 h-4 text-bad" data-testid="icon-health-poor" />;
   };
 
   const statsCards = [
@@ -218,7 +218,7 @@ export default function SupplyChainNetwork() {
             <Card>
               <CardContent className="pt-6">
                 <div className="text-center py-8">
-                  <CheckCircle2 className="w-12 h-12 mx-auto text-green-500 mb-4" />
+                  <CheckCircle2 className="w-12 h-12 mx-auto text-good mb-4" />
                   <h3 className="text-lg font-semibold">No Active Alerts</h3>
                   <p className="text-muted-foreground">All suppliers are operating within normal parameters</p>
                 </div>
@@ -232,7 +232,7 @@ export default function SupplyChainNetwork() {
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-2">
-                          <AlertCircle className="w-5 h-5 text-orange-500 flex-shrink-0" />
+                          <AlertCircle className="w-5 h-5 text-signal flex-shrink-0" />
                           <CardTitle className="text-lg" data-testid={`text-alert-title-${alert.id}`}>{alert.title}</CardTitle>
                         </div>
                         <Badge className={getSeverityColor(alert.severity)} data-testid={`badge-severity-${alert.id}`}>

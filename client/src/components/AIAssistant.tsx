@@ -120,15 +120,15 @@ interface AlertsResponse {
 }
 
 const impactColors = {
-  positive: "text-green-600 dark:text-green-400",
-  negative: "text-red-600 dark:text-red-400",
+  positive: "text-green-600",
+  negative: "text-red-600",
   neutral: "text-muted-foreground"
 };
 
 const severityStyles = {
   info: "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30",
-  warning: "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 border-yellow-500/30",
-  critical: "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30"
+  warning: "bg-yellow-500/15 text-yellow-700 border-yellow-500/30",
+  critical: "bg-red-500/15 text-red-700 border-red-500/30"
 };
 
 const actionTypeIcons: Record<string, typeof ShoppingCart> = {
@@ -543,9 +543,9 @@ export function AIAssistant() {
                                   <div key={idx} className="bg-background/50 rounded p-2">
                                     <div className="flex items-center gap-2">
                                       {insight.impact === "positive" ? (
-                                        <TrendingUp className="h-3 w-3 text-green-500" />
+                                        <TrendingUp className="h-3 w-3 text-good" />
                                       ) : insight.impact === "negative" ? (
-                                        <TrendingDown className="h-3 w-3 text-red-500" />
+                                        <TrendingDown className="h-3 w-3 text-bad" />
                                       ) : null}
                                       <span className={`text-xs font-medium ${impactColors[insight.impact]}`}>
                                         {insight.title}
@@ -615,7 +615,7 @@ export function AIAssistant() {
                   
                   {!pendingActions || pendingActions.length === 0 ? (
                     <div className="text-center py-8">
-                      <CheckCircle className="h-10 w-10 text-green-500 mx-auto mb-3" />
+                      <CheckCircle className="h-10 w-10 text-good mx-auto mb-3" />
                       <p className="text-sm font-medium">All caught up!</p>
                       <p className="text-xs text-muted-foreground">No actions awaiting approval</p>
                     </div>
@@ -627,7 +627,7 @@ export function AIAssistant() {
                           <Card key={action.id} className="p-3 border-l-4 border-l-yellow-500">
                             <div className="flex items-start gap-2 mb-2">
                               <div className="p-1.5 bg-yellow-500/20 rounded">
-                                <ActionIcon className="h-4 w-4 text-yellow-600" />
+                                <ActionIcon className="h-4 w-4 text-signal" />
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium">{action.agentName}</p>
@@ -771,7 +771,7 @@ export function AIAssistant() {
                           }}
                           data-testid={`button-suggested-${idx}`}
                         >
-                          <Lightbulb className="h-3 w-3 mr-2 flex-shrink-0 text-yellow-500" />
+                          <Lightbulb className="h-3 w-3 mr-2 flex-shrink-0 text-signal" />
                           <span className="line-clamp-1">{q}</span>
                         </Button>
                       ))}
@@ -815,9 +815,9 @@ export function AIAssistant() {
                                 <div key={idx} className="bg-background/50 rounded p-2">
                                   <div className="flex items-center gap-2">
                                     {insight.impact === "positive" ? (
-                                      <TrendingUp className="h-3 w-3 text-green-500" />
+                                      <TrendingUp className="h-3 w-3 text-good" />
                                     ) : insight.impact === "negative" ? (
-                                      <TrendingDown className="h-3 w-3 text-red-500" />
+                                      <TrendingDown className="h-3 w-3 text-bad" />
                                     ) : null}
                                     <span className={`text-xs font-medium ${impactColors[insight.impact]}`}>
                                       {insight.title}

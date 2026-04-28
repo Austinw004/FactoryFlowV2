@@ -69,7 +69,7 @@ export function ETQConfigDialog({ open, onOpenChange }: ETQConfigDialogProps) {
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <FileCheck className="h-5 w-5 text-green-600" />
+            <FileCheck className="h-5 w-5 text-good" />
             Configure ETQ Reliance
           </DialogTitle>
           <DialogDescription>

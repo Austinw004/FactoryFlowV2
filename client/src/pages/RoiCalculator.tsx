@@ -220,7 +220,7 @@ export default function RoiCalculator() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between py-2 border-b">
                     <div className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-green-600" />
+                      <DollarSign className="h-4 w-4 text-good" />
                       <div>
                         <div className="font-medium">Procurement Savings</div>
                         <div className="text-xs text-muted-foreground">Counter-cyclical timing opportunities</div>

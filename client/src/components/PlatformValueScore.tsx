@@ -204,7 +204,7 @@ export function PlatformValueScore({ compact = false }: { compact?: boolean }) {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
+            <div className="flex items-center gap-1 text-green-600">
               <ArrowUpRight className="h-4 w-4" />
               <span className="text-sm font-medium">+{valueData.valueGrowthRate.toFixed(1)}%</span>
             </div>
@@ -229,7 +229,7 @@ export function PlatformValueScore({ compact = false }: { compact?: boolean }) {
               </CardDescription>
             </div>
             {valueData.valueGrowthRate > 0 && (
-              <Badge variant="secondary" className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
+              <Badge variant="secondary" className="bg-green-100 dark:bg-green-900/30 text-green-700">
                 <ArrowUpRight className="h-3 w-3 mr-1" />
                 {valueData.valueGrowthRate.toFixed(1)}% growth
               </Badge>
@@ -250,7 +250,7 @@ export function PlatformValueScore({ compact = false }: { compact?: boolean }) {
               
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex items-center gap-2 p-2 rounded-lg bg-background/50">
-                  <DollarSign className="h-4 w-4 text-green-600" />
+                  <DollarSign className="h-4 w-4 text-good" />
                   <div>
                     <p className="text-xs text-muted-foreground">Procurement Savings</p>
                     <p className="font-semibold text-sm" data-testid="text-procurement-savings">
@@ -277,7 +277,7 @@ export function PlatformValueScore({ compact = false }: { compact?: boolean }) {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 p-2 rounded-lg bg-background/50">
-                  <Clock className="h-4 w-4 text-orange-600" />
+                  <Clock className="h-4 w-4 text-signal" />
                   <div>
                     <p className="text-xs text-muted-foreground">Time Saved</p>
                     <p className="font-semibold text-sm" data-testid="text-time-saved">

@@ -76,19 +76,19 @@ export function LiveAnalysisIndicator() {
           </div>
           <div className="text-xs text-muted-foreground space-y-1">
             <div className="flex items-center gap-2">
-              <CheckCircle className="h-3 w-3 text-green-500" />
+              <CheckCircle className="h-3 w-3 text-good" />
               Economic regime monitoring
             </div>
             <div className="flex items-center gap-2">
-              <CheckCircle className="h-3 w-3 text-green-500" />
+              <CheckCircle className="h-3 w-3 text-good" />
               Demand pattern analysis
             </div>
             <div className="flex items-center gap-2">
-              <CheckCircle className="h-3 w-3 text-green-500" />
+              <CheckCircle className="h-3 w-3 text-good" />
               Supply chain risk tracking
             </div>
             <div className="flex items-center gap-2">
-              <CheckCircle className="h-3 w-3 text-green-500" />
+              <CheckCircle className="h-3 w-3 text-good" />
               Commodity price updates
             </div>
           </div>

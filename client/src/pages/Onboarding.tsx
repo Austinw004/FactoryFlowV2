@@ -1164,7 +1164,7 @@ export default function Onboarding() {
           <Card data-testid="card-onboarding-launch" className="border-0 shadow-xl shadow-black/5">
             <CardHeader className="text-center pb-2">
               <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-500/10">
-                <Check className="w-8 h-8 text-green-600 dark:text-green-400" />
+                <Check className="w-8 h-8 text-good" />
               </div>
               <CardTitle className="text-2xl">You're all set!</CardTitle>
               <CardDescription className="text-base mt-1">
