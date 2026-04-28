@@ -566,7 +566,7 @@ export default function Dashboard() {
             )}
           </Card>
         </div>
-        <PolicySignals signals={policySignals} />
+        <PolicySignals signals={policySignals} regime={regimeType} fdr={fdr} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
