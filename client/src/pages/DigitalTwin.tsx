@@ -196,12 +196,15 @@ interface ExternalVariables {
   timestamp: string;
 }
 
+// Regime / severity color maps now use palette tokens (good/signal/bad/
+// muted) instead of the rainbow bg-green-500 / bg-amber-500 / bg-red-500
+// /  bg-blue-500. Same hierarchy, design-aligned tones.
 const REGIME_COLORS: Record<string, string> = {
-  HEALTHY_EXPANSION: "bg-green-500",
-  ASSET_LED_GROWTH: "bg-amber-500",
-  IMBALANCED_EXCESS: "bg-red-500",
-  REAL_ECONOMY_LEAD: "bg-blue-500",
-  UNKNOWN: "bg-gray-500",
+  HEALTHY_EXPANSION: "bg-good",
+  ASSET_LED_GROWTH: "bg-signal",
+  IMBALANCED_EXCESS: "bg-bad",
+  REAL_ECONOMY_LEAD: "bg-bone/60",
+  UNKNOWN: "bg-muted",
 };
 
 const REGIME_LABELS: Record<string, string> = {
@@ -213,10 +216,10 @@ const REGIME_LABELS: Record<string, string> = {
 };
 
 const SEVERITY_COLORS: Record<string, string> = {
-  info: "bg-blue-500",
-  warning: "bg-amber-500",
-  critical: "bg-orange-500",
-  emergency: "bg-red-500",
+  info: "bg-muted",
+  warning: "bg-signal",
+  critical: "bg-bad/70",
+  emergency: "bg-bad",
 };
 
 const CHART_COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))"];
@@ -1114,7 +1117,7 @@ export default function DigitalTwin() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between p-3 rounded-lg border" data-testid="feed-weather">
                       <div className="flex items-center gap-3">
-                        <div className="h-2 w-2 rounded-full bg-green-500" />
+                        <div className="h-2 w-2 rounded-full bg-good" />
                         <div className="flex items-center gap-2">
                           <Cloud className="h-4 w-4 text-sky-500" />
                           <div>
@@ -1135,7 +1138,7 @@ export default function DigitalTwin() {
 
                     <div className="flex items-center justify-between p-3 rounded-lg border" data-testid="feed-commodity-futures">
                       <div className="flex items-center gap-3">
-                        <div className="h-2 w-2 rounded-full bg-green-500" />
+                        <div className="h-2 w-2 rounded-full bg-good" />
                         <div className="flex items-center gap-2">
                           <TrendingUp className="h-4 w-4 text-green-500" />
                           <div>
@@ -1157,7 +1160,7 @@ export default function DigitalTwin() {
 
                     <div className="flex items-center justify-between p-3 rounded-lg border" data-testid="feed-consumer-sentiment">
                       <div className="flex items-center gap-3">
-                        <div className="h-2 w-2 rounded-full bg-green-500" />
+                        <div className="h-2 w-2 rounded-full bg-good" />
                         <div className="flex items-center gap-2">
                           <ThermometerSun className="h-4 w-4 text-amber-500" />
                           <div>
@@ -1188,7 +1191,7 @@ export default function DigitalTwin() {
 
                     <div className="flex items-center justify-between p-3 rounded-lg border" data-testid="feed-social-trends">
                       <div className="flex items-center gap-3">
-                        <div className="h-2 w-2 rounded-full bg-green-500" />
+                        <div className="h-2 w-2 rounded-full bg-good" />
                         <div className="flex items-center gap-2">
                           <MessageSquare className="h-4 w-4 text-purple-500" />
                           <div>

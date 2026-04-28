@@ -573,7 +573,7 @@ export default function EventMonitoring() {
                             </div>
                             <div className="h-2 bg-muted rounded-full overflow-hidden">
                               <div 
-                                className="h-full bg-blue-500 rounded-full transition-all"
+                                className="h-full bg-muted rounded-full transition-all"
                                 style={{ width: `${percentage}%` }}
                               />
                             </div>

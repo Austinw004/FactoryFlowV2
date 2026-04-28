@@ -51,7 +51,7 @@ export default function ShopFloorMode() {
             </div>
           </div>
           <Badge variant="outline" className="gap-1">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            <div className="w-2 h-2 rounded-full bg-good animate-pulse" />
             Live
           </Badge>
         </div>

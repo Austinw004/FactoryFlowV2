@@ -39,7 +39,7 @@ export function LiveAnalysisIndicator() {
             {isAnalyzing ? (
               <div className="relative">
                 <Brain className="h-4 w-4 text-primary" />
-                <span className="absolute -top-0.5 -right-0.5 h-2 w-2 bg-green-500 rounded-full animate-pulse" />
+                <span className="absolute -top-0.5 -right-0.5 h-2 w-2 bg-good rounded-full animate-pulse" />
               </div>
             ) : (
               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />

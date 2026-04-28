@@ -331,7 +331,7 @@ export function AIAssistant() {
         >
           <Sparkles className="h-6 w-6" />
           {(criticalAlerts.length > 0 || pendingCount > 0) && (
-            <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 rounded-full flex items-center justify-center text-xs text-white">
+            <span className="absolute -top-1 -right-1 h-5 w-5 bg-bad rounded-full flex items-center justify-center text-xs text-white">
               {criticalAlerts.length + pendingCount}
             </span>
           )}
@@ -404,7 +404,7 @@ export function AIAssistant() {
                   <Zap className="h-3 w-3 mr-1" />
                   Actions
                   {pendingCount > 0 && (
-                    <span className="absolute -top-1 -right-1 h-4 w-4 bg-yellow-500 rounded-full flex items-center justify-center text-[10px] text-white">
+                    <span className="absolute -top-1 -right-1 h-4 w-4 bg-signal rounded-full flex items-center justify-center text-[10px] text-white">
                       {pendingCount}
                     </span>
                   )}
@@ -413,7 +413,7 @@ export function AIAssistant() {
                   <Bell className="h-3 w-3 mr-1" />
                   Alerts
                   {hasAlerts && (
-                    <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full flex items-center justify-center text-[10px] text-white">
+                    <span className="absolute -top-1 -right-1 h-4 w-4 bg-bad rounded-full flex items-center justify-center text-[10px] text-white">
                       {alerts.length}
                     </span>
                   )}

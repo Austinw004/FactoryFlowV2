@@ -235,10 +235,10 @@ export function IntegrationReadinessReport() {
             </div>
             <div className="flex justify-between text-xs text-muted-foreground mt-1">
               <span className="flex items-center gap-1">
-                <span className="w-2 h-2 bg-green-500 rounded-full" /> Compliant
+                <span className="w-2 h-2 bg-good rounded-full" /> Compliant
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-2 h-2 bg-amber-500 rounded-full" /> Partial
+                <span className="w-2 h-2 bg-signal rounded-full" /> Partial
               </span>
               <span className="flex items-center gap-1">
                 <span className="w-2 h-2 bg-muted-foreground rounded-full" />{" "}
