@@ -1,3 +1,4 @@
+import { LoadingCard } from "@/components/LoadingState";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -403,7 +404,7 @@ export default function SupplyChainTraceability() {
           </div>
 
           {eventsLoading ? (
-            <Card><CardContent className="p-6">Loading events...</CardContent></Card>
+            <LoadingCard />
           ) : filteredEvents.length === 0 ? (
             <Card>
               <CardContent className="p-6 text-center text-muted-foreground">

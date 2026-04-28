@@ -1,3 +1,4 @@
+import { LoadingCard } from "@/components/LoadingState";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -380,7 +381,7 @@ export default function InventoryOptimization() {
 
         <TabsContent value="recommendations" className="space-y-4">
           {recsLoading ? (
-            <Card><CardContent className="p-6">Loading recommendations...</CardContent></Card>
+            <LoadingCard />
           ) : recommendations.length === 0 ? (
             <Card>
               <CardContent className="p-6 text-center text-muted-foreground">

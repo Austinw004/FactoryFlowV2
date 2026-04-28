@@ -1,3 +1,4 @@
+import { LoadingCard } from "@/components/LoadingState";
 import { getSeverityBadge } from "@/components/SeverityBadge";
 import { getRegimeBadge } from "@/components/RegimeBadge";
 import { useState } from "react";
@@ -396,7 +397,7 @@ export default function PredictiveMaintenance() {
           </div>
 
           {alertsLoading ? (
-            <Card><CardContent className="p-6">Loading alerts...</CardContent></Card>
+            <LoadingCard />
           ) : alerts.length === 0 ? (
             // Differentiate "no sensors connected yet" from "sensors connected,
             // all running cleanly". The first case demands a Connect-Your-
@@ -511,7 +512,7 @@ export default function PredictiveMaintenance() {
           </div>
 
           {predictionsLoading ? (
-            <Card><CardContent className="p-6">Loading predictions...</CardContent></Card>
+            <LoadingCard />
           ) : predictions.length === 0 ? (
             <Card>
               <CardContent className="p-6 text-center text-muted-foreground">
