@@ -76,7 +76,7 @@ interface WebhookIntegration {
 
 const PLATFORMS: Record<WebhookPlatform, { name: string; description: string; color: string }> = {
   mulesoft: { name: "MuleSoft", description: "Anypoint Platform integration", color: "bg-blue-500" },
-  boomi: { name: "Dell Boomi", description: "AtomSphere integration platform", color: "bg-purple-500" },
+  boomi: { name: "Dell Boomi", description: "AtomSphere integration platform", color: "bg-signal" },
   zapier: { name: "Zapier", description: "No-code automation platform", color: "bg-orange-500" },
   make: { name: "Make (Integromat)", description: "Visual automation platform", color: "bg-violet-500" },
   workato: { name: "Workato", description: "Enterprise automation platform", color: "bg-green-500" },
@@ -556,8 +556,8 @@ export default function WebhookIntegrations() {
           </Card>
           <Card>
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="p-3 bg-purple-500/10 rounded-lg">
-                <Zap className="w-6 h-6 text-purple-500" />
+              <div className="p-3 bg-signal/10 rounded-lg">
+                <Zap className="w-6 h-6 text-signal" />
               </div>
               <div>
                 <p className="text-2xl font-bold" data-testid="text-event-subscriptions">

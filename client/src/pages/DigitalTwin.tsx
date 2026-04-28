@@ -278,7 +278,7 @@ export default function DigitalTwin() {
       name: "Economic Downturn",
       description: "What if the economy enters recession?",
       icon: TrendingDown,
-      color: "text-purple-600 bg-purple-100 dark:bg-purple-900/30",
+      color: "text-signal bg-signal/15 dark:bg-signal/15",
       type: "regime_shift",
       params: { regimeShift: { targetRegime: "IMBALANCED_EXCESS" } }
     }
@@ -1193,7 +1193,7 @@ export default function DigitalTwin() {
                       <div className="flex items-center gap-3">
                         <div className="h-2 w-2 rounded-full bg-good" />
                         <div className="flex items-center gap-2">
-                          <MessageSquare className="h-4 w-4 text-purple-500" />
+                          <MessageSquare className="h-4 w-4 text-signal" />
                           <div>
                             <p className="font-medium text-sm">Social & News Trends</p>
                             <p className="text-xs text-muted-foreground">
