@@ -167,11 +167,7 @@ export default function ProductionKPIs() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2" data-testid="heading-production-kpis">
-            <Activity className="h-8 w-8" />
-            Production KPI Dashboard
-          </h1>
-          <p className="text-muted-foreground mt-1">
+<p className="text-muted-foreground mt-1">
             Real-time OEE tracking, bottleneck detection, and regime-aware production intelligence
           </p>
         </div>
