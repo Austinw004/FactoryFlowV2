@@ -1,0 +1,129 @@
+{
+  "digestDate": "2026-04-28",
+  "priorDigestDate": "2026-04-27",
+  "priorDigestPr": 133,
+  "priorReplyChecksum": null,
+  "priorReplyProcessed": false,
+  "priorReplyNote": "No reply to the 2026-04-27 digest was received in this session; prior 12 decisions remain open and were not auto-acted on.",
+  "emailDelivery": {
+    "sent": false,
+    "reason": "import-failed: sendpulse-api not installed in routine sandbox; logged to /tmp/digest-failures.jsonl. Composed bodies retained at /tmp/digest.html and /tmp/digest.txt for manual delivery."
+  },
+  "counters": {
+    "ranCleanly": 0,
+    "needEyes": 6,
+    "blocking": 1
+  },
+  "decisions": [
+    {
+      "id": 1,
+      "severity": "RED",
+      "routine": "Weekly Clean",
+      "kind": "issue",
+      "ref": 125,
+      "url": "https://github.com/Austinw004/FactoryFlowV2/issues/125",
+      "summary": "Shopify webhook HMAC verification bypassable (re-serialized body)",
+      "question": "Patch this week, defer, or accept the risk?",
+      "carryFromPriorDigest": true
+    },
+    {
+      "id": 2,
+      "severity": "YELLOW",
+      "routine": "Big Boi",
+      "kind": "pr-pair",
+      "refs": [140, 132],
+      "url": "https://github.com/Austinw004/FactoryFlowV2/pull/140",
+      "summary": "Regime-aware command center — today (#140) extends yesterday (#132)",
+      "question": "Merge #140 and close #132, merge both, or reject?"
+    },
+    {
+      "id": 3,
+      "severity": "YELLOW",
+      "routine": "Daily Boost",
+      "kind": "pr",
+      "ref": 139,
+      "url": "https://github.com/Austinw004/FactoryFlowV2/pull/139",
+      "summary": "Daily codebase pass: security patch + Zod + type fixes + dep bumps",
+      "question": "Squash-merge?"
+    },
+    {
+      "id": 4,
+      "severity": "YELLOW",
+      "routine": "Code Review",
+      "kind": "pr",
+      "ref": 134,
+      "url": "https://github.com/Austinw004/FactoryFlowV2/pull/134",
+      "summary": "Replace empty catches with logging in jobs + health probe",
+      "question": "Squash-merge?"
+    },
+    {
+      "id": 5,
+      "severity": "YELLOW",
+      "routine": "Optimus",
+      "kind": "direct-to-main",
+      "commits": [
+        "2bc8ad2",
+        "917b3e0",
+        "3b73b34",
+        "efc9cef",
+        "232731c",
+        "e0c1879",
+        "060bc32",
+        "067bc76"
+      ],
+      "summary": "8 redesign-wave merges pushed directly to main on 04-28 02:00–03:30 UTC, no PRs",
+      "question": "Confirm direct-to-main authorization, require PRs going forward, or revert this batch?"
+    },
+    {
+      "id": 6,
+      "severity": "YELLOW",
+      "routine": "conflict-watch",
+      "kind": "file-overlap",
+      "file": "client/src/pages/Dashboard.tsx",
+      "actors": ["Optimus (overnight sweeps on main)", "Big Boi (PR #140)"],
+      "summary": "Both routines touched Dashboard.tsx in the 24h window",
+      "question": "Rebase #140 on current main before merging, or merge #140 first and let Optimus rebase?"
+    },
+    {
+      "id": 7,
+      "severity": "YELLOW",
+      "routine": "Code Review",
+      "kind": "issue",
+      "ref": 137,
+      "url": "https://github.com/Austinw004/FactoryFlowV2/issues/137",
+      "summary": "Express 4 has no global async-error wrapper — unhandled rejections hang requests",
+      "question": "Schedule fix this week, defer, or close as won't-fix?"
+    },
+    {
+      "id": 8,
+      "severity": "YELLOW",
+      "routine": "Palantard Grade",
+      "kind": "issue-pair",
+      "refs": [135, 136],
+      "summary": "Section 232 tariff (Apr 6) + Strait of Hormuz / Iran shipping crisis intel",
+      "question": "Accept into roadmap, dismiss, or queue for next sprint?"
+    },
+    {
+      "id": 9,
+      "severity": "YELLOW",
+      "routine": "Big Boi",
+      "kind": "issue",
+      "ref": 141,
+      "url": "https://github.com/Austinw004/FactoryFlowV2/issues/141",
+      "summary": "Materials ↔ suppliers UI follow-up (Principle 2)",
+      "question": "Accept and queue, or defer?"
+    },
+    {
+      "id": 10,
+      "severity": "YELLOW",
+      "routine": "Weekly Clean",
+      "kind": "pr-pair",
+      "refs": [130, 99],
+      "summary": "Two stacked weekly-clean drafts (04-26 and 04-24) — both still open",
+      "question": "Merge #130 and close #99, merge both, or defer to next clean?"
+    }
+  ],
+  "priorDecisionsCarriedOpen": [
+    "PR #133 (yesterday's digest state) lists 12 prior items still open — unaffected by today's run since no reply was received."
+  ]
+}
