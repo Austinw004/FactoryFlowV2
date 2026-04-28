@@ -73,8 +73,7 @@ export default function HistoricalBacktesting() {
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight">Historical Backtesting</h1>
-        <p className="text-muted-foreground">
+<p className="text-muted-foreground">
           Validate dual-circuit economic theory by testing predictions against 2015-2023 historical data
         </p>
       </div>

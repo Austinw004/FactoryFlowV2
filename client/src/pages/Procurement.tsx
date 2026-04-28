@@ -293,23 +293,23 @@ export default function Procurement() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
+      {/* Page header — the global topbar already shows the
+          "Operations / Procurement" breadcrumb, so this row no longer
+          repeats the page title. It keeps a single-line subtitle for
+          context and the Ask-AI shortcut on the right. The button uses
+          the signal accent (Anthropic burnt-orange) instead of the old
+          purple-600, which conflicted with the no-rainbow palette. */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight" data-testid="heading-procurement">
-            Procurement
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Manage suppliers, materials, and procurement timing with AI-powered insights
-          </p>
-        </div>
+        <p className="text-sm text-muted-foreground max-w-xl" data-testid="text-procurement-subtitle">
+          Manage suppliers, materials, and procurement timing — grounded in your live regime, inventory, and supplier risk.
+        </p>
         <Button
           onClick={() => goToAgenticAI()}
-          className="bg-purple-600 hover:bg-purple-700"
+          className="bg-signal text-ink hover:bg-signal/90"
           data-testid="button-procurement-ai-assistant"
         >
           <Bot className="h-4 w-4 mr-2" />
-          Ask AI Assistant
+          Ask AI Advisor
         </Button>
       </div>
 

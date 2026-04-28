@@ -85,10 +85,7 @@ export default function GeopoliticalRisk() {
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight" data-testid="text-page-title">
-          Geopolitical Risk Intelligence
-        </h1>
-        <p className="text-muted-foreground" data-testid="text-page-description">
+<p className="text-muted-foreground" data-testid="text-page-description">
           Track global events and their impact on supply chains with FDR-aware analysis
         </p>
       </div>

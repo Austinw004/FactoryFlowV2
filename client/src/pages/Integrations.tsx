@@ -167,8 +167,7 @@ export function Integrations() {
         {/* Header */}
         <div className="mb-8">
           <div className="text-xs uppercase tracking-widest text-muted-foreground mb-3">Integrations</div>
-          <h1 className="text-3xl lg:text-4xl font-semibold tracking-tight mb-3">Connect the systems you already use.</h1>
-          <p className="text-muted-foreground text-sm lg:text-base max-w-3xl leading-relaxed">
+<p className="text-muted-foreground text-sm lg:text-base max-w-3xl leading-relaxed">
             {totals.selfServe} integrations are fully self-serve — connect in five minutes from this page.
             The rest connect via your data team or our API.
           </p>

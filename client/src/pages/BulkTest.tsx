@@ -74,8 +74,7 @@ export default function BulkTest() {
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight">Bulk Feature Testing</h1>
-        <p className="text-muted-foreground">
+<p className="text-muted-foreground">
           Run 1,000 scenarios in each enterprise feature to validate performance and accuracy
         </p>
       </div>

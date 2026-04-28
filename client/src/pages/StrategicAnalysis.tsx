@@ -383,10 +383,7 @@ export default function StrategicAnalysis() {
   return (
     <div className="flex flex-col gap-6 p-6 pb-12">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight" data-testid="text-page-title">
-          Strategic Analysis
-        </h1>
-        <p className="text-muted-foreground" data-testid="text-page-description">
+<p className="text-muted-foreground" data-testid="text-page-description">
           Dual-circuit economic modeling for counter-cyclical procurement and regime-aware strategic planning
         </p>
       </div>

@@ -155,10 +155,7 @@ export default function EventMonitoring() {
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight" data-testid="text-page-title">
-              Event Monitoring
-            </h1>
-            <p className="text-muted-foreground" data-testid="text-page-description">
+<p className="text-muted-foreground" data-testid="text-page-description">
               Real-time supply chain intelligence with FDR-aware analysis
             </p>
           </div>
