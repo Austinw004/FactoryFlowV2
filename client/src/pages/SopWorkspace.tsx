@@ -399,8 +399,7 @@ export default function SopWorkspace() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight" data-testid="text-page-title">S&OP Workspace</h1>
-            <p className="text-muted-foreground" data-testid="text-page-description">
+<p className="text-muted-foreground" data-testid="text-page-description">
               Sales & Operations Planning for integrated demand, supply, and financial planning
             </p>
           </div>

@@ -520,8 +520,7 @@ export default function WebhookIntegrations() {
       <div className="container mx-auto p-6 max-w-6xl">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight mb-2" data-testid="text-page-title">Webhook Integrations</h1>
-            <p className="text-muted-foreground">
+<p className="text-muted-foreground">
               Connect Prescient Labs with middleware platforms for bidirectional data sync
             </p>
           </div>

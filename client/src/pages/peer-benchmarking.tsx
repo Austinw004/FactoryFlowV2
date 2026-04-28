@@ -138,8 +138,7 @@ export default function PeerBenchmarking() {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight" data-testid="text-page-title">Peer Benchmarking</h1>
-          <p className="text-muted-foreground mt-1" data-testid="text-page-subtitle">
+<p className="text-muted-foreground mt-1" data-testid="text-page-subtitle">
             Compare your material costs with industry peers and discover savings opportunities
           </p>
         </div>

@@ -192,8 +192,7 @@ export default function RfqDashboard() {
   return (
     <div className="flex flex-col gap-6 p-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight mb-2" data-testid="text-title">Automated RFQ Generation</h1>
-        <p className="text-muted-foreground" data-testid="text-description">
+<p className="text-muted-foreground" data-testid="text-description">
           Monitor inventory levels and economic regime signals to automatically generate Request for Quotations
         </p>
       </div>

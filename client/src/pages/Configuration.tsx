@@ -162,10 +162,7 @@ export default function Configuration() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight" data-testid="heading-configuration">
-            Settings & Configuration
-          </h1>
-          <p className="text-muted-foreground mt-1">
+<p className="text-muted-foreground mt-1">
             Configure your company profile, budget, and preferences
           </p>
         </div>
