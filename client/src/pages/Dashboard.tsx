@@ -1,5 +1,6 @@
 import { KPICard } from "@/components/KPICard";
 import { RegimeStatus } from "@/components/RegimeStatus";
+import { RegimeProcurementBanner } from "@/components/RegimeProcurementBanner";
 import { PolicySignals } from "@/components/PolicySignals";
 import { AllocationTable } from "@/components/AllocationTable";
 import { EditableBudgetGauge } from "@/components/EditableBudgetGauge";
@@ -337,14 +338,18 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="mb-16">
+      <div className="mb-12">
         <div className="eyebrow mb-4">State of operations</div>
-        <h1 className="hero text-5xl">{regime?.regime ? getRegimeDescription(regime.regime).split('.')[0] + '.' : 'Analyzing conditions.'}</h1>
-        <p className="text-soft mt-5 max-w-xl leading-relaxed">
-          {Array.isArray(skus) && skus.length > 0
-            ? `Tracking ${skus.length.toLocaleString()} SKU${skus.length === 1 ? '' : 's'}. ${regime?.regime === 'HEALTHY_EXPANSION' ? 'No critical exposures.' : 'Review current regime conditions.'}`
-            : 'Add your first SKU to start tracking operations.'}
-        </p>
+        <RegimeProcurementBanner
+          regime={regimeType}
+          fdr={fdr}
+          confidencePct={
+            regimeIntelligence?.confidence?.overall != null
+              ? Math.round(Number(regimeIntelligence.confidence.overall) * 100)
+              : undefined
+          }
+          exposureCount={Array.isArray(policySignals) ? policySignals.length : undefined}
+        />
       </div>
 
       <div className="grid grid-cols-4 gap-px bg-line mb-20">
