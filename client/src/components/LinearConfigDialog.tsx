@@ -184,7 +184,7 @@ export function LinearConfigDialog({ open, onOpenChange }: LinearConfigDialogPro
             </div>
 
             {status?.linear?.configured && (
-              <div className="flex items-center gap-2 text-sm text-green-600">
+              <div className="flex items-center gap-2 text-sm text-good">
                 <CheckCircle className="w-4 h-4" />
                 Linear is configured
               </div>

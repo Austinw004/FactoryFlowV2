@@ -1145,7 +1145,7 @@ export default function AgenticAI() {
             <Clock className="h-4 w-4 text-signal" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{displayStats.pendingActions}</div>
+            <div className="text-2xl font-bold text-signal">{displayStats.pendingActions}</div>
             <p className="text-xs text-muted-foreground">Awaiting your approval</p>
           </CardContent>
         </Card>
@@ -1156,7 +1156,7 @@ export default function AgenticAI() {
             <CheckCircle className="h-4 w-4 text-good" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{displayStats.completedToday}</div>
+            <div className="text-2xl font-bold text-good">{displayStats.completedToday}</div>
             <p className="text-xs text-muted-foreground">Autonomous actions</p>
           </CardContent>
         </Card>
@@ -1167,7 +1167,7 @@ export default function AgenticAI() {
             <DollarSign className="h-4 w-4 text-good" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">${displayStats.totalSavings.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-good">${displayStats.totalSavings.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">This month from AI actions</p>
           </CardContent>
         </Card>
@@ -1448,7 +1448,7 @@ export default function AgenticAI() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Today's Savings</span>
-                    <Badge variant="secondary" className="text-green-600">
+                    <Badge variant="secondary" className="text-good">
                       ${displayStats.totalSavings.toLocaleString()}
                     </Badge>
                   </div>
@@ -1615,7 +1615,7 @@ export default function AgenticAI() {
                               </span>
                             )}
                             {rule.avgSavings && rule.avgSavings > 0 && (
-                              <span className="flex items-center gap-1 text-green-600">
+                              <span className="flex items-center gap-1 text-good">
                                 <TrendingUp className="h-3 w-3" />
                                 ${rule.avgSavings.toLocaleString()} avg savings
                               </span>
@@ -1746,7 +1746,7 @@ export default function AgenticAI() {
                           <p className="text-sm font-medium">Estimated Impact</p>
                           <div className="flex flex-wrap gap-4 mt-1 text-sm">
                             {action.estimatedImpact?.costSavings && (
-                              <span className="text-green-600">
+                              <span className="text-good">
                                 ${action.estimatedImpact.costSavings.toLocaleString()} savings
                               </span>
                             )}
@@ -1865,7 +1865,7 @@ export default function AgenticAI() {
                     {guard.violationCount > 0 && (
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">Violations</span>
-                        <span className="text-red-600">{guard.violationCount} blocked</span>
+                        <span className="text-bad">{guard.violationCount} blocked</span>
                       </div>
                     )}
                   </div>

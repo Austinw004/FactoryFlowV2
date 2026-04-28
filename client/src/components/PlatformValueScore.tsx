@@ -204,7 +204,7 @@ export function PlatformValueScore({ compact = false }: { compact?: boolean }) {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-1 text-green-600">
+            <div className="flex items-center gap-1 text-good">
               <ArrowUpRight className="h-4 w-4" />
               <span className="text-sm font-medium">+{valueData.valueGrowthRate.toFixed(1)}%</span>
             </div>
@@ -229,7 +229,7 @@ export function PlatformValueScore({ compact = false }: { compact?: boolean }) {
               </CardDescription>
             </div>
             {valueData.valueGrowthRate > 0 && (
-              <Badge variant="secondary" className="bg-green-100 dark:bg-green-900/30 text-green-700">
+              <Badge variant="secondary" className="bg-good/15 dark:bg-good/15 text-good">
                 <ArrowUpRight className="h-3 w-3 mr-1" />
                 {valueData.valueGrowthRate.toFixed(1)}% growth
               </Badge>
@@ -259,7 +259,7 @@ export function PlatformValueScore({ compact = false }: { compact?: boolean }) {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 p-2 rounded-lg bg-background/50">
-                  <Target className="h-4 w-4 text-blue-600" />
+                  <Target className="h-4 w-4 text-muted-foreground" />
                   <div>
                     <p className="text-xs text-muted-foreground">Forecast Gains</p>
                     <p className="font-semibold text-sm" data-testid="text-forecast-gains">

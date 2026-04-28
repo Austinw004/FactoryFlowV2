@@ -584,10 +584,10 @@ function Step4Test({
             
             {state.testStatus === 'success' && (
               <>
-                <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4">
+                <div className="h-16 w-16 rounded-full bg-good/15 dark:bg-good/15 flex items-center justify-center mb-4">
                   <CheckCircle2 className="h-8 w-8 text-good" />
                 </div>
-                <h3 className="font-semibold text-lg text-green-600 mb-2">Connection Successful!</h3>
+                <h3 className="font-semibold text-lg text-good mb-2">Connection Successful!</h3>
                 <p className="text-muted-foreground text-center mb-2">
                   {state.testMessage || `Successfully connected to your ${template.erpName} instance`}
                 </p>
@@ -600,10 +600,10 @@ function Step4Test({
             
             {state.testStatus === 'error' && (
               <>
-                <div className="h-16 w-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
+                <div className="h-16 w-16 rounded-full bg-bad/15 dark:bg-bad/15 flex items-center justify-center mb-4">
                   <XCircle className="h-8 w-8 text-bad" />
                 </div>
-                <h3 className="font-semibold text-lg text-red-600 mb-2">Connection Failed</h3>
+                <h3 className="font-semibold text-lg text-bad mb-2">Connection Failed</h3>
                 <p className="text-muted-foreground text-center mb-4">
                   {state.testMessage || 'Unable to connect. Please check your credentials and try again.'}
                 </p>
@@ -685,10 +685,10 @@ function Step5Complete({
         </p>
       </div>
       
-      <Card className="border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-900/10">
+      <Card className="border-good/30 dark:border-good/30 bg-good/15/50 dark:bg-good/15">
         <CardContent className="p-6">
           <div className="flex items-start gap-4">
-            <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
+            <div className="h-10 w-10 rounded-full bg-good/15 dark:bg-good/15 flex items-center justify-center flex-shrink-0">
               <Sparkles className="h-5 w-5 text-good" />
             </div>
             <div>

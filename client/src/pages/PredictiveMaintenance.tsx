@@ -211,7 +211,7 @@ export default function PredictiveMaintenance() {
       </div>
 
       {regime && (
-        <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+        <Card className="bg-muted/15 dark:bg-blue-950 border-muted/30 dark:border-muted/30">
           <CardHeader>
             <CardTitle className="text-sm flex items-center gap-2">
               <Zap className="h-4 w-4" />

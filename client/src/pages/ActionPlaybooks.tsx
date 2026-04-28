@@ -147,7 +147,7 @@ function PlaybookCard({ playbook }: { playbook: ActionPlaybook }) {
                 <Badge variant="secondary">System Default</Badge>
               )}
               {playbook.isActive && (
-                <Badge variant="outline" className="border-green-600 text-green-600">
+                <Badge variant="outline" className="border-green-600 text-good">
                   Active
                 </Badge>
               )}
@@ -166,7 +166,7 @@ function PlaybookCard({ playbook }: { playbook: ActionPlaybook }) {
             <span>{actions.length} actions</span>
           </div>
           {criticalActions > 0 && (
-            <div className="flex items-center gap-2 text-sm text-red-600">
+            <div className="flex items-center gap-2 text-sm text-bad">
               <AlertTriangle className="h-4 w-4" />
               <span>{criticalActions} critical</span>
             </div>
@@ -232,7 +232,7 @@ function PlaybookCard({ playbook }: { playbook: ActionPlaybook }) {
           
           {playbook.expectedOutcomes && playbook.expectedOutcomes.length > 0 && (
             <div>
-              <h4 className="font-medium mb-3 flex items-center gap-2 text-green-600">
+              <h4 className="font-medium mb-3 flex items-center gap-2 text-good">
                 <CheckCircle2 className="h-4 w-4" />
                 Expected Outcomes
               </h4>

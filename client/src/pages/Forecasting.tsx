@@ -189,7 +189,7 @@ export default function Forecasting() {
                     return (
                       <div
                         key={price.material}
-                        className="p-3 border rounded-lg space-y-1.5 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900"
+                        className="p-3 border rounded-lg space-y-1.5 bg-good/15 dark:bg-good/15 border-good/30 dark:border-good/30"
                         data-testid={`commodity-price-${price.material}`}
                       >
                         <div className="flex items-start justify-between">
@@ -229,7 +229,7 @@ export default function Forecasting() {
                     return (
                       <div
                         key={price.material}
-                        className="p-3 border rounded-lg space-y-1.5 bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900"
+                        className="p-3 border rounded-lg space-y-1.5 bg-bad/15 dark:bg-bad/15 border-bad/30 dark:border-bad/30"
                         data-testid={`commodity-price-${price.material}`}
                       >
                         <div className="flex items-start justify-between">

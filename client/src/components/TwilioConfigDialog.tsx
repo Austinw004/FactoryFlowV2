@@ -156,7 +156,7 @@ export function TwilioConfigDialog({ open, onOpenChange }: TwilioConfigDialogPro
                 </div>
               ) : (
                 <div className="rounded-md bg-amber-500/10 p-3 text-sm">
-                  <div className="flex items-center gap-2 text-amber-600">
+                  <div className="flex items-center gap-2 text-signal">
                     <span>Twilio credentials not configured. Please contact support to set up SMS alerts.</span>
                   </div>
                 </div>

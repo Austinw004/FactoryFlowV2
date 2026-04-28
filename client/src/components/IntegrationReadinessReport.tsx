@@ -139,7 +139,7 @@ export function IntegrationReadinessReport() {
         </div>
         <div className="flex items-center gap-2">
           {integration.isConfigured ? (
-            <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600">
+            <Badge variant="outline" className="text-xs bg-green-500/10 text-good">
               Credentials Set
             </Badge>
           ) : (
@@ -193,22 +193,22 @@ export function IntegrationReadinessReport() {
               </div>
             </div>
             <div className="text-center p-3 bg-green-500/10 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">
+              <div className="text-2xl font-bold text-good">
                 {report.byTier.full}
               </div>
-              <div className="text-xs text-green-600/80">Full Tier</div>
+              <div className="text-xs text-good/80">Full Tier</div>
             </div>
             <div className="text-center p-3 bg-blue-500/10 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">
+              <div className="text-2xl font-bold text-muted-foreground">
                 {report.byTier.configured}
               </div>
-              <div className="text-xs text-blue-600/80">Configured</div>
+              <div className="text-xs text-muted-foreground/80">Configured</div>
             </div>
             <div className="text-center p-3 bg-amber-500/10 rounded-lg">
-              <div className="text-2xl font-bold text-amber-600">
+              <div className="text-2xl font-bold text-signal">
                 {report.byTier.setupReady}
               </div>
-              <div className="text-xs text-amber-600/80">Setup Ready</div>
+              <div className="text-xs text-signal/80">Setup Ready</div>
             </div>
             <div className="text-center p-3 bg-purple-500/10 rounded-lg">
               <div className="text-2xl font-bold text-purple-600">

@@ -126,13 +126,13 @@ export default function Machinery() {
           <Card>
             <CardHeader className="pb-3">
               <CardDescription>Operational</CardDescription>
-              <CardTitle className="text-3xl text-green-600" data-testid="text-operational-count">{operationalCount}</CardTitle>
+              <CardTitle className="text-3xl text-good" data-testid="text-operational-count">{operationalCount}</CardTitle>
             </CardHeader>
           </Card>
           <Card>
             <CardHeader className="pb-3">
               <CardDescription>In Maintenance</CardDescription>
-              <CardTitle className="text-3xl text-yellow-600" data-testid="text-maintenance-count">{maintenanceCount}</CardTitle>
+              <CardTitle className="text-3xl text-signal" data-testid="text-maintenance-count">{maintenanceCount}</CardTitle>
             </CardHeader>
           </Card>
           <Card>
@@ -687,7 +687,7 @@ function MachineDetailsView({ machine, onClose }: {
                 <Card>
                   <CardHeader className="pb-3">
                     <CardDescription>Current Value</CardDescription>
-                    <CardTitle className="text-2xl text-green-600">
+                    <CardTitle className="text-2xl text-good">
                       ${depreciation.currentValue.toLocaleString()}
                     </CardTitle>
                   </CardHeader>
@@ -695,7 +695,7 @@ function MachineDetailsView({ machine, onClose }: {
                 <Card>
                   <CardHeader className="pb-3">
                     <CardDescription>Total Depreciation</CardDescription>
-                    <CardTitle className="text-2xl text-red-600">
+                    <CardTitle className="text-2xl text-bad">
                       ${depreciation.totalDepreciation.toLocaleString()}
                     </CardTitle>
                   </CardHeader>
@@ -735,7 +735,7 @@ function MachineDetailsView({ machine, onClose }: {
                         <tr key={row.year} className="border-t">
                           <td className="p-2">Year {row.year}</td>
                           <td className="p-2 text-right">${row.beginningValue.toLocaleString()}</td>
-                          <td className="p-2 text-right text-red-600">-${row.depreciation.toLocaleString()}</td>
+                          <td className="p-2 text-right text-bad">-${row.depreciation.toLocaleString()}</td>
                           <td className="p-2 text-right">${row.endingValue.toLocaleString()}</td>
                         </tr>
                       ))}

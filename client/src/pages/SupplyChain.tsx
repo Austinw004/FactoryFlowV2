@@ -812,7 +812,7 @@ export default function SupplyChain() {
                         <p className="text-sm text-muted-foreground" data-testid={`text-description-${alert.id}`}>{alert.description}</p>
                         
                         {alert.recommendedAction && (
-                          <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-lg">
+                          <div className="bg-muted/15 dark:bg-muted/15 p-4 rounded-lg">
                             <h4 className="text-sm font-semibold mb-2">Recommended Action</h4>
                             <p className="text-sm" data-testid={`text-action-${alert.id}`}>{alert.recommendedAction}</p>
                           </div>
@@ -848,7 +848,7 @@ export default function SupplyChain() {
                         {alert.estimatedImpact && (
                           <div className="pt-2 border-t">
                             <span className="text-sm text-muted-foreground">Estimated Impact: </span>
-                            <span className="text-sm font-semibold text-red-600" data-testid={`text-impact-${alert.id}`}>
+                            <span className="text-sm font-semibold text-bad" data-testid={`text-impact-${alert.id}`}>
                               ${alert.estimatedImpact.toLocaleString()}
                             </span>
                           </div>
@@ -896,7 +896,7 @@ export default function SupplyChain() {
                             </div>
                             <div className="flex justify-between">
                               <span className="text-muted-foreground">Bankruptcy Risk:</span>
-                              <span className="font-medium text-red-600">{node.bankruptcyRisk?.toFixed(0) || 'N/A'}%</span>
+                              <span className="font-medium text-bad">{node.bankruptcyRisk?.toFixed(0) || 'N/A'}%</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-muted-foreground">Delivery:</span>

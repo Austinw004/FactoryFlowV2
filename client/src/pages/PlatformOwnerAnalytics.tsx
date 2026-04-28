@@ -236,7 +236,7 @@ export default function PlatformOwnerAnalytics() {
                       {metrics.overview.activeCompanies} active (30d)
                     </p>
                   </div>
-                  <Building2 className="h-10 w-10 text-blue-600" />
+                  <Building2 className="h-10 w-10 text-muted-foreground" />
                 </div>
               </CardContent>
             </Card>
@@ -264,7 +264,7 @@ export default function PlatformOwnerAnalytics() {
                     <p className="text-3xl font-bold" data-testid="text-owner-mrr">
                       ${(metrics.overview.totalMRR / 1000).toFixed(1)}K
                     </p>
-                    <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                    <p className="text-xs text-good mt-1 flex items-center gap-1">
                       <TrendingUp className="h-3 w-3" />
                       {metrics.overview.growthRate.toFixed(1)}% growth
                     </p>

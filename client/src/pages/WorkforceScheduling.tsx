@@ -1131,7 +1131,7 @@ export default function WorkforceScheduling() {
                 ) : (
                   <div className="space-y-2">
                     {todaysCoverage.onLeaveEmployees.map((emp: any) => (
-                      <div key={emp.id} className="flex items-center justify-between p-2 rounded bg-orange-50 dark:bg-orange-950/20">
+                      <div key={emp.id} className="flex items-center justify-between p-2 rounded bg-signal/15 dark:bg-signal/15">
                         <span className="font-medium">{emp.firstName} {emp.lastName}</span>
                         <Badge variant="secondary" className="capitalize">{emp.department}</Badge>
                       </div>
@@ -1465,7 +1465,7 @@ export default function WorkforceScheduling() {
                   <AlertTriangle className="h-4 w-4 text-signal" />
                   Approaching Overtime
                 </CardDescription>
-                <CardTitle className="text-3xl text-orange-600" data-testid="text-approaching-overtime">
+                <CardTitle className="text-3xl text-signal" data-testid="text-approaching-overtime">
                   {overtimeTracking?.summary?.approachingOvertime || 0}
                 </CardTitle>
               </CardHeader>
@@ -1481,7 +1481,7 @@ export default function WorkforceScheduling() {
                   <AlertCircle className="h-4 w-4 text-bad" />
                   In Overtime
                 </CardDescription>
-                <CardTitle className="text-3xl text-red-600" data-testid="text-in-overtime">
+                <CardTitle className="text-3xl text-bad" data-testid="text-in-overtime">
                   {overtimeTracking?.summary?.inOvertime || 0}
                 </CardTitle>
               </CardHeader>

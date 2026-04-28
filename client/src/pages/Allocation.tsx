@@ -231,10 +231,10 @@ export default function Allocation() {
 
             {/* Low stock warnings - based on actual data */}
             {inventoryCapacityCheck.materialsLowStock.length > 0 && (
-              <Alert className="py-2 border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20" data-testid="alert-low-stock">
+              <Alert className="py-2 border-yellow-500 bg-signal/15 dark:bg-signal/15" data-testid="alert-low-stock">
                 <AlertCircle className="h-4 w-4 text-signal" />
                 <AlertDescription className="space-y-2">
-                  <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                  <p className="text-sm text-signal">
                     <strong>{inventoryCapacityCheck.materialsLowStock.length} material(s) with low stock (&lt;10 units):</strong>{' '}
                     {inventoryCapacityCheck.materialsLowStock.slice(0, 3).map(m => m.name || m.code).join(', ')}
                     {inventoryCapacityCheck.materialsLowStock.length > 3 && ` (+${inventoryCapacityCheck.materialsLowStock.length - 3} more)`}
@@ -246,7 +246,7 @@ export default function Allocation() {
                       onCheckedChange={(checked) => setLowStockAcknowledged(checked === true)}
                       data-testid="checkbox-acknowledge-low-stock"
                     />
-                    <Label htmlFor="acknowledge-low-stock" className="text-sm text-yellow-700 dark:text-yellow-300 cursor-pointer">
+                    <Label htmlFor="acknowledge-low-stock" className="text-sm text-signal cursor-pointer">
                       I acknowledge low stock and want to proceed with allocation
                     </Label>
                   </div>
@@ -256,7 +256,7 @@ export default function Allocation() {
 
             {/* All clear message */}
             {inventoryCapacityCheck.materialsLowStock.length === 0 && (
-              <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-300" data-testid="text-inventory-healthy">
+              <div className="flex items-center gap-2 text-sm text-good" data-testid="text-inventory-healthy">
                 <CheckCircle2 className="h-4 w-4" />
                 All materials have adequate stock levels for allocation.
               </div>
@@ -432,9 +432,9 @@ export default function Allocation() {
           
           {/* Pre-run warning if low stock and not acknowledged */}
           {inventoryCapacityCheck && inventoryCapacityCheck.materialsLowStock.length > 0 && !lowStockAcknowledged && (
-            <Alert className="mb-4 border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20" data-testid="alert-acknowledge-required">
+            <Alert className="mb-4 border-yellow-500 bg-signal/15 dark:bg-signal/15" data-testid="alert-acknowledge-required">
               <AlertCircle className="h-4 w-4 text-signal" />
-              <AlertDescription className="text-sm text-yellow-700 dark:text-yellow-300">
+              <AlertDescription className="text-sm text-signal">
                 Please acknowledge the low stock warning above before running allocation.
               </AlertDescription>
             </Alert>
@@ -504,7 +504,7 @@ function AllocationCard({ allocation }: { allocation: Allocation }) {
         <CardTitle className="flex items-center justify-between text-lg">
           <span>{allocation.name || "Unnamed Allocation"}</span>
           {hasDirectMaterials && (
-            <span className="text-xs font-normal px-2 py-1 rounded-md bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100">
+            <span className="text-xs font-normal px-2 py-1 rounded-md bg-muted/15 dark:bg-blue-900 text-blue-900 dark:text-blue-100">
               Direct Materials
             </span>
           )}
@@ -554,7 +554,7 @@ function AllocationCard({ allocation }: { allocation: Allocation }) {
         {coverage && coverage.isSufficient && (
           <div className="flex justify-between items-center">
             <span className="text-sm text-muted-foreground">Coverage:</span>
-            <span className="font-semibold text-sm text-green-600" data-testid={`text-coverage-${allocation.id}`}>
+            <span className="font-semibold text-sm text-good" data-testid={`text-coverage-${allocation.id}`}>
               ✓ {coverage.budgetCoverageDays?.toFixed(0)} days
             </span>
           </div>

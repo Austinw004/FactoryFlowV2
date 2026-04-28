@@ -272,8 +272,8 @@ function MaintenanceQuickEntry() {
       </CardHeader>
       <CardContent className="space-y-6">
         {needingMaintenance.length > 0 && (
-          <div className="p-3 bg-amber-50 dark:bg-amber-950 rounded-lg border border-amber-200 dark:border-amber-800">
-            <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+          <div className="p-3 bg-signal/15 dark:bg-amber-950 rounded-lg border border-signal/30 dark:border-signal/30">
+            <p className="text-sm font-medium text-signal dark:text-amber-200">
               {needingMaintenance.length} machine{needingMaintenance.length > 1 ? 's' : ''} need maintenance
             </p>
           </div>

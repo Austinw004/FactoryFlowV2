@@ -75,7 +75,7 @@ function DiffView({ changes }: { changes: any }) {
           <div key={key} className="flex items-start gap-2 text-xs font-mono">
             <span className="text-muted-foreground min-w-[120px] truncate">{key}:</span>
             <div className="flex items-center gap-2">
-              <span className="bg-red-500/10 text-red-600 px-1.5 py-0.5 rounded line-through">
+              <span className="bg-red-500/10 text-bad px-1.5 py-0.5 rounded line-through">
                 {formatValue(changes.before?.[key])}
               </span>
               <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />

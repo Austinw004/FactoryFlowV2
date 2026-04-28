@@ -443,7 +443,7 @@ export default function Compliance() {
                 {(complianceScore?.expiringDocuments?.length ?? 0) > 0 && (
                   <div className="text-sm space-y-1">
                     {complianceScore?.expiringDocuments?.slice(0, 3).map((doc: any) => (
-                      <div key={doc.id} className="flex items-center justify-between text-yellow-700 dark:text-yellow-300">
+                      <div key={doc.id} className="flex items-center justify-between text-signal">
                         <span className="truncate">{doc.title}</span>
                         <span className="text-xs">
                           {differenceInDays(new Date(doc.expirationDate), new Date())} days
@@ -1268,28 +1268,28 @@ export default function Compliance() {
                     <div className="space-y-2 text-sm">
                       <p className="font-medium">Compliance Recommendations:</p>
                       {regime.regime === "IMBALANCED_EXCESS" && (
-                        <div className="bg-red-50 dark:bg-red-950 p-3 rounded-lg border border-red-200 dark:border-red-800">
+                        <div className="bg-bad/15 dark:bg-red-950 p-3 rounded-lg border border-bad/30 dark:border-bad/30">
                           <p className="text-red-900 dark:text-red-100">
                             <strong>High Enforcement Risk:</strong> During bubble periods, regulatory enforcement typically intensifies. Ensure all documentation is current and audit-ready.
                           </p>
                         </div>
                       )}
                       {regime.regime === "REAL_ECONOMY_LEAD" && (
-                        <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <div className="bg-muted/15 dark:bg-blue-950 p-3 rounded-lg border border-muted/30 dark:border-muted/30">
                           <p className="text-blue-900 dark:text-blue-100">
                             <strong>Growth Focus:</strong> Regulators may prioritize economic recovery. Good time to streamline compliance processes.
                           </p>
                         </div>
                       )}
                       {regime.regime === "HEALTHY_EXPANSION" && (
-                        <div className="bg-green-50 dark:bg-green-950 p-3 rounded-lg border border-green-200 dark:border-green-800">
+                        <div className="bg-good/15 dark:bg-green-950 p-3 rounded-lg border border-good/30 dark:border-good/30">
                           <p className="text-green-900 dark:text-green-100">
                             <strong>Balanced Approach:</strong> Normal compliance environment. Maintain standard procedures and document quality.
                           </p>
                         </div>
                       )}
                       {regime.regime === "ASSET_LED_GROWTH" && (
-                        <div className="bg-orange-50 dark:bg-orange-950 p-3 rounded-lg border border-orange-200 dark:border-orange-800">
+                        <div className="bg-signal/15 dark:bg-orange-950 p-3 rounded-lg border border-signal/30 dark:border-signal/30">
                           <p className="text-orange-900 dark:text-orange-100">
                             <strong>Prepare for Shift:</strong> Financial markets pulling ahead signals potential regulatory tightening. Review compliance frameworks now.
                           </p>

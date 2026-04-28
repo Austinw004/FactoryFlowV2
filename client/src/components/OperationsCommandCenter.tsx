@@ -81,16 +81,16 @@ export function OperationsCommandCenter() {
 
   if (isError || !data) {
     return (
-      <Card className="mb-6 bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800">
+      <Card className="mb-6 bg-signal/15 dark:bg-amber-950 border-signal/30 dark:border-signal/30">
         <CardContent className="py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-signal/15 dark:bg-amber-900 flex items-center justify-center">
                 <AlertTriangle className="h-5 w-5 text-signal" />
               </div>
               <div>
-                <p className="font-medium text-amber-800 dark:text-amber-200">Unable to Load Attention Items</p>
-                <p className="text-sm text-amber-600">Could not fetch operations data</p>
+                <p className="font-medium text-signal dark:text-amber-200">Unable to Load Attention Items</p>
+                <p className="text-sm text-signal">Could not fetch operations data</p>
               </div>
             </div>
             <Button 
@@ -113,15 +113,15 @@ export function OperationsCommandCenter() {
 
   if (summary.total === 0) {
     return (
-      <Card className="mb-6 bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
+      <Card className="mb-6 bg-good/15 dark:bg-green-950 border-good/30 dark:border-good/30">
         <CardContent className="py-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-good/15 dark:bg-green-900 flex items-center justify-center">
               <CheckCircle className="h-5 w-5 text-good" />
             </div>
             <div>
-              <p className="font-medium text-green-800 dark:text-green-200">All Clear</p>
-              <p className="text-sm text-green-600">No items need attention right now</p>
+              <p className="font-medium text-good dark:text-green-200">All Clear</p>
+              <p className="text-sm text-good">No items need attention right now</p>
             </div>
           </div>
         </CardContent>

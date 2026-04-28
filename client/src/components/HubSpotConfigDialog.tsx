@@ -156,7 +156,7 @@ export function HubSpotConfigDialog({ open, onOpenChange }: HubSpotConfigDialogP
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="w-4 h-4 text-blue-500 mt-0.5" />
                   <div>
-                    <p className="font-medium text-blue-600 dark:text-blue-400">Private App Access Token Required</p>
+                    <p className="font-medium text-muted-foreground">Private App Access Token Required</p>
                     <p className="text-muted-foreground mt-1">
                       Create a private app in HubSpot to get an access token.{" "}
                       <a

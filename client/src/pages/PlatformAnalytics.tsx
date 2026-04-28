@@ -163,7 +163,7 @@ export default function PlatformAnalytics() {
             <h1 className="text-2xl font-bold tracking-tight">Platform Analytics</h1>
             <p className="text-muted-foreground">Loading platform metrics...</p>
           </div>
-          <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20">
+          <Badge className="bg-blue-500/10 text-muted-foreground border-blue-500/20">
             <Activity className="h-3 w-3 mr-1 animate-spin" />
             Loading
           </Badge>
@@ -210,7 +210,7 @@ export default function PlatformAnalytics() {
             <h1 className="text-2xl font-bold tracking-tight">Platform Analytics</h1>
             <p className="text-muted-foreground">Unable to load platform metrics</p>
           </div>
-          <Badge className="bg-red-500/10 text-red-600 border-red-500/20">
+          <Badge className="bg-red-500/10 text-bad border-red-500/20">
             <AlertCircle className="h-3 w-3 mr-1" />
             Error
           </Badge>
@@ -607,7 +607,7 @@ export default function PlatformAnalytics() {
                         <div className="text-sm text-muted-foreground">6-Month Retention</div>
                       </div>
                       <div className="text-center p-4 bg-muted/50 rounded-lg">
-                        <div className="text-3xl font-bold text-blue-600">{healthData?.retention?.week2 ?? 0}%</div>
+                        <div className="text-3xl font-bold text-muted-foreground">{healthData?.retention?.week2 ?? 0}%</div>
                         <div className="text-sm text-muted-foreground">Week 2 Retention</div>
                       </div>
                     </div>

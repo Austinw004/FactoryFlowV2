@@ -165,7 +165,7 @@ export function PowerBIConnectorDialog({ open, onOpenChange }: PowerBIConnectorD
                 <div className="rounded-md bg-blue-500/10 p-3 text-sm">
                   <div className="flex items-center gap-2">
                     <Database className="w-4 h-4 text-blue-500" />
-                    <span className="font-medium text-blue-600 dark:text-blue-400">Available Data Endpoints</span>
+                    <span className="font-medium text-muted-foreground">Available Data Endpoints</span>
                   </div>
                   <p className="text-muted-foreground mt-1">
                     These REST API endpoints can be connected to any BI tool that supports JSON data sources.
@@ -227,7 +227,7 @@ export function PowerBIConnectorDialog({ open, onOpenChange }: PowerBIConnectorD
                 <div className="rounded-md bg-amber-500/10 p-3 text-sm">
                   <div className="flex items-center gap-2">
                     <BarChart3 className="w-4 h-4 text-signal" />
-                    <span className="font-medium text-amber-600">Power BI Desktop Setup</span>
+                    <span className="font-medium text-signal">Power BI Desktop Setup</span>
                   </div>
                 </div>
 
@@ -307,7 +307,7 @@ export function PowerBIConnectorDialog({ open, onOpenChange }: PowerBIConnectorD
                 <div className="rounded-md bg-blue-500/10 p-3 text-sm">
                   <div className="flex items-center gap-2">
                     <BarChart3 className="w-4 h-4 text-blue-500" />
-                    <span className="font-medium text-blue-600 dark:text-blue-400">Tableau Desktop Setup</span>
+                    <span className="font-medium text-muted-foreground">Tableau Desktop Setup</span>
                   </div>
                 </div>
 

@@ -648,11 +648,11 @@ export default function DigitalTwin() {
                     <div className="flex items-center gap-2 mt-2">
                       <span className="text-xs text-muted-foreground">vs. industry avg (62):</span>
                       {healthData.score >= 62 ? (
-                        <Badge variant="secondary" className="text-green-700 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-xs font-medium">
+                        <Badge variant="secondary" className="text-good bg-good/15 dark:bg-good/15 border border-good/30 dark:border-good/30 text-xs font-medium">
                           +{healthData.score - 62} pts
                         </Badge>
                       ) : (
-                        <Badge variant="secondary" className="text-amber-700 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-xs font-medium">
+                        <Badge variant="secondary" className="text-signal bg-signal/15 dark:bg-signal/15 border border-signal/30 dark:border-signal/30 text-xs font-medium">
                           {healthData.score - 62} pts
                         </Badge>
                       )}
@@ -750,7 +750,7 @@ export default function DigitalTwin() {
                           {rec.type === "critical" ? <CircleAlert className="h-4 w-4 text-bad mt-0.5" /> :
                            rec.type === "warning" ? <AlertTriangle className="h-4 w-4 text-signal mt-0.5" /> :
                            rec.type === "success" ? <CheckCircle2 className="h-4 w-4 text-good mt-0.5" /> :
-                           <Lightbulb className="h-4 w-4 text-blue-600 mt-0.5" />}
+                           <Lightbulb className="h-4 w-4 text-muted-foreground mt-0.5" />}
                           <div>
                             <p className="font-medium text-sm">{rec.title}</p>
                             <p className="text-xs text-muted-foreground mt-0.5">{rec.description}</p>

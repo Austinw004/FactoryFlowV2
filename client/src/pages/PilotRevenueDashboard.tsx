@@ -240,7 +240,7 @@ function ExperimentDashboard({ metrics }: { metrics: RevenueDashboardMetrics }) 
               </div>
               {metrics.realizedSavings.hasMeasuredData ? (
                 <div>
-                  <span className="text-lg font-semibold text-green-600" data-testid="value-measured-savings">
+                  <span className="text-lg font-semibold text-good" data-testid="value-measured-savings">
                     ${metrics.realizedSavings.measuredDollars?.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                   </span>
                   <Badge variant="default" className="text-xs ml-2" data-testid="badge-measured-label">

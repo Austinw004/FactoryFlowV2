@@ -909,7 +909,7 @@ export default function AutomatedPO() {
                       {playbook.avgSavings !== null && (
                         <div>
                           <span className="text-muted-foreground">Avg Savings:</span>
-                          <span className="ml-2 font-medium text-green-600">{playbook.avgSavings.toFixed(1)}%</span>
+                          <span className="ml-2 font-medium text-good">{playbook.avgSavings.toFixed(1)}%</span>
                         </div>
                       )}
                     </div>

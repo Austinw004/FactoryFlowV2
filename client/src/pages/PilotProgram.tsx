@@ -278,7 +278,7 @@ export default function PilotProgram() {
               <p className="text-sm">
                 <strong>Example:</strong> If we help you save $400K annually, our fee would be{" "}
                 <span className="font-semibold text-primary">$92,500</span>{" "}
-                (25% of $250K = $62,500 + 20% of $150K = $30,000) — you keep <span className="font-semibold text-green-600">$307,500</span>.
+                (25% of $250K = $62,500 + 20% of $150K = $30,000) — you keep <span className="font-semibold text-good">$307,500</span>.
               </p>
             </div>
           </Card>
@@ -422,8 +422,8 @@ export default function PilotProgram() {
                 <div className="flex items-start gap-3 p-4 rounded-lg bg-green-500/10 border border-green-500/20">
                   <CheckCircle2 className="h-5 w-5 text-good shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-medium text-green-800">4+ Yes answers?</p>
-                    <p className="text-sm text-green-700">
+                    <p className="font-medium text-good">4+ Yes answers?</p>
+                    <p className="text-sm text-good">
                       You're an excellent candidate for a pilot. Let's discuss your specific situation.
                     </p>
                   </div>
@@ -431,8 +431,8 @@ export default function PilotProgram() {
                 <div className="flex items-start gap-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20 mt-3">
                   <AlertCircle className="h-5 w-5 text-signal shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-medium text-amber-800">Fewer than 4?</p>
-                    <p className="text-sm text-amber-700">
+                    <p className="font-medium text-signal">Fewer than 4?</p>
+                    <p className="text-sm text-signal">
                       We may still be able to help. Book a call to explore options tailored to your situation.
                     </p>
                   </div>
