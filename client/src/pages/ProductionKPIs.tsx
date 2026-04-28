@@ -1,3 +1,4 @@
+import { getRegimeBadge } from "@/components/RegimeBadge";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -121,16 +122,9 @@ export default function ProductionKPIs() {
     return <Badge variant="destructive">Poor ({oee.toFixed(1)}%)</Badge>;
   };
 
-  const getRegimeBadge = (regimeName: string) => {
-    const regimeConfig = {
-      HEALTHY_EXPANSION: { className: "bg-green-600", label: "Healthy Expansion" },
-      ASSET_LED_GROWTH: { className: "bg-orange-600", label: "Asset-Led Growth" },
-      IMBALANCED_EXCESS: { className: "bg-red-600", label: "Imbalanced Excess" },
-      REAL_ECONOMY_LEAD: { className: "bg-blue-600", label: "Real Economy Lead" },
-    };
-    const config = regimeConfig[regimeName as keyof typeof regimeConfig] || { className: "", label: regimeName };
-    return <Badge className={config.className}>{config.label}</Badge>;
-  };
+  // Regime badge logic moved to @/components/RegimeBadge — single source
+  // of truth across the app, palette-aligned (good/signal/bad/bone tones
+  // instead of bg-green-600 / bg-orange-600 / bg-red-600 / bg-blue-600).
 
   // Calculate aggregate stats
   const aggregateStats = productionRuns.reduce((acc: any, run: any) => {
