@@ -1,0 +1,129 @@
+{
+  "digestDate": "2026-04-27",
+  "priorDigestDate": null,
+  "priorReplyChecksum": null,
+  "emailDelivery": {
+    "sent": false,
+    "reason": "import-failed: sendpulse-api not installed in sandbox; logged to /tmp/digest-failures.jsonl"
+  },
+  "decisions": [
+    {
+      "id": 1,
+      "severity": "RED",
+      "routine": "Weekly Clean",
+      "kind": "issue",
+      "ref": 125,
+      "url": "https://github.com/austinw004/factoryflowv2/issues/125",
+      "summary": "Shopify HMAC verification bypassable",
+      "question": "Patch this week, defer, or accept the risk?"
+    },
+    {
+      "id": 2,
+      "severity": "YELLOW",
+      "routine": "Big Boi",
+      "kind": "pr-pair",
+      "refs": [132, 122],
+      "summary": "Duplicate regime-dashboard PRs",
+      "question": "Merge #132 and close #122, merge both, or reject both?"
+    },
+    {
+      "id": 3,
+      "severity": "YELLOW",
+      "routine": "Daily Boost",
+      "kind": "pr-pair",
+      "refs": [129, 116],
+      "summary": "Sibling daily-engineer runs on TS-fix scope",
+      "question": "Merge #129 and close #116, or merge both?"
+    },
+    {
+      "id": 4,
+      "severity": "YELLOW",
+      "routine": "Weekly Clean",
+      "kind": "pr",
+      "ref": 130,
+      "url": "https://github.com/austinw004/factoryflowv2/pull/130",
+      "summary": "Weekly deep clean PR",
+      "question": "Approve & squash-merge?"
+    },
+    {
+      "id": 5,
+      "severity": "YELLOW",
+      "routine": "Palantard Grade",
+      "kind": "pr",
+      "ref": 121,
+      "url": "https://github.com/austinw004/factoryflowv2/pull/121",
+      "summary": "Null-safety + WS dev-gate",
+      "question": "Approve & squash-merge? (overlaps Item 6)"
+    },
+    {
+      "id": 6,
+      "severity": "YELLOW",
+      "routine": "Code Review",
+      "kind": "pr",
+      "ref": 117,
+      "url": "https://github.com/austinw004/factoryflowv2/pull/117",
+      "summary": "WS log dev-gate",
+      "question": "Approve & squash-merge, or close in favor of #121?"
+    },
+    {
+      "id": 7,
+      "severity": "YELLOW",
+      "routine": "Optimus",
+      "kind": "pr",
+      "ref": 123,
+      "url": "https://github.com/austinw004/factoryflowv2/pull/123",
+      "summary": ".claude/agents + .claude/commands scaffold",
+      "question": "Approve & squash-merge?"
+    },
+    {
+      "id": 8,
+      "severity": "YELLOW",
+      "routine": "Weekly Clean",
+      "kind": "issue",
+      "ref": 128,
+      "url": "https://github.com/austinw004/factoryflowv2/issues/128",
+      "summary": "drizzle-zod / zod / @hookform/resolvers drift",
+      "question": "Option A (full bump + form sweep) or Option B (@ts-expect-error)?"
+    },
+    {
+      "id": 9,
+      "severity": "YELLOW",
+      "routine": "Weekly Clean",
+      "kind": "issue",
+      "ref": 127,
+      "url": "https://github.com/austinw004/factoryflowv2/issues/127",
+      "summary": "Split 20.8k-line server/routes.ts",
+      "question": "Schedule for next Weekly Clean, defer, or reject?"
+    },
+    {
+      "id": 10,
+      "severity": "YELLOW",
+      "routine": "Weekly Clean",
+      "kind": "issue",
+      "ref": 126,
+      "url": "https://github.com/austinw004/factoryflowv2/issues/126",
+      "summary": "6 moderate npm-audit vulns (dev-only)",
+      "question": "Defer until next major bumps, or address now?"
+    },
+    {
+      "id": 11,
+      "severity": "YELLOW",
+      "routine": "Weekly Clean",
+      "kind": "issue",
+      "ref": 124,
+      "url": "https://github.com/austinw004/factoryflowv2/issues/124",
+      "summary": "154 unreferenced backend routes",
+      "question": "Audit external usage and prune, or leave alone?"
+    },
+    {
+      "id": 12,
+      "severity": "YELLOW",
+      "routine": "Palantard Grade",
+      "kind": "issue",
+      "ref": 120,
+      "url": "https://github.com/austinw004/factoryflowv2/issues/120",
+      "summary": "Silent empty catch{} in regime/intelligence",
+      "question": "Queue Code Review fix, or defer?"
+    }
+  ]
+}
