@@ -210,7 +210,7 @@ const agentTypeIcons: Record<string, typeof Bot> = {
 const agentTypeColors: Record<string, string> = {
   procurement: "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30",
   inventory: "bg-green-500/15 text-green-700 border-green-500/30",
-  forecasting: "bg-purple-500/15 text-purple-700 dark:text-purple-400 border-purple-500/30",
+  forecasting: "bg-signal/15 text-signal border-signal/30",
   supplier: "bg-orange-500/15 text-orange-700 border-orange-500/30",
   production: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-400 border-cyan-500/30",
   custom: "bg-gray-500/15 text-gray-700 dark:text-gray-400 border-gray-500/30",
@@ -286,8 +286,8 @@ const quickActionCategories = [
   {
     category: "Strategy",
     icon: Target,
-    color: "text-purple-500",
-    bgColor: "bg-purple-500/10",
+    color: "text-signal",
+    bgColor: "bg-signal/10",
     questions: [
       { short: "Market outlook?", full: "What's the current economic regime and what does it mean for our strategy?" },
       { short: "Supplier recommendations?", full: "Which suppliers should we strengthen relationships with based on current conditions?" },
@@ -1215,8 +1215,8 @@ export default function AgenticAI() {
                 <CardHeader className="border-b pb-4">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-purple-500/20">
-                        <Bot className="h-5 w-5 text-purple-500" />
+                      <div className="p-2 rounded-lg bg-signal/20">
+                        <Bot className="h-5 w-5 text-signal" />
                       </div>
                       <div>
                         <CardTitle className="flex items-center gap-2">
@@ -1254,8 +1254,8 @@ export default function AgenticAI() {
                       {chatMessages.length === 0 ? (
                         <div className="py-8 px-4">
                           <div className="text-center mb-8">
-                            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center">
-                              <Sparkles className="h-8 w-8 text-purple-500" />
+                            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-signal/20 to-signal/5 flex items-center justify-center">
+                              <Sparkles className="h-8 w-8 text-signal" />
                             </div>
                             <h3 className="font-semibold text-xl mb-2">Hi {greetingName} — how can we operate today?</h3>
                           </div>
@@ -1288,8 +1288,8 @@ export default function AgenticAI() {
                             className={`flex gap-3 w-full overflow-hidden ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                           >
                             {msg.role === "assistant" && (
-                              <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-                                <Bot className="h-4 w-4 text-purple-500" />
+                              <div className="w-8 h-8 rounded-full bg-signal/20 flex items-center justify-center flex-shrink-0">
+                                <Bot className="h-4 w-4 text-signal" />
                               </div>
                             )}
                             <div
@@ -1342,12 +1342,12 @@ export default function AgenticAI() {
                       )}
                       {chatMutation.isPending && (
                         <div className="flex gap-3 justify-start">
-                          <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-                            <Bot className="h-4 w-4 text-purple-500" />
+                          <div className="w-8 h-8 rounded-full bg-signal/20 flex items-center justify-center flex-shrink-0">
+                            <Bot className="h-4 w-4 text-signal" />
                           </div>
                           <div className="bg-muted rounded-lg p-3">
                             <div className="flex items-center gap-2">
-                              <Loader2 className="h-4 w-4 animate-spin text-purple-500" />
+                              <Loader2 className="h-4 w-4 animate-spin text-signal" />
                               <span className="text-sm text-muted-foreground">Thinking...</span>
                             </div>
                           </div>
@@ -1455,11 +1455,11 @@ export default function AgenticAI() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-purple-500/5 border-purple-500/20">
+              <Card className="bg-signal/5 border-signal/20">
                 <CardContent className="pt-4">
                   <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-full bg-purple-500/20">
-                      <Brain className="h-4 w-4 text-purple-500" />
+                    <div className="p-2 rounded-full bg-signal/20">
+                      <Brain className="h-4 w-4 text-signal" />
                     </div>
                     <div>
                       <p className="font-medium text-sm">Autonomous Mode Active</p>

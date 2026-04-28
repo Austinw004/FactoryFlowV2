@@ -106,7 +106,7 @@ interface ErpConnection {
 const ERP_LOGOS: Record<string, { icon: any; color: string; bgColor: string }> = {
   "SAP": { icon: Building2, color: "text-blue-600", bgColor: "bg-blue-100 dark:bg-blue-900/30" },
   "Oracle NetSuite": { icon: Database, color: "text-red-600", bgColor: "bg-red-100 dark:bg-red-900/30" },
-  "Microsoft Dynamics 365": { icon: Package, color: "text-purple-600", bgColor: "bg-purple-100 dark:bg-purple-900/30" },
+  "Microsoft Dynamics 365": { icon: Package, color: "text-signal", bgColor: "bg-signal/15 dark:bg-signal/15" },
   "Sage": { icon: Settings, color: "text-green-600", bgColor: "bg-green-100 dark:bg-green-900/30" },
   "Infor": { icon: Zap, color: "text-orange-600", bgColor: "bg-orange-100 dark:bg-orange-900/30" },
 };
