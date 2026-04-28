@@ -323,10 +323,14 @@ export default function Compliance() {
   // Regime badge logic moved to @/components/RegimeBadge — single source
   // of truth across the app, palette-aligned.
 
+  // Score-color now uses palette tokens (good / signal / bad) instead of
+  // the rainbow text-green-600 / text-yellow-600 / text-red-600 — keeps
+  // the same red/yellow/green semantics the operator expects, but the
+  // tones come from the design palette rather than raw Tailwind.
   const getScoreColor = (score: number) => {
-    if (score >= 80) return "text-green-600";
-    if (score >= 60) return "text-yellow-600";
-    return "text-red-600";
+    if (score >= 80) return "text-good";
+    if (score >= 60) return "text-signal";
+    return "text-bad";
   };
 
   const getScoreProgressColor = (score: number) => {

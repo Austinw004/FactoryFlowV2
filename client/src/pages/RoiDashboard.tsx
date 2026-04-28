@@ -113,7 +113,7 @@ function MetricCard({
           {formatNumber(value, unit)}
         </div>
         {trend !== undefined && (
-          <p className={`text-xs flex items-center gap-1 ${isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+          <p className={`text-xs flex items-center gap-1 ${isPositive ? 'text-good' : 'text-bad'}`}>
             <TrendIcon className="h-3 w-3" />
             {Math.abs(trend).toFixed(1)}% {trendLabel || 'from baseline'}
           </p>
@@ -470,7 +470,7 @@ export default function RoiDashboard() {
                   <div className="text-right">
                     <p className="text-sm font-semibold">{formatNumber(metric.value, metric.unit)}</p>
                     {metric.improvementPercent && (
-                      <p className={`text-xs ${metric.improvementPercent >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                      <p className={`text-xs ${metric.improvementPercent >= 0 ? 'text-good' : 'text-bad'}`}>
                         {metric.improvementPercent >= 0 ? '+' : ''}{metric.improvementPercent.toFixed(1)}%
                       </p>
                     )}
