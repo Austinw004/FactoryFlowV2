@@ -1,3 +1,4 @@
+import { LoadingCard } from "@/components/LoadingState";
 import { getRegimeBadge } from "@/components/RegimeBadge";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -488,7 +489,7 @@ export default function SupplyChain() {
               </div>
 
               {eventsLoading ? (
-                <Card><CardContent className="p-6">Loading events...</CardContent></Card>
+                <LoadingCard />
               ) : filteredEvents.length === 0 ? (
                 <Card>
                   <CardContent className="p-6 text-center text-muted-foreground">
