@@ -1,3 +1,4 @@
+import { getSeverityBadge } from "@/components/SeverityBadge";
 import { getRegimeBadge } from "@/components/RegimeBadge";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -122,16 +123,9 @@ export default function PredictiveMaintenance() {
     });
   };
 
-  const getSeverityBadge = (severity: string) => {
-    const config = {
-      critical: { variant: "destructive" as const, label: "Critical" },
-      high: { variant: "destructive" as const, label: "High", className: "bg-orange-600" },
-      medium: { variant: "default" as const, label: "Medium", className: "bg-yellow-600" },
-      low: { variant: "secondary" as const, label: "Low" },
-    };
-    const c = config[severity as keyof typeof config] || config.medium;
-    return <Badge variant={c.variant} className={(c as any).className}>{c.label}</Badge>;
-  };
+  // Severity badge logic moved to @/components/SeverityBadge — single
+  // source of truth, palette-aligned (bad/signal/muted instead of
+  // destructive/orange-600/yellow-600/secondary).
 
   // Regime badge logic moved to @/components/RegimeBadge — single source
   // of truth across the app, palette-aligned.

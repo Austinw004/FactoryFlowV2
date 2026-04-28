@@ -1,3 +1,4 @@
+import { getSeverityBadge } from "@/components/SeverityBadge";
 import { getRegimeBadge } from "@/components/RegimeBadge";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -315,16 +316,9 @@ export default function Compliance() {
     return <Badge variant={config.variant} className={config.className}>{config.label}</Badge>;
   };
 
-  const getSeverityBadge = (severity: string) => {
-    const config: Record<string, { className: string, label: string }> = {
-      critical: { className: "bg-red-600", label: "Critical" },
-      major: { className: "bg-orange-600", label: "Major" },
-      minor: { className: "bg-yellow-600", label: "Minor" },
-      observation: { className: "bg-blue-600", label: "Observation" },
-    };
-    const c = config[severity] || config.minor;
-    return <Badge className={c.className}>{c.label}</Badge>;
-  };
+  // Severity badge logic moved to @/components/SeverityBadge — supports
+  // both the critical/high/medium/low and critical/major/minor/observation
+  // schemes via shared palette tones.
 
   // Regime badge logic moved to @/components/RegimeBadge — single source
   // of truth across the app, palette-aligned.
