@@ -75,7 +75,7 @@ export function BillComConfigDialog({ open, onOpenChange }: BillComConfigDialogP
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-green-500" />
+            <DollarSign className="h-5 w-5 text-good" />
             Configure Bill.com
           </DialogTitle>
           <DialogDescription>

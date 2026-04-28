@@ -121,7 +121,7 @@ export function ShopifyDialog({ open, onOpenChange }: ShopifyDialogProps) {
             <ScrollArea className="h-[350px] pr-4">
               <div className="space-y-4">
                 <div className="rounded-md bg-green-500/10 p-3 text-sm">
-                  <p className="font-medium text-green-600 dark:text-green-400">Connect Your Shopify Store</p>
+                  <p className="font-medium text-green-600">Connect Your Shopify Store</p>
                   <p className="text-muted-foreground mt-1">
                     Enter your store details to enable bi-directional data sync.
                   </p>
@@ -248,7 +248,7 @@ export function ShopifyDialog({ open, onOpenChange }: ShopifyDialogProps) {
             <ScrollArea className="h-[350px] pr-4">
               <div className="space-y-4">
                 <div className="rounded-md bg-amber-500/10 p-3 text-sm">
-                  <p className="font-medium text-amber-600 dark:text-amber-400">Data Sync Options</p>
+                  <p className="font-medium text-amber-600">Data Sync Options</p>
                   <p className="text-muted-foreground mt-1">
                     Choose which data types to sync between Shopify and Prescient Labs.
                   </p>

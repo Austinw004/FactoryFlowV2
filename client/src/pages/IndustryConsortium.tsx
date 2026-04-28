@@ -259,7 +259,7 @@ export default function IndustryConsortium() {
             <CardContent className="space-y-4">
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
-                  <Shield className="h-5 w-5 text-green-600 mt-0.5" />
+                  <Shield className="h-5 w-5 text-good mt-0.5" />
                   <div>
                     <h4 className="font-medium">Cryptographic Anonymization</h4>
                     <p className="text-sm text-muted-foreground mt-1">
@@ -269,7 +269,7 @@ export default function IndustryConsortium() {
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <Shield className="h-5 w-5 text-green-600 mt-0.5" />
+                  <Shield className="h-5 w-5 text-good mt-0.5" />
                   <div>
                     <h4 className="font-medium">Aggregate-Only Data</h4>
                     <p className="text-sm text-muted-foreground mt-1">
@@ -279,7 +279,7 @@ export default function IndustryConsortium() {
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <Shield className="h-5 w-5 text-green-600 mt-0.5" />
+                  <Shield className="h-5 w-5 text-good mt-0.5" />
                   <div>
                     <h4 className="font-medium">Opt-In Control</h4>
                     <p className="text-sm text-muted-foreground mt-1">
@@ -289,7 +289,7 @@ export default function IndustryConsortium() {
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <Shield className="h-5 w-5 text-green-600 mt-0.5" />
+                  <Shield className="h-5 w-5 text-good mt-0.5" />
                   <div>
                     <h4 className="font-medium">Data Retention</h4>
                     <p className="text-sm text-muted-foreground mt-1">

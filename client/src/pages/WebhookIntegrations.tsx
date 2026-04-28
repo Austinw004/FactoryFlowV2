@@ -141,7 +141,7 @@ function CopyButton({ text, label }: { text: string; label: string }) {
 
   return (
     <Button variant="ghost" size="icon" onClick={handleCopy} data-testid={`button-copy-${label.toLowerCase().replace(/\s/g, '-')}`}>
-      {copied ? <CheckCircle className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+      {copied ? <CheckCircle className="w-4 h-4 text-good" /> : <Copy className="w-4 h-4" />}
     </Button>
   );
 }
@@ -544,7 +544,7 @@ export default function WebhookIntegrations() {
           <Card>
             <CardContent className="p-4 flex items-center gap-4">
               <div className="p-3 bg-green-500/10 rounded-lg">
-                <CheckCircle className="w-6 h-6 text-green-500" />
+                <CheckCircle className="w-6 h-6 text-good" />
               </div>
               <div>
                 <p className="text-2xl font-bold" data-testid="text-active-integrations">

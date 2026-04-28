@@ -153,7 +153,7 @@ export function FlexportConfigDialog({ open, onOpenChange }: FlexportConfigDialo
               disabled={isTesting || !apiKey}
               data-testid="button-test-flexport"
             >
-              {isTesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : testSuccess ? <CheckCircle className="mr-2 h-4 w-4 text-green-500" /> : null}
+              {isTesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : testSuccess ? <CheckCircle className="mr-2 h-4 w-4 text-good" /> : null}
               {testSuccess ? "Connected" : "Test Connection"}
             </Button>
             <a

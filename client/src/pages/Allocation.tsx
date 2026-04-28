@@ -232,7 +232,7 @@ export default function Allocation() {
             {/* Low stock warnings - based on actual data */}
             {inventoryCapacityCheck.materialsLowStock.length > 0 && (
               <Alert className="py-2 border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20" data-testid="alert-low-stock">
-                <AlertCircle className="h-4 w-4 text-yellow-600" />
+                <AlertCircle className="h-4 w-4 text-signal" />
                 <AlertDescription className="space-y-2">
                   <p className="text-sm text-yellow-700 dark:text-yellow-300">
                     <strong>{inventoryCapacityCheck.materialsLowStock.length} material(s) with low stock (&lt;10 units):</strong>{' '}
@@ -433,7 +433,7 @@ export default function Allocation() {
           {/* Pre-run warning if low stock and not acknowledged */}
           {inventoryCapacityCheck && inventoryCapacityCheck.materialsLowStock.length > 0 && !lowStockAcknowledged && (
             <Alert className="mb-4 border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20" data-testid="alert-acknowledge-required">
-              <AlertCircle className="h-4 w-4 text-yellow-600" />
+              <AlertCircle className="h-4 w-4 text-signal" />
               <AlertDescription className="text-sm text-yellow-700 dark:text-yellow-300">
                 Please acknowledge the low stock warning above before running allocation.
               </AlertDescription>
@@ -554,7 +554,7 @@ function AllocationCard({ allocation }: { allocation: Allocation }) {
         {coverage && coverage.isSufficient && (
           <div className="flex justify-between items-center">
             <span className="text-sm text-muted-foreground">Coverage:</span>
-            <span className="font-semibold text-sm text-green-600 dark:text-green-400" data-testid={`text-coverage-${allocation.id}`}>
+            <span className="font-semibold text-sm text-green-600" data-testid={`text-coverage-${allocation.id}`}>
               ✓ {coverage.budgetCoverageDays?.toFixed(0)} days
             </span>
           </div>

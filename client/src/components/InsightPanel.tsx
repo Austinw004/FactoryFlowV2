@@ -45,13 +45,13 @@ const SEVERITY_STYLES = {
   critical: {
     border: "border-red-500/30",
     bg: "bg-red-500/5",
-    badge: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20",
+    badge: "bg-red-500/10 text-red-600 border-red-500/20",
     icon: "text-red-500",
   },
   warning: {
     border: "border-amber-500/30",
     bg: "bg-amber-500/5",
-    badge: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+    badge: "bg-amber-500/10 text-amber-600 border-amber-500/20",
     icon: "text-amber-500",
   },
   info: {
@@ -208,7 +208,7 @@ export function InsightPanel({ compact = false }: { compact?: boolean }) {
               </Badge>
             )}
             {warningCount > 0 && (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-amber-500/10 text-amber-600 border-amber-500/20">
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-amber-500/10 text-signal border-amber-500/20">
                 {warningCount} warnings
               </Badge>
             )}

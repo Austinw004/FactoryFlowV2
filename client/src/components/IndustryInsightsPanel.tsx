@@ -17,8 +17,8 @@ const insightIcons: Record<string, typeof TrendingUp> = {
 
 const insightColors: Record<string, string> = {
   kpi: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-  risk: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  opportunity: "bg-green-500/10 text-green-600 dark:text-green-400",
+  risk: "bg-amber-500/10 text-amber-600",
+  opportunity: "bg-green-500/10 text-green-600",
   tip: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
 };
 

@@ -182,9 +182,9 @@ export default function PlatformOwnerAnalytics() {
   }
 
   const getTrendIcon = (trend: string) => {
-    if (trend === "up" || trend === "growing") return <TrendingUp className="h-4 w-4 text-green-600" />;
-    if (trend === "down" || trend === "declining") return <TrendingDown className="h-4 w-4 text-red-600" />;
-    return <Activity className="h-4 w-4 text-yellow-600" />;
+    if (trend === "up" || trend === "growing") return <TrendingUp className="h-4 w-4 text-good" />;
+    if (trend === "down" || trend === "declining") return <TrendingDown className="h-4 w-4 text-bad" />;
+    return <Activity className="h-4 w-4 text-signal" />;
   };
 
   const getRiskBadge = (score: number) => {
@@ -251,7 +251,7 @@ export default function PlatformOwnerAnalytics() {
                       {metrics.overview.activeUsers} active (30d)
                     </p>
                   </div>
-                  <Users className="h-10 w-10 text-green-600" />
+                  <Users className="h-10 w-10 text-good" />
                 </div>
               </CardContent>
             </Card>
@@ -286,7 +286,7 @@ export default function PlatformOwnerAnalytics() {
                       RFQs + Allocations
                     </p>
                   </div>
-                  <Activity className="h-10 w-10 text-orange-600" />
+                  <Activity className="h-10 w-10 text-signal" />
                 </div>
               </CardContent>
             </Card>
@@ -307,7 +307,7 @@ export default function PlatformOwnerAnalytics() {
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center gap-3">
-                  <Truck className="h-8 w-8 text-green-500" />
+                  <Truck className="h-8 w-8 text-good" />
                   <div>
                     <p className="text-2xl font-bold">{metrics.usage.totalSuppliers}</p>
                     <p className="text-sm text-muted-foreground">Suppliers Monitored</p>

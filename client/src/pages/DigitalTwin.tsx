@@ -196,12 +196,15 @@ interface ExternalVariables {
   timestamp: string;
 }
 
+// Regime / severity color maps now use palette tokens (good/signal/bad/
+// muted) instead of the rainbow bg-green-500 / bg-amber-500 / bg-red-500
+// /  bg-blue-500. Same hierarchy, design-aligned tones.
 const REGIME_COLORS: Record<string, string> = {
-  HEALTHY_EXPANSION: "bg-green-500",
-  ASSET_LED_GROWTH: "bg-amber-500",
-  IMBALANCED_EXCESS: "bg-red-500",
-  REAL_ECONOMY_LEAD: "bg-blue-500",
-  UNKNOWN: "bg-gray-500",
+  HEALTHY_EXPANSION: "bg-good",
+  ASSET_LED_GROWTH: "bg-signal",
+  IMBALANCED_EXCESS: "bg-bad",
+  REAL_ECONOMY_LEAD: "bg-bone/60",
+  UNKNOWN: "bg-muted",
 };
 
 const REGIME_LABELS: Record<string, string> = {
@@ -213,10 +216,10 @@ const REGIME_LABELS: Record<string, string> = {
 };
 
 const SEVERITY_COLORS: Record<string, string> = {
-  info: "bg-blue-500",
-  warning: "bg-amber-500",
-  critical: "bg-orange-500",
-  emergency: "bg-red-500",
+  info: "bg-muted",
+  warning: "bg-signal",
+  critical: "bg-bad/70",
+  emergency: "bg-bad",
 };
 
 const CHART_COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))"];
@@ -645,11 +648,11 @@ export default function DigitalTwin() {
                     <div className="flex items-center gap-2 mt-2">
                       <span className="text-xs text-muted-foreground">vs. industry avg (62):</span>
                       {healthData.score >= 62 ? (
-                        <Badge variant="secondary" className="text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-xs font-medium">
+                        <Badge variant="secondary" className="text-green-700 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-xs font-medium">
                           +{healthData.score - 62} pts
                         </Badge>
                       ) : (
-                        <Badge variant="secondary" className="text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-xs font-medium">
+                        <Badge variant="secondary" className="text-amber-700 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-xs font-medium">
                           {healthData.score - 62} pts
                         </Badge>
                       )}
@@ -744,9 +747,9 @@ export default function DigitalTwin() {
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-start gap-2">
-                          {rec.type === "critical" ? <CircleAlert className="h-4 w-4 text-red-600 mt-0.5" /> :
-                           rec.type === "warning" ? <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" /> :
-                           rec.type === "success" ? <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5" /> :
+                          {rec.type === "critical" ? <CircleAlert className="h-4 w-4 text-bad mt-0.5" /> :
+                           rec.type === "warning" ? <AlertTriangle className="h-4 w-4 text-signal mt-0.5" /> :
+                           rec.type === "success" ? <CheckCircle2 className="h-4 w-4 text-good mt-0.5" /> :
                            <Lightbulb className="h-4 w-4 text-blue-600 mt-0.5" />}
                           <div>
                             <p className="font-medium text-sm">{rec.title}</p>
@@ -983,7 +986,7 @@ export default function DigitalTwin() {
                 <Skeleton className="h-48" />
               ) : alerts.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  <CheckCircle2 className="h-12 w-12 mx-auto mb-4 text-green-500" />
+                  <CheckCircle2 className="h-12 w-12 mx-auto mb-4 text-good" />
                   <p>No active alerts. Your supply chain is running smoothly.</p>
                 </div>
               ) : (
@@ -1050,7 +1053,7 @@ export default function DigitalTwin() {
               <div className="grid gap-4 md:grid-cols-4 mb-6">
                 <div className="p-4 rounded-lg bg-muted/50">
                   <div className="flex items-center gap-2 mb-2">
-                    <Zap className="h-5 w-5 text-green-500" />
+                    <Zap className="h-5 w-5 text-good" />
                     <span className="font-medium">Active Feeds</span>
                   </div>
                   <p className="text-2xl font-bold">{(dashboard?.dataFeeds?.active || 0) + 4}</p>
@@ -1071,7 +1074,7 @@ export default function DigitalTwin() {
                 </div>
                 <div className="p-4 rounded-lg bg-muted/50">
                   <div className="flex items-center gap-2 mb-2">
-                    <XCircle className="h-5 w-5 text-red-500" />
+                    <XCircle className="h-5 w-5 text-bad" />
                     <span className="font-medium">Errors</span>
                   </div>
                   <p className="text-2xl font-bold">{dashboard?.dataFeeds?.errors || 0}</p>
@@ -1114,7 +1117,7 @@ export default function DigitalTwin() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between p-3 rounded-lg border" data-testid="feed-weather">
                       <div className="flex items-center gap-3">
-                        <div className="h-2 w-2 rounded-full bg-green-500" />
+                        <div className="h-2 w-2 rounded-full bg-good" />
                         <div className="flex items-center gap-2">
                           <Cloud className="h-4 w-4 text-sky-500" />
                           <div>
@@ -1135,9 +1138,9 @@ export default function DigitalTwin() {
 
                     <div className="flex items-center justify-between p-3 rounded-lg border" data-testid="feed-commodity-futures">
                       <div className="flex items-center gap-3">
-                        <div className="h-2 w-2 rounded-full bg-green-500" />
+                        <div className="h-2 w-2 rounded-full bg-good" />
                         <div className="flex items-center gap-2">
-                          <TrendingUp className="h-4 w-4 text-green-500" />
+                          <TrendingUp className="h-4 w-4 text-good" />
                           <div>
                             <p className="font-medium text-sm">Commodity Futures</p>
                             <p className="text-xs text-muted-foreground">
@@ -1157,9 +1160,9 @@ export default function DigitalTwin() {
 
                     <div className="flex items-center justify-between p-3 rounded-lg border" data-testid="feed-consumer-sentiment">
                       <div className="flex items-center gap-3">
-                        <div className="h-2 w-2 rounded-full bg-green-500" />
+                        <div className="h-2 w-2 rounded-full bg-good" />
                         <div className="flex items-center gap-2">
-                          <ThermometerSun className="h-4 w-4 text-amber-500" />
+                          <ThermometerSun className="h-4 w-4 text-signal" />
                           <div>
                             <p className="font-medium text-sm">Consumer Sentiment</p>
                             <p className="text-xs text-muted-foreground">
@@ -1188,7 +1191,7 @@ export default function DigitalTwin() {
 
                     <div className="flex items-center justify-between p-3 rounded-lg border" data-testid="feed-social-trends">
                       <div className="flex items-center gap-3">
-                        <div className="h-2 w-2 rounded-full bg-green-500" />
+                        <div className="h-2 w-2 rounded-full bg-good" />
                         <div className="flex items-center gap-2">
                           <MessageSquare className="h-4 w-4 text-purple-500" />
                           <div>

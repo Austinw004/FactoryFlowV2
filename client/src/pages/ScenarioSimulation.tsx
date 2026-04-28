@@ -788,14 +788,14 @@ function SimulationDetail({
                   <CardContent>
                     <ul className="space-y-2 text-sm">
                       <li className="flex items-start gap-2">
-                        <AlertTriangle className="h-4 w-4 mt-0.5 text-yellow-600" />
+                        <AlertTriangle className="h-4 w-4 mt-0.5 text-signal" />
                         <span>
                           {variants.filter(v => (v.riskScore || 0) >= 50).length} of {variants.length} variants 
                           present elevated risk levels requiring mitigation strategies.
                         </span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <DollarSign className="h-4 w-4 mt-0.5 text-green-600" />
+                        <DollarSign className="h-4 w-4 mt-0.5 text-good" />
                         <span>
                           Procurement cost variation ranges from 
                           {' '}{Math.min(...variants.map(v => v.procurementImpact || 0)).toFixed(1)}% to 

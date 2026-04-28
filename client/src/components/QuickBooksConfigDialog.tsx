@@ -148,7 +148,7 @@ export function QuickBooksConfigDialog({ open, onOpenChange }: QuickBooksConfigD
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div className="p-2 bg-green-500/10 rounded-lg">
-              <DollarSign className="w-6 h-6 text-green-500" />
+              <DollarSign className="w-6 h-6 text-good" />
             </div>
             <div>
               <DialogTitle>Connect QuickBooks</DialogTitle>
@@ -282,7 +282,7 @@ export function QuickBooksConfigDialog({ open, onOpenChange }: QuickBooksConfigD
               </>
             ) : testSuccess ? (
               <>
-                <CheckCircle2 className="w-4 h-4 mr-2 text-green-500" />
+                <CheckCircle2 className="w-4 h-4 mr-2 text-good" />
                 Connection Verified
               </>
             ) : (

@@ -179,7 +179,7 @@ export function SalesforceConfigDialog({ open, onOpenChange }: SalesforceConfigD
 
             <div className="rounded-lg border bg-muted/50 p-3">
               <div className="flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5" />
+                <AlertTriangle className="w-4 h-4 text-signal mt-0.5" />
                 <div className="text-sm">
                   <p className="font-medium">Setup Guide</p>
                   <p className="text-muted-foreground">

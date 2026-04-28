@@ -990,7 +990,7 @@ export default function AutomatedPO() {
                     <div className="grid grid-cols-2 gap-2">
                       <div className="flex items-center gap-2">
                         {erpStatus.capabilities.canReadPOs ? (
-                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <CheckCircle className="h-4 w-4 text-good" />
                         ) : (
                           <XCircle className="h-4 w-4 text-muted-foreground" />
                         )}
@@ -998,7 +998,7 @@ export default function AutomatedPO() {
                       </div>
                       <div className="flex items-center gap-2">
                         {erpStatus.capabilities.canCreatePOs ? (
-                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <CheckCircle className="h-4 w-4 text-good" />
                         ) : (
                           <XCircle className="h-4 w-4 text-muted-foreground" />
                         )}
@@ -1006,7 +1006,7 @@ export default function AutomatedPO() {
                       </div>
                       <div className="flex items-center gap-2">
                         {erpStatus.capabilities.canUpdatePOs ? (
-                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <CheckCircle className="h-4 w-4 text-good" />
                         ) : (
                           <XCircle className="h-4 w-4 text-muted-foreground" />
                         )}
@@ -1014,7 +1014,7 @@ export default function AutomatedPO() {
                       </div>
                       <div className="flex items-center gap-2">
                         {erpStatus.capabilities.canReadInventory ? (
-                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <CheckCircle className="h-4 w-4 text-good" />
                         ) : (
                           <XCircle className="h-4 w-4 text-muted-foreground" />
                         )}
@@ -1123,7 +1123,7 @@ export default function AutomatedPO() {
         <DialogContent data-testid="dialog-confirm-execute">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              <AlertTriangle className="h-5 w-5 text-signal" />
               Confirm Purchase Execution
             </DialogTitle>
             <DialogDescription>
@@ -1390,7 +1390,7 @@ export default function AutomatedPO() {
           {ruleWizardStep === 3 && (
             <div className="space-y-4">
               <div className="text-center space-y-2">
-                <ShieldCheck className="h-12 w-12 mx-auto text-green-600" />
+                <ShieldCheck className="h-12 w-12 mx-auto text-good" />
                 <h3 className="font-semibold">Review Your Rule</h3>
                 <p className="text-sm text-muted-foreground">Confirm the settings before activating</p>
               </div>

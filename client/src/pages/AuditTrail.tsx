@@ -249,7 +249,7 @@ export default function AuditTrail() {
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-amber-500/10">
-              <BarChart3 className="h-5 w-5 text-amber-500" />
+              <BarChart3 className="h-5 w-5 text-signal" />
             </div>
             <div>
               <p className="text-2xl font-bold">{entityTypes.length}</p>

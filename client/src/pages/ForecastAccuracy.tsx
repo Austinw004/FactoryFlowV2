@@ -120,9 +120,9 @@ export default function ForecastAccuracy() {
 
   const getAccuracyColor = (mape: number | null | undefined) => {
     if (mape === null || mape === undefined) return "text-muted-foreground";
-    if (mape < 10) return "text-green-600 dark:text-green-400";
-    if (mape < 20) return "text-yellow-600 dark:text-yellow-400";
-    return "text-red-600 dark:text-red-400";
+    if (mape < 10) return "text-green-600";
+    if (mape < 20) return "text-yellow-600";
+    return "text-red-600";
   };
 
   const hasError = metricsError || byPeriodError || bySkuError || predictionsError;
@@ -279,9 +279,9 @@ export default function ForecastAccuracy() {
                 <>
                   <div className={`text-2xl font-bold ${
                     metrics?.trackingSignal === null || metrics?.trackingSignal === undefined ? 'text-muted-foreground' :
-                    Math.abs(metrics.trackingSignal) <= 4 ? 'text-green-600 dark:text-green-400' :
-                    Math.abs(metrics.trackingSignal) <= 6 ? 'text-yellow-600 dark:text-yellow-400' :
-                    'text-red-600 dark:text-red-400'
+                    Math.abs(metrics.trackingSignal) <= 4 ? 'text-green-600' :
+                    Math.abs(metrics.trackingSignal) <= 6 ? 'text-yellow-600' :
+                    'text-red-600'
                   }`} data-testid="text-tracking-signal">
                     {metrics?.trackingSignal !== null && metrics?.trackingSignal !== undefined 
                       ? metrics.trackingSignal.toFixed(2) 
@@ -315,9 +315,9 @@ export default function ForecastAccuracy() {
                 <>
                   <div className={`text-2xl font-bold ${
                     metrics?.theilsU === null || metrics?.theilsU === undefined ? 'text-muted-foreground' :
-                    metrics.theilsU < 0.8 ? 'text-green-600 dark:text-green-400' :
-                    metrics.theilsU < 1.0 ? 'text-yellow-600 dark:text-yellow-400' :
-                    'text-red-600 dark:text-red-400'
+                    metrics.theilsU < 0.8 ? 'text-green-600' :
+                    metrics.theilsU < 1.0 ? 'text-yellow-600' :
+                    'text-red-600'
                   }`} data-testid="text-theils-u">
                     {metrics?.theilsU !== null && metrics?.theilsU !== undefined 
                       ? metrics.theilsU.toFixed(3) 
@@ -351,9 +351,9 @@ export default function ForecastAccuracy() {
                 <>
                   <div className={`text-2xl font-bold ${
                     metrics?.directionalAccuracy === null || metrics?.directionalAccuracy === undefined ? 'text-muted-foreground' :
-                    metrics.directionalAccuracy >= 70 ? 'text-green-600 dark:text-green-400' :
-                    metrics.directionalAccuracy >= 50 ? 'text-yellow-600 dark:text-yellow-400' :
-                    'text-red-600 dark:text-red-400'
+                    metrics.directionalAccuracy >= 70 ? 'text-green-600' :
+                    metrics.directionalAccuracy >= 50 ? 'text-yellow-600' :
+                    'text-red-600'
                   }`} data-testid="text-directional-accuracy">
                     {metrics?.directionalAccuracy !== null && metrics?.directionalAccuracy !== undefined 
                       ? `${metrics.directionalAccuracy.toFixed(1)}%` 
@@ -387,9 +387,9 @@ export default function ForecastAccuracy() {
                 <>
                   <div className={`text-2xl font-bold ${
                     metrics?.confidenceHitRate === null || metrics?.confidenceHitRate === undefined ? 'text-muted-foreground' :
-                    metrics.confidenceHitRate >= 80 ? 'text-green-600 dark:text-green-400' :
-                    metrics.confidenceHitRate >= 60 ? 'text-yellow-600 dark:text-yellow-400' :
-                    'text-red-600 dark:text-red-400'
+                    metrics.confidenceHitRate >= 80 ? 'text-green-600' :
+                    metrics.confidenceHitRate >= 60 ? 'text-yellow-600' :
+                    'text-red-600'
                   }`} data-testid="text-confidence-hit-rate">
                     {metrics?.confidenceHitRate !== null && metrics?.confidenceHitRate !== undefined 
                       ? `${metrics.confidenceHitRate.toFixed(1)}%` 

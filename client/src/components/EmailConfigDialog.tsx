@@ -122,7 +122,7 @@ export function EmailConfigDialog({ open, onOpenChange }: EmailConfigDialogProps
             <Mail className="w-5 h-5" />
             Email Notifications
             {isConfigured && (
-              <CheckCircle className="w-4 h-4 text-green-500" />
+              <CheckCircle className="w-4 h-4 text-good" />
             )}
           </DialogTitle>
           <DialogDescription>
@@ -140,13 +140,13 @@ export function EmailConfigDialog({ open, onOpenChange }: EmailConfigDialogProps
               {isConfigured ? (
                 <div className="rounded-md bg-green-500/10 p-3 text-sm">
                   <div className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <CheckCircle className="w-4 h-4 text-good" />
                     <span>Email service is configured and ready</span>
                   </div>
                 </div>
               ) : (
                 <div className="rounded-md bg-amber-500/10 p-3 text-sm">
-                  <div className="flex items-start gap-2 text-amber-600 dark:text-amber-400">
+                  <div className="flex items-start gap-2 text-amber-600">
                     <AlertTriangle className="w-4 h-4 mt-0.5" />
                     <div>
                       <p className="font-medium">Email service not fully configured</p>

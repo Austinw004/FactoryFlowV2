@@ -116,11 +116,11 @@ export function IntegrationReadinessReport() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "compliant":
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
+        return <CheckCircle className="w-4 h-4 text-good" />;
       case "partial":
-        return <AlertTriangle className="w-4 h-4 text-amber-500" />;
+        return <AlertTriangle className="w-4 h-4 text-signal" />;
       default:
-        return <XCircle className="w-4 h-4 text-red-500" />;
+        return <XCircle className="w-4 h-4 text-bad" />;
     }
   };
 
@@ -235,10 +235,10 @@ export function IntegrationReadinessReport() {
             </div>
             <div className="flex justify-between text-xs text-muted-foreground mt-1">
               <span className="flex items-center gap-1">
-                <span className="w-2 h-2 bg-green-500 rounded-full" /> Compliant
+                <span className="w-2 h-2 bg-good rounded-full" /> Compliant
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-2 h-2 bg-amber-500 rounded-full" /> Partial
+                <span className="w-2 h-2 bg-signal rounded-full" /> Partial
               </span>
               <span className="flex items-center gap-1">
                 <span className="w-2 h-2 bg-muted-foreground rounded-full" />{" "}
@@ -258,7 +258,7 @@ export function IntegrationReadinessReport() {
               data-testid="section-full-integrations"
             >
               <div className="flex items-center gap-2 flex-wrap">
-                <Zap className="w-4 h-4 text-green-500" />
+                <Zap className="w-4 h-4 text-good" />
                 <span className="font-medium">
                   Full Tier ({fullIntegrations.length})
                 </span>
@@ -331,7 +331,7 @@ export function IntegrationReadinessReport() {
               data-testid="section-setup-ready-integrations"
             >
               <div className="flex items-center gap-2 flex-wrap">
-                <Settings className="w-4 h-4 text-amber-500" />
+                <Settings className="w-4 h-4 text-signal" />
                 <span className="font-medium">
                   Setup Ready ({setupReadyIntegrations.length})
                 </span>
@@ -378,7 +378,7 @@ export function IntegrationReadinessReport() {
                   key={idx}
                   className="flex items-center gap-1 text-xs text-muted-foreground"
                 >
-                  <CheckCircle className="w-3 h-3 text-green-500" />
+                  <CheckCircle className="w-3 h-3 text-good" />
                   {req}
                 </div>
               ))}

@@ -115,11 +115,15 @@ export default function ProductionKPIs() {
     return { oee, availability, performance, quality };
   };
 
+  // OEE badge — palette-aligned (good/bone/signal/bad) instead of the
+  // rainbow bg-green-600 / bg-blue-600 / bg-yellow-600 / destructive.
+  // Same threshold semantics: World Class >=85, Good >=75, Fair >=60, Poor below.
   const getOEEBadge = (oee: number) => {
-    if (oee >= 85) return <Badge className="bg-green-600">World Class ({oee.toFixed(1)}%)</Badge>;
-    if (oee >= 75) return <Badge className="bg-blue-600">Good ({oee.toFixed(1)}%)</Badge>;
-    if (oee >= 60) return <Badge className="bg-yellow-600">Fair ({oee.toFixed(1)}%)</Badge>;
-    return <Badge variant="destructive">Poor ({oee.toFixed(1)}%)</Badge>;
+    const v = oee.toFixed(1);
+    if (oee >= 85) return <Badge variant="outline" className="bg-good/20 text-good border-good/30">World Class ({v}%)</Badge>;
+    if (oee >= 75) return <Badge variant="outline" className="bg-bone/10 text-bone border-bone/20">Good ({v}%)</Badge>;
+    if (oee >= 60) return <Badge variant="outline" className="bg-signal/20 text-signal border-signal/30">Fair ({v}%)</Badge>;
+    return <Badge variant="outline" className="bg-bad/20 text-bad border-bad/30">Poor ({v}%)</Badge>;
   };
 
   // Regime badge logic moved to @/components/RegimeBadge — single source
@@ -571,7 +575,7 @@ export default function ProductionKPIs() {
                 )}
                 {aggregateStats.avgAvailability < 80 && (
                   <div className="flex items-start gap-2 p-3 bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                    <Clock className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+                    <Clock className="h-5 w-5 text-signal flex-shrink-0 mt-0.5" />
                     <div className="text-sm">
                       <p className="font-semibold text-yellow-900 dark:text-yellow-100">High Downtime</p>
                       <p className="text-muted-foreground">
@@ -582,7 +586,7 @@ export default function ProductionKPIs() {
                 )}
                 {aggregateStats.avgQuality < 95 && (
                   <div className="flex items-start gap-2 p-3 bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded-lg">
-                    <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400 flex-shrink-0 mt-0.5" />
+                    <AlertTriangle className="h-5 w-5 text-signal flex-shrink-0 mt-0.5" />
                     <div className="text-sm">
                       <p className="font-semibold text-orange-900 dark:text-orange-100">Quality Concerns</p>
                       <p className="text-muted-foreground">
@@ -593,7 +597,7 @@ export default function ProductionKPIs() {
                 )}
                 {aggregateStats.avgOEE >= 85 && (
                   <div className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
-                    <Zap className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                    <Zap className="h-5 w-5 text-good flex-shrink-0 mt-0.5" />
                     <div className="text-sm">
                       <p className="font-semibold text-green-900 dark:text-green-100">World-Class Performance</p>
                       <p className="text-muted-foreground">

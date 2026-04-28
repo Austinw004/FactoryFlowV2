@@ -691,25 +691,25 @@ export default function WorkforceScheduling() {
                             <TableCell className="font-medium">{emp.firstName} {emp.lastName}</TableCell>
                             <TableCell>
                               {benefits.some((b: any) => b.employeeId === emp.id && b.benefitType === 'health') ? 
-                                <CheckCircle2 className="h-4 w-4 text-green-600" /> :
+                                <CheckCircle2 className="h-4 w-4 text-good" /> :
                                 <AlertCircle className="h-4 w-4 text-muted-foreground" />
                               }
                             </TableCell>
                             <TableCell>
                               {benefits.some((b: any) => b.employeeId === emp.id && b.benefitType === 'dental') ? 
-                                <CheckCircle2 className="h-4 w-4 text-green-600" /> :
+                                <CheckCircle2 className="h-4 w-4 text-good" /> :
                                 <AlertCircle className="h-4 w-4 text-muted-foreground" />
                               }
                             </TableCell>
                             <TableCell>
                               {benefits.some((b: any) => b.employeeId === emp.id && b.benefitType === '401k') ? 
-                                <CheckCircle2 className="h-4 w-4 text-green-600" /> :
+                                <CheckCircle2 className="h-4 w-4 text-good" /> :
                                 <AlertCircle className="h-4 w-4 text-muted-foreground" />
                               }
                             </TableCell>
                             <TableCell>
                               {benefits.some((b: any) => b.employeeId === emp.id && b.benefitType === 'life') ? 
-                                <CheckCircle2 className="h-4 w-4 text-green-600" /> :
+                                <CheckCircle2 className="h-4 w-4 text-good" /> :
                                 <AlertCircle className="h-4 w-4 text-muted-foreground" />
                               }
                             </TableCell>
@@ -959,7 +959,7 @@ export default function WorkforceScheduling() {
                             <TableCell className="capitalize">{review.reviewType}</TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                <TrendingUp className="h-4 w-4 text-green-600" />
+                                <TrendingUp className="h-4 w-4 text-good" />
                                 {review.overallRating}/5
                               </div>
                             </TableCell>
@@ -1051,7 +1051,7 @@ export default function WorkforceScheduling() {
             <Card>
               <CardHeader className="pb-3">
                 <CardDescription className="flex items-center gap-2">
-                  <UserCheck className="h-4 w-4 text-green-500" />
+                  <UserCheck className="h-4 w-4 text-good" />
                   Scheduled Today
                 </CardDescription>
                 <CardTitle className="text-3xl" data-testid="text-scheduled-today">
@@ -1062,7 +1062,7 @@ export default function WorkforceScheduling() {
             <Card>
               <CardHeader className="pb-3">
                 <CardDescription className="flex items-center gap-2">
-                  <UserX className="h-4 w-4 text-orange-500" />
+                  <UserX className="h-4 w-4 text-signal" />
                   On Leave
                 </CardDescription>
                 <CardTitle className="text-3xl" data-testid="text-on-leave">
@@ -1098,7 +1098,7 @@ export default function WorkforceScheduling() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  <UserCheck className="h-5 w-5 text-green-500" />
+                  <UserCheck className="h-5 w-5 text-good" />
                   Working Today
                 </CardTitle>
               </CardHeader>
@@ -1121,7 +1121,7 @@ export default function WorkforceScheduling() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  <UserX className="h-5 w-5 text-orange-500" />
+                  <UserX className="h-5 w-5 text-signal" />
                   On Leave Today
                 </CardTitle>
               </CardHeader>
@@ -1462,7 +1462,7 @@ export default function WorkforceScheduling() {
             <Card className={overtimeTracking?.summary?.approachingOvertime > 0 ? "border-l-4 border-l-orange-500" : ""}>
               <CardHeader className="pb-3">
                 <CardDescription className="flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-orange-500" />
+                  <AlertTriangle className="h-4 w-4 text-signal" />
                   Approaching Overtime
                 </CardDescription>
                 <CardTitle className="text-3xl text-orange-600" data-testid="text-approaching-overtime">
@@ -1478,7 +1478,7 @@ export default function WorkforceScheduling() {
             <Card className={overtimeTracking?.summary?.inOvertime > 0 ? "border-l-4 border-l-red-500" : ""}>
               <CardHeader className="pb-3">
                 <CardDescription className="flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 text-red-500" />
+                  <AlertCircle className="h-4 w-4 text-bad" />
                   In Overtime
                 </CardDescription>
                 <CardTitle className="text-3xl text-red-600" data-testid="text-in-overtime">

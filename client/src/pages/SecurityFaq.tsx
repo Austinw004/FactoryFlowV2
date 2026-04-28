@@ -219,7 +219,7 @@ export default function SecurityFaq() {
                     {item.status === "Self-attested" ? (
                       <CheckCircle className="h-5 w-5 text-muted-foreground" />
                     ) : item.status === "Planned" ? (
-                      <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                      <AlertTriangle className="h-5 w-5 text-signal" />
                     ) : (
                       <Globe className="h-5 w-5 text-muted-foreground" />
                     )}

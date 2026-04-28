@@ -216,8 +216,8 @@ function SummaryCard({
         <div className="text-2xl font-bold">{value}</div>
         {description && (
           <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-            {trend === "up" && <TrendingUp className="h-3 w-3 text-red-600" />}
-            {trend === "down" && <TrendingDown className="h-3 w-3 text-green-600" />}
+            {trend === "up" && <TrendingUp className="h-3 w-3 text-bad" />}
+            {trend === "down" && <TrendingDown className="h-3 w-3 text-good" />}
             {description}
           </p>
         )}
@@ -433,7 +433,7 @@ function SupplierDetailDialog({
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                  <AlertTriangle className="h-4 w-4 text-signal" />
                   Recommended Actions
                 </CardTitle>
               </CardHeader>
@@ -718,7 +718,7 @@ export default function SupplierRisk() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-red-600" />
+                  <AlertTriangle className="h-4 w-4 text-bad" />
                   Critical Suppliers
                 </CardTitle>
               </CardHeader>
@@ -732,7 +732,7 @@ export default function SupplierRisk() {
                         onClick={() => handleViewDetails(s)}
                       >
                         <div className="flex items-center gap-2">
-                          <XCircle className="h-4 w-4 text-red-600" />
+                          <XCircle className="h-4 w-4 text-bad" />
                           <span className="font-medium">{s.supplier?.name || s.supplierId}</span>
                         </div>
                         <span className="font-bold text-red-600">{s.adjustedScore.toFixed(0)}</span>
@@ -742,7 +742,7 @@ export default function SupplierRisk() {
                 ) : (
                   <div className="h-full flex items-center justify-center text-muted-foreground py-8">
                     <div className="text-center">
-                      <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-green-600" />
+                      <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-good" />
                       <p>No critical suppliers</p>
                     </div>
                   </div>
@@ -857,7 +857,7 @@ export default function SupplierRisk() {
           ) : (
             <Card>
               <CardContent className="py-12 text-center">
-                <CheckCircle2 className="h-10 w-10 mx-auto text-green-600 mb-4" />
+                <CheckCircle2 className="h-10 w-10 mx-auto text-good mb-4" />
                 <h3 className="font-semibold mb-2">No Immediate Actions Required</h3>
                 <p className="text-muted-foreground">
                   All suppliers are within acceptable risk thresholds.

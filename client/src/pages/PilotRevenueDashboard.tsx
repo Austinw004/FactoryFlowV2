@@ -73,7 +73,7 @@ function MetricDelta({ value, suffix = "", inverted = false }: { value: number; 
     );
   }
   return (
-    <span className={`flex items-center gap-1 text-sm font-medium ${positive ? "text-green-600 dark:text-green-400" : negative ? "text-red-600 dark:text-red-400" : "text-muted-foreground"}`}>
+    <span className={`flex items-center gap-1 text-sm font-medium ${positive ? "text-green-600" : negative ? "text-red-600" : "text-muted-foreground"}`}>
       {positive ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
       {value > 0 ? "+" : ""}{value.toFixed(2)}{suffix}
     </span>
@@ -240,7 +240,7 @@ function ExperimentDashboard({ metrics }: { metrics: RevenueDashboardMetrics }) 
               </div>
               {metrics.realizedSavings.hasMeasuredData ? (
                 <div>
-                  <span className="text-lg font-semibold text-green-600 dark:text-green-400" data-testid="value-measured-savings">
+                  <span className="text-lg font-semibold text-green-600" data-testid="value-measured-savings">
                     ${metrics.realizedSavings.measuredDollars?.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                   </span>
                   <Badge variant="default" className="text-xs ml-2" data-testid="badge-measured-label">

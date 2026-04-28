@@ -139,7 +139,7 @@ export function OnboardingChecklist({
               <div className="flex items-center gap-3">
                 <div className="flex-shrink-0">
                   {step.completed ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-500" data-testid={`icon-completed-${step.id}`} />
+                    <CheckCircle2 className="h-5 w-5 text-good" data-testid={`icon-completed-${step.id}`} />
                   ) : (
                     <Circle className="h-5 w-5 text-muted-foreground" data-testid={`icon-pending-${step.id}`} />
                   )}
@@ -148,12 +148,12 @@ export function OnboardingChecklist({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className={`text-sm font-medium truncate ${
-                      step.completed ? 'text-green-700 dark:text-green-400' : 'text-foreground'
+                      step.completed ? 'text-green-700' : 'text-foreground'
                     }`}>
                       {step.title}
                     </p>
                     {step.completed && (
-                      <span className="text-xs text-green-600 dark:text-green-500 font-medium flex-shrink-0">
+                      <span className="text-xs text-green-600 font-medium flex-shrink-0">
                         ✓ Done
                       </span>
                     )}

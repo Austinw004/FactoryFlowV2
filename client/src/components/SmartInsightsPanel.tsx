@@ -53,8 +53,8 @@ const typeIcons = {
 };
 
 const typeColors = {
-  opportunity: 'text-green-600 dark:text-green-400',
-  risk: 'text-red-600 dark:text-red-400',
+  opportunity: 'text-green-600',
+  risk: 'text-red-600',
   action: 'text-blue-600 dark:text-blue-400',
   trend: 'text-purple-600 dark:text-purple-400',
 };

@@ -238,9 +238,9 @@ export function GoogleSheetsDialog({ open, onOpenChange }: GoogleSheetsDialogPro
 
           <div className="rounded-md bg-green-500/10 p-4 text-sm">
             <div className="flex items-start gap-3">
-              <CheckCircle className="w-5 h-5 text-green-500 mt-0.5" />
+              <CheckCircle className="w-5 h-5 text-good mt-0.5" />
               <div>
-                <p className="font-medium text-green-600 dark:text-green-400">
+                <p className="font-medium text-green-600">
                   How to use with Google Sheets
                 </p>
                 <ol className="text-muted-foreground mt-2 space-y-1 text-xs list-decimal list-inside">

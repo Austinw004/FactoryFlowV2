@@ -181,7 +181,7 @@ export default function Forecasting() {
               {/* Top 5 Gainers */}
               <div>
                 <div className="flex items-center gap-2 mb-3">
-                  <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  <TrendingUp className="h-4 w-4 text-good" />
                   <h3 className="font-semibold text-sm">Top 5 Gainers (24h)</h3>
                 </div>
                 <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -221,7 +221,7 @@ export default function Forecasting() {
               {/* Top 5 Losers */}
               <div>
                 <div className="flex items-center gap-2 mb-3">
-                  <TrendingDown className="h-4 w-4 text-red-600 dark:text-red-400" />
+                  <TrendingDown className="h-4 w-4 text-bad" />
                   <h3 className="font-semibold text-sm">Top 5 Losers (24h)</h3>
                 </div>
                 <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">

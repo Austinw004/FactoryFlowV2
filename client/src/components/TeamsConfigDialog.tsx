@@ -153,7 +153,7 @@ export function TeamsConfigDialog({ open, onOpenChange }: TeamsConfigDialogProps
             <MessageSquare className="w-5 h-5 text-[#6264A7]" />
             Microsoft Teams Integration
             {status?.teams?.configured && (
-              <CheckCircle className="w-4 h-4 text-green-500" />
+              <CheckCircle className="w-4 h-4 text-good" />
             )}
           </DialogTitle>
           <DialogDescription>

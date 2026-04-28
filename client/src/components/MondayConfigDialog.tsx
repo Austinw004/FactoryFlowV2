@@ -100,7 +100,7 @@ export function MondayConfigDialog({ open, onOpenChange }: MondayConfigDialogPro
       <DialogContent className="max-w-lg" data-testid="dialog-monday-config">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <LayoutGrid className="h-5 w-5 text-red-500" />
+            <LayoutGrid className="h-5 w-5 text-bad" />
             Configure Monday.com
           </DialogTitle>
           <DialogDescription>
@@ -212,7 +212,7 @@ export function MondayConfigDialog({ open, onOpenChange }: MondayConfigDialogPro
             {isTesting ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
             ) : testSuccess ? (
-              <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+              <CheckCircle className="h-4 w-4 mr-2 text-good" />
             ) : null}
             Test Connection
           </Button>

@@ -90,7 +90,7 @@ export function IndustryCommoditySuggestions({
         {highRelevance.length > 0 && (
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-sm font-medium">
-              <Star className="h-4 w-4 text-yellow-500" />
+              <Star className="h-4 w-4 text-signal" />
               High Relevance
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">

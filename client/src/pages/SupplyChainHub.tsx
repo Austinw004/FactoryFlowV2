@@ -102,7 +102,7 @@ export default function SupplyChainHub({ initialTab = "inventory" }: SupplyChain
                     {lowStockItems.length > 0 && (
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-sm font-medium">
-                          <PackageX className="h-4 w-4 text-orange-600" />
+                          <PackageX className="h-4 w-4 text-signal" />
                           <span>Low Stock Items ({lowStockItems.length})</span>
                           <Button 
                             variant="ghost" 
@@ -139,7 +139,7 @@ export default function SupplyChainHub({ initialTab = "inventory" }: SupplyChain
                     {atRiskSuppliers.length > 0 && (
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-sm font-medium">
-                          <Building2 className="h-4 w-4 text-red-600" />
+                          <Building2 className="h-4 w-4 text-bad" />
                           <span>At-Risk Suppliers ({atRiskSuppliers.length})</span>
                           <Button 
                             variant="ghost" 

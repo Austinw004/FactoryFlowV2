@@ -86,11 +86,11 @@ export function OperationsCommandCenter() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900 flex items-center justify-center">
-                <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                <AlertTriangle className="h-5 w-5 text-signal" />
               </div>
               <div>
                 <p className="font-medium text-amber-800 dark:text-amber-200">Unable to Load Attention Items</p>
-                <p className="text-sm text-amber-600 dark:text-amber-400">Could not fetch operations data</p>
+                <p className="text-sm text-amber-600">Could not fetch operations data</p>
               </div>
             </div>
             <Button 
@@ -117,11 +117,11 @@ export function OperationsCommandCenter() {
         <CardContent className="py-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-              <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+              <CheckCircle className="h-5 w-5 text-good" />
             </div>
             <div>
               <p className="font-medium text-green-800 dark:text-green-200">All Clear</p>
-              <p className="text-sm text-green-600 dark:text-green-400">No items need attention right now</p>
+              <p className="text-sm text-green-600">No items need attention right now</p>
             </div>
           </div>
         </CardContent>
@@ -134,7 +134,7 @@ export function OperationsCommandCenter() {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-amber-500" />
+            <AlertTriangle className="h-5 w-5 text-signal" />
             What Needs Attention Today
           </CardTitle>
           <div className="flex gap-2">

@@ -39,7 +39,7 @@ export function LiveAnalysisIndicator() {
             {isAnalyzing ? (
               <div className="relative">
                 <Brain className="h-4 w-4 text-primary" />
-                <span className="absolute -top-0.5 -right-0.5 h-2 w-2 bg-green-500 rounded-full animate-pulse" />
+                <span className="absolute -top-0.5 -right-0.5 h-2 w-2 bg-good rounded-full animate-pulse" />
               </div>
             ) : (
               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -76,19 +76,19 @@ export function LiveAnalysisIndicator() {
           </div>
           <div className="text-xs text-muted-foreground space-y-1">
             <div className="flex items-center gap-2">
-              <CheckCircle className="h-3 w-3 text-green-500" />
+              <CheckCircle className="h-3 w-3 text-good" />
               Economic regime monitoring
             </div>
             <div className="flex items-center gap-2">
-              <CheckCircle className="h-3 w-3 text-green-500" />
+              <CheckCircle className="h-3 w-3 text-good" />
               Demand pattern analysis
             </div>
             <div className="flex items-center gap-2">
-              <CheckCircle className="h-3 w-3 text-green-500" />
+              <CheckCircle className="h-3 w-3 text-good" />
               Supply chain risk tracking
             </div>
             <div className="flex items-center gap-2">
-              <CheckCircle className="h-3 w-3 text-green-500" />
+              <CheckCircle className="h-3 w-3 text-good" />
               Commodity price updates
             </div>
           </div>

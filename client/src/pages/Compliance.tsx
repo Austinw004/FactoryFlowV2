@@ -496,7 +496,7 @@ export default function Compliance() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <CheckCircle2 className="h-8 w-8 text-green-500" />
+              <CheckCircle2 className="h-8 w-8 text-good" />
               <div>
                 <div className="text-2xl font-bold">{documents.filter((d: any) => d.status === "approved" || d.status === "active").length}</div>
                 <div className="text-sm text-muted-foreground">Active Documents</div>

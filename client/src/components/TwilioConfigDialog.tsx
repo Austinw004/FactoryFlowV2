@@ -132,7 +132,7 @@ export function TwilioConfigDialog({ open, onOpenChange }: TwilioConfigDialogPro
             <Phone className="w-5 h-5" />
             SMS Alerts (Twilio)
             {isConfigured && (
-              <CheckCircle className="w-4 h-4 text-green-500" />
+              <CheckCircle className="w-4 h-4 text-good" />
             )}
           </DialogTitle>
           <DialogDescription>
@@ -150,13 +150,13 @@ export function TwilioConfigDialog({ open, onOpenChange }: TwilioConfigDialogPro
               {isConfigured ? (
                 <div className="rounded-md bg-green-500/10 p-3 text-sm">
                   <div className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <CheckCircle className="w-4 h-4 text-good" />
                     <span>Twilio is configured (from: ...{status?.twilio.fromNumber})</span>
                   </div>
                 </div>
               ) : (
                 <div className="rounded-md bg-amber-500/10 p-3 text-sm">
-                  <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                  <div className="flex items-center gap-2 text-amber-600">
                     <span>Twilio credentials not configured. Please contact support to set up SMS alerts.</span>
                   </div>
                 </div>

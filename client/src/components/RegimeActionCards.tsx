@@ -119,7 +119,7 @@ export function RegimeActionCards({ regime, fdr }: RegimeActionCardsProps) {
         <div className="flex items-start justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
-              <Lightbulb className="h-5 w-5 text-yellow-600" />
+              <Lightbulb className="h-5 w-5 text-signal" />
               Strategic Recommendations
             </CardTitle>
             <CardDescription>{recommendations.description}</CardDescription>

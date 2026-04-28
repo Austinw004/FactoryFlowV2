@@ -218,8 +218,8 @@ export default function PlatformAnalytics() {
         <Card className="border-red-500/20">
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center">
-                <AlertCircle className="h-6 w-6 text-red-600" />
+              <div className="w-12 h-12 rounded-full bg-bad/10 flex items-center justify-center">
+                <AlertCircle className="h-6 w-6 text-bad" />
               </div>
               <div>
                 <h3 className="font-medium">Failed to Load Analytics Data</h3>

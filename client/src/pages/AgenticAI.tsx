@@ -209,9 +209,9 @@ const agentTypeIcons: Record<string, typeof Bot> = {
 
 const agentTypeColors: Record<string, string> = {
   procurement: "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30",
-  inventory: "bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30",
+  inventory: "bg-green-500/15 text-green-700 border-green-500/30",
   forecasting: "bg-purple-500/15 text-purple-700 dark:text-purple-400 border-purple-500/30",
-  supplier: "bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30",
+  supplier: "bg-orange-500/15 text-orange-700 border-orange-500/30",
   production: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-400 border-cyan-500/30",
   custom: "bg-gray-500/15 text-gray-700 dark:text-gray-400 border-gray-500/30",
 };
@@ -1142,7 +1142,7 @@ export default function AgenticAI() {
         <Card data-testid="card-pending-actions">
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending Actions</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-500" />
+            <Clock className="h-4 w-4 text-signal" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">{displayStats.pendingActions}</div>
@@ -1153,7 +1153,7 @@ export default function AgenticAI() {
         <Card data-testid="card-completed-today">
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Completed Today</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
+            <CheckCircle className="h-4 w-4 text-good" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{displayStats.completedToday}</div>
@@ -1164,7 +1164,7 @@ export default function AgenticAI() {
         <Card data-testid="card-total-savings">
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Savings</CardTitle>
-            <DollarSign className="h-4 w-4 text-green-500" />
+            <DollarSign className="h-4 w-4 text-good" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">${displayStats.totalSavings.toLocaleString()}</div>
@@ -1391,7 +1391,7 @@ export default function AgenticAI() {
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm flex items-center gap-2">
-                    <Zap className="h-4 w-4 text-yellow-500" />
+                    <Zap className="h-4 w-4 text-signal" />
                     Quick Actions
                   </CardTitle>
                 </CardHeader>
@@ -1427,7 +1427,7 @@ export default function AgenticAI() {
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-green-500" />
+                    <Activity className="h-4 w-4 text-good" />
                     Current Context
                   </CardTitle>
                 </CardHeader>
@@ -1657,7 +1657,7 @@ export default function AgenticAI() {
           {displayPendingActions.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
-                <CheckCircle className="h-12 w-12 text-green-500 mb-4" />
+                <CheckCircle className="h-12 w-12 text-good mb-4" />
                 <h3 className="text-lg font-medium">All caught up!</h3>
                 <p className="text-muted-foreground">No pending actions require your approval</p>
               </CardContent>
@@ -1674,7 +1674,7 @@ export default function AgenticAI() {
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex items-start gap-3">
                           <div className="p-2 bg-yellow-500/10 rounded-lg">
-                            <ActionIcon className="h-5 w-5 text-yellow-600" />
+                            <ActionIcon className="h-5 w-5 text-signal" />
                           </div>
                           <div>
                             <div className="flex items-center gap-2 mb-1">
@@ -1741,7 +1741,7 @@ export default function AgenticAI() {
                       </div>
 
                       <div className="flex items-center gap-4 p-3 bg-green-500/10 rounded-lg">
-                        <TrendingUp className="h-5 w-5 text-green-600" />
+                        <TrendingUp className="h-5 w-5 text-good" />
                         <div className="flex-1">
                           <p className="text-sm font-medium">Estimated Impact</p>
                           <div className="flex flex-wrap gap-4 mt-1 text-sm">
