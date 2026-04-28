@@ -1,3 +1,4 @@
+import { getRegimeBadge } from "@/components/RegimeBadge";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -325,16 +326,8 @@ export default function Compliance() {
     return <Badge className={c.className}>{c.label}</Badge>;
   };
 
-  const getRegimeBadge = (regimeName: string) => {
-    const regimeConfig: Record<string, { className: string, label: string }> = {
-      HEALTHY_EXPANSION: { className: "bg-green-600", label: "Healthy Expansion" },
-      ASSET_LED_GROWTH: { className: "bg-orange-600", label: "Asset-Led Growth" },
-      IMBALANCED_EXCESS: { className: "bg-red-600", label: "Imbalanced Excess" },
-      REAL_ECONOMY_LEAD: { className: "bg-blue-600", label: "Real Economy Lead" },
-    };
-    const config = regimeConfig[regimeName] || { className: "", label: regimeName };
-    return <Badge className={config.className}>{config.label}</Badge>;
-  };
+  // Regime badge logic moved to @/components/RegimeBadge — single source
+  // of truth across the app, palette-aligned.
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return "text-green-600";
@@ -353,11 +346,7 @@ export default function Compliance() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2" data-testid="heading-compliance">
-            <Shield className="h-8 w-8" />
-            Regulatory Compliance Management
-          </h1>
-          <p className="text-muted-foreground mt-1">
+<p className="text-muted-foreground mt-1">
             Proactive compliance tracking with regime-aware intelligence
           </p>
         </div>

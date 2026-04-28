@@ -1,3 +1,4 @@
+import { getRegimeBadge } from "@/components/RegimeBadge";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { formatRegimeName } from "@/lib/utils";
@@ -178,16 +179,8 @@ export default function SupplyChain() {
     return <Badge variant={c.variant} className={c.className}>{c.label}</Badge>;
   };
 
-  const getRegimeBadge = (regimeName: string) => {
-    const regimeConfig = {
-      HEALTHY_EXPANSION: { className: "bg-green-600", label: "Healthy Expansion" },
-      ASSET_LED_GROWTH: { className: "bg-orange-600", label: "Asset-Led Growth" },
-      IMBALANCED_EXCESS: { className: "bg-red-600", label: "Imbalanced Excess" },
-      REAL_ECONOMY_LEAD: { className: "bg-blue-600", label: "Real Economy Lead" },
-    };
-    const config = regimeConfig[regimeName as keyof typeof regimeConfig] || { className: "", label: regimeName };
-    return <Badge className={config.className}>{config.label}</Badge>;
-  };
+  // Regime badge logic moved to @/components/RegimeBadge — single source
+  // of truth across the app, palette-aligned.
 
   const getCriticalityColor = (criticality: string) => {
     const colors = {
@@ -236,11 +229,7 @@ export default function SupplyChain() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2" data-testid="heading-supply-chain">
-            <Network className="h-8 w-8" />
-            Supply Chain Intelligence
-          </h1>
-          <p className="text-muted-foreground mt-1">
+<p className="text-muted-foreground mt-1">
             End-to-end material traceability and FDR-aware supplier network monitoring
           </p>
         </div>

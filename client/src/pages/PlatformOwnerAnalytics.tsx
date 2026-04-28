@@ -197,11 +197,7 @@ export default function PlatformOwnerAnalytics() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2" data-testid="heading-owner-analytics">
-            <Database className="h-8 w-8" />
-            Platform Owner Analytics
-          </h1>
-          <p className="text-muted-foreground mt-1">
+<p className="text-muted-foreground mt-1">
             Cross-customer intelligence and platform-wide insights (Owner Only)
           </p>
         </div>

@@ -151,11 +151,7 @@ export default function InventoryOptimization() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2" data-testid="heading-inventory-optimization">
-            <Package className="h-8 w-8" />
-            AI-Powered Inventory Optimization
-          </h1>
-          <p className="text-muted-foreground mt-1">
+<p className="text-muted-foreground mt-1">
             ML demand forecasting, optimal stock levels, and regime-aware procurement recommendations
           </p>
         </div>
