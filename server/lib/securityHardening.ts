@@ -347,6 +347,9 @@ export function securityHeadersMiddleware(req: Request, res: Response, next: Nex
   // Enable XSS protection
   res.setHeader('X-XSS-Protection', '1; mode=block');
 
+  // Block legacy Adobe/Flash cross-domain policy files from being honored.
+  res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+
   // Referrer policy
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 
@@ -369,9 +372,10 @@ export function securityHeadersMiddleware(req: Request, res: Response, next: Nex
     `default-src 'self'; ${scriptSrc}; ${styleSrc}; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' wss: https: https://api.stripe.com; frame-src 'self' https://js.stripe.com https://hooks.stripe.com; ${frameAncestors};`
   );
   
-  // Strict Transport Security (HSTS) - only in production with HTTPS
+  // Strict Transport Security (HSTS) - only in production with HTTPS.
+  // `preload` qualifies the apex domain for the browser HSTS preload list.
   if (process.env.NODE_ENV === 'production') {
-    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
   }
   
   // Permissions Policy

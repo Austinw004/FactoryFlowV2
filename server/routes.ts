@@ -1078,12 +1078,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const onboardingOperationsSchema = z.object({
     productionVolume: z.string().max(100).optional(),
-    annualProcurementSpend: z.union([z.string(), z.number()]).transform(String).optional(),
-    keyMaterials: z.union([z.array(z.string().max(100)), z.string().max(500)]).optional(),
+    annualProcurementSpend: z.union([z.string().max(100), z.number().finite()]).transform(String).optional(),
+    keyMaterials: z.union([z.array(z.string().max(100)).max(50), z.string().max(500)]).optional(),
     erpSystem: z.string().max(100).optional(),
-    painPoints: z.union([z.array(z.string().max(200)), z.string().max(1000)]).optional(),
-    numberOfSuppliers: z.union([z.string(), z.number()]).transform(String).optional(),
-    numberOfFacilities: z.union([z.string(), z.number()]).transform(String).optional(),
+    painPoints: z.union([z.array(z.string().max(200)).max(50), z.string().max(1000)]).optional(),
+    numberOfSuppliers: z.union([z.string().max(50), z.number().int().nonnegative()]).transform(String).optional(),
+    numberOfFacilities: z.union([z.string().max(50), z.number().int().nonnegative()]).transform(String).optional(),
     topProducts: z.string().max(500).optional(),
   });
 
@@ -1375,14 +1375,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const activityLogSchema = z.object({
-    activityType: z.string().min(1).max(100),
-    title: z.string().min(1).max(300),
+    activityType: z.string().trim().min(1).max(100),
+    title: z.string().trim().min(1).max(300),
     description: z.string().max(1000).optional(),
     entityType: z.string().max(100).optional(),
     entityId: z.string().max(100).optional(),
     category: z.string().max(100).optional(),
     severity: z.enum(["info", "success", "warning", "error"]).optional(),
-    metadata: z.record(z.unknown()).optional(),
+    // metadata is opaque JSON. Cap the serialized size at 8 KB to keep
+    // an attacker from stuffing megabytes of nested junk into the audit row.
+    metadata: z
+      .record(z.unknown())
+      .refine((v) => JSON.stringify(v).length <= 8192, {
+        message: "metadata must serialize to ≤ 8KB",
+      })
+      .optional(),
   });
 
   app.post('/api/activity-logs', isAuthenticated, async (req: any, res) => {
@@ -1530,14 +1537,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Trigger / action JSON blobs are opaque to this layer (the workflow engine
+  // owns their shape). Cap their serialized size so a malformed rule can't
+  // bloat the rules table or trip the engine's downstream parser.
   const automationUpdateSchema = z.object({
-    name: z.string().min(1).max(200).optional(),
+    name: z.string().trim().min(1).max(200).optional(),
     description: z.string().max(1000).optional(),
     enabled: z.boolean().optional(),
     triggerType: z.string().max(100).optional(),
-    triggerConditions: z.record(z.unknown()).optional(),
+    triggerConditions: z
+      .record(z.unknown())
+      .refine((v) => JSON.stringify(v).length <= 16384, { message: "triggerConditions too large (≤ 16KB)" })
+      .optional(),
     actionType: z.string().max(100).optional(),
-    actionConfig: z.record(z.unknown()).optional(),
+    actionConfig: z
+      .record(z.unknown())
+      .refine((v) => JSON.stringify(v).length <= 16384, { message: "actionConfig too large (≤ 16KB)" })
+      .optional(),
     priority: z.number().int().min(1).max(100).optional(),
     category: z.string().max(100).optional(),
   });
@@ -1655,18 +1671,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User has no associated company" });
       }
       
-      // Validate and sanitize input
+      // Validate and sanitize input. Strict: any extra field is rejected
+      // because the spread below feeds restPrefs straight into storage and
+      // a passthrough schema would let a caller mass-assign arbitrary
+      // columns (e.g. companyId, userId).
+      const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "expected HH:MM");
       const notifPrefsSchema = z.object({
         emailEnabled: z.boolean().optional(),
         pushEnabled: z.boolean().optional(),
         smsEnabled: z.boolean().optional(),
         inAppEnabled: z.boolean().optional(),
         digestFrequency: z.enum(["realtime", "hourly", "daily", "weekly"]).optional(),
-        quietHoursStart: z.string().optional().nullable(),
-        quietHoursEnd: z.string().optional().nullable(),
+        quietHoursStart: hhmm.nullable().optional(),
+        quietHoursEnd: hhmm.nullable().optional(),
         alertThreshold: z.enum(["all", "warning", "critical"]).optional(),
-        categories: z.record(z.boolean()).optional(),
-      }).passthrough();
+        // Cap the categories record so a caller can't push a multi-MB blob.
+        categories: z
+          .record(z.boolean())
+          .refine((v) => Object.keys(v).length <= 100, {
+            message: "categories must contain ≤ 100 entries",
+          })
+          .optional(),
+      }).strict();
       const sanitizedBody = notifPrefsSchema.parse(req.body);
 
       const { inAppEnabled, emailEnabled, pushEnabled, smsEnabled, ...restPrefs } = sanitizedBody;
@@ -3403,16 +3429,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/demand-history/bulk", isAuthenticated, async (req: any, res) => {
+  // Cap items at 1000 — protects DB & memory from a payload bomb. Each row
+  // is also re-validated against the Drizzle insert schema below.
+  const bulkDemandHistorySchema = z.object({
+    items: z
+      .array(z.object({ skuId: z.string().trim().min(1).max(128) }).passthrough())
+      .min(1)
+      .max(1000),
+  });
+  app.post("/api/demand-history/bulk", isAuthenticated, validateBody(bulkDemandHistorySchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      const items = req.body.items || [];
+      const { items } = req.validated as z.infer<typeof bulkDemandHistorySchema>;
       // Batch-validate all SKU IDs in one query to avoid N+1
-      const skuIds: string[] = [...new Set<string>(items.map((item: { skuId: string }) => item.skuId))];
+      const skuIds: string[] = [...new Set<string>(items.map((item) => item.skuId))];
       const companySkus = await storage.getSkus(user.companyId);
       const companySkuIds = new Set(companySkus.map(s => s.id));
       for (const skuId of skuIds) {
@@ -3540,14 +3574,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/multi-horizon-forecasts/bulk", isAuthenticated, async (req: any, res) => {
+  // Cap at 5000 — multi-horizon writes are heavier than demand-history rows
+  // (per-SKU per-horizon), but still need a hard ceiling to block payload bombs.
+  const bulkMultiHorizonForecastsSchema = z.object({
+    forecasts: z.array(z.record(z.unknown())).min(1).max(5000),
+  });
+  app.post("/api/multi-horizon-forecasts/bulk", isAuthenticated, validateBody(bulkMultiHorizonForecastsSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      const forecasts = req.body.forecasts || [];
+      const { forecasts } = req.validated as z.infer<typeof bulkMultiHorizonForecastsSchema>;
       const validated = forecasts.map((f: any) => insertMultiHorizonForecastSchema.parse({
         ...f,
         companyId: user.companyId,
@@ -3930,17 +3969,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Validation schema for direct material requirements
   const directMaterialRequirementSchema = z.object({
-    materialId: z.string().min(1, "Material ID is required"),
-    quantity: z.number().positive("Quantity must be positive"),
+    materialId: z.string().trim().min(1, "Material ID is required").max(128),
+    quantity: z.number().finite().positive("Quantity must be positive").max(1e9),
   });
 
   const allocationRunSchema = z.object({
-    budget: z.number().positive("Budget must be positive"),
-    name: z.string().optional(),
-    budgetDurationValue: z.number().int().positive().optional(),
+    // Cap budget to a sane upper bound — allocations larger than $1B are
+    // almost certainly typos and would blow up downstream solvers.
+    budget: z.number().finite().positive("Budget must be positive").max(1e12),
+    name: z.string().max(200).optional(),
+    budgetDurationValue: z.number().int().positive().max(365).optional(),
     budgetDurationUnit: z.enum(["day", "week", "month", "quarter"]).optional(),
-    horizonStart: z.string().optional(),
-    directMaterialRequirements: z.array(directMaterialRequirementSchema).optional(),
+    horizonStart: z.string().max(64).optional(),
+    directMaterialRequirements: z.array(directMaterialRequirementSchema).max(2000).optional(),
   });
 
   // Run allocation

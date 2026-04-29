@@ -5,3 +5,22 @@ server/public
 vite.config.ts.*
 *.tar.gz
 *.zip
+# Environment files — only .env.example may be committed.
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.test
+# Credentials & key material
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+service-account*.json
+# Editor / OS noise
+.idea/
+.vscode/
+*.log
+npm-debug.log*
