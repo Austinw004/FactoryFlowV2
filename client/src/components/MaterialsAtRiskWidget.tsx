@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Package, TrendingDown } from "lucide-react";
+import { AlertTriangle, Package, TrendingDown, Search } from "lucide-react";
 import { useLocation } from "wouter";
 import type { Material } from "@shared/schema";
 
@@ -14,11 +14,44 @@ interface MaterialRisk {
   inventoryLevel: number; // percentage
 }
 
+// Regime-aware playbook fragment for at-risk materials. Each at-risk
+// material gets a short "what to do under this regime" line so the
+// recommendation is never just "low stock" — it's "low stock + here's why
+// it matters more right now."
+function regimeAdvice(regime: string): { line: string; tone: "warm" | "tense" | "favorable" | "neutral" } {
+  switch (regime) {
+    case "ASSET_LED_GROWTH":
+      return {
+        line: "Input costs trending up — secure supply now, defer non-critical reorders.",
+        tone: "warm",
+      };
+    case "IMBALANCED_EXCESS":
+      return {
+        line: "Build safety stock on critical materials only. Push out non-essential POs.",
+        tone: "tense",
+      };
+    case "REAL_ECONOMY_LEAD":
+      return {
+        line: "Favorable buying window — lock in pricing on long-lead items.",
+        tone: "favorable",
+      };
+    default:
+      return {
+        line: "Standard procurement pace — restore stock to target levels.",
+        tone: "neutral",
+      };
+  }
+}
+
 export function MaterialsAtRiskWidget() {
   const [, setLocation] = useLocation();
   const { data: materials = [], isLoading } = useQuery<Material[]>({
     queryKey: ['/api/materials'],
   });
+  const { data: regime } = useQuery<{ regime?: string; fdr?: number }>({
+    queryKey: ['/api/economics/regime'],
+  });
+  const advice = regimeAdvice(regime?.regime || "");
   
   // Calculate risk for each material
   const materialsAtRisk: MaterialRisk[] = materials
@@ -96,6 +129,13 @@ export function MaterialsAtRiskWidget() {
     );
   }
   
+  const adviceTone: Record<typeof advice.tone, string> = {
+    warm: "border-amber-500/30 bg-amber-500/5 text-amber-200",
+    tense: "border-red-500/30 bg-red-500/5 text-red-200",
+    favorable: "border-emerald-500/30 bg-emerald-500/5 text-emerald-200",
+    neutral: "border-line bg-muted/20 text-muted-foreground",
+  };
+
   return (
     <Card data-testid="card-materials-at-risk">
       <CardHeader>
@@ -106,13 +146,18 @@ export function MaterialsAtRiskWidget() {
               Materials at Risk
             </CardTitle>
             <CardDescription>
-              {materialsAtRisk.length} materials requiring attention
+              {materialsAtRisk.length} {materialsAtRisk.length === 1 ? "material requires" : "materials require"} attention, ranked by stock-out severity
             </CardDescription>
           </div>
           <Badge variant="destructive">{materialsAtRisk.length}</Badge>
         </div>
       </CardHeader>
       <CardContent>
+        {regime?.regime && (
+          <div className={`text-xs rounded-md border px-3 py-2 mb-4 ${adviceTone[advice.tone]}`}>
+            <span className="font-medium">Regime guidance:</span> {advice.line}
+          </div>
+        )}
         <div className="space-y-4">
           {materialsAtRisk.map((item) => (
             <div
@@ -140,10 +185,10 @@ export function MaterialsAtRiskWidget() {
                   {item.reason}
                 </Badge>
               </div>
-              
+
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">Inventory Level</span>
+                  <span className="text-muted-foreground">On-hand inventory</span>
                   <span className="font-mono font-medium">
                     {item.material.onHand} {item.material.unit}
                     {item.material.inbound > 0 && ` (+${item.material.inbound} inbound)`}
@@ -160,7 +205,13 @@ export function MaterialsAtRiskWidget() {
                   }`}
                 />
               </div>
-              
+
+              <p className="text-xs text-muted-foreground mt-2">
+                <span className="text-foreground font-medium">Why:</span>{" "}
+                {item.reason.toLowerCase()} on {item.material.name}
+                {item.material.inbound === 0 ? " with no inbound replenishment scheduled." : "."}
+              </p>
+
               <div className="flex items-center gap-2 mt-3">
                 <Button
                   variant="outline"
@@ -171,6 +222,16 @@ export function MaterialsAtRiskWidget() {
                 >
                   <TrendingDown className="h-3 w-3 mr-1" />
                   Schedule Procurement
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => setLocation(`/multi-tier-mapping?materialId=${item.material.id}`)}
+                  data-testid={`button-find-alts-${item.material.id}`}
+                >
+                  <Search className="h-3 w-3 mr-1" />
+                  Find alternatives
                 </Button>
               </div>
             </div>
