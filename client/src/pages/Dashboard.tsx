@@ -781,17 +781,85 @@ export default function Dashboard() {
         <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
           <div className="flex items-start gap-3">
             <TrendingUp className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-            <div className="text-sm space-y-1">
+            <div className="text-sm space-y-2 flex-1">
               <p className="font-semibold text-foreground">
                 Market Insight: {fdr >= 1.5 ? 'Financial markets are outpacing the real economy — consider deferring major purchases' : fdr >= 1.0 ? 'Moderate market divergence detected — standard procurement pace recommended' : 'Real economy is strong — favorable conditions for locking in supplier terms'}
               </p>
               <p className="text-muted-foreground">
-                Current FDR ratio of {fdr.toFixed(2)} indicates <strong>{friendlyRegime}</strong> regime. 
-                {dataSource === 'external' && ' The platform is gathering data from 15+ external APIs including FRED, Alpha Vantage, DBnomics, World Bank, IMF, OECD, and Trading Economics to calculate real-time FDR.'}
-                {dataSource === 'fallback' && ' Using simulated economic data while external APIs are unavailable.'}
-                {dataSource === 'balance_sheet' && ' Calculated from internal balance sheet and income statement data.'}
-                {' '}All forecasts, allocations, and procurement signals are automatically adjusted based on the current economic regime.
+                <span className="text-foreground font-medium">Why:</span> Current FDR ratio of {fdr.toFixed(2)} indicates <strong>{friendlyRegime}</strong> regime.
+                {dataSource === 'external' && ' Computed from 15+ live economic data sources (FRED, Alpha Vantage, DBnomics, World Bank, IMF, OECD, Trading Economics).'}
+                {dataSource === 'fallback' && ' Using simulated economic data while external APIs are unavailable — confidence reduced.'}
+                {dataSource === 'balance_sheet' && ' Calculated from your internal balance sheet and income statement data.'}
+                {' '}All forecasts, allocations, and procurement signals are auto-adjusted to this regime.
               </p>
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                {fdr >= 1.5 && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-7"
+                      onClick={() => setLocation('/procurement')}
+                      data-testid="button-insight-defer-pos"
+                    >
+                      Identify deferrable POs →
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-7"
+                      onClick={() => setLocation('/suppliers')}
+                      data-testid="button-insight-renegotiate"
+                    >
+                      Renegotiate contracts →
+                    </Button>
+                  </>
+                )}
+                {fdr >= 1.0 && fdr < 1.5 && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-7"
+                      onClick={() => setLocation('/materials')}
+                      data-testid="button-insight-view-exposed"
+                    >
+                      View exposed materials →
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-7"
+                      onClick={() => setLocation('/forecasting')}
+                      data-testid="button-insight-forecast"
+                    >
+                      Run forecast →
+                    </Button>
+                  </>
+                )}
+                {fdr < 1.0 && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-7"
+                      onClick={() => setLocation('/suppliers')}
+                      data-testid="button-insight-lock-terms"
+                    >
+                      Lock in supplier terms →
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-7"
+                      onClick={() => setLocation('/procurement')}
+                      data-testid="button-insight-accelerate"
+                    >
+                      Accelerate planned buys →
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
