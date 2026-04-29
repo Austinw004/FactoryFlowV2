@@ -1,8 +1,10 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Activity, ShieldCheck, AlertTriangle, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Activity, ShieldCheck, AlertTriangle, TrendingUp, TrendingDown, Minus, ArrowRight } from "lucide-react";
 import { InfoTooltip } from "@/components/InfoTooltip";
+import { useLocation } from "wouter";
 
 type Regime = "HEALTHY_EXPANSION" | "ASSET_LED_GROWTH" | "IMBALANCED_EXCESS" | "REAL_ECONOMY_LEAD";
 
@@ -53,26 +55,49 @@ interface RegimeStatusProps {
 // internals are intentionally NOT exposed in the UI — those are proprietary
 // methodology, kept on the server. The customer sees the result, not the
 // formula.
-const regimeConfig: Record<Regime, { label: string; description: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+const regimeConfig: Record<Regime, {
+  label: string;
+  description: string;
+  variant: "default" | "secondary" | "destructive" | "outline";
+  // Recommended-actions block — every regime card now answers "what
+  // should I do about this" rather than just labeling the regime.
+  actions: { label: string; href: string }[];
+}> = {
   HEALTHY_EXPANSION: {
     label: "Healthy Expansion",
     description: "Balanced growth. Standard procurement pace.",
     variant: "default",
+    actions: [
+      { label: "Review expiring contracts", href: "/suppliers" },
+      { label: "Run baseline forecast", href: "/forecasting" },
+    ],
   },
   ASSET_LED_GROWTH: {
     label: "Asset-Led Growth",
     description: "Assets outpacing real economy. Consider accelerating procurement.",
     variant: "secondary",
+    actions: [
+      { label: "View exposed materials", href: "/materials" },
+      { label: "Lock in contracts", href: "/suppliers" },
+    ],
   },
   IMBALANCED_EXCESS: {
     label: "Imbalanced Excess",
     description: "Significant asset-real economy gap. Defer non-critical purchases.",
     variant: "destructive",
+    actions: [
+      { label: "Identify deferrable POs", href: "/procurement" },
+      { label: "Build safety stock — critical only", href: "/inventory-management" },
+    ],
   },
   REAL_ECONOMY_LEAD: {
     label: "Real Economy Lead",
     description: "Counter-cyclical opportunity. Lock in favorable pricing.",
     variant: "default",
+    actions: [
+      { label: "Renegotiate supplier agreements", href: "/suppliers" },
+      { label: "Lock in long-term pricing", href: "/procurement" },
+    ],
   },
 };
 
@@ -94,6 +119,7 @@ function ConfidenceBar({ label, value, testId, tooltip }: { label: string; value
 }
 
 export function RegimeStatus({ regime, fdr: fdrProp, intensity, regimeEvidence, intelligence }: RegimeStatusProps) {
+  const [, setLocation] = useLocation();
   const fdr = Number.isFinite(Number(fdrProp)) ? Number(fdrProp) : 1.0;
   const config = regimeConfig[regime] || regimeConfig.HEALTHY_EXPANSION;
   const confidence = intelligence?.confidence || regimeEvidence?.confidence;
@@ -178,6 +204,27 @@ export function RegimeStatus({ regime, fdr: fdrProp, intensity, regimeEvidence, 
             </span>
           </div>
         )}
+
+        <div className="border-t pt-3 mt-1" data-testid="regime-recommended-actions">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+            What to do under {config.label}
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            {config.actions.map((a) => (
+              <Button
+                key={a.href + a.label}
+                variant="outline"
+                size="sm"
+                className="text-xs h-7"
+                onClick={() => setLocation(a.href)}
+                data-testid={`button-regime-action-${a.label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`}
+              >
+                {a.label}
+                <ArrowRight className="h-3 w-3 ml-1" />
+              </Button>
+            ))}
+          </div>
+        </div>
       </div>
     </Card>
   );
