@@ -1,5 +1,6 @@
 import { KPICard } from "@/components/KPICard";
 import { RegimeStatus } from "@/components/RegimeStatus";
+import { RegimeProcurementBriefing } from "@/components/RegimeProcurementBriefing";
 import { PolicySignals } from "@/components/PolicySignals";
 import { AllocationTable } from "@/components/AllocationTable";
 import { EditableBudgetGauge } from "@/components/EditableBudgetGauge";
@@ -63,19 +64,39 @@ function getRegimeDescription(regime: string): string {
   return regimeDescriptions[regime] || "Economic conditions are being analyzed.";
 }
 
+interface RegimeShift {
+  from: string;
+  to: string;
+  fdr: number | null;
+  at: number;
+}
+
 export default function Dashboard() {
   const { toast } = useToast();
   const { user, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
 
+  // Persist the most recent regime shift so the dashboard reflects it
+  // visually for the rest of the session — not just as a toast that
+  // disappears after 10 seconds.
+  const [regimeShift, setRegimeShift] = useState<RegimeShift | null>(null);
+
   // Enable WebSocket for real-time updates with regime change notifications
   const { isConnected } = useWebSocket((message) => {
     if (message.type === 'regime_change' && message.data) {
       const severity = message.data.severity === 'high' ? 'destructive' : 'default';
-      
+      const fdrNum = Number(message.data.fdr);
+
+      setRegimeShift({
+        from: String(message.data.from || ''),
+        to: String(message.data.to || ''),
+        fdr: Number.isFinite(fdrNum) ? fdrNum : null,
+        at: Date.now(),
+      });
+
       toast({
         title: "Economic Regime Changed",
-        description: `The economic regime has shifted from ${message.data.from} to ${message.data.to}. FDR: ${Number.isFinite(Number(message.data.fdr)) ? Number(message.data.fdr).toFixed(2) : '—'}`,
+        description: `The economic regime has shifted from ${message.data.from} to ${message.data.to}. FDR: ${Number.isFinite(fdrNum) ? fdrNum.toFixed(2) : '—'}`,
         variant: severity as 'default' | 'destructive',
         duration: 10000, // Show for 10 seconds
       });
@@ -337,7 +358,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="mb-16">
+      <div className="mb-10">
         <div className="eyebrow mb-4">State of operations</div>
         <h1 className="hero text-5xl">{regime?.regime ? getRegimeDescription(regime.regime).split('.')[0] + '.' : 'Analyzing conditions.'}</h1>
         <p className="text-soft mt-5 max-w-xl leading-relaxed">
@@ -346,6 +367,56 @@ export default function Dashboard() {
             : 'Add your first SKU to start tracking operations.'}
         </p>
       </div>
+
+      {regimeShift && (
+        <div
+          className="mb-6 flex items-start gap-3 rounded-md border border-signal/30 bg-signal/5 p-4"
+          data-testid="banner-regime-shift"
+        >
+          <Radio className="h-4 w-4 text-signal shrink-0 mt-0.5 animate-pulse" />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <span className="text-xs uppercase tracking-[0.14em] text-signal font-medium">
+                Regime shift detected
+              </span>
+              <span className="text-xs text-muted-foreground font-mono">
+                {new Date(regimeShift.at).toLocaleTimeString()}
+              </span>
+            </div>
+            <p className="text-sm">
+              <span className="font-medium">{regimeShift.from.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase())}</span>
+              {' → '}
+              <span className="font-medium">{regimeShift.to.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase())}</span>
+              {regimeShift.fdr != null && (
+                <span className="text-muted-foreground"> · FDR now {regimeShift.fdr.toFixed(2)}</span>
+              )}
+              {'. '}
+              <span className="text-muted-foreground">
+                Procurement guidance below has been updated to reflect the new regime.
+              </span>
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs"
+            onClick={() => setRegimeShift(null)}
+            data-testid="button-dismiss-regime-shift"
+          >
+            Dismiss
+          </Button>
+        </div>
+      )}
+
+      {regimeType !== "UNKNOWN" && (
+        <div className="mb-10">
+          <RegimeProcurementBriefing
+            regime={regimeType}
+            fdr={fdr}
+            confidence={regimeIntelligence?.confidence?.overall}
+          />
+        </div>
+      )}
 
       <div className="grid grid-cols-4 gap-px bg-line mb-20">
         <div className="bg-panel p-6">
