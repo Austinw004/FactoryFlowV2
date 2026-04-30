@@ -122,6 +122,11 @@ import {
   predictionOutcomes,
   insertPredictionOutcomeSchema,
   automationSafeMode,
+  insertComplianceDocumentSchema,
+  insertComplianceRegulationSchema,
+  insertComplianceAuditSchema,
+  insertAuditFindingSchema,
+  insertComplianceCalendarEventSchema,
 } from "@shared/schema";
 
 const economics = new DualCircuitEconomics();
@@ -4512,9 +4517,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate request body
       const validationResult = insertRfqSchema.safeParse(req.body);
       if (!validationResult.success) {
-        return res.status(400).json({ 
-          error: "Validation failed", 
-          details: validationResult.error.errors 
+        return res.status(400).json({
+          error: "Validation failed",
+          details: validationResult.error.issues
         });
       }
 
@@ -4669,9 +4674,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (!validationResult.success) {
-        return res.status(400).json({ 
-          error: "Validation failed", 
-          details: validationResult.error.errors 
+        return res.status(400).json({
+          error: "Validation failed",
+          details: validationResult.error.issues
         });
       }
 
@@ -4729,14 +4734,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get current economic regime for context
       await economics.fetch();
-      
-      const document = await storage.createComplianceDocument({
+
+      const parsed = insertComplianceDocumentSchema.safeParse({
         ...req.body,
         companyId: user.companyId,
         createdBy: user.id,
         economicRegimeContext: economics.regime,
       });
-      
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid input", fields: parsed.error.flatten().fieldErrors });
+      }
+
+      const document = await storage.createComplianceDocument(parsed.data);
+
       res.status(201).json(document);
     } catch (error: any) {
       console.error("Error creating compliance document:", error);
@@ -4770,11 +4780,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "User must be associated with a company" });
       }
 
-      const regulation = await storage.createComplianceRegulation({
+      const parsed = insertComplianceRegulationSchema.safeParse({
         ...req.body,
         companyId: user.companyId,
       });
-      
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid input", fields: parsed.error.flatten().fieldErrors });
+      }
+
+      const regulation = await storage.createComplianceRegulation(parsed.data);
+
       res.status(201).json(regulation);
     } catch (error: any) {
       console.error("Error creating compliance regulation:", error);
@@ -4810,14 +4825,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get current economic regime and FDR
       await economics.fetch();
-      
-      const audit = await storage.createComplianceAudit({
+
+      const parsed = insertComplianceAuditSchema.safeParse({
         ...req.body,
         companyId: user.companyId,
         economicRegime: economics.regime,
         fdrAtAudit: economics.fdr,
       });
-      
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid input", fields: parsed.error.flatten().fieldErrors });
+      }
+
+      const audit = await storage.createComplianceAudit(parsed.data);
+
       res.status(201).json(audit);
     } catch (error: any) {
       console.error("Error creating compliance audit:", error);
@@ -4855,11 +4875,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "User must be associated with a company" });
       }
 
-      const finding = await storage.createAuditFinding({
+      const parsed = insertAuditFindingSchema.safeParse({
         ...req.body,
         companyId: user.companyId,
       });
-      
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid input", fields: parsed.error.flatten().fieldErrors });
+      }
+
+      const finding = await storage.createAuditFinding(parsed.data);
+
       res.status(201).json(finding);
     } catch (error: any) {
       console.error("Error creating audit finding:", error);
@@ -4918,11 +4943,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "User must be associated with a company" });
       }
 
-      const event = await storage.createComplianceCalendarEvent({
+      const parsed = insertComplianceCalendarEventSchema.safeParse({
         ...req.body,
         companyId: user.companyId,
       });
-      
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid input", fields: parsed.error.flatten().fieldErrors });
+      }
+
+      const event = await storage.createComplianceCalendarEvent(parsed.data);
+
       res.status(201).json(event);
     } catch (error: any) {
       console.error("Error creating calendar event:", error);
@@ -10503,7 +10533,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validationResult = exportSchema.safeParse(req.body);
       if (!validationResult.success) {
-        return res.status(400).json({ error: "Invalid request parameters", details: validationResult.error.errors });
+        return res.status(400).json({ error: "Invalid request parameters", details: validationResult.error.issues });
       }
 
       const { format, entities } = validationResult.data;
@@ -10566,7 +10596,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validationResult = importSchema.safeParse(req.body);
       if (!validationResult.success) {
-        return res.status(400).json({ error: "Invalid request parameters", details: validationResult.error.errors });
+        return res.status(400).json({ error: "Invalid request parameters", details: validationResult.error.issues });
       }
 
       const { entity, updateExisting } = validationResult.data;
