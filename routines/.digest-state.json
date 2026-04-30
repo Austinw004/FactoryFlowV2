@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "today": "2026-04-30",
+  "prior_digest_date": "2026-04-29",
+  "prior_reply_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "prior_reply_note": "no reply received; digest-state.json was missing on disk because last run's PR #146 (which attempted to commit it) is still open and unmerged",
+  "email_send": {
+    "status": "failed",
+    "reason": "sendpulse-api not in node_modules; CredentialService not reachable in routine env",
+    "logged_to": "/tmp/digest-failures.jsonl",
+    "subject_used": "Daily digest — 8 need your call",
+    "html_path": "/tmp/digest/digest-2026-04-30.html",
+    "text_path": "/tmp/digest/digest-2026-04-30.txt"
+  },
+  "at_a_glance": {
+    "ran_cleanly": 1,
+    "need_eyes": 5,
+    "blocking": 0
+  },
+  "decisions_needed": [
+    {
+      "id": 1,
+      "routine": "Big Boi",
+      "kind": "pr",
+      "ref": "https://github.com/Austinw004/FactoryFlowV2/pull/151",
+      "summary": "Daily codebase pass: postcss XSS patch, 15 TS errors fixed, 5 compliance POSTs Zod-validated. Build clean.",
+      "question": "Approve and merge, or defer pending the broader drizzle-zod / zod-v3-vs-v4 decision the PR flags?"
+    },
+    {
+      "id": 2,
+      "routine": "Daily Boost",
+      "kind": "pr",
+      "ref": "https://github.com/Austinw004/FactoryFlowV2/pull/147",
+      "summary": "Wraps 3 unguarded async route handlers in try/catch + structured 500.",
+      "question": "Approve and merge?"
+    },
+    {
+      "id": 3,
+      "routine": "Optimus",
+      "kind": "pr",
+      "ref": "https://github.com/Austinw004/FactoryFlowV2/pull/152",
+      "summary": "Regime-aware command center on dashboard (today's iteration, +471/-71).",
+      "question": "Promote to ready and merge, or hold pending review?"
+    },
+    {
+      "id": 4,
+      "routine": "Optimus",
+      "kind": "pr",
+      "ref": "https://github.com/Austinw004/FactoryFlowV2/pull/145",
+      "summary": "Regime-driven procurement playbook (yesterday's iteration, +297/-22). Likely superseded by #152.",
+      "question": "Close as superseded by #152, or keep open?"
+    },
+    {
+      "id": 5,
+      "routine": "Optimus",
+      "kind": "conflict",
+      "ref": "https://github.com/Austinw004/FactoryFlowV2/pull/140 + https://github.com/Austinw004/FactoryFlowV2/pull/145 + https://github.com/Austinw004/FactoryFlowV2/pull/152",
+      "summary": "Three open PRs all rewriting the same Dashboard regime surface.",
+      "question": "Pick one canonical PR; close or rebase the others. Which wins?"
+    },
+    {
+      "id": 6,
+      "routine": "Weekly Clean",
+      "kind": "pr",
+      "ref": "https://github.com/Austinw004/FactoryFlowV2/pull/130",
+      "summary": "Weekly deep clean from 2026-04-26 still awaiting review (in 7-day window). Security headers, validation, vendor-chunk split (557→212 kB), 5 issues filed.",
+      "question": "Approve and merge, or close and let next week's clean re-do?"
+    },
+    {
+      "id": 7,
+      "routine": "Palantard Grade",
+      "kind": "issues",
+      "ref": "https://github.com/Austinw004/FactoryFlowV2/issues/148, https://github.com/Austinw004/FactoryFlowV2/issues/149, https://github.com/Austinw004/FactoryFlowV2/issues/150",
+      "summary": "Three new product flags: Section 232 tariffs (#148), copper price moves (#149), GHS Rev 7 + EPA RMP (#150). #148 recurs across #110, #118, #135, #144.",
+      "question": "Triage as: real product gap, defer-with-label, or dismiss? The recurrence of #148 is itself a signal."
+    },
+    {
+      "id": 8,
+      "routine": "Daily Digest",
+      "kind": "meta",
+      "ref": "https://github.com/Austinw004/FactoryFlowV2/pull/146",
+      "summary": "Yesterday's digest opened a PR to commit routines/.digest-state.json, contradicting this routine's \"no commits / no PRs / no issues\" hard rule.",
+      "question": "Close PR #146 (state should live on session disk only), or amend the routine spec to permit a state-only commit?"
+    }
+  ],
+  "routines_observed": {
+    "Big Boi": { "branch_pattern": "claude/exciting-fermi-*", "today": ["PR #151"] },
+    "Optimus": { "branch_pattern": "claude/vigilant-allen-*", "today": ["PR #145", "PR #152"], "carry": ["PR #140"] },
+    "Daily Boost": { "branch_pattern": "claude/hopeful-rubin-*", "today": ["PR #147"], "carry": ["PR #143"] },
+    "Palantard Grade": { "branch_pattern": "(no PRs; files issues)", "today": ["#148", "#149", "#150"] },
+    "Weekly Clean": { "branch_pattern": "claude/festive-dijkstra-*", "today": [], "in_7d": ["PR #130"] },
+    "Code Review": { "branch_pattern": "claude/code-review-*", "today": [], "note": "silent — no activity in 24h" }
+  }
+}
