@@ -1,5 +1,6 @@
 import { KPICard } from "@/components/KPICard";
 import { RegimeStatus } from "@/components/RegimeStatus";
+import { RegimeProcurementBriefing } from "@/components/RegimeProcurementBriefing";
 import { PolicySignals } from "@/components/PolicySignals";
 import { AllocationTable } from "@/components/AllocationTable";
 import { EditableBudgetGauge } from "@/components/EditableBudgetGauge";
@@ -337,7 +338,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="mb-16">
+      <div className="mb-10">
         <div className="eyebrow mb-4">State of operations</div>
         <h1 className="hero text-5xl">{regime?.regime ? getRegimeDescription(regime.regime).split('.')[0] + '.' : 'Analyzing conditions.'}</h1>
         <p className="text-soft mt-5 max-w-xl leading-relaxed">
@@ -346,6 +347,16 @@ export default function Dashboard() {
             : 'Add your first SKU to start tracking operations.'}
         </p>
       </div>
+
+      {regimeType !== "UNKNOWN" && (
+        <div className="mb-10">
+          <RegimeProcurementBriefing
+            regime={regimeType}
+            fdr={fdr}
+            confidence={regimeIntelligence?.confidence?.overall}
+          />
+        </div>
+      )}
 
       <div className="grid grid-cols-4 gap-px bg-line mb-20">
         <div className="bg-panel p-6">
