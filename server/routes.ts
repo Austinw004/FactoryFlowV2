@@ -4512,9 +4512,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate request body
       const validationResult = insertRfqSchema.safeParse(req.body);
       if (!validationResult.success) {
-        return res.status(400).json({ 
-          error: "Validation failed", 
-          details: validationResult.error.errors 
+        return res.status(400).json({
+          error: "Validation failed",
+          details: validationResult.error.issues
         });
       }
 
@@ -4669,9 +4669,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (!validationResult.success) {
-        return res.status(400).json({ 
-          error: "Validation failed", 
-          details: validationResult.error.errors 
+        return res.status(400).json({
+          error: "Validation failed",
+          details: validationResult.error.issues
         });
       }
 
@@ -10503,7 +10503,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validationResult = exportSchema.safeParse(req.body);
       if (!validationResult.success) {
-        return res.status(400).json({ error: "Invalid request parameters", details: validationResult.error.errors });
+        return res.status(400).json({ error: "Invalid request parameters", details: validationResult.error.issues });
       }
 
       const { format, entities } = validationResult.data;
@@ -10566,7 +10566,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validationResult = importSchema.safeParse(req.body);
       if (!validationResult.success) {
-        return res.status(400).json({ error: "Invalid request parameters", details: validationResult.error.errors });
+        return res.status(400).json({ error: "Invalid request parameters", details: validationResult.error.issues });
       }
 
       const { entity, updateExisting } = validationResult.data;
