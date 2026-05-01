@@ -59,8 +59,80 @@ const regimeDescriptions: Record<string, string> = {
   REAL_ECONOMY_LEAD: "Counter-cyclical opportunity. FDR > 2.5. Lock in favorable supplier terms while asset markets correct.",
 };
 
+// Regime-aware procurement playbook. The headline is the "so what" in plain
+// manufacturing language. The actions are concrete next steps the customer
+// can take today. The accent class tints the hero rule so the dashboard's
+// tone shifts subtly with market conditions — calm in expansion, warm in
+// growth, tense in excess, opportunity-blue in counter-cyclical windows.
+type RegimePlaybook = {
+  headline: string;
+  meaning: string;
+  actions: string[];
+  accent: string; // tailwind border/bg color class for the hero rule
+  badgeTone: string;
+};
+
+const regimePlaybooks: Record<string, RegimePlaybook> = {
+  HEALTHY_EXPANSION: {
+    headline: "Conditions are stable. Standard procurement pace.",
+    meaning:
+      "Asset markets and the real economy are tracking together. Input-cost shocks are unlikely in the next quarter.",
+    actions: [
+      "Negotiate long-term contracts while pricing is predictable.",
+      "Right-size safety stock — no need to over-build.",
+    ],
+    accent: "border-good/40",
+    badgeTone: "text-good",
+  },
+  ASSET_LED_GROWTH: {
+    headline: "Asset markets are heating up. Lock in supply before prices move.",
+    meaning:
+      "Financial markets are outpacing real output. Historically this regime precedes 8–12% input cost increases over the next quarter.",
+    actions: [
+      "Lock in supplier contracts for critical materials this week.",
+      "Pre-purchase 30–60 days of cover on commodity-exposed inputs.",
+    ],
+    accent: "border-amber-500/50",
+    badgeTone: "text-amber-500",
+  },
+  IMBALANCED_EXCESS: {
+    headline: "Significant decoupling detected. Defer and renegotiate.",
+    meaning:
+      "Asset prices have separated from real demand. Expect volatility in commodity and logistics costs, plus supplier credit stress.",
+    actions: [
+      "Defer non-critical purchase orders by 30–45 days.",
+      "Build safety stock only on single-source critical materials.",
+      "Renegotiate contracts expiring in the next 90 days.",
+    ],
+    accent: "border-bad/50",
+    badgeTone: "text-bad",
+  },
+  REAL_ECONOMY_LEAD: {
+    headline: "Counter-cyclical window. Buyer's market — act now.",
+    meaning:
+      "The real economy is leading and asset markets are correcting. Suppliers are more willing to concede on price and terms.",
+    actions: [
+      "Renegotiate expiring agreements at lower rates.",
+      "Consolidate spend with tier-1 suppliers to capture volume discounts.",
+    ],
+    accent: "border-signal/50",
+    badgeTone: "text-signal",
+  },
+  UNKNOWN: {
+    headline: "Analyzing market conditions.",
+    meaning: "Gathering economic signals to determine your procurement posture.",
+    actions: ["Connect data sources to unlock regime-specific guidance."],
+    accent: "border-line",
+    badgeTone: "text-muted",
+  },
+};
+
 function getRegimeDescription(regime: string): string {
   return regimeDescriptions[regime] || "Economic conditions are being analyzed.";
+}
+
+function getRegimePlaybook(regime: string): RegimePlaybook {
+  return regimePlaybooks[regime] || regimePlaybooks.UNKNOWN;
 }
 
 export default function Dashboard() {
@@ -337,15 +409,48 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="mb-16">
-        <div className="eyebrow mb-4">State of operations</div>
-        <h1 className="hero text-5xl">{regime?.regime ? getRegimeDescription(regime.regime).split('.')[0] + '.' : 'Analyzing conditions.'}</h1>
-        <p className="text-soft mt-5 max-w-xl leading-relaxed">
-          {Array.isArray(skus) && skus.length > 0
-            ? `Tracking ${skus.length.toLocaleString()} SKU${skus.length === 1 ? '' : 's'}. ${regime?.regime === 'HEALTHY_EXPANSION' ? 'No critical exposures.' : 'Review current regime conditions.'}`
-            : 'Add your first SKU to start tracking operations.'}
-        </p>
-      </div>
+      {(() => {
+        const playbook = getRegimePlaybook(regimeType);
+        return (
+          <div className={`mb-16 border-l-2 pl-6 ${playbook.accent}`} data-testid="hero-regime-playbook">
+            <div className="eyebrow mb-4 flex items-center gap-3">
+              <span>State of operations</span>
+              <span className={`mono text-[10px] ${playbook.badgeTone}`}>
+                {friendlyRegime} · FDR {fdr.toFixed(2)}
+              </span>
+            </div>
+            <h1 className="hero text-5xl">{playbook.headline}</h1>
+            <p className="text-soft mt-5 max-w-2xl leading-relaxed">
+              {playbook.meaning}
+            </p>
+
+            {playbook.actions.length > 0 && (
+              <div className="mt-8 max-w-2xl">
+                <div className="eyebrow mb-3">Your move this week</div>
+                <ul className="space-y-2">
+                  {playbook.actions.map((action, idx) => (
+                    <li
+                      key={idx}
+                      className="flex items-start gap-3 text-sm leading-relaxed"
+                      data-testid={`playbook-action-${idx}`}
+                    >
+                      <span className={`mono text-xs mt-0.5 ${playbook.badgeTone}`}>
+                        {String(idx + 1).padStart(2, '0')}
+                      </span>
+                      <span>{action}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-xs text-muted mt-4 leading-relaxed">
+                  Why: FDR (Financial-Real Decoupling) measures the gap between asset-market activity
+                  and real economic output. The platform reads this regime live and adjusts every
+                  forecast, allocation, and signal below.
+                </p>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       <div className="grid grid-cols-4 gap-px bg-line mb-20">
         <div className="bg-panel p-6">
