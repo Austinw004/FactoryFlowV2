@@ -22,13 +22,16 @@ import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
 import LandingPage from "@/pages/LandingPage";
 import DashboardHub from "@/pages/DashboardHub";
-import Onboarding from "@/pages/Onboarding";
 import SignUpPage from "@/pages/SignUpPage";
 import SignInPage from "@/pages/SignInPage";
 import AuthCallback from "@/pages/AuthCallback";
 import Pricing from "@/pages/Pricing";
 
-// Lazy-loaded pages — split into separate chunks for faster initial load
+// Lazy-loaded pages — split into separate chunks for faster initial load.
+// Onboarding is a one-time post-signup flow (1.2k LOC, pulls Stripe form
+// + many @shared/schema runtime exports), so it doesn't belong in the
+// initial bundle that the landing page pays for.
+const Onboarding = lazy(() => import("@/pages/Onboarding"));
 const DemandHub = lazy(() => import("@/pages/DemandHub"));
 const ProcurementHub = lazy(() => import("@/pages/ProcurementHub"));
 const OperationsHub = lazy(() => import("@/pages/OperationsHub"));
