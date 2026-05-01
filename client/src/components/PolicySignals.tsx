@@ -1,9 +1,10 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  AlertTriangle, 
-  TrendingDown, 
-  TrendingUp, 
+import { useQuery } from "@tanstack/react-query";
+import {
+  AlertTriangle,
+  TrendingDown,
+  TrendingUp,
   DollarSign,
   Target,
   Package,
@@ -20,6 +21,18 @@ interface Signal {
 interface PolicySignalsProps {
   signals: Signal[];
 }
+
+const regimeRationale: Record<string, string> = {
+  HEALTHY_EXPANSION:
+    "FDR is in equilibrium — input costs are stable and supplier capacity is not constrained.",
+  ASSET_LED_GROWTH:
+    "Asset markets are outpacing real output (FDR rising) — this regime historically precedes 8–12% input cost increases.",
+  IMBALANCED_EXCESS:
+    "Significant decoupling between asset markets and the real economy — expect commodity volatility and supplier credit stress.",
+  REAL_ECONOMY_LEAD:
+    "Real economy is leading; asset markets correcting — suppliers are more willing to concede on price and terms.",
+  UNKNOWN: "Regime is being analyzed — guidance will sharpen as data flows in.",
+};
 
 // Type-aware signal configuration using composite keys: type:action
 const signalConfig: Record<string, { label: string; icon: any; color: string }> = {
@@ -91,6 +104,13 @@ const signalConfig: Record<string, { label: string; icon: any; color: string }> 
 };
 
 export function PolicySignals({ signals }: PolicySignalsProps) {
+  const { data: regimeData } = useQuery<{ regime?: string; fdr?: number }>({
+    queryKey: ["/api/economics/regime"],
+  });
+  const regimeKey = regimeData?.regime || "UNKNOWN";
+  const fdr = Number.isFinite(Number(regimeData?.fdr)) ? Number(regimeData?.fdr) : null;
+  const whyNow = regimeRationale[regimeKey] || regimeRationale.UNKNOWN;
+
   // Guard against invalid data
   if (!Array.isArray(signals) || signals.length === 0) {
     return (
@@ -112,6 +132,12 @@ export function PolicySignals({ signals }: PolicySignalsProps) {
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-lg">Recommended Actions</h3>
           <Badge variant="secondary" data-testid="badge-signal-count">{signals.length}</Badge>
+        </div>
+
+        <div className="text-xs text-muted-foreground leading-relaxed pb-2 border-b border-line/40">
+          <span className="font-medium text-foreground">Why these actions: </span>
+          {whyNow}
+          {fdr != null && <span className="mono"> (FDR {fdr.toFixed(2)})</span>}
         </div>
         
         <div className="space-y-3">

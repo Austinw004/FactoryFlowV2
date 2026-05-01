@@ -13,6 +13,7 @@ interface QuickWin {
   description: string;
   urgency: "high" | "medium" | "low";
   actionLabel: string;
+  rationale: string;
 }
 
 export function QuickWinsWidget() {
@@ -61,6 +62,7 @@ export function QuickWinsWidget() {
         description: "Current market regime favors buyers. Review planned purchases for acceleration opportunities.",
         urgency: "high",
         actionLabel: "Review procurement queue",
+        rationale: `FDR ${fdr.toFixed(2)} signals a counter-cyclical window — suppliers are typically more flexible on price and terms in this regime.`,
       });
     }
 
@@ -72,6 +74,7 @@ export function QuickWinsWidget() {
         description: "Current regime suggests caution. Consider deferring non-critical purchases.",
         urgency: "medium",
         actionLabel: "Review pending orders",
+        rationale: `FDR ${fdr.toFixed(2)} indicates asset-real decoupling. Historically this regime sees commodity prices peak before correcting — deferring 30–45 days often captures better pricing.`,
       });
     }
 
@@ -84,6 +87,7 @@ export function QuickWinsWidget() {
         description: "Low inventory detected. Review reorder needs to prevent production delays.",
         urgency: "high",
         actionLabel: "View at-risk materials",
+        rationale: `${lowStockMaterials.length} of your ${materials.length} tracked materials sit below the 50-unit threshold — at typical lead times, any demand spike triggers a stockout.`,
       });
     }
 
@@ -95,6 +99,7 @@ export function QuickWinsWidget() {
         description: "Multiple suppliers detected. Consolidating orders may improve terms.",
         urgency: "low",
         actionLabel: "Analyze suppliers",
+        rationale: `${materials.length} active materials suggests fragmented spend. Tier-1 consolidation typically unlocks 3–7% volume discounts and reduces invoice overhead.`,
       });
     }
 
@@ -108,6 +113,7 @@ export function QuickWinsWidget() {
           description: "Budget size may support renegotiation with key suppliers.",
           urgency: "medium",
           actionLabel: "View supplier terms",
+          rationale: `Allocation budget of $${(latestAllocation.budget / 1000).toFixed(0)}K crosses the threshold where suppliers usually concede on payment terms or rebate tiers.`,
         });
       }
     }
@@ -206,6 +212,10 @@ export function QuickWinsWidget() {
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground line-clamp-2">{win.description}</p>
+                  <p className="text-[11px] text-muted-foreground/80 mt-1 leading-relaxed" data-testid={`quick-win-rationale-${win.id}`}>
+                    <span className="font-medium text-foreground/80">Why: </span>
+                    {win.rationale}
+                  </p>
                   <div className="flex items-center justify-end mt-2">
                     <Button 
                       variant="ghost" 
