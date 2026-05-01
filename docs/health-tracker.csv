@@ -1,2 +1,3 @@
 date,tsc_errors,validation_coverage_pct,npm_vulns_total,npm_vulns_critical,bundle_main_kb,build_status,site_status,issues_created,commits_pushed
 2026-04-18,0,23,6,0,517,pass,up(403),2,1
+2026-05-01,318,25,5,0,475,pass,sandbox-blocked,3,7

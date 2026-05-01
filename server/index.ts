@@ -31,14 +31,10 @@ app.use(
     frameguard: false,
   }),
 );
-// Permissions-Policy: lock down sensitive browser APIs not used by this app.
-app.use((_req, res, next) => {
-  res.setHeader(
-    "Permissions-Policy",
-    "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()",
-  );
-  next();
-});
+// Permissions-Policy is set by securityHeadersMiddleware in
+// server/lib/securityHardening.ts (registered via applySecurityHardening
+// during registerRoutes). Keeping a single source of truth avoids the
+// later middleware silently overwriting an earlier value with a narrower one.
 
 // Startup env validation — fail fast before binding port.
 // Loud logs so we can see the boot sequence in production log tail.

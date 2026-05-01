@@ -60,7 +60,10 @@ underlying 110-control status.
    is unusually strong for a small-business SaaS; it directly answers
    industrial-base supply-chain scrutiny.
 3. **Clean dependency posture.** 0 critical / 0 high CVEs in production
-   bundles after the 2026-04-14 audit pass.
+   bundles after the 2026-W18 audit pass. The 5 remaining moderate
+   advisories all live in build-time tooling (vite, esbuild, drizzle-kit)
+   and are unreachable from the production runtime; postcss was upgraded
+   to 8.5.10 to clear GHSA-qx2v-qp2m-jg93.
 4. **Deny-by-default architecture.** Public endpoints are enumerated and
    justified; every other route demands authentication.
 

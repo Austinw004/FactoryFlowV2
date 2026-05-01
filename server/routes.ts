@@ -3796,7 +3796,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(result[0]);
     } catch (error: any) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: "Invalid request data", details: error.errors });
+        return res.status(400).json({ error: "Invalid request data", details: error.issues });
       }
       res.status(500).json({ error: error.message });
     }
@@ -3955,7 +3955,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate request body
       const validationResult = allocationRunSchema.safeParse(req.body);
       if (!validationResult.success) {
-        return res.status(400).json({ error: validationResult.error.errors[0].message });
+        return res.status(400).json({ error: validationResult.error.issues[0].message });
       }
 
       const { budget, name, budgetDurationValue, budgetDurationUnit, horizonStart, directMaterialRequirements } = validationResult.data;
@@ -4514,7 +4514,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!validationResult.success) {
         return res.status(400).json({ 
           error: "Validation failed", 
-          details: validationResult.error.errors 
+          details: validationResult.error.issues 
         });
       }
 
@@ -4671,7 +4671,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!validationResult.success) {
         return res.status(400).json({ 
           error: "Validation failed", 
-          details: validationResult.error.errors 
+          details: validationResult.error.issues 
         });
       }
 
@@ -8343,29 +8343,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Test ERP connection before saving
-  app.post("/api/erp-connections/test", isAuthenticated, async (req: any, res) => {
+  const erpConnectionTestSchema = z.object({
+    erpSystem: z.enum(["sap", "oracle", "netsuite", "microsoft-dynamics", "infor", "epicor", "syspro", "other"]),
+    apiEndpoint: z.string().trim().url().min(10).max(2048),
+    authMethod: z.enum(["basic", "oauth2", "api_key", "bearer", "saml"]),
+    credentials: z
+      .object({
+        username: z.string().max(500).optional(),
+        password: z.string().max(2000).optional(),
+        apiKey: z.string().max(2000).optional(),
+        clientId: z.string().max(500).optional(),
+        clientSecret: z.string().max(2000).optional(),
+        token: z.string().max(4000).optional(),
+        tenantId: z.string().max(200).optional(),
+      })
+      .strict()
+      .refine((c) => Object.values(c).some((v) => typeof v === "string" && v.length > 0), {
+        message: "At least one credential field is required",
+      }),
+  }).strict();
+  app.post("/api/erp-connections/test", isAuthenticated, validateBody(erpConnectionTestSchema), async (req: any, res) => {
     try {
-      const { erpSystem, apiEndpoint, authMethod, credentials } = req.body;
-      
+      const { erpSystem } = req.validated as z.infer<typeof erpConnectionTestSchema>;
+
       // Simulate connection testing
       // In production, this would actually attempt to connect to the ERP
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // For demo purposes, simulate various responses
-      if (!apiEndpoint || apiEndpoint.length < 10) {
-        return res.status(400).json({ 
-          success: false, 
-          error: "Invalid API endpoint. Please provide a valid URL." 
-        });
-      }
-      
-      if (!credentials || Object.keys(credentials).length === 0) {
-        return res.status(400).json({ 
-          success: false, 
-          error: "No credentials provided." 
-        });
-      }
-      
+
       // Simulate successful connection with mock data discovery
       const mockDiscovery = {
         products: Math.floor(Math.random() * 500) + 100,
@@ -8582,10 +8586,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Generate M&A scoring
-  app.post("/api/ma/score", isAuthenticated, async (req: any, res) => {
+  // Generate M&A scoring — keep targetType in sync with MARecommendationInput
+  // in server/lib/maIntelligence.ts.
+  const maScoreSchema = z.object({
+    targetType: z.enum(["acquisition", "divestiture", "joint_venture"]),
+    estimatedValue: z.number().finite().min(0).max(1e15),
+    strategicFitScore: z.number().min(0).max(100),
+    currentFDR: z.number().finite().min(-100).max(100),
+    currentRegime: z.string().trim().min(1).max(100),
+  }).strict();
+  app.post("/api/ma/score", isAuthenticated, validateBody(maScoreSchema), async (req: any, res) => {
     try {
-      const { targetType, estimatedValue, strategicFitScore, currentFDR, currentRegime } = req.body;
+      const { targetType, estimatedValue, strategicFitScore, currentFDR, currentRegime } = req.validated as z.infer<typeof maScoreSchema>;
       const scoring = maEngine.generateRecommendation(
         { targetType, estimatedValue, strategicFitScore },
         currentFDR,
@@ -8737,15 +8749,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Compare multiple scenarios
-  app.post("/api/scenarios/compare", isAuthenticated, async (req: any, res) => {
+  // Compare multiple scenarios — array bound to prevent payload bombs.
+  const scenariosCompareSchema = z.object({
+    scenarios: z.array(z.record(z.unknown())).min(1).max(20),
+  }).strict();
+  app.post("/api/scenarios/compare", isAuthenticated, validateBody(scenariosCompareSchema), async (req: any, res) => {
     try {
-      const { scenarios } = req.body;
-      if (!Array.isArray(scenarios) || scenarios.length === 0) {
-        return res.status(400).json({ error: "scenarios array is required" });
-      }
+      const { scenarios } = req.validated as z.infer<typeof scenariosCompareSchema>;
 
-      const comparison = await scenarioEngine.compareScenarios(scenarios);
+      // Schema bounds the array shape; downstream type asserts the per-item
+      // ScenarioOutput contract (validated again by scenarioEngine if needed).
+      const comparison = await scenarioEngine.compareScenarios(scenarios as never);
       res.json(comparison);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -8758,23 +8772,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const geoRiskEngine = new GeopoliticalRiskEngine(storage);
 
-  // Assess geopolitical risk
-  app.post("/api/geopolitical/assess", isAuthenticated, async (req: any, res) => {
+  // Assess geopolitical risk — arrays of affected entities are capped.
+  // eventType matches the union in server/lib/geopoliticalRisk.ts.
+  const geopoliticalAssessSchema = z.object({
+    eventType: z.enum(["trade_war", "sanctions", "currency_crisis", "political_instability", "natural_disaster"]),
+    region: z.string().trim().min(1).max(100),
+    severity: z.enum(["low", "medium", "high", "critical"]).optional(),
+    description: z.string().max(5000).optional(),
+    startDate: z.string().datetime().optional(),
+    endDate: z.string().datetime().optional(),
+    commoditiesAffected: z.array(z.string().max(100)).max(100).optional(),
+    suppliersAffected: z.array(z.string().max(200)).max(500).optional(),
+    currentFDR: z.number().finite().optional(),
+  }).strict();
+  app.post("/api/geopolitical/assess", isAuthenticated, validateBody(geopoliticalAssessSchema), async (req: any, res) => {
     try {
+      const body = req.validated as z.infer<typeof geopoliticalAssessSchema>;
       const event: GeopoliticalEvent = {
-        eventType: req.body.eventType,
-        region: req.body.region,
-        severity: req.body.severity || 'medium',
-        description: req.body.description || '',
-        startDate: req.body.startDate ? new Date(req.body.startDate) : new Date(),
-        endDate: req.body.endDate ? new Date(req.body.endDate) : undefined,
-        commoditiesAffected: req.body.commoditiesAffected || [],
-        suppliersAffected: req.body.suppliersAffected || [],
+        eventType: body.eventType,
+        region: body.region,
+        severity: body.severity || 'medium',
+        description: body.description || '',
+        startDate: body.startDate ? new Date(body.startDate) : new Date(),
+        endDate: body.endDate ? new Date(body.endDate) : undefined,
+        commoditiesAffected: body.commoditiesAffected || [],
+        suppliersAffected: body.suppliersAffected || [],
       };
 
-      const currentFDR = parseFloat(req.body.currentFDR) || 1.0;
+      const currentFDR = body.currentFDR ?? 1.0;
       const assessment = await geoRiskEngine.assessRisk(event, currentFDR);
-      
+
       res.json(assessment);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -9101,7 +9128,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AI ASSISTANT ENDPOINTS
   // ============================================================
 
-  app.post("/api/ai/chat", isAuthenticated, async (req: any, res) => {
+  // Bound message length to prevent token-cost / prompt-injection abuse.
+  const aiChatSchema = z.object({
+    message: z.string().trim().min(1).max(8000),
+    conversationId: z.string().uuid().optional(),
+  }).strict();
+  app.post("/api/ai/chat", isAuthenticated, validateBody(aiChatSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -9109,14 +9141,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "No company associated with user" });
       }
 
-      const { message, conversationId } = req.body;
-      if (!message || typeof message !== 'string') {
-        return res.status(400).json({ error: "Message is required" });
-      }
+      const { message, conversationId } = req.validated as z.infer<typeof aiChatSchema>;
 
       const { aiAssistantService } = await import("./lib/aiAssistant");
       const response = await aiAssistantService.chat(user.companyId, message, conversationId);
-      
+
       res.json(response);
     } catch (error: any) {
       console.error('AI chat error:', error);
@@ -9125,7 +9154,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Agentic AI Chat endpoint with autonomous action capabilities
-  app.post("/api/ai/agentic-chat", isAuthenticated, async (req: any, res) => {
+  app.post("/api/ai/agentic-chat", isAuthenticated, validateBody(aiChatSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -9133,14 +9162,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "No company associated with user" });
       }
 
-      const { message, conversationId } = req.body;
-      if (!message || typeof message !== 'string') {
-        return res.status(400).json({ error: "Message is required" });
-      }
+      const { message, conversationId } = req.validated as z.infer<typeof aiChatSchema>;
 
       const { aiAssistantService } = await import("./lib/aiAssistant");
       const response = await aiAssistantService.chat(user.companyId, message, conversationId);
-      
+
       res.json(response);
     } catch (error: any) {
       console.error('Agentic AI chat error:', error);
@@ -9357,8 +9383,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const { HistoricalBacktestingEngine } = await import("./lib/historicalBacktesting");
   const backtestEngine = new HistoricalBacktestingEngine(storage);
 
-  // Run historical backtest
-  app.post("/api/backtest/run", isAuthenticated, async (req: any, res) => {
+  // Run historical backtest — bound year/horizon to prevent runaway compute.
+  const backtestRunSchema = z.object({
+    startYear: z.coerce.number().int().min(1990).max(2100).optional(),
+    endYear: z.coerce.number().int().min(1990).max(2100).optional(),
+    horizonMonths: z.coerce.number().int().min(1).max(60).optional(),
+  }).strict();
+  app.post("/api/backtest/run", isAuthenticated, validateBody(backtestRunSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       let user = await storage.getUser(userId);
@@ -9386,15 +9417,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const { startYear, endYear, horizonMonths } = req.body;
-      
+      const { startYear, endYear, horizonMonths } = req.validated as z.infer<typeof backtestRunSchema>;
+
       console.log('[Backtest] Starting historical validation with real data integration...');
-      
+
       const results = await backtestEngine.runBacktest(
         user.companyId!,
-        parseInt(startYear as string) || 2015,
-        parseInt(endYear as string) || 2023,
-        parseInt(horizonMonths as string) || 6
+        startYear ?? 2015,
+        endYear ?? 2023,
+        horizonMonths ?? 6,
       );
 
       // Store results
@@ -10480,7 +10511,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error updating company settings:", error);
       if (error.name === 'ZodError') {
-        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+        return res.status(400).json({ message: "Invalid request data", errors: error.issues });
       }
       res.status(500).json({ message: "Failed to update company settings" });
     }
@@ -10503,7 +10534,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validationResult = exportSchema.safeParse(req.body);
       if (!validationResult.success) {
-        return res.status(400).json({ error: "Invalid request parameters", details: validationResult.error.errors });
+        return res.status(400).json({ error: "Invalid request parameters", details: validationResult.error.issues });
       }
 
       const { format, entities } = validationResult.data;
@@ -10566,7 +10597,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validationResult = importSchema.safeParse(req.body);
       if (!validationResult.success) {
-        return res.status(400).json({ error: "Invalid request parameters", details: validationResult.error.errors });
+        return res.status(400).json({ error: "Invalid request parameters", details: validationResult.error.issues });
       }
 
       const { entity, updateExisting } = validationResult.data;
@@ -10770,7 +10801,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(submission);
     } catch (error: any) {
       if (error.name === "ZodError") {
-        return res.status(400).json({ error: "Invalid data", details: error.errors });
+        return res.status(400).json({ error: "Invalid data", details: error.issues });
       }
       res.status(500).json({ error: error.message });
     }
@@ -11210,19 +11241,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/demand-signals/batch", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+  const demandSignalsBatchSchema = z.object({
+    signals: z.array(z.record(z.unknown())).min(1).max(100),
+  }).strict();
+  app.post("/api/demand-signals/batch", isAuthenticated, rateLimiters.api, validateBody(demandSignalsBatchSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      
-      const { signals } = req.body;
-      if (!Array.isArray(signals)) {
-        return res.status(400).json({ error: "signals must be an array" });
-      }
-      
+
+      const { signals } = req.validated as z.infer<typeof demandSignalsBatchSchema>;
+
       const { insertDemandSignalSchema } = await import("@shared/schema");
       const createdSignals = [];
       const errors = [];
@@ -14378,30 +14409,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Create approval chain
-  app.post("/api/sop/approval-chains", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+  // Create approval chain — array of steps capped to prevent payload bombs.
+  // Per-step fields are validated by insertSopApprovalStepSchema below.
+  const sopApprovalChainCreateSchema = z.object({
+    steps: z.array(z.record(z.unknown())).max(50).optional(),
+  }).passthrough();
+  app.post("/api/sop/approval-chains", isAuthenticated, rateLimiters.api, validateBody(sopApprovalChainCreateSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      
-      const { steps, ...chainData } = req.body;
-      
+
+      const { steps, ...chainData } = req.validated as { steps?: unknown[]; [k: string]: unknown };
+
       const validatedData = insertSopApprovalChainSchema.parse({
         ...chainData,
         companyId: user.companyId,
       });
-      
+
       const chain = await storage.createSopApprovalChain(validatedData);
-      
+
       // Create steps if provided
       const createdSteps = [];
       if (steps && Array.isArray(steps)) {
         for (let i = 0; i < steps.length; i++) {
           const stepData = insertSopApprovalStepSchema.parse({
-            ...steps[i],
+            ...steps[i] as object,
             chainId: chain.id,
             stepOrder: i + 1,
           });
@@ -14409,7 +14444,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           createdSteps.push(step);
         }
       }
-      
+
       res.status(201).json({ ...chain, steps: createdSteps });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -14678,31 +14713,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.patch("/api/digital-twin/data-feeds/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+  const digitalTwinDataFeedUpdateSchema = z.object({
+    name: z.string().trim().min(1).max(200).optional(),
+    feedType: z.string().trim().min(1).max(50).optional(),
+    sourceUrl: z.string().trim().url().max(2048).optional(),
+    refreshInterval: z.number().int().min(10).max(86400).optional(),
+    status: z.enum(["active", "paused", "error", "pending"]).optional(),
+    connectionConfig: z.record(z.unknown()).optional(),
+    fieldMappings: z.array(z.record(z.unknown())).max(500).optional(),
+  }).strict();
+  app.patch("/api/digital-twin/data-feeds/:id", isAuthenticated, rateLimiters.api, validateBody(digitalTwinDataFeedUpdateSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      
+
       // Verify ownership before updating
       const existing = await storage.getDigitalTwinDataFeed(req.params.id);
       if (!existing || existing.companyId !== user.companyId) {
         return res.status(404).json({ error: "Data feed not found" });
       }
-      
-      // Validate the update data
-      const { name, feedType, sourceUrl, refreshInterval, status, connectionConfig, fieldMappings } = req.body;
-      const updateData: any = {};
-      if (name !== undefined) updateData.name = name;
-      if (feedType !== undefined) updateData.feedType = feedType;
-      if (sourceUrl !== undefined) updateData.sourceUrl = sourceUrl;
-      if (refreshInterval !== undefined) updateData.refreshInterval = refreshInterval;
-      if (status !== undefined) updateData.status = status;
-      if (connectionConfig !== undefined) updateData.connectionConfig = connectionConfig;
-      if (fieldMappings !== undefined) updateData.fieldMappings = fieldMappings;
-      
+
+      const updateData = req.validated as z.infer<typeof digitalTwinDataFeedUpdateSchema>;
+
       const feed = await storage.updateDigitalTwinDataFeed(req.params.id, updateData);
       res.json(feed);
     } catch (error: any) {
@@ -16431,26 +16466,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Configure Slack integration
-  app.post("/api/integrations/slack/configure", isAuthenticated, async (req: any, res) => {
+  const slackConfigureSchema = z.object({
+    webhookUrl: z
+      .string()
+      .trim()
+      .url()
+      .max(500)
+      .refine((u) => u.startsWith("https://hooks.slack.com/"), {
+        message: "webhookUrl must start with https://hooks.slack.com/",
+      })
+      .optional()
+      .or(z.literal("")),
+    defaultChannel: z
+      .string()
+      .trim()
+      .max(80)
+      .regex(/^#?[a-zA-Z0-9._-]+$/, "Invalid Slack channel name")
+      .optional(),
+    enabled: z.boolean().optional(),
+  }).strict();
+  app.post("/api/integrations/slack/configure", isAuthenticated, validateBody(slackConfigureSchema), async (req: any, res) => {
     try {
-      const { webhookUrl, defaultChannel, enabled } = req.body;
+      const { webhookUrl, defaultChannel, enabled } = req.validated as z.infer<typeof slackConfigureSchema>;
       const authUserId = req.user.claims.sub;
       const user = await storage.getUser(authUserId);
       if (!user?.companyId) {
         return res.status(401).json({ error: "No company associated" });
       }
-      
-      // Validate webhook URL format
-      if (webhookUrl && !webhookUrl.startsWith("https://hooks.slack.com/")) {
-        return res.status(400).json({ error: "Invalid Slack webhook URL format" });
-      }
-      
+
       await storage.updateCompany(user.companyId, {
         slackWebhookUrl: webhookUrl || null,
         slackDefaultChannel: defaultChannel || "#prescient-alerts",
         slackEnabled: enabled ? 1 : 0,
       });
-      
+
       res.json({ success: true, message: "Slack integration configured" });
     } catch (error: any) {
       console.error("Error configuring Slack:", error);
@@ -16485,26 +16534,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Configure Microsoft Teams integration
-  app.post("/api/integrations/teams/configure", isAuthenticated, async (req: any, res) => {
+  const teamsConfigureSchema = z.object({
+    webhookUrl: z
+      .string()
+      .trim()
+      .url()
+      .max(2048)
+      .refine((u) => u.includes("webhook.office.com") || u.includes("office365.com"), {
+        message: "webhookUrl must be a Microsoft Teams webhook URL",
+      })
+      .optional()
+      .or(z.literal("")),
+    channelName: z.string().trim().min(1).max(120).optional(),
+    enabled: z.boolean().optional(),
+  }).strict();
+  app.post("/api/integrations/teams/configure", isAuthenticated, validateBody(teamsConfigureSchema), async (req: any, res) => {
     try {
-      const { webhookUrl, channelName, enabled } = req.body;
+      const { webhookUrl, channelName, enabled } = req.validated as z.infer<typeof teamsConfigureSchema>;
       const authUserId = req.user.claims.sub;
       const user = await storage.getUser(authUserId);
       if (!user?.companyId) {
         return res.status(401).json({ error: "No company associated" });
       }
-      
-      // Validate Teams webhook URL format if provided
-      if (webhookUrl && !webhookUrl.includes("webhook.office.com") && !webhookUrl.includes("office365.com")) {
-        return res.status(400).json({ error: "Invalid Teams webhook URL format" });
-      }
-      
+
       // Build update object - only include webhookUrl if a new one was provided
       const updateData: any = {
         teamsChannelName: channelName || "Prescient Alerts",
         teamsEnabled: enabled ? 1 : 0,
       };
-      
+
       // Only update the webhook URL if a new one was explicitly provided
       if (webhookUrl !== undefined && webhookUrl !== "") {
         updateData.teamsWebhookUrl = webhookUrl;
@@ -16572,15 +16630,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Configure Shopify integration
-  app.post("/api/integrations/shopify/configure", isAuthenticated, async (req: any, res) => {
+  const shopifyConfigureSchema = z.object({
+    shopDomain: z
+      .string()
+      .trim()
+      .min(3)
+      .max(253)
+      .regex(/^[a-zA-Z0-9][a-zA-Z0-9.-]*\.myshopify\.com$|^[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$/i, "Invalid shop domain")
+      .optional()
+      .or(z.literal("")),
+    apiKey: z.string().trim().min(1).max(500).optional().or(z.literal("")),
+    apiSecret: z.string().trim().min(1).max(500).optional().or(z.literal("")),
+    syncOptions: z
+      .object({
+        syncOrders: z.boolean().optional(),
+        syncProducts: z.boolean().optional(),
+        syncInventory: z.boolean().optional(),
+      })
+      .strict()
+      .optional(),
+  }).strict();
+  app.post("/api/integrations/shopify/configure", isAuthenticated, validateBody(shopifyConfigureSchema), async (req: any, res) => {
     try {
-      const { shopDomain, apiKey, apiSecret, syncOptions } = req.body;
+      const { shopDomain, apiKey, apiSecret, syncOptions } = req.validated as z.infer<typeof shopifyConfigureSchema>;
       const authUserId = req.user.claims.sub;
       const user = await storage.getUser(authUserId);
       if (!user?.companyId) {
         return res.status(401).json({ error: "No company associated" });
       }
-      
+
       // Store Shopify configuration
       await storage.updateCompany(user.companyId, {
         shopifyDomain: shopDomain || null,
@@ -16591,7 +16669,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         shopifySyncInventory: syncOptions?.syncInventory ? 1 : 0,
         shopifyEnabled: shopDomain ? 1 : 0,
       });
-      
+
       res.json({ success: true, message: "Shopify integration configured" });
     } catch (error: any) {
       console.error("Error configuring Shopify:", error);
@@ -17070,7 +17148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const parseResult = emailConfigureSchema.safeParse(req.body);
       if (!parseResult.success) {
-        return res.status(400).json({ error: parseResult.error.errors[0].message });
+        return res.status(400).json({ error: parseResult.error.issues[0].message });
       }
       const { enabled } = parseResult.data;
       const authUserId = req.user.claims.sub;
@@ -17095,7 +17173,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const parseResult = emailTestSchema.safeParse(req.body);
       if (!parseResult.success) {
-        return res.status(400).json({ success: false, message: parseResult.error.errors[0].message });
+        return res.status(400).json({ success: false, message: parseResult.error.issues[0].message });
       }
       const { email } = parseResult.data;
       const authUserId = req.user.claims.sub;
