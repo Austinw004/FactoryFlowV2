@@ -1,0 +1,75 @@
+{
+  "digestDate": "2026-05-01",
+  "priorDigestDate": null,
+  "priorReplyChecksum": null,
+  "lookbackWindow": {
+    "daily": "2026-04-30T00:00:00Z..2026-05-01T09:10:00Z",
+    "weekly": "2026-04-24T00:00:00Z..2026-05-01T09:10:00Z"
+  },
+  "counters": {
+    "ranCleanly": 2,
+    "needYourEyes": 4,
+    "blocking": 0
+  },
+  "routineActivity": {
+    "Big Boi": { "status": "activity", "branchSlug": "claude/exciting-fermi-*", "prs": [151] },
+    "Optimus": { "status": "silent", "prs": [] },
+    "Daily Boost": { "status": "activity", "branchSlug": "claude/vigilant-allen-*", "prs": [157, 152] },
+    "Palantard Grade": { "status": "silent", "prs": [] },
+    "Weekly Clean": { "status": "activity", "branchSlug": "claude/festive-dijkstra-*", "prs": [158], "olderOpenPrs": [130, 99] },
+    "Code Review": { "status": "activity", "branchSlug": "claude/hopeful-rubin-*", "prs": [154] }
+  },
+  "decisions": [
+    {
+      "id": 1,
+      "routine": "Big Boi",
+      "pr": 151,
+      "type": "policy",
+      "summary": "Routine spec said push directly to main, but PR #151 used draft-PR pattern instead.",
+      "question": "Should Big Boi push directly to main going forward, or keep the draft-PR workflow?"
+    },
+    {
+      "id": 2,
+      "routine": "Big Boi",
+      "pr": 151,
+      "type": "technical",
+      "summary": "drizzle-zod@0.8.3 imports zod/v4 while project uses zod v3 — blocks 304 remaining TS errors.",
+      "question": "Pick (a) downgrade drizzle-zod to ^0.7.x, or (b) migrate codebase imports zod -> zod/v4."
+    },
+    {
+      "id": 3,
+      "routine": "Daily Boost",
+      "prs": [152, 157],
+      "type": "sequencing",
+      "summary": "Two open draft PRs touch overlapping dashboard files; #157 supersedes most of #152 with added 'why' reasoning.",
+      "question": "Merge #152 first then rebase #157, close #152 in favor of #157, or merge them in order as-is?"
+    },
+    {
+      "id": 4,
+      "routine": "Code Review",
+      "pr": 154,
+      "type": "approval",
+      "summary": "9-line observability-only fix in productionMetricsPopulation.ts. Build clean.",
+      "question": "Approve and merge?"
+    },
+    {
+      "id": 5,
+      "routine": "Weekly Clean",
+      "pr": 158,
+      "type": "approval+technical",
+      "summary": "PR #158 ready for review. 5 remaining moderate CVEs in esbuild/vite/drizzle-kit need a coordinated `npm audit fix --force` (Vite v8 major bump).",
+      "question": "Approve the major bump in this PR, defer to next week, or open a tracking issue?"
+    }
+  ],
+  "emailDelivery": {
+    "attempted": true,
+    "succeeded": false,
+    "failureReason": "sendpulse-api module not resolvable from emailService.ts (node_modules absent in routine sandbox); SENDPULSE_API_USER_ID/SECRET also unset. Email composed at /tmp/digest-email.{html,txt} but not delivered.",
+    "subject": "Daily digest — 5 need your call",
+    "to": "austinwendler44@gmail.com",
+    "from": "info@prescient-labs.com",
+    "loggedTo": "/tmp/digest-failures.jsonl"
+  },
+  "pendingClarifications": [],
+  "issuesFiled": []
+}
