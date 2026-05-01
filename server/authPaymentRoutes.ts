@@ -492,7 +492,7 @@ export function registerAuthPaymentRoutes(app: Express): void {
       entityId: authUser.id,
       changes: { fields: Object.keys(req.body ?? {}) },
       notes: "profile updated by user",
-    }).catch(() => {});
+    }).catch((err) => console.error("[Audit] profile update log failed:", err?.message || err));
     res.json(result);
   }));
 
@@ -576,7 +576,7 @@ export function registerAuthPaymentRoutes(app: Express): void {
         entityId: authUser.id,
         changes: { dataPreferences: flipped },
         notes: "data-preference consent toggle",
-      }).catch(() => {});
+      }).catch((err) => console.error("[Audit] data-preference consent log failed:", err?.message || err));
     }
 
     res.json({ preferences: merged, success: true });
@@ -594,7 +594,7 @@ export function registerAuthPaymentRoutes(app: Express): void {
       entityType: "user",
       entityId: authUser.id,
       notes: "password changed by user",
-    }).catch(() => {});
+    }).catch((err) => console.error("[Audit] password change log failed:", err?.message || err));
     res.json(result);
   }));
 
