@@ -3796,7 +3796,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(result[0]);
     } catch (error: any) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: "Invalid request data", details: error.errors });
+        return res.status(400).json({ error: "Invalid request data", details: error.issues });
       }
       res.status(500).json({ error: error.message });
     }
@@ -3955,7 +3955,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate request body
       const validationResult = allocationRunSchema.safeParse(req.body);
       if (!validationResult.success) {
-        return res.status(400).json({ error: validationResult.error.errors[0].message });
+        return res.status(400).json({ error: validationResult.error.issues[0].message });
       }
 
       const { budget, name, budgetDurationValue, budgetDurationUnit, horizonStart, directMaterialRequirements } = validationResult.data;
@@ -4514,7 +4514,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!validationResult.success) {
         return res.status(400).json({ 
           error: "Validation failed", 
-          details: validationResult.error.errors 
+          details: validationResult.error.issues 
         });
       }
 
@@ -4671,7 +4671,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!validationResult.success) {
         return res.status(400).json({ 
           error: "Validation failed", 
-          details: validationResult.error.errors 
+          details: validationResult.error.issues 
         });
       }
 
@@ -8586,9 +8586,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Generate M&A scoring
+  // Generate M&A scoring — keep targetType in sync with MARecommendationInput
+  // in server/lib/maIntelligence.ts.
   const maScoreSchema = z.object({
-    targetType: z.enum(["acquisition", "merger", "divestiture", "joint-venture", "partnership"]),
+    targetType: z.enum(["acquisition", "divestiture", "joint_venture"]),
     estimatedValue: z.number().finite().min(0).max(1e15),
     strategicFitScore: z.number().min(0).max(100),
     currentFDR: z.number().finite().min(-100).max(100),
@@ -8756,7 +8757,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { scenarios } = req.validated as z.infer<typeof scenariosCompareSchema>;
 
-      const comparison = await scenarioEngine.compareScenarios(scenarios);
+      // Schema bounds the array shape; downstream type asserts the per-item
+      // ScenarioOutput contract (validated again by scenarioEngine if needed).
+      const comparison = await scenarioEngine.compareScenarios(scenarios as never);
       res.json(comparison);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -8770,8 +8773,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const geoRiskEngine = new GeopoliticalRiskEngine(storage);
 
   // Assess geopolitical risk — arrays of affected entities are capped.
+  // eventType matches the union in server/lib/geopoliticalRisk.ts.
   const geopoliticalAssessSchema = z.object({
-    eventType: z.string().trim().min(1).max(100),
+    eventType: z.enum(["trade_war", "sanctions", "currency_crisis", "political_instability", "natural_disaster"]),
     region: z.string().trim().min(1).max(100),
     severity: z.enum(["low", "medium", "high", "critical"]).optional(),
     description: z.string().max(5000).optional(),
@@ -10507,7 +10511,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error updating company settings:", error);
       if (error.name === 'ZodError') {
-        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+        return res.status(400).json({ message: "Invalid request data", errors: error.issues });
       }
       res.status(500).json({ message: "Failed to update company settings" });
     }
@@ -10530,7 +10534,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validationResult = exportSchema.safeParse(req.body);
       if (!validationResult.success) {
-        return res.status(400).json({ error: "Invalid request parameters", details: validationResult.error.errors });
+        return res.status(400).json({ error: "Invalid request parameters", details: validationResult.error.issues });
       }
 
       const { format, entities } = validationResult.data;
@@ -10593,7 +10597,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validationResult = importSchema.safeParse(req.body);
       if (!validationResult.success) {
-        return res.status(400).json({ error: "Invalid request parameters", details: validationResult.error.errors });
+        return res.status(400).json({ error: "Invalid request parameters", details: validationResult.error.issues });
       }
 
       const { entity, updateExisting } = validationResult.data;
@@ -10797,7 +10801,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(submission);
     } catch (error: any) {
       if (error.name === "ZodError") {
-        return res.status(400).json({ error: "Invalid data", details: error.errors });
+        return res.status(400).json({ error: "Invalid data", details: error.issues });
       }
       res.status(500).json({ error: error.message });
     }
@@ -17144,7 +17148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const parseResult = emailConfigureSchema.safeParse(req.body);
       if (!parseResult.success) {
-        return res.status(400).json({ error: parseResult.error.errors[0].message });
+        return res.status(400).json({ error: parseResult.error.issues[0].message });
       }
       const { enabled } = parseResult.data;
       const authUserId = req.user.claims.sub;
@@ -17169,7 +17173,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const parseResult = emailTestSchema.safeParse(req.body);
       if (!parseResult.success) {
-        return res.status(400).json({ success: false, message: parseResult.error.errors[0].message });
+        return res.status(400).json({ success: false, message: parseResult.error.issues[0].message });
       }
       const { email } = parseResult.data;
       const authUserId = req.user.claims.sub;
