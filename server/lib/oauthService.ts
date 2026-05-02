@@ -60,9 +60,10 @@ const OAUTH_CONFIGS: Record<string, Omit<OAuthConfig, "clientId" | "clientSecret
 
 export class OAuthService {
   private static getBaseUrl(): string {
-    return process.env.REPLIT_DOMAINS?.split(",")[0] 
-      ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
-      : "http://localhost:5000";
+    if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, "");
+    if (process.env.REPLIT_DOMAINS) return `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`;
+    if (process.env.REPLIT_DEV_DOMAIN) return `https://${process.env.REPLIT_DEV_DOMAIN}`;
+    return "http://localhost:5000";
   }
 
   static getAuthorizationUrl(

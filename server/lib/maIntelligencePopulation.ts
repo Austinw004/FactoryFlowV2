@@ -78,7 +78,9 @@ export class MAIntelligencePopulationService {
             targetEmployees: target.employees,
           });
           targetsCreated++;
-        } catch (error) {}
+        } catch (error) {
+          console.error(`[M&A] Failed to insert acquisition target "${target.name}":`, error);
+        }
       }
     }
 
@@ -98,7 +100,9 @@ export class MAIntelligencePopulationService {
             currentRegime: currentRegime,
           });
           targetsCreated++;
-        } catch (error) {}
+        } catch (error) {
+          console.error(`[M&A] Failed to insert divestiture target "${target.name}":`, error);
+        }
       }
     }
 
@@ -114,7 +118,9 @@ export class MAIntelligencePopulationService {
           currentRegime: currentRegime,
         });
         recommendationsGenerated++;
-      } catch (error) {}
+      } catch (error) {
+        console.error(`[M&A] Failed to insert recommendation for action "${action.substring(0, 50)}":`, error);
+      }
     }
 
     console.log(`[M&A] Created ${targetsCreated} targets, ${recommendationsGenerated} recommendations`);
