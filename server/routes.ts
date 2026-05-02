@@ -122,6 +122,11 @@ import {
   predictionOutcomes,
   insertPredictionOutcomeSchema,
   automationSafeMode,
+  insertComplianceDocumentSchema,
+  insertComplianceRegulationSchema,
+  insertComplianceAuditSchema,
+  insertAuditFindingSchema,
+  insertComplianceCalendarEventSchema,
 } from "@shared/schema";
 
 const economics = new DualCircuitEconomics();
@@ -4727,16 +4732,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "User must be associated with a company" });
       }
 
+      const parsed = insertComplianceDocumentSchema
+        .omit({ companyId: true, createdBy: true, economicRegimeContext: true })
+        .safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Validation failed", details: parsed.error.issues });
+      }
+
       // Get current economic regime for context
       await economics.fetch();
-      
+
       const document = await storage.createComplianceDocument({
-        ...req.body,
+        ...parsed.data,
         companyId: user.companyId,
         createdBy: user.id,
         economicRegimeContext: economics.regime,
       });
-      
+
       res.status(201).json(document);
     } catch (error: any) {
       console.error("Error creating compliance document:", error);
@@ -4770,11 +4782,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "User must be associated with a company" });
       }
 
+      const parsed = insertComplianceRegulationSchema
+        .omit({ companyId: true })
+        .safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Validation failed", details: parsed.error.issues });
+      }
+
       const regulation = await storage.createComplianceRegulation({
-        ...req.body,
+        ...parsed.data,
         companyId: user.companyId,
       });
-      
+
       res.status(201).json(regulation);
     } catch (error: any) {
       console.error("Error creating compliance regulation:", error);
@@ -4808,16 +4827,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "User must be associated with a company" });
       }
 
+      const parsed = insertComplianceAuditSchema
+        .omit({ companyId: true, economicRegime: true, fdrAtAudit: true })
+        .safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Validation failed", details: parsed.error.issues });
+      }
+
       // Get current economic regime and FDR
       await economics.fetch();
-      
+
       const audit = await storage.createComplianceAudit({
-        ...req.body,
+        ...parsed.data,
         companyId: user.companyId,
         economicRegime: economics.regime,
         fdrAtAudit: economics.fdr,
       });
-      
+
       res.status(201).json(audit);
     } catch (error: any) {
       console.error("Error creating compliance audit:", error);
@@ -4855,11 +4881,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "User must be associated with a company" });
       }
 
+      const parsed = insertAuditFindingSchema
+        .omit({ companyId: true })
+        .safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Validation failed", details: parsed.error.issues });
+      }
+
       const finding = await storage.createAuditFinding({
-        ...req.body,
+        ...parsed.data,
         companyId: user.companyId,
       });
-      
+
       res.status(201).json(finding);
     } catch (error: any) {
       console.error("Error creating audit finding:", error);
@@ -4918,11 +4951,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "User must be associated with a company" });
       }
 
+      const parsed = insertComplianceCalendarEventSchema
+        .omit({ companyId: true })
+        .safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Validation failed", details: parsed.error.issues });
+      }
+
       const event = await storage.createComplianceCalendarEvent({
-        ...req.body,
+        ...parsed.data,
         companyId: user.companyId,
       });
-      
+
       res.status(201).json(event);
     } catch (error: any) {
       console.error("Error creating calendar event:", error);
