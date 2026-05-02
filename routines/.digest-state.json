@@ -1,0 +1,99 @@
+{
+  "todayDate": "2026-05-02",
+  "priorDigestDate": "2026-05-01",
+  "priorReplyChecksum": null,
+  "emailDelivery": {
+    "attempted": true,
+    "success": false,
+    "reason": "helper-import-failed: Cannot find package 'sendpulse-api' imported from /home/user/FactoryFlowV2/server/lib/emailService.ts",
+    "failureLog": "/tmp/digest-failures.jsonl"
+  },
+  "counters": {
+    "ranCleanly": 2,
+    "needEyes": 4,
+    "blocking": 0
+  },
+  "perRoutine": {
+    "BigBoi": {
+      "status": "activity",
+      "prs": [{ "number": 168, "branch": "claude/exciting-fermi-o3mcb", "state": "open-draft" }]
+    },
+    "Optimus": { "status": "silent", "prs": [] },
+    "DailyBoost": {
+      "status": "activity",
+      "prs": [
+        { "number": 169, "branch": "claude/vigilant-allen-nEotf", "state": "open-draft" },
+        { "number": 157, "branch": "claude/vigilant-allen-JdwMf", "state": "open-draft" }
+      ]
+    },
+    "PalantardGrade": { "status": "silent", "prs": [] },
+    "WeeklyClean": {
+      "status": "carryover",
+      "prs": [{ "number": 158, "branch": "claude/festive-dijkstra-kXsfu", "state": "open-draft" }]
+    },
+    "CodeReview": {
+      "status": "activity",
+      "prs": [{ "number": 163, "branch": "claude/hopeful-rubin-8E1lh", "state": "open-draft" }],
+      "issuesFiled": [164, 165, 166, 167]
+    }
+  },
+  "decisions": [
+    {
+      "id": 1,
+      "routine": "BigBoi",
+      "summary": "Approve and merge PR #168 (daily codebase pass: deps + 5 Zod validators + Zod 3.25 alias migration), or hold?",
+      "refs": { "prs": [168] }
+    },
+    {
+      "id": 2,
+      "routine": "BigBoi",
+      "summary": "drizzle-zod v3/v4 split — downgrade drizzle-zod to ^0.7.x, or migrate codebase to zod/v4 namespace?",
+      "refs": { "issues": [161, 128] },
+      "carryoverFrom": "2026-05-01#2"
+    },
+    {
+      "id": 3,
+      "routine": "BigBoi",
+      "summary": "Direct-to-main policy — keep draft-PR pattern or grant direct-to-main for this routine?",
+      "carryoverFrom": "2026-05-01#1"
+    },
+    {
+      "id": 4,
+      "routine": "BigBoi+WeeklyClean",
+      "summary": "Conflict between #168 and #158 on server/routes.ts, server/routes/rbac.ts, package.json. Which merges first; loser rebases or closes?",
+      "refs": { "prs": [168, 158] }
+    },
+    {
+      "id": 5,
+      "routine": "DailyBoost",
+      "summary": "Approve and merge PR #169 (RegimeCommandPanel + supplier-linked at-risk materials)?",
+      "refs": { "prs": [169] }
+    },
+    {
+      "id": 6,
+      "routine": "DailyBoost",
+      "summary": "Conflict between #169 and #157 on MaterialsAtRiskWidget.tsx + Dashboard.tsx. Sequence: merge #157 first, the reverse, or pick one and close the other?",
+      "refs": { "prs": [169, 157] },
+      "carryoverFrom": "2026-05-01#3"
+    },
+    {
+      "id": 7,
+      "routine": "CodeReview",
+      "summary": "Approve and merge PR #163 (9-line audit-log observability fix)?",
+      "refs": { "prs": [163] }
+    },
+    {
+      "id": 8,
+      "routine": "CodeReview",
+      "summary": "Triage / assign / defer 4 product issues (#164–#167) filed during three-hat audit.",
+      "refs": { "issues": [164, 165, 166, 167] }
+    },
+    {
+      "id": 9,
+      "routine": "WeeklyClean",
+      "summary": "Approve and merge PR #158 (2026-W18 deep clean)? Vite v8 major bump deferred — accept that deferral or schedule?",
+      "refs": { "prs": [158] },
+      "carryoverFrom": "2026-05-01#5"
+    }
+  ]
+}
