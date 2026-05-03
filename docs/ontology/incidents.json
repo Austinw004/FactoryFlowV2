@@ -1,0 +1,5 @@
+{
+  "$schema_version": 1,
+  "description": "Production incidents, persistent CI failures (>24h), runtime errors, and security advisories. Updated during Phase 2 incident fusion.",
+  "incidents": []
+}

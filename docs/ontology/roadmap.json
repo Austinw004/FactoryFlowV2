@@ -1,0 +1,7 @@
+{
+  "$schema_version": 1,
+  "description": "Product roadmap. now = in-flight, next = committed for the next horizon, later = parked. Updated as draft proposals during Phase 2 roadmap fusion; humans approve.",
+  "now": [],
+  "next": [],
+  "later": []
+}

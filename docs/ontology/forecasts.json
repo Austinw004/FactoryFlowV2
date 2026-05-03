@@ -1,0 +1,7 @@
+{
+  "$schema_version": 1,
+  "description": "READ-ONLY from the meta-routine's perspective. Owned by the FDR forecasting pipeline (server/lib/fdr*). Do not hand-edit. The Palantir meta-routine reads this during Phase 2.10 forecast fusion to summarize the latest horizon, MAPE/MAE, and any regime changes.",
+  "owner": "fdr-pipeline",
+  "latest": null,
+  "history": []
+}

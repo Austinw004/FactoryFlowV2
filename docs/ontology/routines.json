@@ -1,0 +1,19 @@
+{
+  "$schema_version": 1,
+  "description": "Catalog of every Claude Code routine targeting FactoryFlowV2. Maintained by Phase 1 of the Palantir meta-routine. Each entry preserves run history.",
+  "routine_shape": {
+    "name": "string",
+    "repo": "string",
+    "schedule": "cron-or-description",
+    "blast_radius_class": "A|B|C|D",
+    "connectors": ["string"],
+    "summary": "string",
+    "last_run": {
+      "timestamp": "ISO-8601",
+      "outcome": "pass|fail|partial|skipped",
+      "pr_url": "string|null"
+    },
+    "history": []
+  },
+  "routines": []
+}

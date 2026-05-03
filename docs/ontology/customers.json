@@ -1,0 +1,5 @@
+{
+  "$schema_version": 1,
+  "description": "Known and prospective customers, including pilots. Owned by the Palantir meta-routine; updated during Phase 2 customer fusion.",
+  "customers": []
+}
