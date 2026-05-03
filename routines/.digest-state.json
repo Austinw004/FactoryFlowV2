@@ -1,0 +1,34 @@
+{
+  "digestDate": "2026-05-03",
+  "priorDigestDate": "2026-05-02",
+  "priorDigestPr": 170,
+  "priorReplyChecksum": null,
+  "priorReplyProcessed": false,
+  "counters": { "cleanly": 2, "needsEyes": 11, "blocking": 0 },
+  "routines": {
+    "bigBoi": { "status": "activity", "branchSlug": "claude/exciting-fermi-*", "openPrs": [168] },
+    "optimus": { "status": "silent", "branchSlug": null, "openPrs": [] },
+    "dailyBoost": { "status": "activity", "branchSlug": "claude/vigilant-allen-*", "openPrs": [169, 172] },
+    "palantardGrade": { "status": "silent", "branchSlug": null, "openPrs": [] },
+    "weeklyClean": { "status": "activity-7d", "branchSlug": "claude/festive-dijkstra-*", "openPrs": [158] },
+    "codeReview": { "status": "activity", "branchSlug": "claude/hopeful-rubin-*", "openPrs": [163, 171], "openIssues": [164, 165, 166, 167] }
+  },
+  "decisionsNeeded": [
+    { "id": 1, "routine": "bigBoi", "kind": "merge", "ref": "PR#168", "carryover": true, "question": "Approve/merge daily codebase PR (deps + 5 Zod validators + Zod 3.25 alias migration), or hold for drizzle-zod resolution (#2)?" },
+    { "id": 2, "routine": "bigBoi", "kind": "policy", "ref": "drizzle-zod v3/v4", "carryover": true, "question": "Pin drizzle-zod to ^0.7.x, or migrate codebase to zod/v4?" },
+    { "id": 3, "routine": "bigBoi", "kind": "policy", "ref": "direct-to-main", "carryover": true, "question": "Keep draft-PR pattern, or grant direct-to-main for trivial dep/security patches?" },
+    { "id": 4, "routine": "bigBoi+weeklyClean", "kind": "conflict", "ref": "PR#168 vs PR#158", "carryover": true, "question": "Both touched routes.ts/rbac.ts and package.json. Which merges first; who rebases?" },
+    { "id": 5, "routine": "dailyBoost", "kind": "merge", "ref": "PR#169", "carryover": true, "question": "Approve/merge RegimeCommandPanel + supplier-linked at-risk materials? (Possibly superseded by #172.)" },
+    { "id": 6, "routine": "dailyBoost", "kind": "merge", "ref": "PR#172", "carryover": false, "question": "Approve/merge regime-driven procurement intelligence (RegimeBriefing + supplier-materials endpoint)?" },
+    { "id": 7, "routine": "dailyBoost", "kind": "conflict", "ref": "PR#172 vs PR#169", "carryover": false, "question": "PR#172 supersedes/overlaps PR#169 on MaterialsAtRiskWidget + Dashboard. Close #169 in favor of #172, or merge #169 first and rebase #172?" },
+    { "id": 8, "routine": "codeReview", "kind": "merge", "ref": "PR#163", "carryover": true, "question": "Approve/merge audit-log observability fix?" },
+    { "id": 9, "routine": "codeReview", "kind": "merge", "ref": "PR#171", "carryover": false, "question": "Approve/merge silent-insert-failure logging + OAuth base URL fallback?" },
+    { "id": 10, "routine": "codeReview", "kind": "triage", "ref": "Issues #164-#167", "carryover": true, "question": "Triage 4 product issues: assign / defer / close?" },
+    { "id": 11, "routine": "weeklyClean", "kind": "merge", "ref": "PR#158", "carryover": true, "question": "Approve/merge W18 deep clean? Vite v8 major deferred — accept or schedule?" }
+  ],
+  "emailSend": {
+    "attempted": false,
+    "delivered": false,
+    "reason": "sendpulse-api SDK not installed (node_modules absent); per spec no in-run retry. Composed email persisted at /tmp/digest-email.{html,txt}; failure logged to /tmp/digest-failures.jsonl."
+  }
+}
