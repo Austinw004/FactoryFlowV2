@@ -3342,6 +3342,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Aggregate endpoint: every material→supplier link for the customer's
+  // company. Powers entity-connection features across the UI (e.g. "show
+  // me which supplier this material comes from" on every page) without
+  // forcing the client to make N supplier-by-supplier requests. Each row
+  // is enriched with supplier name and material code/name so the UI can
+  // render inline labels without further joins.
+  app.get("/api/supplier-materials", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      const [links, suppliers, materials] = await Promise.all([
+        storage.getAllSupplierMaterialsForCompany(user.companyId),
+        storage.getSuppliers(user.companyId),
+        storage.getMaterials(user.companyId),
+      ]);
+      const supplierById = new Map(suppliers.map((s) => [s.id, s]));
+      const materialById = new Map(materials.map((m) => [m.id, m]));
+      const enriched = links.map((sm) => {
+        const supplier = supplierById.get(sm.supplierId);
+        const material = materialById.get(sm.materialId);
+        return {
+          ...sm,
+          supplierName: supplier?.name ?? null,
+          materialCode: material?.code ?? null,
+          materialName: material?.name ?? null,
+          materialUnit: material?.unit ?? null,
+        };
+      });
+      res.json(enriched);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post("/api/supplier-materials", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
