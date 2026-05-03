@@ -1,15 +1,17 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  AlertTriangle, 
-  TrendingDown, 
-  TrendingUp, 
+import { useQuery } from "@tanstack/react-query";
+import {
+  AlertTriangle,
+  TrendingDown,
+  TrendingUp,
   DollarSign,
   Target,
   Package,
   Activity,
   Maximize2
 } from "lucide-react";
+import { getRegimeGuidance } from "@/lib/regimeGuidance";
 
 interface Signal {
   type: string;      // "procurement", "inventory", "production"
@@ -91,6 +93,14 @@ const signalConfig: Record<string, { label: string; icon: any; color: string }> 
 };
 
 export function PolicySignals({ signals }: PolicySignalsProps) {
+  // Pull current regime so we can append a "Why these recommendations"
+  // footer that explains the macro reasoning. Customers asked us to
+  // never show a recommendation without showing our work.
+  const { data: regime } = useQuery<{ regime: string }>({
+    queryKey: ["/api/economics/regime"],
+  });
+  const guidance = getRegimeGuidance(regime?.regime);
+
   // Guard against invalid data
   if (!Array.isArray(signals) || signals.length === 0) {
     return (
@@ -113,7 +123,7 @@ export function PolicySignals({ signals }: PolicySignalsProps) {
           <h3 className="font-semibold text-lg">Recommended Actions</h3>
           <Badge variant="secondary" data-testid="badge-signal-count">{signals.length}</Badge>
         </div>
-        
+
         <div className="space-y-3">
           {signals.map((signal, idx) => {
             // Ensure signal has required properties
@@ -156,6 +166,18 @@ export function PolicySignals({ signals }: PolicySignalsProps) {
             );
           })}
         </div>
+
+        {regime?.regime && (
+          <div
+            className="pt-4 border-t text-xs text-muted-foreground leading-relaxed"
+            data-testid="policy-signals-reasoning"
+          >
+            <span className="font-medium uppercase tracking-wider text-[10px] text-foreground">
+              Why ·{" "}
+            </span>
+            {guidance.reasoning}
+          </div>
+        )}
       </div>
     </Card>
   );

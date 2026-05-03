@@ -4,7 +4,8 @@ import { PolicySignals } from "@/components/PolicySignals";
 import { AllocationTable } from "@/components/AllocationTable";
 import { EditableBudgetGauge } from "@/components/EditableBudgetGauge";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
-import { InfoTooltip } from "@/components/InfoTooltip";
+import { RegimeBriefing } from "@/components/RegimeBriefing";
+import { getRegimeToneClass } from "@/lib/regimeGuidance";
 
 // Below-the-fold and dialog-gated widgets are lazy-loaded so the initial
 // Dashboard paint only pays for what the user actually sees before scrolling.
@@ -323,9 +324,12 @@ export default function Dashboard() {
     );
   }
 
-  // Main dashboard content
+  // Main dashboard content. The regime tone class subtly tints the page
+  // accents (regime-accent-rule / regime-accent-bg / regime-accent-text)
+  // so the dashboard's character matches the current market condition
+  // without requiring conscious interpretation by the customer.
   return (
-    <div className="p-12 max-w-5xl">
+    <div className={`p-12 max-w-5xl ${getRegimeToneClass(regimeType)}`} data-regime={regimeType}>
       {/* Trial banner */}
       {subscriptionData?.status === 'trialing' && (
         <div className="trial-banner px-6 py-4 mb-12 flex items-center justify-between">
@@ -337,15 +341,12 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="mb-16">
-        <div className="eyebrow mb-4">State of operations</div>
-        <h1 className="hero text-5xl">{regime?.regime ? getRegimeDescription(regime.regime).split('.')[0] + '.' : 'Analyzing conditions.'}</h1>
-        <p className="text-soft mt-5 max-w-xl leading-relaxed">
-          {Array.isArray(skus) && skus.length > 0
-            ? `Tracking ${skus.length.toLocaleString()} SKU${skus.length === 1 ? '' : 's'}. ${regime?.regime === 'HEALTHY_EXPANSION' ? 'No critical exposures.' : 'Review current regime conditions.'}`
-            : 'Add your first SKU to start tracking operations.'}
-        </p>
-      </div>
+      <RegimeBriefing
+        regime={regimeType}
+        fdr={fdr}
+        confidence={regimeIntelligence?.confidence?.overall}
+        skuCount={Array.isArray(skus) ? skus.length : 0}
+      />
 
       <div className="grid grid-cols-4 gap-px bg-line mb-20">
         <div className="bg-panel p-6">

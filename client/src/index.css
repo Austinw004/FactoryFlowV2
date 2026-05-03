@@ -413,4 +413,42 @@
     background: hsl(var(--card));
     border: 1px solid hsl(var(--border));
   }
+
+  /* Regime ambient tone — applied to dashboard wrapper.
+     Each regime tints the page edge with a subtle accent so the customer
+     feels the market condition rather than just reading it. The accent is
+     low-saturation on purpose: it should register at a glance without
+     fighting the data. */
+  .regime-tone-stable {
+    --regime-accent: 130 30% 50%;
+    --regime-accent-soft: 130 30% 50% / 0.04;
+  }
+  .regime-tone-warming {
+    --regime-accent: 35 75% 55%;
+    --regime-accent-soft: 35 75% 55% / 0.06;
+  }
+  .regime-tone-tense {
+    --regime-accent: 0 70% 55%;
+    --regime-accent-soft: 0 70% 55% / 0.07;
+  }
+  .regime-tone-opportunity {
+    --regime-accent: 190 70% 50%;
+    --regime-accent-soft: 190 70% 50% / 0.06;
+  }
+  .regime-tone-neutral {
+    --regime-accent: 0 0% 50%;
+    --regime-accent-soft: 0 0% 50% / 0.03;
+  }
+
+  .regime-accent-rule {
+    border-color: hsl(var(--regime-accent, var(--accent)));
+  }
+
+  .regime-accent-bg {
+    background-color: hsl(var(--regime-accent-soft, var(--accent) / 0.05));
+  }
+
+  .regime-accent-text {
+    color: hsl(var(--regime-accent, var(--accent)));
+  }
 }
