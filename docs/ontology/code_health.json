@@ -1,0 +1,17 @@
+{
+  "$schema_version": 1,
+  "description": "Daily snapshot of repo health metrics. One row appended per meta-routine run during Phase 2 code-health fusion.",
+  "row_shape": {
+    "date": "YYYY-MM-DD (UTC)",
+    "main_sha": "string",
+    "typecheck_clean": "bool",
+    "lint_clean": "bool",
+    "test_pass_count": "int",
+    "test_fail_count": "int",
+    "build_clean": "bool",
+    "bundle_size_kb": "int|null",
+    "dependency_count": "int|null",
+    "security_advisory_count": "int|null"
+  },
+  "history": []
+}
