@@ -1208,13 +1208,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
    * to the Stripe customer by Stripe's confirm flow — we just record the
    * link and set it as the customer's default for invoices.
    */
-  app.post('/api/onboarding/payment-method/confirm', isAuthenticated, async (req: any, res) => {
+  const confirmPaymentMethodSchema = z.object({
+    setupIntentId: z.string().trim().regex(/^seti_[A-Za-z0-9_]{1,255}$/, "Invalid setup intent id"),
+  });
+  app.post('/api/onboarding/payment-method/confirm', isAuthenticated, validateBody(confirmPaymentMethodSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const setupIntentId = String(req.body?.setupIntentId || "");
-      if (!setupIntentId.startsWith("seti_")) {
-        return res.status(400).json({ error: "Invalid setup intent id" });
-      }
+      const { setupIntentId } = req.validated as z.infer<typeof confirmPaymentMethodSchema>;
 
       const user = await stripeService.getUser(userId);
       if (!user || !user.stripeCustomerId) {
