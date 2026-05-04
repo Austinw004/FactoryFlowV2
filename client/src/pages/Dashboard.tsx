@@ -63,6 +63,69 @@ function getRegimeDescription(regime: string): string {
   return regimeDescriptions[regime] || "Economic conditions are being analyzed.";
 }
 
+// Regime-aware procurement playbook. Each regime drives a specific
+// procurement posture, the dollar/operational implication for the customer,
+// and the next-action surfaces they should jump to. This is what turns the
+// FDR signal from a label into a decision.
+type RegimeGuidance = {
+  headline: string;
+  implication: string;
+  actions: { label: string; href: string }[];
+  toneClass: string; // border/background tint
+  pulseClass: string; // accent dot
+};
+
+const regimeGuidance: Record<string, RegimeGuidance> = {
+  HEALTHY_EXPANSION: {
+    headline: "Standard procurement pace. Good window for long-term contracts.",
+    implication:
+      "Markets are stable. Input costs trending flat. Lock in 12-month agreements with reliable suppliers while leverage is balanced.",
+    actions: [
+      { label: "Negotiate long-term contracts", href: "/procurement" },
+      { label: "Review supplier mix", href: "/supplier-risk" },
+    ],
+    toneClass: "border-good/30 bg-good/5",
+    pulseClass: "bg-good",
+  },
+  ASSET_LED_GROWTH: {
+    headline: "Asset prices outpacing the real economy. Lock in pricing now.",
+    implication:
+      "Historically this regime precedes 8–12% input cost increases within a quarter. Pre-purchase critical materials and accelerate POs on items with rising lead times.",
+    actions: [
+      { label: "Lock in supplier contracts", href: "/procurement" },
+      { label: "View exposed materials", href: "/inventory-management" },
+    ],
+    toneClass: "border-amber-500/30 bg-amber-500/5",
+    pulseClass: "bg-amber-500",
+  },
+  IMBALANCED_EXCESS: {
+    headline: "Significant decoupling detected. Defer and renegotiate.",
+    implication:
+      "Asset/real-economy gap is at risk levels. Defer non-critical purchases. Renegotiate expiring contracts. Build safety stock only on single-sourced critical materials.",
+    actions: [
+      { label: "Review at-risk materials", href: "/inventory-optimization" },
+      { label: "Renegotiate contracts", href: "/procurement" },
+    ],
+    toneClass: "border-bad/30 bg-bad/5",
+    pulseClass: "bg-bad",
+  },
+  REAL_ECONOMY_LEAD: {
+    headline: "Counter-cyclical window. Favorable supplier terms available.",
+    implication:
+      "Asset markets are correcting while real demand holds. Suppliers are open to concessions — renegotiate expiring agreements and lock in 12–24 month pricing.",
+    actions: [
+      { label: "Renegotiate expiring agreements", href: "/procurement" },
+      { label: "Run scenario analysis", href: "/scenario-planning" },
+    ],
+    toneClass: "border-signal/30 bg-signal/5",
+    pulseClass: "bg-signal",
+  },
+};
+
+function getRegimeGuidance(regime: string): RegimeGuidance {
+  return regimeGuidance[regime] || regimeGuidance.HEALTHY_EXPANSION;
+}
+
 export default function Dashboard() {
   const { toast } = useToast();
   const { user, isLoading: authLoading } = useAuth();
@@ -338,13 +401,53 @@ export default function Dashboard() {
       )}
 
       <div className="mb-16">
-        <div className="eyebrow mb-4">State of operations</div>
-        <h1 className="hero text-5xl">{regime?.regime ? getRegimeDescription(regime.regime).split('.')[0] + '.' : 'Analyzing conditions.'}</h1>
-        <p className="text-soft mt-5 max-w-xl leading-relaxed">
-          {Array.isArray(skus) && skus.length > 0
-            ? `Tracking ${skus.length.toLocaleString()} SKU${skus.length === 1 ? '' : 's'}. ${regime?.regime === 'HEALTHY_EXPANSION' ? 'No critical exposures.' : 'Review current regime conditions.'}`
-            : 'Add your first SKU to start tracking operations.'}
+        <div className="eyebrow mb-4">State of operations · {friendlyRegime}</div>
+        <h1 className="hero text-5xl" data-testid="text-regime-hero">{getRegimeGuidance(regimeType).headline}</h1>
+        <p className="text-soft mt-5 max-w-2xl leading-relaxed" data-testid="text-regime-implication">
+          {getRegimeGuidance(regimeType).implication}
         </p>
+
+        {/* Regime-aware action card. Visible, prominent, and the primary
+            way the FDR model influences the customer's day. The tone
+            shifts with the regime so the dashboard *feels* different
+            when conditions decouple. */}
+        <div
+          className={`mt-8 max-w-2xl border ${getRegimeGuidance(regimeType).toneClass} rounded-md p-5`}
+          data-testid="card-regime-guidance"
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <span className={`relative flex h-2 w-2`}>
+              <span className={`absolute inline-flex h-full w-full rounded-full ${getRegimeGuidance(regimeType).pulseClass} opacity-60 animate-ping`}></span>
+              <span className={`relative inline-flex rounded-full h-2 w-2 ${getRegimeGuidance(regimeType).pulseClass}`}></span>
+            </span>
+            <span className="eyebrow">Recommended actions · FDR {fdr.toFixed(2)}</span>
+            {regimeIntelligence?.confidence?.overall != null && (
+              <span className="mono text-[10px] text-muted ml-auto">
+                {Math.round(Number(regimeIntelligence.confidence.overall) * 100)}% confidence
+              </span>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {getRegimeGuidance(regimeType).actions.map((action) => (
+              <Button
+                key={action.href}
+                variant="outline"
+                size="sm"
+                onClick={() => setLocation(action.href)}
+                data-testid={`button-regime-action-${action.href.replace(/\//g, '')}`}
+              >
+                {action.label}
+                <span aria-hidden className="ml-2">→</span>
+              </Button>
+            ))}
+          </div>
+          <p className="text-xs text-muted mt-4 leading-relaxed">
+            <span className="font-medium">Why this guidance:</span> the FDR (Financial-Real Decoupling) score
+            measures the gap between asset-market activity and real economic output. At {fdr.toFixed(2)},
+            the platform classifies conditions as {friendlyRegime}, which historically corresponds to the
+            procurement posture above.
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-4 gap-px bg-line mb-20">
