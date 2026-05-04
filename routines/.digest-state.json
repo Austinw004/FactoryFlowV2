@@ -1,0 +1,134 @@
+{
+  "today": "2026-05-04",
+  "prior_digest_date": "2026-05-03",
+  "prior_reply_checksum": null,
+  "email_status": {
+    "sent": false,
+    "attempted_at": "2026-05-04T09:00:00Z",
+    "reason": "sendpulse-api package not installed in routine sandbox; CredentialService unreachable without DB access",
+    "content_paths": {
+      "html": "/tmp/digest-email.html",
+      "text": "/tmp/digest-email.txt"
+    },
+    "failure_log": "/tmp/digest-failures.jsonl"
+  },
+  "subject": "Daily digest — 2 blocking, 8 need your call",
+  "counters": {
+    "ran_cleanly": 1,
+    "need_eyes": 8,
+    "blocking": 2
+  },
+  "routine_status": {
+    "big_boi": { "status": "activity", "branch_pattern": "claude/exciting-fermi-*" },
+    "optimus": { "status": "silent", "branch_pattern": null },
+    "daily_boost": { "status": "activity", "branch_pattern": "claude/vigilant-allen-*" },
+    "palantard_grade": { "status": "activity", "branch_pattern": "claude/relaxed-ramanujan-*" },
+    "weekly_clean": { "status": "activity-carryover", "branch_pattern": "claude/festive-dijkstra-*" },
+    "code_review": { "status": "failed", "branch_pattern": "claude/hopeful-rubin-*" }
+  },
+  "decisions": [
+    {
+      "id": 1,
+      "severity": "RED",
+      "routine": "code_review",
+      "ref": { "type": "issue", "number": 175 },
+      "summary": "P0 production outage (prescient-labs.com unreachable, Replit edge host_not_allowed) still open from prior digest. Manual Replit dashboard action required.",
+      "question": "Did you restore the deployment? If not, who does this and when?"
+    },
+    {
+      "id": 2,
+      "severity": "RED",
+      "routine": "code_review",
+      "ref": { "type": "issue", "number": 181 },
+      "summary": "drizzle-zod 0.8 vs zod 3 type mismatch in Machinery.tsx breaks CI on main; every PR shows red.",
+      "question": "Pin drizzle-zod@^0.7 (a), upgrade zod to v4 (b), or refactor Machinery.tsx form (c)?"
+    },
+    {
+      "id": 3,
+      "severity": "YELLOW",
+      "routine": "big_boi",
+      "ref": { "type": "pr", "numbers": [182, 168] },
+      "summary": "Two daily-codebase PRs from this routine are open (#182 today, #168 carryover).",
+      "question": "Merge #182 and close #168, or merge #168 first?"
+    },
+    {
+      "id": 4,
+      "severity": "YELLOW",
+      "routine": "daily_boost",
+      "ref": { "type": "pr", "numbers": [183, 172, 169], "conflict": true },
+      "summary": "Three open PRs all touch Dashboard.tsx, MaterialsAtRiskWidget.tsx, PolicySignals.tsx. #183 likely supersedes #172/#169.",
+      "question": "Close #172/#169 in favor of #183, or sequence them?"
+    },
+    {
+      "id": 5,
+      "severity": "YELLOW",
+      "routine": "palantard_grade",
+      "ref": { "type": "pr", "numbers": [174] },
+      "summary": "docs/ontology/ skeleton bootstrap PR awaiting review (11 files, docs only).",
+      "question": "Approve/merge? Confirm docs/ontology is the right path."
+    },
+    {
+      "id": 6,
+      "severity": "YELLOW",
+      "routine": "weekly_clean",
+      "ref": { "type": "pr", "numbers": [158] },
+      "summary": "W18 deep clean PR carryover. Vite v8 major bump deferred.",
+      "question": "Approve/merge W18; accept the Vite-v8 deferral or schedule it as its own run?"
+    },
+    {
+      "id": 7,
+      "severity": "YELLOW",
+      "routine": "code_review",
+      "ref": { "type": "pr", "numbers": [176] },
+      "summary": "Dev-only console.log gating PR (+7/-5). CI red is from #181, not this PR.",
+      "question": "Merge?"
+    },
+    {
+      "id": 8,
+      "severity": "YELLOW",
+      "routine": "code_review",
+      "ref": { "type": "pr", "numbers": [163, 171] },
+      "summary": "Two prior Code Review fix PRs still open (audit-trail observability + silent-insert/OAuth fallback).",
+      "question": "Merge both, or any reason to hold?"
+    },
+    {
+      "id": 9,
+      "severity": "YELLOW",
+      "routine": "code_review",
+      "ref": { "type": "issue", "numbers": [164, 165, 166, 167, 177, 178, 179, 180] },
+      "summary": "Eight Code Review product/intelligence issues open: tariffs, freight, compliance, digital-twin thesis, etc.",
+      "question": "Aggregate triage call: assign to Product, defer to next quarter, or close?"
+    },
+    {
+      "id": 10,
+      "severity": "YELLOW",
+      "routine": "big_boi",
+      "ref": { "type": "policy" },
+      "summary": "Big Boi keeps writing draft PRs instead of pushing directly to main, because session-level git policy overrides its own spec.",
+      "question": "Keep the draft-PR override or grant direct-to-main authority?"
+    }
+  ],
+  "items_24h": {
+    "prs_opened": [182, 183, 176, 174, 173],
+    "prs_merged": [],
+    "prs_closed": [],
+    "issues_opened": [175, 177, 178, 179, 180, 181],
+    "issues_closed": [],
+    "commits_to_main": [],
+    "failed_ci_runs": [
+      { "scope": "main + every PR", "cause_issue": 181, "summary": "drizzle-zod ↔ zod type mismatch, 44 TS errors in Machinery.tsx" }
+    ]
+  },
+  "items_7d_weekly_clean": {
+    "prs_opened": [158],
+    "prs_merged": [],
+    "prs_closed": []
+  },
+  "potential_conflicts": [
+    {
+      "files": ["client/src/pages/Dashboard.tsx", "client/src/components/MaterialsAtRiskWidget.tsx", "client/src/components/PolicySignals.tsx"],
+      "prs": [183, 172, 169],
+      "routines": ["daily_boost"]
+    }
+  ]
+}
