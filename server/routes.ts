@@ -4512,9 +4512,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate request body
       const validationResult = insertRfqSchema.safeParse(req.body);
       if (!validationResult.success) {
-        return res.status(400).json({ 
-          error: "Validation failed", 
-          details: validationResult.error.errors 
+        return res.status(400).json({
+          error: "Validation failed",
+          details: validationResult.error.issues
         });
       }
 
@@ -4669,9 +4669,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (!validationResult.success) {
-        return res.status(400).json({ 
-          error: "Validation failed", 
-          details: validationResult.error.errors 
+        return res.status(400).json({
+          error: "Validation failed",
+          details: validationResult.error.issues
         });
       }
 
