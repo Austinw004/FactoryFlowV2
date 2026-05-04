@@ -3803,7 +3803,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Resolve a prediction with actual outcome
-  app.post("/api/prediction-outcomes/:id/resolve", isAuthenticated, async (req: any, res) => {
+  const resolvePredictionOutcomeSchema = z.object({
+    actualValue: z.coerce.string().trim().min(1).max(256),
+    actualDirection: z.string().trim().max(64).optional(),
+    wasAccurate: z.boolean().optional(),
+    errorMagnitude: z.number().finite().optional(),
+  });
+  app.post("/api/prediction-outcomes/:id/resolve", isAuthenticated, validateBody(resolvePredictionOutcomeSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -3812,11 +3818,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { id } = req.params;
-      const { actualValue, actualDirection, wasAccurate, errorMagnitude } = req.body;
-
-      if (!actualValue) {
-        return res.status(400).json({ error: "actualValue is required" });
-      }
+      const { actualValue, actualDirection, wasAccurate, errorMagnitude } = req.validated as z.infer<typeof resolvePredictionOutcomeSchema>;
 
       const result = await db
         .update(predictionOutcomes)
@@ -3857,17 +3859,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/forecast-degradation-alerts/:id/resolve", isAuthenticated, async (req: any, res) => {
+  const resolveForecastAlertSchema = z.object({
+    actionTaken: z.string().trim().min(1, "actionTaken is required").max(2048),
+  });
+  app.post("/api/forecast-degradation-alerts/:id/resolve", isAuthenticated, validateBody(resolveForecastAlertSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      const { actionTaken } = req.body;
-      if (!actionTaken) {
-        return res.status(400).json({ error: "actionTaken is required" });
-      }
+      const { actionTaken } = req.validated as z.infer<typeof resolveForecastAlertSchema>;
       const alert = await storage.resolveForecastAlert(req.params.id, actionTaken, userId);
       res.json(alert);
     } catch (error: any) {
