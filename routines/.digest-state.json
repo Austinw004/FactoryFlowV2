@@ -1,0 +1,147 @@
+{
+  "today": "2026-05-05",
+  "prior_digest_date": "2026-05-04",
+  "prior_reply_checksum": null,
+  "prior_reply_processed": false,
+  "email_status": {
+    "sent": false,
+    "attempted_at": "2026-05-05T09:00:00Z",
+    "reason": "sendpulse-api package not installed in routine sandbox; sendEmail() throws ERR_MODULE_NOT_FOUND. Same as 2026-05-04.",
+    "content_paths": {
+      "html": "/tmp/digest-email.html",
+      "text": "/tmp/digest-email.txt"
+    },
+    "failure_log": "/tmp/digest-failures.jsonl"
+  },
+  "subject": "Daily digest — 2 blocking, 8 need your call",
+  "to": [{ "name": "Austin Wendler", "email": "austinwendler44@gmail.com" }],
+  "from": { "name": "Prescient Labs", "email": "info@prescient-labs.com" },
+  "counters": {
+    "ran_cleanly": 2,
+    "need_eyes": 8,
+    "blocking": 2
+  },
+  "routine_status": {
+    "big_boi":         { "status": "activity",            "branch_pattern": "claude/exciting-fermi-*",   "ci_today": "green" },
+    "optimus":         { "status": "silent",              "branch_pattern": null,                         "ci_today": null },
+    "daily_boost":     { "status": "activity",            "branch_pattern": "claude/vigilant-allen-*",    "ci_today": "red" },
+    "palantard_grade": { "status": "silent",              "branch_pattern": "claude/relaxed-ramanujan-*", "ci_today": null },
+    "weekly_clean":    { "status": "activity-carryover",  "branch_pattern": "claude/festive-dijkstra-*",  "ci_today": "red" },
+    "code_review":     { "status": "failed",              "branch_pattern": "claude/hopeful-rubin-*",     "ci_today": "red" }
+  },
+  "decisions": [
+    {
+      "id": 1,
+      "severity": "RED",
+      "routine": "code_review",
+      "ref": { "type": "issue", "number": 175 },
+      "summary": "P0 outage prescient-labs.com unreachable (Replit host_not_allowed) still open from 2026-05-03. No comments, no resolution.",
+      "question": "Did you confirm the deployment is back? If still down, who restores it and when?",
+      "carryover_from_prior": true
+    },
+    {
+      "id": 2,
+      "severity": "RED",
+      "routine": "big_boi",
+      "ref": { "type": "pr", "number": 192, "resolves_issues": [181, 191] },
+      "summary": "Big Boi #192 claims tsc 319 -> 0 and CI is green on its branch. Merging would clear CI on main and un-red every other open PR.",
+      "question": "Approve and merge #192 to clear main?"
+    },
+    {
+      "id": 3,
+      "severity": "YELLOW",
+      "routine": "big_boi",
+      "ref": { "type": "pr", "numbers": [192, 182, 168, 151, 139] },
+      "summary": "Five draft daily-codebase PRs stacked open, each superseding the prior.",
+      "question": "Merge #192 and close the rest, or sequence them?"
+    },
+    {
+      "id": 4,
+      "severity": "YELLOW",
+      "routine": "daily_boost",
+      "ref": { "type": "pr", "numbers": [193, 183, 172, 169, 157, 152, 145, 140], "conflict": true, "files": ["client/src/pages/Dashboard.tsx", "client/src/components/MaterialsAtRiskWidget.tsx", "client/src/components/PolicySignals.tsx"] },
+      "summary": "Eight open PRs all touch Dashboard.tsx / MaterialsAtRiskWidget.tsx / PolicySignals.tsx. #193 likely supersedes priors. Flagged as potential conflict per hard rule.",
+      "question": "Close #183/#172/#169/#157/#152/#145/#140 in favor of #193, or pick a different head?"
+    },
+    {
+      "id": 5,
+      "severity": "YELLOW",
+      "routine": "code_review",
+      "ref": { "type": "pr", "numbers": [185, 176, 171, 163, 154, 147, 143] },
+      "summary": "Seven open fix PRs (console gating, audit-trail logging, error handling). All independent low-risk. CI red is from #181, not the diffs.",
+      "question": "Merge all once #181 clears, or any to hold?"
+    },
+    {
+      "id": 6,
+      "severity": "YELLOW",
+      "routine": "code_review",
+      "ref": { "type": "issue", "numbers": [186, 187, 189, 190, 180, 179, 178, 177, 167, 166, 165, 164, 156, 155] },
+      "summary": "Code Review's product-intelligence issue queue is now 14 open with heavy overlap on commodity-tariff / Section 232 / lead-time / compliance themes.",
+      "question": "One-shot triage routine to dedupe and assign to Product, or batch defer to Q3?"
+    },
+    {
+      "id": 7,
+      "severity": "YELLOW",
+      "routine": "palantard_grade",
+      "ref": { "type": "pr", "number": 174 },
+      "summary": "docs/ontology skeleton bootstrap PR (docs-only, 11 files), open since 2026-05-03.",
+      "question": "Approve and merge?",
+      "carryover_from_prior": true
+    },
+    {
+      "id": 8,
+      "severity": "YELLOW",
+      "routine": "weekly_clean",
+      "ref": { "type": "pr", "number": 158 },
+      "summary": "W18 deep clean PR carryover with Vite v8 deferred. W19 not yet started.",
+      "question": "Approve W18 (Vite v8 as its own follow-up), or want W18 expanded first?",
+      "carryover_from_prior": true
+    },
+    {
+      "id": 9,
+      "severity": "YELLOW",
+      "routine": "daily_digest",
+      "ref": { "type": "infra" },
+      "summary": "Email send blocked again: sendpulse-api npm package not installed in routine sandbox; CredentialService can't reach prod DB. Yesterday's digest hit the same wall.",
+      "question": "Install sendpulse-api in the sandbox image (a), surface SENDPULSE_USER/SECRET env vars the digest can read directly (b), or switch to a Slack/Discord webhook (c)?"
+    },
+    {
+      "id": 10,
+      "severity": "YELLOW",
+      "routine": "big_boi",
+      "ref": { "type": "policy" },
+      "summary": "Big Boi keeps producing draft PRs because session-level git policy overrides the push-to-main mode in its routine spec. Not yet answered.",
+      "question": "Keep draft-PR mode or grant direct-to-main authority?",
+      "carryover_from_prior": true
+    }
+  ],
+  "items_24h": {
+    "prs_opened": [192, 193, 185],
+    "prs_merged": [],
+    "prs_closed": [],
+    "issues_opened": [186, 187, 188, 189, 190, 191],
+    "issues_closed": [],
+    "commits_to_main": [],
+    "failed_ci_runs": [
+      { "scope": "PR #193 typecheck+build", "cause_issue": 181 },
+      { "scope": "PR #185 typecheck+build", "cause_issue": 181 },
+      { "scope": "PR #158 typecheck+build (carryover)", "cause_issue": 181 }
+    ],
+    "first_green_ci": [
+      { "pr": 192, "note": "Big Boi #192 — first typecheck+build success since #181 landed" }
+    ]
+  },
+  "items_7d_weekly_clean": {
+    "prs_opened": [],
+    "prs_merged": [],
+    "prs_closed": []
+  },
+  "potential_conflicts": [
+    {
+      "files": ["client/src/pages/Dashboard.tsx", "client/src/components/MaterialsAtRiskWidget.tsx", "client/src/components/PolicySignals.tsx"],
+      "prs": [193, 183, 172, 169, 157, 152, 145, 140],
+      "routines": ["daily_boost"]
+    }
+  ],
+  "pending_clarifications": []
+}
