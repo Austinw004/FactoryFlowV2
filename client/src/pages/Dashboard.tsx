@@ -37,7 +37,7 @@ const SmartInsightsCompact = lazy(() =>
 const InsightPanel = lazy(() =>
   import("@/components/InsightPanel").then((m) => ({ default: m.InsightPanel })),
 );
-import { TrendingUp, DollarSign, Package, AlertCircle, Plus, Upload, GitCompare, Loader2, Globe, Radio, Package2, Building2, Box, FileDown } from "lucide-react";
+import { TrendingUp, DollarSign, Package, AlertCircle, Plus, Upload, GitCompare, Loader2, Globe, Radio, Package2, Building2, Box, FileDown, ArrowRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -63,19 +63,96 @@ function getRegimeDescription(regime: string): string {
   return regimeDescriptions[regime] || "Economic conditions are being analyzed.";
 }
 
+// Regime briefing: this is the product's soul. Every regime has a plain-English
+// headline (what's happening), a directive (what to do), and the primary
+// procurement action so the dashboard answers "so what?" in 5 seconds.
+type RegimeBriefing = {
+  headline: string;
+  directive: string;
+  accent: string;            // left-border accent class
+  primaryActionLabel: string;
+  primaryActionPath: string;
+};
+
+const regimeBriefings: Record<string, RegimeBriefing> = {
+  HEALTHY_EXPANSION: {
+    headline: "Conditions are stable.",
+    directive:
+      "Standard procurement pace. Good window to negotiate long-term contracts and renew supplier agreements while pricing is predictable.",
+    accent: "border-good/50",
+    primaryActionLabel: "Review contracts up for renewal",
+    primaryActionPath: "/suppliers",
+  },
+  ASSET_LED_GROWTH: {
+    headline: "Asset markets are outpacing the real economy.",
+    directive:
+      "Lock in supplier contracts before pricing resets. This regime historically precedes 8–12% input cost increases — accelerate critical-material POs and pre-buy on items with lead times above 6 weeks.",
+    accent: "border-signal/60",
+    primaryActionLabel: "View materials with the highest exposure",
+    primaryActionPath: "/inventory-management",
+  },
+  IMBALANCED_EXCESS: {
+    headline: "Significant market decoupling detected.",
+    directive:
+      "Defer non-critical purchases. Renegotiate contracts expiring in the next 90 days. Build safety stock only on single-source materials — broader correction risk is elevated.",
+    accent: "border-bad/60",
+    primaryActionLabel: "Find single-source exposure",
+    primaryActionPath: "/inventory-management",
+  },
+  REAL_ECONOMY_LEAD: {
+    headline: "Counter-cyclical window is open.",
+    directive:
+      "Favorable supplier terms are available. Lock in long-dated agreements while asset markets correct, and renegotiate contracts that expire in the next two quarters.",
+    accent: "border-good/60",
+    primaryActionLabel: "Start contract renegotiations",
+    primaryActionPath: "/suppliers",
+  },
+  UNKNOWN: {
+    headline: "Calibrating regime model.",
+    directive:
+      "Connect economic data sources to receive procurement guidance tailored to current market conditions. Sample data can demonstrate the model in the meantime.",
+    accent: "border-line",
+    primaryActionLabel: "Connect a data source",
+    primaryActionPath: "/integrations",
+  },
+};
+
+function getRegimeBriefing(regime: string): RegimeBriefing {
+  return regimeBriefings[regime] || regimeBriefings.UNKNOWN;
+}
+
 export default function Dashboard() {
   const { toast } = useToast();
   const { user, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
 
+  // A regime shift is a first-class event, not just a toast. We hold the
+  // most recent transition in state so the dashboard surfaces it as a
+  // persistent banner until the operator dismisses it — they need to see
+  // the change every time they open the page until they've acted on it.
+  const [regimeShift, setRegimeShift] = useState<{
+    from: string;
+    to: string;
+    fdr: number | null;
+    at: string;
+  } | null>(null);
+
   // Enable WebSocket for real-time updates with regime change notifications
   const { isConnected } = useWebSocket((message) => {
     if (message.type === 'regime_change' && message.data) {
       const severity = message.data.severity === 'high' ? 'destructive' : 'default';
-      
+      const fdrNum = Number.isFinite(Number(message.data.fdr)) ? Number(message.data.fdr) : null;
+
+      setRegimeShift({
+        from: String(message.data.from || ''),
+        to: String(message.data.to || ''),
+        fdr: fdrNum,
+        at: new Date().toISOString(),
+      });
+
       toast({
         title: "Economic Regime Changed",
-        description: `The economic regime has shifted from ${message.data.from} to ${message.data.to}. FDR: ${Number.isFinite(Number(message.data.fdr)) ? Number(message.data.fdr).toFixed(2) : '—'}`,
+        description: `The economic regime has shifted from ${message.data.from} to ${message.data.to}. FDR: ${fdrNum != null ? fdrNum.toFixed(2) : '—'}`,
         variant: severity as 'default' | 'destructive',
         duration: 10000, // Show for 10 seconds
       });
@@ -337,14 +414,78 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="mb-16">
-        <div className="eyebrow mb-4">State of operations</div>
-        <h1 className="hero text-5xl">{regime?.regime ? getRegimeDescription(regime.regime).split('.')[0] + '.' : 'Analyzing conditions.'}</h1>
-        <p className="text-soft mt-5 max-w-xl leading-relaxed">
-          {Array.isArray(skus) && skus.length > 0
-            ? `Tracking ${skus.length.toLocaleString()} SKU${skus.length === 1 ? '' : 's'}. ${regime?.regime === 'HEALTHY_EXPANSION' ? 'No critical exposures.' : 'Review current regime conditions.'}`
-            : 'Add your first SKU to start tracking operations.'}
+      {regimeShift && regimeShift.from && regimeShift.to && regimeShift.from !== regimeShift.to && (
+        <div
+          className="mb-10 border-l-2 border-signal pl-6 pr-4 py-4 bg-signal/5 flex items-start justify-between gap-4"
+          data-testid="banner-regime-shift"
+        >
+          <div className="flex-1">
+            <div className="eyebrow text-signal mb-2">Regime shift detected</div>
+            <p className="text-bone text-sm leading-relaxed">
+              Economic regime moved from{" "}
+              <span className="text-bone">{(regimeLabels[regimeShift.from] || regimeShift.from)}</span> to{" "}
+              <span className="text-bone">{(regimeLabels[regimeShift.to] || regimeShift.to)}</span>
+              {regimeShift.fdr != null && <> · FDR <span className="font-mono">{regimeShift.fdr.toFixed(2)}</span></>}.
+              Your procurement strategy below has been updated to match the new conditions.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setRegimeShift(null)}
+            className="text-muted hover:text-bone transition shrink-0"
+            aria-label="Dismiss regime shift notice"
+            data-testid="button-dismiss-regime-shift"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      <div className={`mb-16 border-l-2 pl-6 ${getRegimeBriefing(regimeType).accent}`}>
+        <div className="flex items-center gap-3 mb-4 flex-wrap">
+          <div className="eyebrow">State of operations</div>
+          <span className="text-muted text-[10px]">·</span>
+          <div className="eyebrow text-signal" data-testid="text-current-regime">{friendlyRegime}</div>
+          {regimeData.degraded && (
+            <Badge variant="outline" className="text-[10px] uppercase tracking-[0.18em]">Limited data</Badge>
+          )}
+        </div>
+        <h1 className="hero text-5xl" data-testid="text-regime-headline">
+          {getRegimeBriefing(regimeType).headline}
+        </h1>
+        <p className="text-soft mt-5 max-w-2xl leading-relaxed" data-testid="text-regime-directive">
+          {getRegimeBriefing(regimeType).directive}
         </p>
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-6 text-xs">
+          <span className="text-muted inline-flex items-center gap-1.5">
+            FDR <span className="font-mono text-bone tabular-nums">{fdr.toFixed(2)}</span>
+            <InfoTooltip term="fdr" />
+          </span>
+          <span className="text-muted">
+            Tracking <span className="font-mono text-bone">{Array.isArray(skus) ? skus.length.toLocaleString() : '—'}</span> SKUs
+          </span>
+          <span className="text-muted">
+            <span className="font-mono text-bone">{policySignals.length}</span> action{policySignals.length === 1 ? '' : 's'} recommended
+          </span>
+          {regimeIntelligence?.confidence?.overall != null && (
+            <span className="text-muted">
+              Model confidence{" "}
+              <span className="font-mono text-bone">
+                {Math.round(Number(regimeIntelligence.confidence.overall) * 100)}%
+              </span>
+            </span>
+          )}
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="mt-6 group"
+          onClick={() => setLocation(getRegimeBriefing(regimeType).primaryActionPath)}
+          data-testid="button-regime-primary-action"
+        >
+          {getRegimeBriefing(regimeType).primaryActionLabel}
+          <ArrowRight className="h-3.5 w-3.5 ml-2 transition-transform group-hover:translate-x-0.5" />
+        </Button>
       </div>
 
       <div className="grid grid-cols-4 gap-px bg-line mb-20">
@@ -699,9 +840,33 @@ export default function Dashboard() {
       </Card>
 
       <Card className="p-6">
-        <h2 className="text-lg font-semibold mb-4">Demand Trend Analysis</h2>
-        <p className="text-sm text-muted-foreground">
-          Connect demand history data to view forecasting trends
+        <div className="flex items-start justify-between flex-wrap gap-3 mb-3">
+          <div>
+            <h2 className="text-lg font-semibold">Demand outlook</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Forecasts adjusted for the current <span className="text-bone">{friendlyRegime}</span> regime.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setLocation('/forecasting')}
+            data-testid="button-open-forecasting"
+          >
+            Open forecasting
+            <ArrowRight className="h-3.5 w-3.5 ml-2" />
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed max-w-3xl">
+          {regimeType === 'ASSET_LED_GROWTH'
+            ? 'Asset-Led Growth typically pulls demand forward as customers anticipate price increases. Review forecast vs. recent actuals before committing additional capacity.'
+            : regimeType === 'IMBALANCED_EXCESS'
+            ? 'Imbalanced Excess regimes historically precede demand softening. Treat short-horizon upside surprises as transitory and validate before raising commitments.'
+            : regimeType === 'REAL_ECONOMY_LEAD'
+            ? 'Real Economy Lead regimes favor durable demand. Lock in supplier capacity for top-volume SKUs while terms are favorable.'
+            : regimeType === 'HEALTHY_EXPANSION'
+            ? 'Healthy Expansion supports stable forecasting. Prioritize accuracy improvements on low-volume, high-margin SKUs where the marginal dollar is highest.'
+            : 'Connect demand history to receive regime-adjusted forecasts.'}
         </p>
       </Card>
       
