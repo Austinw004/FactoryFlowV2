@@ -8,7 +8,6 @@
  */
 
 import { db } from "../db";
-import { historicalPredictions, predictionAccuracyMetrics, economicSnapshots } from "@shared/schema";
 import { sql, and, gte, lte, isNotNull } from "drizzle-orm";
 import { classifyRegimeFromFDR } from './regimeConstants';
 

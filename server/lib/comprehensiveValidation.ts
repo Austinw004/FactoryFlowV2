@@ -15,12 +15,6 @@
  */
 
 import type { IStorage } from '../storage';
-import type { 
-  InsertHistoricalPrediction,
-  InsertModelComparison,
-  InsertMachineryPrediction,
-  InsertWorkforcePrediction 
-} from '@shared/schema';
 import { DualCircuitEconomics } from './economics';
 import { CANONICAL_REGIME_THRESHOLDS } from './regimeConstants';
 

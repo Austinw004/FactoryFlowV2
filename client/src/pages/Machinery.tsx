@@ -17,7 +17,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { Machinery, InsertMachinery, MaintenanceRecord, InsertMaintenanceRecord } from "@shared/schema";
-import { insertMachinerySchema, insertMaintenanceRecordSchema } from "@shared/schema";
 import { z } from "zod";
 
 type DepreciationSchedule = {

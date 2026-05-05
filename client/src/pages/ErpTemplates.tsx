@@ -16,12 +16,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import {
   Select,
   SelectContent,
   SelectItem,

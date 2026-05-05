@@ -8,7 +8,6 @@ import {
   dataQualityScores,
   type PilotExperiment,
 } from "@shared/schema";
-import { classifyRegimeFromFDR, type Regime } from "./regimeConstants";
 import { seededRandom } from "./evaluationHarness";
 import { computePolicyRecommendation, computeWhatIf, type PolicyInputs } from "./decisionIntelligence";
 import { optimizeReorderQuantity } from "./probabilisticOptimization";
