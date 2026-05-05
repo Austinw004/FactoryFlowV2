@@ -3857,17 +3857,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/forecast-degradation-alerts/:id/resolve", isAuthenticated, async (req: any, res) => {
+  const resolveForecastAlertSchema = z.object({
+    actionTaken: z.string().trim().min(1, "actionTaken is required").max(2000),
+  });
+  app.post("/api/forecast-degradation-alerts/:id/resolve", isAuthenticated, validateBody(resolveForecastAlertSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      const { actionTaken } = req.body;
-      if (!actionTaken) {
-        return res.status(400).json({ error: "actionTaken is required" });
-      }
+      const { actionTaken } = req.validated as z.infer<typeof resolveForecastAlertSchema>;
       const alert = await storage.resolveForecastAlert(req.params.id, actionTaken, userId);
       res.json(alert);
     } catch (error: any) {
@@ -6154,7 +6154,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update employee skill certification
   app.patch("/api/workforce/skill-certifications/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const cert = await storage.updateEmployeeSkillCertification(req.params.id, req.body);
+      const { insertEmployeeSkillCertificationSchema } = await import("@shared/schema");
+      const updateSchema = (insertEmployeeSkillCertificationSchema as any).partial().strict();
+      const parsed = updateSchema.safeParse({
+        ...req.body,
+        ...(req.body.expirationDate !== undefined && {
+          expirationDate: req.body.expirationDate ? new Date(req.body.expirationDate) : null,
+        }),
+        ...(req.body.certifiedDate !== undefined && {
+          certifiedDate: req.body.certifiedDate ? new Date(req.body.certifiedDate) : null,
+        }),
+      });
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Validation failed", details: parsed.error.issues });
+      }
+      const cert = await storage.updateEmployeeSkillCertification(req.params.id, parsed.data);
       if (!cert) {
         return res.status(404).json({ error: "Skill certification not found" });
       }
@@ -6219,7 +6233,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update shift assignment
   app.patch("/api/workforce/shift-assignments/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const assignment = await storage.updateShiftAssignment(req.params.id, req.body);
+      const { insertShiftAssignmentSchema } = await import("@shared/schema");
+      const updateSchema = (insertShiftAssignmentSchema as any).partial().strict();
+      const parsed = updateSchema.safeParse({
+        ...req.body,
+        ...(req.body.shiftDate !== undefined && {
+          shiftDate: req.body.shiftDate ? new Date(req.body.shiftDate) : null,
+        }),
+      });
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Validation failed", details: parsed.error.issues });
+      }
+      const assignment = await storage.updateShiftAssignment(req.params.id, parsed.data);
       if (!assignment) {
         return res.status(404).json({ error: "Shift assignment not found" });
       }
@@ -7558,7 +7583,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/supply-chain/nodes/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const node = await storage.updateSupplierNode(req.params.id, req.body);
+      const updateSchema = (insertSupplierNodeSchema as any)
+        .partial()
+        .strict()
+        .omit({ companyId: true });
+      const parsed = updateSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Validation failed", details: parsed.error.issues });
+      }
+      const node = await storage.updateSupplierNode(req.params.id, parsed.data);
       if (!node) {
         return res.status(404).json({ error: "Supplier node not found" });
       }
@@ -7912,7 +7945,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/po-rules/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const rule = await storage.updatePoRule(req.params.id, req.body);
+      const updateSchema = (insertPoRuleSchema as any)
+        .partial()
+        .strict()
+        .omit({ companyId: true });
+      const parsed = updateSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Validation failed", details: parsed.error.issues });
+      }
+      const rule = await storage.updatePoRule(req.params.id, parsed.data);
       if (!rule) {
         return res.status(404).json({ error: "PO rule not found" });
       }
