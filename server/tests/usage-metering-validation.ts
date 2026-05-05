@@ -12,7 +12,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
 import { calculateMeteringCost, formatMeteringCost, countActiveSKUs, recordUsageEvent } from "../lib/usageMetering";
 import { db } from "../db";
-import { companies, subscriptions, skus } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 describe("Usage-Based Metering", () => {

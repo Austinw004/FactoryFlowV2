@@ -1,9 +1,7 @@
 import { storage } from "../storage";
 import { NewsMonitoringService } from "./newsMonitoring";
 import { calculateMAPEForSKU, checkForDegradation } from "./forecastMonitoring";
-import { fetchAllCommodityPrices, CommodityPrice } from "./commodityPricing";
 import { calculateSupplierRiskScore } from "./supplyChainRisk";
-import { calculateOEE, detectBottlenecks } from "./productionKPIs";
 import { fetchExternalVariables } from "./externalAPIs";
 import { getAISystemPromptEnhancements } from "./industryPersonalization";
 import { getIndustryConfig } from "@shared/industryConfig";

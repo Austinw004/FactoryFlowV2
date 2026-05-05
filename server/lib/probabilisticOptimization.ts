@@ -9,7 +9,6 @@ import {
   purchaseOrders,
   type OptimizationRun,
 } from "@shared/schema";
-import { classifyRegimeFromFDR, CANONICAL_REGIME_THRESHOLDS, type Regime } from "./regimeConstants";
 import { seededRandom } from "./evaluationHarness";
 import { computePolicyRecommendation, computeWhatIf, computeTrustScore, assertEconomicValidity, type PolicyInputs, type WhatIfScenario } from "./decisionIntelligence";
 import { assertEconomicValidityStrict } from "./guardRails";

@@ -15,16 +15,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
-  insertSopScenarioSchema,
-  insertSopGapAnalysisSchema,
-  insertSopActionItemSchema,
   type SopScenario,
   type SopGapAnalysis,
   type SopMeeting,
   type SopActionItem,
-  type InsertSopScenario,
-  type InsertSopGapAnalysis,
-  type InsertSopActionItem,
 } from "@shared/schema";
 import { Plus, Calendar, TrendingUp, FileText, CheckCircle2, AlertCircle, Clock, Users, Mail, Bell, X, UserPlus } from "lucide-react";
 import { format } from "date-fns";
@@ -53,26 +47,40 @@ function safeFormatDate(dateValue: Date | string | null | undefined, formatStrin
   }
 }
 
-// Create scenario form schema - omit server-injected fields first
-const createScenarioFormSchema = insertSopScenarioSchema
-  .omit({ companyId: true, createdBy: true, approvedAt: true, approvedBy: true })
-  .extend({
-    startDate: z.string(),
-    endDate: z.string(),
-    nextReviewDate: z.string().optional(),
-  });
+// drizzle-zod 0.8.x emits zod-v4 typed schemas while project code consumes
+// the v3 default export, so '.extend()' over a derived schema raises TS2741.
+// Declare the form schemas in pure v3 zod (same fields the form actually
+// uses); server-side validation still goes through the drizzle-derived
+// insert*Schema in the API route.
+const createScenarioFormSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  scenarioType: z.string().min(1, "Scenario type is required"),
+  planningPeriod: z.string().min(1, "Planning period is required"),
+  status: z.string().default("draft"),
+  startDate: z.string(),
+  endDate: z.string(),
+  nextReviewDate: z.string().optional(),
+  demandGrowthRate: z.coerce.number().optional(),
+  productionCapacity: z.coerce.number().optional(),
+  materialAvailability: z.coerce.number().optional(),
+  supplierReliability: z.coerce.number().optional(),
+  budgetAllocation: z.coerce.number().optional(),
+  costInflationRate: z.coerce.number().optional(),
+  notes: z.string().optional(),
+});
 
-// Create gap analysis form schema - omit server-injected fields
-const createGapFormSchema = insertSopGapAnalysisSchema
-  .omit({ companyId: true })
-  .extend({
-    periodStart: z.string(),
-    periodEnd: z.string(),
-    forecastedDemand: z.coerce.number().min(0),
-    plannedProduction: z.coerce.number().min(0),
-    gapQuantity: z.coerce.number(),
-    gapPercentage: z.coerce.number().optional(),
-  });
+const createGapFormSchema = z.object({
+  scenarioId: z.string().optional(),
+  gapCategory: z.string().min(1, "Gap category is required"),
+  recommendedAction: z.string().optional(),
+  estimatedImpact: z.coerce.number().optional(),
+  periodStart: z.string(),
+  periodEnd: z.string(),
+  forecastedDemand: z.coerce.number().min(0),
+  plannedProduction: z.coerce.number().min(0),
+  gapQuantity: z.coerce.number(),
+  gapPercentage: z.coerce.number().optional(),
+});
 
 // Create meeting form schema - uses fields from the database schema plus UI-specific fields
 const createMeetingFormSchema = z.object({

@@ -17,7 +17,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { Machinery, InsertMachinery, MaintenanceRecord, InsertMaintenanceRecord } from "@shared/schema";
-import { insertMachinerySchema, insertMaintenanceRecordSchema } from "@shared/schema";
 import { z } from "zod";
 
 type DepreciationSchedule = {
@@ -33,7 +32,15 @@ type DepreciationSchedule = {
   }>;
 };
 
-const machineryFormSchema = insertMachinerySchema.omit({ companyId: true }).extend({
+// drizzle-zod 0.8.x emits zod-v4 typed schemas, but the project's default
+// `zod` import resolves to v3, so combining them via `.extend()` triggers
+// TS2741 ("'_zod' is missing"). These forms only need v3 zod for resolver
+// wiring, so we declare them in v3 directly (same validation behavior, no
+// dependence on the drizzle-zod-derived shape).
+const machineryFormSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  category: z.string().min(1, "Category is required"),
+  depreciationMethod: z.string(),
   purchaseCost: z.coerce.number().min(0, "Purchase cost must be positive"),
   salvageValue: z.coerce.number().min(0, "Salvage value must be positive").default(0),
   usefulLifeYears: z.coerce.number().int().min(1, "Useful life must be at least 1 year").default(10),
@@ -47,7 +54,9 @@ const machineryFormSchema = insertMachinerySchema.omit({ companyId: true }).exte
   notes: z.string().optional(),
 });
 
-const maintenanceFormSchema = insertMaintenanceRecordSchema.omit({ machineryId: true, partsReplaced: true, nextScheduledDate: true }).extend({
+const maintenanceFormSchema = z.object({
+  description: z.string().min(1, "Description is required"),
+  maintenanceType: z.string().min(1, "Maintenance type is required"),
   cost: z.coerce.number().min(0, "Cost must be positive").default(0),
   downTimeHours: z.coerce.number().min(0, "Downtime must be positive").default(0),
   performedDate: z.string(),
