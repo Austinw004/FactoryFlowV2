@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Package, TrendingDown } from "lucide-react";
+import { AlertTriangle, Package, TrendingDown, Search } from "lucide-react";
 import { useLocation } from "wouter";
 import type { Material } from "@shared/schema";
 
@@ -12,46 +12,80 @@ interface MaterialRisk {
   riskScore: number;
   reason: string;
   inventoryLevel: number; // percentage
+  whyAtRisk: string;        // plain-English explanation of the trigger
+  recommendedAction: string; // what the operator should do next
 }
+
+// Regime-aware framing for the widget header. Different regimes change what
+// "at risk" actually means for procurement decisions.
+const regimeFraming: Record<string, string> = {
+  HEALTHY_EXPANSION:
+    "Standard window. Address low-stock items before they become critical — supplier capacity is available.",
+  ASSET_LED_GROWTH:
+    "Input costs are rising. Prioritize POs on these materials now; lead times typically extend in this regime.",
+  IMBALANCED_EXCESS:
+    "Defer non-critical replenishment, but maintain coverage on single-source materials below.",
+  REAL_ECONOMY_LEAD:
+    "Favorable supplier terms — convert risk items into long-dated contracts where possible.",
+};
 
 export function MaterialsAtRiskWidget() {
   const [, setLocation] = useLocation();
   const { data: materials = [], isLoading } = useQuery<Material[]>({
     queryKey: ['/api/materials'],
   });
-  
+
+  // Pull the current regime so the widget can frame risk in context.
+  const { data: regime } = useQuery<{ regime?: string }>({
+    queryKey: ['/api/economics/regime'],
+  });
+  const regimeKey = regime?.regime || 'UNKNOWN';
+  const headerNote = regimeFraming[regimeKey];
+
   // Calculate risk for each material
   const materialsAtRisk: MaterialRisk[] = materials
     .map(material => {
       const onHand = material.onHand || 0;
       const inbound = material.inbound || 0;
       const total = onHand + inbound;
-      
+
       // Simple risk calculation (in production, would factor in demand, lead time, etc.)
       let riskScore = 0;
       let reason = "";
-      
+      let whyAtRisk = "";
+      let recommendedAction = "";
+
       if (total === 0) {
         riskScore = 100;
         reason = "Zero inventory";
+        whyAtRisk = "On-hand and inbound are both zero — production lines using this material will stop on the next run.";
+        recommendedAction = "Issue an emergency PO today and qualify a backup supplier this week.";
       } else if (total < 100) {
         riskScore = 80;
         reason = "Critically low stock";
+        whyAtRisk = "Combined on-hand + inbound is under 100 units — likely below one production cycle of coverage.";
+        recommendedAction = "Place a replenishment PO this week; review safety-stock target.";
       } else if (total < 500) {
         riskScore = 50;
         reason = "Low inventory";
+        whyAtRisk = "Coverage is tight relative to historical consumption — a forecast surprise or lead-time slip would put production at risk.";
+        recommendedAction = "Schedule replenishment within the standard lead-time window.";
       } else if (inbound === 0 && onHand < 1000) {
         riskScore = 30;
         reason = "No inbound orders";
+        whyAtRisk = "On-hand is moderate but no inbound POs are open — coverage will erode without action.";
+        recommendedAction = "Open a PO before on-hand drops below the reorder point.";
       }
-      
+
       const inventoryLevel = Math.min(100, (total / 1000) * 100); // Assume 1000 is full stock
-      
+
       return {
         material,
         riskScore,
         reason,
         inventoryLevel,
+        whyAtRisk,
+        recommendedAction,
       };
     })
     .filter(m => m.riskScore > 0)
@@ -106,11 +140,16 @@ export function MaterialsAtRiskWidget() {
               Materials at Risk
             </CardTitle>
             <CardDescription>
-              {materialsAtRisk.length} materials requiring attention
+              {materialsAtRisk.length} {materialsAtRisk.length === 1 ? 'material requires' : 'materials require'} attention, ranked by severity
             </CardDescription>
           </div>
           <Badge variant="destructive">{materialsAtRisk.length}</Badge>
         </div>
+        {headerNote && (
+          <p className="text-xs text-muted-foreground leading-relaxed pt-2 border-t mt-3" data-testid="text-regime-framing">
+            {headerNote}
+          </p>
+        )}
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -140,7 +179,7 @@ export function MaterialsAtRiskWidget() {
                   {item.reason}
                 </Badge>
               </div>
-              
+
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">Inventory Level</span>
@@ -160,7 +199,24 @@ export function MaterialsAtRiskWidget() {
                   }`}
                 />
               </div>
-              
+
+              {(item.whyAtRisk || item.recommendedAction) && (
+                <div className="mt-3 space-y-1.5 text-xs">
+                  {item.whyAtRisk && (
+                    <p className="text-muted-foreground leading-relaxed" data-testid={`material-why-${item.material.id}`}>
+                      <span className="text-foreground font-medium">Why: </span>
+                      {item.whyAtRisk}
+                    </p>
+                  )}
+                  {item.recommendedAction && (
+                    <p className="text-muted-foreground leading-relaxed" data-testid={`material-action-${item.material.id}`}>
+                      <span className="text-foreground font-medium">Recommended: </span>
+                      {item.recommendedAction}
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="flex items-center gap-2 mt-3">
                 <Button
                   variant="outline"
@@ -171,6 +227,17 @@ export function MaterialsAtRiskWidget() {
                 >
                   <TrendingDown className="h-3 w-3 mr-1" />
                   Schedule Procurement
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => setLocation(`/suppliers?material=${encodeURIComponent(item.material.name)}`)}
+                  data-testid={`button-find-alternatives-${item.material.id}`}
+                  title="Find alternative suppliers for this material"
+                >
+                  <Search className="h-3 w-3 mr-1" />
+                  Find Alternatives
                 </Button>
               </div>
             </div>
