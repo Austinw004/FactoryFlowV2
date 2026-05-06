@@ -5,6 +5,7 @@ import { AllocationTable } from "@/components/AllocationTable";
 import { EditableBudgetGauge } from "@/components/EditableBudgetGauge";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { InfoTooltip } from "@/components/InfoTooltip";
+import { getRegimeGuidance, describeFdr } from "@/lib/regimeGuidance";
 
 // Below-the-fold and dialog-gated widgets are lazy-loaded so the initial
 // Dashboard paint only pays for what the user actually sees before scrolling.
@@ -37,7 +38,7 @@ const SmartInsightsCompact = lazy(() =>
 const InsightPanel = lazy(() =>
   import("@/components/InsightPanel").then((m) => ({ default: m.InsightPanel })),
 );
-import { TrendingUp, DollarSign, Package, AlertCircle, Plus, Upload, GitCompare, Loader2, Globe, Radio, Package2, Building2, Box, FileDown } from "lucide-react";
+import { TrendingUp, DollarSign, Package, AlertCircle, Plus, Upload, GitCompare, Loader2, Globe, Radio, Package2, Building2, Box, FileDown, ArrowRight, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -337,15 +338,72 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="mb-16">
-        <div className="eyebrow mb-4">State of operations</div>
-        <h1 className="hero text-5xl">{regime?.regime ? getRegimeDescription(regime.regime).split('.')[0] + '.' : 'Analyzing conditions.'}</h1>
-        <p className="text-soft mt-5 max-w-xl leading-relaxed">
-          {Array.isArray(skus) && skus.length > 0
-            ? `Tracking ${skus.length.toLocaleString()} SKU${skus.length === 1 ? '' : 's'}. ${regime?.regime === 'HEALTHY_EXPANSION' ? 'No critical exposures.' : 'Review current regime conditions.'}`
-            : 'Add your first SKU to start tracking operations.'}
-        </p>
-      </div>
+      {/* Command-center hero — regime-aware procurement guidance.
+          The FDR regime model is the product's edge, so the hero leads
+          with what the customer should DO this week, not just a label. */}
+      {(() => {
+        const guidance = getRegimeGuidance(regimeType);
+        return (
+          <div
+            className={`mb-16 border-l-2 ${guidance.borderClass} ${guidance.accentClass} pl-8 pr-6 py-8 -ml-8`}
+            data-testid="dashboard-regime-hero"
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <span className={`inline-block h-2 w-2 rounded-full ${guidance.dotClass} ${guidance.posture === 'analyzing' ? '' : 'animate-pulse'}`}></span>
+              <div className="eyebrow">State of operations · {guidance.label}</div>
+              <span className="mono text-xs text-muted ml-2">{describeFdr(fdr)}</span>
+            </div>
+            <h1 className="hero text-4xl md:text-5xl leading-tight" data-testid="text-regime-headline">
+              {guidance.headline}
+            </h1>
+            <p className="text-soft mt-5 max-w-2xl leading-relaxed">
+              {guidance.mechanism}
+            </p>
+            <div className="mt-7 flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-muted">
+                <Target className="h-3.5 w-3.5" />
+                This week
+              </div>
+              <span className="text-bone font-medium" data-testid="text-regime-top-action">
+                {guidance.topAction}
+              </span>
+            </div>
+            {guidance.posture !== 'analyzing' && (
+              <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-px bg-line max-w-3xl">
+                {guidance.actions.map((action, idx) => (
+                  <div key={idx} className="bg-panel p-4 flex gap-3" data-testid={`regime-action-${idx}`}>
+                    <span className="mono text-xs text-muted shrink-0">{String(idx + 1).padStart(2, '0')}</span>
+                    <span className="text-sm leading-snug">{action}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setLocation('/supplier-risk')}
+                data-testid="button-regime-view-exposed"
+              >
+                View Exposed Materials
+                <ArrowRight className="h-3.5 w-3.5 ml-2" />
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setLocation('/action-playbooks')}
+                data-testid="button-regime-open-playbook"
+              >
+                Open Procurement Playbook
+              </Button>
+              <span className="text-xs text-muted">
+                Tracking {Array.isArray(skus) ? skus.length.toLocaleString() : '0'} SKU{Array.isArray(skus) && skus.length === 1 ? '' : 's'}
+                {Array.isArray(allocations) && allocations.length > 0 && ` · ${allocations.length} active allocation${allocations.length === 1 ? '' : 's'}`}
+              </span>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="grid grid-cols-4 gap-px bg-line mb-20">
         <div className="bg-panel p-6">
