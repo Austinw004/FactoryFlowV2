@@ -1,0 +1,72 @@
+{
+  "today": "2026-05-06",
+  "priorDigestDate": null,
+  "priorReplyChecksum": null,
+  "decisions": [
+    {
+      "id": 1,
+      "routine": "Big Boi",
+      "branchSlug": "exciting-fermi",
+      "pr": 192,
+      "prUrl": "https://github.com/Austinw004/FactoryFlowV2/pull/192",
+      "summary": "Daily Codebase Engineer pass (tsc 319→0, +5 validated routes, security patches). CI green; open draft.",
+      "question": "Merge to main, hold for review, or defer?",
+      "ci": "passing",
+      "classification": "yellow"
+    },
+    {
+      "id": 2,
+      "routine": "Optimus",
+      "branchSlug": "hopeful-rubin",
+      "pr": 198,
+      "prUrl": "https://github.com/Austinw004/FactoryFlowV2/pull/198",
+      "summary": "Replaces silent catch blocks with structured logging; CI typecheck failed.",
+      "question": "Fix on next Optimus run, close as not-needed, or escalate to manual?",
+      "ci": "failing",
+      "classification": "yellow"
+    },
+    {
+      "id": 3,
+      "routine": "Daily Boost",
+      "branchSlug": "vigilant-allen",
+      "prs": [199, 193],
+      "prUrls": [
+        "https://github.com/Austinw004/FactoryFlowV2/pull/199",
+        "https://github.com/Austinw004/FactoryFlowV2/pull/193"
+      ],
+      "summary": "Two open drafts in 24h modifying the same files (client/src/pages/Dashboard.tsx + client/src/components/MaterialsAtRiskWidget.tsx) with divergent designs. Both fail typecheck. Potential conflict.",
+      "question": "Pick #199 (shared regimeGuidance.ts), pick #193 (inline briefings + regime-shift banner), close both, or merge one and rebase the other?",
+      "ci": "failing",
+      "classification": "yellow",
+      "potentialConflict": {
+        "files": [
+          "client/src/pages/Dashboard.tsx",
+          "client/src/components/MaterialsAtRiskWidget.tsx"
+        ],
+        "prs": [199, 193]
+      }
+    },
+    {
+      "id": 4,
+      "routine": "Weekly Clean",
+      "branchSlug": "festive-dijkstra",
+      "pr": 158,
+      "prUrl": "https://github.com/Austinw004/FactoryFlowV2/pull/158",
+      "summary": "W18 weekly deep clean PR open since 2026-05-01 with failing typecheck; no new run yet this week.",
+      "question": "Merge as-is, rerun Weekly Clean fresh on Monday, or close and skip W18?",
+      "ci": "failing",
+      "classification": "yellow"
+    }
+  ],
+  "routineActivity": {
+    "Big Boi": { "branchSlug": "exciting-fermi", "prsInWindow": [192], "status": "cleanly" },
+    "Optimus": { "branchSlug": "hopeful-rubin", "prsInWindow": [198], "status": "activity" },
+    "Daily Boost": { "branchSlug": "vigilant-allen", "prsInWindow": [199, 193], "status": "activity" },
+    "Palantard Grade": { "branchSlug": "relaxed-ramanujan", "prsInWindow": [], "status": "silent" },
+    "Weekly Clean": { "branchSlug": "festive-dijkstra", "prsInWindow": [158], "status": "activity", "windowDays": 7 },
+    "Code Review": { "branchSlug": "code-review", "prsInWindow": [], "status": "silent" }
+  },
+  "atAGlance": { "ranCleanly": 3, "needYourCall": 3, "blocking": 0 },
+  "emailSent": false,
+  "emailFailureReason": "sendEmail failed: Cannot find module 'sendpulse-api' — project deps not installed in routine sandbox; credentials require DATABASE_URL + INTEGRATION_ENCRYPTION_KEY which are unset"
+}
