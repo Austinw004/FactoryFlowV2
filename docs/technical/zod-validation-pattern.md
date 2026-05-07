@@ -60,12 +60,22 @@ As of this writing, Zod is the standard for:
 - The traceability verification endpoint.
 - Automation rule creation + update.
 
-The remaining `req.body` destructure sites (~400) are being retrofitted
-opportunistically — every time a handler is touched for another reason, its
-body schema is added. This avoids a giant one-shot PR that would be hard to
-review and high-regression-risk. Progress is tracked in
-`docs/ZOD_COVERAGE.md` (to be regenerated from route introspection as part of
-the planned CI pass).
+Weekly deep-clean sessions add comprehensive schemas to the highest-risk routes
+(financial operations, bulk imports, state-machine transitions, scenario
+simulation). As of **2026-04-24** coverage has been extended to:
+
+- `POST /api/demand-history/bulk` — array max 1000, numeric bounds
+- `POST /api/purchase-orders` — financial value caps (unit cost ≤ $100M, qty ≤ 10M)
+- `POST /api/workforce/payroll` — salary/deduction caps, payment method enum
+- `POST /api/scenarios/simulate` — regime enum, coerced numerics with bounds
+- `POST /api/backtest/run` — year bounds (2000–current), 20-year window cap
+- `POST /api/demand-signals/batch` — array max 500, signal type enum
+- `POST /api/simulations/:id/variants` — regime enum, commodity map max 50
+- `POST /api/sop/meetings` — attendee array max 100, external email max 50
+- `POST /api/sop/approval-chains` — steps array bounded 1–20, trigger type enum
+- `POST /api/sop/approvals/:id/action` — action enum + delegation cross-field refine
+
+The remaining `req.body` destructure sites are being retrofitted opportunistically.
 
 ## CI enforcement (planned)
 
