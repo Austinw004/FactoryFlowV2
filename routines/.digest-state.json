@@ -1,0 +1,73 @@
+{
+  "todayDate": "2026-05-07",
+  "priorDigestDate": "2026-05-06",
+  "priorReplyChecksum": null,
+  "priorReplyProcessed": false,
+  "emailSendStatus": "failed",
+  "emailSendFailureReason": "sendpulse-api module not resolvable in routine sandbox; SendPulse credentials require DATABASE_URL + INTEGRATION_ENCRYPTION_KEY, both unset",
+  "subject": "Daily digest — 5 need your call",
+  "decisions": [
+    {
+      "id": 1,
+      "routine": "Code Review",
+      "pr": 201,
+      "url": "https://github.com/Austinw004/FactoryFlowV2/pull/201",
+      "summary": "typecheck + build failing on a small, low-risk diff (gate console logs + harden /api/oauth/supported)",
+      "question": "Fix in next run, close, or merge despite CI?",
+      "classification": "YELLOW"
+    },
+    {
+      "id": 2,
+      "routine": "Daily Boost",
+      "pr": 209,
+      "relatedPrs": [199, 193],
+      "url": "https://github.com/Austinw004/FactoryFlowV2/pull/209",
+      "summary": "third open draft on Dashboard.tsx + MaterialsAtRiskWidget.tsx (alongside #199, #193); all failing typecheck",
+      "question": "Pick one design and close the others, or close all three and rebase fresh?",
+      "classification": "YELLOW",
+      "potentialConflict": true
+    },
+    {
+      "id": 3,
+      "routine": "Weekly Clean",
+      "pr": 158,
+      "url": "https://github.com/Austinw004/FactoryFlowV2/pull/158",
+      "summary": "W18 PR open since 2026-05-01, typecheck failing on carried-over 318 baseline",
+      "question": "Merge as-is, rerun for W19, or skip the week?",
+      "classification": "YELLOW"
+    },
+    {
+      "id": 4,
+      "routine": "Big Boi",
+      "pr": 192,
+      "url": "https://github.com/Austinw004/FactoryFlowV2/pull/192",
+      "summary": "carry-over from prior digest (which failed to send); CI green per prior digest",
+      "question": "Merge, hold, or defer?",
+      "classification": "YELLOW",
+      "carryOver": true
+    },
+    {
+      "id": 5,
+      "routine": "Optimus",
+      "pr": 198,
+      "url": "https://github.com/Austinw004/FactoryFlowV2/pull/198",
+      "summary": "carry-over from prior digest (which failed to send); typecheck failed",
+      "question": "Fix on next run, close, or escalate?",
+      "classification": "YELLOW",
+      "carryOver": true
+    }
+  ],
+  "pillCounts": {
+    "ranCleanly": 1,
+    "needYourCall": 5,
+    "blocking": 0
+  },
+  "perRoutine": {
+    "Big Boi": "activity (carry-over)",
+    "Optimus": "activity (carry-over)",
+    "Daily Boost": "failed",
+    "Palantard Grade": "silent",
+    "Weekly Clean": "activity",
+    "Code Review": "failed"
+  }
+}
