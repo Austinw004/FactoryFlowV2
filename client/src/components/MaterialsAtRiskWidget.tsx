@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Package, TrendingDown } from "lucide-react";
+import { AlertTriangle, Package, TrendingDown, Search } from "lucide-react";
 import { useLocation } from "wouter";
 import type { Material } from "@shared/schema";
 
@@ -14,11 +14,44 @@ interface MaterialRisk {
   inventoryLevel: number; // percentage
 }
 
-export function MaterialsAtRiskWidget() {
+interface MaterialsAtRiskWidgetProps {
+  /** Current FDR regime — used to translate inventory risk into the
+   * appropriate procurement recommendation (lock-in vs draw-down). */
+  regime?: string;
+}
+
+// Regime-aware "why now" framing. The same low-inventory material has a
+// different recommended response depending on whether input costs are
+// rising (lock in supply) or correcting (draw down before re-buying).
+const regimeRiskFraming: Record<string, { tag: string; recommendation: (reason: string) => string }> = {
+  ASSET_LED_GROWTH: {
+    tag: "Cost pressure rising",
+    recommendation: (reason) =>
+      `${reason}. Input costs trending up — lock in supply now before next pricing cycle.`,
+  },
+  IMBALANCED_EXCESS: {
+    tag: "Decoupling — defer if possible",
+    recommendation: (reason) =>
+      `${reason}. Markets decoupling — buy minimum to cover, defer larger orders, expect correction.`,
+  },
+  REAL_ECONOMY_LEAD: {
+    tag: "Counter-cyclical buy window",
+    recommendation: (reason) =>
+      `${reason}. Pricing at cyclical low — replenish and consider building strategic stock.`,
+  },
+  HEALTHY_EXPANSION: {
+    tag: "Stable conditions",
+    recommendation: (reason) =>
+      `${reason}. Standard procurement pace — qualify a backup supplier if single-sourced.`,
+  },
+};
+
+export function MaterialsAtRiskWidget({ regime }: MaterialsAtRiskWidgetProps = {}) {
   const [, setLocation] = useLocation();
   const { data: materials = [], isLoading } = useQuery<Material[]>({
     queryKey: ['/api/materials'],
   });
+  const framing = (regime && regimeRiskFraming[regime]) || regimeRiskFraming.HEALTHY_EXPANSION;
   
   // Calculate risk for each material
   const materialsAtRisk: MaterialRisk[] = materials
@@ -106,7 +139,7 @@ export function MaterialsAtRiskWidget() {
               Materials at Risk
             </CardTitle>
             <CardDescription>
-              {materialsAtRisk.length} materials requiring attention
+              {materialsAtRisk.length} requiring attention · {framing.tag}
             </CardDescription>
           </div>
           <Badge variant="destructive">{materialsAtRisk.length}</Badge>
@@ -140,7 +173,7 @@ export function MaterialsAtRiskWidget() {
                   {item.reason}
                 </Badge>
               </div>
-              
+
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">Inventory Level</span>
@@ -160,7 +193,11 @@ export function MaterialsAtRiskWidget() {
                   }`}
                 />
               </div>
-              
+
+              <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                <span className="font-medium text-foreground/80">Why:</span> {framing.recommendation(item.reason)}
+              </p>
+
               <div className="flex items-center gap-2 mt-3">
                 <Button
                   variant="outline"
@@ -171,6 +208,16 @@ export function MaterialsAtRiskWidget() {
                 >
                   <TrendingDown className="h-3 w-3 mr-1" />
                   Schedule Procurement
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => setLocation(`/multi-tier-supplier-mapping?materialId=${item.material.id}`)}
+                  data-testid={`button-alternatives-${item.material.id}`}
+                >
+                  <Search className="h-3 w-3 mr-1" />
+                  Alternatives
                 </Button>
               </div>
             </div>
