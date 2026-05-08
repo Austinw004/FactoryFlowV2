@@ -127,6 +127,18 @@ function unwrapDbError(err: any): { code?: string; detail?: string } {
 function handle(fn: (req: Request, res: Response) => Promise<void>) {
   return (req: Request, res: Response) => {
     fn(req, res).catch((err: any) => {
+      // ZodError → 400 VALIDATION_ERROR with a flat human-readable message.
+      // Without this, schema.parse() failures fall through to the default
+      // status=500 + JSON.stringify(issues) message — every validation
+      // error on signup/login/etc. surfaces as INTERNAL_ERROR with a raw
+      // issues dump, which is wrong both as a status code and as UX.
+      if (err instanceof z.ZodError) {
+        const message = err.issues
+          .map(i => (i.path.length ? `${i.path.join(".")}: ` : "") + i.message)
+          .join("; ");
+        return apiError(res, 400, "VALIDATION_ERROR", message || "Invalid request.");
+      }
+
       const status  = err.status  ?? 500;
       const code    = err.code    ?? "INTERNAL_ERROR";
       const message = err.message ?? "An unexpected error occurred.";
