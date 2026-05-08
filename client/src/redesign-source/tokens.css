@@ -1,0 +1,111 @@
+/* Prescient Labs — design tokens */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Inter+Tight:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --ink: #0A0B0D;
+  --ink-deep: #050608;
+  --panel: #0F1013;
+  --panel-2: #131418;
+  --line: #1F2126;
+  --line-soft: #17181C;
+  --muted: #6A6E76;
+  --soft: #A1A4AB;
+  --bone: #F2F2F2;
+  --bone-dim: #D6D6D8;
+  --signal: #CC785C;
+  --signal-dim: #8A4F3C;
+  --signal-bg: rgba(204, 120, 92, 0.10);
+  --good: #7FB09A;
+  --good-bg: rgba(127, 176, 154, 0.10);
+  --bad: #C47A6E;
+  --bad-bg: rgba(196, 122, 110, 0.10);
+}
+
+.prescient {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 400;
+  letter-spacing: -0.011em;
+  color: var(--bone);
+  background: var(--ink);
+  font-feature-settings: 'ss01', 'cv11';
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.prescient .mono {
+  font-family: 'Inter Tight', 'Inter', system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1, 'cv11' 1;
+  letter-spacing: -0.01em;
+}
+
+.prescient .num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+.prescient .eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.prescient .hero {
+  font-weight: 300;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+  color: var(--bone);
+}
+
+.prescient .display {
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--bone);
+}
+
+.prescient .hairline {
+  background: var(--line);
+  height: 1px;
+  width: 100%;
+}
+
+/* dot */
+.prescient .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+/* hide scrollbar but keep scroll */
+.prescient .scroll-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+.prescient .scroll-thin::-webkit-scrollbar-thumb { background: var(--line); border-radius: 999px; }
+.prescient .scroll-thin::-webkit-scrollbar-track { background: transparent; }
+
+/* subtle hover for ghost rows */
+.prescient .row-hover:hover { background: var(--panel-2); }
+
+/* focus ring */
+.prescient *:focus-visible {
+  outline: 1px solid var(--signal);
+  outline-offset: 2px;
+}
+
+/* Sparkline path */
+.prescient .spark { stroke-width: 1.25; fill: none; }
+
+/* selection */
+.prescient ::selection { background: var(--signal-bg); color: var(--bone); }
+
+/* Brand mark globe spin — animate scaleX to fake meridian rotation
+   (full cycle: 1 → 0 → -1 → 0 → 1, mirrored so it reads as a continuous spin) */
+@keyframes pmark-spin {
+  0%   { transform: scaleX(1); }
+  25%  { transform: scaleX(0.05); }
+  50%  { transform: scaleX(-1); }
+  75%  { transform: scaleX(0.05); }
+  100% { transform: scaleX(1); }
+}
