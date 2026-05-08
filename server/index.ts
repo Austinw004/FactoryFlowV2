@@ -7,6 +7,7 @@ import { startBackgroundJobs, stopBackgroundJobs } from "./backgroundJobs";
 import { runMigrations } from 'stripe-replit-sync';
 import { getStripeSync } from './stripeClient';
 import { WebhookHandlers } from './webhookHandlers';
+import { runSchemaSelfHeal } from './lib/schemaSelfHeal';
 
 const app = express();
 app.use(compression());
@@ -213,6 +214,21 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
+    // Schema self-heal — runs idempotent ALTER TABLE IF NOT EXISTS for any
+    // columns added to shared/schema.ts but not yet pushed to the live DB.
+    // Bounded by a 10s timeout so a hung query can't block boot. See
+    // server/lib/schemaSelfHeal.ts for the column list and rationale.
+    try {
+      await Promise.race([
+        runSchemaSelfHeal(),
+        new Promise<void>((_, reject) =>
+          setTimeout(() => reject(new Error("schema self-heal timed out after 10s")), 10_000),
+        ),
+      ]);
+    } catch (err: any) {
+      console.error('[Startup] Schema self-heal error (non-fatal, continuing):', err?.message || err);
+    }
+
     console.log('[Startup] Registering routes...');
     const server = await registerRoutes(app);
     console.log('[Startup] Routes registered');
