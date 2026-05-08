@@ -63,6 +63,70 @@ function getRegimeDescription(regime: string): string {
   return regimeDescriptions[regime] || "Economic conditions are being analyzed.";
 }
 
+// Regime-aware procurement posture: prescriptive guidance translating the
+// FDR regime into explicit actions a Plant Director or VP of Supply Chain
+// can take this week. Each entry pairs a plain-language headline ("what this
+// means for procurement") with the reasoning ("why") and the single most
+// important next action ("now").
+const regimePosture: Record<string, {
+  headline: string;
+  meaning: string;
+  why: string;
+  action: { label: string; href: string };
+  tone: "calm" | "warm" | "tense" | "opportunity";
+}> = {
+  HEALTHY_EXPANSION: {
+    headline: "Stable conditions — negotiate from a position of strength.",
+    meaning: "Asset and real-economy circuits are in balance. Input costs are unlikely to spike or collapse this quarter, so this is a window to lock in long-term contracts on favorable terms rather than react to volatility.",
+    why: "When FDR sits below 1.2 historically, supplier negotiating leverage is roughly symmetrical and quoted lead times tend to hold. Use the calm to revisit expiring agreements.",
+    action: { label: "Review expiring contracts", href: "/suppliers" },
+    tone: "calm",
+  },
+  ASSET_LED_GROWTH: {
+    headline: "Cost pressure building — lock in critical materials now.",
+    meaning: "Financial markets are running ahead of the real economy. Input costs typically rise 8–12% over the next quarter under this regime, and lead times begin to lengthen as competitors hedge. Pre-buy critical SKUs and freeze pricing on multi-quarter agreements before suppliers re-quote.",
+    why: "FDR between 1.2 and 1.8 has historically preceded broad commodity repricing within 60–90 days. Acting before the next pricing cycle preserves margin you cannot recover later.",
+    action: { label: "View materials exposed to price risk", href: "/inventory-management" },
+    tone: "warm",
+  },
+  IMBALANCED_EXCESS: {
+    headline: "Decoupling detected — defer non-critical buys, renegotiate.",
+    meaning: "Asset prices are significantly disconnected from real demand. Expect a correction in input costs over the next one to two quarters. Defer non-critical purchases, draw down existing safety stock on commoditized items, and reopen negotiation on any contract expiring in 90 days.",
+    why: "FDR above 1.8 has historically resolved through input-cost declines as financial conditions tighten. Buying at peak locks in margin compression; waiting captures the correction.",
+    action: { label: "Identify deferrable purchase orders", href: "/automated-po" },
+    tone: "tense",
+  },
+  REAL_ECONOMY_LEAD: {
+    headline: "Counter-cyclical window — buy ahead, lock multi-year terms.",
+    meaning: "The real economy is leading and asset markets are correcting. Suppliers are motivated, capacity is available, and pricing is at a cyclical low. This is the moment to build strategic stock on critical SKUs and lock multi-year supply agreements before the cycle turns.",
+    why: "FDR above 2.5 marks the bottom of the input-cost cycle in historical analogues. Forward-buying here typically delivers 6–15% cost advantage versus average-cycle procurement.",
+    action: { label: "Plan strategic buy & contract lock-in", href: "/suppliers" },
+    tone: "opportunity",
+  },
+};
+
+function getRegimePosture(regime: string) {
+  return regimePosture[regime] || {
+    headline: "Analyzing market conditions.",
+    meaning: "The platform is gathering economic data to determine the active regime and the procurement posture it implies. Recommendations will sharpen as data flows in.",
+    why: "FDR is calculated from 15+ macro indicators. A confident regime call typically requires a few hours of live data after first connect.",
+    action: { label: "Review market data sources", href: "/integrations" },
+    tone: "calm" as const,
+  };
+}
+
+// Regime tone mapping → subtle accent classes that visually shift the
+// dashboard hero based on the active regime. Calm = neutral. Warm = amber
+// (cost pressure rising). Tense = red (decoupling, defer). Opportunity =
+// green (favorable conditions). Kept subtle on purpose — the dashboard
+// must remain readable, not alarmist.
+const regimeToneClasses: Record<string, { accent: string; dot: string; label: string }> = {
+  calm: { accent: "border-l-2 border-l-muted-foreground/40", dot: "bg-muted-foreground", label: "Stable" },
+  warm: { accent: "border-l-2 border-l-amber-500/70", dot: "bg-amber-500", label: "Cost pressure" },
+  tense: { accent: "border-l-2 border-l-red-500/70", dot: "bg-red-500", label: "Decoupling" },
+  opportunity: { accent: "border-l-2 border-l-emerald-500/70", dot: "bg-emerald-500", label: "Favorable" },
+};
+
 export default function Dashboard() {
   const { toast } = useToast();
   const { user, isLoading: authLoading } = useAuth();
@@ -337,15 +401,53 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="mb-16">
-        <div className="eyebrow mb-4">State of operations</div>
-        <h1 className="hero text-5xl">{regime?.regime ? getRegimeDescription(regime.regime).split('.')[0] + '.' : 'Analyzing conditions.'}</h1>
-        <p className="text-soft mt-5 max-w-xl leading-relaxed">
-          {Array.isArray(skus) && skus.length > 0
-            ? `Tracking ${skus.length.toLocaleString()} SKU${skus.length === 1 ? '' : 's'}. ${regime?.regime === 'HEALTHY_EXPANSION' ? 'No critical exposures.' : 'Review current regime conditions.'}`
-            : 'Add your first SKU to start tracking operations.'}
-        </p>
-      </div>
+      {(() => {
+        const posture = getRegimePosture(regimeType);
+        const tone = regimeToneClasses[posture.tone] ?? regimeToneClasses.calm;
+        const fdrLabel = Number.isFinite(fdr) ? fdr.toFixed(2) : "—";
+        const confidencePct = regimeIntelligence?.confidence?.overall != null
+          ? Math.round(Number(regimeIntelligence.confidence.overall) * 100)
+          : null;
+        return (
+          <div className="mb-16">
+            <div className="eyebrow mb-4 flex items-center gap-2">
+              <span className={`dot ${tone.dot}`} />
+              <span>Procurement posture · {tone.label}</span>
+              <span className="text-muted/60">·</span>
+              <span className="mono normal-case tracking-normal text-[11px]">FDR {fdrLabel}</span>
+              {confidencePct !== null && (
+                <>
+                  <span className="text-muted/60">·</span>
+                  <span className="mono normal-case tracking-normal text-[11px]">{confidencePct}% confidence</span>
+                </>
+              )}
+            </div>
+            <h1 className="hero text-5xl">{posture.headline}</h1>
+            <div className={`mt-6 pl-6 ${tone.accent} max-w-3xl space-y-4`}>
+              <p className="text-base leading-relaxed text-foreground/90">
+                {posture.meaning}
+              </p>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                <span className="eyebrow mr-2">Why</span>
+                {posture.why}
+              </p>
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                <Button
+                  size="sm"
+                  onClick={() => setLocation(posture.action.href)}
+                  data-testid="button-regime-primary-action"
+                >
+                  {posture.action.label} →
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  Tracking {Array.isArray(skus) ? skus.length.toLocaleString() : 0} SKU{skus && (skus as any[]).length === 1 ? '' : 's'}
+                  {policySignals.length > 0 && ` · ${policySignals.length} action${policySignals.length === 1 ? '' : 's'} recommended this week`}
+                </span>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="grid grid-cols-4 gap-px bg-line mb-20">
         <div className="bg-panel p-6">
@@ -575,7 +677,7 @@ export default function Dashboard() {
           <Suspense fallback={<div className="h-32 rounded-md bg-muted/20 animate-pulse" />}>
             <InsightPanel compact />
             <QuickWinsWidget />
-            <MaterialsAtRiskWidget />
+            <MaterialsAtRiskWidget regime={regimeType} />
           </Suspense>
         </div>
       </div>
