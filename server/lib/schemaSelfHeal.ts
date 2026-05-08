@@ -43,13 +43,42 @@ interface ColumnAddition {
 // bottom with a comment noting when they were added — that way diffing
 // this list against `git log shared/schema.ts` shows whether anything
 // in the schema is unaccounted for.
+//
+// Cover the full set of user/company columns added in the last few
+// quarters of feature work. Every entry is `IF NOT EXISTS` so listing
+// columns that already exist is harmless — the cost is one cheap
+// information_schema lookup per column at boot.
 const ADDITIONS: ColumnAddition[] = [
-  // 2026-05 — nickname for AI-Advisor greetings (Settings → Profile)
+  // ── users — Phase 12 (90-day trial + per-SKU metering)
+  { table: "users", column: "stripe_customer_id", type: "text" },
+  { table: "users", column: "stripe_subscription_id", type: "text" },
+  { table: "users", column: "subscription_status", type: "text" },
+  { table: "users", column: "subscription_tier", type: "text" },
+  { table: "users", column: "trial_ends_at", type: "timestamp" },
+  { table: "users", column: "onboarding_complete", type: "integer", defaultExpr: "0" },
+  // ── users — email/password auth + lockout
+  { table: "users", column: "password_hash", type: "text" },
+  { table: "users", column: "username", type: "text" },
+  { table: "users", column: "role", type: "text", defaultExpr: "'viewer'" },
+  { table: "users", column: "google_id", type: "text" },
+  { table: "users", column: "failed_login_attempts", type: "integer", defaultExpr: "0" },
+  { table: "users", column: "locked_until", type: "timestamp" },
+  { table: "users", column: "last_login_ip", type: "text" },
+  { table: "users", column: "last_login_device", type: "text" },
+  // ── users — 7-step onboarding profile fields
+  { table: "users", column: "job_title", type: "text" },
+  { table: "users", column: "phone", type: "text" },
+  { table: "users", column: "department", type: "text" },
+  { table: "users", column: "selected_plan_id", type: "text" },
+  { table: "users", column: "selected_billing_interval", type: "text" },
+  // ── users — personalization (2026-05)
   { table: "users", column: "nickname", type: "text" },
-  // 2026-05 — consent-based data preferences (Settings → Data tab).
+  // ── users — consent-based data preferences (Settings → Data tab, 2026-05).
   // Stored as a JSON object so we can add new opt-ins without another
   // schema bump. See client/src/pages/SettingsPage.tsx (DataTab).
   { table: "users", column: "data_preferences", type: "jsonb" },
+  // ── companies — Phase 12 verified-savings counter (Performance plan)
+  { table: "companies", column: "verified_savings_total_cents", type: "integer", defaultExpr: "0" },
 ];
 
 export async function runSchemaSelfHeal(): Promise<void> {
