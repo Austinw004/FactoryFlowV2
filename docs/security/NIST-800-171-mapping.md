@@ -5,7 +5,7 @@ requirements in **NIST SP 800-171 Rev. 2**, which is the baseline for DoD
 Controlled Unclassified Information (CUI) handling and the foundation of
 **CMMC 2.0 Level 2**.
 
-**Version:** 1.1 · **Last updated:** 2026-04-18 · **Maintainer:** Austin Wendler
+**Version:** 1.2 · **Last updated:** 2026-05-08 · **Maintainer:** Austin Wendler
 
 Status legend:
 - ✅ implemented
@@ -45,7 +45,7 @@ SOC 2 Type II attestations.
 ## Detailed mapping (highlights — full table in `SECURITY.md`)
 
 ### 3.1 Access Control
-- **3.1.1** Limit system access to authorized users — ✅ `isAuthenticated` middleware; 728 of 732 routes gated.
+- **3.1.1** Limit system access to authorized users — ✅ `isAuthenticated` middleware; 731 of 739 routes gated. The 8 public routes are `/healthz`, `/readyz`, `/livez`, `/api/stripe/config`, `/api/stripe/products`, `/api/status/summary`, `/api/status/history`, and `/api/contact-sales` (rate-limited, honeypotted).
 - **3.1.2** Limit access to permitted transactions — ✅ RBAC: owner / admin / super_admin / user / viewer.
 - **3.1.3** Control CUI flow — 🟨 tenant isolation enforced; CUI-specific tagging planned.
 - **3.1.5** Least privilege — ✅ default role on signup is `user`; elevation is explicit.
@@ -72,7 +72,7 @@ SOC 2 Type II attestations.
 
 ### 3.14 System & Information Integrity
 - **3.14.1** Identify, report, correct system flaws — ✅ security@prescient-labs.com + 48h SLA.
-- **3.14.2** Protect against malicious code — ✅ helmet headers (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy), `x-powered-by` removed, input validation at every route boundary.
+- **3.14.2** Protect against malicious code — ✅ helmet headers (X-Content-Type-Options, Referrer-Policy, Permissions-Policy, HSTS preload, CSP with `frame-ancestors` for clickjacking — X-Frame-Options is intentionally omitted because Replit Preview iframes from a different subdomain), `x-powered-by` removed, input validation at every route boundary.
 - **3.14.6** Monitor system security alerts — ✅ WebSocket anomaly broadcasts; audit-log alerting.
 - **3.14.7** Identify unauthorized use — 🟨 rate-limit + audit-log review; SIEM integration on roadmap.
 
