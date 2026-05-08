@@ -138,7 +138,20 @@ export async function login(
 ) {
   const data = loginSchema.parse(input);
 
-  const [user] = await db.select().from(users).where(
+  // Explicit column projection — see signup() for the rationale. A bare
+  // db.select().from(users) compiles every schema column into the SELECT,
+  // so any column added to shared/schema.ts but not yet pushed to live DB
+  // makes login 500 on every request. List only what login actually needs.
+  const [user] = await db.select({
+    id:                  users.id,
+    email:               users.email,
+    username:            users.username,
+    passwordHash:        users.passwordHash,
+    role:                users.role,
+    companyId:           users.companyId,
+    failedLoginAttempts: users.failedLoginAttempts,
+    lockedUntil:         users.lockedUntil,
+  }).from(users).where(
     or(eq(users.email, data.emailOrUsername), eq(users.username, data.emailOrUsername))
   ).limit(1);
 
@@ -259,7 +272,11 @@ export const changePasswordSchema = z.object({
 export async function changePassword(userId: string, input: z.infer<typeof changePasswordSchema>) {
   const { currentPassword, newPassword } = changePasswordSchema.parse(input);
 
-  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  // Only project the fields this flow needs — see login() for rationale.
+  const [user] = await db.select({
+    id:           users.id,
+    passwordHash: users.passwordHash,
+  }).from(users).where(eq(users.id, userId)).limit(1);
   if (!user) {
     throw Object.assign(new Error("User not found."), { code: "USER_NOT_FOUND", status: 404 });
   }

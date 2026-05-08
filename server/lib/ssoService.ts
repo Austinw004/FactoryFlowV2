@@ -14,7 +14,7 @@
  *   If not present, a domain-verified email simulation is used for internal testing only.
  *   This is explicitly logged as "google-oauth-simulated" not "google-oauth".
  */
-import { db } from "../db";
+import { db, pool } from "../db";
 import { users } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import crypto from "crypto";
@@ -276,8 +276,16 @@ async function provisionSsoUser(input: {
 }): Promise<{ user: any; isNewUser: boolean }> {
   const role = getRoleForDomain(input.email);
 
-  // Check if user already exists
-  const [existing] = await db.select().from(users).where(eq(users.email, input.email)).limit(1);
+  // Explicit column projection — see emailAuthService.signup() for rationale.
+  // A bare db.select().from(users) compiles every schema column, so any drift
+  // between shared/schema.ts and the live DB makes SSO 500 on every login.
+  const [existing] = await db.select({
+    id:        users.id,
+    email:     users.email,
+    role:      users.role,
+    companyId: users.companyId,
+    googleId:  users.googleId,
+  }).from(users).where(eq(users.email, input.email)).limit(1);
 
   if (existing) {
     // Update googleId if provided and not set
@@ -287,17 +295,32 @@ async function provisionSsoUser(input: {
     return { user: existing, isNewUser: false };
   }
 
-  // Create new user
+  // Create new user via raw SQL — same drift-tolerance reasoning as signup().
   const joined = [input.firstName, input.lastName].filter(Boolean).join(" ");
   const displayName = input.name ?? (joined || null);
-  const [newUser] = await db.insert(users).values({
-    email:     input.email,
-    name:      displayName,
-    firstName: input.firstName ?? null,
-    lastName:  input.lastName ?? null,
-    role,
-    googleId:  input.googleId ?? null,
-  }).returning();
+  const insertResult = await pool.query<{
+    id: string; email: string | null; role: string | null; company_id: string | null;
+  }>(
+    `INSERT INTO "users"
+       ("email", "name", "first_name", "last_name", "role", "google_id")
+     VALUES ($1, $2, $3, $4, $5, $6)
+     RETURNING "id", "email", "role", "company_id"`,
+    [
+      input.email,
+      displayName,
+      input.firstName ?? null,
+      input.lastName ?? null,
+      role,
+      input.googleId ?? null,
+    ],
+  );
+  const row = insertResult.rows[0];
+  const newUser = {
+    id:        row.id,
+    email:     row.email,
+    role:      row.role,
+    companyId: row.company_id,
+  };
 
   logger.info("sso" as any, "SSO user auto-provisioned", { userId: newUser.id, role });
   return { user: newUser, isNewUser: true };
