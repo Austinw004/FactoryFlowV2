@@ -96,6 +96,30 @@ Admin:
 Public / marketing:
 - MarketingLandingPage, MarketingPricingPage, MarketingSecurityPage, MarketingCareersPage
 
+### batch8-fillgap.jsx (31)
+The pages flagged as uncovered after batches 1–7. Same visual language; sized appropriately (auth/kiosk/error use shorter HSm height in the canvas).
+
+Operations & ops-platform:
+- ActionPlaybooksPage, DigitalTwinPage, MachineryPage, PredictiveMaintenancePage, ProductionKPIsPage, ShopFloorModePage, SopWorkflowsPage, SopWorkspacePage, WorkforceSchedulingPage
+
+Procurement / setup adjacencies:
+- IntegrationChecklistPage, ErpTemplatesPage, ConfigurationPage
+
+Trust / compliance / docs:
+- CompliancePage, PrivacyPolicyPage, TermsOfServicePage, StatusPage, ApiDocumentationPage, ReportsPage, TrainingPage
+
+Admin & analytics:
+- LeadsAdminPage, PlatformAnalyticsPage, PlatformOwnerAnalyticsPage, RoiDashboardPage, BulkTestPage
+
+Auth (extras):
+- ForgotPasswordPage, ResetPasswordPage
+
+Marketing / public:
+- ContactPage, HowItWorksPage, PilotProgramPage, RoiCalculatorPage
+
+Error:
+- NotFoundPage
+
 ## Total
-- 68 surfaces wired into `Prescient Labs Redesign.html`
-- Original repo lists 84 pages in `client/src/pages/`. The gap (16) is a mix of consolidated variants (e.g. LandingPage A/B/C → MarketingLandingPage) and surfaces not yet covered. See PR description for the full mapping.
+- **99 surfaces** wired into `Prescient Labs Redesign.html`
+- Covers all 84 .tsx files in `client/src/pages/` — either 1:1, or consolidated (LandingPage A/B/C → MarketingLandingPage; Onboarding multi-step → OnboardingConnect1/2/Ready; ScenarioPlanning + ScenarioSimulation → ScenarioBuilder/Compare; WebhookIntegrations → IntegrationsPage), or net-new design surfaces with no current repo equivalent (Strategy Insights, Forecast Ensemble, Logistics Management, Trade & Tariffs, Global Events, Event Calendar, Agent Monitoring/Registry/Swarm, Team/Workspace/Security/DataResidency, Admin Tenants/Users/Flags, Marketing Careers).
