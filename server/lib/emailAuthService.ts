@@ -12,7 +12,7 @@
  */
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import { db } from "../db";
+import { db, pool } from "../db";
 import { users, passwordResetTokens, authSessions } from "@shared/schema";
 import { eq, or, and, gt, lt, sql } from "drizzle-orm";
 import { signAccessToken, signRefreshToken, verifyToken } from "./jwtAuth";
@@ -94,16 +94,38 @@ export async function signup(
   const passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);
   const trialEndsAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000); // 90 days from now
 
-  const [user] = await db.insert(users).values({
-    email:        data.email,
-    name:         data.name ?? null,
-    username:     data.username ?? null,
-    passwordHash,
-    trialEndsAt,  // Start 90-day trial on signup
-    role:         "viewer",
-    lastLoginIp:  context?.ipAddress ?? null,
-    lastLoginDevice: context?.userAgent ?? null,
-  }).returning();
+  // Raw SQL INSERT — only references the columns we actually set. We deliberately
+  // avoid `db.insert(users).values(...)` here: Drizzle compiles a column list
+  // covering every field in the schema, so any drift between shared/schema.ts
+  // and the live DB (e.g. a not-yet-pushed nullable column) makes signup blow up
+  // with `column "X" of relation "users" does not exist`. Touching only the
+  // columns this flow needs makes signup tolerant of forward-rolled schemas.
+  const insertResult = await pool.query<{
+    id: string; email: string | null; role: string | null; company_id: string | null;
+  }>(
+    `INSERT INTO "users"
+       ("email", "name", "username", "password_hash", "trial_ends_at",
+        "role", "last_login_ip", "last_login_device")
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     RETURNING "id", "email", "role", "company_id"`,
+    [
+      data.email,
+      data.name ?? null,
+      data.username ?? null,
+      passwordHash,
+      trialEndsAt,
+      "viewer",
+      context?.ipAddress ?? null,
+      context?.userAgent ?? null,
+    ],
+  );
+  const row = insertResult.rows[0];
+  const user = {
+    id:        row.id,
+    email:     row.email,
+    role:      row.role,
+    companyId: row.company_id,
+  };
 
   return buildTokenPair(user, context);
 }

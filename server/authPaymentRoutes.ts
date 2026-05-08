@@ -109,12 +109,36 @@ function apiError(res: Response, status: number, code: string, message: string) 
 }
 
 // ─── Async error wrapper ───────────────────────────────────────────────────────
+// Drizzle wraps the underlying Postgres error in `err.cause`. Without unwrapping
+// it, every DB failure surfaces as a generic "Failed query: ..." dump with no
+// indication of what Postgres actually rejected (missing column, unique
+// violation, etc.). Walk the cause chain so the driver-level message and PG
+// SQLSTATE make it into the server log; keep the response payload generic in
+// production to avoid leaking SQL.
+function unwrapDbError(err: any): { code?: string; detail?: string } {
+  let cur = err?.cause;
+  while (cur) {
+    if (cur.code || cur.detail) return { code: cur.code, detail: cur.detail ?? cur.message };
+    cur = cur.cause;
+  }
+  return {};
+}
+
 function handle(fn: (req: Request, res: Response) => Promise<void>) {
   return (req: Request, res: Response) => {
     fn(req, res).catch((err: any) => {
       const status  = err.status  ?? 500;
       const code    = err.code    ?? "INTERNAL_ERROR";
       const message = err.message ?? "An unexpected error occurred.";
+      if (status >= 500) {
+        const pg = unwrapDbError(err);
+        console.error(
+          `[handle] ${req.method} ${req.path} → ${status} ${code}` +
+          (pg.code   ? ` pg=${pg.code}`     : "") +
+          (pg.detail ? ` detail=${pg.detail}` : ""),
+          err?.stack || err?.message || err,
+        );
+      }
       apiError(res, status, code, message);
     });
   };
