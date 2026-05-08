@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "today": "2026-05-08",
+  "priorDigest": {
+    "date": "2026-05-07",
+    "pr": 210,
+    "url": "https://github.com/Austinw004/FactoryFlowV2/pull/210",
+    "replyChecksum": null,
+    "replyProcessed": false,
+    "note": "No reply found in this session's prior turn — Step 5 skipped."
+  },
+  "emailDelivery": {
+    "subject": "Daily digest — 1 blocking, 5 need your call",
+    "to": "austinwendler44@gmail.com",
+    "sent": false,
+    "failureReason": "cannot import emailService.ts: ERR_MODULE_NOT_FOUND (sendpulse-api not installed; DATABASE_URL + INTEGRATION_ENCRYPTION_KEY unset)",
+    "failureLogPath": "/tmp/digest-failures.jsonl",
+    "consecutiveFailures": 2
+  },
+  "atAGlance": {
+    "ranCleanly": 1,
+    "needYourEyes": 5,
+    "blocking": 1
+  },
+  "decisions": [
+    {
+      "id": 1,
+      "level": "RED",
+      "routine": "Daily Digest",
+      "summary": "SendPulse send failed two days in a row; sandbox missing sendpulse-api + creds",
+      "question": "Wire SendPulse creds into the routine env, or switch this routine to direct SMTP env vars (SENDPULSE_USER_ID/SENDPULSE_SECRET)?",
+      "refs": []
+    },
+    {
+      "id": 2,
+      "level": "YELLOW",
+      "routine": "Code Review",
+      "summary": "#214 supersedes carry-over #201 (same surface)",
+      "question": "Approve and merge #214 + close #201, or rebase #201 on top of #214?",
+      "refs": [214, 201]
+    },
+    {
+      "id": 3,
+      "level": "YELLOW",
+      "routine": "Big Boi",
+      "summary": "#216 lands; carry-over #192 overlaps",
+      "question": "Merge #216 and close #192, or merge #192 first then rebase #216?",
+      "refs": [216, 192]
+    },
+    {
+      "id": 4,
+      "level": "YELLOW",
+      "routine": "Weekly Clean",
+      "summary": "W19 #217 lands while W18 #158 still open + CI-failing",
+      "question": "Close #158 and review #217, merge #158 first, or roll #158 forward into #217?",
+      "refs": [217, 158]
+    },
+    {
+      "id": 5,
+      "level": "YELLOW",
+      "routine": "Daily Boost",
+      "summary": "Three open Dashboard.tsx drafts stacked, all failing typecheck",
+      "question": "Pick one to keep, or close all three and have Daily Boost rebase fresh?",
+      "refs": [193, 199, 209]
+    },
+    {
+      "id": 6,
+      "level": "YELLOW",
+      "routine": "Optimus",
+      "summary": "#198 typecheck still failing; Optimus silent 3 days",
+      "question": "Have Optimus fix on next run, close #198, or escalate the underlying tsc baseline?",
+      "refs": [198]
+    }
+  ],
+  "routineActivity": {
+    "Big Boi": { "status": "activity", "slug": "claude/exciting-fermi", "today": [216] },
+    "Optimus": { "status": "silent", "slug": "claude/hopeful-rubin (observability variant)", "today": [], "carryOver": [198] },
+    "Daily Boost": { "status": "silent", "slug": "claude/vigilant-allen", "today": [], "carryOver": [193, 199, 209] },
+    "Palantard Grade": { "status": "silent", "slug": "claude/quirky-rubin (ontology variant)", "today": [] },
+    "Weekly Clean": { "status": "activity", "slug": "claude/festive-dijkstra", "today": [217], "carryOver": [158] },
+    "Code Review": { "status": "activity", "slug": "claude/hopeful-rubin (customer-surface variant)", "today": [214], "carryOver": [201] },
+    "Daily Digest (self)": { "status": "failed", "slug": "claude/intelligent-fermi", "today": [] }
+  },
+  "directToMainNotes": [
+    {
+      "sha": "abfe1637",
+      "ts": "2026-05-08T03:10:37Z",
+      "subject": "fix(signup): self-heal schema drift between shared/schema.ts and live DB",
+      "attribution": "operator (Austin) with Claude co-author — not attributed to a routine"
+    },
+    {
+      "sha": "2a3f7dca",
+      "ts": "2026-05-08T03:18:50Z",
+      "subject": "fix(signup): expand schema self-heal to cover all users/companies columns",
+      "attribution": "operator (Austin) with Claude co-author — not attributed to a routine"
+    }
+  ]
+}
