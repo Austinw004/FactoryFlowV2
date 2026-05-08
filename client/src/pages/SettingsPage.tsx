@@ -36,6 +36,7 @@ interface UserProfile {
   firstName: string | null;
   lastName: string | null;
   username: string | null;
+  nickname: string | null;
   jobTitle: string | null;
   department: string | null;
   phone: string | null;
