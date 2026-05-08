@@ -3410,7 +3410,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      const items = req.body.items || [];
+      // Hard-cap the array up front to defend against payload-bomb DoS:
+      // each item triggers a Zod parse + later goes through bulkCreate.
+      const rawItems = Array.isArray(req.body?.items) ? req.body.items : [];
+      if (rawItems.length > 1000) {
+        return res.status(413).json({ error: "Bulk size exceeds 1000 items per request" });
+      }
+      const items = rawItems;
       // Batch-validate all SKU IDs in one query to avoid N+1
       const skuIds: string[] = [...new Set<string>(items.map((item: { skuId: string }) => item.skuId))];
       const companySkus = await storage.getSkus(user.companyId);
@@ -3547,8 +3553,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      const forecasts = req.body.forecasts || [];
-      const validated = forecasts.map((f: any) => insertMultiHorizonForecastSchema.parse({
+      const rawForecasts = Array.isArray(req.body?.forecasts) ? req.body.forecasts : [];
+      if (rawForecasts.length > 1000) {
+        return res.status(413).json({ error: "Bulk size exceeds 1000 forecasts per request" });
+      }
+      const validated = rawForecasts.map((f: any) => insertMultiHorizonForecastSchema.parse({
         ...f,
         companyId: user.companyId,
       }));
