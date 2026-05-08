@@ -369,13 +369,19 @@ export function securityHeadersMiddleware(req: Request, res: Response, next: Nex
     `default-src 'self'; ${scriptSrc}; ${styleSrc}; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' wss: https: https://api.stripe.com; frame-src 'self' https://js.stripe.com https://hooks.stripe.com; ${frameAncestors};`
   );
   
-  // Strict Transport Security (HSTS) - only in production with HTTPS
+  // Strict Transport Security (HSTS) - only in production with HTTPS.
+  // 2-year max-age + preload satisfies the HSTS preload list requirements.
   if (process.env.NODE_ENV === 'production') {
-    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
   }
-  
-  // Permissions Policy
-  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+
+  // Permissions Policy — must mirror the restrictive list set in server/index.ts.
+  // Both layers call res.setHeader (last write wins), so a less restrictive
+  // value here would silently re-open APIs we already disabled at the edge.
+  res.setHeader(
+    'Permissions-Policy',
+    'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()',
+  );
   
   next();
 }
