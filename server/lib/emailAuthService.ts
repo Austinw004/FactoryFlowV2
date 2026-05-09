@@ -317,17 +317,34 @@ export async function changePassword(userId: string, input: z.infer<typeof chang
 
 // ─── Update Profile (authenticated) ──────────────────────────────────────────
 
+// Strip <script>, javascript: protocols, and on*= event-handler attributes
+// from any string the user can author. JSX rendering is XSS-safe, but these
+// values also flow into emails, PDF exports, and audit logs where escape
+// rules differ — neutralize at the source. Mirrors safeText() in routes.ts.
+const safeProfileText = (max: number) =>
+  z.preprocess(
+    v => {
+      if (typeof v !== "string") return v;
+      return v
+        .replace(/[<>]/g, "")
+        .replace(/javascript:/gi, "")
+        .replace(/on\w+\s*=/gi, "")
+        .trim();
+    },
+    z.string().max(max),
+  );
+
 export const updateProfileSchema = z.object({
-  name:       z.string().min(1).max(100).optional(),
-  firstName:  z.string().min(1).max(50).optional().nullable(),
-  lastName:   z.string().min(1).max(50).optional().nullable(),
+  name:       safeProfileText(100).pipe(z.string().min(1)).optional(),
+  firstName:  safeProfileText(50).pipe(z.string().min(1)).optional().nullable(),
+  lastName:   safeProfileText(50).pipe(z.string().min(1)).optional().nullable(),
   // Optional preferred-name override used by the AI Advisor and other
   // in-product greetings. Empty string is normalized to null on write so
   // the AI falls back to firstName.
-  nickname:   z.string().max(50).optional().nullable(),
-  jobTitle:   z.string().max(100).optional().nullable(),
-  department: z.string().max(100).optional().nullable(),
-  phone:      z.string().max(30).optional().nullable(),
+  nickname:   safeProfileText(50).optional().nullable(),
+  jobTitle:   safeProfileText(100).optional().nullable(),
+  department: safeProfileText(100).optional().nullable(),
+  phone:      safeProfileText(30).optional().nullable(),
 });
 
 export async function updateProfile(userId: string, input: z.infer<typeof updateProfileSchema>) {

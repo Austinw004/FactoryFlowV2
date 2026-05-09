@@ -210,10 +210,14 @@ export function createRateLimitMiddleware(
 
     if (globalRateLimiter.isRateLimited(key, maxRequests, windowMs)) {
       const remaining = globalRateLimiter.getRemaining(key, maxRequests);
-      
+
       res.setHeader('X-RateLimit-Limit', maxRequests.toString());
       res.setHeader('X-RateLimit-Remaining', remaining.toString());
       res.setHeader('X-RateLimit-Reset', new Date(Date.now() + windowMs).toISOString());
+      // Make the in-process scope explicit so consumers know the limit is
+      // not a hard distributed cap. See the rateLimiters preset block for
+      // the migration plan when this becomes load-bearing.
+      res.setHeader('X-RateLimit-Scope', 'instance');
       
       securityMonitor.logEvent({
         type: 'rate_limit',
@@ -233,6 +237,7 @@ export function createRateLimitMiddleware(
     const remaining = globalRateLimiter.getRemaining(key, maxRequests);
     res.setHeader('X-RateLimit-Limit', maxRequests.toString());
     res.setHeader('X-RateLimit-Remaining', remaining.toString());
+    res.setHeader('X-RateLimit-Scope', 'instance');
 
     next();
   };
@@ -581,17 +586,37 @@ export function applySecurityHardening(app: any) {
 // Export encryption service instance
 export const encryptionService = new EncryptionService();
 
-// Export preset rate limiters
+// Export preset rate limiters.
+//
+// SCOPE — IMPORTANT: these counters live in `globalRateLimiter`, an in-process
+// Map that is NOT shared across Replit autoscale containers. If autoscale
+// spins up multiple instances, an attacker hitting different instances will
+// see their effective limit multiply by the number of instances. This is
+// acceptable today (low traffic, single-instance deployment, per-account
+// lockout still enforces hard brute-force protection at the DB layer in
+// emailAuthService.login()), but BEFORE scaling to multiple paid instances:
+//
+//   1. Move the store to Redis (`rate-limit-redis`) or Postgres.
+//   2. Switch `auth` to per-IP-AND-per-email so a botnet hitting one email
+//      from many IPs still trips the limit.
+//   3. Drop `auth` to ~10/min — the current 30/min is intentionally lenient
+//      because legit users may retype passwords; tightening this is safe
+//      once the per-account lockout's 5-attempt threshold is the primary
+//      defense (which it already is).
+//
+// `auth` is also hardened by emailAuthService.login()'s account lockout:
+// 5 wrong attempts on an email → 30-minute DB-backed lockout. That defense
+// IS shared across instances and is the real brute-force protection.
 export const rateLimiters = {
-  // Rate limiting for authentication endpoints
+  // Rate limiting for authentication endpoints (per-IP, in-process).
   auth: createRateLimitMiddleware(30, 60000), // 30 requests per minute
-  
+
   // Moderate rate limiting for API endpoints
   api: createRateLimitMiddleware(300, 60000), // 300 requests per minute
-  
+
   // Lenient rate limiting for read-only endpoints
   readOnly: createRateLimitMiddleware(300, 60000), // 300 requests per minute
-  
+
   // Very strict for sensitive operations
   sensitive: createRateLimitMiddleware(3, 60000), // 3 requests per minute
 };

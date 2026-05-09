@@ -880,12 +880,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Onboarding API endpoints
+  // Onboarding API endpoints — every user-supplied string field runs through
+  // sanitizeString() before validation so the persisted value can never carry
+  // raw <script> tags, javascript: URLs, or event-handler attributes. JSX is
+  // XSS-safe by default, but these names also flow into HTML emails, audit
+  // logs, and PDF exports where escape rules differ — strip at the source.
+  const safeText = (max: number, label = "text") =>
+    z.preprocess(
+      v => (typeof v === "string" ? sanitizeString(v) : v),
+      z.string().trim().max(max, `${label} too long`),
+    );
   const onboardingCompanySchema = z.object({
-    name: z.string().trim().min(1, "Company name is required").max(256),
-    industry: z.string().trim().max(128).nullable().optional(),
-    companySize: z.string().trim().max(64).nullable().optional(),
-    location: z.string().trim().max(256).nullable().optional(),
+    name: safeText(256, "Company name").pipe(z.string().min(1, "Company name is required")),
+    industry: safeText(128, "Industry").nullable().optional(),
+    companySize: safeText(64, "Company size").nullable().optional(),
+    location: safeText(256, "Location").nullable().optional(),
   });
   app.post('/api/onboarding/company', isAuthenticated, validateBody(onboardingCompanySchema), async (req: any, res) => {
     try {
@@ -958,7 +967,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       .array(
         z.object({
           email: z.string().email(),
-          name: z.string().trim().max(256).optional(),
+          name: safeText(256, "Member name").optional(),
           role: z.enum(["viewer", "manager", "admin"]).optional(),
         }),
       )
