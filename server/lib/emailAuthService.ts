@@ -16,6 +16,7 @@ import { db, pool } from "../db";
 import { users, passwordResetTokens, authSessions } from "@shared/schema";
 import { eq, or, and, gt, lt, sql } from "drizzle-orm";
 import { signAccessToken, signRefreshToken, verifyToken } from "./jwtAuth";
+import { sendPasswordResetEmail } from "./emailService";
 import { z } from "zod";
 
 const SALT_ROUNDS           = 12;
@@ -237,10 +238,40 @@ export async function forgotPassword(input: z.infer<typeof forgotPasswordSchema>
 
   await db.insert(passwordResetTokens).values({ userId: user.id, tokenHash, expiresAt, used: 0 });
 
-  const resetLink = `${process.env.APP_URL ?? ""}/reset-password?token=${rawToken}`;
-  // TODO: Send via email service (SendGrid/SES). Never log tokens in production.
-  if (process.env.NODE_ENV !== 'production') {
-    console.log(`[PasswordReset] Reset link generated for ${email} (dev only — expires in 1 hour)`);
+  // Build the reset link from APP_URL if set, otherwise fall back to the
+  // production domain. Replit autoscale doesn't always set APP_URL, and a
+  // bare `/reset-password?token=...` link in an email body is useless to
+  // the recipient — so prefer an explicit absolute URL.
+  const baseUrl =
+    process.env.APP_URL?.trim() ||
+    (process.env.REPLIT_DOMAINS?.split(",")[0]?.trim()
+      ? `https://${process.env.REPLIT_DOMAINS!.split(",")[0]!.trim()}`
+      : "https://prescient-labs.com");
+  const resetLink = `${baseUrl}/reset-password?token=${rawToken}`;
+
+  // Fire the email in the background — never block the response on it.
+  // Two reasons: (1) leaking timing differences between "email exists" and
+  // "email doesn't exist" undoes the no-enumeration guarantee above, and
+  // (2) a slow SendPulse round-trip would push every forgot-password
+  // request into the rate limiter's eviction window. Log failures so we
+  // can spot a misconfigured key in `[Email]`-prefixed log lines without
+  // failing the request.
+  sendPasswordResetEmail(email, resetLink)
+    .then(result => {
+      if (!result.success) {
+        console.error(`[PasswordReset] sendPasswordResetEmail failed for ${email}: ${result.error}`);
+      } else {
+        console.log(`[PasswordReset] Reset email sent to ${email}`);
+      }
+    })
+    .catch(err => {
+      console.error(`[PasswordReset] sendPasswordResetEmail threw for ${email}:`, err?.message || err);
+    });
+
+  // In dev only, log the token so you can paste the link without an inbox.
+  // NEVER log the token in production — these are bearer credentials.
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`[PasswordReset] Reset link for ${email} (dev only — expires in 1 hour): ${resetLink}`);
   }
 
   return { message: "If that email is registered, a reset link has been sent." };
