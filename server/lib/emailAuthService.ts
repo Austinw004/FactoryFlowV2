@@ -26,6 +26,25 @@ const LOCKOUT_DURATION_MS   = 30 * 60 * 1000;           // 30 minutes
 
 // ─── Input schemas ────────────────────────────────────────────────────────────
 
+// Strip <script>, javascript: protocols, and on*= event-handler attributes
+// from any string the user can author. JSX rendering is XSS-safe but these
+// values also flow into HTML emails, PDF exports, and audit logs where
+// escape rules differ — neutralize at the source. Used by signupSchema and
+// updateProfileSchema (and mirrored by safeText() in routes.ts for the
+// onboarding path).
+const safeText = (max: number) =>
+  z.preprocess(
+    v => {
+      if (typeof v !== "string") return v;
+      return v
+        .replace(/[<>]/g, "")
+        .replace(/javascript:/gi, "")
+        .replace(/on\w+\s*=/gi, "")
+        .trim();
+    },
+    z.string().max(max),
+  );
+
 export const signupSchema = z.object({
   email:    z.string().email("Invalid email address"),
   password: z.string()
@@ -33,8 +52,10 @@ export const signupSchema = z.object({
     .regex(/[A-Z]/,        "Password must contain at least one uppercase letter")
     .regex(/[0-9]/,        "Password must contain at least one number")
     .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
+  // Username is restricted by regex to [a-zA-Z0-9_-] so HTML tags can't
+  // pass the regex anyway — no preprocess needed there.
   username: z.string().min(3).max(30).regex(/^[a-zA-Z0-9_-]+$/, "Username may only contain letters, numbers, underscores, and hyphens").optional(),
-  name:     z.string().min(1).max(100).optional(),
+  name:     safeText(100).pipe(z.string().min(1)).optional(),
 });
 
 export const loginSchema = z.object({
@@ -317,34 +338,17 @@ export async function changePassword(userId: string, input: z.infer<typeof chang
 
 // ─── Update Profile (authenticated) ──────────────────────────────────────────
 
-// Strip <script>, javascript: protocols, and on*= event-handler attributes
-// from any string the user can author. JSX rendering is XSS-safe, but these
-// values also flow into emails, PDF exports, and audit logs where escape
-// rules differ — neutralize at the source. Mirrors safeText() in routes.ts.
-const safeProfileText = (max: number) =>
-  z.preprocess(
-    v => {
-      if (typeof v !== "string") return v;
-      return v
-        .replace(/[<>]/g, "")
-        .replace(/javascript:/gi, "")
-        .replace(/on\w+\s*=/gi, "")
-        .trim();
-    },
-    z.string().max(max),
-  );
-
 export const updateProfileSchema = z.object({
-  name:       safeProfileText(100).pipe(z.string().min(1)).optional(),
-  firstName:  safeProfileText(50).pipe(z.string().min(1)).optional().nullable(),
-  lastName:   safeProfileText(50).pipe(z.string().min(1)).optional().nullable(),
+  name:       safeText(100).pipe(z.string().min(1)).optional(),
+  firstName:  safeText(50).pipe(z.string().min(1)).optional().nullable(),
+  lastName:   safeText(50).pipe(z.string().min(1)).optional().nullable(),
   // Optional preferred-name override used by the AI Advisor and other
   // in-product greetings. Empty string is normalized to null on write so
   // the AI falls back to firstName.
-  nickname:   safeProfileText(50).optional().nullable(),
-  jobTitle:   safeProfileText(100).optional().nullable(),
-  department: safeProfileText(100).optional().nullable(),
-  phone:      safeProfileText(30).optional().nullable(),
+  nickname:   safeText(50).optional().nullable(),
+  jobTitle:   safeText(100).optional().nullable(),
+  department: safeText(100).optional().nullable(),
+  phone:      safeText(30).optional().nullable(),
 });
 
 export async function updateProfile(userId: string, input: z.infer<typeof updateProfileSchema>) {
