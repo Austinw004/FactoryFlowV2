@@ -14,7 +14,10 @@ let isInitialized = false;
 
 async function getCredentials(companyId?: string): Promise<SendPulseCredentials | null> {
   if (cachedCredentials) return cachedCredentials;
-  
+
+  // Per-company creds (preferred when an authenticated request gives us
+  // a companyId — lets multi-tenant orgs ship from their own SendPulse
+  // account so customers see their domain in the From: header).
   if (companyId) {
     try {
       const credentials = await CredentialService.getDecryptedCredentials(companyId, 'sendpulse');
@@ -27,8 +30,20 @@ async function getCredentials(companyId?: string): Promise<SendPulseCredentials 
       console.error('[Email] CredentialService lookup failed:', error);
     }
   }
-  
-  console.warn('[Email] No credentials found - configure via CredentialService');
+
+  // System-level fallback. Used by flows that have no company context
+  // (forgot-password, signup welcome) and as a baseline for tenants that
+  // haven't configured their own SendPulse keys. Env vars are read once
+  // and cached for the life of the process.
+  const envUser = process.env.SENDPULSE_USER_ID?.trim() || process.env.SENDPULSE_API_USER?.trim();
+  const envSecret = process.env.SENDPULSE_SECRET?.trim() || process.env.SENDPULSE_API_SECRET?.trim();
+  if (envUser && envSecret) {
+    console.log('[Email] Using system-level SendPulse credentials from env');
+    cachedCredentials = { userId: envUser, secret: envSecret };
+    return cachedCredentials;
+  }
+
+  console.warn('[Email] No credentials found — configure SENDPULSE_USER_ID + SENDPULSE_SECRET env vars (system fallback) or per-company via CredentialService');
   return null;
 }
 
