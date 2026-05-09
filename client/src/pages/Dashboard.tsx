@@ -59,8 +59,67 @@ const regimeDescriptions: Record<string, string> = {
   REAL_ECONOMY_LEAD: "Counter-cyclical opportunity. FDR > 2.5. Lock in favorable supplier terms while asset markets correct.",
 };
 
+// Prescriptive procurement guidance per regime — what the regime MEANS for
+// today's procurement decisions, in plain manufacturing language. This is the
+// product's thesis surfaced as concrete actions, not commentary.
+type RegimeGuidance = {
+  headline: string;
+  action: string;
+  rationale: string;
+  primary: { label: string; href: string };
+  secondary?: { label: string; href: string };
+  tone: "calm" | "warm" | "tense" | "opportunity";
+};
+
+const regimeGuidance: Record<string, RegimeGuidance> = {
+  HEALTHY_EXPANSION: {
+    headline: "Market conditions are stable.",
+    action: "Standard procurement pace. Good window to negotiate long-term contracts and consolidate suppliers.",
+    rationale: "Asset and real-economy circuits are in equilibrium — pricing pressure is low and supplier capacity is steady.",
+    primary: { label: "Review supplier contracts", href: "/supply-chain" },
+    secondary: { label: "Run forecast", href: "/forecasting" },
+    tone: "calm",
+  },
+  ASSET_LED_GROWTH: {
+    headline: "Asset prices are outpacing the real economy.",
+    action: "Lock in supplier contracts before the next pricing cycle. Pre-purchase critical materials with long lead times.",
+    rationale: "Historically, this regime precedes 8–12% input cost increases over the next quarter. Cost pass-through to materials typically lags asset moves by 6–10 weeks.",
+    primary: { label: "View materials at risk", href: "/supply-chain" },
+    secondary: { label: "Start contract review", href: "/procurement" },
+    tone: "warm",
+  },
+  IMBALANCED_EXCESS: {
+    headline: "Significant market decoupling detected.",
+    action: "Defer non-critical purchases. Renegotiate expiring contracts. Build safety stock only on single-source critical materials.",
+    rationale: "Decoupling at this scale historically resolves through demand contraction. Holding excess inventory in non-critical SKUs ties up working capital that you may need.",
+    primary: { label: "Review at-risk materials", href: "/supply-chain" },
+    secondary: { label: "Adjust safety stock", href: "/inventory-optimization" },
+    tone: "tense",
+  },
+  REAL_ECONOMY_LEAD: {
+    headline: "Counter-cyclical buying window is open.",
+    action: "Favorable supplier terms are available. Lock in agreements while asset markets correct.",
+    rationale: "Real economy is leading — suppliers are more flexible on price and terms than in a tighter regime. Expiring contracts can typically be renewed at improved rates.",
+    primary: { label: "Renegotiate contracts", href: "/procurement" },
+    secondary: { label: "View supplier list", href: "/supply-chain" },
+    tone: "opportunity",
+  },
+};
+
 function getRegimeDescription(regime: string): string {
   return regimeDescriptions[regime] || "Economic conditions are being analyzed.";
+}
+
+function getRegimeGuidance(regime: string): RegimeGuidance {
+  return (
+    regimeGuidance[regime] || {
+      headline: "Economic conditions are being analyzed.",
+      action: "Once data is available, regime-specific procurement guidance will appear here.",
+      rationale: "The platform analyzes the gap between asset markets and the real economy to time procurement decisions.",
+      primary: { label: "Open command center", href: "/dashboard" },
+      tone: "calm",
+    }
+  );
 }
 
 export default function Dashboard() {
@@ -337,15 +396,65 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="mb-16">
-        <div className="eyebrow mb-4">State of operations</div>
-        <h1 className="hero text-5xl">{regime?.regime ? getRegimeDescription(regime.regime).split('.')[0] + '.' : 'Analyzing conditions.'}</h1>
-        <p className="text-soft mt-5 max-w-xl leading-relaxed">
-          {Array.isArray(skus) && skus.length > 0
-            ? `Tracking ${skus.length.toLocaleString()} SKU${skus.length === 1 ? '' : 's'}. ${regime?.regime === 'HEALTHY_EXPANSION' ? 'No critical exposures.' : 'Review current regime conditions.'}`
-            : 'Add your first SKU to start tracking operations.'}
-        </p>
-      </div>
+      {(() => {
+        const guidance = getRegimeGuidance(regimeType);
+        const toneAccent: Record<RegimeGuidance["tone"], string> = {
+          calm: "border-l-good/60",
+          warm: "border-l-yellow-500/70",
+          tense: "border-l-bad/70",
+          opportunity: "border-l-primary/70",
+        };
+        const toneLabel: Record<RegimeGuidance["tone"], string> = {
+          calm: "Stable",
+          warm: "Heating up",
+          tense: "Action needed",
+          opportunity: "Window open",
+        };
+        return (
+          <div className={`mb-16 border-l-4 pl-6 py-2 ${toneAccent[guidance.tone]}`} data-testid="dashboard-hero-guidance">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="eyebrow">State of operations</div>
+              <span className="mono text-xs text-muted">·</span>
+              <div className="eyebrow text-soft">{friendlyRegime}</div>
+              <span className="mono text-xs text-muted">·</span>
+              <div className="mono text-xs text-muted">{toneLabel[guidance.tone]}</div>
+            </div>
+            <h1 className="hero text-5xl mb-5">{guidance.headline}</h1>
+            <p className="text-soft max-w-2xl leading-relaxed text-lg">
+              {guidance.action}
+            </p>
+            <p className="text-xs text-muted mt-3 max-w-2xl leading-relaxed">
+              <span className="uppercase tracking-wider mr-2">Why</span>
+              {guidance.rationale}
+              {regimeIntelligence?.confidence?.overall != null
+                ? ` Confidence: ${Math.round((regimeIntelligence.confidence.overall ?? 0) * 100)}%.`
+                : ""}
+              {Array.isArray(skus) && skus.length > 0
+                ? ` Tracking ${skus.length.toLocaleString()} SKU${skus.length === 1 ? "" : "s"}.`
+                : ""}
+            </p>
+            <div className="flex items-center gap-2 mt-6">
+              <Button
+                size="sm"
+                onClick={() => setLocation(guidance.primary.href)}
+                data-testid="button-hero-primary-action"
+              >
+                {guidance.primary.label}
+              </Button>
+              {guidance.secondary && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setLocation(guidance.secondary!.href)}
+                  data-testid="button-hero-secondary-action"
+                >
+                  {guidance.secondary.label}
+                </Button>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="grid grid-cols-4 gap-px bg-line mb-20">
         <div className="bg-panel p-6">
@@ -679,23 +788,51 @@ export default function Dashboard() {
         
         <Separator className="my-4" />
         
-        <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <TrendingUp className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-            <div className="text-sm space-y-1">
-              <p className="font-semibold text-foreground">
-                Market Insight: {fdr >= 1.5 ? 'Financial markets are outpacing the real economy — consider deferring major purchases' : fdr >= 1.0 ? 'Moderate market divergence detected — standard procurement pace recommended' : 'Real economy is strong — favorable conditions for locking in supplier terms'}
-              </p>
-              <p className="text-muted-foreground">
-                Current FDR ratio of {fdr.toFixed(2)} indicates <strong>{friendlyRegime}</strong> regime. 
-                {dataSource === 'external' && ' The platform is gathering data from 15+ external APIs including FRED, Alpha Vantage, DBnomics, World Bank, IMF, OECD, and Trading Economics to calculate real-time FDR.'}
-                {dataSource === 'fallback' && ' Using simulated economic data while external APIs are unavailable.'}
-                {dataSource === 'balance_sheet' && ' Calculated from internal balance sheet and income statement data.'}
-                {' '}All forecasts, allocations, and procurement signals are automatically adjusted based on the current economic regime.
-              </p>
+        {(() => {
+          const heroGuidance = getRegimeGuidance(regimeType);
+          return (
+            <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <TrendingUp className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                <div className="text-sm space-y-2 flex-1">
+                  <p className="font-semibold text-foreground">
+                    What this means today: {heroGuidance.headline}
+                  </p>
+                  <p className="text-muted-foreground">
+                    <strong className="text-foreground">Recommended action:</strong> {heroGuidance.action}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    <span className="uppercase tracking-wider mr-1">Why</span>
+                    {heroGuidance.rationale} FDR is {fdr.toFixed(2)} ({friendlyRegime}).
+                    {dataSource === 'external' && ' Sourced live from FRED, Alpha Vantage, DBnomics, World Bank, IMF, OECD and Trading Economics.'}
+                    {dataSource === 'fallback' && ' Using fallback baseline while external APIs are unavailable — confidence will rise as live feeds reconnect.'}
+                    {dataSource === 'balance_sheet' && ' Calculated from your internal balance sheet and income statement data.'}
+                  </p>
+                  <div className="flex items-center gap-2 pt-1">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setLocation(heroGuidance.primary.href)}
+                      data-testid="button-market-tracker-primary"
+                    >
+                      {heroGuidance.primary.label}
+                    </Button>
+                    {heroGuidance.secondary && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setLocation(heroGuidance.secondary!.href)}
+                        data-testid="button-market-tracker-secondary"
+                      >
+                        {heroGuidance.secondary.label}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          );
+        })()}
       </Card>
 
       <Card className="p-6">
