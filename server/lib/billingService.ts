@@ -1,12 +1,12 @@
 /**
- * Billing Service — Enterprise SaaS Subscription + Usage-Based Billing
+ * Billing Service \u2014 Enterprise SaaS Subscription + Usage-Based Billing
  *
- * 5 Plans (ALL features included on ALL plans — differences are billing mechanics ONLY):
- *   1. monthly_starter    — $299/month
- *   2. monthly_growth     — $799/month
- *   3. annual_starter     — $2,990/year  (~17% discount)
- *   4. annual_growth      — $7,990/year  (~17% discount)
- *   5. usage_based        — $199/month base + $0.02/unit OR 0.25% of procurement spend
+ * 5 Plans (ALL features included on ALL plans \u2014 differences are billing mechanics ONLY):
+ *   1. monthly_starter    \u2014 $299/month
+ *   2. monthly_growth     \u2014 $799/month
+ *   3. annual_starter     \u2014 $2,990/year  (~17% discount)
+ *   4. annual_growth      \u2014 $7,990/year  (~17% discount)
+ *   5. usage_based        \u2014 $199/month base + $0.02/unit OR 0.25% of procurement spend
  *
  * IMPORTANT: No feature gating anywhere. Plan type is stored for billing mechanics only.
  */
@@ -26,11 +26,11 @@ import { logger } from "./structuredLogger";
 // (acct_1SZFrW9F4Ysa19m8) on 2026-04-25 via Stripe API. These are the
 // authoritative IDs that /api/stripe/checkout uses to spin up Checkout
 // sessions. If you create a new Price in Stripe (e.g. for a coupon or
-// new tier) update the matching field here — the server side won't
+// new tier) update the matching field here \u2014 the server side won't
 // pick it up automatically.
 //
 // Override per-environment by setting STRIPE_PRICE_<KEY>_<INTERVAL> env
-// vars (e.g. STRIPE_PRICE_STARTER_MONTHLY=price_xxxx) — useful if you
+// vars (e.g. STRIPE_PRICE_STARTER_MONTHLY=price_xxxx) \u2014 useful if you
 // keep separate test vs live prices and want to swap without a redeploy.
 
 const stripePriceId = (key: string, fallback: string): string =>
@@ -52,7 +52,7 @@ export const BILLING_PLANS = {
   monthly_growth: {
     id:          "monthly_growth",
     name:        "Monthly Growth",
-    description: "Full platform access, billed monthly — higher tier billing",
+    description: "Full platform access, billed monthly \u2014 higher tier billing",
     priceCents:  79900,       // $799.00
     currency:    "usd",
     interval:    "month" as const,
@@ -88,7 +88,7 @@ export const BILLING_PLANS = {
   usage_based: {
     id:           "usage_based",
     name:         "Usage-Based",
-    description:  "Full platform access — $199/month base + $2/SKU overage (100 SKUs included, capped at $799/mo)",
+    description:  "Full platform access \u2014 $199/month base + $2/SKU overage (100 SKUs included, capped at $799/mo)",
     baseFeeCents: 19900,      // $199.00/month
     baseSkus:     100,        // First 100 SKUs included
     overageRate:  "2.00",    // $2.00 per additional SKU
@@ -102,8 +102,8 @@ export const BILLING_PLANS = {
   performance: {
     id:              "performance",
     name:            "Performance-Based",
-    description:     "$100/month + 10–20% of verified, realized savings. Only pay when value is delivered.",
-    baseFeeCents:    10000,    // $100.00/month — always charged
+    description:     "$100/month + 10\u201320% of verified, realized savings. Only pay when value is delivered.",
+    baseFeeCents:    10000,    // $100.00/month \u2014 always charged
     feePercentageMin: 0.10,    // 10% of verified savings
     feePercentageMax: 0.20,    // 20% of verified savings
     feePercentageDefault: 0.15, // 15% default
@@ -188,9 +188,9 @@ export async function createSubscription(input: CreateSubscriptionInput): Promis
     });
     stripeSubId = sub.id;
   } else {
-    // Stripe price not configured — log and proceed with DB record only
+    // Stripe price not configured \u2014 log and proceed with DB record only
     // (Production: create matching Stripe products/prices in dashboard first)
-    logger.warn("billing" as any, "stripePriceId not provided — subscription recorded in DB only", {
+    logger.warn("billing" as any, "stripePriceId not provided \u2014 subscription recorded in DB only", {
       userId: input.userId, planId: input.planId
     });
   }
