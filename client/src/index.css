@@ -4,7 +4,16 @@
 @tailwind components;
 @tailwind utilities;
 
-/* DARK MODE — Palantir-inspired enterprise palette (DEFAULT) */
+/* DARK MODE — Palantir-inspired enterprise palette (DEFAULT)
+ *
+ * Accent reset (2026-05-08): the previous --accent of 43 77% 58% was a bright
+ * candy-amber (~#E5B852) which read as a startup/dashboard yellow and made
+ * every active sidebar item, ring, and primary chart series feel "kiddie".
+ * The brand palette in tailwind.config.ts already defines the canonical
+ * accent — `signal: #CC785C` (Anthropic Tropical Tan, a muted burnt-orange).
+ * Aligning the CSS variables to that hsl(15 50% 58%) so the accent surfaces
+ * driven by the variables match the brand spec. One restrained warm accent,
+ * not a saturated yellow. */
 :root {
   --button-outline: rgba(255,255,255, .08);
   --badge-outline: rgba(255,255,255, .04);
@@ -13,42 +22,42 @@
   --elevate-2: rgba(255,255,255, .07);
   --background: 0 0% 0%;
   --foreground: 0 0% 94.9%;
-  --border: 0 0% 10.6%;
-  --card: 0 0% 6.3%;
+  --border: 0 0% 11.5%;
+  --card: 0 0% 4.3%;
   --card-foreground: 0 0% 94.9%;
-  --card-border: 0 0% 10.6%;
+  --card-border: 0 0% 11.5%;
   --sidebar: 0 0% 0%;
   --sidebar-foreground: 0 0% 94.9%;
-  --sidebar-border: 0 0% 10.6%;
-  --sidebar-primary: 43 77% 58%;
-  --sidebar-primary-foreground: 0 0% 0%;
-  --sidebar-accent: 43 77% 58%;
-  --sidebar-accent-foreground: 0 0% 94.9%;
-  --sidebar-ring: 43 77% 58%;
+  --sidebar-border: 0 0% 11.5%;
+  --sidebar-primary: 15 50% 58%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 15 50% 58%;
+  --sidebar-accent-foreground: 0 0% 100%;
+  --sidebar-ring: 15 50% 58%;
   --popover: 0 0% 6.3%;
   --popover-foreground: 0 0% 94.9%;
-  --popover-border: 0 0% 10.6%;
+  --popover-border: 0 0% 11.5%;
   --primary: 0 0% 94.9%;
   --primary-foreground: 0 0% 0%;
   --secondary: 0 0% 10.6%;
   --secondary-foreground: 0 0% 94.9%;
   --muted: 0 0% 41.6%;
-  --muted-foreground: 0 0% 63.1%;
-  --accent: 43 77% 58%;
-  --accent-foreground: 0 0% 0%;
-  --destructive: 0 76% 63%;
+  --muted-foreground: 0 0% 65.1%;
+  --accent: 15 50% 58%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 6 55% 60%;
   --destructive-foreground: 0 0% 98%;
-  --input: 0 0% 10.6%;
-  --ring: 43 77% 58%;
-  --chart-1: 43 77% 58%;
-  --chart-2: 130 43% 61%;
-  --chart-3: 0 76% 63%;
+  --input: 0 0% 11.5%;
+  --ring: 15 50% 58%;
+  --chart-1: 15 50% 58%;
+  --chart-2: 152 24% 60%;
+  --chart-3: 6 55% 60%;
   --chart-4: 0 0% 94.9%;
-  --chart-5: 43 77% 58%;
+  --chart-5: 30 12% 62%;
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', monospace;
-  --radius: .125rem;
+  --radius: .25rem;
   --shadow-2xs: none;
   --shadow-xs: none;
   --shadow-sm: none;
