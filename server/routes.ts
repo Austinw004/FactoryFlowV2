@@ -867,8 +867,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`[Auth] Auto-created company ${company.id} for user ${userId}`);
       }
-      
-      res.json(user);
+
+      // Never serialize the bcrypt hash to a client. Even though the owner is
+      // the only one who can fetch their own /api/auth/user, the hash leaks
+      // through dev tools / logs / extensions / HAR exports — strip it here
+      // and at every other route that echoes a user record.
+      const { passwordHash, ...safeUser } = user as any;
+      res.json(safeUser);
     } catch (error: any) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });

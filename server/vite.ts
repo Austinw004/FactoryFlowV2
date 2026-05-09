@@ -41,6 +41,12 @@ export async function setupVite(app: Express, server: Server) {
   });
 
   app.use(vite.middlewares);
+  // Unknown /api/* routes must NOT fall through to the SPA index.html — that
+  // makes API consumers see a 200 with an HTML body where they expect a JSON
+  // 404, hiding routing bugs. Return a clean JSON 404 instead.
+  app.use("/api", (_req, res) => {
+    res.status(404).json({ error: "NOT_FOUND", message: "API endpoint not found." });
+  });
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
 
@@ -89,6 +95,12 @@ export function serveStatic(app: Express) {
       }
     },
   }));
+
+  // Unknown /api/* routes must NOT fall through to the SPA index.html — see
+  // the dev-server matching block above for rationale.
+  app.use("/api", (_req, res) => {
+    res.status(404).json({ error: "NOT_FOUND", message: "API endpoint not found." });
+  });
 
   // fall through to index.html if the file doesn't exist
   app.use("*", (_req, res) => {
