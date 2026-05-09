@@ -53,26 +53,30 @@ interface RegimeStatusProps {
 // internals are intentionally NOT exposed in the UI — those are proprietary
 // methodology, kept on the server. The customer sees the result, not the
 // formula.
-const regimeConfig: Record<Regime, { label: string; description: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+const regimeConfig: Record<Regime, { label: string; description: string; variant: "default" | "secondary" | "destructive" | "outline"; nextStep: string }> = {
   HEALTHY_EXPANSION: {
     label: "Healthy Expansion",
     description: "Balanced growth. Standard procurement pace.",
     variant: "default",
+    nextStep: "Use this stable window to consolidate suppliers and negotiate longer-term contracts.",
   },
   ASSET_LED_GROWTH: {
     label: "Asset-Led Growth",
     description: "Assets outpacing real economy. Consider accelerating procurement.",
     variant: "secondary",
+    nextStep: "Lock in pricing on critical materials before the next cost pass-through cycle (typically 6–10 weeks).",
   },
   IMBALANCED_EXCESS: {
     label: "Imbalanced Excess",
     description: "Significant asset-real economy gap. Defer non-critical purchases.",
     variant: "destructive",
+    nextStep: "Build safety stock only on single-source critical SKUs; defer everything else and renegotiate expiring contracts.",
   },
   REAL_ECONOMY_LEAD: {
     label: "Real Economy Lead",
     description: "Counter-cyclical opportunity. Lock in favorable pricing.",
     variant: "default",
+    nextStep: "Solicit competing quotes on expiring contracts — supplier flexibility is at its highest point in the cycle.",
   },
 };
 
@@ -174,10 +178,20 @@ export function RegimeStatus({ regime, fdr: fdrProp, intensity, regimeEvidence, 
           <div className="flex items-center gap-2 text-xs p-2 rounded-md bg-muted/50 border" data-testid="alert-transition-risk">
             <AlertTriangle className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
             <span className="text-muted-foreground">
-              Transition probability to <span className="font-medium">{intelligence.transitionPrediction.predictedRegime}</span>: {Math.round(transitionProbability * 100)}%
+              Transition probability to <span className="font-medium">{intelligence.transitionPrediction.predictedRegime}</span>: {Math.round(transitionProbability * 100)}%. Plan procurement for the regime you're heading into, not just the one you're in.
             </span>
           </div>
         )}
+
+        <div className="rounded-md border border-primary/20 bg-primary/5 p-3" data-testid="regime-next-step">
+          <div className="flex items-start gap-2">
+            <Activity className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+            <div className="text-xs leading-relaxed">
+              <span className="uppercase tracking-wider text-[10px] text-primary font-medium mr-1">Next step</span>
+              <span className="text-foreground">{config.nextStep}</span>
+            </div>
+          </div>
+        </div>
       </div>
     </Card>
   );
