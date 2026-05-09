@@ -1,0 +1,37 @@
+{
+  "digest_date": "2026-05-09",
+  "prior_digest_date": null,
+  "prior_reply_checksum": null,
+  "email_send": {
+    "attempted": true,
+    "success": false,
+    "reason": "sendpulse-api dependency missing in routine sandbox; node_modules not installed; tsx runtime also missing. SENDPULSE_USER_ID/SENDPULSE_SECRET env unset. Logged to /tmp/digest-failures.jsonl per spec — no retry.",
+    "subject": "Daily digest — 8 need your call",
+    "to": "austinwendler44@gmail.com",
+    "from": "info@prescient-labs.com"
+  },
+  "lookback": {
+    "daily_since": "2026-05-08T00:00:00Z",
+    "weekly_since": "2026-05-02T00:00:00Z"
+  },
+  "routine_activity": {
+    "big_boi": { "status": "activity", "prs": [216] },
+    "optimus": { "status": "activity", "prs": [215] },
+    "daily_boost": { "status": "activity", "prs": [226] },
+    "palantard_grade": { "status": "silent", "prs": [] },
+    "weekly_clean": { "status": "activity", "prs": [217] },
+    "code_review": { "status": "activity", "prs": [222] }
+  },
+  "decisions_needed": [
+    { "id": 1, "routine": "big_boi", "ref": "PR #216", "url": "https://github.com/Austinw004/FactoryFlowV2/pull/216", "question": "Approve and merge daily engineering pass (security + types + 5 validated routes), or close?" },
+    { "id": 2, "routine": "big_boi", "ref": "schema.ts tsc", "url": null, "question": "228 schema.ts errors from Zod 3.25 ↔ drizzle-zod 0.8.3 — defer or downgrade Zod now?" },
+    { "id": 3, "routine": "optimus", "ref": "PR #215", "url": "https://github.com/Austinw004/FactoryFlowV2/pull/215", "question": "Keep open as visual reference or close once consumed?" },
+    { "id": 4, "routine": "daily_boost", "ref": "PR #226", "url": "https://github.com/Austinw004/FactoryFlowV2/pull/226", "question": "Approve regime guidance copy + merge?" },
+    { "id": 5, "routine": "weekly_clean", "ref": "PR #217", "url": "https://github.com/Austinw004/FactoryFlowV2/pull/217", "question": "Approve weekly hardening (headers, vulns, bulk caps) and merge?" },
+    { "id": 6, "routine": "weekly_clean", "ref": "branch-policy", "url": null, "question": "Keep feature-branch policy, or grant direct-to-main exception for Weekly Clean?" },
+    { "id": 7, "routine": "weekly_clean", "ref": "deferred-work", "url": null, "question": "Schedule any of bundle split / routes.ts split / TS2344 wave for next week, or all defer?" },
+    { "id": 8, "routine": "code_review", "ref": "PR #222", "url": "https://github.com/Austinw004/FactoryFlowV2/pull/222", "question": "Approve error-handling hardening + merge? Note: routes.ts conflict potential with #216 — suggest #222 first, then rebase #216." }
+  ],
+  "pending_clarifications": [],
+  "notes": "No prior digest state file existed at session start, so Step 5 (read previous reply) was skipped silently. PR #221 body indicates the 2026-05-08 digest also failed to send for the same reason."
+}
