@@ -2,7 +2,11 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <!-- Drop maximum-scale=1: it blocks user-initiated pinch-zoom on mobile,
+         which violates WCAG 1.4.4 (text resize up to 200%) and is a common
+         a11y-audit failure. iOS/Android still respect initial-scale=1 for
+         the default render; users can zoom past it when they need to. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Prescient Labs gives manufacturers the foresight to make smarter decisions - from predicting demand and timing purchases to optimizing production and protecting supply chains." />
     <meta name="theme-color" content="#0a0a0a" />
     <meta name="robots" content="index,follow" />
