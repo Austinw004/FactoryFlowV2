@@ -70,6 +70,9 @@ const EventMonitoring = lazy(() => import("@/pages/EventMonitoring"));
 const PilotRevenueDashboard = lazy(() => import("@/pages/PilotRevenueDashboard"));
 const ImpactDashboard = lazy(() => import("@/pages/ImpactDashboard"));
 const Training = lazy(() => import("@/pages/Training"));
+const HistoricalBacktesting = lazy(() => import("@/pages/HistoricalBacktesting"));
+const MultiTierSupplierMapping = lazy(() => import("@/pages/MultiTierSupplierMapping"));
+const BulkTest = lazy(() => import("@/pages/BulkTest"));
 
 // Loading fallback for lazy-loaded routes
 function PageLoadingFallback() {
@@ -267,6 +270,26 @@ function Router() {
       {/* Federal grant-readiness surfaces */}
       <Route path="/impact" component={ImpactDashboard} />
       <Route path="/training" component={Training} />
+
+      {/* Previously-orphaned components — written, sidebar-linked, but unrouted. */}
+      <Route path="/historical-backtesting" component={HistoricalBacktesting} />
+      <Route path="/multi-tier-supplier-mapping" component={MultiTierSupplierMapping} />
+      <Route path="/multi-tier-suppliers" component={MultiTierSupplierMapping} />
+      <Route path="/bulk-test" component={BulkTest} />
+
+      {/* Aliases for paths the sidebar / external docs reference but that
+          were never registered. Each maps to the canonical route's component. */}
+      <Route path="/dashboard-hub" component={DashboardOverviewRoute} />
+      <Route path="/operations-hub" component={OperationsMachineryRoute} />
+      <Route path="/strategy-hub" component={StrategyDigitalTwinRoute} />
+      <Route path="/procurement-hub" component={ProcurementPurchasingRoute} />
+      <Route path="/supply-chain-hub" component={SupplyChainInventoryRoute} />
+      <Route path="/api-documentation" component={ApiDocumentation} />
+      <Route path="/multi-horizon" component={DemandHorizonsRoute} />
+      <Route path="/demand-signals" component={DemandSignalsRoute} />
+      <Route path="/leads" component={LeadsAdmin} />
+      <Route path="/scenario-planning" component={StrategyScenariosRoute} />
+      <Route path="/m-a-intelligence" component={StrategyMaRoute} />
 
       {/* OAuth callback — routes through even if already authenticated */}
       <Route path="/auth/callback" component={AuthCallback} />
