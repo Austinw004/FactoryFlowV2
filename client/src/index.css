@@ -422,4 +422,29 @@
     background: hsl(var(--card));
     border: 1px solid hsl(var(--border));
   }
+
+  /* Regime tone classes — subtle visual cues that match the FDR regime.
+     The accent is small (a left rule + faint background tint) so the
+     dashboard FEELS the macro environment without ever feeling alarmist.
+     Critical operational signals (red destructive items) remain the
+     loudest thing on the page; regime tone is ambient. */
+  .regime-tone-stable {
+    border-left: 2px solid hsl(var(--border));
+    padding-left: 1.25rem;
+  }
+  .regime-tone-heating {
+    border-left: 2px solid hsl(45 90% 55% / 0.55);
+    padding-left: 1.25rem;
+    background: linear-gradient(90deg, hsl(45 90% 55% / 0.025) 0%, transparent 40%);
+  }
+  .regime-tone-stress {
+    border-left: 2px solid hsl(20 90% 55% / 0.6);
+    padding-left: 1.25rem;
+    background: linear-gradient(90deg, hsl(20 90% 55% / 0.03) 0%, transparent 40%);
+  }
+  .regime-tone-opportunity {
+    border-left: 2px solid hsl(150 60% 45% / 0.55);
+    padding-left: 1.25rem;
+    background: linear-gradient(90deg, hsl(150 60% 45% / 0.025) 0%, transparent 40%);
+  }
 }
