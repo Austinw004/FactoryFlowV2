@@ -78,7 +78,9 @@ export class MAIntelligencePopulationService {
             targetEmployees: target.employees,
           });
           targetsCreated++;
-        } catch (error) {}
+        } catch (error) {
+          console.warn("[M&A] insert failed:", error instanceof Error ? error.message : error);
+        }
       }
     }
 
@@ -98,7 +100,9 @@ export class MAIntelligencePopulationService {
             currentRegime: currentRegime,
           });
           targetsCreated++;
-        } catch (error) {}
+        } catch (error) {
+          console.warn("[M&A] insert failed:", error instanceof Error ? error.message : error);
+        }
       }
     }
 
@@ -114,7 +118,9 @@ export class MAIntelligencePopulationService {
           currentRegime: currentRegime,
         });
         recommendationsGenerated++;
-      } catch (error) {}
+      } catch (error) {
+        console.warn("[M&A] recommendation insert failed:", error instanceof Error ? error.message : error);
+      }
     }
 
     console.log(`[M&A] Created ${targetsCreated} targets, ${recommendationsGenerated} recommendations`);

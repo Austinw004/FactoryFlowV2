@@ -95,16 +95,21 @@ export function registerSensorIngestRoutes(app: Express) {
   // Lightweight health probe so customers can verify connectivity + auth
   // without writing data. Returns 200 on valid key, 401 otherwise.
   app.get("/api/sensors/ingest/health", async (req: Request, res: Response) => {
-    const headerKey =
-      (req.headers["x-api-key"] as string | undefined) ??
-      (req.headers["authorization"] as string | undefined);
-    const companyId = await authenticateByApiKey(headerKey);
-    if (!companyId) return res.status(401).json({ ok: false });
-    return res.json({
-      ok: true,
-      companyId: companyId.slice(0, 8) + "…",
-      maxBatch: MAX_BATCH,
-      rateLimitPerMinute: RATE_LIMIT_PER_MINUTE,
-    });
+    try {
+      const headerKey =
+        (req.headers["x-api-key"] as string | undefined) ??
+        (req.headers["authorization"] as string | undefined);
+      const companyId = await authenticateByApiKey(headerKey);
+      if (!companyId) return res.status(401).json({ ok: false });
+      return res.json({
+        ok: true,
+        companyId: companyId.slice(0, 8) + "…",
+        maxBatch: MAX_BATCH,
+        rateLimitPerMinute: RATE_LIMIT_PER_MINUTE,
+      });
+    } catch (err) {
+      console.error("[sensors/ingest/health] error:", err);
+      return res.status(500).json({ ok: false, error: "INTERNAL" });
+    }
   });
 }

@@ -108,7 +108,9 @@ export class ProductionMetricsPopulationService {
           await db.insert(productionMetrics).values(metric);
           metricsCreated++;
           totalOEE += metric.oee || 0;
-        } catch (error) {}
+        } catch (error) {
+          console.warn("[ProductionKPI] metric insert failed:", error instanceof Error ? error.message : error);
+        }
       }
 
       const events = await db
@@ -123,7 +125,9 @@ export class ProductionMetricsPopulationService {
           try {
             await db.insert(productionBottlenecks).values(bottleneck);
             bottlenecksFound++;
-          } catch (error) {}
+          } catch (error) {
+            console.warn("[ProductionKPI] bottleneck insert failed:", error instanceof Error ? error.message : error);
+          }
         }
       }
     }
@@ -197,7 +201,9 @@ export class ProductionMetricsPopulationService {
         });
         metricsCreated++;
         totalOEE += oee;
-      } catch (error) {}
+      } catch (error) {
+        console.warn("[ProductionKPI] synthetic metric insert failed:", error instanceof Error ? error.message : error);
+      }
     }
 
     const avgOEE = metricsCreated > 0 ? totalOEE / metricsCreated : 0;
