@@ -1,0 +1,47 @@
+{
+  "today": "2026-05-15",
+  "priorDate": null,
+  "priorReplyChecksum": null,
+  "send": {
+    "attempted": true,
+    "ok": false,
+    "reason": "SendPulse credentials not configured (SENDPULSE_USER_ID + SENDPULSE_SECRET env vars unset in this routine environment)",
+    "failureLog": "/tmp/digest-failures.jsonl"
+  },
+  "summary": {
+    "ranCleanly": 3,
+    "needEyes": 3,
+    "blocking": 0
+  },
+  "routines": {
+    "Big Boi": { "status": "silent", "items": [] },
+    "Optimus": { "status": "silent", "items": [] },
+    "Daily Boost": {
+      "status": "activity",
+      "items": [
+        { "type": "pr", "number": 233, "branch": "claude/exciting-fermi-j4HTd", "state": "open-draft", "ci": "typecheck-red", "additions": 1904, "deletions": 1854, "files": 3 }
+      ]
+    },
+    "Palantard Grade": {
+      "status": "activity",
+      "items": [
+        { "type": "pr", "number": 234, "branch": "claude/vigilant-allen-8YwvO", "state": "open-draft", "ci": "typecheck-red", "additions": 349, "deletions": 54, "files": 4 }
+      ]
+    },
+    "Weekly Clean": {
+      "status": "activity",
+      "items": [
+        { "type": "pr", "number": 235, "branch": "claude/festive-dijkstra-Lv717", "state": "open-draft", "ci": "typecheck-red", "additions": 83, "deletions": 55, "files": 9 }
+      ]
+    },
+    "Code Review": { "status": "silent", "items": [] }
+  },
+  "decisionsNeeded": [
+    { "id": 1, "routine": "Daily Boost", "ref": "PR #233", "url": "https://github.com/Austinw004/FactoryFlowV2/pull/233", "question": "Approve and merge daily maintenance PR (axios/postcss CVE patches + 4 TS fixes)? CI typecheck-red is the known zod/drizzle-zod issue #232." },
+    { "id": 2, "routine": "Palantard Grade", "ref": "PR #234", "url": "https://github.com/Austinw004/FactoryFlowV2/pull/234", "question": "Smoke-test the dashboard regime-brief redesign in browser then merge, or hand back for adjustments?" },
+    { "id": 3, "routine": "Weekly Clean", "ref": "PR #235", "url": "https://github.com/Austinw004/FactoryFlowV2/pull/235", "question": "Approve and merge weekly clean (security headers, axios HIGH→0, bundle 563→232kB)?" },
+    { "id": 4, "routine": "Daily Boost / Palantard Grade / Weekly Clean", "ref": "branch policy", "url": null, "question": "Routines flagged that 'push directly to main' is being overridden by branch protection — confirm draft-PR-only as the durable mode (codify in CLAUDE.md), or grant direct-push for any of them?" },
+    { "id": 5, "routine": "(meta) CI", "ref": "Issue #232", "url": "https://github.com/Austinw004/FactoryFlowV2/issues/232", "question": "Pick fix path for zod 3.25 / drizzle-zod 0.8 / hookform-resolvers 3.x typecheck collision: (a) pin zod ~3.24.4, (b) bump @hookform/resolvers to 5.x + drizzle-zod, or (c) defer." },
+    { "id": 6, "routine": "Daily Boost vs Weekly Clean", "ref": "PR #233 ↔ PR #235", "url": null, "question": "Both PRs touch server/routes.ts and bumped package-lock.json. Pick merge order — second one rebases." }
+  ]
+}
