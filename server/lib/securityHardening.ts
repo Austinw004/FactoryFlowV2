@@ -335,11 +335,17 @@ export function securityHeadersMiddleware(req: Request, res: Response, next: Nex
   // Prevent MIME sniffing
   res.setHeader('X-Content-Type-Options', 'nosniff');
 
-  // Enable XSS protection
-  res.setHeader('X-XSS-Protection', '1; mode=block');
+  // X-XSS-Protection: 0 disables the legacy auditor — modern guidance (OWASP,
+  // MDN) is that the old reflective-XSS filter introduced bypasses of its
+  // own, and CSP is the header of record for XSS defense.
+  res.setHeader('X-XSS-Protection', '0');
 
   // Referrer policy
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+  // Cross-Origin-Opener-Policy: isolate the browsing context group from
+  // other origins (mitigates Spectre-class side-channel attacks).
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
 
   // Content Security Policy — tighter in production, permissive in development
   const isProduction = process.env.NODE_ENV === 'production';
@@ -365,8 +371,13 @@ export function securityHeadersMiddleware(req: Request, res: Response, next: Nex
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   }
   
-  // Permissions Policy
-  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  // Permissions Policy — kept in sync with server/index.ts. We re-set it here
+  // because this middleware runs after the index.ts header middleware and
+  // setHeader overwrites; if these drift, the narrower one wins silently.
+  res.setHeader(
+    'Permissions-Policy',
+    'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()',
+  );
   
   next();
 }
