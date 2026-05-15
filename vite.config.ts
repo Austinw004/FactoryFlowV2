@@ -37,6 +37,22 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        // Split long-lived vendor code into separate cacheable chunks so app
+        // updates don't invalidate React/Radix/etc. on every deploy and the
+        // main entry stops carrying ~200kB of vendor weight.
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return;
+          if (id.includes("/react-dom/") || id.includes("/react/") || id.includes("/scheduler/")) {
+            return "react-vendor";
+          }
+          if (id.includes("@tanstack/")) return "query-vendor";
+          if (id.includes("@radix-ui/")) return "radix-vendor";
+          if (id.includes("lucide-react")) return "icons-vendor";
+        },
+      },
+    },
   },
   server: {
     fs: {
