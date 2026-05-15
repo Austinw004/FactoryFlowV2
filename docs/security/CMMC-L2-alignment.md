@@ -60,7 +60,9 @@ underlying 110-control status.
    is unusually strong for a small-business SaaS; it directly answers
    industrial-base supply-chain scrutiny.
 3. **Clean dependency posture.** 0 critical / 0 high CVEs in production
-   bundles after the 2026-04-14 audit pass.
+   bundles after the 2026-05-15 audit pass (axios SSRF/prototype-pollution
+   patched). 5 moderate CVEs remain in dev-time tools (vite, drizzle-kit,
+   esbuild) — not reachable in the production runtime.
 4. **Deny-by-default architecture.** Public endpoints are enumerated and
    justified; every other route demands authentication.
 
