@@ -3417,16 +3417,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/demand-history/bulk", isAuthenticated, async (req: any, res) => {
+  // Cap bulk imports at 1000 rows per request — prevents payload-bomb DoS and
+  // bounds memory usage of the per-item .parse() loop. Clients with larger
+  // datasets should chunk client-side.
+  const bulkDemandHistorySchema = z.object({
+    items: z.array(insertDemandHistorySchema).min(1).max(1000),
+  });
+  app.post("/api/demand-history/bulk", isAuthenticated, validateBody(bulkDemandHistorySchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      const items = req.body.items || [];
+      const { items } = req.validated as z.infer<typeof bulkDemandHistorySchema>;
       // Batch-validate all SKU IDs in one query to avoid N+1
-      const skuIds: string[] = [...new Set<string>(items.map((item: { skuId: string }) => item.skuId))];
+      const skuIds: string[] = [...new Set<string>(items.map((item) => item.skuId))];
       const companySkus = await storage.getSkus(user.companyId);
       const companySkuIds = new Set(companySkus.map(s => s.id));
       for (const skuId of skuIds) {
@@ -3434,9 +3440,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(403).json({ error: `Access denied for SKU ${skuId}` });
         }
       }
-      const validated = items.map((item: any) => insertDemandHistorySchema.parse(item));
-      await storage.bulkCreateDemandHistory(validated);
-      res.status(201).json({ count: validated.length });
+      await storage.bulkCreateDemandHistory(items);
+      res.status(201).json({ count: items.length });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
@@ -3554,14 +3559,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/multi-horizon-forecasts/bulk", isAuthenticated, async (req: any, res) => {
+  // Cap bulk imports at 1000 forecasts per request — same DoS reasoning as
+  // /api/demand-history/bulk above.
+  const bulkMultiHorizonForecastSchema = z.object({
+    forecasts: z.array(insertMultiHorizonForecastSchema.omit({ companyId: true } as any).passthrough()).min(1).max(1000),
+  });
+  app.post("/api/multi-horizon-forecasts/bulk", isAuthenticated, validateBody(bulkMultiHorizonForecastSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      const forecasts = req.body.forecasts || [];
+      const { forecasts } = req.validated as z.infer<typeof bulkMultiHorizonForecastSchema>;
+      // Re-parse with companyId injected — preserves the original per-item
+      // tight schema check (Zod's omit/passthrough on the wrapper is lenient).
       const validated = forecasts.map((f: any) => insertMultiHorizonForecastSchema.parse({
         ...f,
         companyId: user.companyId,
