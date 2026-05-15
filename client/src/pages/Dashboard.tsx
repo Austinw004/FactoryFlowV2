@@ -63,6 +63,92 @@ function getRegimeDescription(regime: string): string {
   return regimeDescriptions[regime] || "Economic conditions are being analyzed.";
 }
 
+// Regime-driven procurement playbook. This is the product's intelligence — the
+// reason a Plant Director opens the dashboard. Each regime maps to a concrete
+// strategic posture, a plain-language briefing, and the specific actions a
+// procurement team should be taking RIGHT NOW. The wording is deliberately
+// operational (what to DO), not academic (what the model is doing).
+type RegimeBrief = {
+  headline: string;        // The h1 sentence — the "so what" in one line
+  stance: string;          // 2-4 word strategic posture
+  briefing: string;        // What this regime means for procurement, in 1-2 sentences
+  toneClass: string;       // Subtle color accent for the page tone
+  dotClass: string;        // Status dot color
+  actions: Array<{
+    label: string;
+    detail: string;
+    href: string;
+    primary?: boolean;
+  }>;
+};
+
+const regimeBriefs: Record<string, RegimeBrief> = {
+  HEALTHY_EXPANSION: {
+    headline: "Market conditions are stable. Standard procurement pace.",
+    stance: "Hold pace · Negotiate long",
+    briefing:
+      "Asset markets and the real economy are moving in step. This is the window for long-term agreements — suppliers are unlikely to push pricing aggressively, and demand signals are reliable.",
+    toneClass: "regime-tone-stable",
+    dotClass: "bg-good",
+    actions: [
+      { label: "Review expiring contracts", detail: "Lock in 12-24 month terms while leverage is balanced", href: "/contract-management", primary: true },
+      { label: "Run quarterly forecast", detail: "Confidence is high — set baseline reorder points", href: "/forecasting" },
+    ],
+  },
+  ASSET_LED_GROWTH: {
+    headline: "Asset markets are running ahead of the real economy. Input costs likely to rise 8–12% this quarter.",
+    stance: "Accelerate critical buys · Lock in pricing",
+    briefing:
+      "Capital is bidding up commodities and inputs before underlying demand confirms it. Historically this regime precedes input cost increases of 8–12% within one quarter. The action window for locking in supplier pricing is narrowing.",
+    toneClass: "regime-tone-heating",
+    dotClass: "bg-yellow-500",
+    actions: [
+      { label: "View materials at risk", detail: "Prioritize coverage on single-sourced and price-volatile inputs", href: "/inventory-management", primary: true },
+      { label: "Start contract negotiations", detail: "Lock pricing on critical materials before Q+1 pricing cycle", href: "/contract-management" },
+      { label: "Pre-purchase critical materials", detail: "Convert open-market exposure into fixed-cost inventory", href: "/automated-po" },
+    ],
+  },
+  IMBALANCED_EXCESS: {
+    headline: "Significant decoupling detected. Defer non-critical purchases. Build safety stock only on critical materials.",
+    stance: "Defer non-critical · Renegotiate · Selective safety stock",
+    briefing:
+      "Asset prices have run well past what real-economy demand can sustain. Corrections from this regime typically include supplier distress, payment-term tightening, and short-notice price resets. Cash and optionality matter more than coverage.",
+    toneClass: "regime-tone-stress",
+    dotClass: "bg-orange-500",
+    actions: [
+      { label: "Defer non-critical POs", detail: "Push out discretionary spend by 30–60 days; preserve cash", href: "/automated-po", primary: true },
+      { label: "Renegotiate expiring contracts", detail: "Use macro signal as leverage — suppliers know the cycle too", href: "/contract-management" },
+      { label: "Build safety stock — critical only", detail: "6–8 weeks on single-source and long-lead items; nothing else", href: "/inventory-management" },
+    ],
+  },
+  REAL_ECONOMY_LEAD: {
+    headline: "Counter-cyclical window. Favorable supplier terms available — lock them in before asset markets re-couple.",
+    stance: "Lock in terms · Extend coverage",
+    briefing:
+      "The real economy is leading; asset markets are correcting. Suppliers are competing on terms, lead times are stable, and quality data is reliable. This is the regime where procurement teams convert market dislocation into structural cost advantage.",
+    toneClass: "regime-tone-opportunity",
+    dotClass: "bg-good",
+    actions: [
+      { label: "Renegotiate expiring agreements", detail: "Press for 24-36 month terms while leverage favors buyers", href: "/contract-management", primary: true },
+      { label: "Qualify backup suppliers", detail: "Suppliers are responsive — close dual-source gaps now", href: "/supplier-tier-mapping" },
+      { label: "Extend coverage on strategic inputs", detail: "Pricing window is open; back up the BOM-critical SKUs", href: "/inventory-management" },
+    ],
+  },
+};
+
+function getRegimeBrief(regime: string): RegimeBrief {
+  return regimeBriefs[regime] || {
+    headline: "Analyzing economic conditions.",
+    stance: "Awaiting signal",
+    briefing: "The platform is gathering market and real-economy data to classify the current regime and generate procurement guidance.",
+    toneClass: "regime-tone-stable",
+    dotClass: "bg-muted-foreground",
+    actions: [
+      { label: "Review onboarding checklist", detail: "Complete data setup so regime intelligence can activate", href: "/how-it-works", primary: true },
+    ],
+  };
+}
+
 export default function Dashboard() {
   const { toast } = useToast();
   const { user, isLoading: authLoading } = useAuth();
@@ -337,15 +423,78 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="mb-16">
-        <div className="eyebrow mb-4">State of operations</div>
-        <h1 className="hero text-5xl">{regime?.regime ? getRegimeDescription(regime.regime).split('.')[0] + '.' : 'Analyzing conditions.'}</h1>
-        <p className="text-soft mt-5 max-w-xl leading-relaxed">
-          {Array.isArray(skus) && skus.length > 0
-            ? `Tracking ${skus.length.toLocaleString()} SKU${skus.length === 1 ? '' : 's'}. ${regime?.regime === 'HEALTHY_EXPANSION' ? 'No critical exposures.' : 'Review current regime conditions.'}`
-            : 'Add your first SKU to start tracking operations.'}
-        </p>
-      </div>
+      {(() => {
+        const brief = getRegimeBrief(regimeType);
+        const regimeDays = regimeEvidence?.regimeDurationDays ?? 0;
+        return (
+          <div className={`mb-16 ${brief.toneClass}`} data-testid="hero-regime-brief">
+            <div className="eyebrow mb-4 flex items-center gap-3">
+              <span className={`dot ${brief.dotClass}`} />
+              <span>Procurement command brief</span>
+              <span className="text-muted-foreground/60">·</span>
+              <span className="mono">{friendlyRegime}</span>
+              {regimeDays > 0 && (
+                <>
+                  <span className="text-muted-foreground/60">·</span>
+                  <span className="mono">FDR {fdr.toFixed(2)}</span>
+                  <span className="text-muted-foreground/60">·</span>
+                  <span>Stable {regimeDays}d</span>
+                </>
+              )}
+              {regimeDays === 0 && fdr > 0 && (
+                <>
+                  <span className="text-muted-foreground/60">·</span>
+                  <span className="mono">FDR {fdr.toFixed(2)}</span>
+                </>
+              )}
+            </div>
+            <h1 className="hero text-4xl md:text-5xl max-w-4xl" data-testid="hero-regime-headline">
+              {brief.headline}
+            </h1>
+            <p className="text-soft mt-5 max-w-3xl leading-relaxed" data-testid="hero-regime-briefing">
+              {brief.briefing}
+            </p>
+            <div className="mt-6 flex items-baseline gap-3 text-sm">
+              <span className="eyebrow">Recommended stance</span>
+              <span className="text-foreground font-medium">{brief.stance}</span>
+            </div>
+
+            <div className="mt-8 border-t border-line pt-6">
+              <div className="eyebrow mb-4">Take action now</div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {brief.actions.map((action, idx) => (
+                  <button
+                    key={action.href + idx}
+                    onClick={() => setLocation(action.href)}
+                    className={`text-left p-4 border transition-colors hover-elevate ${
+                      action.primary
+                        ? "border-foreground/40 bg-foreground/[0.02]"
+                        : "border-border/60"
+                    }`}
+                    data-testid={`button-regime-action-${idx}`}
+                  >
+                    <div className="text-sm font-medium text-foreground flex items-center justify-between gap-2">
+                      <span>{action.label}</span>
+                      <span className="text-muted-foreground">→</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                      {action.detail}
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-4 max-w-3xl leading-relaxed">
+                <span className="font-medium text-foreground">Why this brief:</span>{" "}
+                Recommendations are generated from the FDR (Financial-Real Decoupling) regime model, which detects when asset markets are running ahead of, in line with, or behind real-economy production.
+                {dataSource === 'external' && ' Live data from FRED, World Bank, IMF, OECD, and 12+ additional macroeconomic sources.'}
+                {dataSource === 'fallback' && ' Currently using fallback economic data while external feeds reconnect.'}
+                {dataSource === 'balance_sheet' && ' Derived from your imported financial statements.'}
+                {Array.isArray(skus) && skus.length > 0 && ` Applied across ${skus.length.toLocaleString()} active SKU${skus.length === 1 ? '' : 's'}.`}
+              </p>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="grid grid-cols-4 gap-px bg-line mb-20">
         <div className="bg-panel p-6">
