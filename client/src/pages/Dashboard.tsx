@@ -154,14 +154,32 @@ export default function Dashboard() {
   const { user, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
 
+  // Track the most recent regime shift so we can surface it as a prominent
+  // banner on the dashboard — not just a transient toast. A regime change
+  // is THE event in this product; it must be impossible to miss.
+  const [recentRegimeShift, setRecentRegimeShift] = useState<{
+    from: string;
+    to: string;
+    fdr: number;
+    at: number;
+  } | null>(null);
+
   // Enable WebSocket for real-time updates with regime change notifications
   const { isConnected } = useWebSocket((message) => {
     if (message.type === 'regime_change' && message.data) {
       const severity = message.data.severity === 'high' ? 'destructive' : 'default';
-      
+      const fdrNum = Number.isFinite(Number(message.data.fdr)) ? Number(message.data.fdr) : 0;
+
+      setRecentRegimeShift({
+        from: message.data.from,
+        to: message.data.to,
+        fdr: fdrNum,
+        at: Date.now(),
+      });
+
       toast({
         title: "Economic Regime Changed",
-        description: `The economic regime has shifted from ${message.data.from} to ${message.data.to}. FDR: ${Number.isFinite(Number(message.data.fdr)) ? Number(message.data.fdr).toFixed(2) : '—'}`,
+        description: `The economic regime has shifted from ${message.data.from} to ${message.data.to}. FDR: ${fdrNum ? fdrNum.toFixed(2) : '—'}`,
         variant: severity as 'default' | 'destructive',
         duration: 10000, // Show for 10 seconds
       });
@@ -410,8 +428,40 @@ export default function Dashboard() {
   }
 
   // Main dashboard content
+  const regimeFriendlyName = (key: string) => regimeLabels[key] || key?.replace(/_/g, ' ') || 'Unknown';
   return (
     <div className="p-12 max-w-5xl">
+      {/* Regime shift banner — surfaces the most important macro event */}
+      {recentRegimeShift && (
+        <div
+          className="mb-8 border border-yellow-500/30 bg-yellow-500/[0.04] px-5 py-4 flex items-start justify-between gap-4"
+          data-testid="banner-regime-shift"
+        >
+          <div className="flex items-start gap-3">
+            <span className="dot bg-yellow-500 mt-2 animate-pulse" />
+            <div>
+              <div className="eyebrow mb-1">Regime shift · just now</div>
+              <p className="text-sm leading-relaxed">
+                <span className="font-medium">{regimeFriendlyName(recentRegimeShift.from)}</span>
+                <span className="text-muted-foreground"> → </span>
+                <span className="font-medium">{regimeFriendlyName(recentRegimeShift.to)}</span>
+                <span className="text-muted-foreground"> · FDR {recentRegimeShift.fdr.toFixed(2)}</span>
+              </p>
+              <p className="text-xs text-muted-foreground mt-1 max-w-2xl leading-relaxed">
+                This changes your procurement posture. Review the updated brief below — recommendations have been re-generated for the new regime.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setRecentRegimeShift(null)}
+            className="text-xs text-muted-foreground hover:text-foreground uppercase tracking-wider"
+            data-testid="button-dismiss-regime-shift"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* Trial banner */}
       {subscriptionData?.status === 'trialing' && (
         <div className="trial-banner px-6 py-4 mb-12 flex items-center justify-between">
