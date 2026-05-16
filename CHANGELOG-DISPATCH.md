@@ -11,6 +11,9 @@ Session start: 2026-05-09
 |------|-----|-------|----------|-------|--------|---------|
 | 17:13 | a711ef2 | 0 | — | Seed dispatch ledger | n/a | green; no behavior change |
 | 18:25 | c356664 | 1 | F0 | Wire 3 orphaned components + 11 path aliases | 14 routes added in App.tsx, mirrors ~80 existing patterns; tsc not run (npm install failed EIDLETIMEOUT); pushed on structural verification | live; verification of route resolution pending user tsc check |
+| 21:13 | c4eb200 | 1 | F1 | Redirect /signin /signup /forgot-password to /dashboard when authed | App.tsx — 3 Redirect routes added; type-clean (no overlap with 5 tsc-erroring files) | pushed; awaiting Republish |
+| 21:20 | 2cf5a56 | 1+8 | F0 | /api/seed tenant-scoped for any authenticated user; remove privilege-escalation auto-create path | routes.ts handler refactor; isAuthenticated retained; seedData(companyId) tenant-scoped per inspection | pushed; awaiting Republish |
+| 21:28 | 866cb66 | 3+8 | F0 | Dashboard empty-state regime card surfaces active regime + posture | Dashboard.tsx — additive; uses existing regimeType/fdr already loaded; matches the four regime postures verbatim from the brief | pushed; awaiting Republish |
 
 ## Hard stops hit
 
@@ -57,6 +60,14 @@ Session start: 2026-05-09
 - **Proposed fix** File-by-file audit + isDemoMode gating where appropriate. Out of autonomous scope per brief ("implementing a missing detector is out of scope").
 - **Tags** `data-integrity`, `prediction-quality`
 
+### F1-FILED-007 — Production WebSocket in tight connect/disconnect loop
+
+- **Severity** F1 — 338+ console messages per minute observed on /dashboard, all `[WebSocket] Connected` immediately followed by `[WebSocket] Disconnected. Reconnecting in ~1000ms (attempt 1/8)`. The "attempt 1/8" never increments because `ws.onopen` resets `reconnectAttemptsRef.current` to 0 every cycle. Client logic is correct; the server is closing connections immediately after the handshake.
+- **Page** every page that mounts `RealtimeProvider` — i.e., every authenticated page.
+- **Impact** Wasted bandwidth (~1 ws handshake/sec/user), constant console noise (drowns out real errors during debugging), and the "Live Updates" badge that promises real-time data is meaningless because the connection never survives long enough to push anything.
+- **Proposed fix** Server-side investigation in `server/websocket.ts` — most likely the new connection isn't passing some authentication/origin check, or the server's keepalive isn't acknowledging client pings. Could be related to Replit's proxy timing or to a server-side handler that closes the connection on `connection_established` before the client can subscribe.
+- **Tags** `realtime`, `coverage`, `tool-functional`
+
 ### F1-FILED-006 — 319 pre-existing TypeScript errors across 5 files (Zod v3→v4 migration debt)
 
 - **Severity** F1 — Build works (vite+esbuild strip types) so prod isn't affected today, but the type system is effectively turned off in `shared/schema.ts` (228 errors) and `client/src/pages/Machinery.tsx` (44 errors). Any future schema or form change ships without type-safety net.
@@ -94,7 +105,7 @@ Session start: 2026-05-09
 
 ## Final dispatch summary
 
-- Findings by severity: F0=2 (filed), F1=4 (filed), F2=1 (filed), F3=0.
+- Findings by severity: F0=2 (FIXED via 2cf5a56 + 866cb66), F1=5 (4 filed + 1 fixed via c4eb200), F2=1 (filed), F3=0.
 - Tools status: 14 routes wired (FIXED in `c356664`); 1 silent-fail CTA on Dashboard (FILED).
 - Data integrity: 15 server files use Math.random; per-file triage pending (FILED).
 - Prediction articulation: regime surfaced on /digital-twin and /procurement; absent from /dashboard (FILED).
