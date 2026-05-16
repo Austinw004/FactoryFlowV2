@@ -1310,59 +1310,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Seed data endpoint (for demo purposes)
-  // Gated behind manage_users permission AND (in prod) explicit enable flag.
-  // Without this gate, any authenticated user could spawn a new company +
-  // assign themselves admin — a privilege-escalation risk.
-  app.post('/api/seed', isAuthenticated, requirePermission('manage_users'), async (req: any, res) => {
-    if (process.env.NODE_ENV === 'production' && process.env.ENABLE_SEED_ENDPOINT !== 'true') {
-      return res.status(403).json({ error: "Seed endpoint is disabled in production." });
-    }
+  // Sample-data load endpoint (called by Dashboard's "Load Sample Data" CTA).
+  //
+  // Previously this required `manage_users` permission AND was disabled in
+  // production unless ENABLE_SEED_ENDPOINT=true. The original gate was a
+  // privilege-escalation defense: the handler used to auto-create a company
+  // and assign the caller admin role if they had no company yet, which any
+  // authenticated user could exploit to become admin of a fresh company.
+  //
+  // That escalation path is now removed (callers without a company are
+  // rejected with 400 — they should finish /onboarding first). What remains
+  // is purely tenant-scoped: `seedData(companyId)` only inserts rows tagged
+  // with the caller's existing companyId, so the worst a user can do is
+  // populate their OWN company. That's the intended self-serve demo
+  // experience and doesn't need an admin gate.
+  app.post('/api/seed', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      let user = await storage.getUser(userId);
-      
+      const user = await storage.getUser(userId);
+
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
 
-      // Create company if user doesn't have one
       if (!user.companyId) {
-        const company = await storage.createCompany({
-          name: `${user.firstName || 'User'}'s Company`,
-        });
-        
-        // Initialize default roles for the new company
-        console.log(`[RBAC] Initializing default roles for company ${company.id}`);
-        await initializeDefaultRoles(company.id);
-        
-        // Assign Admin role to the first user
-        const adminRole = await storage.getRoleByName(company.id, "Admin");
-        if (adminRole) {
-          await storage.assignRoleToUser(userId, adminRole.id, company.id, userId);
-          console.log(`[RBAC] Assigned Admin role to user ${userId}`);
-        }
-        
-        // Update user with company
-        user = await storage.upsertUser({
-          ...user,
-          companyId: company.id,
+        return res.status(400).json({
+          error: "ONBOARDING_REQUIRED",
+          message: "Complete onboarding (set up your company) before loading sample data.",
         });
       }
 
-      // Import seed function
       const { seedData } = await import("./seed");
-      const result = await seedData(user.companyId!);
-      
-      // Invalidate server-side cache for this company's data
-      const companyId = user.companyId!;
+      const result = await seedData(user.companyId);
+
+      // Invalidate server-side cache so the dashboard sees the seeded rows
+      // on its next query.
+      const companyId = user.companyId;
       globalCache.invalidate(`masterData:skus:${companyId}`);
       globalCache.invalidate(`masterData:materials:${companyId}`);
       globalCache.invalidate(`masterData:suppliers:${companyId}`);
       globalCache.invalidate(`masterData:allocations:${companyId}`);
-      console.log(`[Seed] Invalidated cache for company ${companyId}`);
-      
-      res.json({ message: "Seed data created successfully", result });
+      console.log(`[Seed] Tenant-scoped seed for company ${companyId} by user ${userId}`);
+
+      res.json({ message: "Sample data loaded.", result });
     } catch (error: any) {
       console.error("Seed error:", error);
       res.status(500).json({ error: error.message });
