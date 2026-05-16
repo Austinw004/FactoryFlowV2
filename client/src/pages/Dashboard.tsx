@@ -251,6 +251,19 @@ export default function Dashboard() {
   
   const friendlyRegime = regimeLabels[regimeType] || regimeType;
 
+  // One-line posture summary keyed off the active regime — the thesis baked
+  // into the customer's first screen so the empty-state still answers Persona
+  // Q1 ("what regime are we in, what does it mean for me?"). Matches the
+  // canonical posture descriptions documented in the Dispatch test brief.
+  const regimePostures: Record<string, string> = {
+    HEALTHY_EXPANSION:  "Forward-buy critical materials, lock contracts, scale capacity. Optimistic with discipline.",
+    ASSET_LED_GROWTH:   "Shorten lead times, hedge cost inflation, watch credit conditions. Alert-but-engaged.",
+    IMBALANCED_EXCESS:  "Build inventory buffer on critical inputs, scenario-plan a downturn, defer expansion. Defensive.",
+    REAL_ECONOMY_LEAD:  "Secure supply ahead of price moves, longer-term contracts, lock capacity. Grab-it-while-you-can.",
+    UNKNOWN:            "Regime signals still loading. Posture recommendations appear once the analysis stabilizes.",
+  };
+  const regimePosture = regimePostures[regimeType] || regimePostures.UNKNOWN;
+
   // Show loading state (wait for auth first, then data)
   if (authLoading || (user && (skusLoading || regimeLoading))) {
     return (
@@ -274,6 +287,28 @@ export default function Dashboard() {
               </Badge>
             </div>
           </div>
+          {/* Regime card — always present on the empty-state so customers can
+              answer Persona Q1 ("what regime are we in?") without first
+              loading data. Pulls the live regime + posture from
+              /api/economics/regime (already queried via `regime` above). */}
+          <Card className="p-6" data-testid="card-empty-regime">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+                  Current Economic Regime
+                </p>
+                <h2 className="text-2xl font-semibold mb-2" data-testid="text-empty-regime-name">
+                  {friendlyRegime}
+                </h2>
+                <p className="text-sm text-muted-foreground leading-relaxed max-w-3xl">
+                  {regimePosture}
+                </p>
+              </div>
+              <Badge variant="outline" className="gap-1.5 shrink-0">
+                <span className="text-xs">FDR {fdr.toFixed(2)}</span>
+              </Badge>
+            </div>
+          </Card>
           <Card className="p-12">
             <div className="text-center space-y-6">
               <Package className="h-16 w-16 mx-auto text-muted-foreground" />
