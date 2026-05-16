@@ -14,6 +14,10 @@ Session start: 2026-05-09
 | 21:13 | c4eb200 | 1 | F1 | Redirect /signin /signup /forgot-password to /dashboard when authed | App.tsx — 3 Redirect routes added; type-clean (no overlap with 5 tsc-erroring files) | **LIVE & VERIFIED** — navigated /signin via JS, final pathname = /dashboard, h1 = "Dashboard" |
 | 21:20 | 2cf5a56 | 1+8 | F0 | /api/seed tenant-scoped for any authenticated user; remove privilege-escalation auto-create path | routes.ts handler refactor; isAuthenticated retained; seedData(companyId) tenant-scoped per inspection | **LIVE & VERIFIED** — POST /api/seed for non-admin user `qa-1778291133` returned 200 with `{"message":"Sample data loaded.","result":{...materials:[Carbon Steel, Stainless Steel 304, Aluminum 6061, Copper, ...]}}` |
 | 21:28 | 866cb66 | 3+8 | F0 | Dashboard empty-state regime card surfaces active regime + posture | Dashboard.tsx — additive; uses existing regimeType/fdr already loaded; matches the four regime postures verbatim from the brief | **LIVE & VERIFIED** — fresh tenant `qa-rcsmoke-1778959218`'s dashboard renders eyebrow "CURRENT ECONOMIC REGIME", h2 "Healthy Expansion", body "Forward-buy critical materials, lock contracts, scale capacity. Optimistic with discipline.", FDR 1.00 badge — above the existing Get Started card |
+| 23:55 | 8ec097b | 3 | F0 | calculateSignalsForRegime() descriptions aligned with brief postures for all 4 regimes | routes.ts — text + action key rewrite in one switch block; downstream consumers (PolicySignals.tsx, Procurement.tsx) verified non-breaking via grep | pushed; awaiting Republish |
+| 23:58 | 5692a87 | 4 | F1 | Smart Insights stop rendering "undefined units" / NaN to customer | smartInsights.ts — Number.isFinite guards on two dataPoints map calls; deeper field-source fix (skus ↔ inventory join) filed for follow-up | pushed; awaiting Republish |
+| 00:05 | fd76178 | 3+5 | F0 | /api/copilot/query: JWT-auth resolution + regime-coherence pushback on hostile prompts | routes.ts handler reads jwtUser.sub fallback; copilotService imports getCompanyRegimeIntelligence and appends "Active economic regime: X. Recommended posture: Y" + prepends pushback when intent contradicts regime posture | pushed; awaiting Republish |
+| 00:15 | b4be2c3 | 4+6 | F1 | WebSocket handshake accepts JWT via ?token=… (dual auth with connect.sid cookie) | server/websocket.ts + client/src/hooks/useWebSocket.ts — verified live: WS upgrade with ?token=$JWT returns HTTP 101 Switching Protocols | **LIVE & VERIFIED** — handshake 101 success |
 
 ## Hard stops hit
 
@@ -105,7 +109,8 @@ Session start: 2026-05-09
 
 ## Final dispatch summary
 
-- Findings by severity: F0=2 (FIXED via 2cf5a56 + 866cb66), F1=5 (4 filed + 1 fixed via c4eb200), F2=1 (filed), F3=0.
+- Findings by severity: F0=4 (all FIXED: 2cf5a56 seed, 866cb66 dashboard regime, 8ec097b signals, fd76178 advisor), F1=7 (3 fixed: c4eb200 redirect, b4be2c3 WS, 5692a87 undefined-units; 4 filed: Math.random gating, Zod-v4 debt, advisor not real LLM, deeper insights field-source), F2=1, F3=0.
+- Perf: TTFB ~120ms on / and /dashboard, JS bundle 168 KB gzipped (550 KB raw), CSS 118 KB.
 - Tools status: 14 routes wired (FIXED in `c356664`); 1 silent-fail CTA on Dashboard (FILED).
 - Data integrity: 15 server files use Math.random; per-file triage pending (FILED).
 - Prediction articulation: regime surfaced on /digital-twin and /procurement; absent from /dashboard (FILED).
