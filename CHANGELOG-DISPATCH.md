@@ -73,7 +73,23 @@ Session start: 2026-05-09
 - **Proposed fix** Server-side investigation in `server/websocket.ts` — most likely the new connection isn't passing some authentication/origin check, or the server's keepalive isn't acknowledging client pings. Could be related to Replit's proxy timing or to a server-side handler that closes the connection on `connection_established` before the client can subscribe.
 - **Tags** `realtime`, `coverage`, `tool-functional`
 
-### F1-FILED-006 — 319 pre-existing TypeScript errors (Zod v3→v4 migration debt) — REMAINS FILED
+### F1-FILED-006 — 319 pre-existing TypeScript errors (Zod v3→v4 migration debt) — ATTEMPT FAILED, REMAINS FILED
+
+**Round-6 attempt (d740958)**: bumped `"zod": "^3.24.2"` → `"^3.25.1"` to satisfy what looked like a `drizzle-zod` 0.8 peer requirement per [drizzle-orm issue #4249](https://github.com/drizzle-team/drizzle-orm/issues/4249). User republished, ran `npx tsc --noEmit`, **same 319 errors**. The zod floor bump is harmless (semver-safe minor on a stable line) but didn't address the root cause.
+
+**Diagnosis after the failed attempt**: the error pattern is `Type 'ZodObject<…>' does not satisfy the constraint 'ZodType<any, any, any>': missing _type, _parse, _getType, _getOrReturnCtx`. Those are zod **v3** internal properties. The schemas returned by `drizzle-zod` 0.8.3's `createInsertSchema()` are **v4-shape** (they carry `_zod: _$ZodTypeInternals` instead of the v3 `_type/_parse` cluster). Bumping zod doesn't change drizzle-zod's output shape; the mismatch persists.
+
+**Next attempt to try — NOT pushed autonomously**:
+```bash
+# In Replit shell, on a non-prod branch ideally:
+npm install drizzle-zod@^0.5
+# then npm run build to confirm no runtime regression
+# then npx tsc --noEmit to confirm errors cleared
+```
+
+Pin drizzle-zod to its last v3-only version (~0.5). **Risk**: drizzle-zod 0.5 → 0.8 added support for newer Drizzle column types (jsonb, geometry, varchar with length, etc.). If `shared/schema.ts` uses any column type that didn't exist in 0.5.x, schema generation will fail at runtime and customers see the app crash. **Don't push this without testing it first.**
+
+**Recommendation for human review**: schedule a focused 2-4 hour eng window with the option to either (a) pin drizzle-zod ~0.5 + smoke-test all schema usages, or (b) commit to the full Zod-v4 migration across `shared/schema.ts`, `Machinery.tsx`, `SopWorkspace.tsx`, `routes.ts`, `SettingsPage.tsx` — the 319 errors are concentrated in those 5 files and a focused refactor session should clear them all. The app is currently shipping fine — this is type-system technical debt, not a customer-facing bug.
 
 **Re-assessed post round-5.** Both available paths trigger explicit hard-stops in the dispatch protocol:
 
