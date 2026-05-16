@@ -3,6 +3,7 @@ import { productionRuns, productionMetrics, downtimeEvents, productionBottleneck
 import { eq, desc, sql } from "drizzle-orm";
 import type { IStorage } from "../storage";
 import { calculateOEE, generateProductionMetric, detectBottlenecks, generateProductionRecommendations } from "./productionKPIs";
+import { isDemoMode } from "./demoMode";
 
 /**
  * Production Metrics Population Service
@@ -35,8 +36,25 @@ export class ProductionMetricsPopulationService {
       .where(eq(machinery.companyId, companyId));
 
     if (companyMachinery.length === 0) {
-      console.log("[ProductionKPI] No machinery found, generating synthetic data");
-      return this.generateSyntheticMetrics(companyId);
+      // Previously this fell straight into generateSyntheticMetrics() so any
+      // customer with no real machinery saw Math.random-shaped OEE numbers
+      // labeled as their production data. Gate behind DEMO_MODE so the
+      // synthetic feeder only runs in demo/pilot environments; production
+      // tenants without machinery now get a clean empty result and the
+      // dashboard's empty-state CTA instead of fake metrics.
+      if (isDemoMode()) {
+        console.log("[ProductionKPI] No machinery found, generating synthetic data (DEMO_MODE)");
+        return this.generateSyntheticMetrics(companyId);
+      }
+      console.log("[ProductionKPI] No machinery found and DEMO_MODE off — returning empty result");
+      return {
+        machineryProcessed: 0,
+        metricsCreated: 0,
+        avgOEE: 0,
+        bottlenecksIdentified: 0,
+        regime: "UNKNOWN",
+        recommendations: ["Add machinery to start tracking production KPIs."],
+      };
     }
 
     const latestSnapshot = await db
@@ -62,6 +80,11 @@ export class ProductionMetricsPopulationService {
         .limit(10);
 
       if (runs.length === 0) {
+        // Same gating reasoning as above — only fabricate metrics for a
+        // machine that has no real run data when the operator has opted into
+        // demo mode. In production, skip the machine; the dashboard will
+        // show "no data yet" rather than Math.random OEE numbers.
+        if (!isDemoMode()) continue;
         // Create synthetic metrics directly without foreign key constraint
         const oee = 70 + Math.random() * 20;
         const availability = 85 + Math.random() * 12;

@@ -89,12 +89,19 @@ export class SupplierRiskMonitoringService {
     for (const supplier of companySuppliersData) {
       const node = nodesBySupplier.get(supplier.id);
 
+      // Previously each missing supplier_node field fell back to Math.random
+      // (e.g., onTimeDeliveryRate || 85 + Math.random() * 15). That meant a
+      // customer's supplier risk score was non-deterministic — refresh the
+      // page and the same supplier showed a different score every time.
+      // Replace with deterministic neutral defaults at the midpoint of the
+      // prior random range so the long-run average risk score matches what
+      // was emitted before but each call is reproducible.
       const riskInputs: RiskScoreInputs = {
-        financialHealthScore: node?.financialHealthScore || this.generateSyntheticFinancialHealth(),
-        bankruptcyRisk: node?.bankruptcyRisk || Math.random() * 10,
-        onTimeDeliveryRate: node?.onTimeDeliveryRate || 85 + Math.random() * 15,
-        qualityScore: node?.qualityScore || 80 + Math.random() * 20,
-        capacityUtilization: node?.capacityUtilization || 60 + Math.random() * 30,
+        financialHealthScore: node?.financialHealthScore || 77.5,    // was 60 + rand*35 → midpoint
+        bankruptcyRisk:       node?.bankruptcyRisk       ||  5,      // was rand*10
+        onTimeDeliveryRate:   node?.onTimeDeliveryRate   || 92.5,    // was 85 + rand*15
+        qualityScore:         node?.qualityScore         || 90,      // was 80 + rand*20
+        capacityUtilization:  node?.capacityUtilization  || 75,      // was 60 + rand*30
         currentFDR: currentFdr,
         tier: node?.tier || 1,
         criticality: (node?.criticality || "medium") as "low" | "medium" | "high" | "critical",
@@ -182,8 +189,12 @@ export class SupplierRiskMonitoringService {
     }));
   }
 
+  /** @deprecated Risk-input defaults are now deterministic constants (see
+   * evaluateSuppliers). This helper is kept for any straggling callers but
+   * returns the midpoint of the prior random range so behavior is
+   * reproducible across requests. */
   private generateSyntheticFinancialHealth(): number {
-    return 60 + Math.random() * 35;
+    return 77.5; // was 60 + Math.random() * 35 — midpoint of that range
   }
 
   private calculateFdrSignalStrength(fdr: number): number {
