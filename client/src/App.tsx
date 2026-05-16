@@ -1,4 +1,4 @@
-import { Switch, Route, useLocation } from "wouter";
+import { Switch, Route, Redirect, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -182,6 +182,13 @@ function Router() {
   return (
     <Suspense fallback={<PageLoadingFallback />}>
     <Switch>
+      {/* If an authenticated user lands on one of the public auth pages,
+          bounce them to the dashboard instead of showing "This page doesn't
+          exist." inside the app shell. */}
+      <Route path="/signin"><Redirect to="/dashboard" /></Route>
+      <Route path="/signup"><Redirect to="/dashboard" /></Route>
+      <Route path="/forgot-password"><Redirect to="/dashboard" /></Route>
+
       {/* Main hub routes - Dashboard is default landing for authenticated users */}
       <Route path="/" component={DashboardOverviewRoute} />
       <Route path="/dashboard" component={DashboardOverviewRoute} />
