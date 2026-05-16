@@ -332,7 +332,17 @@ export class SmartInsightsService {
       priority: urgency,
       title: `${lowStockSkus.length} Products Need Attention`,
       description: 'Inventory levels approaching safety stock thresholds',
-      dataPoints: lowStockSkus.slice(0, 3).map(s => `${s.name}: ${s.currentStock} units`),
+      // Defensive rendering: skus table doesn't carry currentStock/onHand
+      // directly (those live on inventory/allocations tables), so reading
+      // straight from the SKU row often yields undefined. Until smartInsights
+      // is refactored to join inventory state, fall back to a stock-pending
+      // string instead of letting "undefined units" reach the customer.
+      dataPoints: lowStockSkus.slice(0, 3).map(s => {
+        const stock = Number((s as any).currentStock ?? (s as any).onHand);
+        return Number.isFinite(stock)
+          ? `${s.name}: ${stock} units`
+          : `${s.name}: stock data pending`;
+      }),
       actionLink: '/demand',
       actionLabel: 'View Inventory',
       metrics: { count: lowStockSkus.length },
@@ -347,7 +357,15 @@ export class SmartInsightsService {
       priority: 'medium',
       title: 'High-Demand Products',
       description: `${highDemandSkus.length} products showing strong demand patterns`,
-      dataPoints: highDemandSkus.slice(0, 3).map(s => `${s.name}: ${s.averageMonthlyDemand}/month`),
+      // Same defensive rendering as the low-stock insight — averageMonthlyDemand
+      // is computed downstream of the SKU row, so reading it directly is
+      // often undefined for brand-new tenants. Guard against rendering NaN.
+      dataPoints: highDemandSkus.slice(0, 3).map(s => {
+        const d = Number((s as any).averageMonthlyDemand);
+        return Number.isFinite(d) && d > 0
+          ? `${s.name}: ${d}/month`
+          : `${s.name}: demand data pending`;
+      }),
       actionLink: '/forecasting',
       actionLabel: 'View Forecasts',
       timestamp: new Date(),
