@@ -11,9 +11,9 @@ Session start: 2026-05-09
 |------|-----|-------|----------|-------|--------|---------|
 | 17:13 | a711ef2 | 0 | — | Seed dispatch ledger | n/a | green; no behavior change |
 | 18:25 | c356664 | 1 | F0 | Wire 3 orphaned components + 11 path aliases | 14 routes added in App.tsx, mirrors ~80 existing patterns; tsc not run (npm install failed EIDLETIMEOUT); pushed on structural verification | live; verification of route resolution pending user tsc check |
-| 21:13 | c4eb200 | 1 | F1 | Redirect /signin /signup /forgot-password to /dashboard when authed | App.tsx — 3 Redirect routes added; type-clean (no overlap with 5 tsc-erroring files) | pushed; awaiting Republish |
-| 21:20 | 2cf5a56 | 1+8 | F0 | /api/seed tenant-scoped for any authenticated user; remove privilege-escalation auto-create path | routes.ts handler refactor; isAuthenticated retained; seedData(companyId) tenant-scoped per inspection | pushed; awaiting Republish |
-| 21:28 | 866cb66 | 3+8 | F0 | Dashboard empty-state regime card surfaces active regime + posture | Dashboard.tsx — additive; uses existing regimeType/fdr already loaded; matches the four regime postures verbatim from the brief | pushed; awaiting Republish |
+| 21:13 | c4eb200 | 1 | F1 | Redirect /signin /signup /forgot-password to /dashboard when authed | App.tsx — 3 Redirect routes added; type-clean (no overlap with 5 tsc-erroring files) | **LIVE & VERIFIED** — navigated /signin via JS, final pathname = /dashboard, h1 = "Dashboard" |
+| 21:20 | 2cf5a56 | 1+8 | F0 | /api/seed tenant-scoped for any authenticated user; remove privilege-escalation auto-create path | routes.ts handler refactor; isAuthenticated retained; seedData(companyId) tenant-scoped per inspection | **LIVE & VERIFIED** — POST /api/seed for non-admin user `qa-1778291133` returned 200 with `{"message":"Sample data loaded.","result":{...materials:[Carbon Steel, Stainless Steel 304, Aluminum 6061, Copper, ...]}}` |
+| 21:28 | 866cb66 | 3+8 | F0 | Dashboard empty-state regime card surfaces active regime + posture | Dashboard.tsx — additive; uses existing regimeType/fdr already loaded; matches the four regime postures verbatim from the brief | **LIVE & VERIFIED** — fresh tenant `qa-rcsmoke-1778959218`'s dashboard renders eyebrow "CURRENT ECONOMIC REGIME", h2 "Healthy Expansion", body "Forward-buy critical materials, lock contracts, scale capacity. Optimistic with discipline.", FDR 1.00 badge — above the existing Get Started card |
 
 ## Hard stops hit
 
