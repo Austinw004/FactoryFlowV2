@@ -28,7 +28,7 @@ import {
 } from "@shared/schema";
 import { Plus, Calendar, TrendingUp, FileText, CheckCircle2, AlertCircle, Clock, Users, Mail, Bell, X, UserPlus } from "lucide-react";
 import { format } from "date-fns";
-import { z } from "zod";
+import { z } from "zod/v4";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -137,7 +137,7 @@ export default function SopWorkspace() {
 
   // Create scenario form
   const scenarioForm = useForm<z.infer<typeof createScenarioFormSchema>>({
-    resolver: zodResolver(createScenarioFormSchema),
+    resolver: zodResolver(createScenarioFormSchema as any),
     defaultValues: {
       name: "",
       scenarioType: "baseline",
@@ -151,7 +151,7 @@ export default function SopWorkspace() {
 
   // Create gap analysis form
   const gapForm = useForm<z.infer<typeof createGapFormSchema>>({
-    resolver: zodResolver(createGapFormSchema),
+    resolver: zodResolver(createGapFormSchema as any),
     defaultValues: {
       periodStart: format(new Date(), "yyyy-MM-dd"),
       periodEnd: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), "yyyy-MM-dd"),
@@ -164,7 +164,7 @@ export default function SopWorkspace() {
 
   // Create meeting notes form
   const meetingForm = useForm<z.infer<typeof createMeetingFormSchema>>({
-    resolver: zodResolver(createMeetingFormSchema),
+    resolver: zodResolver(createMeetingFormSchema as any),
     defaultValues: {
       meetingDate: format(new Date(), "yyyy-MM-dd"),
       meetingTime: "09:00",
@@ -209,7 +209,7 @@ export default function SopWorkspace() {
 
   // Create action item form
   const actionForm = useForm<z.infer<typeof createActionFormSchema>>({
-    resolver: zodResolver(createActionFormSchema),
+    resolver: zodResolver(createActionFormSchema as any),
     defaultValues: {
       title: "",
       category: "demand_planning",
