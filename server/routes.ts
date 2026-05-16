@@ -128,44 +128,56 @@ const economics = new DualCircuitEconomics();
 const webhookService = new WebhookService(storage);
 const rfqGenerationService = createRfqGenerationService(storage);
 
-// Helper function to calculate policy signals based on regime
+// Policy signals per regime — the dispatch test brief is the source of
+// truth for what posture each regime should produce. Previously the
+// HEALTHY_EXPANSION case said "Maintain standard procurement levels"
+// (and "Keep inventory at optimal levels"), which contradicted the brief's
+// stated posture of "Forward-buy critical materials, lock contracts, scale
+// capacity." That mismatch made every dashboard recommendation, signal
+// dot, and action card under HEALTHY_EXPANSION read as generic advice
+// instead of regime-coherent action — a thesis violation.
+//
+// Each description below matches the brief's posture text for that regime
+// verbatim in spirit; action keys are display-only (snake_case → label via
+// PolicySignals.tsx's `.replace(/_/g, ' ').toUpperCase()`), so adding new
+// keys like `forward_buy` is non-breaking.
 function calculateSignalsForRegime(regime: string) {
   const signals: any[] = [];
 
   switch (regime) {
     case 'HEALTHY_EXPANSION':
       signals.push(
-        { type: 'procurement', action: 'normal', description: 'Maintain standard procurement levels' },
-        { type: 'inventory', action: 'maintain', description: 'Keep inventory at optimal levels' },
-        { type: 'production', action: 'increase', description: 'Gradually increase production capacity' }
+        { type: 'procurement', action: 'forward_buy',   description: 'Forward-buy critical materials while pricing is favorable' },
+        { type: 'inventory',   action: 'lock_contracts',description: 'Lock supply contracts to secure volume at current rates' },
+        { type: 'production',  action: 'scale',         description: 'Scale capacity to capture growth — optimistic with discipline' }
       );
       break;
     case 'ASSET_LED_GROWTH':
       signals.push(
-        { type: 'procurement', action: 'strategic_buy', description: 'Lock in favorable prices before inflation hits' },
-        { type: 'inventory', action: 'build', description: 'Build strategic inventory reserves' },
-        { type: 'production', action: 'increase', description: 'Expand production to meet anticipated demand' }
+        { type: 'procurement', action: 'shorten_lead',  description: 'Shorten lead times — financial conditions are outrunning real demand' },
+        { type: 'inventory',   action: 'hedge',         description: 'Hedge against cost inflation on input materials' },
+        { type: 'production',  action: 'watch_credit', description: 'Watch credit conditions before expanding capacity — alert but engaged' }
       );
       break;
     case 'IMBALANCED_EXCESS':
       signals.push(
-        { type: 'procurement', action: 'reduce', description: 'Reduce procurement due to bubble risk' },
-        { type: 'inventory', action: 'drawdown', description: 'Draw down excess inventory' },
-        { type: 'production', action: 'decrease', description: 'Scale back production capacity' }
+        { type: 'procurement', action: 'buffer_critical', description: 'Build inventory buffer on critical inputs ahead of fragility' },
+        { type: 'inventory',   action: 'scenario_plan',   description: 'Scenario-plan a downturn; surface single-points-of-failure' },
+        { type: 'production',  action: 'defer_expansion', description: 'Defer expansion until financial-real decoupling narrows' }
       );
       break;
     case 'REAL_ECONOMY_LEAD':
       signals.push(
-        { type: 'procurement', action: 'aggressive_buy', description: 'Aggressively purchase materials at low prices' },
-        { type: 'inventory', action: 'maximize', description: 'Maximize inventory to capitalize on low prices' },
-        { type: 'production', action: 'maximize', description: 'Maximize production for upcoming expansion' }
+        { type: 'procurement', action: 'secure_supply',   description: 'Secure supply ahead of price moves — real activity is outrunning financial conditions' },
+        { type: 'inventory',   action: 'long_term',       description: 'Lock longer-term contracts before supply tightens further' },
+        { type: 'production',  action: 'lock_capacity',   description: 'Lock capacity — grab-it-while-you-can window is open' }
       );
       break;
     default:
       signals.push(
-        { type: 'procurement', action: 'normal', description: 'Maintain standard procurement levels' },
-        { type: 'inventory', action: 'maintain', description: 'Keep inventory at optimal levels' },
-        { type: 'production', action: 'normal', description: 'Maintain current production levels' }
+        { type: 'procurement', action: 'normal',   description: 'Maintain standard procurement levels' },
+        { type: 'inventory',   action: 'maintain', description: 'Keep inventory at optimal levels' },
+        { type: 'production',  action: 'normal',   description: 'Maintain current production levels' }
       );
   }
 
