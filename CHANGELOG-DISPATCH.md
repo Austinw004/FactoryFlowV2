@@ -73,19 +73,21 @@ Session start: 2026-05-09
 - **Proposed fix** Server-side investigation in `server/websocket.ts` — most likely the new connection isn't passing some authentication/origin check, or the server's keepalive isn't acknowledging client pings. Could be related to Replit's proxy timing or to a server-side handler that closes the connection on `connection_established` before the client can subscribe.
 - **Tags** `realtime`, `coverage`, `tool-functional`
 
-### F1-FILED-006 — 319 pre-existing TypeScript errors across 5 files (Zod v3→v4 migration debt)
+### F1-FILED-006 — 319 pre-existing TypeScript errors (Zod v3→v4 migration debt) — REMAINS FILED
 
-- **Severity** F1 — Build works (vite+esbuild strip types) so prod isn't affected today, but the type system is effectively turned off in `shared/schema.ts` (228 errors) and `client/src/pages/Machinery.tsx` (44 errors). Any future schema or form change ships without type-safety net.
-- **Discovered via** User ran `npx tsc --noEmit` in Replit shell at the dispatch's request. Output: `Found 319 errors in 5 files.` All errors are Zod-shape mismatches (`Property '_zod' missing`, `ZodObject does not satisfy constraint 'ZodType<any, any, any>'`) — the signature of a Zod v3 → v4 upgrade where the dependency was bumped but downstream schemas weren't updated.
-- **Confirmed unrelated to dispatch pushes** Dispatch's only code push (`c356664`) modified `client/src/App.tsx` exclusively. None of the 5 erroring files overlap with the diff. The 319 errors were already in the codebase before this session began.
-- **Breakdown**
-  - shared/schema.ts:369 — 228 errors
-  - client/src/pages/Machinery.tsx:37 — 44 errors
-  - client/src/pages/SopWorkspace.tsx:60 — 32 errors
-  - server/routes.ts:863 — 13 errors
-  - client/src/pages/SettingsPage.tsx:237 — 2 errors
-- **Proposed fix** Either downgrade Zod to v3 (one-line `package.json` change + npm install) or update every `z.infer<typeof xSchema>` and `z.coerce.number()` usage to the v4 API. The downgrade is much smaller blast radius. Either way, out of single-session autonomous scope per the hard-stop list (`package.json` dependency changes require human review).
-- **Tags** `data-integrity`, `tool-functional`, `coverage`
+**Re-assessed post round-5.** Both available paths trigger explicit hard-stops in the dispatch protocol:
+
+- **Path A — downgrade zod in package.json** to the v3.x line that the schemas were written against. Tiny change (one version pin), reverses the error cascade. **Hard-stop**: `package.json dependency entries` is on the explicit no-push list.
+- **Path B — migrate all 320 callsites to the v4 API** (`z.coerce.number().min(…)` → v4 equivalents, `z.infer<typeof xSchema>` → updated generic positions, `.optional().nullable()` chains, drizzle-zod `createInsertSchema` output shape changes). Multi-file, multi-session refactor across `shared/schema.ts` (228 errors), `Machinery.tsx` (44), `SopWorkspace.tsx` (32), `routes.ts` (13), `SettingsPage.tsx` (2). Each file requires per-callsite judgment because v4's stricter type contracts surface real bugs (some "errors" are intentional behavior, some are bona-fide misuses). Not safe to mass-rewrite autonomously.
+
+**Why this isn't shipping a customer regression today**: Replit's build pipeline (`vite build && esbuild server/index.ts ...`) strips types without checking — runtime behavior is unaffected by these errors. The app ships, the tests still run, the dashboards still render. The only thing that's degraded is developer ergonomics on any future change that touches the affected files.
+
+**Recommendation for a human reviewer**:
+1. Pin `zod@^3.23` in `package.json` (single-line change).
+2. Run `npm install` → confirm tsc clean.
+3. Schedule the v4 migration as a tracked workstream when the surrounding feature shape stabilizes.
+
+Filing this as **F1 with a concrete recovery path** rather than chasing the per-callsite rewrite autonomously.
 
 ### F1-FILED-005 — Replit subscription "Payment failed" warning
 
@@ -110,7 +112,7 @@ Session start: 2026-05-09
 
 ## Final dispatch summary
 
-- Findings by severity: F0=4 (all FIXED & LIVE), F1=8 (4 fixed; 4 filed), F2=2 (filed), F3=0.
+- Findings by severity: F0=4 (all FIXED & LIVE), F1=9 (7 fixed; 2 filed — Zod v4 debt blocked by package.json hard-stop, Math.random in the remaining 13 lib files needs per-file judgment), F2=2 (1 fixed in d4c9f28, 1 fixed via the same commit), F3=0.
 - New feature: live integration health card on /integrations (62c6c76) — pulls /api/integrations/health on 60s refetch.
 - Perf: TTFB ~120ms on / and /dashboard, JS bundle 168 KB gzipped (550 KB raw), CSS 118 KB.
 
