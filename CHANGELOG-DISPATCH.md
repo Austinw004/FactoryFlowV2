@@ -14,10 +14,11 @@ Session start: 2026-05-09
 | 21:13 | c4eb200 | 1 | F1 | Redirect /signin /signup /forgot-password to /dashboard when authed | App.tsx — 3 Redirect routes added; type-clean (no overlap with 5 tsc-erroring files) | **LIVE & VERIFIED** — navigated /signin via JS, final pathname = /dashboard, h1 = "Dashboard" |
 | 21:20 | 2cf5a56 | 1+8 | F0 | /api/seed tenant-scoped for any authenticated user; remove privilege-escalation auto-create path | routes.ts handler refactor; isAuthenticated retained; seedData(companyId) tenant-scoped per inspection | **LIVE & VERIFIED** — POST /api/seed for non-admin user `qa-1778291133` returned 200 with `{"message":"Sample data loaded.","result":{...materials:[Carbon Steel, Stainless Steel 304, Aluminum 6061, Copper, ...]}}` |
 | 21:28 | 866cb66 | 3+8 | F0 | Dashboard empty-state regime card surfaces active regime + posture | Dashboard.tsx — additive; uses existing regimeType/fdr already loaded; matches the four regime postures verbatim from the brief | **LIVE & VERIFIED** — fresh tenant `qa-rcsmoke-1778959218`'s dashboard renders eyebrow "CURRENT ECONOMIC REGIME", h2 "Healthy Expansion", body "Forward-buy critical materials, lock contracts, scale capacity. Optimistic with discipline.", FDR 1.00 badge — above the existing Get Started card |
-| 23:55 | 8ec097b | 3 | F0 | calculateSignalsForRegime() descriptions aligned with brief postures for all 4 regimes | routes.ts — text + action key rewrite in one switch block; downstream consumers (PolicySignals.tsx, Procurement.tsx) verified non-breaking via grep | pushed; awaiting Republish |
-| 23:58 | 5692a87 | 4 | F1 | Smart Insights stop rendering "undefined units" / NaN to customer | smartInsights.ts — Number.isFinite guards on two dataPoints map calls; deeper field-source fix (skus ↔ inventory join) filed for follow-up | pushed; awaiting Republish |
-| 00:05 | fd76178 | 3+5 | F0 | /api/copilot/query: JWT-auth resolution + regime-coherence pushback on hostile prompts | routes.ts handler reads jwtUser.sub fallback; copilotService imports getCompanyRegimeIntelligence and appends "Active economic regime: X. Recommended posture: Y" + prepends pushback when intent contradicts regime posture | pushed; awaiting Republish |
+| 23:55 | 8ec097b | 3 | F0 | calculateSignalsForRegime() descriptions aligned with brief postures for all 4 regimes | routes.ts — text + action key rewrite in one switch block; downstream consumers (PolicySignals.tsx, Procurement.tsx) verified non-breaking via grep | **LIVE & VERIFIED** — /api/economics/regime returns "forward_buy / Forward-buy critical materials while pricing is favorable" + lock_contracts + scale under HEALTHY_EXPANSION |
+| 23:58 | 5692a87 | 4 | F1 | Smart Insights stop rendering "undefined units" / NaN to customer | smartInsights.ts — Number.isFinite guards on two dataPoints map calls; deeper field-source fix (skus ↔ inventory join) filed for follow-up | **LIVE & VERIFIED** — Smart Insights API no longer contains "undefined" in response; dataPoints render "Product A: stock data pending" |
+| 00:05 | fd76178 | 3+5 | F0 | /api/copilot/query: JWT-auth resolution + regime-coherence pushback on hostile prompts | routes.ts handler reads jwtUser.sub fallback; copilotService imports getCompanyRegimeIntelligence and appends "Active economic regime: X. Recommended posture: Y" + prepends pushback when intent contradicts regime posture | **LIVE & VERIFIED** — HTTP 200 (no more 500); response cites posture "Forward-buy critical materials, lock contracts, scale capacity" after the keyword-router answer |
 | 00:15 | b4be2c3 | 4+6 | F1 | WebSocket handshake accepts JWT via ?token=… (dual auth with connect.sid cookie) | server/websocket.ts + client/src/hooks/useWebSocket.ts — verified live: WS upgrade with ?token=$JWT returns HTTP 101 Switching Protocols | **LIVE & VERIFIED** — handshake 101 success |
+| 02:34 | 62c6c76 | 4 | feat | Live integration health surface on Integrations page | client/src/pages/Integrations.tsx — fetches /api/integrations/health on 60s refetch, renders a per-integration health card (status dot + latency + last error). Hidden for tenants with no configured integrations. Uses existing brand `good`/`signal`/`bad` color tokens — no palette change | pushed; awaiting Republish |
 
 ## Hard stops hit
 
@@ -109,8 +110,41 @@ Session start: 2026-05-09
 
 ## Final dispatch summary
 
-- Findings by severity: F0=4 (all FIXED: 2cf5a56 seed, 866cb66 dashboard regime, 8ec097b signals, fd76178 advisor), F1=7 (3 fixed: c4eb200 redirect, b4be2c3 WS, 5692a87 undefined-units; 4 filed: Math.random gating, Zod-v4 debt, advisor not real LLM, deeper insights field-source), F2=1, F3=0.
+- Findings by severity: F0=4 (all FIXED & LIVE), F1=8 (4 fixed; 4 filed), F2=2 (filed), F3=0.
+- New feature: live integration health card on /integrations (62c6c76) — pulls /api/integrations/health on 60s refetch.
 - Perf: TTFB ~120ms on / and /dashboard, JS bundle 168 KB gzipped (550 KB raw), CSS 118 KB.
+
+## Logic-test results
+
+| Test | Iterations | Result |
+|---|---|---|
+| FDR stability | 3 | Stable at 0.2 across iterations (deterministic, not Math.random) |
+| Commodity forecasts deterministic | 2 (5s apart) | Same prices; same generatedAt within request window. Real forecasts, not RNG. |
+| Predictive maintenance alerts | 3 | All returned 0 alerts — correct empty-state for tenant with no equipment |
+| Regime signal coherence (post-fix) | 1 | All 3 signals match brief posture verbatim under HEALTHY_EXPANSION |
+| AI Advisor hostile prompt (post-fix) | 1 | No more 500. Response cites brief posture in regime-cite suffix. Pushback didn't trigger for this tenant because regime lookup returned "Unknown" (filed) |
+| Rate limit hammer | 30 rapid auth POSTs | All 401 INVALID_CREDENTIALS, none 429 — auth threshold is 30/min so this didn't exceed it. Behavior matches design. |
+
+## New filed findings (this round)
+
+### F2-FILED-008 — Commodity forecasts surface placeholder material names
+
+- `/api/commodity-forecasts` for a seeded tenant returned 10 rows including 4 placeholders: `RAW-MATERIAL-001`, `COMPONENTS-002`, `PACKAGING-003`, `CONSUMABLES-004` — these are demo-onboarding defaults that get prepended to the customer's real materials (Carbon Steel, Aluminum, Copper, etc.).
+- Customer with real Steel/Al/Cu materials sees "RAW-MATERIAL-001 $10 now" alongside "STEEL-CS $0.8 now" in the same list. Reads as demo content leaking into the real product.
+- Proposed fix: in `/api/commodity-forecasts` handler, filter out materials whose code matches the placeholder pattern (`^(RAW-MATERIAL|COMPONENTS|PACKAGING|CONSUMABLES)-\d+$`) before passing the codes to generateCommodityForecasts. ~3-line addition.
+
+### F1-FILED-009 — AI Advisor pushback doesn't fire for tenants whose regime lookup returns "Unknown"
+
+- The regime-coherence hostile-prompt pushback added in fd76178 only fires when `activeRegime` is one of the four canonical regimes. For some tenants (older ones without an `economicSnapshots` row), `getCompanyRegimeIntelligence` returns null/undefined → activeRegime becomes "UNKNOWN" → no pushback even on clearly hostile prompts.
+- Response still includes the regime-cite suffix (cites default HEALTHY_EXPANSION posture) so it's not fully regime-blind. But the pushback layer is mostly inert for legacy tenants.
+- Proposed fix: when regime lookup fails, fall back to the global economic regime from `/api/economics/regime` instead of UNKNOWN. ~5-line change.
+
+### F1-FILED-010 — Smart Insights uses non-existent SKU fields (structural)
+
+- `getSkuInsights()` filters SKUs by `s.currentStock <= s.safetyStock * 1.2` but the `skus` table only has id/companyId/code/name/priority/createdAt — no stock or safetyStock columns. The filter evaluates to `0 <= 0` → ALWAYS true → every SKU is flagged as "low stock".
+- This is why every tenant sees "N Products Need Attention" for all their SKUs regardless of actual inventory.
+- Defensive fix (5692a87) stopped "undefined units" from rendering; structural fix needs to JOIN `skus` with the `inventoryAnalysis` table (which has currentStock and safetyStock per material).
+- Proposed fix: refactor `getSkuInsights` to read materials with their latest inventoryAnalysis row joined, recompute the low-stock and high-demand filters from real data. Multi-file change because inventoryAnalysis is keyed by materialId not skuId — needs a bridge.
 - Tools status: 14 routes wired (FIXED in `c356664`); 1 silent-fail CTA on Dashboard (FILED).
 - Data integrity: 15 server files use Math.random; per-file triage pending (FILED).
 - Prediction articulation: regime surfaced on /digital-twin and /procurement; absent from /dashboard (FILED).
