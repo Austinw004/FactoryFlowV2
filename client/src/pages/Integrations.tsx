@@ -1,8 +1,32 @@
 import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
-import { Check, ArrowUpRight, ExternalLink, Zap, Webhook, Code2, Search, MessageSquare } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Check, ArrowUpRight, ExternalLink, Zap, Webhook, Code2, Search, MessageSquare, Activity } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+
+// Shape returned by GET /api/integrations/health. Mirrors what the server
+// already produces (server/lib/integrationOrchestrator + healthChecker).
+interface IntegrationHealthResponse {
+  overall: "healthy" | "degraded" | "critical" | "unknown";
+  summary: {
+    healthy: number;
+    configured: number;
+    degraded: number;
+    offline: number;
+    notConfigured: number;
+    total: number;
+  };
+  avgLatencyMs?: number;
+  byCategory?: Record<string, Array<{
+    integration: string;
+    status: "healthy" | "configured" | "degraded" | "offline" | "not_configured" | string;
+    latencyMs?: number;
+    message?: string;
+    category?: string;
+    lastError?: string;
+  }>>;
+}
 
 /**
  * Integrations catalog.
@@ -116,6 +140,24 @@ export function Integrations() {
   const [showOnly, setShowOnly] = useState<"all" | "self-serve">("all");
   const [webhookModal, setWebhookModal] = useState<{ id: string; name: string } | null>(null);
 
+  // Live health snapshot for the integrations this tenant actually has
+  // wired up. Server already aggregates this at /api/integrations/health —
+  // catalog was previously static so customers had no way to know which
+  // integrations were live, degraded, or down without leaving the page.
+  // 60s refetch keeps the surface near-real-time without hammering the
+  // upstream health-check fan-out.
+  const { data: health } = useQuery<IntegrationHealthResponse>({
+    queryKey: ["/api/integrations/health"],
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+  const liveIntegrations = useMemo(() => {
+    if (!health?.byCategory) return [] as Array<{ integration: string; status: string; latencyMs?: number; message?: string; lastError?: string; category?: string }>;
+    return Object.values(health.byCategory)
+      .flat()
+      .filter((row) => row.status !== "not_configured");
+  }, [health]);
+
   const filteredCategories = useMemo(() => {
     const q = filter.trim().toLowerCase();
     return Object.entries(integrationCategories)
@@ -172,6 +214,81 @@ export function Integrations() {
             The rest connect via your data team or our API.
           </p>
         </div>
+
+        {/* Live integration health — pulled from /api/integrations/health.
+            Shows the tenant's actually-configured integrations with current
+            status + latency, so customers don't have to leave this page to
+            know what's working. Hidden when nothing is configured to avoid
+            visual noise for brand-new tenants. */}
+        {health && health.summary.total > 0 && liveIntegrations.length > 0 && (
+          <div className="rounded-xl border bg-card p-6 lg:p-8 mb-8" data-testid="card-integration-health">
+            <div className="flex items-start justify-between gap-4 mb-5 flex-wrap">
+              <div className="flex items-start gap-4">
+                <div className="rounded-lg p-2.5 bg-muted/50">
+                  <Activity className="h-5 w-5 text-foreground" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold tracking-tight mb-1.5">Live integration health</h2>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {health.summary.healthy} healthy
+                    {health.summary.degraded ? ` · ${health.summary.degraded} degraded` : ""}
+                    {health.summary.offline ? ` · ${health.summary.offline} offline` : ""}
+                    {health.summary.notConfigured ? ` · ${health.summary.notConfigured} not configured` : ""}
+                    {typeof health.avgLatencyMs === "number" ? ` · ${health.avgLatencyMs}ms avg` : ""}
+                  </p>
+                </div>
+              </div>
+              <span
+                className="text-xs uppercase tracking-wider px-2.5 py-1 rounded-full border"
+                style={{
+                  borderColor:
+                    health.overall === "healthy"  ? "rgba(127,176,154,0.5)" :
+                    health.overall === "degraded" ? "rgba(204,120,92,0.5)" :
+                    health.overall === "critical" ? "rgba(196,122,110,0.6)" :
+                                                    "rgba(255,255,255,0.15)",
+                  color:
+                    health.overall === "healthy"  ? "#7FB09A" :
+                    health.overall === "degraded" ? "#CC785C" :
+                    health.overall === "critical" ? "#C47A6E" :
+                                                    "var(--muted-foreground)",
+                }}
+                data-testid="badge-integration-health"
+              >
+                {health.overall}
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+              {liveIntegrations.slice(0, 12).map((row) => {
+                const isOk = row.status === "healthy" || row.status === "configured";
+                const isOff = row.status === "offline";
+                const dot = isOk ? "#7FB09A" : isOff ? "#C47A6E" : "#CC785C";
+                return (
+                  <div
+                    key={`${row.category ?? ""}:${row.integration}`}
+                    className="rounded-md border bg-background p-3 flex items-center gap-3"
+                    data-testid={`health-row-${row.integration}`}
+                  >
+                    <span
+                      className="inline-block h-2 w-2 rounded-full shrink-0"
+                      style={{ background: dot }}
+                      aria-hidden="true"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm truncate">
+                        {row.integration.replace(/[_-]/g, " ")}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground truncate">
+                        {row.status}
+                        {typeof row.latencyMs === "number" ? ` · ${row.latencyMs}ms` : ""}
+                        {isOff && row.lastError ? ` · ${row.lastError.slice(0, 40)}` : ""}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Universal connector hero — the platform path */}
         <div className="rounded-xl border bg-card p-6 lg:p-8 mb-8" style={{ borderColor: "rgba(204, 120, 92, 0.3)", background: "linear-gradient(180deg, rgba(204,120,92,0.04), transparent)" }}>
