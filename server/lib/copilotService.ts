@@ -157,14 +157,30 @@ export async function queryCopilot(companyId: string, userId: string, query: str
   const startMs = Date.now();
   const lowerQuery = query.toLowerCase();
 
-  // Resolve the active regime for this tenant so the response can cite it.
-  // Failure here is non-fatal — the response just won't carry regime context.
+  // Resolve the active regime. Per-tenant lookup first; if that misses (older
+  // tenants without an economic snapshot), fall back to the global FDR-derived
+  // regime via DualCircuitEconomics. Either is failure-tolerant: a regime
+  // lookup miss should never block the user response, and the worst case is
+  // that posture defaults to HEALTHY_EXPANSION below.
   let activeRegime = "UNKNOWN";
   try {
     const ri = await getCompanyRegimeIntelligence(companyId);
     activeRegime = (ri as any)?.regime || (ri as any)?.confirmedRegime || "UNKNOWN";
   } catch {
-    // swallow — keep activeRegime as UNKNOWN; never block the user response on a regime lookup miss.
+    // continue — try the global fallback below
+  }
+  if (activeRegime === "UNKNOWN") {
+    try {
+      const { DualCircuitEconomics } = await import("./economics");
+      const econ = new DualCircuitEconomics();
+      const snapshot = (econ as any).getCurrentRegime ? (econ as any).getCurrentRegime() : null;
+      const globalRegime = snapshot?.regime || snapshot?.confirmedRegime;
+      if (globalRegime && globalRegime in REGIME_POSTURES) {
+        activeRegime = globalRegime;
+      }
+    } catch {
+      // give up — activeRegime stays UNKNOWN, posture defaults below
+    }
   }
   const posture = REGIME_POSTURES[activeRegime] || REGIME_POSTURES.HEALTHY_EXPANSION;
   const hostileIntent = detectHostileIntent(lowerQuery, activeRegime);

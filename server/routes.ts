@@ -10215,12 +10215,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Import forecasting engine
       const { generateCommodityForecasts } = await import('./lib/commodityForecasting');
-      
+
       // Get materials to track
       const materials = await storage.getMaterials(user.companyId);
-      const materialCodes = req.query.codes 
+      // Filter out the generic onboarding-default placeholders (RAW-MATERIAL-001,
+      // COMPONENTS-002, PACKAGING-003, CONSUMABLES-004) before generating
+      // forecasts. They have no commodity-pricing mapping and surfaced as
+      // "RAW-MATERIAL-001 $10" alongside the customer's real Steel/Al/Cu
+      // materials, making the page read as demo content.
+      const realMaterials = materials.filter(
+        m => !/^(RAW-MATERIAL|COMPONENTS|PACKAGING|CONSUMABLES)-\d+$/.test(m.code),
+      );
+      const materialCodes = req.query.codes
         ? (req.query.codes as string).split(',')
-        : materials.map(m => m.code).slice(0, 10); // Limit to first 10 by default
+        : realMaterials.map(m => m.code).slice(0, 10); // Limit to first 10 by default
       
       // Get current regime
       const latestSnapshot = await storage.getLatestEconomicSnapshot(user.companyId);
@@ -10251,10 +10259,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { getCommodityForecastSummary } = await import('./lib/commodityForecasting');
-      
-      // Get materials to track
+
+      // Get materials to track — same placeholder filter as /api/commodity-forecasts.
       const materials = await storage.getMaterials(user.companyId);
-      const materialCodes = materials.map(m => m.code).slice(0, 20);
+      const realMaterials = materials.filter(
+        m => !/^(RAW-MATERIAL|COMPONENTS|PACKAGING|CONSUMABLES)-\d+$/.test(m.code),
+      );
+      const materialCodes = realMaterials.map(m => m.code).slice(0, 20);
       
       // Get current regime
       const latestSnapshot = await storage.getLatestEconomicSnapshot(user.companyId);

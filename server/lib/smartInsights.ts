@@ -181,34 +181,65 @@ export class SmartInsightsService {
   
   private async getSkuInsights(companyId: string) {
     try {
+      // Structural fix: the previous logic read `s.currentStock ?? s.onHand`
+      // and `s.safetyStock` off the SKU row, but the skus schema only has
+      // {id, companyId, code, name, priority, createdAt} — neither stock
+      // nor safetyStock columns exist. The filter evaluated 0 <= 0 * 1.2
+      // for every SKU, so every SKU was flagged "low stock" regardless of
+      // actual inventory. The materials table is where real on-hand
+      // quantities live (materials.onHand is populated by the seed/import
+      // flow). Read materials here and compute a tenant-aware low-stock
+      // threshold from the distribution rather than a fixed cutoff —
+      // materials at the 25th percentile or below count as needing
+      // attention. SKUs are still returned for callers that need the list
+      // (forecastDegrading section uses forecasted SKU IDs).
       const allSkus = await db.select().from(skus).where(eq(skus.companyId, companyId));
-      
-      const lowStock = (allSkus as any[]).filter(s => {
-        const current = Number(s.currentStock ?? s.onHand) || 0;
-        const safety = Number(s.safetyStock) || 0;
-        return current <= safety * 1.2;
-      });
+      const allMaterials = await db.select().from(materials).where(eq(materials.companyId, companyId));
 
-      const highDemand = (allSkus as any[]).filter(s => {
-        const avgDemand = Number(s.averageMonthlyDemand) || 0;
-        return avgDemand > 1000;
-      });
-      
+      // Compute the low-stock threshold: bottom-quartile onHand across the
+      // tenant's materials, with a floor of 100 units so single-material
+      // tenants don't get false positives on healthy stock.
+      const onHands = allMaterials
+        .map(m => Number(m.onHand))
+        .filter(n => Number.isFinite(n) && n >= 0)
+        .sort((a, b) => a - b);
+      const q1 = onHands.length > 0
+        ? onHands[Math.max(0, Math.floor(onHands.length * 0.25) - 1)]
+        : 0;
+      const threshold = Math.max(q1, 100);
+
+      const lowStock = allMaterials
+        .map(m => ({
+          // Project material onto a shape that generateLowStockInsight's
+          // .name and `currentStock ?? onHand` access pattern can read.
+          name: m.name,
+          currentStock: Number(m.onHand) || 0,
+          onHand: Number(m.onHand) || 0,
+          unit: m.unit,
+        }))
+        .filter(m => m.onHand <= threshold);
+
+      // High-demand previously read s.averageMonthlyDemand which isn't on
+      // SKUs either. There's no first-class demand column today — leave
+      // empty rather than emit a false positive. When demand-history
+      // aggregation is wired up, swap this for a real query.
+      const highDemand: any[] = [];
+
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      
+
       const recentAccuracyTracking = await db.select()
         .from(forecastAccuracyTracking)
         .where(and(
           eq(forecastAccuracyTracking.companyId, companyId),
           gte((forecastAccuracyTracking as any).calculatedAt ?? forecastAccuracyTracking.createdAt, thirtyDaysAgo)
         ));
-      
+
       const forecastDegrading = recentAccuracyTracking.filter(p => {
         const mape = Number(p.mape) || 0;
         return mape > 15;
       });
-      
+
       return { all: allSkus, lowStock, highDemand, forecastDegrading };
     } catch {
       return { all: [], lowStock: [], highDemand: [], forecastDegrading: [] };
@@ -332,15 +363,14 @@ export class SmartInsightsService {
       priority: urgency,
       title: `${lowStockSkus.length} Products Need Attention`,
       description: 'Inventory levels approaching safety stock thresholds',
-      // Defensive rendering: skus table doesn't carry currentStock/onHand
-      // directly (those live on inventory/allocations tables), so reading
-      // straight from the SKU row often yields undefined. Until smartInsights
-      // is refactored to join inventory state, fall back to a stock-pending
-      // string instead of letting "undefined units" reach the customer.
+      // getSkuInsights now projects materials with a unit-aware shape
+      // ({name, onHand, currentStock, unit}) so we render real quantities
+      // with their unit (kg / units / etc.) instead of generic "units".
       dataPoints: lowStockSkus.slice(0, 3).map(s => {
         const stock = Number((s as any).currentStock ?? (s as any).onHand);
+        const unit = (s as any).unit ?? "units";
         return Number.isFinite(stock)
-          ? `${s.name}: ${stock} units`
+          ? `${s.name}: ${stock} ${unit}`
           : `${s.name}: stock data pending`;
       }),
       actionLink: '/demand',
