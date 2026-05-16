@@ -1,0 +1,69 @@
+{
+  "today": "2026-05-16",
+  "priorDigestDate": null,
+  "priorReplyChecksum": null,
+  "lookbackWindowHours": 24,
+  "weeklyCleanLookbackDays": 7,
+  "subject": "Daily digest — 5 need your call",
+  "counts": {
+    "cleanly": 2,
+    "needsYourEyes": 5,
+    "blocking": 0
+  },
+  "routineStatus": {
+    "Big Boi": "silent",
+    "Optimus": "silent",
+    "Daily Boost": "activity",
+    "Palantard Grade": "activity",
+    "Weekly Clean": "activity",
+    "Code Review": "activity"
+  },
+  "decisions": [
+    {
+      "id": 1,
+      "routine": "Palantard Grade",
+      "ref": "PR #240",
+      "url": "https://github.com/Austinw004/FactoryFlowV2/pull/240",
+      "branch": "claude/vigilant-allen-2nQkf",
+      "question": "Approve and merge, request changes, or hold for design review?"
+    },
+    {
+      "id": 2,
+      "routine": "Daily Boost",
+      "ref": "PR #239",
+      "url": "https://github.com/Austinw004/FactoryFlowV2/pull/239",
+      "branch": "claude/exciting-fermi-10tuU",
+      "question": "Approve and merge?"
+    },
+    {
+      "id": 3,
+      "routine": "Weekly Clean",
+      "ref": "PR #235",
+      "url": "https://github.com/Austinw004/FactoryFlowV2/pull/235",
+      "branch": "claude/festive-dijkstra-Lv717",
+      "question": "Approve and merge, or close in favor of a fresh weekly run?"
+    },
+    {
+      "id": 4,
+      "routine": "Code Review",
+      "ref": "PR #237",
+      "url": "https://github.com/Austinw004/FactoryFlowV2/pull/237",
+      "branch": "claude/hopeful-rubin-bhM11",
+      "question": "Approve and merge?"
+    },
+    {
+      "id": 5,
+      "routine": "Daily Boost <-> Weekly Clean",
+      "ref": "PRs #239 and #235",
+      "url": "https://github.com/Austinw004/FactoryFlowV2/pulls",
+      "branch": null,
+      "question": "Potential conflict: both touch package-lock.json and server/routes.ts. Suggested order: merge #235 first, then #239. Confirm or pick your own order?"
+    }
+  ],
+  "emailDelivery": {
+    "attempted": true,
+    "sent": false,
+    "failureReason": "SendPulse credentials not configured in environment (SENDPULSE_USER_ID / SENDPULSE_SECRET / SENDPULSE_API_USER / SENDPULSE_API_SECRET all unset); sendpulse-api module also not installed (node_modules absent)",
+    "failureLogPath": "/tmp/digest-failures.jsonl"
+  }
+}
