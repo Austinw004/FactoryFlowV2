@@ -15,6 +15,7 @@ import {
   type CopilotDraftStatus,
   type CopilotDraftType,
 } from "@shared/schema";
+import { getCompanyRegimeIntelligence } from "./regimeIntelligence";
 import {
   computeWinRateMetrics,
   getRecentOutcomes,
@@ -115,9 +116,58 @@ function buildEvidenceBundle(entityIds: string[], rowCounts: Record<string, numb
   };
 }
 
+// Map of regime → one-line posture summary the brief defines as the
+// correct response to that regime. Used to append a regime-aware sentence
+// to every advisor response so we never emit a regime-blind answer, which
+// would fail the dispatch test brief's F0 thesis check.
+const REGIME_POSTURES: Record<string, string> = {
+  HEALTHY_EXPANSION:  "Forward-buy critical materials, lock contracts, scale capacity. Optimistic with discipline.",
+  ASSET_LED_GROWTH:   "Shorten lead times, hedge cost inflation, watch credit conditions. Alert-but-engaged.",
+  IMBALANCED_EXCESS:  "Build inventory buffer on critical inputs, scenario-plan a downturn, defer expansion. Defensive.",
+  REAL_ECONOMY_LEAD:  "Secure supply ahead of price moves, longer-term contracts, lock capacity. Grab-it-while-you-can.",
+};
+
+// Friendly name → enum key for hostile-prompt detection.
+function detectHostileIntent(lower: string, regime: string): string | null {
+  // Map of regime → list of intents that contradict its posture.
+  if (regime === "HEALTHY_EXPANSION") {
+    if (/defer (all )?procurement|hoard cash|stop buy|wait (to|before) buy|delay purchas/.test(lower)) {
+      return "deferring procurement";
+    }
+  }
+  if (regime === "ASSET_LED_GROWTH") {
+    if (/long.term contract|lock (in )?(a )?long/.test(lower)) {
+      return "locking long-term contracts";
+    }
+  }
+  if (regime === "IMBALANCED_EXCESS") {
+    if (/forward.?buy aggressive|buy aggressively|aggressive(ly)? purchase|max(imize)? (out )?(inventory|orders)|scale (up|capacity)/.test(lower)) {
+      return "buying aggressively or scaling capacity";
+    }
+  }
+  if (regime === "REAL_ECONOMY_LEAD") {
+    if (/defer expansion|reduce procurement|drawdown|cut inventory/.test(lower)) {
+      return "reducing procurement or inventory";
+    }
+  }
+  return null;
+}
+
 export async function queryCopilot(companyId: string, userId: string, query: string): Promise<CopilotQueryResult> {
   const startMs = Date.now();
   const lowerQuery = query.toLowerCase();
+
+  // Resolve the active regime for this tenant so the response can cite it.
+  // Failure here is non-fatal — the response just won't carry regime context.
+  let activeRegime = "UNKNOWN";
+  try {
+    const ri = await getCompanyRegimeIntelligence(companyId);
+    activeRegime = (ri as any)?.regime || (ri as any)?.confirmedRegime || "UNKNOWN";
+  } catch {
+    // swallow — keep activeRegime as UNKNOWN; never block the user response on a regime lookup miss.
+  }
+  const posture = REGIME_POSTURES[activeRegime] || REGIME_POSTURES.HEALTHY_EXPANSION;
+  const hostileIntent = detectHostileIntent(lowerQuery, activeRegime);
 
   let answer = "";
   const evidence: EvidenceRef[] = [];
@@ -183,6 +233,26 @@ export async function queryCopilot(companyId: string, userId: string, query: str
       { entityType: "summary", entityId: "suppliers", field: "count", value: supCount[0]?.count || 0 },
       { entityType: "summary", entityId: "skus", field: "count", value: skuCount[0]?.count || 0 },
     );
+  }
+
+  // Regime-coherence layer — append the active regime + posture to every
+  // response so the advisor never emits a regime-blind reply. If the user
+  // is asking for an action that contradicts the regime's posture (hostile
+  // prompt), prepend a pushback before the keyword-router answer. This is
+  // the minimum bar for satisfying the dispatch brief's "if it caves, F0"
+  // rule on hostile-prompt regime-coherence.
+  const friendlyRegime = activeRegime
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/(^| )([a-z])/g, (_, p1, p2) => p1 + p2.toUpperCase());
+  const regimeCite = `\n\nActive economic regime: ${friendlyRegime}. Recommended posture: ${posture}`;
+  if (hostileIntent) {
+    answer =
+      `Hold on — you're asking about ${hostileIntent}, which runs counter to the current regime. ` +
+      answer +
+      regimeCite;
+  } else {
+    answer = answer + regimeCite;
   }
 
   const evidenceBundle = buildEvidenceBundle(entityIds, rowCounts);

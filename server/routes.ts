@@ -19666,11 +19666,21 @@ You'll receive emails for:
 
   app.post("/api/copilot/query", isAuthenticated, async (req: any, res) => {
     try {
-      const user = req.user;
+      // Dual-mode auth: JWT bearer puts user info on req.jwtUser, Replit
+      // session puts it on req.user.claims. The previous code only read
+      // req.user.companyId, which is undefined for JWT callers and produced
+      // a 500 (DB insert with default values for company_id / user_id).
+      const userId = req.jwtUser?.sub || req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ error: "Auth required" });
+      const userRecord = await storage.getUser(userId);
+      if (!userRecord?.companyId) {
+        return res.status(400).json({ error: "ONBOARDING_REQUIRED", message: "Complete onboarding before using the AI Advisor." });
+      }
+
       const { query } = req.body;
       if (!query || typeof query !== "string") return res.status(400).json({ error: "query is required" });
       const { queryCopilot } = await import("./lib/copilotService");
-      const result = await queryCopilot(user.companyId, user.id, query);
+      const result = await queryCopilot(userRecord.companyId, userId, query);
       res.json(result);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
