@@ -94,7 +94,15 @@ export function useWebSocket(onMessage?: MessageHandler) {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.hostname;
     const port = window.location.port;
-    const wsUrl = protocol + "//" + host + (port ? ":" + port : "") + "/ws";
+    // Carry the JWT in the query string when present — the browser's native
+    // WebSocket API doesn't let you set Authorization headers, so query-string
+    // is the standard pattern for token auth on WS. Server's setupWebSocket
+    // accepts ?token=… (JWT) OR connect.sid cookie (Replit session); without
+    // this, JWT-authed customers got 1008 Authentication required on every
+    // handshake and the client looped reconnecting forever.
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('prescient_token') : null;
+    const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
+    const wsUrl = protocol + "//" + host + (port ? ":" + port : "") + "/ws" + tokenParam;
 
     try {
       const ws = new WebSocket(wsUrl);

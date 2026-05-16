@@ -4,6 +4,7 @@ import type { IncomingMessage } from 'http';
 import { parse as parseCookie } from 'cookie';
 import { unsign } from 'cookie-signature';
 import { storage } from './storage';
+import { verifyToken } from './lib/jwtAuth';
 
 let wss: WebSocketServer | null = null;
 
@@ -31,62 +32,98 @@ export function setupWebSocket(server: Server) {
 
   wss.on('connection', async (ws: WebSocket, req: IncomingMessage) => {
     console.log('[WebSocket] Client attempting connection');
-    
+
     let authenticatedCompanyId: string | undefined;
-    
+
     try {
-      const cookies = req.headers.cookie ? parseCookie(req.headers.cookie) : {};
-      const sessionCookie = cookies['connect.sid'];
-      
-      if (!sessionCookie) {
-        console.warn('[WebSocket] No session cookie found, closing connection');
-        ws.close(1008, 'Authentication required');
-        return;
+      // Dual-mode auth: JWT-bearer customers (signed in via /api/auth/login)
+      // pass their access token as ?token=… in the WS URL — the browser
+      // WebSocket API doesn't let you set Authorization headers, so the
+      // query-string carry is the standard pattern. Replit-session users
+      // still authenticate via connect.sid cookie. Without this dual path,
+      // every JWT user's WS handshake closed with 1008 'Authentication
+      // required' and the client reconnected in a ~1Hz loop forever —
+      // visible to the customer as Dashboard's "CONNECTION: Offline /
+      // Reconnecting..." badge.
+      const url = new URL(req.url || '/', 'http://localhost');
+      const queryToken = url.searchParams.get('token');
+
+      if (queryToken) {
+        let payload: ReturnType<typeof verifyToken>;
+        try {
+          payload = verifyToken(queryToken);
+        } catch {
+          console.warn('[WebSocket] Invalid JWT in query string, closing connection');
+          ws.close(1008, 'Invalid token');
+          return;
+        }
+        if (payload.type !== 'access') {
+          console.warn('[WebSocket] Non-access JWT presented, closing connection');
+          ws.close(1008, 'Invalid token type');
+          return;
+        }
+        const user = await storage.getUser(payload.sub);
+        if (!user?.companyId) {
+          console.warn('[WebSocket] JWT user has no company, closing connection');
+          ws.close(1008, 'User not associated with company');
+          return;
+        }
+        authenticatedCompanyId = user.companyId;
+        console.log(`[WebSocket] JWT client authenticated for company: ${authenticatedCompanyId}`);
+      } else {
+        // Cookie-based path (Replit session auth)
+        const cookies = req.headers.cookie ? parseCookie(req.headers.cookie) : {};
+        const sessionCookie = cookies['connect.sid'];
+
+        if (!sessionCookie) {
+          console.warn('[WebSocket] No JWT and no session cookie, closing connection');
+          ws.close(1008, 'Authentication required');
+          return;
+        }
+
+        if (!sessionCookie.startsWith('s:')) {
+          console.warn('[WebSocket] Invalid session cookie format, closing connection');
+          ws.close(1008, 'Invalid session cookie');
+          return;
+        }
+
+        const signedValue = sessionCookie.slice(2);
+        const sessionSecret = process.env.SESSION_SECRET;
+
+        if (!sessionSecret) {
+          console.error('[WebSocket] SESSION_SECRET not configured');
+          ws.close(1011, 'Server configuration error');
+          return;
+        }
+
+        const sessionId = unsign(signedValue, sessionSecret);
+
+        if (sessionId === false) {
+          console.warn('[WebSocket] Invalid session signature, closing connection');
+          ws.close(1008, 'Invalid session signature');
+          return;
+        }
+
+        const sessionData = await storage.getSessionById(sessionId);
+
+        if (!sessionData || !sessionData.passport?.user?.claims?.sub) {
+          console.warn('[WebSocket] Invalid or expired session, closing connection');
+          ws.close(1008, 'Invalid session');
+          return;
+        }
+
+        const userId = sessionData.passport.user.claims.sub;
+        const user = await storage.getUser(userId);
+
+        if (!user || !user.companyId) {
+          console.warn('[WebSocket] User has no company, closing connection');
+          ws.close(1008, 'User not associated with company');
+          return;
+        }
+
+        authenticatedCompanyId = user.companyId;
+        console.log(`[WebSocket] Session client authenticated for company: ${authenticatedCompanyId}`);
       }
-      
-      if (!sessionCookie.startsWith('s:')) {
-        console.warn('[WebSocket] Invalid session cookie format, closing connection');
-        ws.close(1008, 'Invalid session cookie');
-        return;
-      }
-      
-      const signedValue = sessionCookie.slice(2);
-      const sessionSecret = process.env.SESSION_SECRET;
-      
-      if (!sessionSecret) {
-        console.error('[WebSocket] SESSION_SECRET not configured');
-        ws.close(1011, 'Server configuration error');
-        return;
-      }
-      
-      const sessionId = unsign(signedValue, sessionSecret);
-      
-      if (sessionId === false) {
-        console.warn('[WebSocket] Invalid session signature, closing connection');
-        ws.close(1008, 'Invalid session signature');
-        return;
-      }
-      
-      const sessionData = await storage.getSessionById(sessionId);
-      
-      if (!sessionData || !sessionData.passport?.user?.claims?.sub) {
-        console.warn('[WebSocket] Invalid or expired session, closing connection');
-        ws.close(1008, 'Invalid session');
-        return;
-      }
-      
-      const userId = sessionData.passport.user.claims.sub;
-      const user = await storage.getUser(userId);
-      
-      if (!user || !user.companyId) {
-        console.warn('[WebSocket] User has no company, closing connection');
-        ws.close(1008, 'User not associated with company');
-        return;
-      }
-      
-      authenticatedCompanyId = user.companyId;
-      console.log(`[WebSocket] Client authenticated for company: ${authenticatedCompanyId}`);
-      
     } catch (error) {
       console.error('[WebSocket] Authentication error:', error);
       ws.close(1011, 'Authentication error');
