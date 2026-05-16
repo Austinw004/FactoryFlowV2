@@ -25,6 +25,7 @@ import {
   Sparkles,
   Activity
 } from "lucide-react";
+import { RegimePostureBanner } from "@/components/RegimePostureBanner";
 import type {
   PurchaseOrder,
   MaterialUsageTracking,
@@ -147,10 +148,13 @@ export default function InventoryManagement() {
   return (
     <div className="p-6 space-y-6">
       <div>
-<p className="text-muted-foreground mt-1">
-          One-stop shop for purchase orders, material usage, and automated procurement
+        <h1 className="text-2xl font-semibold">Inventory Management</h1>
+        <p className="text-muted-foreground mt-1">
+          Purchase orders, material usage, replenishment schedules, and FDR-aware procurement recommendations in one workspace.
         </p>
       </div>
+
+      <RegimePostureBanner context="inventory" />
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-4">
