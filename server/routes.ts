@@ -1140,7 +1140,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.upsertUser({
         ...user,
         selectedPlanId: planId,
-        selectedBillingInterval: billingInterval,
+        selectedBillingInterval: billingInterval ?? null,
         subscriptionStatus: 'trialing',
         // 90-day trial — matches marketing copy on Pricing.tsx, Onboarding
         // Step 5 ("90-day free trial starts today"), and the Stripe Checkout
@@ -4526,9 +4526,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate request body
       const validationResult = insertRfqSchema.safeParse(req.body);
       if (!validationResult.success) {
-        return res.status(400).json({ 
-          error: "Validation failed", 
-          details: validationResult.error.errors 
+        return res.status(400).json({
+          error: "Validation failed",
+          details: validationResult.error.issues
         });
       }
 
@@ -4683,9 +4683,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (!validationResult.success) {
-        return res.status(400).json({ 
-          error: "Validation failed", 
-          details: validationResult.error.errors 
+        return res.status(400).json({
+          error: "Validation failed",
+          details: validationResult.error.issues
         });
       }
 
