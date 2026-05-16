@@ -57,6 +57,20 @@ Session start: 2026-05-09
 - **Proposed fix** File-by-file audit + isDemoMode gating where appropriate. Out of autonomous scope per brief ("implementing a missing detector is out of scope").
 - **Tags** `data-integrity`, `prediction-quality`
 
+### F1-FILED-006 — 319 pre-existing TypeScript errors across 5 files (Zod v3→v4 migration debt)
+
+- **Severity** F1 — Build works (vite+esbuild strip types) so prod isn't affected today, but the type system is effectively turned off in `shared/schema.ts` (228 errors) and `client/src/pages/Machinery.tsx` (44 errors). Any future schema or form change ships without type-safety net.
+- **Discovered via** User ran `npx tsc --noEmit` in Replit shell at the dispatch's request. Output: `Found 319 errors in 5 files.` All errors are Zod-shape mismatches (`Property '_zod' missing`, `ZodObject does not satisfy constraint 'ZodType<any, any, any>'`) — the signature of a Zod v3 → v4 upgrade where the dependency was bumped but downstream schemas weren't updated.
+- **Confirmed unrelated to dispatch pushes** Dispatch's only code push (`c356664`) modified `client/src/App.tsx` exclusively. None of the 5 erroring files overlap with the diff. The 319 errors were already in the codebase before this session began.
+- **Breakdown**
+  - shared/schema.ts:369 — 228 errors
+  - client/src/pages/Machinery.tsx:37 — 44 errors
+  - client/src/pages/SopWorkspace.tsx:60 — 32 errors
+  - server/routes.ts:863 — 13 errors
+  - client/src/pages/SettingsPage.tsx:237 — 2 errors
+- **Proposed fix** Either downgrade Zod to v3 (one-line `package.json` change + npm install) or update every `z.infer<typeof xSchema>` and `z.coerce.number()` usage to the v4 API. The downgrade is much smaller blast radius. Either way, out of single-session autonomous scope per the hard-stop list (`package.json` dependency changes require human review).
+- **Tags** `data-integrity`, `tool-functional`, `coverage`
+
 ### F1-FILED-005 — Replit subscription "Payment failed" warning
 
 - **Severity** F1/F0 depending on grace period — "Active deployments will go offline" if not resolved. This is the actual launch-blocker today; no amount of QA matters if the deploy goes dark.
@@ -80,7 +94,7 @@ Session start: 2026-05-09
 
 ## Final dispatch summary
 
-- Findings by severity: F0=2 (filed), F1=3 (filed), F2=1 (filed), F3=0.
+- Findings by severity: F0=2 (filed), F1=4 (filed), F2=1 (filed), F3=0.
 - Tools status: 14 routes wired (FIXED in `c356664`); 1 silent-fail CTA on Dashboard (FILED).
 - Data integrity: 15 server files use Math.random; per-file triage pending (FILED).
 - Prediction articulation: regime surfaced on /digital-twin and /procurement; absent from /dashboard (FILED).
