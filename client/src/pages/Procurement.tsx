@@ -41,6 +41,7 @@ import { InfoTooltip } from "@/components/InfoTooltip";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { CreateMaterialDialog } from "@/components/CreateMaterialDialog";
+import { RegimePostureBanner } from "@/components/RegimePostureBanner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -312,6 +313,8 @@ export default function Procurement() {
           Ask AI Advisor
         </Button>
       </div>
+
+      <RegimePostureBanner context="procurement" />
 
       {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

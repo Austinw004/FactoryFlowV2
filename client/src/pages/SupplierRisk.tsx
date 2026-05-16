@@ -64,6 +64,7 @@ import {
   PolarRadiusAxis,
 } from "recharts";
 import { format } from "date-fns";
+import { RegimePostureBanner } from "@/components/RegimePostureBanner";
 
 interface RiskFactors {
   financial: { score: number; weight: number };
@@ -656,6 +657,8 @@ export default function SupplierRisk() {
           Recalculate Scores
         </Button>
       </div>
+
+      <RegimePostureBanner context="supplier" />
 
       {summary && (
         <div className="grid gap-4 md:grid-cols-4">

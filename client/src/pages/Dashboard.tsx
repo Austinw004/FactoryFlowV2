@@ -1,6 +1,7 @@
 import { KPICard } from "@/components/KPICard";
 import { RegimeStatus } from "@/components/RegimeStatus";
 import { PolicySignals } from "@/components/PolicySignals";
+import { RegimeCommandHero } from "@/components/RegimeCommandHero";
 import { AllocationTable } from "@/components/AllocationTable";
 import { EditableBudgetGauge } from "@/components/EditableBudgetGauge";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
@@ -274,36 +275,34 @@ export default function Dashboard() {
               </Badge>
             </div>
           </div>
-          <Card className="p-12">
-            <div className="text-center space-y-6">
-              <Package className="h-16 w-16 mx-auto text-muted-foreground" />
+          <Card className="p-12 border-line">
+            <div className="text-center space-y-6 max-w-2xl mx-auto">
+              <Package className="h-12 w-12 mx-auto text-signal" />
               <div>
-                <h2 className="text-2xl font-semibold mb-2">Get Started</h2>
-                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                  Add your products, materials, and suppliers to start using the platform. 
-                  Or explore with sample data first.
+                <div className="eyebrow mb-3">Command center · Empty</div>
+                <h2 className="text-3xl hero text-bone mb-3">
+                  See the macro signal that's about to move your input costs — before it shows up in supplier quotes.
+                </h2>
+                <p className="text-soft mb-2 max-w-xl mx-auto leading-relaxed">
+                  This platform watches the Financial-Real Decoupling (FDR) ratio between asset markets and the real economy.
+                  When the two circuits diverge, the platform tells you whether to lock in contracts, defer purchases, build safety stock, or renegotiate — for each of your specific materials and suppliers.
+                </p>
+                <p className="text-xs text-muted mt-4">
+                  Load sample data to see a live regime, exposed materials, and prescribed actions in 30 seconds.
                 </p>
               </div>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Button 
-                  onClick={() => setShowCreateSKU(true)}
-                  size="lg"
-                  data-testid="button-add-first-product"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Your First Product
-                </Button>
-                <Button 
-                  variant="outline"
-                  onClick={() => seedMutation.mutate()} 
+              <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+                <Button
+                  onClick={() => seedMutation.mutate()}
                   disabled={seedMutation.isPending}
                   size="lg"
+                  className="bg-signal text-ink hover:bg-bone border-signal"
                   data-testid="button-load-sample-data"
                 >
                   {seedMutation.isPending ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Loading...
+                      Loading sample operation...
                     </>
                   ) : (
                     <>
@@ -311,6 +310,15 @@ export default function Dashboard() {
                       Load Sample Data
                     </>
                   )}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowCreateSKU(true)}
+                  size="lg"
+                  data-testid="button-add-first-product"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Your First Product
                 </Button>
               </div>
             </div>
@@ -337,15 +345,14 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="mb-16">
-        <div className="eyebrow mb-4">State of operations</div>
-        <h1 className="hero text-5xl">{regime?.regime ? getRegimeDescription(regime.regime).split('.')[0] + '.' : 'Analyzing conditions.'}</h1>
-        <p className="text-soft mt-5 max-w-xl leading-relaxed">
-          {Array.isArray(skus) && skus.length > 0
-            ? `Tracking ${skus.length.toLocaleString()} SKU${skus.length === 1 ? '' : 's'}. ${regime?.regime === 'HEALTHY_EXPANSION' ? 'No critical exposures.' : 'Review current regime conditions.'}`
-            : 'Add your first SKU to start tracking operations.'}
-        </p>
-      </div>
+      <RegimeCommandHero
+        regime={regimeType}
+        fdr={fdr}
+        source={dataSource}
+        timestamp={regimeData.timestamp}
+        skuCount={Array.isArray(skus) ? skus.length : 0}
+        signalCount={Array.isArray(policySignals) ? policySignals.length : 0}
+      />
 
       <div className="grid grid-cols-4 gap-px bg-line mb-20">
         <div className="bg-panel p-6">

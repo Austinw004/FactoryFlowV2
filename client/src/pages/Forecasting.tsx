@@ -12,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { TrendingUp, TrendingDown, AlertCircle, DollarSign, ChevronDown, ChevronUp, Plus, BarChart3, Clock } from "lucide-react";
 import type { Sku, DemandHistory } from "@shared/schema";
 import { InfoTooltip } from "@/components/InfoTooltip";
+import { RegimePostureBanner } from "@/components/RegimePostureBanner";
 
 interface CommodityPrice {
   material: string;
@@ -97,10 +98,13 @@ export default function Forecasting() {
   return (
     <div className="p-6 space-y-6">
       <div>
-<p className="text-muted-foreground mt-1">
-          Regime-aware demand predictions for optimal production planning
+        <h1 className="text-2xl font-semibold">Demand Forecasting</h1>
+        <p className="text-muted-foreground mt-1">
+          Regime-aware demand predictions with FDR-adjusted cost and timing assumptions.
         </p>
       </div>
+
+      <RegimePostureBanner context="forecasting" />
 
       {regime && (() => {
         const regimeInfo = getFriendlyRegimeName(regime.regime);
