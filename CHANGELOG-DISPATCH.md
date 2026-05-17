@@ -36,6 +36,8 @@ Session start: 2026-05-09
 | 22:00 | 6284bda | F1 | F1 | RBAC ghost-owner: auto-create-company paths now assign Admin role | 5 of 6 auto-create branches in routes.ts skipped initializeDefaultRoles + assignRoleToUser(Admin) → user owned company but couldn't manage team. Helper `createCompanyForUserWithAdminRole` consolidates the 3-step contract. Verified live: fresh signup → /api/users still 403 today (before deploy); after deploy will be 200 | pushed |
 | 22:15 | ea5cdf5 | F0 | F0 | CSV import 100%-failure for materials + suppliers | mapRecordToEntity + generateTemplate were written against an obsolete simplified schema (referenced category/currentPrice/quantityAvailable/etc. that no longer exist). Every "follow the template" import failed all rows. Plus added multer file-size limit (10MB) + MIME filter — prior config was DOS-prone | pushed |
 | 22:25 | 465226f | F1 | F1 | Stripe billing flow unreachable: stale JWT companyId | requireJwt middleware now refreshes companyId from DB when JWT has none. Was: customer signs up → JWT issued with companyId:null → company auto-created → JWT still null → all 15 /api/billing/* endpoints 400 NO_COMPANY → customer can browse plans but never reach card capture | pushed |
+| 23:30 | 99e9374 | F1 | F1 | Stripe role-gate: same-handler race clobbered helper's role update | Was: helper bumped users.role to admin, then caller immediately did `user = upsertUser({...user, companyId})` which spread the STALE pre-helper user (role:viewer) back over the DB. Helper now writes companyId+role atomically; callers re-fetch from DB. Closes the 3-iteration Stripe role-gate hunt | LIVE & VERIFIED — /api/billing/setup-intent returns 200 with clientSecret |
+| 00:45 | 8ae25af | F0+F1+F2 | F0 | Round-14 audit: 3 hardening fixes | F0: refresh-token-not-revoked-on-logout (auth replay). F1: trial-expiry chicken-and-egg (all endpoints 402 blocks upgrade). F2: generic "Internal server error" on 4xx client errors. Plus 1 F2 filed (DELETE /api/users/me 404 — no account self-deletion path) | pushed; awaiting Republish |
 | 22:15 | 9362635 | feat | F2 | MAPE backtest pipeline — closes F2-FILED-013 | 4-file commit: NEW mapeBacktest.ts (back-fill helper), WIRED backgroundJobs.ts (runs back-fill before existing trackAllSKUs cron), NEW POST /api/forecasts/backtest (manual trigger), REWROTE alertGeneration.generateForecastAlerts (now reads real MAPE from forecast_accuracy_tracking with tiered ratio thresholds + noise floor + 24h dedupe). Root cause was deeper than filed: existing pipeline was structurally complete but silent no-op because actualDemand column never populated | pushed; awaiting Republish |
 
 ## Hard stops hit
@@ -364,6 +366,34 @@ No F0/F1 isolation bugs found. Multi-tenant data access is properly scoped by `c
 - **Observed** Fresh tenant onboarding picked Industry="Industrial Equipment" + Company Size="51-200 employees" in the wizard. After completing onboarding and navigating to Settings → Configuration, those dropdowns render BLANK even though Company Name, Location, etc. populated correctly from the same wizard.
 - **Likely cause** Form's defaultValues / value binding for those two dropdowns isn't pulling from `company.industry` / `company.companySize` on initial render. Other text fields (companyName, location) bind fine.
 - **Tags** `coverage`, `tool-functional`, `polish`
+
+### F0-FOUND-024 — Logout doesn't revoke the refresh token — **FIXED in `8ae25af`**
+
+- **Severity** F0 — a "log out" button that doesn't actually invalidate the session is a real security regression. Captured refresh token (network log, browser history, malicious extension) keeps minting 15-minute access tokens for the token's full 7-day TTL.
+- **Test sequence** Login → save refreshToken → POST `/api/auth/logout` (200) → POST `/api/auth/refresh` with the SAME token → 200 with a new access token.
+- **Root cause** `refreshAccessToken()` did ONE DB lookup filtering on `revoked_at IS NULL AND expiresAt > NOW()`. If the row didn't match — because logout had revoked it, OR rotation had marked it used — control fell through to a "graceful stateless fallback" branch that issued a new access token unconditionally. The fallback's comment claimed it was for "legacy tokens issued before session tracking," but it silently covered every revoked + replay-attack case too.
+- **Fix** Split the lookup. First check if ANY row exists with the token hash. If yes + revoked → `401 TOKEN_REVOKED`. If yes + expired → `401 TOKEN_EXPIRED`. If yes + active → normal rotation. If no → legacy stateless path (the original intent, now isolated).
+- **Tags** `security`, `auth`
+
+### F1-FOUND-025 — Trial expiry locks customer out of the upgrade path — **FIXED in `8ae25af`**
+
+- **Severity** F1 — chicken-and-egg. Trial expires + no active subscription → `checkTrialExpiry` middleware returns 402 PAYMENT_REQUIRED on every authenticated request. The 402 response includes `upgradeUrl: /billing/upgrade`, but that page can't make ANY API call because every endpoint is 402'ing — including the very endpoints needed to subscribe.
+- **Root cause** `app.use(checkTrialExpiry)` registered globally in `authPaymentRoutes.ts:180`. Middleware ran for every request without any path-based bypass. The check correctly fired for users whose trial expired without a sub, but didn't realize it was also blocking the upgrade flow.
+- **Fix** Added `TRIAL_CHECK_EXEMPT_PREFIXES` allowlist: `/api/auth/*`, `/api/billing/*`, `/api/payments/*`, `/api/webhooks/*`, `/api/integrations/email/diag`, `/api/user/profile`. These always pass through the trial gate so a customer can sign in, upgrade, view their profile even with expired trial. Other endpoints still return 402 — correct behavior.
+- **Tags** `billing`, `tool-functional`
+
+### F2-FOUND-026 — Generic "Internal server error" on 4xx client errors — **FIXED in `8ae25af`**
+
+- **Severity** F2 (UX/DX, not customer-blocking but causes integration debugging friction)
+- **Observed** Malformed JSON body → `400 {"message":"Internal server error"}`. 5 MB body → `413 {"message":"Internal server error"}`. Both client mistakes presented as server problems with zero actionable information.
+- **Root cause** Global error handler in `server/index.ts:236-244` returned `'Internal server error'` in production for ANY status (4xx OR 5xx). The "hide internals in prod" intent is right for 5xx, wrong for 4xx (the client triggered the error and needs to know why to fix it).
+- **Fix** Differentiate by status: 4xx exposes `err.message` (client-safe — they caused it); 5xx still hides details in production to avoid leaking stack traces or internal paths.
+- **Tags** `coverage`, `dx`
+
+### F2-FOUND-027 — No account self-deletion endpoint (`DELETE /api/users/me` 404)
+
+- **Severity** F2 — GDPR/CCPA relevant. EU customers can request data deletion under Article 17. Today there's no self-service path.
+- **Filed for future** Should be a destructive action that: revokes all sessions, cascades-deletes user-owned data per the company's data-retention policy, and surfaces to admins for company-creator deletions (where deleting the owner orphans the whole company). Out of scope for autonomous fix because of the destructive cascade decisions.
 
 ### F2-FILED-013 — No per-SKU MAPE source — **RESOLVED in `9362635`**
 
