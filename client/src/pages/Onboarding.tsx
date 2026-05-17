@@ -21,32 +21,15 @@ import {
 } from "lucide-react";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
+//
+// Pulled from shared/onboardingOptions.ts so the wizard, Settings page, and
+// any downstream consumers stay in lockstep. Round-13 audit caught a
+// drift where Settings had different slugs than the wizard saved.
 
-const INDUSTRIES = [
-  "Aerospace & Defense",
-  "Automotive",
-  "Chemicals",
-  "Consumer Goods",
-  "Electronics",
-  "Food & Beverage",
-  "Industrial Equipment",
-  "Medical Devices",
-  "Metals & Mining",
-  "Pharmaceuticals",
-  "Plastics & Rubber",
-  "Semiconductors",
-  "Textiles",
-  "Other Manufacturing",
-];
-
-const COMPANY_SIZES = [
-  { value: "1-10", label: "1–10 employees" },
-  { value: "11-50", label: "11–50 employees" },
-  { value: "51-200", label: "51–200 employees" },
-  { value: "201-1000", label: "201–1,000 employees" },
-  { value: "1001-5000", label: "1,001–5,000 employees" },
-  { value: "5001+", label: "5,000+ employees" },
-];
+import {
+  INDUSTRY_OPTIONS as INDUSTRIES,
+  COMPANY_SIZE_OPTIONS as COMPANY_SIZES,
+} from "@shared/onboardingOptions";
 
 const ANNUAL_REVENUE = [
   { value: "pre-revenue", label: "Pre-revenue" },

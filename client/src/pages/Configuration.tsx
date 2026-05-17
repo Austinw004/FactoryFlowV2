@@ -17,6 +17,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "wouter";
 import { ChevronRight } from "lucide-react";
 import type { Company, User, Role } from "@shared/schema";
+import { INDUSTRY_OPTIONS, COMPANY_SIZE_OPTIONS } from "@shared/onboardingOptions";
 import { LocationsManagement } from "@/components/LocationsManagement";
 
 export default function Configuration() {
@@ -285,6 +286,11 @@ export default function Configuration() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="industry">Industry</Label>
+                  {/* Options sourced from shared/onboardingOptions.ts so the
+                      wizard and Settings can't drift. Round-13 audit caught
+                      this: wizard saved "Industrial Equipment" but Settings
+                      had value="industrial" — the value never matched,
+                      rendering the dropdown blank after save. */}
                   <Select
                     value={formData.industry || ""}
                     onValueChange={(value) => handleChange("industry", value)}
@@ -293,16 +299,9 @@ export default function Configuration() {
                       <SelectValue placeholder="Select industry" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="automotive">Automotive</SelectItem>
-                      <SelectItem value="aerospace">Aerospace</SelectItem>
-                      <SelectItem value="electronics">Electronics</SelectItem>
-                      <SelectItem value="consumer-goods">Consumer Goods</SelectItem>
-                      <SelectItem value="industrial">Industrial Equipment</SelectItem>
-                      <SelectItem value="medical">Medical Devices</SelectItem>
-                      <SelectItem value="food-beverage">Food & Beverage</SelectItem>
-                      <SelectItem value="pharmaceuticals">Pharmaceuticals</SelectItem>
-                      <SelectItem value="textiles">Textiles</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
+                      {INDUSTRY_OPTIONS.map(name => (
+                        <SelectItem key={name} value={name}>{name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -321,6 +320,9 @@ export default function Configuration() {
 
               <div className="space-y-2">
                 <Label htmlFor="company-size">Company Size</Label>
+                {/* Same buckets the wizard uses (slug values "1-10",
+                    "51-200", etc. — not "small"/"medium" which never
+                    matched). See shared/onboardingOptions.ts. */}
                 <Select
                   value={formData.companySize || ""}
                   onValueChange={(value) => handleChange("companySize", value)}
@@ -329,10 +331,9 @@ export default function Configuration() {
                     <SelectValue placeholder="Select company size" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="small">Small (1-50 employees)</SelectItem>
-                    <SelectItem value="medium">Medium (51-250 employees)</SelectItem>
-                    <SelectItem value="large">Large (251-1000 employees)</SelectItem>
-                    <SelectItem value="enterprise">Enterprise (1000+ employees)</SelectItem>
+                    {COMPANY_SIZE_OPTIONS.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

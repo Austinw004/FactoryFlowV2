@@ -613,15 +613,17 @@ export async function fetchWeatherLogistics(): Promise<WeatherLogistics> {
     // Winter storm risk: November-March
     const winterStormRisk = (month >= 10 || month <= 2) ? 65 : 15;
     
-    // Base alerts on current season and typical patterns.
+    // Real source: NOAA National Weather Service active alerts. Free, no
+    // API key, authoritative for US weather. Fetches happen behind a
+    // 15-min regime-aware cache so we don't hammer NOAA's endpoint.
+    // Closes F2-FILED-012 (replaces the prior empty-array stub).
     //
-    // Until a real weather API (NOAA, OpenWeather, AccuWeather) is wired up,
-    // we only fabricate season-shaped alerts in demo mode. Production
-    // tenants get an empty array, which the UI renders as "no active
-    // logistics weather alerts" — honest, and far better than a 60%-chance
-    // "tropical_system in Gulf of Mexico, 2-day delay" that's the same
-    // random coin flip on every page reload regardless of actual weather.
-    const alerts: WeatherAlert[] = [];
+    // Demo mode (DEMO_MODE=1) still synthesizes season-shaped alerts so
+    // sales walkthroughs in demo tenants always have a populated
+    // logistics-weather card to talk to. Production tenants now get
+    // real data from NOAA whenever active alerts exist; empty when they
+    // don't (which is the correct UX, not a stub).
+    let alerts: WeatherAlert[] = [];
 
     if (isDemoMode()) {
       if (hurricaneSeasonActive && Math.random() > 0.6) {
@@ -648,6 +650,27 @@ export async function fetchWeatherLogistics(): Promise<WeatherLogistics> {
           startDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
           endDate: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString()
         });
+      }
+    } else {
+      // Production path — real NOAA data.
+      try {
+        const { fetchNoaaActiveAlerts } = await import("./weather/noaaAdapter");
+        const noaaAlerts = await fetchNoaaActiveAlerts();
+        alerts = noaaAlerts.map(a => ({
+          type:               a.type,
+          region:             a.region,
+          severity:           a.severity,
+          impactDescription:  a.impactDescription,
+          estimatedDelay:     a.estimatedDelay,
+          affectedPorts:      a.affectedPorts,
+          startDate:          a.startDate,
+          endDate:            a.endDate,
+        }));
+      } catch (err) {
+        // NOAA degraded — log and continue with empty alerts. The UI
+        // empty-state ("no active logistics weather alerts") is correct
+        // under network failure.
+        console.error("[fetchWeatherLogistics] NOAA fetch failed:", err);
       }
     }
     

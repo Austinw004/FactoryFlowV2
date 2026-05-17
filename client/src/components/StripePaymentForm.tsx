@@ -115,7 +115,23 @@ function CardForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <PaymentElement options={{ layout: "tabs" }} />
+      {/* wallets.link: "never" disables Stripe Link's cross-browser auto-
+          suggest of any previously-saved payment method tied to the
+          customer's email/browser-session — which on shared computers,
+          demo machines, or sales-team laptops surfaces the PREVIOUS
+          user's bank account to a fresh signup (round-13 audit found
+          this: a fresh test user got shown the platform-owner's
+          personal Frost bank account). Combined with applePay/googlePay
+          set to "never" so the demo UX is plain card-entry only — no
+          surprise wallet buttons triggered by the customer's Apple
+          device or Google account.
+          See F2-FILED-022 in CHANGELOG-DISPATCH.md for the full repro. */}
+      <PaymentElement
+        options={{
+          layout: "tabs",
+          wallets: { applePay: "never", googlePay: "never", link: "never" },
+        }}
+      />
 
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <Shield className="w-3.5 h-3.5" />
