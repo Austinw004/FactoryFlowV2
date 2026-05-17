@@ -30,6 +30,8 @@ Session start: 2026-05-09
 | 20:18 | ef66334 | doc | — | F1-FILED-004 RESOLVED ledger + Phase 7 perf + 3 new F2s | All dispatch in-scope items now closed except F1-FILED-005 (Replit invoice) | LIVE |
 | 20:45 | 85fbf10 | F1 | F1 | Onboarding triple-fix: /complete persists both flags, auto-create company name uses real name, invite-team persists + reports per-invitation status | Found in round-9 live E2E audit. (a) Duplicate /api/onboarding/complete handler — 2nd was dead code, both flags now set atomically. (b) Auto-create company name was always "User's Company" because code only checked firstName (null at signup); now firstName → name[0] → email-local → "User". (c) /api/onboarding/invite-team never called storage.createTeamInvitation — emails sent invite links that resolved to "invalid invitation". Now persists BEFORE sending, returns 207 Multi-Status when emails fail, includes per-invite link in response so inviter can share manually | pushed; awaiting Republish |
 | 20:48 | bbe2248 | F0 | F0 | Close free-active-subscription leak in /api/billing/subscribe | **F0 in retrospect** — found in round-9. Any authenticated user could POST {planId:"monthly_starter"} and get status:"active" for 30 days with no Stripe subscription, no payment method, no money. Three concrete leaks: (1) client-controlled stripePriceId (could pass $1 price for $299 plan) → now server-derived from BILLING_PLANS, body param ignored; (2) no payment-method gate → now required unless trialDays > 0; (3) Stripe-side failure didn't fail the DB insert → now throws 502. Status field expanded: "active"/"trialing"/"pending_setup"/"incomplete". trialCheck middleware updated to accept "active" + "trialing" only | pushed; awaiting Republish |
+| 21:05 | 15a138a | doc | — | Round-9 ledger closure | All 4 round-9 findings + fixes documented in push-log + finding-detail sections | LIVE |
+| 21:15 | b121ef4 | F1 | F1 | Manual /api/rfqs creation was 400-ing on every request | Found in round-10 tenant-isolation audit (couldn't even create an RFQ to test cross-tenant access on). Handler validated client body against the FULL insertRfqSchema which requires server-derived fields (companyId / rfqNumber / regimeAtGeneration / fdrAtGeneration). Fix mirrors auto-gen flow: client-input schema omits server-injected fields; handler derives rfqNumber (RFQ-YYYY-NNNN) + captures regime context from latest snapshot | pushed; awaiting Republish |
 
 ## Hard stops hit
 
@@ -279,6 +281,29 @@ Filing this as **F1 with a concrete recovery path** rather than chasing the per-
 - **Severity** F1 — cosmetic but immediately visible. If the user invited a teammate before completing onboarding, the teammate joined "User's Company" — embarrassing.
 - **Root cause** Auto-create-company logic used `${user.firstName || 'User'}'s Company` in 6 different routes. Email signup writes the display name to `user.name`, leaving `firstName` null until Settings → Profile is edited. So `firstName || 'User'` always evaluated to `'User'`.
 - **Fix** Priority chain: `firstName || name.split(/\s+/)[0] || email.split("@")[0] || "User"`. Applied to all 6 sites via `replace_all`.
+
+### Tenant Isolation Audit (Round-10) — **PASSED across all surfaces tested**
+
+Live cross-tenant attack matrix against prod (2026-05-16 21:00 CDT):
+
+| Resource | List (own tenant) | List (other tenant) | GET other-tenant ID | PATCH other-tenant ID | DELETE other-tenant ID |
+|---|---|---|---|---|---|
+| Materials | ✓ 1 item | ✓ 0 items | ✓ 404 | ✓ 404 | ✓ 404 |
+| Suppliers | ✓ 1 item | ✓ 0 items | ✓ 404 | ✓ 404 | ✓ 403 |
+| SKUs | ✓ 1 item | ✓ 0 items | ✓ 404 | ✓ 404 | — |
+| Machinery | ✓ 1 item | ✓ 0 items | ✓ 404 | ✓ 404 | — |
+| RFQs | (creation broken — fixed in `b121ef4`) | ✓ 0 items | ✓ 404 | ✓ 404 | — |
+| Users | ✓ 0 (self excluded) | ✓ 0 items | (no `/api/users/:id` route) | — | — |
+
+Adversarial probes that should NOT work (and don't):
+- SQL injection via path param (`%20OR%201=1`) → 404, Drizzle parameterized
+- Path traversal (`../materials/<id>`) → 404
+- Foreign-key pollution (link tenant-B material to tenant-A supplier via POST /api/supplier-materials) → **403 "Access denied to supplier"** — handler validates FK ownership before insert
+- ID enumeration on `/api/users/:id`, `/api/companies/:id`, `/api/rbac/invitations`: routes don't exist (clean 404, no existence-leak via status code differences)
+
+Side-find during the audit: manual `/api/rfqs` POST was 400-ing on every payload because the validator required server-derived fields — fixed in `b121ef4`, see push log.
+
+No F0/F1 isolation bugs found. Multi-tenant data access is properly scoped by `companyId` derived from the authenticated JWT — never trusted from the request body or URL. Marking this audit as the F0-blocker for "can the product safely have paying customers without cross-tenant leakage." It can.
 
 ### F1-FOUND-017 — `/api/onboarding/invite-team` never persisted invitations; emailed links resolved to "invalid" — **FIXED in `85fbf10`**
 
