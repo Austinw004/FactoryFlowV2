@@ -4,6 +4,7 @@ import {
   text,
   varchar,
   real,
+  doublePrecision,
   integer,
   timestamp,
   jsonb,
@@ -217,8 +218,8 @@ export const companies = pgTable("companies", {
   numberOfFacilities: text("number_of_facilities"),
   topProducts: text("top_products"),
   // Budget Configuration
-  annualBudget: real("annual_budget"),
-  currentBudgetSpent: real("current_budget_spent").default(0),
+  annualBudget: doublePrecision("annual_budget"),
+  currentBudgetSpent: doublePrecision("current_budget_spent").default(0),
   budgetPeriod: text("budget_period"), // "monthly", "quarterly", "annual", "custom"
   budgetStartDate: timestamp("budget_start_date"),
   budgetEndDate: timestamp("budget_end_date"),
@@ -232,7 +233,7 @@ export const companies = pgTable("companies", {
   alertEmail: text("alert_email"),
   enableRegimeAlerts: integer("enable_regime_alerts").default(1), // 1 = enabled, 0 = disabled
   enableBudgetAlerts: integer("enable_budget_alerts").default(1),
-  budgetAlertThreshold: real("budget_alert_threshold").default(0.8), // Alert when 80% budget spent
+  budgetAlertThreshold: doublePrecision("budget_alert_threshold").default(0.8), // Alert when 80% budget spent
   enableAllocationAlerts: integer("enable_allocation_alerts").default(1),
   enablePriceAlerts: integer("enable_price_alerts").default(1),
   // Email Processing & Forwarding Settings
@@ -571,7 +572,7 @@ export const supplierMaterials = pgTable("supplier_materials", {
   materialId: varchar("material_id")
     .notNull()
     .references(() => materials.id, { onDelete: "cascade" }),
-  unitCost: real("unit_cost").notNull(),
+  unitCost: doublePrecision("unit_cost").notNull(),
   leadTimeDays: integer("lead_time_days").notNull(),
   onTimePct: real("on_time_pct"),        // 0.0–1.0 on-time delivery rate; null = no data
   deliveryVariance: real("delivery_variance"), // fractional variance ≥ 0; null = no data
@@ -605,7 +606,7 @@ export const allocations = pgTable(
       .notNull()
       .references(() => companies.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
-    budget: real("budget").notNull(),
+    budget: doublePrecision("budget").notNull(),
     regime: text("regime").notNull(),
     fdr: real("fdr").notNull(),
     policyKnobs: jsonb("policy_knobs").notNull(),
@@ -636,7 +637,7 @@ export const allocationResults = pgTable("allocation_results", {
   allocatedUnits: real("allocated_units").notNull(),
   fillRate: real("fill_rate").notNull(),
   // Budget runway fields
-  estimatedCostPerPeriod: real("estimated_cost_per_period"), // Burn rate for this SKU
+  estimatedCostPerPeriod: doublePrecision("estimated_cost_per_period"), // Burn rate for this SKU
   projectedDepletionDate: timestamp("projected_depletion_date"), // When budget runs out for this SKU
   daysOfInventory: real("days_of_inventory"), // How many days this allocation covers
 }, (table) => [
@@ -653,13 +654,13 @@ export const priceAlerts = pgTable("price_alerts", {
     .references(() => companies.id, { onDelete: "cascade" }),
   materialCode: text("material_code").notNull(),
   materialName: text("material_name").notNull(),
-  targetPrice: real("target_price").notNull(),
+  targetPrice: doublePrecision("target_price").notNull(),
   priceDirection: text("price_direction").notNull(), // "above" or "below"
   supplierId: varchar("supplier_id").references(() => suppliers.id, {
     onDelete: "set null",
   }),
   isActive: integer("is_active").notNull().default(1), // 1 = active, 0 = inactive
-  lastCheckedPrice: real("last_checked_price"),
+  lastCheckedPrice: doublePrecision("last_checked_price"),
   lastCheckedAt: timestamp("last_checked_at"),
   notificationsSent: integer("notifications_sent").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -683,8 +684,8 @@ export const machinery = pgTable("machinery", {
   serialNumber: text("serial_number"),
   category: text("category").notNull(), // "CNC", "Injection Molding", "Assembly Robot", etc.
   purchaseDate: timestamp("purchase_date"),
-  purchaseCost: real("purchase_cost").notNull(),
-  salvageValue: real("salvage_value").notNull().default(0),
+  purchaseCost: doublePrecision("purchase_cost").notNull(),
+  salvageValue: doublePrecision("salvage_value").notNull().default(0),
   usefulLifeYears: integer("useful_life_years").notNull().default(10),
   depreciationMethod: text("depreciation_method")
     .notNull()
@@ -713,7 +714,7 @@ export const maintenanceRecords = pgTable("maintenance_records", {
     .references(() => machinery.id, { onDelete: "cascade" }),
   maintenanceType: text("maintenance_type").notNull(), // "preventive", "corrective", "predictive"
   description: text("description").notNull(),
-  cost: real("cost").notNull().default(0),
+  cost: doublePrecision("cost").notNull().default(0),
   performedDate: timestamp("performed_date").notNull(),
   performedBy: text("performed_by"),
   nextScheduledDate: timestamp("next_scheduled_date"),
@@ -739,27 +740,27 @@ export const balanceSheets = pgTable("balance_sheets", {
   statementType: text("statement_type").notNull().default("quarterly"), // "quarterly", "annual", "monthly"
   version: integer("version").notNull().default(1), // For revisions
   // Assets
-  currentAssets: real("current_assets"),
-  cashAndEquivalents: real("cash_and_equivalents"),
+  currentAssets: doublePrecision("current_assets"),
+  cashAndEquivalents: doublePrecision("cash_and_equivalents"),
   accountsReceivable: real("accounts_receivable"),
   inventory: real("inventory"),
-  prepaidExpenses: real("prepaid_expenses"),
-  fixedAssets: real("fixed_assets"),
+  prepaidExpenses: doublePrecision("prepaid_expenses"),
+  fixedAssets: doublePrecision("fixed_assets"),
   propertyPlantEquipment: real("property_plant_equipment"),
   accumulatedDepreciation: real("accumulated_depreciation"),
-  intangibleAssets: real("intangible_assets"),
-  totalAssets: real("total_assets"),
+  intangibleAssets: doublePrecision("intangible_assets"),
+  totalAssets: doublePrecision("total_assets"),
   // Liabilities
   currentLiabilities: real("current_liabilities"),
   accountsPayable: real("accounts_payable"),
   shortTermDebt: real("short_term_debt"),
-  accruedExpenses: real("accrued_expenses"),
+  accruedExpenses: doublePrecision("accrued_expenses"),
   longTermLiabilities: real("long_term_liabilities"),
   longTermDebt: real("long_term_debt"),
-  totalLiabilities: real("total_liabilities"),
+  totalLiabilities: doublePrecision("total_liabilities"),
   // Equity
-  shareholdersEquity: real("shareholders_equity"),
-  retainedEarnings: real("retained_earnings"),
+  shareholdersEquity: doublePrecision("shareholders_equity"),
+  retainedEarnings: doublePrecision("retained_earnings"),
   // Metadata
   additionalData: jsonb("additional_data"), // Flexible field for extra line items
   notes: text("notes"),
@@ -779,22 +780,22 @@ export const incomeStatements = pgTable("income_statements", {
   statementType: text("statement_type").notNull().default("quarterly"), // "quarterly", "annual", "monthly"
   version: integer("version").notNull().default(1),
   // Revenue
-  revenue: real("revenue"),
-  costOfGoodsSold: real("cost_of_goods_sold"),
-  grossProfit: real("gross_profit"),
+  revenue: doublePrecision("revenue"),
+  costOfGoodsSold: doublePrecision("cost_of_goods_sold"),
+  grossProfit: doublePrecision("gross_profit"),
   // Operating Expenses
-  operatingExpenses: real("operating_expenses"),
+  operatingExpenses: doublePrecision("operating_expenses"),
   sellingGeneralAdmin: real("selling_general_admin"),
   researchDevelopment: real("research_development"),
   depreciationAmortization: real("depreciation_amortization"),
-  operatingIncome: real("operating_income"),
+  operatingIncome: doublePrecision("operating_income"),
   // Other
-  interestExpense: real("interest_expense"),
-  interestIncome: real("interest_income"),
-  otherIncome: real("other_income"),
-  incomeBeforeTax: real("income_before_tax"),
-  incomeTax: real("income_tax"),
-  netIncome: real("net_income"),
+  interestExpense: doublePrecision("interest_expense"),
+  interestIncome: doublePrecision("interest_income"),
+  otherIncome: doublePrecision("other_income"),
+  incomeBeforeTax: doublePrecision("income_before_tax"),
+  incomeTax: doublePrecision("income_tax"),
+  netIncome: doublePrecision("net_income"),
   // Metadata
   additionalData: jsonb("additional_data"),
   notes: text("notes"),
@@ -814,29 +815,29 @@ export const cashFlowStatements = pgTable("cash_flow_statements", {
   statementType: text("statement_type").notNull().default("quarterly"), // "quarterly", "annual", "monthly"
   version: integer("version").notNull().default(1),
   // Operating Activities
-  netIncome: real("net_income"),
+  netIncome: doublePrecision("net_income"),
   depreciationAmortization: real("depreciation_amortization"),
   changesInWorkingCapital: real("changes_in_working_capital"),
   changesInReceivables: real("changes_in_receivables"),
   changesInInventory: real("changes_in_inventory"),
   changesInPayables: real("changes_in_payables"),
-  operatingCashFlow: real("operating_cash_flow"),
+  operatingCashFlow: doublePrecision("operating_cash_flow"),
   // Investing Activities
   capitalExpenditures: real("capital_expenditures"),
   acquisitions: real("acquisitions"),
   investmentPurchases: real("investment_purchases"),
   investmentSales: real("investment_sales"),
-  investingCashFlow: real("investing_cash_flow"),
+  investingCashFlow: doublePrecision("investing_cash_flow"),
   // Financing Activities
   debtIssuance: real("debt_issuance"),
-  debtRepayment: real("debt_repayment"),
-  equityIssuance: real("equity_issuance"),
+  debtRepayment: doublePrecision("debt_repayment"),
+  equityIssuance: doublePrecision("equity_issuance"),
   dividendsPaid: real("dividends_paid"),
-  financingCashFlow: real("financing_cash_flow"),
+  financingCashFlow: doublePrecision("financing_cash_flow"),
   // Summary
-  netCashFlow: real("net_cash_flow"),
-  beginningCash: real("beginning_cash"),
-  endingCash: real("ending_cash"),
+  netCashFlow: doublePrecision("net_cash_flow"),
+  beginningCash: doublePrecision("beginning_cash"),
+  endingCash: doublePrecision("ending_cash"),
   // Metadata
   additionalData: jsonb("additional_data"),
   notes: text("notes"),
@@ -855,7 +856,7 @@ export const supplierMachinery = pgTable("supplier_machinery", {
   machineryType: text("machinery_type").notNull(), // e.g., "CNC Machine", "Industrial Robot"
   manufacturer: text("manufacturer"),
   model: text("model"),
-  unitPrice: real("unit_price").notNull(),
+  unitPrice: doublePrecision("unit_price").notNull(),
   currency: text("currency").notNull().default("USD"),
   leadTimeDays: integer("lead_time_days"),
   warrantyMonths: integer("warranty_months"),
@@ -877,7 +878,7 @@ export const priceHistory = pgTable("price_history", {
   supplierId: varchar("supplier_id").references(() => suppliers.id, {
     onDelete: "cascade",
   }),
-  price: real("price").notNull(),
+  price: doublePrecision("price").notNull(),
   currency: text("currency").notNull().default("USD"),
   source: text("source").notNull(), // "supplier_quote", "api", "market_data"
   apiProvider: text("api_provider"), // "metals_dev", "commodities_api", "equipmentwatch"
@@ -898,13 +899,13 @@ export const priceRecommendations = pgTable("price_recommendations", {
   currentSupplierId: varchar("current_supplier_id").references(
     () => suppliers.id,
   ),
-  currentPrice: real("current_price").notNull(),
+  currentPrice: doublePrecision("current_price").notNull(),
   recommendedSupplierId: varchar("recommended_supplier_id").references(
     () => suppliers.id,
   ),
-  recommendedPrice: real("recommended_price").notNull(),
-  potentialSavings: real("potential_savings").notNull(),
-  savingsPercentage: real("savings_percentage").notNull(),
+  recommendedPrice: doublePrecision("recommended_price").notNull(),
+  potentialSavings: doublePrecision("potential_savings").notNull(),
+  savingsPercentage: doublePrecision("savings_percentage").notNull(),
   status: text("status").notNull().default("active"), // "active", "dismissed", "accepted"
   priority: text("priority").default("medium"), // "high", "medium", "low"
   notes: text("notes"),
@@ -1244,7 +1245,7 @@ export const downtimeEvents = pgTable("downtime_events", {
   correctiveAction: text("corrective_action"),
   responsiblePerson: text("responsible_person"),
   impactOnProduction: text("impact_on_production"), // "production_stopped", "reduced_capacity", "quality_affected"
-  estimatedCost: real("estimated_cost"), // Cost of downtime
+  estimatedCost: doublePrecision("estimated_cost"), // Cost of downtime
   preventativeMeasures: text("preventative_measures"),
   economicRegime: text("economic_regime"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -1265,8 +1266,8 @@ export const productionBottlenecks = pgTable("production_bottlenecks", {
   machineryId: varchar("machinery_id").references(() => machinery.id),
   description: text("description").notNull(),
   impactLevel: text("impact_level").notNull(), // "critical", "high", "medium", "low"
-  throughputLoss: real("throughput_loss"), // percentage
-  estimatedDailyCost: real("estimated_daily_cost"),
+  throughputLoss: doublePrecision("throughput_loss"), // percentage
+  estimatedDailyCost: doublePrecision("estimated_daily_cost"),
   recommendedActions: jsonb("recommended_actions"),
   implementedSolutions: text("implemented_solutions"),
   resolvedAt: timestamp("resolved_at"),
@@ -1398,7 +1399,7 @@ export const inventoryOptimizations = pgTable("inventory_optimizations", {
   stockoutRisk: real("stockout_risk"), // percentage
   excessInventoryRisk: real("excess_inventory_risk"), // percentage
   recommendedAction: text("recommended_action"), // "increase", "decrease", "maintain", "urgent_reorder"
-  estimatedCostImpact: real("estimated_cost_impact"),
+  estimatedCostImpact: doublePrecision("estimated_cost_impact"),
   mlModel: text("ml_model"),
   confidence: real("confidence"),
   economicRegime: text("economic_regime"),
@@ -1596,7 +1597,7 @@ export const inventoryRecommendations = pgTable("inventory_recommendations", {
   currentState: jsonb("current_state"),
   recommendedState: jsonb("recommended_state"),
   reasoning: text("reasoning").notNull(),
-  estimatedSavings: real("estimated_savings"),
+  estimatedSavings: doublePrecision("estimated_savings"),
   estimatedRisk: text("estimated_risk"),
   status: text("status").notNull().default("pending"), // "pending", "accepted", "rejected", "implemented"
   implementedBy: varchar("implemented_by").references(() => users.id),
@@ -1683,7 +1684,7 @@ export const supplierChainLinks = pgTable("supplier_chain_links", {
   riskLevel: text("risk_level").notNull().default("medium"), // "low", "medium", "high", "critical"
   singleSourceRisk: integer("single_source_risk").notNull().default(0), // 1 if single source, 0 if multiple
   geographicDiversification: text("geographic_diversification"), // "high", "medium", "low"
-  leadTimeReliability: real("lead_time_reliability"), // percentage
+  leadTimeReliability: doublePrecision("lead_time_reliability"), // percentage
   qualityScore: real("quality_score"), // 0-100
   lastDisruptionDate: timestamp("last_disruption_date"),
   disruptionHistory: jsonb("disruption_history"), // Historical disruptions
@@ -1714,7 +1715,7 @@ export const supplierTiers = pgTable(
     country: text("country"),
     coordinates: jsonb("coordinates"), // { lat: number, lng: number } for mapping
     riskRegion: integer("risk_region").default(0), // 1 if in high-risk region, 0 otherwise
-    spendShare: real("spend_share"), // Percentage of total spend with this tier
+    spendShare: doublePrecision("spend_share"), // Percentage of total spend with this tier
     dependencyWeight: real("dependency_weight"), // How critical is this supplier (0-100)
     alternativesCount: integer("alternatives_count").default(0), // Number of alternative suppliers at this tier
     lastAssessmentDate: timestamp("last_assessment_date"),
@@ -2038,7 +2039,7 @@ export const employeePayroll = pgTable("employee_payroll", {
   companyId: varchar("company_id")
     .notNull()
     .references(() => companies.id, { onDelete: "cascade" }),
-  annualSalary: real("annual_salary"),
+  annualSalary: doublePrecision("annual_salary"),
   hourlyRate: real("hourly_rate"),
   payFrequency: text("pay_frequency").notNull().default("biweekly"), // "weekly", "biweekly", "monthly", "semimonthly"
   paymentMethod: text("payment_method").notNull().default("direct_deposit"), // "direct_deposit", "check", "cash"
@@ -2228,9 +2229,9 @@ export const employeePerformanceReviews = pgTable(
     accomplishments: text("accomplishments"),
     reviewNotes: text("review_notes"),
     employeeComments: text("employee_comments"),
-    raiseAmount: real("raise_amount"),
-    raisePercentage: real("raise_percentage"),
-    bonusAmount: real("bonus_amount"),
+    raiseAmount: doublePrecision("raise_amount"),
+    raisePercentage: doublePrecision("raise_percentage"),
+    bonusAmount: doublePrecision("bonus_amount"),
     promotionTitle: text("promotion_title"),
     nextReviewDate: timestamp("next_review_date"),
     status: text("status").notNull().default("draft"), // "draft", "completed", "acknowledged"
@@ -2816,7 +2817,7 @@ export const procurementSchedules = pgTable("procurement_schedules", {
     .references(() => suppliers.id, { onDelete: "cascade" }),
   scheduleType: text("schedule_type").notNull(), // "daily", "weekly", "monthly", "quarterly"
   quantity: real("quantity").notNull(),
-  unitPrice: real("unit_price").notNull(),
+  unitPrice: doublePrecision("unit_price").notNull(),
   dayOfWeek: integer("day_of_week"), // 1-7 for weekly
   dayOfMonth: integer("day_of_month"), // 1-31 for monthly
   isActive: text("is_active").notNull().default("active"), // "active", "paused", "cancelled"
@@ -2845,11 +2846,11 @@ export const autoPurchaseRecommendations = pgTable(
     recommendationType: text("recommendation_type").notNull(), // "stock_low", "price_optimal", "counter_cyclical", "demand_spike"
     priority: text("priority").notNull(), // "critical", "high", "medium", "low"
     suggestedQuantity: real("suggested_quantity").notNull(),
-    suggestedPrice: real("suggested_price"),
+    suggestedPrice: doublePrecision("suggested_price"),
     currentStockLevel: real("current_stock_level"),
     projectedStockoutDate: timestamp("projected_stockout_date"),
     reasoning: text("reasoning").notNull(),
-    costSavings: real("cost_savings"),
+    costSavings: doublePrecision("cost_savings"),
     aiConfidence: real("ai_confidence").notNull(), // 0-1
     status: text("status").notNull().default("pending"), // "pending", "auto_approved", "user_approved", "rejected", "executed"
     executedAt: timestamp("executed_at"),
@@ -2924,8 +2925,8 @@ export const purchaseOrders = pgTable(
       .notNull()
       .references(() => suppliers.id, { onDelete: "cascade" }),
     quantity: real("quantity").notNull(),
-    unitPrice: real("unit_price").notNull(),
-    totalCost: real("total_cost").notNull(),
+    unitPrice: doublePrecision("unit_price").notNull(),
+    totalCost: doublePrecision("total_cost").notNull(),
     status: text("status").notNull().default("pending"), // "pending", "in_progress", "delivered", "cancelled"
     orderDate: timestamp("order_date").notNull().defaultNow(),
     expectedDeliveryDate: timestamp("expected_delivery_date"),
@@ -2981,8 +2982,8 @@ export const materialUsageTracking = pgTable("material_usage_tracking", {
   ),
   notes: text("notes"),
   remainingStock: real("remaining_stock"), // Stock level after this usage
-  costPerUnit: real("cost_per_unit"), // FIFO/LIFO cost at time of usage
-  totalCost: real("total_cost"),
+  costPerUnit: doublePrecision("cost_per_unit"), // FIFO/LIFO cost at time of usage
+  totalCost: doublePrecision("total_cost"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -3020,7 +3021,7 @@ export const historicalPredictions = pgTable(
     confidenceScore: real("confidence_score"), // 0-1 confidence in prediction
 
     // What actually happened
-    actualValue: real("actual_value"), // Actual price or value at target date
+    actualValue: doublePrecision("actual_value"), // Actual price or value at target date
     actualRegime: text("actual_regime"), // Actual regime at target date
     actualDirection: text("actual_direction"), // Actual direction of movement
 
@@ -3072,14 +3073,14 @@ export const predictionAccuracyMetrics = pgTable(
     rootMeanSquareError: real("root_mean_square_error"), // RMSE for price predictions
 
     // Breakdown by prediction type
-    commodityPriceMAPE: real("commodity_price_mape"),
+    commodityPriceMAPE: doublePrecision("commodity_price_mape"),
     regimeChangeAccuracy: real("regime_change_accuracy"),
-    assetBubbleDetection: real("asset_bubble_detection"), // % of bubbles correctly predicted
+    assetBubbleDetection: doublePrecision("asset_bubble_detection"), // % of bubbles correctly predicted
     recessionPredictionAccuracy: real("recession_prediction_accuracy"),
 
     // Breakdown by economic regime
     healthyExpansionAccuracy: real("healthy_expansion_accuracy"),
-    assetLedGrowthAccuracy: real("asset_led_growth_accuracy"),
+    assetLedGrowthAccuracy: doublePrecision("asset_led_growth_accuracy"),
     imbalancedExcessAccuracy: real("imbalanced_excess_accuracy"),
     realEconomyLeadAccuracy: real("real_economy_lead_accuracy"),
 
@@ -3184,7 +3185,7 @@ export const modelComparisons = pgTable(
     commodity: text("commodity").notNull(), // "Aluminum", "Copper", "Steel", "Nickel", "Oil"
 
     // Actual outcome (ground truth)
-    actualPrice: real("actual_price").notNull(),
+    actualPrice: doublePrecision("actual_price").notNull(),
     actualDirection: text("actual_direction").notNull(), // "up", "down", "stable"
 
     // Dual-Circuit FDR Model (PRIMARY - YOUR THESIS)
@@ -3246,19 +3247,19 @@ export const machineryPredictions = pgTable(
 
     // Machinery metrics predicted
     predictedOEE: real("predicted_oee"), // Overall Equipment Effectiveness
-    predictedMaintenanceCost: real("predicted_maintenance_cost"),
+    predictedMaintenanceCost: doublePrecision("predicted_maintenance_cost"),
     predictedDowntimeHours: real("predicted_downtime_hours"),
     predictedReplacementNeed: integer("predicted_replacement_need"), // 1 if replacement recommended
 
     // Actual outcomes
     actualOEE: real("actual_oee"),
-    actualMaintenanceCost: real("actual_maintenance_cost"),
+    actualMaintenanceCost: doublePrecision("actual_maintenance_cost"),
     actualDowntimeHours: real("actual_downtime_hours"),
     actualReplacementNeed: integer("actual_replacement_need"),
 
     // Accuracy metrics
     oeeMAPE: real("oee_mape"),
-    maintenanceCostMAPE: real("maintenance_cost_mape"),
+    maintenanceCostMAPE: doublePrecision("maintenance_cost_mape"),
     downtimeMAPE: real("downtime_mape"),
     replacementCorrect: integer("replacement_correct"),
 
@@ -3451,10 +3452,10 @@ export const supplierHealthMetrics = pgTable(
     regime: text("regime").notNull(),
 
     // Financial metrics
-    revenueGrowth: real("revenue_growth"), // % YoY
-    profitMargin: real("profit_margin"), // %
-    debtToEquity: real("debt_to_equity"),
-    cashReserves: real("cash_reserves"), // Days of operating cash
+    revenueGrowth: doublePrecision("revenue_growth"), // % YoY
+    profitMargin: doublePrecision("profit_margin"), // %
+    debtToEquity: doublePrecision("debt_to_equity"),
+    cashReserves: doublePrecision("cash_reserves"), // Days of operating cash
 
     // Operational metrics
     productionCapacity: real("production_capacity"), // % of max
@@ -3556,14 +3557,14 @@ export const poRules = pgTable(
     inventoryMax: real("inventory_max"), // Don't trigger if inventory above this
 
     // Price triggers
-    priceMin: real("price_min"), // Only buy if price <= this
-    priceMax: real("price_max"), // Don't buy if price >= this
-    priceChange: real("price_change"), // Trigger on % price movement
+    priceMin: doublePrecision("price_min"), // Only buy if price <= this
+    priceMax: doublePrecision("price_max"), // Don't buy if price >= this
+    priceChange: doublePrecision("price_change"), // Trigger on % price movement
 
     // Order parameters
     orderQuantity: real("order_quantity"), // Fixed quantity
     orderDuration: integer("order_duration"), // Days of supply to order
-    maxOrderValue: real("max_order_value"), // $ cap on order
+    maxOrderValue: doublePrecision("max_order_value"), // $ cap on order
 
     // Approval requirements
     requiresApproval: integer("requires_approval").notNull().default(0),
@@ -3677,7 +3678,7 @@ export const negotiationPlaybooks = pgTable(
 
     // Success metrics
     usageCount: integer("usage_count").notNull().default(0),
-    avgSavings: real("avg_savings"), // Average % saved using this playbook
+    avgSavings: doublePrecision("avg_savings"), // Average % saved using this playbook
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -3754,11 +3755,11 @@ export const consortiumContributions = pgTable(
 
     // Procurement data (anonymized)
     commodityPurchases: jsonb("commodity_purchases"), // {materialType: avgPrice, volume}
-    avgProcurementSavings: real("avg_procurement_savings"), // % vs market
+    avgProcurementSavings: doublePrecision("avg_procurement_savings"), // % vs market
 
     // Machinery data
     avgOEE: real("avg_oee"),
-    avgMaintenanceCost: real("avg_maintenance_cost"),
+    avgMaintenanceCost: doublePrecision("avg_maintenance_cost"),
 
     // Workforce data
     avgWageGrowth: real("avg_wage_growth"), // %
@@ -3803,7 +3804,7 @@ export const consortiumMetrics = pgTable(
     medianCommodityPrice: jsonb("median_commodity_price"), // {material: price}
     p25CommodityPrice: jsonb("p25_commodity_price"),
     p75CommodityPrice: jsonb("p75_commodity_price"),
-    avgProcurementSavings: real("avg_procurement_savings"),
+    avgProcurementSavings: doublePrecision("avg_procurement_savings"),
 
     // Aggregated performance metrics
     medianOEE: real("median_oee"),
@@ -3815,7 +3816,7 @@ export const consortiumMetrics = pgTable(
     p75Turnover: real("p75_turnover"),
 
     // Best practices indicators
-    topDecileProcurementSavings: real("top_decile_procurement_savings"),
+    topDecileProcurementSavings: doublePrecision("top_decile_procurement_savings"),
     topDecileOEE: real("top_decile_oee"),
     topDecileTurnover: real("top_decile_turnover"),
 
@@ -3884,7 +3885,7 @@ export const maTargets = pgTable(
     // Target company info
     targetName: text("target_name").notNull(),
     targetIndustry: text("target_industry"),
-    targetRevenue: real("target_revenue"),
+    targetRevenue: doublePrecision("target_revenue"),
     targetEmployees: integer("target_employees"),
     targetRegion: text("target_region"),
 
@@ -3895,7 +3896,7 @@ export const maTargets = pgTable(
     targetRegime: text("target_regime"),
 
     // Valuation metrics
-    estimatedValue: real("estimated_value"), // $
+    estimatedValue: doublePrecision("estimated_value"), // $
     fdrAdjustedValue: real("fdr_adjusted_value"), // $ adjusted for regime
     marketMultiple: real("market_multiple"), // EV/EBITDA
     fdrAdjustedMultiple: real("fdr_adjusted_multiple"), // Regime-adjusted multiple
@@ -3944,7 +3945,7 @@ export const maScenarios = pgTable(
 
     // Deal structure
     dealValue: real("deal_value").notNull(), // $
-    cashPortion: real("cash_portion"), // % or $
+    cashPortion: doublePrecision("cash_portion"), // % or $
     stockPortion: real("stock_portion"), // % or $
     debtAssumed: real("debt_assumed"), // $
 
@@ -3956,21 +3957,21 @@ export const maScenarios = pgTable(
     // Projected outcomes
     projectedSynergies: real("projected_synergies"), // $ annual
     synergyCaptureRate: real("synergy_capture_rate"), // % of synergies realized
-    integrationCost: real("integration_cost"), // $ one-time
+    integrationCost: doublePrecision("integration_cost"), // $ one-time
     integrationTimeline: integer("integration_timeline"), // Months
 
     // Financial projections
-    year1Revenue: real("year1_revenue"),
+    year1Revenue: doublePrecision("year1_revenue"),
     year1EBITDA: real("year1_ebitda"),
-    year3Revenue: real("year3_revenue"),
+    year3Revenue: doublePrecision("year3_revenue"),
     year3EBITDA: real("year3_ebitda"),
 
     // Returns
-    projectedROI: real("projected_roi"), // % IRR
+    projectedROI: doublePrecision("projected_roi"), // % IRR
     paybackPeriod: real("payback_period"), // Years
 
     // Risk adjustments
-    riskAdjustedROI: real("risk_adjusted_roi"),
+    riskAdjustedROI: doublePrecision("risk_adjusted_roi"),
     fdrVolatilityImpact: real("fdr_volatility_impact"), // How regime changes affect returns
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -4004,7 +4005,7 @@ export const maIntegrationRisks = pgTable(
 
     // Mitigation
     mitigationStrategy: text("mitigation_strategy"),
-    mitigationCost: real("mitigation_cost"), // $
+    mitigationCost: doublePrecision("mitigation_cost"), // $
     residualRisk: real("residual_risk"), // Risk after mitigation (0-100)
 
     ownerRole: text("owner_role"), // Who manages this risk
@@ -4235,8 +4236,8 @@ export const geopoliticalImpacts = pgTable(
     impactSeverity: text("impact_severity").notNull(), // 'low', 'medium', 'high', 'critical'
 
     // Financial impact
-    estimatedCostImpact: real("estimated_cost_impact"), // $ annual
-    estimatedRevenueImpact: real("estimated_revenue_impact"), // $ annual
+    estimatedCostImpact: doublePrecision("estimated_cost_impact"), // $ annual
+    estimatedRevenueImpact: doublePrecision("estimated_revenue_impact"), // $ annual
 
     // Operational impact
     affectedSuppliers: jsonb("affected_suppliers"), // Supplier IDs
@@ -4250,7 +4251,7 @@ export const geopoliticalImpacts = pgTable(
 
     // Mitigation strategies
     mitigationPlan: text("mitigation_plan"),
-    mitigationCost: real("mitigation_cost"), // $
+    mitigationCost: doublePrecision("mitigation_cost"), // $
     mitigationTimeline: integer("mitigation_timeline"), // Days
     residualRisk: real("residual_risk"), // 0-100 after mitigation
 
@@ -4615,7 +4616,7 @@ export const scenarioVariants = pgTable(
     inventoryImpact: real("inventory_impact"), // % change in inventory levels
     allocationImpact: jsonb("allocation_impact"), // Detailed allocation changes
     forecastImpact: jsonb("forecast_impact"), // Impact on demand forecasts
-    budgetImpact: real("budget_impact"), // Impact on budget utilization
+    budgetImpact: doublePrecision("budget_impact"), // Impact on budget utilization
     riskScore: real("risk_score"), // Overall risk score for this variant
     comparisonMeta: jsonb("comparison_meta"), // Additional comparison data
     isBaseline: integer("is_baseline").default(0), // 1 if this is the baseline scenario
@@ -4799,11 +4800,11 @@ export const sopScenarios = pgTable(
     // Supply assumptions
     productionCapacity: real("production_capacity"), // Units per period
     materialAvailability: real("material_availability"), // % of materials available
-    supplierReliability: real("supplier_reliability"), // % reliability score
+    supplierReliability: doublePrecision("supplier_reliability"), // % reliability score
 
     // Financial assumptions
-    budgetAllocation: real("budget_allocation"),
-    costInflationRate: real("cost_inflation_rate"), // % expected cost increase
+    budgetAllocation: doublePrecision("budget_allocation"),
+    costInflationRate: doublePrecision("cost_inflation_rate"), // % expected cost increase
 
     // Status and ownership
     status: text("status").notNull().default("draft"), // "draft", "active", "archived"
@@ -5011,7 +5012,7 @@ export const rfqs = pgTable(
     // Supplier Management
     targetSupplierIds: text("target_supplier_ids").array(), // Array of supplier IDs to send RFQ to
     quotesReceived: integer("quotes_received").default(0),
-    bestQuotePrice: real("best_quote_price"),
+    bestQuotePrice: doublePrecision("best_quote_price"),
     bestQuoteSupplierId: varchar("best_quote_supplier_id").references(
       () => suppliers.id,
     ),
@@ -5057,8 +5058,8 @@ export const rfqQuotes = pgTable(
       .references(() => suppliers.id, { onDelete: "cascade" }),
 
     // Quote Details
-    unitPrice: real("unit_price").notNull(),
-    totalPrice: real("total_price").notNull(),
+    unitPrice: doublePrecision("unit_price").notNull(),
+    totalPrice: doublePrecision("total_price").notNull(),
     quantity: real("quantity").notNull(),
     currency: text("currency").notNull().default("USD"),
 
@@ -5108,7 +5109,7 @@ export const benchmarkSubmissions = pgTable(
     materialName: text("material_name").notNull(), // Generic name (e.g., "Aluminum Sheet 6061")
 
     // Cost Data
-    unitCost: real("unit_cost").notNull(), // Cost per unit
+    unitCost: doublePrecision("unit_cost").notNull(), // Cost per unit
     unit: text("unit").notNull(), // "kg", "ton", "piece", etc.
     currency: text("currency").notNull().default("USD"),
 
@@ -5164,19 +5165,19 @@ export const benchmarkAggregates = pgTable(
 
     // Aggregate Statistics
     participantCount: integer("participant_count").notNull(), // Number of companies contributing (min 3 for privacy)
-    averageCost: real("average_cost").notNull(), // Mean cost per unit
-    medianCost: real("median_cost").notNull(), // Median cost per unit
-    minCost: real("min_cost").notNull(), // Minimum cost (5th percentile for privacy)
-    maxCost: real("max_cost").notNull(), // Maximum cost (95th percentile for privacy)
+    averageCost: doublePrecision("average_cost").notNull(), // Mean cost per unit
+    medianCost: doublePrecision("median_cost").notNull(), // Median cost per unit
+    minCost: doublePrecision("min_cost").notNull(), // Minimum cost (5th percentile for privacy)
+    maxCost: doublePrecision("max_cost").notNull(), // Maximum cost (95th percentile for privacy)
     standardDeviation: real("standard_deviation"), // Cost variation
 
     // Percentiles (for detailed comparison)
-    p25Cost: real("p25_cost"), // 25th percentile
-    p75Cost: real("p75_cost"), // 75th percentile
-    p90Cost: real("p90_cost"), // 90th percentile
+    p25Cost: doublePrecision("p25_cost"), // 25th percentile
+    p75Cost: doublePrecision("p75_cost"), // 75th percentile
+    p90Cost: doublePrecision("p90_cost"), // 90th percentile
 
     // Volume-Weighted Statistics (larger buyers may get better prices)
-    volumeWeightedAvgCost: real("volume_weighted_avg_cost"),
+    volumeWeightedAvgCost: doublePrecision("volume_weighted_avg_cost"),
     totalVolume: real("total_volume"), // Total industry volume for this material
 
     // Temporal Context
@@ -5230,17 +5231,17 @@ export const benchmarkComparisons = pgTable(
       .references(() => benchmarkAggregates.id, { onDelete: "cascade" }),
 
     // Comparison Results
-    companyCost: real("company_cost").notNull(),
-    industryCost: real("industry_cost").notNull(), // Average from aggregate
-    costDifferencePercent: real("cost_difference_percent").notNull(), // (company - industry) / industry * 100
-    costDifferenceAbsolute: real("cost_difference_absolute").notNull(),
+    companyCost: doublePrecision("company_cost").notNull(),
+    industryCost: doublePrecision("industry_cost").notNull(), // Average from aggregate
+    costDifferencePercent: doublePrecision("cost_difference_percent").notNull(), // (company - industry) / industry * 100
+    costDifferenceAbsolute: doublePrecision("cost_difference_absolute").notNull(),
 
     // Percentile Ranking
     companyPercentile: real("company_percentile"), // Where company ranks (0-100)
 
     // Insights
     competitivePosition: text("competitive_position"), // "below_average", "average", "above_average", "significantly_above"
-    savingsOpportunity: real("savings_opportunity"), // Potential annual savings if matched industry average
+    savingsOpportunity: doublePrecision("savings_opportunity"), // Potential annual savings if matched industry average
 
     // Temporal
     comparisonDate: timestamp("comparison_date").notNull().defaultNow(),
@@ -5617,12 +5618,12 @@ export const roiSummary = pgTable(
     periodEnd: timestamp("period_end").notNull(),
 
     // Procurement Savings
-    totalProcurementSavings: real("total_procurement_savings").default(0),
-    regimeTimingSavings: real("regime_timing_savings").default(0), // Savings from buying at right regime
-    supplierOptimizationSavings: real("supplier_optimization_savings").default(
+    totalProcurementSavings: doublePrecision("total_procurement_savings").default(0),
+    regimeTimingSavings: doublePrecision("regime_timing_savings").default(0), // Savings from buying at right regime
+    supplierOptimizationSavings: doublePrecision("supplier_optimization_savings").default(
       0,
     ),
-    bulkPurchaseSavings: real("bulk_purchase_savings").default(0),
+    bulkPurchaseSavings: doublePrecision("bulk_purchase_savings").default(0),
 
     // Forecast Accuracy
     avgForecastMape: real("avg_forecast_mape"), // Average MAPE across all SKUs
@@ -5643,7 +5644,7 @@ export const roiSummary = pgTable(
 
     // Overall ROI
     totalValueGenerated: real("total_value_generated"), // Sum of all savings
-    estimatedAnnualizedRoi: real("estimated_annualized_roi"),
+    estimatedAnnualizedRoi: doublePrecision("estimated_annualized_roi"),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -6077,7 +6078,7 @@ export const sopReconciliationItems = pgTable(
     gapPercentage: real("gap_percentage"), // gap as % of demand
 
     // Financial impact
-    gapCostImpact: real("gap_cost_impact"), // Estimated cost of the gap
+    gapCostImpact: doublePrecision("gap_cost_impact"), // Estimated cost of the gap
 
     // Regime context
     regime: text("regime"),
@@ -6524,7 +6525,7 @@ export const digitalTwinSimulations = pgTable(
   */
 
     // Summary metrics
-    totalCostImpact: real("total_cost_impact"),
+    totalCostImpact: doublePrecision("total_cost_impact"),
     riskScore: real("risk_score"),
     confidenceLevel: real("confidence_level"),
     keyFindings: text("key_findings").array(),
@@ -6780,7 +6781,7 @@ export const aiAutomationRules = pgTable(
     executionCount: integer("execution_count").default(0),
     lastExecutedAt: timestamp("last_executed_at"),
     successRate: real("success_rate"),
-    avgSavings: real("avg_savings"), // Average $ saved per execution
+    avgSavings: doublePrecision("avg_savings"), // Average $ saved per execution
 
     createdBy: varchar("created_by").references(() => users.id),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -7067,7 +7068,7 @@ export const aiPerformanceMetrics = pgTable(
     actionsFailed: integer("actions_failed").default(0),
 
     // Impact metrics
-    totalCostSavings: real("total_cost_savings").default(0),
+    totalCostSavings: doublePrecision("total_cost_savings").default(0),
     totalRiskReduction: real("total_risk_reduction").default(0),
     totalEfficiencyGain: real("total_efficiency_gain").default(0),
 
@@ -7096,7 +7097,7 @@ export const automationRuntimeState = pgTable(
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
     companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
     stateDate: text("state_date").notNull(),
-    dailySpendTotal: real("daily_spend_total").default(0),
+    dailySpendTotal: doublePrecision("daily_spend_total").default(0),
     dailyActionCount: integer("daily_action_count").default(0),
     lastUpdatedAt: timestamp("last_updated_at").defaultNow().notNull(),
   },
@@ -7596,8 +7597,8 @@ export const platformAnalyticsSnapshots = pgTable(
 
     // Financial metrics (aggregated, anonymized)
     totalProcurementVolume: real("total_procurement_volume").default(0),
-    totalSavingsReported: real("total_savings_reported").default(0),
-    avgSavingsPercentage: real("avg_savings_percentage").default(0),
+    totalSavingsReported: doublePrecision("total_savings_reported").default(0),
+    avgSavingsPercentage: doublePrecision("avg_savings_percentage").default(0),
 
     // Industry distribution (JSON)
     industryBreakdown: jsonb("industry_breakdown"), // { "manufacturing": 45, "automotive": 20, ... }
@@ -7625,7 +7626,7 @@ export const platformMaterialTrends = pgTable(
 
     // Demand metrics (percentile-based for anonymity)
     demandGrowthPercentile: real("demand_growth_percentile"), // 0-100
-    priceChangePercentile: real("price_change_percentile"),
+    priceChangePercentile: doublePrecision("price_change_percentile"),
     companiesTracking: integer("companies_tracking").default(0), // How many companies track this
 
     // Trend indicators
@@ -7658,7 +7659,7 @@ export const platformSupplierIntelligence = pgTable(
     avgLeadTimeDays: real("avg_lead_time_days"),
     avgOnTimeDeliveryRate: real("avg_on_time_delivery_rate"),
     avgQualityScore: real("avg_quality_score"),
-    avgPriceCompetitiveness: real("avg_price_competitiveness"),
+    avgPriceCompetitiveness: doublePrecision("avg_price_competitiveness"),
 
     // Risk metrics
     avgRiskScore: real("avg_risk_score"),
@@ -8266,7 +8267,7 @@ export const predictionOutcomes = pgTable(
     wasAccurate: integer("was_accurate"),
     errorMagnitude: real("error_magnitude"),
     regimeAtOutcome: text("regime_at_outcome"),
-    fdrAtOutcome: real("fdr_at_outcome"),
+    fdrAtOutcome: doublePrecision("fdr_at_outcome"),
     predictionTimestamp: timestamp("prediction_timestamp").defaultNow().notNull(),
     outcomeTimestamp: timestamp("outcome_timestamp"),
     metadata: text("metadata"),
@@ -8719,8 +8720,8 @@ export const savingsEvidenceRecords = pgTable("savings_evidence_records", {
   assumptions: jsonb("assumptions").notNull(),
   scenarioInputs: jsonb("scenario_inputs"),
   computationMethod: varchar("computation_method", { length: 128 }).notNull(),
-  estimatedSavings: real("estimated_savings").notNull(),
-  measuredSavings: real("measured_savings"),
+  estimatedSavings: doublePrecision("estimated_savings").notNull(),
+  measuredSavings: doublePrecision("measured_savings"),
   measuredOutcomeRef: jsonb("measured_outcome_ref"),
   entityRefs: jsonb("entity_refs").notNull(),
   regime: varchar("regime", { length: 32 }),
@@ -8835,9 +8836,9 @@ export const optimizationRuns = pgTable("optimization_runs", {
   optimizedQuantity: real("optimized_quantity"),
   currentPolicyQuantity: real("current_policy_quantity"),
   expectedServiceLevel: real("expected_service_level"),
-  expectedCost: real("expected_cost"),
+  expectedCost: doublePrecision("expected_cost"),
   stockoutRisk: real("stockout_risk"),
-  costSavingsVsCurrent: real("cost_savings_vs_current"),
+  costSavingsVsCurrent: doublePrecision("cost_savings_vs_current"),
   serviceLevelDelta: real("service_level_delta"),
   confidenceInterval: jsonb("confidence_interval"),
   evidenceBundle: jsonb("evidence_bundle"),
@@ -9006,7 +9007,7 @@ export const decisionOutcomes = pgTable(
     actualOutcome: jsonb("actual_outcome").notNull(),
     win: boolean("win").notNull(),
     winType: text("win_type").notNull(),
-    deltaCost: real("delta_cost"),
+    deltaCost: doublePrecision("delta_cost"),
     deltaServiceLevel: real("delta_service_level"),
     deltaStockout: real("delta_stockout"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -9396,9 +9397,9 @@ export const performanceBilling = pgTable(
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
     companyId: varchar("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
     savingsRecordId: integer("savings_record_id").notNull().references(() => savingsEvidenceRecords.id, { onDelete: "restrict" }),
-    measuredSavings: real("measured_savings").notNull(),   // dollars — must match evidence record
-    feePercentage: real("fee_percentage").notNull(),        // 0.10 – 0.20
-    feeAmount: real("fee_amount").notNull(),                // measuredSavings × feePercentage
+    measuredSavings: doublePrecision("measured_savings").notNull(),   // dollars — must match evidence record
+    feePercentage: doublePrecision("fee_percentage").notNull(),        // 0.10 – 0.20
+    feeAmount: doublePrecision("fee_amount").notNull(),                // measuredSavings × feePercentage
     status: text("status").notNull().default("pending"),    // pending | invoiced | paid | disputed | cancelled
     billingPeriodStart: timestamp("billing_period_start"),
     billingPeriodEnd: timestamp("billing_period_end"),
@@ -9458,8 +9459,8 @@ export const purchaseIntents = pgTable(
     recommendationId: varchar("recommendation_id").references(() => autoPurchaseRecommendations.id, { onDelete: "set null" }),
     executedByUserId: varchar("executed_by_user_id").references(() => users.id, { onDelete: "set null" }),
     quantity: real("quantity").notNull(),
-    unitPrice: real("unit_price").notNull(),
-    totalAmount: real("total_amount").notNull(),
+    unitPrice: doublePrecision("unit_price").notNull(),
+    totalAmount: doublePrecision("total_amount").notNull(),
     status: text("status").notNull().default("draft"),   // draft|pending_approval|approved|executing|completed|failed
     paymentMethod: text("payment_method").notNull().default("card"), // card|ach|invoice
     trustScore: real("trust_score"),
