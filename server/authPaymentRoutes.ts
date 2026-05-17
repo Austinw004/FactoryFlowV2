@@ -635,6 +635,88 @@ export function registerAuthPaymentRoutes(app: Express): void {
   }));
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // ACCOUNT DELETION (GDPR Article 17 / CCPA right-to-delete)
+  // Soft-delete with 30-day grace period. See server/lib/accountDeletion.ts.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /** POST /api/users/me/delete — request account deletion */
+  app.post("/api/users/me/delete", requireJwt, rateLimiters.sensitive, handle(async (req, res) => {
+    const authUser = getAuthUser(req);
+    if (!authUser) { apiError(res, 401, "UNAUTHORIZED", "Authentication required."); return; }
+
+    const { requestAccountDeletion } = await import("./lib/accountDeletion");
+    const result = await requestAccountDeletion({
+      userId: authUser.id,
+      reason: typeof req.body?.reason === "string" ? req.body.reason.slice(0, 1000) : undefined,
+      ipAddress: (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket?.remoteAddress || undefined,
+    });
+
+    if (result.status === "blocked") {
+      apiError(res, 409, "DELETION_BLOCKED", result.blockReason ?? "Cannot delete account at this time.");
+      return;
+    }
+
+    await logAudit({
+      req,
+      action: result.status === "scheduled" ? "create" : "view",
+      entityType: "account_deletion_request",
+      entityId: result.requestId,
+      notes: result.status === "scheduled"
+        ? `Account deletion scheduled for ${result.scheduledFor?.toISOString()}`
+        : `Account deletion already pending`,
+    }).catch(() => {});
+
+    res.status(result.status === "already_pending" ? 200 : 201).json({
+      success: true,
+      status: result.status,
+      scheduledFor: result.scheduledFor,
+      requestId: result.requestId,
+      message:
+        result.status === "scheduled"
+          ? `Your account is scheduled for deletion in 30 days (on ${result.scheduledFor?.toISOString().slice(0, 10)}). You can cancel any time before then by signing in and visiting Settings → Data & Privacy.`
+          : "An account deletion is already pending. Cancel it first if you want to start a new one.",
+    });
+  }));
+
+  /** GET /api/users/me/delete/status — view current deletion request */
+  app.get("/api/users/me/delete/status", requireJwt, handle(async (req, res) => {
+    const authUser = getAuthUser(req);
+    if (!authUser) { apiError(res, 401, "UNAUTHORIZED", "Authentication required."); return; }
+
+    const { getDeletionStatus } = await import("./lib/accountDeletion");
+    const status = await getDeletionStatus(authUser.id);
+    res.json(status);
+  }));
+
+  /** POST /api/users/me/delete/cancel — cancel pending deletion */
+  app.post("/api/users/me/delete/cancel", requireJwt, rateLimiters.sensitive, handle(async (req, res) => {
+    const authUser = getAuthUser(req);
+    if (!authUser) { apiError(res, 401, "UNAUTHORIZED", "Authentication required."); return; }
+
+    const { cancelAccountDeletion } = await import("./lib/accountDeletion");
+    const result = await cancelAccountDeletion(authUser.id);
+
+    if (!result.cancelled) {
+      apiError(res, 404, "NO_PENDING_DELETION", "No pending deletion request to cancel.");
+      return;
+    }
+
+    await logAudit({
+      req,
+      action: "update",
+      entityType: "account_deletion_request",
+      entityId: authUser.id,
+      notes: `Account deletion cancelled (was scheduled for ${result.previouslyScheduledFor?.toISOString()})`,
+    }).catch(() => {});
+
+    res.json({
+      success: true,
+      cancelled: true,
+      message: "Account deletion cancelled. Your account remains active.",
+    });
+  }));
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // BILLING ROUTES
   // ═══════════════════════════════════════════════════════════════════════════
 

@@ -1260,6 +1260,27 @@ async function selfProbeHealth() {
   }
 }
 
+/**
+ * GDPR Article 17 — daily sweep that processes any account-deletion
+ * requests whose 30-day grace period has elapsed. See
+ * server/lib/accountDeletion.ts for the soft-delete + cascade contract.
+ *
+ * Wrapped in withJobLock by the scheduler so multiple replicas don't
+ * race on the same deletion. Errors are logged per-request, not raised
+ * — one bad row shouldn't block sweeps for the rest.
+ */
+async function accountDeletionSweepJob() {
+  try {
+    const { processDueDeletions } = await import('./lib/accountDeletion');
+    const result = await processDueDeletions();
+    if (result.processed > 0 || result.errors > 0) {
+      console.log(`[AccountDeletionSweep] ${result.processed} processed, ${result.errors} errors`);
+    }
+  } catch (err) {
+    console.error('[AccountDeletionSweep] Sweep failed:', err);
+  }
+}
+
 const jobConfigs: BackgroundJobConfig[] = [
   { name: 'Economic Data Updates', intervalMs: 5 * 60 * 1000, enabled: true },
   { name: 'Sensor Readings Generation', intervalMs: 30 * 1000, enabled: true },
@@ -1277,6 +1298,10 @@ const jobConfigs: BackgroundJobConfig[] = [
   { name: 'Automation Queue Worker', intervalMs: 30 * 1000, enabled: true },
   { name: 'Data Retention', intervalMs: 24 * 60 * 60 * 1000, enabled: true },
   { name: 'Self-Probe Health', intervalMs: 5 * 60 * 1000, enabled: true },
+  // GDPR Article 17 — sweeps account_deletion_requests whose scheduledFor
+  // has passed, cascade-deletes the user (FKs handle dependents). Daily
+  // tick keeps the grace-period contract honest without spamming the DB.
+  { name: 'Account Deletion Sweep', intervalMs: 24 * 60 * 60 * 1000, enabled: true },
 ];
 
 export function startBackgroundJobs() {
@@ -1299,6 +1324,7 @@ export function startBackgroundJobs() {
     automationQueueWorkerJob,
     dataRetentionJob,
     selfProbeHealth,
+    accountDeletionSweepJob,
   ];
   
   jobConfigs.forEach((config, index) => {

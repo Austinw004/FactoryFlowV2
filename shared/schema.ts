@@ -9186,6 +9186,52 @@ export const insertAuthSessionSchema = createInsertSchema(authSessions).omit({ i
 export type AuthSession = typeof authSessions.$inferSelect;
 
 /**
+ * account_deletion_requests — GDPR Article 17 (Right to Erasure) + CCPA
+ * data-deletion-request endpoint backing.
+ *
+ * Soft-delete pattern with 30-day grace period:
+ *   1. User hits POST /api/users/me/delete → row inserted here with
+ *      status="pending" and scheduledFor=now+30d. Confirmation email sent.
+ *   2. User can cancel via POST /api/users/me/delete/cancel any time
+ *      before scheduledFor → row status="cancelled".
+ *   3. Daily background job sweeps rows where status="pending" AND
+ *      scheduledFor <= now() → cascades delete via the FK CASCADE rules
+ *      on the users table, then sets status="completed" on this row
+ *      (history kept for audit, but no longer linked to a live user).
+ *
+ * The 30-day window matches GDPR's "without undue delay" interpretation
+ * and gives the user time to recover from accidental clicks / account
+ * compromise scenarios.
+ *
+ * Sole-admin protection: the deletion endpoint refuses (409) if the
+ * user is the only admin of a company that has other members — they
+ * must transfer admin role first. If they're the only user in the
+ * company, cascade applies to the company too (per FK on users.companyId).
+ */
+export const accountDeletionRequests = pgTable(
+  "account_deletion_requests",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    requestedAt: timestamp("requested_at").defaultNow().notNull(),
+    scheduledFor: timestamp("scheduled_for").notNull(),
+    cancelledAt: timestamp("cancelled_at"),
+    completedAt: timestamp("completed_at"),
+    status: text("status").notNull().default("pending"), // "pending" | "cancelled" | "completed"
+    reason: text("reason"), // Optional user-provided reason (free text, sanitized)
+    requestedFromIp: text("requested_from_ip"),
+  },
+  (t) => [
+    index("account_deletion_user_idx").on(t.userId),
+    index("account_deletion_status_idx").on(t.status),
+    index("account_deletion_scheduled_idx").on(t.scheduledFor),
+  ],
+);
+export const insertAccountDeletionRequestSchema = createInsertSchema(accountDeletionRequests).omit({ id: true, requestedAt: true });
+export type AccountDeletionRequest = typeof accountDeletionRequests.$inferSelect;
+export type InsertAccountDeletionRequest = typeof accountDeletionRequests.$inferInsert;
+
+/**
  * subscriptions — Tracks user/company billing plan.
  * IMPORTANT: Plan type is stored for billing mechanics ONLY — no feature gating.
  * All plans include all features. Differences are billing structure only.
