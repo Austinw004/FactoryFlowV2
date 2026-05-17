@@ -688,6 +688,31 @@ export function registerAuthPaymentRoutes(app: Express): void {
     res.json(status);
   }));
 
+  /** GET /api/users/me/export — GDPR Article 20 data portability download */
+  app.get("/api/users/me/export", requireJwt, rateLimiters.sensitive, handle(async (req, res) => {
+    const authUser = getAuthUser(req);
+    if (!authUser) { apiError(res, 401, "UNAUTHORIZED", "Authentication required."); return; }
+
+    const { buildAccountDataExport } = await import("./lib/accountDataExport");
+    const payload = await buildAccountDataExport(authUser.id);
+
+    await logAudit({
+      req,
+      action: "export",
+      entityType: "user",
+      entityId: authUser.id,
+      notes: `User exported personal data (GDPR Article 20)`,
+    }).catch(() => {});
+
+    // Set Content-Disposition so browsers download as a file instead of
+    // rendering inline. Filename includes the user's id + date so the
+    // user can keep multiple exports organized.
+    const filename = `prescient-labs-data-export-${authUser.id.slice(0, 8)}-${new Date().toISOString().slice(0, 10)}.json`;
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(JSON.stringify(payload, null, 2));
+  }));
+
   /** POST /api/users/me/delete/cancel — cancel pending deletion */
   app.post("/api/users/me/delete/cancel", requireJwt, rateLimiters.sensitive, handle(async (req, res) => {
     const authUser = getAuthUser(req);

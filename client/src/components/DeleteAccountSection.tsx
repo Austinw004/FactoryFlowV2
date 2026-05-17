@@ -34,7 +34,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, AlertTriangle, Trash2 } from "lucide-react";
+import { AlertCircle, AlertTriangle, Trash2, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
@@ -112,11 +112,84 @@ export function DeleteAccountSection() {
     },
   });
 
+  // GDPR Article 20 — Right to Data Portability. Lets the customer
+  // download all their personal data as JSON before requesting
+  // deletion. Rate-limited server-side via rateLimiters.sensitive.
+  const [exporting, setExporting] = useState(false);
+  async function handleExportData() {
+    setExporting(true);
+    try {
+      const res = await fetch("/api/users/me/export", {
+        credentials: "include",
+        headers: localStorage.getItem("prescient_token")
+          ? { Authorization: `Bearer ${localStorage.getItem("prescient_token")}` }
+          : {},
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.message ?? "Couldn't generate data export.");
+      }
+      const blob = await res.blob();
+      // Filename comes from Content-Disposition; fallback if not present
+      const cd = res.headers.get("Content-Disposition") ?? "";
+      const filenameMatch = cd.match(/filename="([^"]+)"/);
+      const filename = filenameMatch?.[1] ?? `prescient-labs-data-export-${new Date().toISOString().slice(0, 10)}.json`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast({
+        title: "Data export downloaded",
+        description: `Saved as ${filename}. This file contains a complete copy of your personal data.`,
+      });
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Couldn't download data export",
+        description: err.message ?? "Something went wrong.",
+      });
+    } finally {
+      setExporting(false);
+    }
+  }
+
   if (isLoading) return null;
 
   const isPending = data?.status === "pending";
 
   return (
+    <div className="space-y-4">
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Download className="w-4 h-4" />
+          Download your data
+        </CardTitle>
+        <CardDescription>
+          Get a copy of all personal data Prescient Labs holds about you,
+          as a JSON file. Required by GDPR Article 20 (Right to Data
+          Portability). Includes your profile, role assignments, company
+          membership, invoices, payment methods (last 4 digits only), and
+          any pending account-deletion requests.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Button
+          variant="outline"
+          onClick={handleExportData}
+          disabled={exporting}
+          data-testid="button-export-data"
+        >
+          <Download className="w-4 h-4 mr-2" />
+          {exporting ? "Generating export…" : "Download my data (JSON)"}
+        </Button>
+      </CardContent>
+    </Card>
+
     <Card className="border-destructive/30">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-destructive">
@@ -230,5 +303,6 @@ export function DeleteAccountSection() {
         )}
       </CardContent>
     </Card>
+    </div>
   );
 }
