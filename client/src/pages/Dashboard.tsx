@@ -71,11 +71,15 @@ export default function Dashboard() {
   // Enable WebSocket for real-time updates with regime change notifications
   const { isConnected } = useWebSocket((message) => {
     if (message.type === 'regime_change' && message.data) {
-      const severity = message.data.severity === 'high' ? 'destructive' : 'default';
-      
+      const severity = message.data?.severity === 'high' ? 'destructive' : 'default';
+      const from = message.data?.from ?? 'previous regime';
+      const to = message.data?.to ?? 'new regime';
+      const fdrNum = Number(message.data?.fdr);
+      const fdrText = Number.isFinite(fdrNum) ? fdrNum.toFixed(2) : '—';
+
       toast({
         title: "Economic Regime Changed",
-        description: `The economic regime has shifted from ${message.data.from} to ${message.data.to}. FDR: ${Number.isFinite(Number(message.data.fdr)) ? Number(message.data.fdr).toFixed(2) : '—'}`,
+        description: `The economic regime has shifted from ${from} to ${to}. FDR: ${fdrText}`,
         variant: severity as 'default' | 'destructive',
         duration: 10000, // Show for 10 seconds
       });
