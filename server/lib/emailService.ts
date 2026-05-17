@@ -32,18 +32,32 @@ async function getCredentials(companyId?: string): Promise<SendPulseCredentials 
   }
 
   // System-level fallback. Used by flows that have no company context
-  // (forgot-password, signup welcome) and as a baseline for tenants that
-  // haven't configured their own SendPulse keys. Env vars are read once
-  // and cached for the life of the process.
-  const envUser = process.env.SENDPULSE_USER_ID?.trim() || process.env.SENDPULSE_API_USER?.trim();
-  const envSecret = process.env.SENDPULSE_SECRET?.trim() || process.env.SENDPULSE_API_SECRET?.trim();
+  // (forgot-password, signup welcome, team-invite from onboarding) and as
+  // a baseline for tenants that haven't configured their own SendPulse
+  // keys. Env vars are read once and cached for the life of the process.
+  //
+  // SendPulse's own dashboard/docs name the credentials API_USER_ID +
+  // API_SECRET — which is what operators naturally set. The original
+  // lookup chain only checked SENDPULSE_USER_ID / SENDPULSE_API_USER
+  // / SENDPULSE_SECRET / SENDPULSE_API_SECRET, missing the _ID-suffixed
+  // form. Result: live tenants who configured the natural name had
+  // emails silently failing (invite-team and forgot-password both
+  // returning success: true with emailsSent: 0). The _ID variants
+  // are now first in priority so the natural Replit-secret name works.
+  const envUser =
+    process.env.SENDPULSE_API_USER_ID?.trim() ||
+    process.env.SENDPULSE_USER_ID?.trim() ||
+    process.env.SENDPULSE_API_USER?.trim();
+  const envSecret =
+    process.env.SENDPULSE_API_SECRET?.trim() ||
+    process.env.SENDPULSE_SECRET?.trim();
   if (envUser && envSecret) {
     console.log('[Email] Using system-level SendPulse credentials from env');
     cachedCredentials = { userId: envUser, secret: envSecret };
     return cachedCredentials;
   }
 
-  console.warn('[Email] No credentials found — configure SENDPULSE_USER_ID + SENDPULSE_SECRET env vars (system fallback) or per-company via CredentialService');
+  console.warn('[Email] No credentials found — configure SENDPULSE_API_USER_ID + SENDPULSE_API_SECRET env vars (system fallback) or per-company via CredentialService');
   return null;
 }
 
