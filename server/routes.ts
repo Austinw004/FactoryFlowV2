@@ -183,30 +183,33 @@ async function createCompanyForUserWithAdminRole(
     // this for a recovery sweep if it ever fires in prod.
   }
 
-  // The codebase has two parallel role systems:
-  //   1. `users.role` — a simple text column (viewer/operator/admin) that
-  //      gets baked into the JWT at signup time and is what the billing
-  //      handlers in server/authPaymentRoutes.ts check.
+  // Atomically set BOTH companyId and role on the user. Two parallel role
+  // systems exist in this codebase:
+  //   1. `users.role` — a simple text column (viewer/operator/admin)
+  //      that gets baked into the JWT at signup time and is what the
+  //      billing handlers in authPaymentRoutes.ts gate on.
   //   2. `user_role_assignments` — the proper RBAC table read by
-  //      requirePermission() middleware.
-  // The RBAC table was assigned above. Without ALSO bumping users.role,
-  // the user who just CREATED the company can call /api/users (RBAC
-  // says Admin) but gets 403 FORBIDDEN on /api/billing/create-customer
-  // because the JWT-carried users.role is still "viewer".
-  // Round-13 audit caught this as the second-order Stripe blocker.
-  // First attempt used storage.upsertUser, but its INSERT…ON CONFLICT
-  // path hits a NOT NULL violation on `email` before the conflict
-  // resolution kicks in (Postgres orders NOT NULL ahead of conflict
-  // detection). Direct UPDATE avoids that — we already know the user
-  // exists.
+  //      requirePermission() middleware. Already assigned above.
+  // Without bumping users.role, the company creator is admin in RBAC
+  // but viewer per JWT → /api/billing/* returns 403 FORBIDDEN.
+  //
+  // Done as a single UPDATE here (rather than via storage.upsertUser
+  // in the caller) for two reasons:
+  //   a) storage.upsertUser uses INSERT…ON CONFLICT, which fails Postgres
+  //      NOT NULL on email BEFORE the conflict resolution kicks in.
+  //   b) the prior caller pattern of `user = upsertUser({...user, companyId})`
+  //      spread the STALE pre-helper user object back over the DB row —
+  //      clobbering this role update within the same request. By doing
+  //      both column writes here atomically, no caller-side overwrite is
+  //      possible.
   try {
-    await db.update(users).set({ role: "admin" }).where(eq(users.id, user.id));
-  } catch (roleColErr) {
-    console.error(`[RBAC] Failed to upgrade users.role to admin for user=${user.id}:`, roleColErr);
-    // Non-fatal — the RBAC table assignment above is the authoritative source.
-    // /api/users + /api/rbac/* will still work; only /api/billing/* + other
-    // JWT-role-gated endpoints will keep the legacy "viewer" gate until a
-    // manual repair.
+    await db.update(users)
+      .set({ companyId: company.id, role: "admin" })
+      .where(eq(users.id, user.id));
+  } catch (userUpdateErr) {
+    console.error(`[RBAC] Failed to set companyId+role on user=${user.id}:`, userUpdateErr);
+    // Caller still has the company; the user link will be missing until
+    // a manual repair. Surface in logs for ops.
   }
 
   return company;
@@ -9697,12 +9700,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // endpoint (/api/users, /api/rbac/*, view_audit_logs, manage_users)
         // returned 403 — including for the company's actual creator.
         // createCompanyForUserWithAdminRole atomically does
-        // createCompany + initializeDefaultRoles + assignRoleToUser(Admin).
-        const company = await createCompanyForUserWithAdminRole(user);
-        user = await storage.upsertUser({
-          ...user,
-          companyId: company.id,
-        });
+        // createCompany + initializeDefaultRoles + assignRoleToUser(Admin)
+        // + atomic companyId+role bump on the user row.
+        //
+        // Was: `user = await storage.upsertUser({...user, companyId})` here.
+        // That spread the STALE pre-helper user (role:"viewer") back over
+        // the DB row, clobbering the role bump within the same request.
+        // The helper now writes companyId+role itself, so the caller just
+        // re-fetches to refresh its local `user` reference.
+        await createCompanyForUserWithAdminRole(user);
+        user = (await storage.getUser(user.id))!;
       }
 
       const { startYear, endYear, horizonMonths } = req.body;
@@ -9770,12 +9777,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // endpoint (/api/users, /api/rbac/*, view_audit_logs, manage_users)
         // returned 403 — including for the company's actual creator.
         // createCompanyForUserWithAdminRole atomically does
-        // createCompany + initializeDefaultRoles + assignRoleToUser(Admin).
-        const company = await createCompanyForUserWithAdminRole(user);
-        user = await storage.upsertUser({
-          ...user,
-          companyId: company.id,
-        });
+        // createCompany + initializeDefaultRoles + assignRoleToUser(Admin)
+        // + atomic companyId+role bump on the user row.
+        //
+        // Was: `user = await storage.upsertUser({...user, companyId})` here.
+        // That spread the STALE pre-helper user (role:"viewer") back over
+        // the DB row, clobbering the role bump within the same request.
+        // The helper now writes companyId+role itself, so the caller just
+        // re-fetches to refresh its local `user` reference.
+        await createCompanyForUserWithAdminRole(user);
+        user = (await storage.getUser(user.id))!;
       }
 
       const results = await storage.getPredictionAccuracyMetrics(user.companyId!);
@@ -10718,12 +10729,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // endpoint (/api/users, /api/rbac/*, view_audit_logs, manage_users)
         // returned 403 — including for the company's actual creator.
         // createCompanyForUserWithAdminRole atomically does
-        // createCompany + initializeDefaultRoles + assignRoleToUser(Admin).
-        const company = await createCompanyForUserWithAdminRole(user);
-        user = await storage.upsertUser({
-          ...user,
-          companyId: company.id,
-        });
+        // createCompany + initializeDefaultRoles + assignRoleToUser(Admin)
+        // + atomic companyId+role bump on the user row.
+        //
+        // Was: `user = await storage.upsertUser({...user, companyId})` here.
+        // That spread the STALE pre-helper user (role:"viewer") back over
+        // the DB row, clobbering the role bump within the same request.
+        // The helper now writes companyId+role itself, so the caller just
+        // re-fetches to refresh its local `user` reference.
+        await createCompanyForUserWithAdminRole(user);
+        user = (await storage.getUser(user.id))!;
       }
 
       const company = await storage.getCompany(user.companyId!);
@@ -10801,12 +10816,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // endpoint (/api/users, /api/rbac/*, view_audit_logs, manage_users)
         // returned 403 — including for the company's actual creator.
         // createCompanyForUserWithAdminRole atomically does
-        // createCompany + initializeDefaultRoles + assignRoleToUser(Admin).
-        const company = await createCompanyForUserWithAdminRole(user);
-        user = await storage.upsertUser({
-          ...user,
-          companyId: company.id,
-        });
+        // createCompany + initializeDefaultRoles + assignRoleToUser(Admin)
+        // + atomic companyId+role bump on the user row.
+        //
+        // Was: `user = await storage.upsertUser({...user, companyId})` here.
+        // That spread the STALE pre-helper user (role:"viewer") back over
+        // the DB row, clobbering the role bump within the same request.
+        // The helper now writes companyId+role itself, so the caller just
+        // re-fetches to refresh its local `user` reference.
+        await createCompanyForUserWithAdminRole(user);
+        user = (await storage.getUser(user.id))!;
       }
 
       // Validate the request body with the partial insert schema
@@ -11019,12 +11038,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // endpoint (/api/users, /api/rbac/*, view_audit_logs, manage_users)
         // returned 403 — including for the company's actual creator.
         // createCompanyForUserWithAdminRole atomically does
-        // createCompany + initializeDefaultRoles + assignRoleToUser(Admin).
-        const company = await createCompanyForUserWithAdminRole(user);
-        user = await storage.upsertUser({
-          ...user,
-          companyId: company.id,
-        });
+        // createCompany + initializeDefaultRoles + assignRoleToUser(Admin)
+        // + atomic companyId+role bump on the user row.
+        //
+        // Was: `user = await storage.upsertUser({...user, companyId})` here.
+        // That spread the STALE pre-helper user (role:"viewer") back over
+        // the DB row, clobbering the role bump within the same request.
+        // The helper now writes companyId+role itself, so the caller just
+        // re-fetches to refresh its local `user` reference.
+        await createCompanyForUserWithAdminRole(user);
+        user = (await storage.getUser(user.id))!;
       }
 
       const companyId = user.companyId!;
