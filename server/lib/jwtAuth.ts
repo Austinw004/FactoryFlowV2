@@ -56,13 +56,42 @@ export function jwtMiddleware(req: Request, _res: Response, next: NextFunction):
 /**
  * Middleware that requires a valid JWT (does not fall through to Replit Auth).
  * Use on routes that can be called from mobile/API clients without cookies.
+ *
+ * Side-effect (round-13 audit): refreshes companyId from the DB when the
+ * JWT has none. JWTs are issued at signup time, when the user typically
+ * has no company yet. They live for 15 minutes. If the user auto-creates
+ * a company mid-session, their DB user.companyId updates but the JWT
+ * keeps companyId: null — and every downstream handler reading
+ * jwtUser.companyId (15+ billing endpoints, settings, RBAC checks) sees
+ * stale null and returns NO_COMPANY. Even though the user IS in a
+ * company.
+ *
+ * The mutation here patches the in-flight `req.jwtUser.companyId` so
+ * downstream handlers see the fresh value without needing async-aware
+ * helpers. Cost: one extra DB query per request, ONLY when the JWT
+ * actually lacks companyId. Happy path (token already has company) is
+ * zero overhead.
  */
-export function requireJwt(req: Request, res: Response, next: NextFunction): void {
+export async function requireJwt(req: Request, res: Response, next: NextFunction): Promise<void> {
   const jwtUser = (req as any).jwtUser;
   if (!jwtUser) {
     res.status(401).json({ error: "UNAUTHORIZED", message: "Valid Bearer token required." });
     return;
   }
+
+  if (!jwtUser.companyId && jwtUser.sub) {
+    try {
+      const { storage } = await import("../storage");
+      const dbUser = await storage.getUser(jwtUser.sub);
+      if (dbUser?.companyId) {
+        jwtUser.companyId = dbUser.companyId;
+      }
+    } catch (err) {
+      console.warn("[requireJwt] companyId refresh failed:", err);
+      // Non-fatal — handler will surface NO_COMPANY if it needs the field
+    }
+  }
+
   next();
 }
 
@@ -90,4 +119,43 @@ export function getAuthUser(req: Request): { id: string; email: string; role: st
     return { id: sessionUser.claims?.sub ?? sessionUser.id, email: sessionUser.claims?.email ?? sessionUser.email, role: sessionUser.role ?? "viewer", companyId: sessionUser.companyId ?? null };
   }
   return null;
+}
+
+/**
+ * Async variant that falls back to a DB lookup when the JWT's companyId
+ * is stale. Use this in handlers that GATE on companyId (billing,
+ * settings, anything writing to per-company tables) so a user who
+ * just had a company auto-created mid-session doesn't get false
+ * NO_COMPANY errors for the remaining 15 minutes their JWT lives.
+ *
+ * Round-13 audit caught this: fresh signup → JWT issued with
+ * companyId: null → /api/onboarding/status auto-creates company → DB
+ * user.companyId is now set, but the JWT they're carrying is unchanged.
+ * Every subsequent billing call (create-customer, setup-intent,
+ * payment-methods) returned 400 NO_COMPANY because getAuthUser only
+ * read the JWT. Customer could browse plans but never reach the card-
+ * capture screen.
+ *
+ * Costs one extra DB roundtrip when JWT.companyId is null. Skipped
+ * entirely on the happy path (JWT already has companyId).
+ */
+export async function getAuthUserWithFreshCompany(
+  req: Request,
+): Promise<{ id: string; email: string; role: string; companyId: string | null } | null> {
+  const baseline = getAuthUser(req);
+  if (!baseline) return null;
+  if (baseline.companyId) return baseline;
+
+  // JWT/session says no company — check the DB before failing the request.
+  try {
+    const { storage } = await import("../storage");
+    const dbUser = await storage.getUser(baseline.id);
+    if (dbUser?.companyId) {
+      return { ...baseline, companyId: dbUser.companyId };
+    }
+  } catch (err) {
+    console.warn("[jwtAuth] getAuthUserWithFreshCompany DB lookup failed:", err);
+    // Fall through — return the stale baseline; caller will surface NO_COMPANY.
+  }
+  return baseline;
 }
