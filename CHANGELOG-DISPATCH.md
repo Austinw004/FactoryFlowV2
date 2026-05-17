@@ -340,12 +340,13 @@ No F0/F1 isolation bugs found. Multi-tenant data access is properly scoped by `c
 - **Root cause** JWTs are issued at signup with `companyId: null` (user hasn't picked a company yet) and cached for 15 minutes. The user then hits `/api/onboarding/status` (or any other auto-create path) which creates a company and updates `user.companyId` in the DB. But the JWT still has `companyId: null`. `getAuthUser` reads JWT only. All 15 billing handlers that read `authUser.companyId` got stale null → NO_COMPANY → entire billing flow blocked.
 - **Fix** `requireJwt` middleware now refreshes companyId from DB once when JWT has none, mutating `req.jwtUser.companyId` in-flight. Costs one extra DB query per request ONLY when JWT.companyId is null. Same pattern as the round-9 RBAC ghost-owner fix.
 
-### F1-FILED-021 — Money columns (`real`/float32) cap at $8.4M precision
+### F1-FILED-021 — Money columns capped at $8.4M precision — **RESOLVED in `5096173`**
 
-- **Severity** F1 (DB migration, not autonomously-fixable in this round)
-- **Where** `companies.annualBudget`, `companies.currentBudgetSpent`, `machinery.purchaseCost`, `machinery.salvageValue` — all use `real` (PG float32). drizzle-zod caps at `2^23 - 1 = 8,388,607` to preserve float32 precision.
-- **Customer impact** Enterprise mfg routinely has $50M+ budgets and $100M+ machinery fleets. Today the form rejects values >$8.4M with "Too big: expected number to be <=8388607" — a confusing error and a blocker for ANY enterprise customer.
-- **Proposed fix** Schema migration to `doublePrecision` (PG float64, 15-16 significant digits, easily handles trillion-dollar values). `ALTER TABLE companies ALTER COLUMN annual_budget TYPE double precision USING annual_budget::double precision;` for each. drizzle-kit push should handle it; verify no existing-data precision loss on real customer rows.
+- **Originally filed** Round-13 audit caught `PATCH /api/company/settings` rejecting `annualBudget=99999999` with "Too big: expected number to be <=8388607" — the drizzle-zod auto-generated max for PostgreSQL `real` (float32). The constraint preserved float32's precision floor but blocked any enterprise budget.
+- **Scope of audit** Expanded the originally-named 4 columns to a full money-column sweep: 144 columns across `companies`, `machinery`, `materials`, `suppliers`, `rfqs`, `purchase_orders`, `balance_sheets`, `income_statements`, `cash_flow_statements`, `employee_payroll`, `subscriptions`, `usage_events`, `transactions`, `invoices`, `payments`, `roi_metrics`, `commodity_price_history`, etc.
+- **Fix delivered** Pattern-matched all `real("col_name")` declarations where col_name contains money keywords (price, cost, budget, revenue, fee, salary, total, value, savings, amount, payment, payout, expense, income, asset, liability, cogs, roi, etc.) and switched them to `doublePrecision` (PG float64, 15-16 significant digits, max ~1.8e308). Non-monetary `real` columns (MAPE, accuracy, confidence, FDR, weights, ratios) intentionally untouched.
+- **Migration safety** PG `ALTER COLUMN ... TYPE doublePrecision USING <col>::double precision` is lossless float32→float64 widening — existing rows preserve their values exactly. Storage cost trivial (4 bytes → 8 bytes per column, ×144 columns × small row counts).
+- **Deploy path** `npm run db:push` ran the column-type migrations against the live Postgres in Replit; deploy then re-built the server which auto-derives the higher max from `doublePrecision` via drizzle-zod.
 - **Tags** `data-integrity`, `enterprise-blocker`
 
 ### F2-FILED-022 — Stripe Link auto-suggests previous user's bank account on shared browsers
