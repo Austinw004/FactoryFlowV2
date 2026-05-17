@@ -182,6 +182,30 @@ async function createCompanyForUserWithAdminRole(
     // this for a recovery sweep if it ever fires in prod.
   }
 
+  // The codebase has two parallel role systems:
+  //   1. `users.role` — a simple text column (viewer/operator/admin) that
+  //      gets baked into the JWT at signup time and is what the billing
+  //      handlers in server/authPaymentRoutes.ts check.
+  //   2. `user_role_assignments` — the proper RBAC table read by
+  //      requirePermission() middleware.
+  // The RBAC table was assigned above. Without ALSO bumping users.role,
+  // the user who just CREATED the company can call /api/users (RBAC
+  // says Admin) but gets 403 FORBIDDEN on /api/billing/create-customer
+  // because the JWT-carried users.role is still "viewer".
+  // Round-13 audit caught this as the second-order Stripe blocker. The
+  // company creator should be admin in BOTH senses, so we upgrade
+  // users.role to "admin" here. Subsequent requests will see the
+  // updated value via requireJwt's DB refresh path.
+  try {
+    await storage.upsertUser({ id: user.id, role: "admin" } as any);
+  } catch (roleColErr) {
+    console.error(`[RBAC] Failed to upgrade users.role to admin for user=${user.id}:`, roleColErr);
+    // Non-fatal — the RBAC table assignment above is the authoritative source.
+    // /api/users + /api/rbac/* will still work; only /api/billing/* + other
+    // JWT-role-gated endpoints will keep the legacy "viewer" gate until a
+    // manual repair.
+  }
+
   return company;
 }
 

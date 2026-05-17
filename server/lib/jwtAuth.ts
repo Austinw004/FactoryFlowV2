@@ -79,16 +79,30 @@ export async function requireJwt(req: Request, res: Response, next: NextFunction
     return;
   }
 
-  if (!jwtUser.companyId && jwtUser.sub) {
+  // Refresh stale JWT fields from DB. JWTs cache for 15 minutes; users
+  // who auto-create a company OR get role-upgraded mid-session (e.g., the
+  // createCompanyForUserWithAdminRole helper bumps users.role to "admin")
+  // would otherwise carry the stale JWT values for the rest of the token's
+  // life — breaking billing endpoints (NO_COMPANY) and FORBIDDEN gates
+  // (Operator or admin role required) until a manual logout/login.
+  //
+  // Round-13 audit: companyId refresh wasn't enough — the second-order
+  // Stripe blocker was the JWT-baked users.role still saying "viewer"
+  // after the user became Admin in both RBAC and the users table.
+  if ((!jwtUser.companyId || jwtUser.role === "viewer") && jwtUser.sub) {
     try {
       const { storage } = await import("../storage");
       const dbUser = await storage.getUser(jwtUser.sub);
       if (dbUser?.companyId) {
         jwtUser.companyId = dbUser.companyId;
       }
+      if (dbUser?.role && dbUser.role !== jwtUser.role) {
+        jwtUser.role = dbUser.role;
+      }
     } catch (err) {
-      console.warn("[requireJwt] companyId refresh failed:", err);
-      // Non-fatal — handler will surface NO_COMPANY if it needs the field
+      console.warn("[requireJwt] companyId/role refresh failed:", err);
+      // Non-fatal — handler will surface NO_COMPANY / FORBIDDEN if it
+      // needs the fresh value.
     }
   }
 
