@@ -130,6 +130,61 @@ const economics = new DualCircuitEconomics();
 const webhookService = new WebhookService(storage);
 const rfqGenerationService = createRfqGenerationService(storage);
 
+/**
+ * Atomic "the user signed in without a company — give them one" helper.
+ *
+ * Used by every auto-create-company branch in this file. Without this
+ * helper, the 6 branches drifted apart: the /api/onboarding/company POST
+ * path correctly initializes default roles + assigns Admin to the user
+ * (so they can later invite teammates, manage roles, view audit logs),
+ * but the 5 other auto-create branches (status check, settings page,
+ * dashboard load, etc.) only did `createCompany + upsertUser{companyId}`.
+ * Result: any user whose first authenticated request hit one of those 5
+ * branches got a company but no role assignment — they became a "ghost
+ * owner" with zero permissions in their own company.
+ *
+ * This helper consolidates the three-step contract:
+ *   1. create company with the chosen name
+ *   2. initialize default roles for that company
+ *   3. assign Admin to the user (and update user.companyId)
+ *
+ * Failures in step 2 or 3 are logged but don't roll back step 1 — the
+ * user still has their company so the request can proceed; a follow-up
+ * sweep can repair the role assignment without re-creating companies.
+ */
+async function createCompanyForUserWithAdminRole(
+  user: { id: string; firstName?: string | null; lastName?: string | null; name?: string | null; email?: string | null },
+  overrideName?: string,
+) {
+  const fallbackName =
+    overrideName ||
+    user.firstName ||
+    user.name?.split(/\s+/)[0] ||
+    user.email?.split("@")[0] ||
+    "User";
+  const companyName = overrideName ?? `${fallbackName}'s Company`;
+
+  const company = await storage.createCompany({ name: companyName });
+
+  try {
+    await initializeDefaultRoles(company.id);
+    const adminRole = await storage.getRoleByName(company.id, "Admin");
+    if (adminRole) {
+      await storage.assignRoleToUser(user.id, adminRole.id, company.id, user.id);
+    } else {
+      console.warn(`[RBAC] Admin role not found for company ${company.id} after initialization — user ${user.id} will be a ghost owner`);
+    }
+  } catch (roleErr) {
+    console.error(`[RBAC] Role init/assign failed for company=${company.id} user=${user.id}:`, roleErr);
+    // Non-fatal: user still has their company. A future request that
+    // hits any other auto-create path will short-circuit on user.companyId
+    // already-set, so the role won't be re-tried automatically — file
+    // this for a recovery sweep if it ever fires in prod.
+  }
+
+  return company;
+}
+
 // Policy signals per regime — the dispatch test brief is the source of
 // truth for what posture each regime should produce. Previously the
 // HEALTHY_EXPANSION case said "Maintain standard procurement levels"
@@ -9610,10 +9665,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Auto-create company if user doesn't have one
       if (!user.companyId) {
-        const company = await storage.createCompany({
-          name: `${user.firstName || user.name?.split(/\s+/)[0] || user.email?.split("@")[0] || 'User'}'s Company`,
-        });
-        
+        // Was: bare storage.createCompany + upsertUser. That left the user
+        // as a "ghost owner" with no role assignment, so any RBAC-gated
+        // endpoint (/api/users, /api/rbac/*, view_audit_logs, manage_users)
+        // returned 403 — including for the company's actual creator.
+        // createCompanyForUserWithAdminRole atomically does
+        // createCompany + initializeDefaultRoles + assignRoleToUser(Admin).
+        const company = await createCompanyForUserWithAdminRole(user);
         user = await storage.upsertUser({
           ...user,
           companyId: company.id,
@@ -9680,10 +9738,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Auto-create company if user doesn't have one
       if (!user.companyId) {
-        const company = await storage.createCompany({
-          name: `${user.firstName || user.name?.split(/\s+/)[0] || user.email?.split("@")[0] || 'User'}'s Company`,
-        });
-        
+        // Was: bare storage.createCompany + upsertUser. That left the user
+        // as a "ghost owner" with no role assignment, so any RBAC-gated
+        // endpoint (/api/users, /api/rbac/*, view_audit_logs, manage_users)
+        // returned 403 — including for the company's actual creator.
+        // createCompanyForUserWithAdminRole atomically does
+        // createCompany + initializeDefaultRoles + assignRoleToUser(Admin).
+        const company = await createCompanyForUserWithAdminRole(user);
         user = await storage.upsertUser({
           ...user,
           companyId: company.id,
@@ -10625,10 +10686,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Auto-create company if user doesn't have one
       if (!user.companyId) {
-        const company = await storage.createCompany({
-          name: `${user.firstName || user.name?.split(/\s+/)[0] || user.email?.split("@")[0] || 'User'}'s Company`,
-        });
-        
+        // Was: bare storage.createCompany + upsertUser. That left the user
+        // as a "ghost owner" with no role assignment, so any RBAC-gated
+        // endpoint (/api/users, /api/rbac/*, view_audit_logs, manage_users)
+        // returned 403 — including for the company's actual creator.
+        // createCompanyForUserWithAdminRole atomically does
+        // createCompany + initializeDefaultRoles + assignRoleToUser(Admin).
+        const company = await createCompanyForUserWithAdminRole(user);
         user = await storage.upsertUser({
           ...user,
           companyId: company.id,
@@ -10705,10 +10769,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Auto-create company if user doesn't have one
       if (!user.companyId) {
-        const company = await storage.createCompany({
-          name: `${user.firstName || user.name?.split(/\s+/)[0] || user.email?.split("@")[0] || 'User'}'s Company`,
-        });
-        
+        // Was: bare storage.createCompany + upsertUser. That left the user
+        // as a "ghost owner" with no role assignment, so any RBAC-gated
+        // endpoint (/api/users, /api/rbac/*, view_audit_logs, manage_users)
+        // returned 403 — including for the company's actual creator.
+        // createCompanyForUserWithAdminRole atomically does
+        // createCompany + initializeDefaultRoles + assignRoleToUser(Admin).
+        const company = await createCompanyForUserWithAdminRole(user);
         user = await storage.upsertUser({
           ...user,
           companyId: company.id,
@@ -10890,10 +10957,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Auto-create company if user doesn't have one
       if (!user.companyId) {
-        const company = await storage.createCompany({
-          name: `${user.firstName || user.name?.split(/\s+/)[0] || user.email?.split("@")[0] || 'User'}'s Company`,
-        });
-        
+        // Was: bare storage.createCompany + upsertUser. That left the user
+        // as a "ghost owner" with no role assignment, so any RBAC-gated
+        // endpoint (/api/users, /api/rbac/*, view_audit_logs, manage_users)
+        // returned 403 — including for the company's actual creator.
+        // createCompanyForUserWithAdminRole atomically does
+        // createCompany + initializeDefaultRoles + assignRoleToUser(Admin).
+        const company = await createCompanyForUserWithAdminRole(user);
         user = await storage.upsertUser({
           ...user,
           companyId: company.id,
