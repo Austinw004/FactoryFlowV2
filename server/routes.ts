@@ -858,7 +858,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Auto-create company if user doesn't have one
       if (!user.companyId) {
         const company = await storage.createCompany({
-          name: `${user.firstName || 'User'}'s Company`,
+          name: `${user.firstName || user.name?.split(/\s+/)[0] || user.email?.split("@")[0] || 'User'}'s Company`,
         });
         
         // Initialize default roles for the new company
@@ -1011,12 +1011,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const managerRole = await storage.getRoleByName(user.companyId, "Operations Manager");
       const adminRole = await storage.getRoleByName(user.companyId, "Admin");
       
-      const invitations = [];
-      const emailResults = [];
-      
+      const invitations: Array<{ email: string; role: string | undefined; token: string; expiresAt: Date; emailSent: boolean; persisted: boolean }> = [];
+      const emailResults: Array<{ email: string; success: boolean }> = [];
+      const persistErrors: Array<{ email: string; reason: string }> = [];
+
       for (const member of members) {
         if (!member.email || !member.email.includes("@")) continue;
-        
+
         // Determine role ID based on member role
         let roleId = viewerRole?.id;
         let roleName = "Viewer";
@@ -1027,17 +1028,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
           roleId = managerRole?.id;
           roleName = "Operations Manager";
         }
-        
+
         // Generate unique token
         const token = `inv_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-        
+
+        // Persist the invitation BEFORE sending the email so the
+        // /invite/:token landing page can resolve it. Prior code generated
+        // the token + sent the email but never called createTeamInvitation,
+        // so every emailed invite link resolved to "invalid invitation" on
+        // click. The DB write is the contract; the email is the
+        // notification, not the source of truth.
+        let persisted = false;
+        try {
+          await storage.createTeamInvitation({
+            companyId: user.companyId!,
+            email: member.email,
+            roleId: roleId ?? null,
+            invitedBy: userId,
+            status: "pending",
+            token,
+            expiresAt,
+          });
+          persisted = true;
+        } catch (persistErr: any) {
+          persistErrors.push({
+            email: member.email,
+            reason: persistErr?.message ?? "unknown DB error",
+          });
+          console.error(`[Onboarding] Failed to persist invitation for ${member.email}:`, persistErr);
+          // Skip email send if persistence failed — emailing a token that
+          // doesn't exist in the DB would dead-end the recipient.
+          invitations.push({ email: member.email, role: member.role, token, expiresAt, emailSent: false, persisted: false });
+          emailResults.push({ email: member.email, success: false });
+          continue;
+        }
+
         // Create invitation link
-        const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-          ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+        const baseUrl = process.env.REPLIT_DEV_DOMAIN
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}`
           : 'https://prescient-labs.com';
         const inviteLink = `${baseUrl}/invite/${token}`;
-        
+
         // Send invitation email
         const emailResult = await sendTeamInvitation(
           member.email,
@@ -1047,27 +1079,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
           roleName,
           inviteLink
         );
-        
+
         emailResults.push({ email: member.email, success: emailResult.success });
-        
-        // Create invitation record
+
         invitations.push({
           email: member.email,
           role: member.role,
           token,
           expiresAt,
           emailSent: emailResult.success,
+          persisted,
         });
-        
-        console.log(`[Onboarding] Invitation ${emailResult.success ? 'sent' : 'created (email failed)'} for ${member.email} (role: ${member.role})`);
+
+        console.log(`[Onboarding] Invitation ${emailResult.success ? 'sent' : 'created (email failed)'} for ${member.email} (role: ${member.role}, persisted=${persisted})`);
       }
-      
+
       const successCount = emailResults.filter(r => r.success).length;
-      res.json({ 
-        success: true, 
-        invitationsSent: invitations.length,
+      const persistedCount = invitations.filter(i => i.persisted).length;
+      const emailsFailed = invitations.length - successCount;
+
+      // Success = at least one invitation persisted. The previous handler
+      // returned success: true even when EVERY email failed and NOTHING
+      // was persisted — clients showed a green toast over a completely
+      // broken flow. Now: report the breakdown so the client can show
+      // a precise toast ("3 invited, 1 email failed — share link manually").
+      const fullySucceeded = persistedCount === invitations.length && emailsFailed === 0;
+      res.status(fullySucceeded ? 200 : 207).json({
+        success: persistedCount > 0,
+        invitationsSent: persistedCount,
         emailsSent: successCount,
-        emailsFailed: invitations.length - successCount
+        emailsFailed,
+        persistErrors: persistErrors.length ? persistErrors : undefined,
+        // For each invitation: include the invite link so the inviter can
+        // share it manually if the email didn't reach the recipient.
+        invitations: invitations
+          .filter(i => i.persisted)
+          .map(i => ({
+            email: i.email,
+            inviteLink: `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'https://prescient-labs.com'}/invite/${i.token}`,
+            emailSent: i.emailSent,
+          })),
       });
     } catch (error: any) {
       console.error("Onboarding invite error:", error);
@@ -1292,13 +1343,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "User not found" });
       }
 
-      // Mark onboarding as complete
+      // Mark onboarding complete on BOTH the user flag (read by useAuth.ts'
+      // `needsOnboarding` check that decides whether to redirect to
+      // /onboarding) AND the company flag (read by Configuration.tsx and the
+      // Dashboard.tsx "Get Started" hint card). The dead duplicate handler
+      // that used to live at routes.ts:10732 only set the company flag;
+      // Express's first-match routing meant it never ran, so the company
+      // flag was orphaned. Setting both here keeps both UI consumers in
+      // sync regardless of which one a future re-org checks.
       await storage.upsertUser({
         ...user,
         onboardingComplete: 1,
       });
-      
-      console.log(`[Onboarding] Completed for user ${userId}`);
+
+      if (user.companyId) {
+        try {
+          await storage.updateCompany(user.companyId, {
+            onboardingCompleted: 1,
+          });
+        } catch (companyErr) {
+          // Non-fatal: per-user flag is already set so the redirect works.
+          // Log but don't fail the request — the company flag is only used
+          // for the dashboard hint card, which is cosmetic.
+          console.warn(`[Onboarding] Failed to set company.onboardingCompleted for ${user.companyId}:`, companyErr);
+        }
+      }
+
+      console.log(`[Onboarding] Completed for user ${userId} (company ${user.companyId ?? "none"})`);
       res.json({ success: true });
     } catch (error: any) {
       console.error("Onboarding complete error:", error);
@@ -9409,7 +9480,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Auto-create company if user doesn't have one
       if (!user.companyId) {
         const company = await storage.createCompany({
-          name: `${user.firstName || 'User'}'s Company`,
+          name: `${user.firstName || user.name?.split(/\s+/)[0] || user.email?.split("@")[0] || 'User'}'s Company`,
         });
         
         user = await storage.upsertUser({
@@ -9479,7 +9550,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Auto-create company if user doesn't have one
       if (!user.companyId) {
         const company = await storage.createCompany({
-          name: `${user.firstName || 'User'}'s Company`,
+          name: `${user.firstName || user.name?.split(/\s+/)[0] || user.email?.split("@")[0] || 'User'}'s Company`,
         });
         
         user = await storage.upsertUser({
@@ -10424,7 +10495,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Auto-create company if user doesn't have one
       if (!user.companyId) {
         const company = await storage.createCompany({
-          name: `${user.firstName || 'User'}'s Company`,
+          name: `${user.firstName || user.name?.split(/\s+/)[0] || user.email?.split("@")[0] || 'User'}'s Company`,
         });
         
         user = await storage.upsertUser({
@@ -10504,7 +10575,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Auto-create company if user doesn't have one
       if (!user.companyId) {
         const company = await storage.createCompany({
-          name: `${user.firstName || 'User'}'s Company`,
+          name: `${user.firstName || user.name?.split(/\s+/)[0] || user.email?.split("@")[0] || 'User'}'s Company`,
         });
         
         user = await storage.upsertUser({
@@ -10689,7 +10760,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Auto-create company if user doesn't have one
       if (!user.companyId) {
         const company = await storage.createCompany({
-          name: `${user.firstName || 'User'}'s Company`,
+          name: `${user.firstName || user.name?.split(/\s+/)[0] || user.email?.split("@")[0] || 'User'}'s Company`,
         });
         
         user = await storage.upsertUser({
@@ -10729,26 +10800,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/onboarding/complete", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      
-      if (!user || !user.companyId) {
-        return res.status(400).json({ message: "User has no company association" });
-      }
-
-      // Mark onboarding as completed
-      const updated = await storage.updateCompany(user.companyId, {
-        onboardingCompleted: 1,
-      });
-      
-      res.json({ success: true, company: updated });
-    } catch (error: any) {
-      console.error("Error completing onboarding:", error);
-      res.status(500).json({ message: "Failed to complete onboarding" });
-    }
-  });
+  // (Removed in 2026-05-16 audit) The second `/api/onboarding/complete`
+  // handler that used to live here was dead — Express resolves by first-
+  // match registration and the active handler at line 1286 always won. Its
+  // intent (setting company.onboardingCompleted) has been folded into the
+  // active handler so both per-user and per-company flags stay in sync.
 
   app.get("/api/cache/stats", isAuthenticated, async (req: any, res) => {
     try {
