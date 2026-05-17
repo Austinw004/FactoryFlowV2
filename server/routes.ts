@@ -13,6 +13,7 @@ import { initializePermissions, initializeDefaultRoles } from "./lib/rbac";
 import { logAudit } from "./lib/auditLogger";
 import { AutomationEngine } from "./lib/automationEngine";
 import { logger } from "./lib/structuredLogger";
+import { isDemoMode } from "./lib/demoMode";
 import { registerIntegrationOrchestratorRoutes } from "./lib/integrationRoutes";
 import { globalCache } from "./lib/caching";
 import { DualCircuitEconomics } from "./lib/economics";
@@ -8362,49 +8363,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/erp-connections/test", isAuthenticated, async (req: any, res) => {
     try {
       const { erpSystem, apiEndpoint, authMethod, credentials } = req.body;
-      
-      // Simulate connection testing
-      // In production, this would actually attempt to connect to the ERP
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // For demo purposes, simulate various responses
+
+      // Input-format validation runs in every mode — fail fast on garbage input.
       if (!apiEndpoint || apiEndpoint.length < 10) {
-        return res.status(400).json({ 
-          success: false, 
-          error: "Invalid API endpoint. Please provide a valid URL." 
+        return res.status(400).json({
+          success: false,
+          error: "Invalid API endpoint. Please provide a valid URL."
         });
       }
-      
       if (!credentials || Object.keys(credentials).length === 0) {
-        return res.status(400).json({ 
-          success: false, 
-          error: "No credentials provided." 
+        return res.status(400).json({
+          success: false,
+          error: "No credentials provided."
         });
       }
-      
-      // Simulate successful connection with mock data discovery
-      const mockDiscovery = {
-        products: Math.floor(Math.random() * 500) + 100,
-        orders: Math.floor(Math.random() * 50) + 10,
-        suppliers: Math.floor(Math.random() * 30) + 5,
-        lastSyncAvailable: new Date().toISOString(),
-      };
-      
-      res.json({
-        success: true,
-        message: `Successfully connected to ${erpSystem}`,
-        discovery: mockDiscovery,
-        capabilities: {
-          canReadInventory: true,
-          canReadPOs: true,
-          canCreatePOs: true,
-          canUpdatePOs: true,
-        }
+
+      // Demo mode: keep the original "everything connected" UX so the sales
+      // demo flow doesn't break. Random discovery numbers are fine here
+      // because the demo tenant is showcase-only.
+      if (isDemoMode()) {
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        const mockDiscovery = {
+          products: Math.floor(Math.random() * 500) + 100,
+          orders: Math.floor(Math.random() * 50) + 10,
+          suppliers: Math.floor(Math.random() * 30) + 5,
+          lastSyncAvailable: new Date().toISOString(),
+        };
+        return res.json({
+          success: true,
+          message: `Successfully connected to ${erpSystem}`,
+          discovery: mockDiscovery,
+          capabilities: {
+            canReadInventory: true,
+            canReadPOs: true,
+            canCreatePOs: true,
+            canUpdatePOs: true,
+          }
+        });
+      }
+
+      // Production: there is no server-side ERP adapter yet, so we cannot
+      // actually validate the connection. Returning the demo's "Successfully
+      // connected" + random discovery numbers misleads the customer into
+      // saving a non-working integration. Be honest: credentials format
+      // accepted, real sync gated on connector availability.
+      return res.json({
+        success: false,
+        validated: true,
+        message: `ERP connector for ${erpSystem || "your system"} is in private beta. ` +
+                 `Your credentials format has been validated; live sync will be enabled ` +
+                 `once the connector is provisioned for your account. ` +
+                 `Contact sales@prescient-labs.com to expedite.`,
+        discovery: null,
+        capabilities: null,
       });
     } catch (error: any) {
-      res.status(500).json({ 
-        success: false, 
-        error: error.message || "Connection test failed" 
+      res.status(500).json({
+        success: false,
+        error: error.message || "Connection test failed"
       });
     }
   });
