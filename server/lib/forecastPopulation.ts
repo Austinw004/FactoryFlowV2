@@ -4,6 +4,7 @@ import { eq, desc, sql, and, gte } from "drizzle-orm";
 import type { IStorage } from "../storage";
 import { DemandForecaster } from "./forecasting";
 import type { Regime } from "./economics";
+import { isDemoMode } from "./demoMode";
 
 /**
  * Multi-Horizon Forecast Population Service
@@ -61,13 +62,21 @@ export class ForecastPopulationService {
     console.log(`[Forecasts] Current regime: ${currentRegime}, FDR: ${currentFdr}`);
 
     const historyBySku: Record<string, number[]> = {};
+    const demo = isDemoMode();
     for (const sku of skus) {
       const history = await this.storage.getDemandHistory(sku.id);
       if (history.length > 0) {
         historyBySku[sku.id] = history.slice(-90).map(h => h.units);
-      } else {
+      } else if (demo) {
+        // Demo tenants: synthesise 90 days of seasonal+noisy history so the
+        // forecast charts have something to render during sales walkthroughs.
         historyBySku[sku.id] = this.generateSyntheticHistory(100);
       }
+      // Production tenants with no real demand history are skipped — the
+      // DemandForecaster correctly handles missing SKUs (forecasts default
+      // to its baseline). Better an empty/baseline forecast than one
+      // grounded on Math.random "demand" that doesn't reflect the customer's
+      // actual product line.
     }
 
     const forecaster = new DemandForecaster(historyBySku);

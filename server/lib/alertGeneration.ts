@@ -8,6 +8,7 @@ import {
 import { eq, desc, sql } from "drizzle-orm";
 import type { IStorage } from "../storage";
 import { CANONICAL_REGIME_THRESHOLDS } from "./regimeConstants";
+import { isDemoMode } from "./demoMode";
 
 /**
  * Alert Generation Service
@@ -123,10 +124,24 @@ export class AlertGenerationService {
   }
 
   /**
-   * Generate forecast degradation alerts when accuracy drops
+   * Generate forecast degradation alerts when accuracy drops.
+   *
+   * The current MAPE values are fabricated (Math.random + offset per SKU
+   * index). Without a real forecast-accuracy backtest computing per-SKU
+   * MAPE against actuals, every "Forecast accuracy degraded" row this
+   * function emits is a coin flip dressed up as a critical alert. We gate
+   * the whole loop behind isDemoMode so production tenants never see
+   * fabricated degradation alerts in their inbox; demo tenants keep the
+   * populated alert list for sales walkthroughs. Replace this with a real
+   * MAPE source (forecastAccuracyTracking table) when the backtest job
+   * lands.
    */
   async generateForecastAlerts(companyId: string): Promise<number> {
     try {
+      if (!isDemoMode()) {
+        return 0;
+      }
+
       const companySkus = await this.storage.getSkus(companyId);
       let alertsCreated = 0;
 
@@ -136,10 +151,10 @@ export class AlertGenerationService {
       for (let i = 0; i < Math.min(companySkus.length, 10); i++) {
         const sku = companySkus[i];
         // Generate degradation alerts for some SKUs (every 2nd SKU gets higher MAPE)
-        const skuMape = i % 2 === 0 
+        const skuMape = i % 2 === 0
           ? baselineMape + (Math.random() * 5) + 6 // 10-15% MAPE
           : baselineMape + (Math.random() * 3);     // 4-7% MAPE
-        
+
         if (skuMape > mapeThreshold) {
           const degradationPercent = ((skuMape - baselineMape) / baselineMape) * 100;
           

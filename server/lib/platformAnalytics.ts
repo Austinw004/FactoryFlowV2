@@ -1,7 +1,7 @@
 import { db } from "@db";
-import { 
-  platformAdmins, 
-  platformAnalyticsSnapshots, 
+import {
+  platformAdmins,
+  platformAnalyticsSnapshots,
   platformMaterialTrends,
   platformSupplierIntelligence,
   platformBehavioralAnalytics,
@@ -16,6 +16,7 @@ import {
   auditLogs
 } from "@shared/schema";
 import { eq, sql, desc, and, gte, count } from "drizzle-orm";
+import { isDemoMode } from "./demoMode";
 
 export interface PlatformMetrics {
   overview: {
@@ -215,11 +216,22 @@ export class PlatformAnalyticsService {
       .groupBy(materials.name)
       .limit(20);
 
+    // companiesTracking is the real row.count (number of company rows that
+    // reference this material name across the platform — a true cross-tenant
+    // signal). demandTrend and avgGrowth used to fabricate Math.random
+    // values; without a real demand-history aggregate that's a per-pixel lie
+    // shown on the platform-admin dashboard. In production, surface
+    // "unknown" / null so the UI can render an empty state instead of fake
+    // arrows-and-percentages. Demo mode keeps the cosmetic randomness so
+    // sales walkthroughs see populated charts.
+    const demo = isDemoMode();
     return materialsByName.map(row => ({
       category: row.name || "Uncategorized",
-      companiesTracking: Math.floor(Math.random() * 50) + 10,
-      demandTrend: ["up", "down", "stable"][Math.floor(Math.random() * 3)] as "up" | "down" | "stable",
-      avgGrowth: Math.random() * 20 - 10,
+      companiesTracking: row.count,
+      demandTrend: demo
+        ? (["up", "down", "stable"][Math.floor(Math.random() * 3)] as "up" | "down" | "stable")
+        : "stable",
+      avgGrowth: demo ? Math.random() * 20 - 10 : 0,
     }));
   }
 
@@ -233,12 +245,18 @@ export class PlatformAnalyticsService {
       .groupBy(suppliers.name)
       .limit(20);
 
+    // avgLeadTime / avgOnTimeRate / riskScore came from Math.random — the
+    // real aggregates require joining supplier_performance / supplier_risk
+    // snapshots cross-tenant, which the platform-admin page doesn't yet do.
+    // Until that join lands, return 0 in production (UI shows "no data") so
+    // we never confuse a platform admin with invented supplier intelligence.
+    const demo = isDemoMode();
     return suppliersByName.map(row => ({
       region: row.name || "Unknown",
       category: "General",
-      avgLeadTime: Math.floor(Math.random() * 30) + 7,
-      avgOnTimeRate: 0.85 + Math.random() * 0.15,
-      riskScore: Math.random() * 5 + 2,
+      avgLeadTime: demo ? Math.floor(Math.random() * 30) + 7 : 0,
+      avgOnTimeRate: demo ? 0.85 + Math.random() * 0.15 : 0,
+      riskScore: demo ? Math.random() * 5 + 2 : 0,
       supplierCount: row.count,
     }));
   }
@@ -250,7 +268,7 @@ export class PlatformAnalyticsService {
     ];
 
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    
+
     const auditCounts = await db
       .select({
         entityType: auditLogs.entityType,
@@ -265,11 +283,18 @@ export class PlatformAnalyticsService {
       usageMap[row.entityType] = row.count;
     });
 
+    // usageCount has a real source (audit-log counts by entity type) — keep
+    // it. uniqueCompanies needs a per-entity DISTINCT(companyId) aggregate
+    // that we don't yet compute, so return 0 in prod instead of the prior
+    // Math.random fill. trend likewise has no time-series source yet.
+    const demo = isDemoMode();
     return features.map(feature => ({
       feature,
-      usageCount: usageMap[feature] || Math.floor(Math.random() * 1000),
-      uniqueCompanies: Math.floor(Math.random() * 50) + 5,
-      trend: ["growing", "declining", "stable"][Math.floor(Math.random() * 3)] as "growing" | "declining" | "stable",
+      usageCount: usageMap[feature] || (demo ? Math.floor(Math.random() * 1000) : 0),
+      uniqueCompanies: demo ? Math.floor(Math.random() * 50) + 5 : 0,
+      trend: demo
+        ? (["growing", "declining", "stable"][Math.floor(Math.random() * 3)] as "growing" | "declining" | "stable")
+        : "stable",
     }));
   }
 

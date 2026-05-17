@@ -5,6 +5,7 @@
  */
 
 import axios from "axios";
+import { isDemoMode } from "./demoMode";
 
 class CircuitBreaker {
   private failures = 0;
@@ -612,33 +613,42 @@ export async function fetchWeatherLogistics(): Promise<WeatherLogistics> {
     // Winter storm risk: November-March
     const winterStormRisk = (month >= 10 || month <= 2) ? 65 : 15;
     
-    // Base alerts on current season and typical patterns
+    // Base alerts on current season and typical patterns.
+    //
+    // Until a real weather API (NOAA, OpenWeather, AccuWeather) is wired up,
+    // we only fabricate season-shaped alerts in demo mode. Production
+    // tenants get an empty array, which the UI renders as "no active
+    // logistics weather alerts" — honest, and far better than a 60%-chance
+    // "tropical_system in Gulf of Mexico, 2-day delay" that's the same
+    // random coin flip on every page reload regardless of actual weather.
     const alerts: WeatherAlert[] = [];
-    
-    if (hurricaneSeasonActive && Math.random() > 0.6) {
-      alerts.push({
-        type: 'tropical_system',
-        region: 'Gulf of Mexico',
-        severity: 'moderate',
-        impactDescription: 'Potential tropical development may affect Gulf Coast shipping',
-        estimatedDelay: 2,
-        affectedPorts: ['Houston', 'New Orleans', 'Mobile'],
-        startDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-        endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-      });
-    }
-    
-    if (winterStormRisk > 50 && Math.random() > 0.5) {
-      alerts.push({
-        type: 'winter_storm',
-        region: 'Midwest/Northeast',
-        severity: 'moderate',
-        impactDescription: 'Winter weather may impact ground freight in northern regions',
-        estimatedDelay: 1,
-        affectedPorts: ['Chicago', 'Detroit', 'Cleveland'],
-        startDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-        endDate: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString()
-      });
+
+    if (isDemoMode()) {
+      if (hurricaneSeasonActive && Math.random() > 0.6) {
+        alerts.push({
+          type: 'tropical_system',
+          region: 'Gulf of Mexico',
+          severity: 'moderate',
+          impactDescription: 'Potential tropical development may affect Gulf Coast shipping',
+          estimatedDelay: 2,
+          affectedPorts: ['Houston', 'New Orleans', 'Mobile'],
+          startDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+          endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+        });
+      }
+
+      if (winterStormRisk > 50 && Math.random() > 0.5) {
+        alerts.push({
+          type: 'winter_storm',
+          region: 'Midwest/Northeast',
+          severity: 'moderate',
+          impactDescription: 'Winter weather may impact ground freight in northern regions',
+          estimatedDelay: 1,
+          affectedPorts: ['Chicago', 'Detroit', 'Cleveland'],
+          startDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+          endDate: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString()
+        });
+      }
     }
     
     const impactedRegions = alerts.map(a => a.region);
