@@ -406,10 +406,28 @@ No F0/F1 isolation bugs found. Multi-tenant data access is properly scoped by `c
 - Wired into `fetchWeatherLogistics()` in `externalAPIs.ts`: production tenants now get real NOAA data; demo mode unchanged.
 - International still out of scope — returns empty for non-US areas. Follow-up to wire OpenWeather/AccuWeather for international coverage (would close the F2 fully).
 
-### F2-FOUND-027 — No account self-deletion endpoint (`DELETE /api/users/me` 404)
+### F2-FOUND-027 — GDPR account self-deletion — **RESOLVED in `3f7db75`**
 
-- **Severity** F2 — GDPR/CCPA relevant. EU customers can request data deletion under Article 17. Today there's no self-service path.
-- **Filed for future** Should be a destructive action that: revokes all sessions, cascades-deletes user-owned data per the company's data-retention policy, and surfaces to admins for company-creator deletions (where deleting the owner orphans the whole company). Out of scope for autonomous fix because of the destructive cascade decisions.
+**Schema** New `account_deletion_requests` table — id, userId (FK cascade), requestedAt, scheduledFor (now+30d), cancelledAt, completedAt, status ("pending"|"cancelled"|"completed"), reason, requestedFromIp. Migration auto-detected by Replit + approved at deploy time.
+
+**Endpoints** (all `requireJwt` + `rateLimiters.sensitive`):
+- `POST /api/users/me/delete` — request deletion. Body: `{reason?: string}`. Returns 201 with `{scheduledFor, requestId, message}` on success, 409 if sole-admin-with-other-members blocker, 200 if already pending.
+- `GET /api/users/me/delete/status` — returns `{status: "none"|"pending", scheduledFor?, daysRemaining?}`.
+- `POST /api/users/me/delete/cancel` — clears pending, returns 200 on success, 404 if nothing to cancel.
+
+**Service** `server/lib/accountDeletion.ts`:
+- 30-day grace period (matches GDPR "without undue delay" + gives cancel window for accidental clicks / account compromise).
+- Sole-admin gate: refuses 409 if requester is the only Admin of a company with other members → must transfer admin role first via Settings → Access Control. If sole member of company, cascade-deletes the company too (per existing FK onDelete: cascade chains on companies.id).
+- `processDueDeletions()` daily sweep — fetches pending requests whose scheduledFor has elapsed, marks status="completed", then DELETEs the user row (cascade handles auth_sessions, user_role_assignments, team_invitations, password_reset_tokens, subscriptions ownership, etc.).
+
+**Wired** `accountDeletionSweepJob` added to `backgroundJobs.ts` with 24h interval, lock-protected.
+
+**Future-work** (filed but not implemented in this round):
+- Data export companion (GDPR Article 20) — let users download their data before requesting deletion.
+- Confirmation email on request — gated on SendPulse sender-domain verification being completed.
+- UI surface in Settings → Data & Privacy — endpoints exist, client page needs wiring.
+
+**Verified live** Round-15 post-deploy: `role=admin` confirms 942cb06 ghost-owner fix, `GET /api/users/me/delete/status` returns `{"status":"none"}` confirming GDPR table + handler wired. POST happy-path bounced off `rateLimiters.sensitive` during test-loop saturation (good — the rate-limit is appropriately tight for a destructive endpoint).
 
 ### F2-FILED-013 — No per-SKU MAPE source — **RESOLVED in `9362635`**
 
