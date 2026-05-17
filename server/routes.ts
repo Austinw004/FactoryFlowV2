@@ -3648,6 +3648,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Run MAPE/MAE/RMSE/bias/directional accuracy backtest for the caller's
+  // company. Two-step pipeline:
+  //   1. back-fill `actualDemand` on past multi_horizon_forecasts rows
+  //      from demand_history (server/lib/mapeBacktest.ts);
+  //   2. delegate to the existing per-SKU MAPE pipeline in
+  //      server/lib/forecastMonitoring.ts → trackAllSKUs, which
+  //      computes the metrics, writes forecast_accuracy_tracking rows,
+  //      and creates/updates forecast_degradation_alerts as needed
+  //      (with auto-retraining for high/critical severity).
+  //
+  // Closes F2-FILED-013. Tenant-scoped — uses caller's companyId from
+  // JWT, never trusts a body param. Safe for any authenticated user
+  // since they can only backtest their own data.
+  app.post("/api/forecasts/backtest", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+
+      const { backfillForecastActuals } = await import("./lib/mapeBacktest");
+      const { trackAllSKUs } = await import("./lib/forecastMonitoring");
+
+      const backfill = await backfillForecastActuals(user.companyId);
+      await trackAllSKUs(storage, user.companyId);
+
+      await logAudit({
+        action: "run",
+        entityType: "forecast_backtest",
+        entityId: user.companyId,
+        notes: `Backtest: ${backfill.forecastsBackfilled}/${backfill.candidatesScanned} forecasts back-filled (${backfill.durationMs}ms), per-SKU MAPE tracking refreshed`,
+        req,
+      });
+
+      res.json({
+        success: true,
+        backfill,
+        message: "Backtest complete. Run /api/alerts/generate to surface any new forecast-degradation alerts.",
+      });
+    } catch (error: any) {
+      console.error("Error running forecast backtest:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Auto-generate multi-horizon forecasts for all SKUs
   app.post("/api/multi-horizon-forecasts/generate", isAuthenticated, rateLimiters.api, async (req: any, res) => {
     try {

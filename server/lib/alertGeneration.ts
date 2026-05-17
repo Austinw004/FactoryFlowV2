@@ -2,10 +2,11 @@ import { db } from "../db";
 import {
   maintenanceAlerts,
   forecastDegradationAlerts,
+  forecastAccuracyTracking,
   alertTriggers,
   economicSnapshots,
 } from "@shared/schema";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, and } from "drizzle-orm";
 import type { IStorage } from "../storage";
 import { CANONICAL_REGIME_THRESHOLDS } from "./regimeConstants";
 import { isDemoMode } from "./demoMode";
@@ -124,79 +125,177 @@ export class AlertGenerationService {
   }
 
   /**
-   * Generate forecast degradation alerts when accuracy drops.
+   * Generate forecast degradation alerts from REAL MAPE measurements.
    *
-   * The current MAPE values are fabricated (Math.random + offset per SKU
-   * index). Without a real forecast-accuracy backtest computing per-SKU
-   * MAPE against actuals, every "Forecast accuracy degraded" row this
-   * function emits is a coin flip dressed up as a critical alert. We gate
-   * the whole loop behind isDemoMode so production tenants never see
-   * fabricated degradation alerts in their inbox; demo tenants keep the
-   * populated alert list for sales walkthroughs. Replace this with a real
-   * MAPE source (forecastAccuracyTracking table) when the backtest job
-   * lands.
+   * Reads the latest forecast_accuracy_tracking row per SKU (populated
+   * by server/lib/mapeBacktest.ts) and emits an alert when MAPE has
+   * degraded materially against the baseline. Closes F2-FILED-013.
+   *
+   * Heuristic for "degraded":
+   *   - Severity-critical: MAPE > 2.5× baseline AND absolute MAPE > 25%
+   *   - Severity-high:     MAPE > 2.0× baseline AND absolute MAPE > 15%
+   *   - Severity-medium:   MAPE > 1.5× baseline AND absolute MAPE > 8%
+   *
+   * Demo mode (DEMO_MODE=1) keeps the legacy synthetic alert generator
+   * for sales walkthroughs where tenants don't yet have enough forecast
+   * history for the real backtest to produce alerts.
    */
   async generateForecastAlerts(companyId: string): Promise<number> {
     try {
-      if (!isDemoMode()) {
+      // Demo-mode legacy path — synthetic alerts so demo tenants have a
+      // populated alerts inbox during sales walkthroughs.
+      if (isDemoMode()) {
+        return await this.generateForecastAlertsDemo(companyId);
+      }
+
+      // Real path — read latest measurement per SKU from the backtest output.
+      // We do this with a window function via raw SQL for atomicity (one
+      // query instead of N per-SKU lookups).
+      const rows = await db.execute<{
+        sku_id: string;
+        mape: number;
+        baseline_mape: number | null;
+        bias: number | null;
+        directional_accuracy: number | null;
+        predictions_evaluated: number;
+        measurement_date: Date;
+      }>(sql`
+        SELECT DISTINCT ON (sku_id)
+          sku_id, mape, baseline_mape, bias, directional_accuracy,
+          predictions_evaluated, measurement_date
+        FROM forecast_accuracy_tracking
+        WHERE company_id = ${companyId}
+        ORDER BY sku_id, measurement_date DESC
+      `);
+
+      const measurements = (rows as any).rows ?? rows;
+      if (!measurements || measurements.length === 0) {
+        console.log(`[Alerts] No forecast_accuracy_tracking rows for company=${companyId} — run mapeBacktest first`);
         return 0;
       }
 
-      const companySkus = await this.storage.getSkus(companyId);
       let alertsCreated = 0;
+      const now = new Date();
 
-      const baselineMape = 4.0;
-      const mapeThreshold = 8.0;
+      for (const m of measurements as any[]) {
+        const currentMape = Number(m.mape);
+        const baseline = m.baseline_mape ? Number(m.baseline_mape) : currentMape;
+        const ratio = baseline > 0 ? currentMape / baseline : 1;
+        const degradationPercent = baseline > 0
+          ? ((currentMape - baseline) / baseline) * 100
+          : 0;
 
-      for (let i = 0; i < Math.min(companySkus.length, 10); i++) {
-        const sku = companySkus[i];
-        // Generate degradation alerts for some SKUs (every 2nd SKU gets higher MAPE)
-        const skuMape = i % 2 === 0
-          ? baselineMape + (Math.random() * 5) + 6 // 10-15% MAPE
-          : baselineMape + (Math.random() * 3);     // 4-7% MAPE
+        // Tier the alert
+        let severity: "critical" | "high" | "medium" | null = null;
+        if (ratio > 2.5 && currentMape > 25) severity = "critical";
+        else if (ratio > 2.0 && currentMape > 15) severity = "high";
+        else if (ratio > 1.5 && currentMape > 8) severity = "medium";
+        if (!severity) continue;
 
-        if (skuMape > mapeThreshold) {
-          const degradationPercent = ((skuMape - baselineMape) / baselineMape) * 100;
-          
-          let severity: string;
-          if (skuMape > 20) severity = "critical";
-          else if (skuMape > 15) severity = "high";
-          else severity = "medium";
+        // Only emit if the measurement has enough evidence — a 100% MAPE
+        // off a single forecast is noise, not signal.
+        if (Number(m.predictions_evaluated) < 5) continue;
 
-          try {
-            await db.insert(forecastDegradationAlerts).values({
-              companyId,
-              skuId: sku.id,
-              alertType: "accuracy_drop",
-              currentMAPE: skuMape,
-              baselineMAPE: baselineMape,
-              previousMAPE: baselineMape + 1,
-              degradationPercent,
-              severity,
-              thresholdType: "absolute",
-              thresholdValue: mapeThreshold,
-              triggeredAt: new Date(),
-              acknowledged: 0,
-              resolved: 0,
-              recommendedAction: skuMape > 15 
-                ? "retrain" 
-                : "recalibrate",
-              message: `Forecast accuracy degraded: MAPE at ${skuMape.toFixed(1)}% vs baseline ${baselineMape}%`,
-            });
-            alertsCreated++;
-          } catch (error) {
-            // Likely duplicate, skip
-            console.log("[Alerts] Error inserting forecast alert:", error);
-          }
+        // Dedupe — don't emit a second alert for the same SKU + severity
+        // within the last 24h. Otherwise the cron would spam every run.
+        const recentCutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        const [recent] = await db
+          .select({ id: forecastDegradationAlerts.id })
+          .from(forecastDegradationAlerts)
+          .where(
+            and(
+              eq(forecastDegradationAlerts.companyId, companyId),
+              eq(forecastDegradationAlerts.skuId, m.sku_id),
+              eq(forecastDegradationAlerts.severity, severity),
+              sql`${forecastDegradationAlerts.triggeredAt} >= ${recentCutoff}`,
+            ),
+          )
+          .limit(1);
+        if (recent) continue;
+
+        try {
+          await db.insert(forecastDegradationAlerts).values({
+            companyId,
+            skuId: m.sku_id,
+            alertType: "accuracy_drop",
+            currentMAPE: currentMape,
+            baselineMAPE: baseline,
+            previousMAPE: baseline, // For now; could pull the second-most-recent measurement.
+            degradationPercent,
+            severity,
+            thresholdType: "ratio_vs_baseline",
+            thresholdValue: severity === "critical" ? 2.5 : severity === "high" ? 2.0 : 1.5,
+            triggeredAt: now,
+            acknowledged: 0,
+            resolved: 0,
+            recommendedAction: severity === "critical" || severity === "high"
+              ? "retrain"
+              : "recalibrate",
+            message: `Forecast accuracy degraded: MAPE ${currentMape.toFixed(1)}% (${(ratio).toFixed(1)}× baseline ${baseline.toFixed(1)}%, ${m.predictions_evaluated} predictions evaluated)`,
+          });
+          alertsCreated++;
+        } catch (error) {
+          console.error("[Alerts] Error inserting forecast alert:", error);
         }
       }
 
+      console.log(`[Alerts] Generated ${alertsCreated} real forecast-degradation alerts from ${measurements.length} SKU measurements (company=${companyId})`);
       return alertsCreated;
-
     } catch (error) {
       console.error("[Alerts] Error generating forecast alerts:", error);
       return 0;
     }
+  }
+
+  /**
+   * Legacy synthetic alert path — only reachable in DEMO_MODE=1.
+   * Preserved so sales walkthroughs in demo tenants still have a
+   * populated alerts inbox. Production runs the real path above.
+   */
+  private async generateForecastAlertsDemo(companyId: string): Promise<number> {
+    const companySkus = await this.storage.getSkus(companyId);
+    let alertsCreated = 0;
+    const baselineMape = 4.0;
+    const mapeThreshold = 8.0;
+
+    for (let i = 0; i < Math.min(companySkus.length, 10); i++) {
+      const sku = companySkus[i];
+      const skuMape = i % 2 === 0
+        ? baselineMape + (Math.random() * 5) + 6
+        : baselineMape + (Math.random() * 3);
+
+      if (skuMape > mapeThreshold) {
+        const degradationPercent = ((skuMape - baselineMape) / baselineMape) * 100;
+        let severity: string;
+        if (skuMape > 20) severity = "critical";
+        else if (skuMape > 15) severity = "high";
+        else severity = "medium";
+
+        try {
+          await db.insert(forecastDegradationAlerts).values({
+            companyId,
+            skuId: sku.id,
+            alertType: "accuracy_drop",
+            currentMAPE: skuMape,
+            baselineMAPE: baselineMape,
+            previousMAPE: baselineMape + 1,
+            degradationPercent,
+            severity,
+            thresholdType: "absolute",
+            thresholdValue: mapeThreshold,
+            triggeredAt: new Date(),
+            acknowledged: 0,
+            resolved: 0,
+            recommendedAction: skuMape > 15 ? "retrain" : "recalibrate",
+            message: `Forecast accuracy degraded: MAPE at ${skuMape.toFixed(1)}% vs baseline ${baselineMape}% (demo)`,
+          });
+          alertsCreated++;
+        } catch (error) {
+          console.log("[Alerts] Error inserting demo forecast alert:", error);
+        }
+      }
+    }
+    return alertsCreated;
   }
 
   /**

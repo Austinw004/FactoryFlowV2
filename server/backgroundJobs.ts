@@ -1048,8 +1048,25 @@ async function runHistoricalBacktesting() {
 async function trackForecastAccuracy() {
   try {
     const activeCompanyIds = await getActiveCompanyIds();
-    
+
+    // trackAllSKUs filters multi_horizon_forecasts on
+    // `actualDemand IS NOT NULL` to compute MAPE. Without the back-fill
+    // below, no production tenant ever has actualDemand set on a forecast
+    // row (only an unused PATCH endpoint sets it, and no real client
+    // calls it) — so the tracking was a no-op end-to-end. Back-fill from
+    // demand_history first; then the existing trackAllSKUs flow does
+    // real work. Closes F2-FILED-013 (the schema was always ready; the
+    // populator was missing).
+    const { backfillForecastActuals } = await import('./lib/mapeBacktest');
+
     for (const companyId of activeCompanyIds) {
+      try {
+        await backfillForecastActuals(companyId);
+      } catch (err) {
+        // Don't let one company's back-fill failure kill the cron for
+        // the rest of the tenants.
+        console.error(`[Forecast Monitoring] back-fill failed for company=${companyId}:`, err);
+      }
       await trackAllSKUs(storage, companyId);
     }
   } catch (error) {
