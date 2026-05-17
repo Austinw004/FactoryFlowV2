@@ -3812,7 +3812,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(result[0]);
     } catch (error: any) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: "Invalid request data", details: error.errors });
+        return res.status(400).json({ error: "Invalid request data", details: error.issues });
       }
       res.status(500).json({ error: error.message });
     }
@@ -10507,7 +10507,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error updating company settings:", error);
       if (error.name === 'ZodError') {
-        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+        return res.status(400).json({ message: "Invalid request data", errors: error.issues });
       }
       res.status(500).json({ message: "Failed to update company settings" });
     }
@@ -10797,7 +10797,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(submission);
     } catch (error: any) {
       if (error.name === "ZodError") {
-        return res.status(400).json({ error: "Invalid data", details: error.errors });
+        return res.status(400).json({ error: "Invalid data", details: error.issues });
       }
       res.status(500).json({ error: error.message });
     }
