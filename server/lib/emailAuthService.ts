@@ -445,17 +445,45 @@ export async function refreshAccessToken(incomingRefreshToken: string) {
 
   const tokenHash = hashToken(incomingRefreshToken);
 
-  // Look up session in DB for rotation check
-  const [session] = await db.select().from(authSessions)
-    .where(and(
-      eq(authSessions.refreshTokenHash, tokenHash),
-      sql`revoked_at IS NULL`,
-      gt(authSessions.expiresAt, new Date()),
-    )).limit(1);
+  // Round-14 audit caught this as F0: the prior code did ONE lookup with
+  // `revoked_at IS NULL` AND `expiresAt > NOW()`. If the row didn't match
+  // (either because logout had revoked it OR rotation had marked it used),
+  // it fell through to a "graceful stateless fallback" that just issued a
+  // new access token anyway. Result: logout was effectively a no-op —
+  // anyone holding the (now-revoked) refresh token could keep extending
+  // their session every 15 minutes for the token's full TTL (7 days).
+  // Same bug let rotation-replay attacks through.
+  //
+  // Fix: split the lookup. First check if the token EXISTS in DB at all.
+  //   - If yes + active: normal rotation path
+  //   - If yes + revoked: REJECT (explicit logout or replay attack)
+  //   - If yes + expired: reject (natural expiry)
+  //   - If no:           legacy stateless token from before session
+  //                       tracking — allow (the original fallback intent)
+  const [anySession] = await db.select().from(authSessions)
+    .where(eq(authSessions.refreshTokenHash, tokenHash)).limit(1);
+
+  if (anySession) {
+    if (anySession.revokedAt) {
+      throw Object.assign(
+        new Error("Refresh token has been revoked. Please sign in again."),
+        { code: "TOKEN_REVOKED", status: 401 },
+      );
+    }
+    if (anySession.expiresAt && anySession.expiresAt <= new Date()) {
+      throw Object.assign(
+        new Error("Refresh token expired. Please sign in again."),
+        { code: "TOKEN_EXPIRED", status: 401 },
+      );
+    }
+  }
+
+  const session = anySession; // still null = legacy token, handled below
 
   if (!session) {
-    // Token not in DB — either already rotated (replay attack) or issued before session tracking
-    // Graceful fallback: verify user still exists and issue new token (stateless compatibility)
+    // Token not in DB — pre-session-tracking legacy token. Verify the user
+    // still exists and issue a new access token. NOTE: this path does NOT
+    // accept tokens that WERE in DB and got revoked — that's handled above.
     const [user] = await db.select({ id: users.id, email: users.email, role: users.role, companyId: users.companyId })
       .from(users).where(eq(users.id, payload.sub)).limit(1);
     if (!user) throw Object.assign(new Error("User not found."), { code: "USER_NOT_FOUND", status: 401 });

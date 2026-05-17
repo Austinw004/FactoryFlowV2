@@ -237,8 +237,19 @@ app.use((req, res, next) => {
       console.error('[Server Error]', err.stack || err.message || err);
       const isProduction = process.env.NODE_ENV === 'production';
       const status = err.status || 500;
+
+      // Round-14 audit: prior handler returned "Internal server error" for
+      // EVERY error including 4xx client mistakes (malformed JSON → 400,
+      // body too large → 413, etc.). That hides the actual cause from
+      // the client even when it's their own mistake, making integration
+      // debugging painful. For 4xx the err.message is safe to expose (the
+      // client triggered it); for 5xx we still hide details to avoid
+      // leaking internals like stack traces or DB structure.
+      const exposeMessage = status < 500;
       res.status(status).json({
-        message: isProduction ? 'Internal server error' : (err.message || 'Internal Server Error'),
+        message: exposeMessage
+          ? (err.message || 'Bad request')
+          : (isProduction ? 'Internal server error' : (err.message || 'Internal Server Error')),
         ...(isProduction ? {} : { stack: err.stack })
       });
     });

@@ -15,7 +15,35 @@ import { db } from "../db";
 import { users, subscriptions } from "@shared/schema";
 import { eq, and, inArray } from "drizzle-orm";
 
+/**
+ * Path allowlist that bypasses trial-check. Without this, a user whose
+ * 90-day trial expired without an active subscription got 402 on
+ * EVERY endpoint — including /api/billing/* and /api/auth/*, the very
+ * endpoints they needed to upgrade their plan. Chicken-and-egg.
+ *
+ * Round-14 audit caught this. Allowlist covers:
+ *   - All auth flows (login, logout, refresh, forgot-password, signup,
+ *     etc.) so users can sign out, recover access, refresh their token
+ *   - All billing flows (subscribe, setup-intent, create-customer,
+ *     payment-methods, plans, etc.) so users can actually upgrade
+ *   - Email integration diag for ops debugging
+ *   - Stripe webhooks (must always be reachable for Stripe to call us)
+ */
+const TRIAL_CHECK_EXEMPT_PREFIXES = [
+  "/api/auth/",
+  "/api/billing/",
+  "/api/payments/",
+  "/api/webhooks/",
+  "/api/integrations/email/diag",
+  "/api/user/profile", // viewing your own profile shouldn't require active trial
+];
+
 export async function checkTrialExpiry(req: Request, res: Response, next: NextFunction): Promise<void> {
+  // Path-based bypass — see TRIAL_CHECK_EXEMPT_PREFIXES.
+  if (TRIAL_CHECK_EXEMPT_PREFIXES.some(p => req.path.startsWith(p))) {
+    return next();
+  }
+
   const authUser = (req as any).jwtUser || (req as any).user;
 
   // Not authenticated — skip (let auth middleware handle it)
