@@ -3500,6 +3500,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Supplier Materials
+  // Company-wide supplier-materials index. Powers the Materials-at-Risk
+  // widget on the Dashboard — it needs to look up "which supplier provides
+  // this material" without N round-trips. Returns the same SupplierMaterial
+  // rows as the per-supplier endpoint, scoped to the caller's company.
+  app.get("/api/supplier-materials", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User not associated with a company" });
+      }
+      const rows = await storage.getAllSupplierMaterialsForCompany(user.companyId);
+      res.json(rows);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/supplier-materials/:supplierId", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

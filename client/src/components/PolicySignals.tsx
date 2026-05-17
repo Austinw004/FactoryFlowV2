@@ -19,7 +19,21 @@ interface Signal {
 
 interface PolicySignalsProps {
   signals: Signal[];
+  // Optional regime context — when supplied, the panel surfaces the
+  // "why these actions today" thesis above the list so the customer
+  // never reads a recommendation without seeing the macro driver.
+  regime?: string;
+  fdr?: number;
 }
+
+// One-line regime → procurement-rationale map. Keep these tight: this is
+// the text that ties every signal in the list back to the FDR model.
+const regimeRationale: Record<string, string> = {
+  HEALTHY_EXPANSION: "Asset and real economy circuits are aligned — these actions keep you on standard cadence.",
+  ASSET_LED_GROWTH:  "Asset prices outpacing real output — these actions front-load purchases before costs rise.",
+  IMBALANCED_EXCESS: "Significant decoupling detected — these actions reduce exposure and preserve cash.",
+  REAL_ECONOMY_LEAD: "Counter-cyclical window — these actions lock in favorable terms while markets correct.",
+};
 
 // Type-aware signal configuration using composite keys: type:action
 const signalConfig: Record<string, { label: string; icon: any; color: string }> = {
@@ -90,7 +104,10 @@ const signalConfig: Record<string, { label: string; icon: any; color: string }> 
   },
 };
 
-export function PolicySignals({ signals }: PolicySignalsProps) {
+export function PolicySignals({ signals, regime, fdr }: PolicySignalsProps) {
+  const rationale = regime ? regimeRationale[regime] : null;
+  const fdrSuffix = fdr != null && Number.isFinite(fdr) ? ` (FDR ${fdr.toFixed(2)})` : "";
+
   // Guard against invalid data
   if (!Array.isArray(signals) || signals.length === 0) {
     return (
@@ -113,6 +130,11 @@ export function PolicySignals({ signals }: PolicySignalsProps) {
           <h3 className="font-semibold text-lg">Recommended Actions</h3>
           <Badge variant="secondary" data-testid="badge-signal-count">{signals.length}</Badge>
         </div>
+        {rationale && (
+          <p className="text-xs text-muted-foreground leading-relaxed border-l-2 border-signal/40 pl-3" data-testid="text-signals-rationale">
+            <span className="text-foreground font-medium">Why these actions today{fdrSuffix}:</span> {rationale}
+          </p>
+        )}
         
         <div className="space-y-3">
           {signals.map((signal, idx) => {

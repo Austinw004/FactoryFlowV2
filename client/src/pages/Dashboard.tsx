@@ -63,6 +63,63 @@ function getRegimeDescription(regime: string): string {
   return regimeDescriptions[regime] || "Economic conditions are being analyzed.";
 }
 
+// Regime-aware hero content: turns the abstract FDR regime into a concrete
+// procurement directive. Each entry has to answer the customer's three
+// questions in <3 seconds: what's happening, what does it mean for my buys,
+// and what should I click next. Keep `headline` directional (a stance, not
+// a label) and `guidance` operational (specific actions on contracts,
+// inventory, timing). Accent maps to existing brand tokens — never invent
+// a new color here.
+type RegimeHero = {
+  headline: string;
+  guidance: string;
+  primaryAction: { label: string; path: string };
+  accent: 'signal' | 'good' | 'bad' | 'muted';
+  tone: string;
+};
+
+const regimeHeroes: Record<string, RegimeHero> = {
+  HEALTHY_EXPANSION: {
+    headline: "Market conditions are stable. Hold a standard procurement pace.",
+    guidance: "Asset and real economy circuits are in equilibrium. Good window to negotiate long-term contracts on critical materials and qualify backup suppliers before the next regime shift.",
+    primaryAction: { label: "Review supplier base", path: "/suppliers" },
+    accent: 'good',
+    tone: "Equilibrium",
+  },
+  ASSET_LED_GROWTH: {
+    headline: "Asset markets are outpacing the real economy. Input costs likely to rise this quarter.",
+    guidance: "Lock in supplier contracts on critical materials before the next pricing cycle. Pre-purchase strategic inputs where storage cost is below the expected price move. Defer flexible-timing buys.",
+    primaryAction: { label: "View exposed materials", path: "/inventory-management" },
+    accent: 'signal',
+    tone: "Heating up",
+  },
+  IMBALANCED_EXCESS: {
+    headline: "Significant asset-real economy decoupling. Procurement should turn defensive.",
+    guidance: "Defer non-critical purchases. Renegotiate contracts expiring in the next 90 days. Build safety stock only on materials that would halt production if disrupted — everything else can run lean.",
+    primaryAction: { label: "Review contracts & exposure", path: "/suppliers" },
+    accent: 'bad',
+    tone: "Defensive posture",
+  },
+  REAL_ECONOMY_LEAD: {
+    headline: "Counter-cyclical window. Favorable terms available across the supplier base.",
+    guidance: "Lock in supplier agreements while asset markets correct. Buy ahead on materials with stable demand. Long-term contracts negotiated now historically beat spot prices for 6-9 months.",
+    primaryAction: { label: "Start contract negotiations", path: "/suppliers" },
+    accent: 'good',
+    tone: "Opportunity window",
+  },
+  UNKNOWN: {
+    headline: "Analyzing market conditions.",
+    guidance: "The FDR classifier is stabilizing. Procurement guidance appears once the signal converges. In the meantime, run standard policies and review your current allocations.",
+    primaryAction: { label: "Review current allocations", path: "/allocation" },
+    accent: 'muted',
+    tone: "Initializing",
+  },
+};
+
+function getRegimeHero(regime: string): RegimeHero {
+  return regimeHeroes[regime] || regimeHeroes.UNKNOWN;
+}
+
 export default function Dashboard() {
   const { toast } = useToast();
   const { user, isLoading: authLoading } = useAuth();
@@ -372,15 +429,47 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="mb-16">
-        <div className="eyebrow mb-4">State of operations</div>
-        <h1 className="hero text-5xl">{regime?.regime ? getRegimeDescription(regime.regime).split('.')[0] + '.' : 'Analyzing conditions.'}</h1>
-        <p className="text-soft mt-5 max-w-xl leading-relaxed">
-          {Array.isArray(skus) && skus.length > 0
-            ? `Tracking ${skus.length.toLocaleString()} SKU${skus.length === 1 ? '' : 's'}. ${regime?.regime === 'HEALTHY_EXPANSION' ? 'No critical exposures.' : 'Review current regime conditions.'}`
-            : 'Add your first SKU to start tracking operations.'}
-        </p>
-      </div>
+      {(() => {
+        // The hero is the customer's first 3 seconds. It must answer:
+        // (1) what regime are we in, (2) what does that mean for my buys
+        // this week, (3) what should I click next. Falls back to the
+        // UNKNOWN posture if the classifier hasn't stabilized.
+        const hero = getRegimeHero(regimeType);
+        const accentBg =
+          hero.accent === 'signal' ? 'bg-signal'
+          : hero.accent === 'good' ? 'bg-good'
+          : hero.accent === 'bad' ? 'bg-bad'
+          : 'bg-line';
+        const confidencePct = regimeIntelligence?.confidence?.overall != null
+          ? Math.round(regimeIntelligence.confidence.overall * 100)
+          : null;
+        return (
+          <div className="mb-16">
+            <div className={`h-px w-32 mb-6 ${accentBg}`} data-testid="hero-regime-accent" />
+            <div className="eyebrow mb-3" data-testid="text-hero-eyebrow">
+              State of operations · FDR {fdr.toFixed(2)} · {hero.tone}
+            </div>
+            <h1 className="hero text-4xl md:text-5xl leading-[1.05] max-w-3xl" data-testid="text-hero-headline">
+              {hero.headline}
+            </h1>
+            <p className="text-soft mt-6 max-w-2xl leading-relaxed" data-testid="text-hero-guidance">
+              {hero.guidance}
+            </p>
+            <div className="mt-7 flex items-center gap-4 flex-wrap">
+              <Button
+                onClick={() => setLocation(hero.primaryAction.path)}
+                data-testid="button-hero-primary-action"
+              >
+                {hero.primaryAction.label}
+              </Button>
+              <span className="text-xs text-muted">
+                Tracking {Array.isArray(skus) ? skus.length.toLocaleString() : 0} SKU{Array.isArray(skus) && skus.length === 1 ? '' : 's'} · {policySignals.length} recommended action{policySignals.length === 1 ? '' : 's'}
+                {confidencePct !== null ? ` · ${confidencePct}% regime confidence` : ''}
+              </span>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="grid grid-cols-4 gap-px bg-line mb-20">
         <div className="bg-panel p-6">
@@ -596,7 +685,7 @@ export default function Dashboard() {
             )}
           </Card>
         </div>
-        <PolicySignals signals={policySignals} />
+        <PolicySignals signals={policySignals} regime={regimeType} fdr={fdr} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
