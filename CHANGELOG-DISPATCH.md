@@ -32,6 +32,8 @@ Session start: 2026-05-09
 | 20:48 | bbe2248 | F0 | F0 | Close free-active-subscription leak in /api/billing/subscribe | **F0 in retrospect** — found in round-9. Any authenticated user could POST {planId:"monthly_starter"} and get status:"active" for 30 days with no Stripe subscription, no payment method, no money. Three concrete leaks: (1) client-controlled stripePriceId (could pass $1 price for $299 plan) → now server-derived from BILLING_PLANS, body param ignored; (2) no payment-method gate → now required unless trialDays > 0; (3) Stripe-side failure didn't fail the DB insert → now throws 502. Status field expanded: "active"/"trialing"/"pending_setup"/"incomplete". trialCheck middleware updated to accept "active" + "trialing" only | pushed; awaiting Republish |
 | 21:05 | 15a138a | doc | — | Round-9 ledger closure | All 4 round-9 findings + fixes documented in push-log + finding-detail sections | LIVE |
 | 21:15 | b121ef4 | F1 | F1 | Manual /api/rfqs creation was 400-ing on every request | Found in round-10 tenant-isolation audit (couldn't even create an RFQ to test cross-tenant access on). Handler validated client body against the FULL insertRfqSchema which requires server-derived fields (companyId / rfqNumber / regimeAtGeneration / fdrAtGeneration). Fix mirrors auto-gen flow: client-input schema omits server-injected fields; handler derives rfqNumber (RFQ-YYYY-NNNN) + captures regime context from latest snapshot | pushed; awaiting Republish |
+| 21:25 | 83c7db2 | doc | — | Round-10 tenant-isolation audit closure | Full attack matrix + RFQ side-find documented | LIVE |
+| 22:15 | 9362635 | feat | F2 | MAPE backtest pipeline — closes F2-FILED-013 | 4-file commit: NEW mapeBacktest.ts (back-fill helper), WIRED backgroundJobs.ts (runs back-fill before existing trackAllSKUs cron), NEW POST /api/forecasts/backtest (manual trigger), REWROTE alertGeneration.generateForecastAlerts (now reads real MAPE from forecast_accuracy_tracking with tiered ratio thresholds + noise floor + 24h dedupe). Root cause was deeper than filed: existing pipeline was structurally complete but silent no-op because actualDemand column never populated | pushed; awaiting Republish |
 
 ## Hard stops hit
 
@@ -315,7 +317,23 @@ No F0/F1 isolation bugs found. Multi-tenant data access is properly scoped by `c
   - Returns HTTP **207 Multi-Status** when some emails failed, 200 only when all succeeded.
   - Returns per-invitation `inviteLink` in the response so the inviter can share manually when the email doesn't reach the recipient.
 
-### F2-FILED-013 — No per-SKU MAPE source; generateForecastAlerts returns 0 in prod
+### F2-FILED-013 — No per-SKU MAPE source — **RESOLVED in `9362635`**
+
+**Status (2026-05-16 22:15 CDT)**: shipped. The MAPE pipeline now produces real numbers end-to-end in production.
+
+**Root-cause depth**: turned out the per-SKU MAPE compute path in `server/lib/forecastMonitoring.ts` was ALREADY complete and ALREADY wired into a 4-hour background cron — `trackForecastAccuracy` → `trackAllSKUs` → `trackMAPEForSKU` → `createDegradationAlert` (with alert dedupe + auto-retraining for high/critical severity). The whole pipeline was a structurally-correct silent no-op because it filters `multi_horizon_forecasts.actualDemand IS NOT NULL` and nothing in the codebase ever populated that column (only an unused PATCH endpoint sets it). So all the math was perfect, all the alerts were ready to fire — but no row ever entered the filter.
+
+**Fix delivered (4-file commit `9362635`)**:
+
+1. **`server/lib/mapeBacktest.ts`** (NEW) — `backfillForecastActuals(companyId)` walks every past forecast where `actualDemand IS NULL`, looks up the matching `demand_history` row (exact YYYY-MM-DD first, monthly bucket sum fallback), writes `actualDemand` + per-row `accuracy`. Idempotent, hard-capped at 2000 rows per call.
+
+2. **`server/backgroundJobs.ts`** — `trackForecastAccuracy` now runs the back-fill BEFORE delegating to the existing `trackAllSKUs`. The 4-hour cron now produces real metrics.
+
+3. **`server/routes.ts`** — `POST /api/forecasts/backtest` manual trigger for customers / admins / sales demos to populate accuracy on demand without waiting for the cron.
+
+4. **`server/lib/alertGeneration.ts`** — `generateForecastAlerts` (the on-demand path called by `/api/alerts/generate`) rewritten to read latest `forecast_accuracy_tracking` row per SKU. Emits alerts on tiered MAPE-ratio thresholds (1.5×/2.0×/2.5× for medium/high/critical) AND absolute floors (8%/15%/25%) AND ≥5 evaluated predictions (noise floor). 24h dedupe per SKU+severity prevents conflict with the background path's `createDegradationAlert`. Demo-mode synthetic generator preserved as a private fallback.
+
+Demo tenants (DEMO_MODE=1) unchanged — they keep the populated demo UX. Production tenants with real forecast history + real demand now see real forecast-accuracy metrics in dashboards and real degradation alerts in the inbox.
 
 - **Severity** F2 — exposed during F1-FILED-004 fix (`c2e4bf0`). The function used to fabricate MAPE per SKU (every 2nd SKU got 10-15% MAPE, others 4-7%) and emit `forecast_degradation` alerts on that coin flip. Now early-returns 0 in prod.
 - **Customer impact** Forecast accuracy is a top-3 buying criterion in S&OP RFPs. Today the Alerts inbox has zero forecast-degradation entries on prod tenants — customers ask why their dashboards show forecasts but no accuracy feedback, and we have nothing to point to.
