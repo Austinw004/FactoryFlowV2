@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": 1,
+  "owned_by": "server/lib/fdr* pipeline — DO NOT hand-edit",
+  "updated_at": null,
+  "forecasts": []
+}
