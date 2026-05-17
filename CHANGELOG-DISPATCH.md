@@ -184,7 +184,7 @@ Filing this as **F1 with a concrete recovery path** rather than chasing the per-
 | 4 — Integrations | partial | Stripe pk_live_ ✓, sensor-ingest 401-without-key ✓, /api-docs reachable ✓, /api/audit-trail 400 for un-onboarded tenant. Full sensor ingest end-to-end not run (no API key). |
 | 5 — Input boundaries | not run this session | Prior sessions covered signup/onboarding XSS sanitization. |
 | 6 — Realtime | not run | Two-tab sensor-push test requires sensor API key. |
-| 7 — Perf | not run this session | Prior sessions: load 2.66s, JS 390KB, API p95 165ms. |
+| 7 — Perf | **done (round-8, 2026-05-16 20:15)** | Landing TTFB 131ms / /dashboard 93ms. Public API p95 125ms over 10-ping series. Auth-gated API p95 114ms. JS 172KB gzipped (564KB raw), CSS 19.6KB gzipped (121KB raw). All headroom under target. |
 | 8 — Persona walk | done | 2/8 questions fully answered, 6/8 hit empty states. Load Sample Data bypass broken (F0-FILED-001). |
 | 9 — Ledger commit | this commit | — |
 
@@ -225,6 +225,42 @@ Filing this as **F1 with a concrete recovery path** rather than chasing the per-
 - This is why every tenant sees "N Products Need Attention" for all their SKUs regardless of actual inventory.
 - Defensive fix (5692a87) stopped "undefined units" from rendering; structural fix needs to JOIN `skus` with the `inventoryAnalysis` table (which has currentStock and safetyStock per material).
 - Proposed fix: refactor `getSkuInsights` to read materials with their latest inventoryAnalysis row joined, recompute the low-stock and high-demand filters from real data. Multi-file change because inventoryAnalysis is keyed by materialId not skuId — needs a bridge.
+
+### F2-FILED-011 — No real server-side ERP adapter behind /api/erp-connections/test
+
+- **Severity** F2 — exposed during the F1-FILED-004 fix (`a4315a1`). The test endpoint now returns an honest "connector in beta — contact sales" message in prod instead of the prior fake "Successfully connected", but the underlying gap is the actual integration: there is no adapter code that authenticates to NetSuite / SAP / Dynamics / Acumatica / Oracle / etc. and pulls products+orders+suppliers.
+- **Customer impact** Today: customer fills out the ERP connection form, gets the "in beta" toast, knows it isn't live. Before the fix: customer thought it WAS live, saved the connection, then their dashboard showed zero sync activity with no explanation. Today's state is honest but the feature still isn't shipped.
+- **Proposed implementation** Multi-adapter pattern in `server/lib/erp/`:
+  1. `adapters/netsuite.ts`, `adapters/sap.ts`, etc. — each exports `testConnection(creds)`, `discoverEntities()`, `syncProducts()`, `syncOrders()`, `syncSuppliers()`. Auth pattern varies (OAuth2 for NetSuite, basic auth + custom domain for SAP S/4HANA, OAuth2+tenant for Dynamics).
+  2. `erpRouter.ts` — picks the right adapter by `erpConnection.erpSystem` field.
+  3. Background sync via `backgroundJobs.ts` — already has the cadence pattern; just needs the adapter calls.
+  4. Test endpoint route ~50 LOC swap-in; per-adapter is ~300-500 LOC each.
+- **Recommendation** Build NetSuite first (largest mid-market mfg overlap), then SAP S/4HANA Cloud. ~2-3 weeks per adapter with sandbox accounts. Until that lands, the honest "in beta" message is correct.
+- **Tags** `coverage`, `integrations`
+
+### F2-FILED-012 — No real weather/logistics API integration; fetchWeatherLogistics returns []
+
+- **Severity** F2 — exposed during F1-FILED-004 fix (`c2e4bf0`). The function used to return season-shaped Math.random alerts ("60% chance of tropical_system in Gulf of Mexico"); now returns `alerts: []` in prod. UI renders "no active logistics weather alerts" — honest but inert.
+- **Customer impact** A customer with shipments through Gulf Coast ports during Sept-Oct gets no early-warning surface for hurricane activity, where competitors (FourKites, project44) do. This is a discoverable competitive gap on sales calls.
+- **Proposed implementation** Wire NOAA's free API (api.weather.gov/alerts) for US alerts + OpenWeather One Call API for international. Both keyed/free-tier. Adapter pattern:
+  1. `server/lib/weather/noaaAdapter.ts` — fetches active alerts, filters by `affected_areas` overlapping the customer's `supplier.region` / port list.
+  2. `server/lib/weather/openWeatherAdapter.ts` — same shape for non-US.
+  3. Cache 15-min per region (TTL via existing `globalCache`).
+  4. Map to existing `WeatherAlert` shape so the UI is a drop-in swap.
+- **Effort** ~1 week including caching + UI affordances for "data freshness" badge.
+- **Tags** `prediction-quality`, `integrations`
+
+### F2-FILED-013 — No per-SKU MAPE source; generateForecastAlerts returns 0 in prod
+
+- **Severity** F2 — exposed during F1-FILED-004 fix (`c2e4bf0`). The function used to fabricate MAPE per SKU (every 2nd SKU got 10-15% MAPE, others 4-7%) and emit `forecast_degradation` alerts on that coin flip. Now early-returns 0 in prod.
+- **Customer impact** Forecast accuracy is a top-3 buying criterion in S&OP RFPs. Today the Alerts inbox has zero forecast-degradation entries on prod tenants — customers ask why their dashboards show forecasts but no accuracy feedback, and we have nothing to point to.
+- **Proposed implementation** Already-architected: the `forecastAccuracyTracking` table exists in shared/schema.ts with `mape`, `mae`, `rmse`, `bias`, `directionalAccuracy` per SKU per period. Just needs a populator:
+  1. `server/lib/backtestJob.ts` — for each SKU, fetch (forecastedDemand from `multiHorizonForecasts`, actualDemand from `demandHistory`) for the past period, compute MAPE/MAE/RMSE/bias, insert into `forecastAccuracyTracking`.
+  2. Schedule via `backgroundJobs.ts` cron (daily 02:00).
+  3. Rewrite `generateForecastAlerts` to read the latest `forecastAccuracyTracking` row per SKU and emit a `forecast_degradation` alert when `mape > baselineMape * 2`.
+- **Effort** ~3-4 days. Schema is ready; this is the populator + alert rewrite.
+- **Tags** `prediction-quality`, `data-integrity`
+
 - Tools status: 14 routes wired (FIXED in `c356664`); 1 silent-fail CTA on Dashboard (FILED).
 - Data integrity: 15 server files use Math.random; per-file triage pending (FILED).
 - Prediction articulation: regime surfaced on /digital-twin and /procurement; absent from /dashboard (FILED).
