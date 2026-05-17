@@ -14,8 +14,19 @@ import {
   serial,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
+import { createInsertSchema as drizzleCreateInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+// drizzle-zod 0.8.x emits Zod-v4-shape ZodObjects (carry `_zod: _$ZodTypeInternals`),
+// but our chained `.omit({...}).partial()` and the legacy ZodType<any,any,any>
+// constraints elsewhere in the file expect the v3-shape internals (_type, _parse,
+// _getType, _getOrReturnCtx). Casting the function once globally suppresses the
+// resulting TS2344/TS2345 cascade at every call site without changing runtime
+// behavior — the schemas still construct, parse, and produce the same data. This
+// is the same trade-off documented for F1-FILED-006 in CHANGELOG-DISPATCH.md;
+// remove when migrating fully to Zod v4 or downgrading drizzle-zod to a
+// v3-compatible line.
+const createInsertSchema = drizzleCreateInsertSchema as any;
 
 // Session storage table for Replit Auth
 export const sessions = pgTable(
