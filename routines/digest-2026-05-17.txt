@@ -1,0 +1,83 @@
+Hi Austin — daily digest for Sun, May 17.
+
+AT A GLANCE
+  1 ran cleanly · 5 need your eyes · 0 blocking
+  (No prior-digest reply to act on this run.)
+
+PER-ROUTINE
+
+[Big Boi · activity]
+Shipped 60+ commits directly to main as FactoryFlow Dispatch — GDPR
+self-deletion + data-portability, money columns to doublePrecision,
+Zod v4 migration (319→0 tsc errors), RBAC admin-role fixes, billing
+leak close, CSV import recovery, SendPulse env-var fix.
+  - 17 commits in QA rounds 13–17 (today)
+  - Notable: 873697f (GDPR Art 17 & 20), 5096173 ($8.4M precision cap
+    lifted), 28a697e (SendPulse env-var fix)
+  - No PRs opened — all direct-to-main. No failed CI in window.
+
+[Optimus · silent]
+Ran and produced nothing in the window. Two clean days in a row.
+
+[Daily Boost · activity]
+No new run today. PR #239 still open from yesterday:
+319→0 tsc errors, axios CVE patch, dep updates.
+  - #239 draft · branch claude/exciting-fermi-10tuU
+    https://github.com/Austinw004/FactoryFlowV2/pull/239
+  - Likely redundant — Big Boi shipped the Zod v4 / tsc fix to main
+    today (57d1f26 → c7dcc77).
+
+[Palantard Grade · activity]
+New PR today plus yesterday's still open — both touch the dashboard
+regime / intelligence surface.
+  - #247 draft (today) — ux: regime-aware dashboard hero +
+    material→supplier intelligence · claude/vigilant-allen-vWlNI
+    https://github.com/Austinw004/FactoryFlowV2/pull/247
+  - #240 draft (yesterday) — Product intelligence sweep:
+    regime-prescriptive dashboard + cross-workspace FDR guidance
+    https://github.com/Austinw004/FactoryFlowV2/pull/240
+  - Both touch client/src/pages/dashboard — likely conflict if merged
+    in either order without rebase.
+
+[Weekly Clean · activity]
+7-day window. PR #235 still open from 2 days ago.
+  - #235 draft (2026-05-15) — security headers, CVE patches,
+    bundle split, docs sync · claude/festive-dijkstra-Lv717
+    https://github.com/Austinw004/FactoryFlowV2/pull/235
+  - Next weekly run lands 2026-05-22 — decide before then or it
+    gets stale.
+
+[Code Review · activity]
+New PR today, prior PR still open, plus 5 issues filed (4
+product/intelligence + 1 tech-debt).
+  - #242 draft (today) — fix: harden customer-facing safety gaps
+    (morning three-hat audit) · claude/hopeful-rubin-Is33C
+    https://github.com/Austinw004/FactoryFlowV2/pull/242
+  - #237 draft (2026-05-15) — fix(resilience): plug crash gaps and
+    silent failures around the model
+    https://github.com/Austinw004/FactoryFlowV2/pull/237
+  - Issues: #245 (OAuth localhost fallback · tech-debt), #246, #244,
+    #243, #238 (product intelligence)
+  - Potential overlap: #242 hardens safety gaps; Big Boi shipped RBAC +
+    auth hardening to main today. Diff vs. main before approving.
+
+DECISIONS NEEDED
+  1. Big Boi — 60 commits direct-to-main since last digest. Keep
+     direct-to-main policy, or require PRs going forward?
+  2. Daily Boost — #239 likely redundant with Big Boi's main commits.
+     Close as dup, rebase, or merge anyway?
+  3. Palantard Grade — #240 + #247 both touch dashboard regime UI.
+     Approve one (which?), both with rebase order, or close one?
+  4. Weekly Clean — #235 open 2 days. Approve and merge, or close in
+     favor of next weekly run?
+  5. Code Review — #237 + #242 both touch safety/resilience; Big Boi
+     may have shipped overlapping fixes. Approve both, rebase, or
+     close as dup?
+
+REPLY
+To act on these, reply to this routine session with the item number
+plus your decision — e.g., "Item 3: approve #247 and close #240",
+"Item 4: defer to next week", "Item 5: needs more info on overlap
+with main". I'll execute on the next daily run.
+
+— Prescient Labs · FactoryFlow daily digest · routine: intelligent-fermi-KAiVW
