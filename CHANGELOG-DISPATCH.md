@@ -27,6 +27,9 @@ Session start: 2026-05-09
 | 19:53 | 57d1f26 | doc | — | F1-FILED-006 changelog closure | Push log + finding-detail with full SHA trail of 7-commit Zod-v4 fix arc | LIVE |
 | 20:05 | a4315a1 | F1 | F1 | /api/erp-connections/test stops returning fake "Successfully connected" + random discovery in prod | Honest `success: false + validated: true + "connector in beta"` response in prod; demo mode keeps mock-discovery UX for sales walkthroughs. Closes the most customer-dangerous slice of F1-FILED-004 | pushed; awaiting Republish |
 | 20:08 | c2e4bf0 | F1 | F1 | 4 server-lib synthetic data feeders gated behind isDemoMode | platformAnalytics (3 functions), externalAPIs (weather alerts), alertGeneration (forecast alerts), forecastPopulation (synthetic history). Demo tenants unchanged; prod tenants now see empty states + real DB aggregates instead of Math.random fills. Closes F1-FILED-004 | pushed; awaiting Republish |
+| 20:18 | ef66334 | doc | — | F1-FILED-004 RESOLVED ledger + Phase 7 perf + 3 new F2s | All dispatch in-scope items now closed except F1-FILED-005 (Replit invoice) | LIVE |
+| 20:45 | 85fbf10 | F1 | F1 | Onboarding triple-fix: /complete persists both flags, auto-create company name uses real name, invite-team persists + reports per-invitation status | Found in round-9 live E2E audit. (a) Duplicate /api/onboarding/complete handler — 2nd was dead code, both flags now set atomically. (b) Auto-create company name was always "User's Company" because code only checked firstName (null at signup); now firstName → name[0] → email-local → "User". (c) /api/onboarding/invite-team never called storage.createTeamInvitation — emails sent invite links that resolved to "invalid invitation". Now persists BEFORE sending, returns 207 Multi-Status when emails fail, includes per-invite link in response so inviter can share manually | pushed; awaiting Republish |
+| 20:48 | bbe2248 | F0 | F0 | Close free-active-subscription leak in /api/billing/subscribe | **F0 in retrospect** — found in round-9. Any authenticated user could POST {planId:"monthly_starter"} and get status:"active" for 30 days with no Stripe subscription, no payment method, no money. Three concrete leaks: (1) client-controlled stripePriceId (could pass $1 price for $299 plan) → now server-derived from BILLING_PLANS, body param ignored; (2) no payment-method gate → now required unless trialDays > 0; (3) Stripe-side failure didn't fail the DB insert → now throws 502. Status field expanded: "active"/"trialing"/"pending_setup"/"incomplete". trialCheck middleware updated to accept "active" + "trialing" only | pushed; awaiting Republish |
 
 ## Hard stops hit
 
@@ -249,6 +252,43 @@ Filing this as **F1 with a concrete recovery path** rather than chasing the per-
   4. Map to existing `WeatherAlert` shape so the UI is a drop-in swap.
 - **Effort** ~1 week including caching + UI affordances for "data freshness" badge.
 - **Tags** `prediction-quality`, `integrations`
+
+### F0-FOUND-014 — Free active subscription via /api/billing/subscribe — **FIXED in `bbe2248`**
+
+- **Severity** F0 in retrospect — a paying-SaaS platform that hands out 30-day active subscriptions to anyone with API access is a revenue leak large enough to gate launch on.
+- **Found** Round-9 live E2E audit (2026-05-16 20:30 CDT). Test sequence:
+  1. POST /api/auth/signup → 201, JWT returned.
+  2. POST /api/billing/subscribe `{"planId":"monthly_starter"}` (no paymentMethodId, no stripePriceId) → **201, status:"active", currentPeriodEnd: now+30d**.
+  3. trial-check middleware reads `subscriptions.status === "active"` → treats user as fully paid for the entire period.
+  4. After period_end, just call /subscribe again. Free service indefinitely.
+- **Three concrete leaks fixed in `createSubscription()`**:
+  1. Client-controlled `stripePriceId` in body → server-derived from BILLING_PLANS only.
+  2. Missing payment-method gate → now rejects unless `paymentMethodId` provided OR `trialDays > 0`.
+  3. Failed Stripe sub create → now throws 502, no DB insert (was: silent fall-through to DB-only "active" record).
+- **Status field expanded** from `active`/`inactive` binary to `active` / `trialing` / `pending_setup` / `incomplete`. `trialCheck` updated to accept `active` + `trialing` as valid paid access. `pending_setup` and `incomplete` no longer unlock the app.
+- **Tags** `tool-functional`, `data-integrity`, `revenue-critical`
+
+### F1-FOUND-015 — `/api/onboarding/complete` had a duplicate dead handler; persistence flag never set on company — **FIXED in `85fbf10`**
+
+- **Severity** F1 — onboarding completion appeared to succeed but the dashboard's "Get Started" hint card stayed forever for any new tenant.
+- **Root cause** Two `app.post("/api/onboarding/complete", ...)` registrations. Express picks first-match, so the second one (which set `company.onboardingCompleted` — the flag the dashboard reads) was dead code. The first handler set `user.onboardingComplete`, which only the auth-hook redirect uses.
+- **Fix** Active handler now sets both flags atomically; per-company write wrapped in try/catch so a stale company row can't 500 the whole call. Dead handler removed.
+
+### F1-FOUND-016 — Email-signup tenants always got a company named "User's Company" — **FIXED in `85fbf10`**
+
+- **Severity** F1 — cosmetic but immediately visible. If the user invited a teammate before completing onboarding, the teammate joined "User's Company" — embarrassing.
+- **Root cause** Auto-create-company logic used `${user.firstName || 'User'}'s Company` in 6 different routes. Email signup writes the display name to `user.name`, leaving `firstName` null until Settings → Profile is edited. So `firstName || 'User'` always evaluated to `'User'`.
+- **Fix** Priority chain: `firstName || name.split(/\s+/)[0] || email.split("@")[0] || "User"`. Applied to all 6 sites via `replace_all`.
+
+### F1-FOUND-017 — `/api/onboarding/invite-team` never persisted invitations; emailed links resolved to "invalid" — **FIXED in `85fbf10`**
+
+- **Severity** F1 — team-invite flow completely broken end-to-end. Inviter got a green toast, teammate got an email with a dead link.
+- **Root cause** Handler generated a token, sent an email via `sendTeamInvitation`, but never called `storage.createTeamInvitation()`. The `invitations: []` array was only used to compute response counts — never written to the DB.
+- **Fix** Handler now:
+  - Persists the invitation **before** sending the email (DB write is the contract; email is the notification).
+  - Skips email send if persistence failed (don't email a dead token).
+  - Returns HTTP **207 Multi-Status** when some emails failed, 200 only when all succeeded.
+  - Returns per-invitation `inviteLink` in the response so the inviter can share manually when the email doesn't reach the recipient.
 
 ### F2-FILED-013 — No per-SKU MAPE source; generateForecastAlerts returns 0 in prod
 
