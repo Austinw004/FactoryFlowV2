@@ -366,7 +366,7 @@ export const insertIntegrationCredentialSchema = createInsertSchema(integrationC
   createdAt: true,
   updatedAt: true,
 });
-export type InsertIntegrationCredential = z.infer<typeof insertIntegrationCredentialSchema>;
+export type InsertIntegrationCredential = typeof integrationCredentials.$inferInsert;
 export type IntegrationCredential = typeof integrationCredentials.$inferSelect;
 
 // Company Locations (warehouses, factories, offices)
@@ -2437,45 +2437,45 @@ export const insertTeamInvitationSchema = createInsertSchema(
 
 // Types
 export type User = typeof users.$inferSelect;
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type UpsertUser = z.infer<typeof upsertUserSchema>;
+export type InsertUser = typeof users.$inferInsert;
+export type UpsertUser = typeof users.$inferInsert;
 export type Company = typeof companies.$inferSelect;
-export type InsertCompany = z.infer<typeof insertCompanySchema>;
+export type InsertCompany = typeof companies.$inferInsert;
 export type CompanyLocation = typeof companyLocations.$inferSelect;
-export type InsertCompanyLocation = z.infer<typeof insertCompanyLocationSchema>;
-export type UpdateCompanyLocation = z.infer<typeof updateCompanyLocationSchema>;
+export type InsertCompanyLocation = typeof companyLocations.$inferInsert;
+export type UpdateCompanyLocation = Partial<typeof companyLocations.$inferInsert>;
 export type Sku = typeof skus.$inferSelect;
-export type InsertSku = z.infer<typeof insertSkuSchema>;
+export type InsertSku = typeof skus.$inferInsert;
 export type Material = typeof materials.$inferSelect;
-export type InsertMaterial = z.infer<typeof insertMaterialSchema>;
+export type InsertMaterial = typeof materials.$inferInsert;
 export type Bom = typeof boms.$inferSelect;
-export type InsertBom = z.infer<typeof insertBomSchema>;
+export type InsertBom = typeof boms.$inferInsert;
 export type Supplier = typeof suppliers.$inferSelect;
-export type InsertSupplier = z.infer<typeof insertSupplierSchema>;
+export type InsertSupplier = typeof suppliers.$inferInsert;
 export type SupplierMaterial = typeof supplierMaterials.$inferSelect;
 export type InsertSupplierMaterial = z.infer<
   typeof insertSupplierMaterialSchema
 >;
 export type DemandHistory = typeof demandHistory.$inferSelect;
-export type InsertDemandHistory = z.infer<typeof insertDemandHistorySchema>;
+export type InsertDemandHistory = typeof demandHistory.$inferInsert;
 export type Allocation = typeof allocations.$inferSelect;
-export type InsertAllocation = z.infer<typeof insertAllocationSchema>;
+export type InsertAllocation = typeof allocations.$inferInsert;
 export type AllocationResult = typeof allocationResults.$inferSelect;
 export type InsertAllocationResult = z.infer<
   typeof insertAllocationResultSchema
 >;
 export type PriceAlert = typeof priceAlerts.$inferSelect;
-export type InsertPriceAlert = z.infer<typeof insertPriceAlertSchema>;
+export type InsertPriceAlert = typeof priceAlerts.$inferInsert;
 export type Machinery = typeof machinery.$inferSelect;
-export type InsertMachinery = z.infer<typeof insertMachinerySchema>;
+export type InsertMachinery = typeof machinery.$inferInsert;
 export type MaintenanceRecord = typeof maintenanceRecords.$inferSelect;
 export type InsertMaintenanceRecord = z.infer<
   typeof insertMaintenanceRecordSchema
 >;
 export type BalanceSheet = typeof balanceSheets.$inferSelect;
-export type InsertBalanceSheet = z.infer<typeof insertBalanceSheetSchema>;
+export type InsertBalanceSheet = typeof balanceSheets.$inferInsert;
 export type IncomeStatement = typeof incomeStatements.$inferSelect;
-export type InsertIncomeStatement = z.infer<typeof insertIncomeStatementSchema>;
+export type InsertIncomeStatement = typeof incomeStatements.$inferInsert;
 export type CashFlowStatement = typeof cashFlowStatements.$inferSelect;
 export type InsertCashFlowStatement = z.infer<
   typeof insertCashFlowStatementSchema
@@ -2485,7 +2485,7 @@ export type InsertSupplierMachinery = z.infer<
   typeof insertSupplierMachinerySchema
 >;
 export type PriceHistory = typeof priceHistory.$inferSelect;
-export type InsertPriceHistory = z.infer<typeof insertPriceHistorySchema>;
+export type InsertPriceHistory = typeof priceHistory.$inferInsert;
 export type PriceRecommendation = typeof priceRecommendations.$inferSelect;
 export type InsertPriceRecommendation = z.infer<
   typeof insertPriceRecommendationSchema
@@ -2499,13 +2499,13 @@ export type InsertComplianceRegulation = z.infer<
   typeof insertComplianceRegulationSchema
 >;
 export type ComplianceAudit = typeof complianceAudits.$inferSelect;
-export type InsertComplianceAudit = z.infer<typeof insertComplianceAuditSchema>;
+export type InsertComplianceAudit = typeof complianceAudits.$inferInsert;
 export type ComplianceApproval = typeof complianceApprovals.$inferSelect;
 export type InsertComplianceApproval = z.infer<
   typeof insertComplianceApprovalSchema
 >;
 export type AuditFinding = typeof auditFindings.$inferSelect;
-export type InsertAuditFinding = z.infer<typeof insertAuditFindingSchema>;
+export type InsertAuditFinding = typeof auditFindings.$inferInsert;
 export type AuditChecklistTemplate =
   typeof auditChecklistTemplates.$inferSelect;
 export type InsertAuditChecklistTemplate = z.infer<
@@ -2522,13 +2522,13 @@ export type InsertEmployeeTrainingRecord = z.infer<
   typeof insertEmployeeTrainingRecordSchema
 >;
 export type ProductionRun = typeof productionRuns.$inferSelect;
-export type InsertProductionRun = z.infer<typeof insertProductionRunSchema>;
+export type InsertProductionRun = typeof productionRuns.$inferInsert;
 export type ProductionMetric = typeof productionMetrics.$inferSelect;
 export type InsertProductionMetric = z.infer<
   typeof insertProductionMetricSchema
 >;
 export type DowntimeEvent = typeof downtimeEvents.$inferSelect;
-export type InsertDowntimeEvent = z.infer<typeof insertDowntimeEventSchema>;
+export type InsertDowntimeEvent = typeof downtimeEvents.$inferInsert;
 export type ProductionBottleneck = typeof productionBottlenecks.$inferSelect;
 export type InsertProductionBottleneck = z.infer<
   typeof insertProductionBottleneckSchema
@@ -2536,11 +2536,11 @@ export type InsertProductionBottleneck = z.infer<
 
 // RBAC Types
 export type Permission = typeof permissions.$inferSelect;
-export type InsertPermission = z.infer<typeof insertPermissionSchema>;
+export type InsertPermission = typeof permissions.$inferInsert;
 export type Role = typeof roles.$inferSelect;
-export type InsertRole = z.infer<typeof insertRoleSchema>;
+export type InsertRole = typeof roles.$inferInsert;
 export type RolePermission = typeof rolePermissions.$inferSelect;
-export type InsertRolePermission = z.infer<typeof insertRolePermissionSchema>;
+export type InsertRolePermission = typeof rolePermissions.$inferInsert;
 export type UserRoleAssignment = typeof userRoleAssignments.$inferSelect;
 export type InsertUserRoleAssignment = z.infer<
   typeof insertUserRoleAssignmentSchema
@@ -2548,7 +2548,7 @@ export type InsertUserRoleAssignment = z.infer<
 
 // Team Invitation Types
 export type TeamInvitation = typeof teamInvitations.$inferSelect;
-export type InsertTeamInvitation = z.infer<typeof insertTeamInvitationSchema>;
+export type InsertTeamInvitation = typeof teamInvitations.$inferInsert;
 
 // IoT Sensors & Predictive Maintenance schemas
 export const insertEquipmentSensorSchema = createInsertSchema(
@@ -2571,9 +2571,9 @@ export const insertMaintenancePredictionSchema = createInsertSchema(
 ).omit({ id: true, createdAt: true });
 
 export type EquipmentSensor = typeof equipmentSensors.$inferSelect;
-export type InsertEquipmentSensor = z.infer<typeof insertEquipmentSensorSchema>;
+export type InsertEquipmentSensor = typeof equipmentSensors.$inferInsert;
 export type SensorReading = typeof sensorReadings.$inferSelect;
-export type InsertSensorReading = z.infer<typeof insertSensorReadingSchema>;
+export type InsertSensorReading = typeof sensorReadings.$inferInsert;
 export type MaintenanceAlert = typeof maintenanceAlerts.$inferSelect;
 export type InsertMaintenanceAlert = z.infer<
   typeof insertMaintenanceAlertSchema
@@ -2643,7 +2643,7 @@ export const insertSupplierChainLinkSchema = createInsertSchema(
 ).omit({ id: true, createdAt: true, updatedAt: true });
 
 export type MaterialBatch = typeof materialBatches.$inferSelect;
-export type InsertMaterialBatch = z.infer<typeof insertMaterialBatchSchema>;
+export type InsertMaterialBatch = typeof materialBatches.$inferInsert;
 export type TraceabilityEvent = typeof traceabilityEvents.$inferSelect;
 export type InsertTraceabilityEvent = z.infer<
   typeof insertTraceabilityEventSchema
@@ -2694,8 +2694,8 @@ export const updateSupplierTierAlertSchema = createInsertSchema(
   .partial();
 
 export type SupplierTier = typeof supplierTiers.$inferSelect;
-export type InsertSupplierTier = z.infer<typeof insertSupplierTierSchema>;
-export type UpdateSupplierTier = z.infer<typeof updateSupplierTierSchema>;
+export type InsertSupplierTier = typeof supplierTiers.$inferInsert;
+export type UpdateSupplierTier = Partial<typeof supplierTiers.$inferInsert>;
 export type SupplierRelationship = typeof supplierRelationships.$inferSelect;
 export type InsertSupplierRelationship = z.infer<
   typeof insertSupplierRelationshipSchema
@@ -2757,16 +2757,16 @@ export const updateShiftAssignmentSchema = createInsertSchema(shiftAssignments)
   .partial();
 
 export type Employee = typeof employees.$inferSelect;
-export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
-export type UpdateEmployee = z.infer<typeof updateEmployeeSchema>;
+export type InsertEmployee = typeof employees.$inferInsert;
+export type UpdateEmployee = Partial<typeof employees.$inferInsert>;
 export type WorkShift = typeof workShifts.$inferSelect;
-export type InsertWorkShift = z.infer<typeof insertWorkShiftSchema>;
+export type InsertWorkShift = typeof workShifts.$inferInsert;
 export type SkillRequirement = typeof skillRequirements.$inferSelect;
 export type InsertSkillRequirement = z.infer<
   typeof insertSkillRequirementSchema
 >;
 export type StaffAssignment = typeof staffAssignments.$inferSelect;
-export type InsertStaffAssignment = z.infer<typeof insertStaffAssignmentSchema>;
+export type InsertStaffAssignment = typeof staffAssignments.$inferInsert;
 export type EmployeeSkillCertification =
   typeof employeeSkillCertifications.$inferSelect;
 export type InsertEmployeeSkillCertification = z.infer<
@@ -2776,10 +2776,10 @@ export type UpdateEmployeeSkillCertification = z.infer<
   typeof updateEmployeeSkillCertificationSchema
 >;
 export type WeeklySchedule = typeof weeklySchedules.$inferSelect;
-export type InsertWeeklySchedule = z.infer<typeof insertWeeklyScheduleSchema>;
+export type InsertWeeklySchedule = typeof weeklySchedules.$inferInsert;
 export type ShiftAssignment = typeof shiftAssignments.$inferSelect;
-export type InsertShiftAssignment = z.infer<typeof insertShiftAssignmentSchema>;
-export type UpdateShiftAssignment = z.infer<typeof updateShiftAssignmentSchema>;
+export type InsertShiftAssignment = typeof shiftAssignments.$inferInsert;
+export type UpdateShiftAssignment = Partial<typeof shiftAssignments.$inferInsert>;
 
 // Comprehensive Employee Management schemas
 export const insertEmployeePayrollSchema = createInsertSchema(
@@ -2834,11 +2834,11 @@ export const updateEmployeePerformanceReviewSchema = createInsertSchema(
   .partial();
 
 export type EmployeePayroll = typeof employeePayroll.$inferSelect;
-export type InsertEmployeePayroll = z.infer<typeof insertEmployeePayrollSchema>;
-export type UpdateEmployeePayroll = z.infer<typeof updateEmployeePayrollSchema>;
+export type InsertEmployeePayroll = typeof employeePayroll.$inferInsert;
+export type UpdateEmployeePayroll = Partial<typeof employeePayroll.$inferInsert>;
 export type EmployeeBenefit = typeof employeeBenefits.$inferSelect;
-export type InsertEmployeeBenefit = z.infer<typeof insertEmployeeBenefitSchema>;
-export type UpdateEmployeeBenefit = z.infer<typeof updateEmployeeBenefitSchema>;
+export type InsertEmployeeBenefit = typeof employeeBenefits.$inferInsert;
+export type UpdateEmployeeBenefit = Partial<typeof employeeBenefits.$inferInsert>;
 export type EmployeeDocument = typeof employeeDocuments.$inferSelect;
 export type InsertEmployeeDocument = z.infer<
   typeof insertEmployeeDocumentSchema
@@ -2847,8 +2847,8 @@ export type UpdateEmployeeDocument = z.infer<
   typeof updateEmployeeDocumentSchema
 >;
 export type EmployeeTimeOff = typeof employeeTimeOff.$inferSelect;
-export type InsertEmployeeTimeOff = z.infer<typeof insertEmployeeTimeOffSchema>;
-export type UpdateEmployeeTimeOff = z.infer<typeof updateEmployeeTimeOffSchema>;
+export type InsertEmployeeTimeOff = typeof employeeTimeOff.$inferInsert;
+export type UpdateEmployeeTimeOff = Partial<typeof employeeTimeOff.$inferInsert>;
 export type EmployeePtoBalance = typeof employeePtoBalances.$inferSelect;
 export type InsertEmployeePtoBalance = z.infer<
   typeof insertEmployeePtoBalanceSchema
@@ -3212,12 +3212,12 @@ export type InsertAutoPurchaseRecommendation = z.infer<
   typeof insertAutoPurchaseRecommendationSchema
 >;
 export type IncomingEmail = typeof incomingEmails.$inferSelect;
-export type InsertIncomingEmail = z.infer<typeof insertIncomingEmailSchema>;
+export type InsertIncomingEmail = typeof incomingEmails.$inferInsert;
 export type EmailAnalysis = typeof emailAnalysis.$inferSelect;
-export type InsertEmailAnalysis = z.infer<typeof insertEmailAnalysisSchema>;
+export type InsertEmailAnalysis = typeof emailAnalysis.$inferInsert;
 export type PurchaseOrder = typeof purchaseOrders.$inferSelect;
-export type InsertPurchaseOrder = z.infer<typeof insertPurchaseOrderSchema>;
-export type UpdatePurchaseOrder = z.infer<typeof updatePurchaseOrderSchema>;
+export type InsertPurchaseOrder = typeof purchaseOrders.$inferInsert;
+export type UpdatePurchaseOrder = Partial<typeof purchaseOrders.$inferInsert>;
 export type MaterialUsageTracking = typeof materialUsageTracking.$inferSelect;
 export type InsertMaterialUsageTracking = z.infer<
   typeof insertMaterialUsageTrackingSchema
@@ -3239,8 +3239,8 @@ export type InsertEconomicSnapshot = z.infer<
 export const insertRegimeStateSchema = createInsertSchema(regimeState);
 export const updateRegimeStateSchema = insertRegimeStateSchema.partial().required({ companyId: true });
 export type RegimeState = typeof regimeState.$inferSelect;
-export type InsertRegimeState = z.infer<typeof insertRegimeStateSchema>;
-export type UpdateRegimeState = z.infer<typeof updateRegimeStateSchema>;
+export type InsertRegimeState = typeof regimeState.$inferInsert;
+export type UpdateRegimeState = Partial<typeof regimeState.$inferInsert>;
 
 // Regime Transitions Audit Log
 export const insertRegimeTransitionSchema = createInsertSchema(regimeTransitions).omit({
@@ -3248,7 +3248,7 @@ export const insertRegimeTransitionSchema = createInsertSchema(regimeTransitions
   createdAt: true,
 });
 export type RegimeTransition = typeof regimeTransitions.$inferSelect;
-export type InsertRegimeTransition = z.infer<typeof insertRegimeTransitionSchema>;
+export type InsertRegimeTransition = typeof regimeTransitions.$inferInsert;
 
 // Model Comparison Tracking - Prove Dual-Circuit Superiority over traditional models
 export const modelComparisons = pgTable(
@@ -4402,7 +4402,7 @@ export const insertFeatureToggleSchema = createInsertSchema(
   featureToggles,
 ).omit({ id: true, createdAt: true, updatedAt: true });
 export type FeatureToggle = typeof featureToggles.$inferSelect;
-export type InsertFeatureToggle = z.infer<typeof insertFeatureToggleSchema>;
+export type InsertFeatureToggle = typeof featureToggles.$inferInsert;
 
 // Supply Chain Network Intelligence
 export const insertSupplierNodeSchema = createInsertSchema(supplierNodes).omit({
@@ -4422,9 +4422,9 @@ export const insertSupplierRiskAlertSchema = createInsertSchema(
 ).omit({ id: true, createdAt: true });
 
 export type SupplierNode = typeof supplierNodes.$inferSelect;
-export type InsertSupplierNode = z.infer<typeof insertSupplierNodeSchema>;
+export type InsertSupplierNode = typeof supplierNodes.$inferInsert;
 export type SupplierLink = typeof supplierLinks.$inferSelect;
-export type InsertSupplierLink = z.infer<typeof insertSupplierLinkSchema>;
+export type InsertSupplierLink = typeof supplierLinks.$inferInsert;
 export type SupplierHealthMetrics = typeof supplierHealthMetrics.$inferSelect;
 export type InsertSupplierHealthMetrics = z.infer<
   typeof insertSupplierHealthMetricsSchema
@@ -4455,17 +4455,17 @@ export const insertErpConnectionSchema = createInsertSchema(
 ).omit({ id: true, createdAt: true, updatedAt: true });
 
 export type PoRule = typeof poRules.$inferSelect;
-export type InsertPoRule = z.infer<typeof insertPoRuleSchema>;
+export type InsertPoRule = typeof poRules.$inferInsert;
 export type PoWorkflowStep = typeof poWorkflowSteps.$inferSelect;
-export type InsertPoWorkflowStep = z.infer<typeof insertPoWorkflowStepSchema>;
+export type InsertPoWorkflowStep = typeof poWorkflowSteps.$inferInsert;
 export type PoApproval = typeof poApprovals.$inferSelect;
-export type InsertPoApproval = z.infer<typeof insertPoApprovalSchema>;
+export type InsertPoApproval = typeof poApprovals.$inferInsert;
 export type NegotiationPlaybook = typeof negotiationPlaybooks.$inferSelect;
 export type InsertNegotiationPlaybook = z.infer<
   typeof insertNegotiationPlaybookSchema
 >;
 export type ErpConnection = typeof erpConnections.$inferSelect;
-export type InsertErpConnection = z.infer<typeof insertErpConnectionSchema>;
+export type InsertErpConnection = typeof erpConnections.$inferInsert;
 
 // Industry Data Consortium
 export const insertConsortiumContributionSchema = createInsertSchema(
@@ -4488,7 +4488,7 @@ export type InsertConsortiumMetrics = z.infer<
   typeof insertConsortiumMetricsSchema
 >;
 export type ConsortiumAlert = typeof consortiumAlerts.$inferSelect;
-export type InsertConsortiumAlert = z.infer<typeof insertConsortiumAlertSchema>;
+export type InsertConsortiumAlert = typeof consortiumAlerts.$inferInsert;
 
 // M&A Intelligence
 export const insertMaTargetSchema = createInsertSchema(maTargets).omit({
@@ -4508,9 +4508,9 @@ export const insertMaRecommendationSchema = createInsertSchema(
 ).omit({ id: true, createdAt: true });
 
 export type MaTarget = typeof maTargets.$inferSelect;
-export type InsertMaTarget = z.infer<typeof insertMaTargetSchema>;
+export type InsertMaTarget = typeof maTargets.$inferInsert;
 export type MaScenario = typeof maScenarios.$inferSelect;
-export type InsertMaScenario = z.infer<typeof insertMaScenarioSchema>;
+export type InsertMaScenario = typeof maScenarios.$inferInsert;
 export type MaIntegrationRisk = typeof maIntegrationRisks.$inferSelect;
 export type InsertMaIntegrationRisk = z.infer<
   typeof insertMaIntegrationRiskSchema
@@ -4534,13 +4534,13 @@ export const insertScenarioOutputSchema = createInsertSchema(
 ).omit({ id: true, calculatedAt: true });
 
 export type Scenario = typeof scenarios.$inferSelect;
-export type InsertScenario = z.infer<typeof insertScenarioSchema>;
+export type InsertScenario = typeof scenarios.$inferInsert;
 export type ScenarioVariable = typeof scenarioVariables.$inferSelect;
 export type InsertScenarioVariable = z.infer<
   typeof insertScenarioVariableSchema
 >;
 export type ScenarioOutput = typeof scenarioOutputs.$inferSelect;
-export type InsertScenarioOutput = z.infer<typeof insertScenarioOutputSchema>;
+export type InsertScenarioOutput = typeof scenarioOutputs.$inferInsert;
 
 // Geopolitical Risk Intelligence (OPTIONAL FEATURE)
 export const insertGeopoliticalEventSchema = createInsertSchema(
@@ -5540,7 +5540,7 @@ export type InsertPredictionAccuracyMetrics = z.infer<
   typeof insertPredictionAccuracyMetricsSchema
 >;
 export type ModelComparison = typeof modelComparisons.$inferSelect;
-export type InsertModelComparison = z.infer<typeof insertModelComparisonSchema>;
+export type InsertModelComparison = typeof modelComparisons.$inferInsert;
 export type MachineryPrediction = typeof machineryPredictions.$inferSelect;
 export type InsertMachineryPrediction = z.infer<
   typeof insertMachineryPredictionSchema
@@ -5557,7 +5557,7 @@ export type InsertModelCalibrationResult = z.infer<
 
 // Saved Scenarios & Bookmarks types
 export type SavedScenario = typeof savedScenarios.$inferSelect;
-export type InsertSavedScenario = z.infer<typeof insertSavedScenarioSchema>;
+export type InsertSavedScenario = typeof savedScenarios.$inferInsert;
 export type ScenarioBookmark = typeof scenarioBookmarks.$inferSelect;
 export type InsertScenarioBookmark = z.infer<
   typeof insertScenarioBookmarkSchema
@@ -5569,7 +5569,7 @@ export type InsertScenarioSimulation = z.infer<
   typeof insertScenarioSimulationSchema
 >;
 export type ScenarioVariant = typeof scenarioVariants.$inferSelect;
-export type InsertScenarioVariant = z.infer<typeof insertScenarioVariantSchema>;
+export type InsertScenarioVariant = typeof scenarioVariants.$inferInsert;
 
 // Supplier Risk Scoring types
 export type SupplierRiskSnapshot = typeof supplierRiskSnapshots.$inferSelect;
@@ -5579,11 +5579,11 @@ export type InsertSupplierRiskSnapshot = z.infer<
 
 // Audit Logs types
 export type AuditLog = typeof auditLogs.$inferSelect;
-export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+export type InsertAuditLog = typeof auditLogs.$inferInsert;
 
 // Smart Alerts types
 export type FdrAlert = typeof fdrAlerts.$inferSelect;
-export type InsertFdrAlert = z.infer<typeof insertFdrAlertSchema>;
+export type InsertFdrAlert = typeof fdrAlerts.$inferInsert;
 export type CommodityPriceAlert = typeof commodityPriceAlerts.$inferSelect;
 export type InsertCommodityPriceAlert = z.infer<
   typeof insertCommodityPriceAlertSchema
@@ -5594,7 +5594,7 @@ export type InsertRegimeChangeNotification = z.infer<
   typeof insertRegimeChangeNotificationSchema
 >;
 export type AlertTrigger = typeof alertTriggers.$inferSelect;
-export type InsertAlertTrigger = z.infer<typeof insertAlertTriggerSchema>;
+export type InsertAlertTrigger = typeof alertTriggers.$inferInsert;
 
 // S&OP Workspace schemas
 export const insertSopScenarioSchema = createInsertSchema(sopScenarios).omit({
@@ -5614,13 +5614,13 @@ export const insertSopActionItemSchema = createInsertSchema(
 
 // S&OP Workspace types
 export type SopScenario = typeof sopScenarios.$inferSelect;
-export type InsertSopScenario = z.infer<typeof insertSopScenarioSchema>;
+export type InsertSopScenario = typeof sopScenarios.$inferInsert;
 export type SopGapAnalysis = typeof sopGapAnalysis.$inferSelect;
-export type InsertSopGapAnalysis = z.infer<typeof insertSopGapAnalysisSchema>;
+export type InsertSopGapAnalysis = typeof sopGapAnalysis.$inferInsert;
 export type SopMeetingNotes = typeof sopMeetingNotes.$inferSelect;
-export type InsertSopMeetingNotes = z.infer<typeof insertSopMeetingNotesSchema>;
+export type InsertSopMeetingNotes = typeof sopMeetingNotes.$inferInsert;
 export type SopActionItem = typeof sopActionItems.$inferSelect;
-export type InsertSopActionItem = z.infer<typeof insertSopActionItemSchema>;
+export type InsertSopActionItem = typeof sopActionItems.$inferInsert;
 
 // RFQ schemas
 export const insertRfqSchema = createInsertSchema(rfqs).omit({
@@ -5635,9 +5635,9 @@ export const insertRfqQuoteSchema = createInsertSchema(rfqQuotes).omit({
 
 // RFQ types
 export type Rfq = typeof rfqs.$inferSelect;
-export type InsertRfq = z.infer<typeof insertRfqSchema>;
+export type InsertRfq = typeof rfqs.$inferInsert;
 export type RfqQuote = typeof rfqQuotes.$inferSelect;
-export type InsertRfqQuote = z.infer<typeof insertRfqQuoteSchema>;
+export type InsertRfqQuote = typeof rfqQuotes.$inferInsert;
 
 // Benchmark schemas
 export const insertBenchmarkSubmissionSchema = createInsertSchema(
@@ -5683,7 +5683,7 @@ export type InsertDemandSignalSource = z.infer<
   typeof insertDemandSignalSourceSchema
 >;
 export type DemandSignal = typeof demandSignals.$inferSelect;
-export type InsertDemandSignal = z.infer<typeof insertDemandSignalSchema>;
+export type InsertDemandSignal = typeof demandSignals.$inferInsert;
 export type DemandSignalAggregate = typeof demandSignalAggregates.$inferSelect;
 export type InsertDemandSignalAggregate = z.infer<
   typeof insertDemandSignalAggregateSchema
@@ -6010,9 +6010,9 @@ export const insertPlaybookActionLogSchema = createInsertSchema(
 
 // ROI Metrics types
 export type RoiMetric = typeof roiMetrics.$inferSelect;
-export type InsertRoiMetric = z.infer<typeof insertRoiMetricSchema>;
+export type InsertRoiMetric = typeof roiMetrics.$inferInsert;
 export type RoiSummary = typeof roiSummary.$inferSelect;
-export type InsertRoiSummary = z.infer<typeof insertRoiSummarySchema>;
+export type InsertRoiSummary = typeof roiSummary.$inferInsert;
 
 // ERP Integration types
 export type ErpIntegrationTemplate =
@@ -6021,11 +6021,11 @@ export type InsertErpIntegrationTemplate = z.infer<
   typeof insertErpIntegrationTemplateSchema
 >;
 export type ErpSyncLog = typeof erpSyncLogs.$inferSelect;
-export type InsertErpSyncLog = z.infer<typeof insertErpSyncLogSchema>;
+export type InsertErpSyncLog = typeof erpSyncLogs.$inferInsert;
 
 // Action Playbook types
 export type ActionPlaybook = typeof actionPlaybooks.$inferSelect;
-export type InsertActionPlaybook = z.infer<typeof insertActionPlaybookSchema>;
+export type InsertActionPlaybook = typeof actionPlaybooks.$inferInsert;
 export type ActivePlaybookInstance =
   typeof activePlaybookInstances.$inferSelect;
 export type InsertActivePlaybookInstance = z.infer<
@@ -6439,7 +6439,7 @@ export type InsertSopMeetingTemplate = z.infer<
   typeof insertSopMeetingTemplateSchema
 >;
 export type SopMeeting = typeof sopMeetings.$inferSelect;
-export type InsertSopMeeting = z.infer<typeof insertSopMeetingSchema>;
+export type InsertSopMeeting = typeof sopMeetings.$inferInsert;
 export type SopMeetingAttendee = typeof sopMeetingAttendees.$inferSelect;
 export type InsertSopMeetingAttendee = z.infer<
   typeof insertSopMeetingAttendeeSchema
@@ -6453,7 +6453,7 @@ export type InsertSopApprovalChain = z.infer<
   typeof insertSopApprovalChainSchema
 >;
 export type SopApprovalStep = typeof sopApprovalSteps.$inferSelect;
-export type InsertSopApprovalStep = z.infer<typeof insertSopApprovalStepSchema>;
+export type InsertSopApprovalStep = typeof sopApprovalSteps.$inferInsert;
 export type SopApprovalRequest = typeof sopApprovalRequests.$inferSelect;
 export type InsertSopApprovalRequest = z.infer<
   typeof insertSopApprovalRequestSchema
@@ -7369,23 +7369,23 @@ export type BackgroundJobLock = typeof backgroundJobLocks.$inferSelect;
 
 export const insertAutomationRuntimeStateSchema = createInsertSchema(automationRuntimeState).omit({ id: true, lastUpdatedAt: true });
 export type AutomationRuntimeState = typeof automationRuntimeState.$inferSelect;
-export type InsertAutomationRuntimeState = z.infer<typeof insertAutomationRuntimeStateSchema>;
+export type InsertAutomationRuntimeState = typeof automationRuntimeState.$inferInsert;
 
 export const insertProcessedTriggerEventSchema = createInsertSchema(processedTriggerEvents).omit({ id: true, processedAt: true });
 export type ProcessedTriggerEvent = typeof processedTriggerEvents.$inferSelect;
-export type InsertProcessedTriggerEvent = z.infer<typeof insertProcessedTriggerEventSchema>;
+export type InsertProcessedTriggerEvent = typeof processedTriggerEvents.$inferInsert;
 
 export const insertStripeProcessedEventSchema = createInsertSchema(stripeProcessedEvents).omit({ processedAt: true });
 export type StripeProcessedEvent = typeof stripeProcessedEvents.$inferSelect;
-export type InsertStripeProcessedEvent = z.infer<typeof insertStripeProcessedEventSchema>;
+export type InsertStripeProcessedEvent = typeof stripeProcessedEvents.$inferInsert;
 
 export const insertAutomationSafeModeSchema = createInsertSchema(automationSafeMode).omit({ id: true, createdAt: true, updatedAt: true });
 export type AutomationSafeMode = typeof automationSafeMode.$inferSelect;
-export type InsertAutomationSafeMode = z.infer<typeof insertAutomationSafeModeSchema>;
+export type InsertAutomationSafeMode = typeof automationSafeMode.$inferInsert;
 
 export const insertStructuredEventLogSchema = createInsertSchema(structuredEventLog).omit({ id: true, timestamp: true });
 export type StructuredEventLog = typeof structuredEventLog.$inferSelect;
-export type InsertStructuredEventLog = z.infer<typeof insertStructuredEventLogSchema>;
+export type InsertStructuredEventLog = typeof structuredEventLog.$inferInsert;
 
 // AI Agent Schemas
 export const insertAiAgentSchema = createInsertSchema(aiAgents).omit({
@@ -7422,19 +7422,19 @@ export const insertAiGuardrailSchema = createInsertSchema(aiGuardrails).omit({
 
 // AI Agent Types
 export type AiAgent = typeof aiAgents.$inferSelect;
-export type InsertAiAgent = z.infer<typeof insertAiAgentSchema>;
+export type InsertAiAgent = typeof aiAgents.$inferInsert;
 export type AiAutomationRule = typeof aiAutomationRules.$inferSelect;
 export type InsertAiAutomationRule = z.infer<
   typeof insertAiAutomationRuleSchema
 >;
 export type AiAction = typeof aiActions.$inferSelect;
-export type InsertAiAction = z.infer<typeof insertAiActionSchema>;
+export type InsertAiAction = typeof aiActions.$inferInsert;
 export type AiApprovalWorkflow = typeof aiApprovalWorkflows.$inferSelect;
 export type InsertAiApprovalWorkflow = z.infer<
   typeof insertAiApprovalWorkflowSchema
 >;
 export type AiGuardrail = typeof aiGuardrails.$inferSelect;
-export type InsertAiGuardrail = z.infer<typeof insertAiGuardrailSchema>;
+export type InsertAiGuardrail = typeof aiGuardrails.$inferInsert;
 export type AiAgentLearning = typeof aiAgentLearning.$inferSelect;
 export type AiExecutionQueue = typeof aiExecutionQueue.$inferSelect;
 export type AiPerformanceMetric = typeof aiPerformanceMetrics.$inferSelect;
@@ -7574,7 +7574,7 @@ export const insertActivityLogSchema = createInsertSchema(activityLogs).omit({
   createdAt: true,
 });
 export type ActivityLog = typeof activityLogs.$inferSelect;
-export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;
+export type InsertActivityLog = typeof activityLogs.$inferInsert;
 
 // User Notification Preferences Schemas
 export const insertUserNotificationPreferencesSchema = createInsertSchema(
@@ -7712,7 +7712,7 @@ export type InsertWebhookIntegration = z.infer<
   typeof insertWebhookIntegrationSchema
 >;
 export type WebhookEventLog = typeof webhookEventLogs.$inferSelect;
-export type InsertWebhookEventLog = z.infer<typeof insertWebhookEventLogSchema>;
+export type InsertWebhookEventLog = typeof webhookEventLogs.$inferInsert;
 
 // ============================================
 // PLATFORM ANALYTICS - Owner-Only Access
@@ -7928,7 +7928,7 @@ export const insertPlatformBehavioralAnalyticsSchema = createInsertSchema(
 
 // Platform Admin Types
 export type PlatformAdmin = typeof platformAdmins.$inferSelect;
-export type InsertPlatformAdmin = z.infer<typeof insertPlatformAdminSchema>;
+export type InsertPlatformAdmin = typeof platformAdmins.$inferInsert;
 export type PlatformAnalyticsSnapshot =
   typeof platformAnalyticsSnapshots.$inferSelect;
 export type PlatformMaterialTrend = typeof platformMaterialTrends.$inferSelect;
@@ -8420,15 +8420,15 @@ export const insertIntegrationDocumentationSchema = createInsertSchema(
 
 // Integration Types
 export type IntegrationConfig = typeof integrationConfigs.$inferSelect;
-export type InsertIntegrationConfig = z.infer<typeof insertIntegrationConfigSchema>;
+export type InsertIntegrationConfig = typeof integrationConfigs.$inferInsert;
 export type IntegrationAuditLog = typeof integrationAuditLogs.$inferSelect;
-export type InsertIntegrationAuditLog = z.infer<typeof insertIntegrationAuditLogSchema>;
+export type InsertIntegrationAuditLog = typeof integrationAuditLogs.$inferInsert;
 export type CanonicalEntity = typeof canonicalEntities.$inferSelect;
-export type InsertCanonicalEntity = z.infer<typeof insertCanonicalEntitySchema>;
+export type InsertCanonicalEntity = typeof canonicalEntities.$inferInsert;
 export type CanonicalEntityMapping = typeof canonicalEntityMappings.$inferSelect;
-export type InsertCanonicalEntityMapping = z.infer<typeof insertCanonicalEntityMappingSchema>;
+export type InsertCanonicalEntityMapping = typeof canonicalEntityMappings.$inferInsert;
 export type IntegrationDocumentation = typeof integrationDocumentation.$inferSelect;
-export type InsertIntegrationDocumentation = z.infer<typeof insertIntegrationDocumentationSchema>;
+export type InsertIntegrationDocumentation = typeof integrationDocumentation.$inferInsert;
 
 // Prediction Outcome Tracking (Falsification Discipline)
 export const predictionOutcomes = pgTable(
@@ -8465,7 +8465,7 @@ export const insertPredictionOutcomeSchema = createInsertSchema(
   predictionOutcomes,
 ).omit({ id: true });
 export type PredictionOutcome = typeof predictionOutcomes.$inferSelect;
-export type InsertPredictionOutcome = z.infer<typeof insertPredictionOutcomeSchema>;
+export type InsertPredictionOutcome = typeof predictionOutcomes.$inferInsert;
 
 // ============================================
 // Integration Orchestrator - Canonical Data Model
@@ -8506,7 +8506,7 @@ export const integrationConnections = pgTable(
 );
 
 export const insertIntegrationConnectionSchema = createInsertSchema(integrationConnections).omit({ id: true, createdAt: true, updatedAt: true });
-export type InsertIntegrationConnection = z.infer<typeof insertIntegrationConnectionSchema>;
+export type InsertIntegrationConnection = typeof integrationConnections.$inferInsert;
 export type IntegrationConnection = typeof integrationConnections.$inferSelect;
 
 // Integration Events - normalized event stream for all integration activity
@@ -8541,7 +8541,7 @@ export const integrationEvents = pgTable(
 );
 
 export const insertIntegrationEventSchema = createInsertSchema(integrationEvents).omit({ id: true, createdAt: true });
-export type InsertIntegrationEvent = z.infer<typeof insertIntegrationEventSchema>;
+export type InsertIntegrationEvent = typeof integrationEvents.$inferInsert;
 export type IntegrationEvent = typeof integrationEvents.$inferSelect;
 
 // Sync Jobs - tracks sync operations for each integration
@@ -8572,7 +8572,7 @@ export const syncJobs = pgTable(
 );
 
 export const insertSyncJobSchema = createInsertSchema(syncJobs).omit({ id: true, createdAt: true });
-export type InsertSyncJob = z.infer<typeof insertSyncJobSchema>;
+export type InsertSyncJob = typeof syncJobs.$inferInsert;
 export type SyncJob = typeof syncJobs.$inferSelect;
 
 // Dead Letter Events - failed events that need manual review
@@ -8605,7 +8605,7 @@ export const deadLetterEvents = pgTable(
 );
 
 export const insertDeadLetterEventSchema = createInsertSchema(deadLetterEvents).omit({ id: true, createdAt: true });
-export type InsertDeadLetterEvent = z.infer<typeof insertDeadLetterEventSchema>;
+export type InsertDeadLetterEvent = typeof deadLetterEvents.$inferInsert;
 export type DeadLetterEvent = typeof deadLetterEvents.$inferSelect;
 
 // External Identity Resolution - maps external IDs to canonical internal IDs
@@ -8631,7 +8631,7 @@ export const externalIdentities = pgTable(
 );
 
 export const insertExternalIdentitySchema = createInsertSchema(externalIdentities).omit({ id: true, createdAt: true });
-export type InsertExternalIdentity = z.infer<typeof insertExternalIdentitySchema>;
+export type InsertExternalIdentity = typeof externalIdentities.$inferInsert;
 export type ExternalIdentity = typeof externalIdentities.$inferSelect;
 
 // Integration Health Snapshots - periodic health checks
@@ -8657,7 +8657,7 @@ export const integrationHealthSnapshots = pgTable(
 );
 
 export const insertIntegrationHealthSnapshotSchema = createInsertSchema(integrationHealthSnapshots).omit({ id: true });
-export type InsertIntegrationHealthSnapshot = z.infer<typeof insertIntegrationHealthSnapshotSchema>;
+export type InsertIntegrationHealthSnapshot = typeof integrationHealthSnapshots.$inferInsert;
 export type IntegrationHealthSnapshot = typeof integrationHealthSnapshots.$inferSelect;
 
 // Canonical Object Types enum for type safety
@@ -8705,7 +8705,7 @@ export const dataQualityScores = pgTable("data_quality_scores", {
 
 export const insertDataQualityScoreSchema = createInsertSchema(dataQualityScores).omit({ id: true });
 export type DataQualityScore = typeof dataQualityScores.$inferSelect;
-export type InsertDataQualityScore = z.infer<typeof insertDataQualityScoreSchema>;
+export type InsertDataQualityScore = typeof dataQualityScores.$inferInsert;
 
 export const leadTimeDistributions = pgTable("lead_time_distributions", {
   id: serial("id").primaryKey(),
@@ -8726,7 +8726,7 @@ export const leadTimeDistributions = pgTable("lead_time_distributions", {
 
 export const insertLeadTimeDistributionSchema = createInsertSchema(leadTimeDistributions).omit({ id: true });
 export type LeadTimeDistribution = typeof leadTimeDistributions.$inferSelect;
-export type InsertLeadTimeDistribution = z.infer<typeof insertLeadTimeDistributionSchema>;
+export type InsertLeadTimeDistribution = typeof leadTimeDistributions.$inferInsert;
 
 export const materialConstraints = pgTable("material_constraints", {
   id: serial("id").primaryKey(),
@@ -8745,7 +8745,7 @@ export const materialConstraints = pgTable("material_constraints", {
 
 export const insertMaterialConstraintSchema = createInsertSchema(materialConstraints).omit({ id: true });
 export type MaterialConstraint = typeof materialConstraints.$inferSelect;
-export type InsertMaterialConstraint = z.infer<typeof insertMaterialConstraintSchema>;
+export type InsertMaterialConstraint = typeof materialConstraints.$inferInsert;
 
 // ============================================================
 // Track B: AI Copilot - Draft-only action system
@@ -8784,7 +8784,7 @@ export const copilotActionDrafts = pgTable("copilot_action_drafts", {
 
 export const insertCopilotActionDraftSchema = createInsertSchema(copilotActionDrafts).omit({ id: true, createdAt: true });
 export type CopilotActionDraft = typeof copilotActionDrafts.$inferSelect;
-export type InsertCopilotActionDraft = z.infer<typeof insertCopilotActionDraftSchema>;
+export type InsertCopilotActionDraft = typeof copilotActionDrafts.$inferInsert;
 
 export const copilotQueryLog = pgTable("copilot_query_log", {
   id: serial("id").primaryKey(),
@@ -8802,7 +8802,7 @@ export const copilotQueryLog = pgTable("copilot_query_log", {
 
 export const insertCopilotQueryLogSchema = createInsertSchema(copilotQueryLog).omit({ id: true, createdAt: true });
 export type CopilotQueryLog = typeof copilotQueryLog.$inferSelect;
-export type InsertCopilotQueryLog = z.infer<typeof insertCopilotQueryLogSchema>;
+export type InsertCopilotQueryLog = typeof copilotQueryLog.$inferInsert;
 
 // ============================================================
 // Track A: Offline Evaluation & Calibration
@@ -8824,7 +8824,7 @@ export const evaluationRuns = pgTable("evaluation_runs", {
 
 export const insertEvaluationRunSchema = createInsertSchema(evaluationRuns).omit({ id: true });
 export type EvaluationRun = typeof evaluationRuns.$inferSelect;
-export type InsertEvaluationRun = z.infer<typeof insertEvaluationRunSchema>;
+export type InsertEvaluationRun = typeof evaluationRuns.$inferInsert;
 
 export const evaluationMetrics = pgTable("evaluation_metrics", {
   id: serial("id").primaryKey(),
@@ -8839,7 +8839,7 @@ export const evaluationMetrics = pgTable("evaluation_metrics", {
 
 export const insertEvaluationMetricSchema = createInsertSchema(evaluationMetrics).omit({ id: true });
 export type EvaluationMetric = typeof evaluationMetrics.$inferSelect;
-export type InsertEvaluationMetric = z.infer<typeof insertEvaluationMetricSchema>;
+export type InsertEvaluationMetric = typeof evaluationMetrics.$inferInsert;
 
 // ============================================================
 // Track C: Decision Intelligence - Recommendations & What-If
@@ -8865,7 +8865,7 @@ export const decisionRecommendations = pgTable("decision_recommendations", {
 
 export const insertDecisionRecommendationSchema = createInsertSchema(decisionRecommendations).omit({ id: true, createdAt: true });
 export type DecisionRecommendation = typeof decisionRecommendations.$inferSelect;
-export type InsertDecisionRecommendation = z.infer<typeof insertDecisionRecommendationSchema>;
+export type InsertDecisionRecommendation = typeof decisionRecommendations.$inferInsert;
 
 export const decisionOverrides = pgTable("decision_overrides", {
   id: serial("id").primaryKey(),
@@ -8887,7 +8887,7 @@ export const decisionOverrides = pgTable("decision_overrides", {
 
 export const insertDecisionOverrideSchema = createInsertSchema(decisionOverrides).omit({ id: true, createdAt: true });
 export type DecisionOverride = typeof decisionOverrides.$inferSelect;
-export type InsertDecisionOverride = z.infer<typeof insertDecisionOverrideSchema>;
+export type InsertDecisionOverride = typeof decisionOverrides.$inferInsert;
 
 // ============================================================
 // Milestone 2 - Track 2: Auditable Counterfactual Savings
@@ -8918,7 +8918,7 @@ export const savingsEvidenceRecords = pgTable("savings_evidence_records", {
 
 export const insertSavingsEvidenceRecordSchema = createInsertSchema(savingsEvidenceRecords).omit({ id: true, createdAt: true });
 export type SavingsEvidenceRecord = typeof savingsEvidenceRecords.$inferSelect;
-export type InsertSavingsEvidenceRecord = z.infer<typeof insertSavingsEvidenceRecordSchema>;
+export type InsertSavingsEvidenceRecord = typeof savingsEvidenceRecords.$inferInsert;
 
 // ============================================================
 // Milestone 2 - Track 4: Enterprise Identity & Access
@@ -8943,7 +8943,7 @@ export const ssoConfigurations = pgTable("sso_configurations", {
 
 export const insertSsoConfigurationSchema = createInsertSchema(ssoConfigurations).omit({ id: true, createdAt: true, updatedAt: true });
 export type SsoConfiguration = typeof ssoConfigurations.$inferSelect;
-export type InsertSsoConfiguration = z.infer<typeof insertSsoConfigurationSchema>;
+export type InsertSsoConfiguration = typeof ssoConfigurations.$inferInsert;
 
 export const scimProvisioningLog = pgTable("scim_provisioning_log", {
   id: serial("id").primaryKey(),
@@ -8964,7 +8964,7 @@ export const scimProvisioningLog = pgTable("scim_provisioning_log", {
 
 export const insertScimProvisioningLogSchema = createInsertSchema(scimProvisioningLog).omit({ id: true, createdAt: true });
 export type ScimProvisioningLog = typeof scimProvisioningLog.$inferSelect;
-export type InsertScimProvisioningLog = z.infer<typeof insertScimProvisioningLogSchema>;
+export type InsertScimProvisioningLog = typeof scimProvisioningLog.$inferInsert;
 
 export const auditExportConfigs = pgTable("audit_export_configs", {
   id: serial("id").primaryKey(),
@@ -8981,7 +8981,7 @@ export const auditExportConfigs = pgTable("audit_export_configs", {
 
 export const insertAuditExportConfigSchema = createInsertSchema(auditExportConfigs).omit({ id: true });
 export type AuditExportConfig = typeof auditExportConfigs.$inferSelect;
-export type InsertAuditExportConfig = z.infer<typeof insertAuditExportConfigSchema>;
+export type InsertAuditExportConfig = typeof auditExportConfigs.$inferInsert;
 
 // ============================================================
 // Milestone 3: Regime-Aware Optimization & Backtest
@@ -9008,7 +9008,7 @@ export const regimeBacktestReports = pgTable("regime_backtest_reports", {
 
 export const insertRegimeBacktestReportSchema = createInsertSchema(regimeBacktestReports).omit({ id: true, createdAt: true });
 export type RegimeBacktestReport = typeof regimeBacktestReports.$inferSelect;
-export type InsertRegimeBacktestReport = z.infer<typeof insertRegimeBacktestReportSchema>;
+export type InsertRegimeBacktestReport = typeof regimeBacktestReports.$inferInsert;
 
 export const optimizationRuns = pgTable("optimization_runs", {
   id: serial("id").primaryKey(),
@@ -9034,7 +9034,7 @@ export const optimizationRuns = pgTable("optimization_runs", {
 
 export const insertOptimizationRunSchema = createInsertSchema(optimizationRuns).omit({ id: true, createdAt: true });
 export type OptimizationRun = typeof optimizationRuns.$inferSelect;
-export type InsertOptimizationRun = z.infer<typeof insertOptimizationRunSchema>;
+export type InsertOptimizationRun = typeof optimizationRuns.$inferInsert;
 
 // ============================================================
 // Milestone 4: Pilot Evaluation Mode
@@ -9068,7 +9068,7 @@ export const pilotExperiments = pgTable("pilot_experiments", {
 
 export const insertPilotExperimentSchema = createInsertSchema(pilotExperiments).omit({ id: true, createdAt: true });
 export type PilotExperiment = typeof pilotExperiments.$inferSelect;
-export type InsertPilotExperiment = z.infer<typeof insertPilotExperimentSchema>;
+export type InsertPilotExperiment = typeof pilotExperiments.$inferInsert;
 
 // ============================================================
 // Predictive Stability Reports (Adaptive Forecasting Layer)
@@ -9096,7 +9096,7 @@ export const predictiveStabilityReports = pgTable("predictive_stability_reports"
 
 export const insertPredictiveStabilityReportSchema = createInsertSchema(predictiveStabilityReports).omit({ id: true, createdAt: true });
 export type PredictiveStabilityReport = typeof predictiveStabilityReports.$inferSelect;
-export type InsertPredictiveStabilityReport = z.infer<typeof insertPredictiveStabilityReportSchema>;
+export type InsertPredictiveStabilityReport = typeof predictiveStabilityReports.$inferInsert;
 
 // ============================================================
 // Stress Test Reports (Stress Testing & Robustness Module)
@@ -9127,7 +9127,7 @@ export const stressTestReports = pgTable("stress_test_reports", {
 
 export const insertStressTestReportSchema = createInsertSchema(stressTestReports).omit({ id: true, createdAt: true });
 export type StressTestReport = typeof stressTestReports.$inferSelect;
-export type InsertStressTestReport = z.infer<typeof insertStressTestReportSchema>;
+export type InsertStressTestReport = typeof stressTestReports.$inferInsert;
 
 // ============================================================
 // Executive Reports (Revenue-Optimized Execution Layer)
@@ -9155,7 +9155,7 @@ export const executiveReports = pgTable("executive_reports", {
 
 export const insertExecutiveReportSchema = createInsertSchema(executiveReports).omit({ id: true, createdAt: true });
 export type ExecutiveReport = typeof executiveReports.$inferSelect;
-export type InsertExecutiveReport = z.infer<typeof insertExecutiveReportSchema>;
+export type InsertExecutiveReport = typeof executiveReports.$inferInsert;
 
 // ============================================================
 // Landing Mode Configuration
@@ -9600,7 +9600,7 @@ export const performanceBilling = pgTable(
 
 export const insertPerformanceBillingSchema = createInsertSchema(performanceBilling).omit({ id: true, createdAt: true, updatedAt: true });
 export type PerformanceBilling = typeof performanceBilling.$inferSelect;
-export type InsertPerformanceBilling = z.infer<typeof insertPerformanceBillingSchema>;
+export type InsertPerformanceBilling = typeof performanceBilling.$inferInsert;
 
 // ============================================================
 // Procurement Execution — Purchase Intents & Billing Profiles
@@ -9629,7 +9629,7 @@ export const billingProfiles = pgTable(
 );
 export const insertBillingProfileSchema = createInsertSchema(billingProfiles).omit({ id: true, createdAt: true, updatedAt: true });
 export type BillingProfile = typeof billingProfiles.$inferSelect;
-export type InsertBillingProfile = z.infer<typeof insertBillingProfileSchema>;
+export type InsertBillingProfile = typeof billingProfiles.$inferInsert;
 
 export const purchaseIntents = pgTable(
   "purchase_intents",
@@ -9663,7 +9663,7 @@ export const purchaseIntents = pgTable(
 );
 export const insertPurchaseIntentSchema = createInsertSchema(purchaseIntents).omit({ id: true, createdAt: true, updatedAt: true });
 export type PurchaseIntent = typeof purchaseIntents.$inferSelect;
-export type InsertPurchaseIntent = z.infer<typeof insertPurchaseIntentSchema>;
+export type InsertPurchaseIntent = typeof purchaseIntents.$inferInsert;
 
 // ============================================================
 // Payment Methods — Saved cards per company (multi-card)
@@ -9687,7 +9687,7 @@ export const companyPaymentMethods = pgTable(
 );
 export const insertCompanyPaymentMethodSchema = createInsertSchema(companyPaymentMethods).omit({ id: true, createdAt: true });
 export type CompanyPaymentMethod = typeof companyPaymentMethods.$inferSelect;
-export type InsertCompanyPaymentMethod = z.infer<typeof insertCompanyPaymentMethodSchema>;
+export type InsertCompanyPaymentMethod = typeof companyPaymentMethods.$inferInsert;
 
 // ============================================================
 // Subscription Payments — Invoice tracking
@@ -9710,7 +9710,7 @@ export const subscriptionPayments = pgTable(
 );
 export const insertSubscriptionPaymentSchema = createInsertSchema(subscriptionPayments).omit({ id: true, createdAt: true });
 export type SubscriptionPayment = typeof subscriptionPayments.$inferSelect;
-export type InsertSubscriptionPayment = z.infer<typeof insertSubscriptionPaymentSchema>;
+export type InsertSubscriptionPayment = typeof subscriptionPayments.$inferInsert;
 
 // ============================================================
 // Purchase Transactions — Supplier payment tracking
@@ -9734,7 +9734,7 @@ export const purchaseTransactions = pgTable(
 );
 export const insertPurchaseTransactionSchema = createInsertSchema(purchaseTransactions).omit({ id: true, createdAt: true });
 export type PurchaseTransaction = typeof purchaseTransactions.$inferSelect;
-export type InsertPurchaseTransaction = z.infer<typeof insertPurchaseTransactionSchema>;
+export type InsertPurchaseTransaction = typeof purchaseTransactions.$inferInsert;
 
 // ── Workflow Automation Engine ──────────────────────────────────────────────
 export const automationRules = pgTable(
@@ -9796,7 +9796,7 @@ export const automationExecutions = pgTable(
 
 export const insertAutomationRuleSchema = createInsertSchema(automationRules).omit({ id: true, createdAt: true, updatedAt: true, executionCount: true, lastExecutedAt: true });
 export type AutomationRule = typeof automationRules.$inferSelect;
-export type InsertAutomationRule = z.infer<typeof insertAutomationRuleSchema>;
+export type InsertAutomationRule = typeof automationRules.$inferInsert;
 export type AutomationExecution = typeof automationExecutions.$inferSelect;
 
 /**
@@ -9858,5 +9858,5 @@ export const insertContactInquirySchema = createInsertSchema(contactInquiries).o
   assignedTo: true,
 });
 export type ContactInquiry = typeof contactInquiries.$inferSelect;
-export type InsertContactInquiry = z.infer<typeof insertContactInquirySchema>;
+export type InsertContactInquiry = typeof contactInquiries.$inferInsert;
 
