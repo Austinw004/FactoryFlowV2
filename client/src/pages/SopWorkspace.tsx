@@ -746,7 +746,11 @@ export default function SopWorkspace() {
                           <FormItem>
                             <FormLabel>Forecasted Demand (units)</FormLabel>
                             <FormControl>
-                              <Input type="number" {...field} data-testid="input-gap-demand" />
+                              {/* drizzle-zod 0.8 emits Zod-v4-shape objects, so
+                                  z.infer on the .omit().extend() chain widens
+                                  field.value to `unknown`. Cast at the call
+                                  site to keep the form schema unchanged. */}
+                              <Input type="number" {...field} value={(field.value as number | string | undefined) ?? ""} data-testid="input-gap-demand" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -759,7 +763,7 @@ export default function SopWorkspace() {
                           <FormItem>
                             <FormLabel>Planned Production (units)</FormLabel>
                             <FormControl>
-                              <Input type="number" {...field} data-testid="input-gap-production" />
+                              <Input type="number" {...field} value={(field.value as number | string | undefined) ?? ""} data-testid="input-gap-production" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -772,7 +776,7 @@ export default function SopWorkspace() {
                           <FormItem>
                             <FormLabel>Gap Quantity (units)</FormLabel>
                             <FormControl>
-                              <Input type="number" {...field} data-testid="input-gap-quantity" />
+                              <Input type="number" {...field} value={(field.value as number | string | undefined) ?? ""} data-testid="input-gap-quantity" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -784,7 +788,7 @@ export default function SopWorkspace() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Gap Category</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select onValueChange={field.onChange} defaultValue={field.value as string | undefined}>
                               <FormControl>
                                 <SelectTrigger data-testid="select-gap-category">
                                   <SelectValue placeholder="Select category" />
@@ -808,7 +812,7 @@ export default function SopWorkspace() {
                           <FormItem>
                             <FormLabel>Recommended Action</FormLabel>
                             <FormControl>
-                              <Textarea placeholder="Recommended actions to address this gap..." {...field} value={field.value || ""} data-testid="textarea-gap-action" />
+                              <Textarea placeholder="Recommended actions to address this gap..." {...field} value={(field.value as string | undefined) ?? ""} data-testid="textarea-gap-action" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>

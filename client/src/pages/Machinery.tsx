@@ -47,12 +47,43 @@ const machineryFormSchema = insertMachinerySchema.omit({ companyId: true }).exte
   notes: z.string().optional(),
 });
 
+// Explicit form-values type — z.infer<typeof machineryFormSchema> widens to
+// `unknown` because drizzle-zod 0.8 emits Zod-v4-shape objects and our
+// .omit().extend() chain confuses the inferencer. Hand-rolling the type
+// preserves field.value: string | number for every <Input {...field} /> spread
+// without having to cast at every call site (see Machinery's 14+ FormFields).
+type MachineryFormValues = {
+  name: string;
+  category: string;
+  depreciationMethod: string;
+  purchaseCost: number;
+  salvageValue: number;
+  usefulLifeYears: number;
+  maintenanceIntervalDays: number;
+  manufacturer?: string;
+  model?: string;
+  serialNumber?: string;
+  purchaseDate?: string;
+  location?: string;
+  productUrl?: string;
+  notes?: string;
+};
+
 const maintenanceFormSchema = insertMaintenanceRecordSchema.omit({ machineryId: true, partsReplaced: true, nextScheduledDate: true }).extend({
   cost: z.coerce.number().min(0, "Cost must be positive").default(0),
   downTimeHours: z.coerce.number().min(0, "Downtime must be positive").default(0),
   performedDate: z.string(),
   performedBy: z.string().optional(),
 });
+
+type MaintenanceFormValues = {
+  maintenanceType: string;
+  description: string;
+  cost: number;
+  downTimeHours: number;
+  performedDate: string;
+  performedBy?: string;
+};
 
 export default function Machinery() {
   const [selectedMachine, setSelectedMachine] = useState<Machinery | null>(null);
@@ -296,8 +327,8 @@ function AddMachineForm({ onSuccess, onCancel }: {
 }) {
   const { toast } = useToast();
   
-  const form = useForm<z.infer<typeof machineryFormSchema>>({
-    resolver: zodResolver(machineryFormSchema),
+  const form = useForm<MachineryFormValues>({
+    resolver: zodResolver(machineryFormSchema) as any,
     defaultValues: {
       name: "",
       manufacturer: "",
@@ -317,7 +348,7 @@ function AddMachineForm({ onSuccess, onCancel }: {
   });
 
   const createMachine = useMutation({
-    mutationFn: async (data: z.infer<typeof machineryFormSchema>) => {
+    mutationFn: async (data: MachineryFormValues) => {
       const payload = {
         name: data.name,
         manufacturer: data.manufacturer || null,
@@ -350,7 +381,7 @@ function AddMachineForm({ onSuccess, onCancel }: {
     },
   });
 
-  const handleSubmit = (data: z.infer<typeof machineryFormSchema>) => {
+  const handleSubmit = (data: MachineryFormValues) => {
     createMachine.mutate(data);
   };
 
@@ -796,20 +827,20 @@ function AddMaintenanceForm({ machine, onSuccess, onCancel }: {
 }) {
   const { toast } = useToast();
   
-  const form = useForm<z.infer<typeof maintenanceFormSchema>>({
-    resolver: zodResolver(maintenanceFormSchema),
+  const form = useForm<MaintenanceFormValues>({
+    resolver: zodResolver(maintenanceFormSchema) as any,
     defaultValues: {
       maintenanceType: "preventive",
       description: "",
       cost: 0,
-      performedDate: new Date().toISOString().split("T")[0],
+      performedDate: new Date().toISOString().split("T")[0] || "",
       performedBy: "",
       downTimeHours: 0,
     },
   });
 
   const addMaintenance = useMutation({
-    mutationFn: async (data: z.infer<typeof maintenanceFormSchema>) => {
+    mutationFn: async (data: MaintenanceFormValues) => {
       const maintenanceIntervalDays = machine.maintenanceIntervalDays || 90;
       const performedDate = new Date(data.performedDate);
       const nextDate = new Date(performedDate);
@@ -843,7 +874,7 @@ function AddMaintenanceForm({ machine, onSuccess, onCancel }: {
     },
   });
 
-  const handleSubmit = (data: z.infer<typeof maintenanceFormSchema>) => {
+  const handleSubmit = (data: MaintenanceFormValues) => {
     addMaintenance.mutate(data);
   };
 
