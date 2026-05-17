@@ -19,6 +19,7 @@ import { ChevronRight } from "lucide-react";
 import type { Company, User, Role } from "@shared/schema";
 import { INDUSTRY_OPTIONS, COMPANY_SIZE_OPTIONS } from "@shared/onboardingOptions";
 import { LocationsManagement } from "@/components/LocationsManagement";
+import { DeleteAccountSection } from "@/components/DeleteAccountSection";
 
 export default function Configuration() {
   const { toast } = useToast();
@@ -824,6 +825,13 @@ export default function Configuration() {
               </div>
             </CardContent>
           </Card>
+
+          {/* GDPR Article 17 / CCPA right-to-delete UI. Backed by the three
+              endpoints introduced in 3f7db75 (POST/GET/POST cancel under
+              /api/users/me/delete*). Rendered below the data-retention card
+              so the destructive action sits visually distinct from the
+              standard preferences. */}
+          <DeleteAccountSection />
         </TabsContent>
 
         <TabsContent value="ai" className="flex-1 space-y-4 mt-0">
