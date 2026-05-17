@@ -391,6 +391,21 @@ No F0/F1 isolation bugs found. Multi-tenant data access is properly scoped by `c
 - **Fix** Differentiate by status: 4xx exposes `err.message` (client-safe — they caused it); 5xx still hides details in production to avoid leaking stack traces or internal paths.
 - **Tags** `coverage`, `dx`
 
+### F2-FILED-022 — Stripe Link cross-session privacy — **FIXED in `c0c7228`**
+
+- Set `wallets: { applePay: "never", googlePay: "never", link: "never" }` on `<PaymentElement>` in `client/src/components/StripePaymentForm.tsx`. The onboarding wizard's Payment step no longer shows the prior browser session's Link-saved bank account to a fresh signup. Plain card-entry only — no surprise wallet buttons either.
+
+### F2-FILED-023 — Settings dropdowns blank after onboarding — **FIXED in `c0c7228`**
+
+- Created `shared/onboardingOptions.ts` as the single source of truth for INDUSTRY_OPTIONS (sourced from `INDUSTRY_CONFIGS` keys in industryConfig.ts) and COMPANY_SIZE_OPTIONS / ANNUAL_REVENUE_OPTIONS (canonical slug/label pairs). Both `Onboarding.tsx` and `Configuration.tsx` import from this file, so they can't drift again. The wizard's saved "Industrial Equipment" / "51-200" values now match the Settings dropdown SelectItem values → dropdowns render the correct selection on load.
+
+### F2-FILED-012 — NOAA weather API integration — **FIXED in `c0c7228`**
+
+- Built `server/lib/weather/noaaAdapter.ts`. Fetches active US alerts from `api.weather.gov/alerts/active` (free, no API key, only requires a descriptive `User-Agent`). Filters to logistics-relevant event types (hurricanes / tropical systems / winter storms / tornadoes / severe thunderstorms / floods / ice storms / extreme wind / fire weather). Maps each NOAA alert into our existing `WeatherAlert` shape, severity-sorted, with inferred affected-ports via a 30-entry state/region → port lookup covering the major US container + intermodal hubs.
+- 15-min default cache via `globalCache.supplyChainRisk` (regime-aware — refreshes faster during IMBALANCED_EXCESS). Network failures degrade to empty array (correct UX vs. error).
+- Wired into `fetchWeatherLogistics()` in `externalAPIs.ts`: production tenants now get real NOAA data; demo mode unchanged.
+- International still out of scope — returns empty for non-US areas. Follow-up to wire OpenWeather/AccuWeather for international coverage (would close the F2 fully).
+
 ### F2-FOUND-027 — No account self-deletion endpoint (`DELETE /api/users/me` 404)
 
 - **Severity** F2 — GDPR/CCPA relevant. EU customers can request data deletion under Article 17. Today there's no self-service path.
