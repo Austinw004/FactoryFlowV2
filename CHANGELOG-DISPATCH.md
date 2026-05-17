@@ -423,9 +423,11 @@ No F0/F1 isolation bugs found. Multi-tenant data access is properly scoped by `c
 **Wired** `accountDeletionSweepJob` added to `backgroundJobs.ts` with 24h interval, lock-protected.
 
 **Future-work** (filed but not implemented in this round):
-- Data export companion (GDPR Article 20) — let users download their data before requesting deletion.
 - Confirmation email on request — gated on SendPulse sender-domain verification being completed.
-- UI surface in Settings → Data & Privacy — endpoints exist, client page needs wiring.
+
+**Round-16 follow-up — completed:**
+- ✅ Data export companion (GDPR Article 20) — shipped in `c6ce474`. `GET /api/users/me/export` returns a single JSON file with 15 top-level keys covering user, company, billing, sessions, invitations, and account-deletion-request history. Sensitive fields (passwordHash, refreshTokenHash, CVC-like fields) redacted; brand+last4 only for payment methods. Response includes `_meta` envelope with `exportedAt` + GDPR-article citation + schema version. Content-Disposition triggers browser download as `prescient-labs-data-export-<uid>-<date>.json`. Live-verified post-deploy: all 15 expected top-level keys present in response shape.
+- ✅ UI surface in Settings → Data & Privacy — shipped in `b9b45aa` (delete card) + `c6ce474` (export card). Both action cards now render in the existing Data & Privacy tab. Customers can self-serve both flows without engineering involvement.
 
 **Verified live** Round-15 post-deploy: `role=admin` confirms 942cb06 ghost-owner fix, `GET /api/users/me/delete/status` returns `{"status":"none"}` confirming GDPR table + handler wired. POST happy-path bounced off `rateLimiters.sensitive` during test-loop saturation (good — the rate-limit is appropriately tight for a destructive endpoint).
 
