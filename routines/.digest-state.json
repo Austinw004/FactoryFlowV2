@@ -1,0 +1,93 @@
+{
+  "today": "2026-05-17",
+  "priorDigestDate": "2026-05-16",
+  "priorReplyChecksum": null,
+  "priorReplyProcessed": false,
+  "lookbackWindowHours": 24,
+  "weeklyCleanLookbackDays": 7,
+  "subject": "Daily digest — 5 need your call",
+  "counts": {
+    "cleanly": 1,
+    "needsYourEyes": 5,
+    "blocking": 0
+  },
+  "routineStatus": {
+    "Big Boi": "activity",
+    "Optimus": "silent",
+    "Daily Boost": "activity",
+    "Palantard Grade": "activity",
+    "Weekly Clean": "activity",
+    "Code Review": "activity"
+  },
+  "decisions": [
+    {
+      "id": 1,
+      "routine": "Big Boi",
+      "ref": "main (FactoryFlow Dispatch)",
+      "url": "https://github.com/Austinw004/FactoryFlowV2/commits/main",
+      "branch": "main",
+      "question": "60 direct-to-main commits since last digest (GDPR Articles 17 & 20, money columns to doublePrecision, Zod v4 migration 319->0, RBAC admin-role fixes, billing leak close, CSV import recovery, SendPulse env-var fix). Keep direct-to-main policy, or require PRs going forward?"
+    },
+    {
+      "id": 2,
+      "routine": "Daily Boost",
+      "ref": "PR #239",
+      "url": "https://github.com/Austinw004/FactoryFlowV2/pull/239",
+      "branch": "claude/exciting-fermi-10tuU",
+      "question": "Likely redundant with Big Boi's main commits today (Zod v4 / tsc work landed at 57d1f26 -> c7dcc77). Close as dup, rebase, or merge anyway?"
+    },
+    {
+      "id": 3,
+      "routine": "Palantard Grade",
+      "ref": "PRs #240 and #247",
+      "url": "https://github.com/Austinw004/FactoryFlowV2/pull/247",
+      "branch": "claude/vigilant-allen-vWlNI",
+      "question": "Both PRs touch client/src/pages/dashboard regime UI. Approve one (which?), both with rebase order, or close one?"
+    },
+    {
+      "id": 4,
+      "routine": "Weekly Clean",
+      "ref": "PR #235",
+      "url": "https://github.com/Austinw004/FactoryFlowV2/pull/235",
+      "branch": "claude/festive-dijkstra-Lv717",
+      "question": "Open 2 days (security headers, CVE patches, bundle split, docs sync). Approve and merge, or close in favor of next weekly run on 2026-05-22?"
+    },
+    {
+      "id": 5,
+      "routine": "Code Review",
+      "ref": "PRs #237 and #242",
+      "url": "https://github.com/Austinw004/FactoryFlowV2/pull/242",
+      "branch": "claude/hopeful-rubin-Is33C",
+      "question": "Both touch safety/resilience and may overlap with Big Boi's RBAC+auth hardening on main today. Approve both, rebase, or close as dup?"
+    }
+  ],
+  "pendingClarifications": [],
+  "filedIssues": [],
+  "potentialConflicts": [
+    {
+      "routines": ["Daily Boost", "Big Boi"],
+      "files": ["shared/schema.ts", "package-lock.json"],
+      "refs": ["PR #239", "main commits 57d1f26..c7dcc77"]
+    },
+    {
+      "routines": ["Palantard Grade (#240)", "Palantard Grade (#247)"],
+      "files": ["client/src/pages/dashboard/*"],
+      "refs": ["PR #240", "PR #247"]
+    },
+    {
+      "routines": ["Code Review", "Big Boi"],
+      "files": ["server/lib/*.ts (RBAC + auth hardening)"],
+      "refs": ["PR #242", "main commits 1e55fa1..942cb06"]
+    }
+  ],
+  "emailDelivery": {
+    "attempted": true,
+    "sent": false,
+    "failureReason": "SendPulse credentials not configured in environment (SENDPULSE_API_USER_ID / SENDPULSE_USER_ID / SENDPULSE_API_USER and SENDPULSE_API_SECRET / SENDPULSE_SECRET all unset); sendpulse-api npm module not installed (node_modules absent) so server/lib/emailService.ts cannot be invoked from sandbox",
+    "failureLogPath": "/tmp/digest-failures.jsonl",
+    "artifactsRetained": [
+      "routines/digest-2026-05-17.html",
+      "routines/digest-2026-05-17.txt"
+    ]
+  }
+}
