@@ -35,6 +35,11 @@ interface UserProfile {
   name: string | null;
   firstName: string | null;
   lastName: string | null;
+  // Nickname (personalization override) — added in 649801c. The Input at
+  // line 235 reads/writes form.nickname; if this field is missing from the
+  // interface, tsc throws TS2339 on the read and TS2345 on the set() call
+  // (set's K extends keyof UserProfile gate rejects "nickname").
+  nickname: string | null;
   username: string | null;
   jobTitle: string | null;
   department: string | null;
