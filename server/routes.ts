@@ -124,6 +124,7 @@ import {
   insertPredictionOutcomeSchema,
   automationSafeMode,
   rfqs,
+  users,
 } from "@shared/schema";
 
 const economics = new DualCircuitEconomics();
@@ -192,12 +193,14 @@ async function createCompanyForUserWithAdminRole(
   // the user who just CREATED the company can call /api/users (RBAC
   // says Admin) but gets 403 FORBIDDEN on /api/billing/create-customer
   // because the JWT-carried users.role is still "viewer".
-  // Round-13 audit caught this as the second-order Stripe blocker. The
-  // company creator should be admin in BOTH senses, so we upgrade
-  // users.role to "admin" here. Subsequent requests will see the
-  // updated value via requireJwt's DB refresh path.
+  // Round-13 audit caught this as the second-order Stripe blocker.
+  // First attempt used storage.upsertUser, but its INSERT…ON CONFLICT
+  // path hits a NOT NULL violation on `email` before the conflict
+  // resolution kicks in (Postgres orders NOT NULL ahead of conflict
+  // detection). Direct UPDATE avoids that — we already know the user
+  // exists.
   try {
-    await storage.upsertUser({ id: user.id, role: "admin" } as any);
+    await db.update(users).set({ role: "admin" }).where(eq(users.id, user.id));
   } catch (roleColErr) {
     console.error(`[RBAC] Failed to upgrade users.role to admin for user=${user.id}:`, roleColErr);
     // Non-fatal — the RBAC table assignment above is the authoritative source.
