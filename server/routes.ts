@@ -3735,13 +3735,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Email integration self-check — returns booleans only, never the values.
-  // Confirms (a) which SendPulse env-var names the deployed process can
-  // see, (b) whether sendEmail's init step succeeds against those creds,
-  // and (c) whether a no-op smtpSendMail to the SendPulse API returns
-  // an authentication-level success. Diagnoses the difference between
-  // "env vars not set in deploy" vs "env vars set but SendPulse account
-  // rejecting" without exposing any secret material in the response.
+  // Email integration self-check — three-layer diagnostic for SendPulse.
+  //
+  // Layer 1 (always runs): env-var presence + name-resolution check.
+  //   Returns booleans only — never reveals secret material. Tells the
+  //   operator which of the five accepted SendPulse env-var names the
+  //   deployed process can see and whether the credential-resolution
+  //   chain in emailService.getCredentials() would pick one up.
+  //
+  // Layer 2 (runs when creds are present): init/handshake check.
+  //   Calls sendpulse.init() with the resolved creds. If this fails the
+  //   operator knows the keys themselves are wrong, not the env-var
+  //   names. Surfaces SendPulse's own error message.
+  //
+  // Layer 3 (runs when ?send=1 is passed): real test-send.
+  //   Fires an actual smtpSendMail call to a recipient — either ?to=foo
+  //   if specified or the caller's own email by default — and returns
+  //   SendPulse's full response. Lets the operator tell apart the
+  //   common failure modes:
+  //     - HTTP 200 with id: domain verified, delivery in progress.
+  //     - "Sender email not allowed" or similar 4xx: sender domain
+  //       (info@prescient-labs.com) needs verification in the SendPulse
+  //       dashboard under Senders → Domains.
+  //     - "Insufficient balance" / "Subscription expired": SendPulse
+  //       account billing issue, separate from API keys.
+  //     - "Recipient domain blacklisted": SendPulse's own deliverability
+  //       rules — try a different test recipient.
+  //
+  // Returns the configured "from" address so the operator knows
+  // which sender to verify in SendPulse's dashboard.
   app.get("/api/integrations/email/diag", isAuthenticated, async (req: any, res) => {
     try {
       const envVarsPresent = {
@@ -3760,16 +3782,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
         initResult = await testConnection();
       }
 
+      // The from-address is hardcoded in emailService.sendEmail's
+      // default. Surfacing it here so operators know which sender
+      // they need verified in SendPulse → Senders.
+      const fromAddress = { name: "Prescient Labs", email: "info@prescient-labs.com" };
+
+      // Layer 3: optional real-send. Gated behind ?send=1 so the
+      // baseline diag stays a fast read-only health check. We resolve
+      // the recipient from ?to= if specified, otherwise from the
+      // caller's own user row — they're authenticated, so this just
+      // emails themselves.
+      let testSend: {
+        attempted: boolean;
+        ok?: boolean;
+        recipient?: string;
+        messageId?: string;
+        error?: string;
+        rawResponse?: unknown;
+      } = { attempted: false };
+
+      if (req.query.send === "1" && anyUser && anySecret && initResult.success) {
+        const userId = req.user?.claims?.sub;
+        const caller = userId ? await storage.getUser(userId) : null;
+        const recipient = typeof req.query.to === "string" && req.query.to.includes("@")
+          ? req.query.to.trim()
+          : caller?.email;
+
+        if (!recipient) {
+          testSend = { attempted: true, ok: false, error: "No recipient — pass ?to=foo@example.com or ensure caller has email on their user row" };
+        } else {
+          const { sendEmail } = await import("./lib/emailService");
+          const subject = `Prescient Labs email-diag test (${new Date().toISOString()})`;
+          const text = `This is an automated test from /api/integrations/email/diag?send=1.\n\nIf you received this, SendPulse delivery is working end-to-end.\n\nSender: ${fromAddress.email}\nRecipient: ${recipient}\nTimestamp: ${new Date().toISOString()}`;
+          const html = `<p>This is an automated test from <code>/api/integrations/email/diag?send=1</code>.</p><p>If you received this, SendPulse delivery is working end-to-end.</p><ul><li>Sender: <code>${fromAddress.email}</code></li><li>Recipient: <code>${recipient}</code></li><li>Timestamp: ${new Date().toISOString()}</li></ul>`;
+          const result = await sendEmail({
+            to: [{ name: recipient.split("@")[0], email: recipient }],
+            subject,
+            text,
+            html,
+            from: fromAddress,
+          });
+          testSend = {
+            attempted: true,
+            ok: result.success,
+            recipient,
+            messageId: result.id,
+            error: result.error,
+            rawResponse: result,
+          };
+        }
+      } else if (req.query.send === "1") {
+        testSend = {
+          attempted: false,
+          error: !anyUser || !anySecret ? "Cannot test-send: credentials not configured" : `Cannot test-send: SendPulse init failed (${initResult.message})`,
+        };
+      }
+
       res.json({
         envVarsPresent,
         anyUserConfigured: anyUser,
         anySecretConfigured: anySecret,
         codeWillResolveCredentials: anyUser && anySecret,
         sendPulseInit: initResult,
+        configuredFromAddress: fromAddress,
+        testSend,
         guidance: anyUser && anySecret
           ? (initResult.success
-              ? "Credentials reach the process and SendPulse init succeeds. If emails still aren't sending, check SendPulse account quota, sender-domain verification, or recipient validity."
-              : `SendPulse init failed: ${initResult.message}. Verify the credentials are correct in SendPulse's dashboard.`)
+              ? (testSend.attempted
+                  ? (testSend.ok
+                      ? `Test send accepted by SendPulse (message id ${testSend.messageId ?? "n/a"}). Check the recipient's inbox AND spam folder. If the email never arrives, the most common cause is unverified sender domain — go to SendPulse → Senders → Domains and verify ${fromAddress.email.split("@")[1]}.`
+                      : `Test send REJECTED by SendPulse: ${testSend.error ?? "unknown error"}. Most common fix: verify sender domain ${fromAddress.email.split("@")[1]} in SendPulse → Senders → Domains. Other possibilities: SendPulse account quota exhausted, sender email not added to Senders list, or recipient domain blocked.`)
+                  : "Credentials reach the process and SendPulse init succeeds. Append ?send=1 to actually test-send to yourself (or ?send=1&to=foo@example.com for a custom recipient).")
+              : `SendPulse init failed: ${initResult.message}. Verify the credentials are correct in SendPulse's dashboard under Settings → API.`)
           : "One or both SendPulse env vars are missing from the deploy environment. Set SENDPULSE_API_USER_ID + SENDPULSE_API_SECRET in Replit Secrets and Republish.",
       });
     } catch (err: any) {
@@ -8691,11 +8775,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Production: there is no server-side ERP adapter yet, so we cannot
-      // actually validate the connection. Returning the demo's "Successfully
-      // connected" + random discovery numbers misleads the customer into
-      // saving a non-working integration. Be honest: credentials format
-      // accepted, real sync gated on connector availability.
+      // Production: dispatch to a registered ERP adapter if we have one.
+      // V1 ships the NetSuite scaffold (server/lib/erp/netsuiteAdapter.ts);
+      // SAP/Oracle/Dynamics adapters land in follow-up commits. The adapter
+      // dispatcher returns one of three shapes:
+      //   - { ok: true, capabilities, ackedBy }            → fully wired + reachable
+      //   - { ok: false, reason }                          → adapter exists but can't connect
+      //   - { kind: "not_configured", reason }             → env vars missing
+      // Routes layer maps each into the consistent API response shape below.
+      try {
+        const { getAdapter } = await import("./lib/erp");
+        const adapter = getAdapter(String(erpSystem).toLowerCase() as any);
+        if (adapter) {
+          const result = await adapter.testConnection(credentials);
+          if ("ok" in result && result.ok) {
+            return res.json({
+              success: true,
+              message: `Connected to ${adapter.displayName} successfully.`,
+              discovery: result.ackedBy
+                ? { confirmedEntity: result.ackedBy.entity, sampleCount: result.ackedBy.count, lastSyncAvailable: new Date().toISOString() }
+                : null,
+              capabilities: result.capabilities,
+            });
+          }
+          // "ok: false" with reason — adapter exists but couldn't connect
+          // (bad creds, network failure, etc.). Surface honestly.
+          return res.json({
+            success: false,
+            validated: false,
+            message: `${adapter.displayName} connection failed: ${(result as any).reason}`,
+            discovery: null,
+            capabilities: null,
+          });
+        }
+      } catch (adapterErr: any) {
+        console.error("[ERP] Adapter dispatch error:", adapterErr);
+        // Fall through to the legacy "in beta" message below.
+      }
+
+      // No adapter registered for this ERP system OR adapter dispatch failed.
+      // Honest fallback: credentials format accepted, real sync gated on
+      // connector availability. F2-FILED-011 follow-up adds SAP/Oracle/
+      // Dynamics adapters as they're built; the NetSuite adapter is the
+      // first one and is registered when NETSUITE_* env vars are present.
       return res.json({
         success: false,
         validated: true,

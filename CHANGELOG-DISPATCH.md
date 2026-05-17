@@ -39,6 +39,7 @@ Session start: 2026-05-09
 | 23:30 | 99e9374 | F1 | F1 | Stripe role-gate: same-handler race clobbered helper's role update | Was: helper bumped users.role to admin, then caller immediately did `user = upsertUser({...user, companyId})` which spread the STALE pre-helper user (role:viewer) back over the DB. Helper now writes companyId+role atomically; callers re-fetch from DB. Closes the 3-iteration Stripe role-gate hunt | LIVE & VERIFIED — /api/billing/setup-intent returns 200 with clientSecret |
 | 00:45 | 8ae25af | F0+F1+F2 | F0 | Round-14 audit: 3 hardening fixes | F0: refresh-token-not-revoked-on-logout (auth replay). F1: trial-expiry chicken-and-egg (all endpoints 402 blocks upgrade). F2: generic "Internal server error" on 4xx client errors. Plus 1 F2 filed (DELETE /api/users/me 404 — no account self-deletion path) | pushed; awaiting Republish |
 | 22:15 | 9362635 | feat | F2 | MAPE backtest pipeline — closes F2-FILED-013 | 4-file commit: NEW mapeBacktest.ts (back-fill helper), WIRED backgroundJobs.ts (runs back-fill before existing trackAllSKUs cron), NEW POST /api/forecasts/backtest (manual trigger), REWROTE alertGeneration.generateForecastAlerts (now reads real MAPE from forecast_accuracy_tracking with tiered ratio thresholds + noise floor + 24h dedupe). Root cause was deeper than filed: existing pipeline was structurally complete but silent no-op because actualDemand column never populated | pushed; awaiting Republish |
+| 02:30 | (round-18) | F1+F2+ops | F1 | F1-FILED-005 RESOLVED (Replit invoice paid by user) + F2-FILED-011 scaffold (NetSuite ERP adapter + dispatcher + env-gated registry) + email-diag enhancement (`?send=1` real test-send mode) | 3 new files in `server/lib/erp/` (adapter.ts interface+registry, netsuiteAdapter.ts NetSuite implementation, index.ts side-effect dispatcher). `routes.ts` `/api/erp-connections/test` dispatches via `getAdapter()` then falls through to "in beta" message. `routes.ts` `/api/integrations/email/diag` adds optional `?send=1[&to=foo]` to fire real `smtpSendMail` for SendPulse sender-domain diagnosis. Changelog updated. | pushed; awaiting Republish |
 
 ## Hard stops hit
 
@@ -179,11 +180,10 @@ Pin drizzle-zod to its last v3-only version (~0.5). **Risk**: drizzle-zod 0.5 �
 
 Filing this as **F1 with a concrete recovery path** rather than chasing the per-callsite rewrite autonomously.
 
-### F1-FILED-005 — Replit subscription "Payment failed" warning
+### F1-FILED-005 — Replit subscription "Payment failed" warning — **RESOLVED 2026-05-17** (user paid)
 
-- **Severity** F1/F0 depending on grace period — "Active deployments will go offline" if not resolved. This is the actual launch-blocker today; no amount of QA matters if the deploy goes dark.
-- **Where** Visible inside Replit IDE when opening the workspace.
-- **Action** Pay the Replit invoice (Pay invoice button in the modal). Not a code fix; surfacing because it threatens the production deploy.
+- **Severity** F1/F0 depending on grace period.
+- **Resolution** User paid the Replit invoice on 2026-05-17. Production deployment remains stable. No code change involved.
 - **Tags** `coverage`, not-a-code-issue
 
 ## Phases status
@@ -238,17 +238,27 @@ Filing this as **F1 with a concrete recovery path** rather than chasing the per-
 - Defensive fix (5692a87) stopped "undefined units" from rendering; structural fix needs to JOIN `skus` with the `inventoryAnalysis` table (which has currentStock and safetyStock per material).
 - Proposed fix: refactor `getSkuInsights` to read materials with their latest inventoryAnalysis row joined, recompute the low-stock and high-demand filters from real data. Multi-file change because inventoryAnalysis is keyed by materialId not skuId — needs a bridge.
 
-### F2-FILED-011 — No real server-side ERP adapter behind /api/erp-connections/test
+### F2-FILED-011 — No real server-side ERP adapter behind /api/erp-connections/test — **SCAFFOLD SHIPPED in round-18** (NetSuite first slice)
 
-- **Severity** F2 — exposed during the F1-FILED-004 fix (`a4315a1`). The test endpoint now returns an honest "connector in beta — contact sales" message in prod instead of the prior fake "Successfully connected", but the underlying gap is the actual integration: there is no adapter code that authenticates to NetSuite / SAP / Dynamics / Acumatica / Oracle / etc. and pulls products+orders+suppliers.
-- **Customer impact** Today: customer fills out the ERP connection form, gets the "in beta" toast, knows it isn't live. Before the fix: customer thought it WAS live, saved the connection, then their dashboard showed zero sync activity with no explanation. Today's state is honest but the feature still isn't shipped.
-- **Proposed implementation** Multi-adapter pattern in `server/lib/erp/`:
-  1. `adapters/netsuite.ts`, `adapters/sap.ts`, etc. — each exports `testConnection(creds)`, `discoverEntities()`, `syncProducts()`, `syncOrders()`, `syncSuppliers()`. Auth pattern varies (OAuth2 for NetSuite, basic auth + custom domain for SAP S/4HANA, OAuth2+tenant for Dynamics).
-  2. `erpRouter.ts` — picks the right adapter by `erpConnection.erpSystem` field.
-  3. Background sync via `backgroundJobs.ts` — already has the cadence pattern; just needs the adapter calls.
-  4. Test endpoint route ~50 LOC swap-in; per-adapter is ~300-500 LOC each.
-- **Recommendation** Build NetSuite first (largest mid-market mfg overlap), then SAP S/4HANA Cloud. ~2-3 weeks per adapter with sandbox accounts. Until that lands, the honest "in beta" message is correct.
-- **Tags** `coverage`, `integrations`
+- **Severity** F2 — exposed during the F1-FILED-004 fix (`a4315a1`). The test endpoint now dispatches via a real adapter registry; one adapter (NetSuite) is shipped as scaffold and falls back to the honest "connector in beta — contact sales" message for systems without an adapter or without credentials.
+
+**Round-18 scaffold landing:**
+
+- **`server/lib/erp/adapter.ts`** (NEW) — defines the `ErpAdapter` interface every integration implements (`testConnection`, `listSuppliers`, `listMaterials`, `listPurchaseOrders`), the normalized cred shape (`ErpCredentials` covers OAuth2 + SAP basic-auth + common fields), the result envelope (`ok | not_configured` discriminated union), and the registry helpers (`registerAdapter`, `getAdapter`, `listRegisteredAdapters`, `notConfigured`). All future adapters land as new files that import + `registerAdapter(self)` on load.
+
+- **`server/lib/erp/netsuiteAdapter.ts`** (NEW) — `NetSuiteAdapter` class implementing the interface. Env-gated: reads `NETSUITE_ACCOUNT_ID` + `NETSUITE_CONSUMER_KEY` + `NETSUITE_CONSUMER_SECRET` + `NETSUITE_TOKEN_ID` + `NETSUITE_TOKEN_SECRET`. If any is missing, every method returns `{kind: "not_configured", reason: "..."}` and the routes layer surfaces the "in beta — contact sales" copy unchanged. With the env vars present, `testConnection` hits `https://<account>.suitetalk.api.netsuite.com/services/rest/record/v1/vendor?limit=1` and returns capabilities + ackedBy entity count. OAuth1.0 / TBA signing is skeleton-only (placeholder Authorization header) — the HMAC-SHA256 base-string canonicalization needs sandbox creds to validate end-to-end. List methods are TODO stubs with TODO comments pointing at the exact NetSuite REST URLs and Vendor → Supplier mapping rules.
+
+- **`server/lib/erp/index.ts`** (NEW) — side-effect dispatcher: importing it registers every implemented adapter (currently just NetSuite). Re-exports the public API. New adapters get added as one-line imports here.
+
+- **`server/routes.ts` `POST /api/erp-connections/test`** — updated to call `getAdapter(erpSystem)` first; if an adapter is registered AND responds `ok: true`, returns `success: true + capabilities + discovery.confirmedEntity/sampleCount`. If the adapter exists but `ok: false` (auth rejected, network failure), returns `success: false + validated: false + message`. If no adapter is registered OR dispatch throws, falls through to the legacy "in beta" message. Demo mode unchanged.
+
+**What's still gated on sandbox creds (operator action):**
+1. Provision a NetSuite sandbox account (free tier exists; ask the NetSuite account rep). Set `NETSUITE_*` env vars in Replit Secrets, Republish.
+2. With the sandbox live, post-process: validate OAuth1.0 signing (HMAC-SHA256 base-string), wire concurrency.units header back-off, implement the three list-entity stubs (Vendor → Supplier, Item → Material, PurchaseOrder → PO). Estimated 3-5 days once the sandbox is in hand.
+
+**Why ship the scaffold today**: it cuts the future delivery from "design + auth + integration + test" to just "fill in the auth math + the three list bodies + sandbox validation". The customer-facing surface (`/api/erp-connections/test`) is already routed through the dispatcher, so flipping NetSuite live on real creds is a code-locality change instead of a routes-layer refactor.
+
+**Tags** `coverage`, `integrations`
 
 ### F2-FILED-012 — No real weather/logistics API integration; fetchWeatherLogistics returns []
 
