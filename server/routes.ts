@@ -1022,31 +1022,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`[Onboarding] Pre-configuration complete: ${preconfigResult.materialsCreated} materials created`);
         }
       } else {
-        // Create new company
-        const company = await storage.createCompany({
-          name: name.trim(),
-          industry: industry || null,
-          companySize: companySize || null,
-          location: location || null,
-        });
-        
-        // Initialize default roles for the new company
-        await initializeDefaultRoles(company.id);
-        
-        // Assign Admin role to the user
-        const adminRole = await storage.getRoleByName(company.id, "Admin");
-        if (adminRole) {
-          await storage.assignRoleToUser(userId, adminRole.id, company.id, userId);
+        // Create new company via the shared helper. Round-15 regression
+        // sweep caught this: /api/onboarding/company had its OWN inline
+        // RBAC bootstrap (createCompany → initializeDefaultRoles →
+        // assignRoleToUser → upsertUser) that was the source of the
+        // round-13 ghost-owner pattern I'd thought I'd fully fixed. The
+        // helper's atomic companyId+role write (8f899d4 + 99e9374) makes
+        // the user.role bump survive the same-handler-stale-user-snapshot
+        // race. This was the LAST auto-create branch still using the
+        // legacy pattern.
+        const company = await createCompanyForUserWithAdminRole(user, name.trim());
+
+        // Apply industry/size/location to the just-created company. The
+        // helper only set the name (preserving the override path) — the
+        // rest of the wizard-supplied fields get patched on now that the
+        // row exists.
+        if (industry || companySize || location) {
+          await storage.updateCompany(company.id, {
+            industry: industry || null,
+            companySize: companySize || null,
+            location: location || null,
+          });
         }
-        
-        // Update user with company
-        user = await storage.upsertUser({
-          ...user,
-          companyId: company.id,
-        });
-        
+
+        user = (await storage.getUser(userId))!;
+
         console.log(`[Onboarding] Created company ${company.id} for user ${userId}`);
-        
+
         // Pre-configure platform based on industry selection
         if (industry) {
           const preconfigResult = await preconfigurePlatformForIndustry(company.id, industry, storage);
