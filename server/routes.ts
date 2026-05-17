@@ -3971,7 +3971,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate request body
       const validationResult = allocationRunSchema.safeParse(req.body);
       if (!validationResult.success) {
-        return res.status(400).json({ error: validationResult.error.errors[0].message });
+        return res.status(400).json({ error: validationResult.error.issues[0].message });
       }
 
       const { budget, name, budgetDurationValue, budgetDurationUnit, horizonStart, directMaterialRequirements } = validationResult.data;
@@ -4528,9 +4528,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate request body
       const validationResult = insertRfqSchema.safeParse(req.body);
       if (!validationResult.success) {
-        return res.status(400).json({ 
-          error: "Validation failed", 
-          details: validationResult.error.errors 
+        return res.status(400).json({
+          error: "Validation failed",
+          details: validationResult.error.issues
         });
       }
 
@@ -4685,9 +4685,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (!validationResult.success) {
-        return res.status(400).json({ 
-          error: "Validation failed", 
-          details: validationResult.error.errors 
+        return res.status(400).json({
+          error: "Validation failed",
+          details: validationResult.error.issues
         });
       }
 
@@ -10530,7 +10530,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validationResult = exportSchema.safeParse(req.body);
       if (!validationResult.success) {
-        return res.status(400).json({ error: "Invalid request parameters", details: validationResult.error.errors });
+        return res.status(400).json({ error: "Invalid request parameters", details: validationResult.error.issues });
       }
 
       const { format, entities } = validationResult.data;
@@ -10593,7 +10593,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validationResult = importSchema.safeParse(req.body);
       if (!validationResult.success) {
-        return res.status(400).json({ error: "Invalid request parameters", details: validationResult.error.errors });
+        return res.status(400).json({ error: "Invalid request parameters", details: validationResult.error.issues });
       }
 
       const { entity, updateExisting } = validationResult.data;
@@ -17097,7 +17097,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const parseResult = emailConfigureSchema.safeParse(req.body);
       if (!parseResult.success) {
-        return res.status(400).json({ error: parseResult.error.errors[0].message });
+        return res.status(400).json({ error: parseResult.error.issues[0].message });
       }
       const { enabled } = parseResult.data;
       const authUserId = req.user.claims.sub;
@@ -17122,7 +17122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const parseResult = emailTestSchema.safeParse(req.body);
       if (!parseResult.success) {
-        return res.status(400).json({ success: false, message: parseResult.error.errors[0].message });
+        return res.status(400).json({ success: false, message: parseResult.error.issues[0].message });
       }
       const { email } = parseResult.data;
       const authUserId = req.user.claims.sub;

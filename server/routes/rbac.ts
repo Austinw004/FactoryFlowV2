@@ -357,7 +357,7 @@ router.post("/team/invite", requirePermission(PERMISSIONS.MANAGE_USERS), async (
 
     const parsed = inviteSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: parsed.error.errors[0]?.message || "Invalid input" });
+      return res.status(400).json({ error: parsed.error.issues[0]?.message || "Invalid input" });
     }
     const { email, roleId } = parsed.data;
 
