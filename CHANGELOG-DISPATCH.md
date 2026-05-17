@@ -33,6 +33,9 @@ Session start: 2026-05-09
 | 21:05 | 15a138a | doc | — | Round-9 ledger closure | All 4 round-9 findings + fixes documented in push-log + finding-detail sections | LIVE |
 | 21:15 | b121ef4 | F1 | F1 | Manual /api/rfqs creation was 400-ing on every request | Found in round-10 tenant-isolation audit (couldn't even create an RFQ to test cross-tenant access on). Handler validated client body against the FULL insertRfqSchema which requires server-derived fields (companyId / rfqNumber / regimeAtGeneration / fdrAtGeneration). Fix mirrors auto-gen flow: client-input schema omits server-injected fields; handler derives rfqNumber (RFQ-YYYY-NNNN) + captures regime context from latest snapshot | pushed; awaiting Republish |
 | 21:25 | 83c7db2 | doc | — | Round-10 tenant-isolation audit closure | Full attack matrix + RFQ side-find documented | LIVE |
+| 22:00 | 6284bda | F1 | F1 | RBAC ghost-owner: auto-create-company paths now assign Admin role | 5 of 6 auto-create branches in routes.ts skipped initializeDefaultRoles + assignRoleToUser(Admin) → user owned company but couldn't manage team. Helper `createCompanyForUserWithAdminRole` consolidates the 3-step contract. Verified live: fresh signup → /api/users still 403 today (before deploy); after deploy will be 200 | pushed |
+| 22:15 | ea5cdf5 | F0 | F0 | CSV import 100%-failure for materials + suppliers | mapRecordToEntity + generateTemplate were written against an obsolete simplified schema (referenced category/currentPrice/quantityAvailable/etc. that no longer exist). Every "follow the template" import failed all rows. Plus added multer file-size limit (10MB) + MIME filter — prior config was DOS-prone | pushed |
+| 22:25 | 465226f | F1 | F1 | Stripe billing flow unreachable: stale JWT companyId | requireJwt middleware now refreshes companyId from DB when JWT has none. Was: customer signs up → JWT issued with companyId:null → company auto-created → JWT still null → all 15 /api/billing/* endpoints 400 NO_COMPANY → customer can browse plans but never reach card capture | pushed |
 | 22:15 | 9362635 | feat | F2 | MAPE backtest pipeline — closes F2-FILED-013 | 4-file commit: NEW mapeBacktest.ts (back-fill helper), WIRED backgroundJobs.ts (runs back-fill before existing trackAllSKUs cron), NEW POST /api/forecasts/backtest (manual trigger), REWROTE alertGeneration.generateForecastAlerts (now reads real MAPE from forecast_accuracy_tracking with tiered ratio thresholds + noise floor + 24h dedupe). Root cause was deeper than filed: existing pipeline was structurally complete but silent no-op because actualDemand column never populated | pushed; awaiting Republish |
 
 ## Hard stops hit
@@ -316,6 +319,51 @@ No F0/F1 isolation bugs found. Multi-tenant data access is properly scoped by `c
   - Skips email send if persistence failed (don't email a dead token).
   - Returns HTTP **207 Multi-Status** when some emails failed, 200 only when all succeeded.
   - Returns per-invitation `inviteLink` in the response so the inviter can share manually when the email doesn't reach the recipient.
+
+### F0-FOUND-018 — CSV import was 100% failure for materials + suppliers — **FIXED in `ea5cdf5`**
+
+- **Severity** F0 — every B2B mfg customer's first ask is "can I bulk-upload my materials/suppliers?" Today: download template → fill in → upload → 100% rows failed validation.
+- **Root cause** `server/lib/dataImport.ts` `mapRecordToEntity` + `generateTemplate` referenced fields that no longer exist on the current tables (materials.category, materials.currentPrice, suppliers.location, suppliers.reliabilityScore, etc.). The CSV mapper inserted those non-existent columns and skipped the actual required ones (`code` on materials, `materialCategories` on suppliers). Only SKU import worked because its schema didn't drift.
+- **Fix** Updated mapper + template to align with current schema. Added comment that they're a coordinated contract — schema changes must update both. Plus: added `multer` `fileSize: 10MB` limit + MIME filter (prior was unlimited memory storage — uploadable 10GB file would OOM the server).
+
+### F1-FOUND-019 — RBAC ghost-owner: auto-create paths skipped role assignment — **FIXED in `6284bda`**
+
+- **Severity** F1 — newly-signed-up user supposed to be Admin of their auto-created company couldn't actually manage their team. All RBAC-gated endpoints (`/api/users`, `/api/rbac/*`, view audit logs, manage roles) returned 403.
+- **Root cause** Only 1 of 6 auto-create-company branches in routes.ts called `initializeDefaultRoles(company.id)` + `assignRoleToUser(userId, adminRole.id)`. The other 5 (`/api/onboarding/status`, settings page, dashboard load, etc.) just did `createCompany + upsertUser{companyId}` — leaving the user as a "ghost owner" with zero permissions in their own company.
+- **Fix** Extracted `createCompanyForUserWithAdminRole(user, overrideName?)` helper. Replaced all 5 broken sites via `replace_all`. Step 2/3 wrapped in try/catch — failure logs but doesn't roll back step 1.
+
+### F1-FOUND-020 — Stripe billing flow unreachable: stale JWT companyId — **FIXED in `465226f`**
+
+- **Severity** F1 — the whole payment-method capture step is dead. Customer browses plans, picks one, hits the Payment screen → `/api/billing/setup-intent` returns 400 NO_COMPANY → can't enter card.
+- **Root cause** JWTs are issued at signup with `companyId: null` (user hasn't picked a company yet) and cached for 15 minutes. The user then hits `/api/onboarding/status` (or any other auto-create path) which creates a company and updates `user.companyId` in the DB. But the JWT still has `companyId: null`. `getAuthUser` reads JWT only. All 15 billing handlers that read `authUser.companyId` got stale null → NO_COMPANY → entire billing flow blocked.
+- **Fix** `requireJwt` middleware now refreshes companyId from DB once when JWT has none, mutating `req.jwtUser.companyId` in-flight. Costs one extra DB query per request ONLY when JWT.companyId is null. Same pattern as the round-9 RBAC ghost-owner fix.
+
+### F1-FILED-021 — Money columns (`real`/float32) cap at $8.4M precision
+
+- **Severity** F1 (DB migration, not autonomously-fixable in this round)
+- **Where** `companies.annualBudget`, `companies.currentBudgetSpent`, `machinery.purchaseCost`, `machinery.salvageValue` — all use `real` (PG float32). drizzle-zod caps at `2^23 - 1 = 8,388,607` to preserve float32 precision.
+- **Customer impact** Enterprise mfg routinely has $50M+ budgets and $100M+ machinery fleets. Today the form rejects values >$8.4M with "Too big: expected number to be <=8388607" — a confusing error and a blocker for ANY enterprise customer.
+- **Proposed fix** Schema migration to `doublePrecision` (PG float64, 15-16 significant digits, easily handles trillion-dollar values). `ALTER TABLE companies ALTER COLUMN annual_budget TYPE double precision USING annual_budget::double precision;` for each. drizzle-kit push should handle it; verify no existing-data precision loss on real customer rows.
+- **Tags** `data-integrity`, `enterprise-blocker`
+
+### F2-FILED-022 — Stripe Link auto-suggests previous user's bank account on shared browsers
+
+- **Severity** F2 — surfaced during round-13 browser UI walk. A new test user (Morgan Smith, email qa-uiwalk-...@prescient-labs.com) signed up in a browser where the platform owner had previously linked their personal bank via Stripe Link. The Payment step auto-displayed the owner's personal bank account ("Frost Personal Account ****2914") as a one-click "Use this bank account" option.
+- **Not a code-level data leak** — this is Stripe Link's intended behavior: it persists across browser sessions tied to email confirmation. Each real customer on their own browser sees their own previously-saved Link account.
+- **Real concern** Demo machines, kiosks, shared workstations, sales-team laptops doing customer demos — the prior session's bank account is one click away from being charged for the new account. Test/QA flows also surface this.
+- **Mitigations to consider**:
+  1. Disable Stripe Link entirely on the SetupIntent (`payment_method_types: ["card"]` excludes Link if not explicitly included).
+  2. Always use incognito for demos.
+  3. Add a "Not your account?" + "Sign out of Link" affordance on the Payment screen.
+- **Tags** `privacy`, `payments`, `sales-demo`
+
+### F2-FILED-023 — Settings → Configuration dropdowns (Industry, Company Size) display blank after persistence
+
+- **Severity** F2 polish (data persisted correctly, only display binding off)
+- **Where** `/configuration` Settings page, Company tab
+- **Observed** Fresh tenant onboarding picked Industry="Industrial Equipment" + Company Size="51-200 employees" in the wizard. After completing onboarding and navigating to Settings → Configuration, those dropdowns render BLANK even though Company Name, Location, etc. populated correctly from the same wizard.
+- **Likely cause** Form's defaultValues / value binding for those two dropdowns isn't pulling from `company.industry` / `company.companySize` on initial render. Other text fields (companyName, location) bind fine.
+- **Tags** `coverage`, `tool-functional`, `polish`
 
 ### F2-FILED-013 — No per-SKU MAPE source — **RESOLVED in `9362635`**
 
