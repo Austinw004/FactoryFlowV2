@@ -95,28 +95,43 @@ export class DataImportService {
       };
     }
 
+    // Round-13 audit caught this: prior mapper was written against an
+    // older simplified-then-evolved schema. The fields below no longer
+    // exist on the materials table at all (category/currentPrice/
+    // quantityAvailable/reorderPoint/leadTimeDays were never in the
+    // current shape). The actual columns are: code, name, unit, onHand,
+    // inbound. Result was 100% CSV import failure for materials in prod
+    // — every uploaded row failed insertMaterialSchema validation because
+    // the required `code` field was never mapped in.
     if (entity === 'materials') {
       return {
         companyId,
+        code: record.code,
         name: record.name,
-        category: record.category || undefined,
-        unit: record.unit || undefined,
-        currentPrice: record.currentPrice ? parseFloat(record.currentPrice) : undefined,
-        quantityAvailable: record.quantityAvailable ? parseFloat(record.quantityAvailable) : undefined,
-        reorderPoint: record.reorderPoint ? parseFloat(record.reorderPoint) : undefined,
-        leadTimeDays: record.leadTimeDays ? parseInt(record.leadTimeDays, 10) : undefined,
+        unit: record.unit,
+        onHand: record.onHand !== undefined && record.onHand !== ''
+          ? parseFloat(record.onHand)
+          : 0,
+        inbound: record.inbound !== undefined && record.inbound !== ''
+          ? parseFloat(record.inbound)
+          : 0,
       };
     }
 
+    // Same issue for suppliers — prior mapper referenced
+    // contactPhone/location/reliabilityScore/leadTimeDays which aren't
+    // on the current suppliers table. Actual columns are: name,
+    // contactEmail, materialCategories[]. Per-supplier lead time + risk
+    // live on supplierMaterials / supplierNodes, not directly on suppliers.
     if (entity === 'suppliers') {
+      const cats = record.materialCategories || record.categories;
       return {
         companyId,
         name: record.name,
-        contactEmail: record.contactEmail || undefined,
-        contactPhone: record.contactPhone || undefined,
-        location: record.location || undefined,
-        reliabilityScore: record.reliabilityScore ? parseFloat(record.reliabilityScore) : undefined,
-        leadTimeDays: record.leadTimeDays ? parseInt(record.leadTimeDays, 10) : undefined,
+        contactEmail: record.contactEmail || record.email || undefined,
+        materialCategories: cats
+          ? String(cats).split(/[,;|]/).map((s: string) => s.trim()).filter(Boolean)
+          : undefined,
       };
     }
 
@@ -186,6 +201,13 @@ export class DataImportService {
   }
 
   async generateTemplate(entity: ImportEntity): Promise<string> {
+    // Templates aligned with the actual schema in shared/schema.ts as of
+    // round-13 audit. Prior templates included fields that don't exist on
+    // the current tables (materials.category, materials.currentPrice,
+    // suppliers.location, etc.), making every "follow the template" import
+    // fail 100% of rows. If you change the materials/suppliers/skus
+    // schemas, this generator + mapRecordToEntity above MUST be updated
+    // together — they're the import contract.
     const templates: Record<ImportEntity, string[]> = {
       skus: [
         'code,name,priority',
@@ -193,14 +215,14 @@ export class DataImportService {
         'SKU002,Widget B,2',
       ],
       materials: [
-        'name,category,unit,currentPrice,quantityAvailable,reorderPoint,leadTimeDays',
-        'Steel Plate,Raw Material,kg,15.50,5000,1000,14',
-        'Aluminum Rod,Raw Material,kg,8.25,3000,500,7',
+        'code,name,unit,onHand,inbound',
+        'STEEL-CS,Carbon Steel Plate,kg,5000,1000',
+        'AL-6061,Aluminum 6061 Rod,kg,3000,500',
       ],
       suppliers: [
-        'name,contactEmail,contactPhone,location,reliabilityScore,leadTimeDays',
-        'ABC Manufacturing,contact@abc.com,555-0100,New York,0.95,10',
-        'XYZ Suppliers,info@xyz.com,555-0200,Chicago,0.88,15',
+        'name,contactEmail,materialCategories',
+        'ABC Manufacturing,contact@abc.com,"raw_metals,fasteners"',
+        'XYZ Suppliers,info@xyz.com,packaging',
       ],
     };
 

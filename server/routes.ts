@@ -10836,7 +10836,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Data import endpoints
-  const upload = multer({ storage: multer.memoryStorage() });
+  //
+  // Round-13 audit found the prior multer config had NO file-size limit and
+  // NO MIME filter. A malicious caller could POST a 10 GB binary as
+  // multipart and OOM the server before the CSV parser even saw it.
+  //
+  // Limits chosen:
+  //   - 10 MB cap (~150K typical CSV rows; 99th percentile bulk upload).
+  //     If a customer needs more, we should chunk server-side rather
+  //     than uncap memory.
+  //   - text/csv + application/vnd.ms-excel + octet-stream allowed
+  //     (octet-stream covers browsers that don't set a MIME on .csv).
+  //     Anything else (zip, exe, image, pdf, etc.) → rejected with 400
+  //     before the file is buffered.
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024, files: 1 },
+    fileFilter: (_req, file, cb) => {
+      const allowed = new Set([
+        'text/csv',
+        'application/csv',
+        'application/vnd.ms-excel',
+        'application/octet-stream',
+        'text/plain',
+      ]);
+      if (allowed.has(file.mimetype) || file.originalname?.toLowerCase().endsWith('.csv')) {
+        cb(null, true);
+      } else {
+        cb(new Error(`Unsupported file type: ${file.mimetype}. Upload a CSV file.`));
+      }
+    },
+  });
 
   app.get("/api/data/import/template/:entity", isAuthenticated, async (req: any, res) => {
     try {
@@ -11559,7 +11589,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // File upload for bulk import of demand signals
-  const demandSignalUpload = multer({ storage: multer.memoryStorage() });
+  // Same limits + filter as the main data-import multer above. See the
+  // round-13 audit notes there for the rationale.
+  const demandSignalUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024, files: 1 },
+    fileFilter: (_req, file, cb) => {
+      const allowed = new Set([
+        'text/csv',
+        'application/csv',
+        'application/vnd.ms-excel',
+        'application/octet-stream',
+        'text/plain',
+      ]);
+      if (allowed.has(file.mimetype) || file.originalname?.toLowerCase().endsWith('.csv')) {
+        cb(null, true);
+      } else {
+        cb(new Error(`Unsupported file type: ${file.mimetype}. Upload a CSV file.`));
+      }
+    },
+  });
   app.post("/api/demand-signals/import", isAuthenticated, demandSignalUpload.single('file'), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
