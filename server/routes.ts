@@ -3648,6 +3648,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Email integration self-check — returns booleans only, never the values.
+  // Confirms (a) which SendPulse env-var names the deployed process can
+  // see, (b) whether sendEmail's init step succeeds against those creds,
+  // and (c) whether a no-op smtpSendMail to the SendPulse API returns
+  // an authentication-level success. Diagnoses the difference between
+  // "env vars not set in deploy" vs "env vars set but SendPulse account
+  // rejecting" without exposing any secret material in the response.
+  app.get("/api/integrations/email/diag", isAuthenticated, async (req: any, res) => {
+    try {
+      const envVarsPresent = {
+        SENDPULSE_API_USER_ID: !!process.env.SENDPULSE_API_USER_ID?.trim(),
+        SENDPULSE_USER_ID:     !!process.env.SENDPULSE_USER_ID?.trim(),
+        SENDPULSE_API_USER:    !!process.env.SENDPULSE_API_USER?.trim(),
+        SENDPULSE_API_SECRET:  !!process.env.SENDPULSE_API_SECRET?.trim(),
+        SENDPULSE_SECRET:      !!process.env.SENDPULSE_SECRET?.trim(),
+      };
+      const anyUser = envVarsPresent.SENDPULSE_API_USER_ID || envVarsPresent.SENDPULSE_USER_ID || envVarsPresent.SENDPULSE_API_USER;
+      const anySecret = envVarsPresent.SENDPULSE_API_SECRET || envVarsPresent.SENDPULSE_SECRET;
+
+      let initResult: { success: boolean; message?: string } = { success: false, message: "not attempted" };
+      if (anyUser && anySecret) {
+        const { testConnection } = await import("./lib/emailService");
+        initResult = await testConnection();
+      }
+
+      res.json({
+        envVarsPresent,
+        anyUserConfigured: anyUser,
+        anySecretConfigured: anySecret,
+        codeWillResolveCredentials: anyUser && anySecret,
+        sendPulseInit: initResult,
+        guidance: anyUser && anySecret
+          ? (initResult.success
+              ? "Credentials reach the process and SendPulse init succeeds. If emails still aren't sending, check SendPulse account quota, sender-domain verification, or recipient validity."
+              : `SendPulse init failed: ${initResult.message}. Verify the credentials are correct in SendPulse's dashboard.`)
+          : "One or both SendPulse env vars are missing from the deploy environment. Set SENDPULSE_API_USER_ID + SENDPULSE_API_SECRET in Replit Secrets and Republish.",
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err?.message ?? "Diagnostic failed" });
+    }
+  });
+
   // Run MAPE/MAE/RMSE/bias/directional accuracy backtest for the caller's
   // company. Two-step pipeline:
   //   1. back-fill `actualDemand` on past multi_horizon_forecasts rows
