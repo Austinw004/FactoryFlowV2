@@ -13,7 +13,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { db } from "../db";
 import { users, subscriptions } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 
 export async function checkTrialExpiry(req: Request, res: Response, next: NextFunction): Promise<void> {
   const authUser = (req as any).jwtUser || (req as any).user;
@@ -51,20 +51,24 @@ export async function checkTrialExpiry(req: Request, res: Response, next: NextFu
       return next();
     }
 
-    // Trial expired — check for active Stripe subscription
-    const [activeSub] = await db
+    // Trial expired — check for any subscription status that counts as
+    // valid paid access. "active" means Stripe is charging successfully.
+    // "trialing" is a sales-issued trial extension (createSubscription
+    // sets this when trialDays > 0). Both unlock access. "pending_setup",
+    // "incomplete", "past_due", and "cancelled" do NOT.
+    const [validSub] = await db
       .select({ id: subscriptions.id, status: subscriptions.status })
       .from(subscriptions)
       .where(
         and(
           eq(subscriptions.userId, userId),
-          eq(subscriptions.status, "active")
-        )
+          inArray(subscriptions.status, ["active", "trialing"]),
+        ),
       )
       .limit(1);
 
-    // Has active subscription — allow
-    if (activeSub) {
+    // Has valid subscription — allow
+    if (validSub) {
       return next();
     }
 

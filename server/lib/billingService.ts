@@ -163,10 +163,35 @@ export async function createSubscription(input: CreateSubscriptionInput): Promis
   const plan = BILLING_PLANS[input.planId];
   if (!plan) throw Object.assign(new Error(`Unknown plan: ${input.planId}`), { code: "INVALID_PLAN", status: 400 });
 
+  // \u2500\u2500 Server-side authoritative Stripe price lookup \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  // Prior code took stripePriceId from the request body (input.stripePriceId).
+  // That meant a malicious client could pass a $1 price ID and create a
+  // subscription against the $299 plan. Always derive from BILLING_PLANS,
+  // server-side. The client param is now ignored (and the schema-level field
+  // remains optional so existing integrations don't 400 \u2014 we just don't
+  // honor it).
+  const planStripePriceId: string | undefined = (plan as any).stripePriceId;
+
+  // \u2500\u2500 Payment-method gate \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  // For "subscription" and "usage" plans, recurring charges require a card
+  // on file unless the caller is explicitly granting a trial. Prior code
+  // happily created a DB record with status="active" + stripeSubscriptionId=
+  // null whenever paymentMethodId was omitted, which gave the caller free
+  // access to the service for the full period_end window. Block that.
+  const requiresPaymentMethod =
+    (plan.type === "subscription" || plan.type === "usage") &&
+    !input.paymentMethodId &&
+    !(input.trialDays && input.trialDays > 0);
+  if (requiresPaymentMethod) {
+    throw Object.assign(
+      new Error("Payment method required. Provide paymentMethodId (or trialDays for sales-issued trials)."),
+      { code: "PAYMENT_METHOD_REQUIRED", status: 400 },
+    );
+  }
+
   const stripeCustomerId = await ensureStripeCustomer(input.userId, input.email, input.name);
   const stripe = await getUncachableStripeClient();
 
-  // Attach payment method if provided
   if (input.paymentMethodId) {
     await stripe.paymentMethods.attach(input.paymentMethodId, { customer: stripeCustomerId });
     await stripe.customers.update(stripeCustomerId, {
@@ -174,40 +199,69 @@ export async function createSubscription(input: CreateSubscriptionInput): Promis
     });
   }
 
-  // Build Stripe subscription params
+  // \u2500\u2500 Stripe subscription creation \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
   let stripeSubId: string | undefined;
-  let stripePriceId = input.stripePriceId;
-
-  if (stripePriceId) {
-    // Use explicit Stripe price (from dashboard)
-    const sub = await stripe.subscriptions.create({
-      customer: stripeCustomerId,
-      items: [{ price: stripePriceId }],
-      trial_period_days: input.trialDays,
-      metadata: { userId: input.userId, planId: input.planId },
+  if (planStripePriceId) {
+    try {
+      const sub = await stripe.subscriptions.create({
+        customer: stripeCustomerId,
+        items: [{ price: planStripePriceId }],
+        trial_period_days: input.trialDays,
+        metadata: { userId: input.userId, planId: input.planId, companyId: input.companyId ?? "" },
+      });
+      stripeSubId = sub.id;
+    } catch (stripeErr: any) {
+      // Stripe rejected the subscription create (e.g., card declined, price
+      // archived). Don't insert a DB record claiming active access to a
+      // service the customer isn't being charged for.
+      logger.error("billing" as any, "Stripe subscription create failed", {
+        userId: input.userId, planId: input.planId, error: stripeErr?.message ?? String(stripeErr),
+      });
+      throw Object.assign(
+        new Error(stripeErr?.message ?? "Stripe subscription creation failed."),
+        { code: "STRIPE_ERROR", status: 502 },
+      );
+    }
+  } else if (plan.type !== "performance") {
+    // "performance" plans are intentionally manual (sales-provisioned, no
+    // Stripe price). Everything else without a stripePriceId is a config
+    // bug, not a free-tier case.
+    logger.error("billing" as any, "Plan missing stripePriceId \u2014 refusing to create active sub", {
+      userId: input.userId, planId: input.planId,
     });
-    stripeSubId = sub.id;
-  } else {
-    // Stripe price not configured \u2014 log and proceed with DB record only
-    // (Production: create matching Stripe products/prices in dashboard first)
-    logger.warn("billing" as any, "stripePriceId not provided \u2014 subscription recorded in DB only", {
-      userId: input.userId, planId: input.planId
-    });
+    throw Object.assign(
+      new Error(`Plan ${input.planId} is missing Stripe configuration. Contact support.`),
+      { code: "PLAN_MISCONFIGURED", status: 500 },
+    );
   }
 
   const now = new Date();
   const periodEnd = plan.type === "subscription"
-    ? new Date(now.getTime() + (plan.interval === "year" ? 365 : 30) * 24 * 60 * 60 * 1000)
+    ? new Date(now.getTime() + ((plan as any).interval === "year" ? 365 : 30) * 24 * 60 * 60 * 1000)
     : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+  // Status: "active" only when Stripe actually has a subscription on file
+  // (or when trial was explicitly granted by sales). For the manual-billed
+  // "performance" plan, mark as "pending_setup" so trial-check middleware
+  // doesn't treat it as paid access until sales completes provisioning.
+  let dbStatus: string;
+  if (stripeSubId) {
+    dbStatus = input.trialDays && input.trialDays > 0 ? "trialing" : "active";
+  } else if (plan.type === "performance") {
+    dbStatus = "pending_setup";
+  } else {
+    // Defensive \u2014 we shouldn't reach here given the gates above.
+    dbStatus = "incomplete";
+  }
 
   const [sub] = await db.insert(subscriptions).values({
     userId:              input.userId,
     companyId:           input.companyId ?? null,
     planId:              input.planId,
-    status:              "active",
+    status:              dbStatus,
     stripeCustomerId,
     stripeSubscriptionId: stripeSubId ?? null,
-    stripePriceId:       stripePriceId ?? null,
+    stripePriceId:       planStripePriceId ?? null,
     currentPeriodStart:  now,
     currentPeriodEnd:    periodEnd,
     ...((plan as any).type === "usage" ? {
@@ -217,7 +271,9 @@ export async function createSubscription(input: CreateSubscriptionInput): Promis
     } : {}),
   }).returning();
 
-  logger.info("billing" as any, "Subscription created", { userId: input.userId, planId: input.planId, subId: sub.id });
+  logger.info("billing" as any, "Subscription created", {
+    userId: input.userId, planId: input.planId, subId: sub.id, status: dbStatus, stripeSubId: stripeSubId ?? null,
+  });
   return sub;
 }
 
