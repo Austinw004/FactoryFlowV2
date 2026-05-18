@@ -578,6 +578,79 @@ Questions about pricing? Reply to this email or visit prescient-labs.com/pricing
   });
 }
 
+/**
+ * Email verification at signup (round-33 — F1 fix from round-24 audit).
+ *
+ * Sent immediately after a user signs up via /api/auth/signup. Contains
+ * a single-use, 24-hour-expiry token that flips emailVerified=true when
+ * clicked. Without this, a typo'd email at signup locked the customer
+ * out forever — no password reset path, no way to contact them.
+ *
+ * The email is fire-and-forget: signup succeeds even if the email
+ * doesn't send (same as the dunning + trial-ending templates from
+ * round-31). The customer can request a resend via
+ * /api/auth/resend-verification at any time.
+ */
+export async function sendEmailVerificationEmail(
+  recipientEmail: string,
+  details: {
+    verificationLink: string;
+    expiresAt: Date;
+    firstName?: string;
+  },
+): Promise<{ success: boolean; error?: string }> {
+  const greeting = details.firstName ? `Hi ${details.firstName},` : "Hi,";
+  const expiresLine = `This link expires <strong>${details.expiresAt.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })} at ${details.expiresAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</strong>.`;
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1a1a1a;max-width:560px;margin:0 auto;padding:32px 20px;background:#fafafa;">
+  <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:36px 32px;">
+    <div style="margin-bottom:28px;">
+      <h1 style="color:#0f172a;margin:0;font-size:22px;font-weight:600;letter-spacing:-0.01em;">Prescient Labs</h1>
+    </div>
+    <h2 style="font-size:20px;font-weight:600;margin:0 0 16px 0;letter-spacing:-0.01em;">Confirm your email address</h2>
+    <p style="font-size:15px;margin:0 0 16px 0;">${greeting}</p>
+    <p style="font-size:15px;margin:0 0 16px 0;">Welcome to Prescient Labs. Click the button below to confirm this email address so we can reach you about your account.</p>
+    <div style="margin:28px 0;">
+      <a href="${details.verificationLink}" style="display:inline-block;background:#CC785C;color:#fff;text-decoration:none;padding:12px 24px;border-radius:4px;font-weight:500;font-size:15px;">
+        Confirm email
+      </a>
+    </div>
+    <p style="font-size:13px;color:#6b7280;margin:0 0 8px 0;">Or copy and paste this link into your browser:</p>
+    <p style="font-size:13px;color:#6b7280;word-break:break-all;margin:0 0 24px 0;">
+      <a href="${details.verificationLink}" style="color:#CC785C;text-decoration:underline;">${details.verificationLink}</a>
+    </p>
+    <p style="font-size:13px;color:#6b7280;margin:0 0 24px 0;">${expiresLine.replace(/<\/?strong>/g, '')}</p>
+    <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
+    <p style="font-size:12px;color:#9ca3af;margin:0;">If you didn't sign up for Prescient Labs, you can safely ignore this email — no account will be activated without confirmation.</p>
+  </div>
+  <p style="font-size:11px;color:#9ca3af;text-align:center;margin:16px 0 0 0;">&copy; ${new Date().getFullYear()} Prescient Labs.</p>
+</body></html>`;
+
+  const text = `Confirm your Prescient Labs email address
+
+${greeting}
+
+Welcome to Prescient Labs. Use the link below to confirm this email address so we can reach you about your account.
+
+${details.verificationLink}
+
+${expiresLine.replace(/<\/?strong>/g, '')}
+
+If you didn't sign up for Prescient Labs, you can safely ignore this email — no account will be activated without confirmation.
+
+— Prescient Labs
+`;
+
+  return sendEmail({
+    to: [{ name: recipientEmail, email: recipientEmail }],
+    subject: "Confirm your Prescient Labs email address",
+    html,
+    text,
+  });
+}
+
 export async function syncEmailCampaignsAsDemandSignals(companyId: string, campaigns: Array<{
   campaignId: string;
   subject: string;

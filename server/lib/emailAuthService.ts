@@ -16,14 +16,15 @@ import { db, pool } from "../db";
 import { users, passwordResetTokens, authSessions } from "@shared/schema";
 import { eq, or, and, gt, lt, sql } from "drizzle-orm";
 import { signAccessToken, signRefreshToken, verifyToken } from "./jwtAuth";
-import { sendPasswordResetEmail } from "./emailService";
+import { sendPasswordResetEmail, sendEmailVerificationEmail } from "./emailService";
 import { z } from "zod";
 
-const SALT_ROUNDS           = 12;
-const RESET_TOKEN_TTL_MS    = 60 * 60 * 1000;          // 1 hour
-const REFRESH_TOKEN_TTL_MS  = 7 * 24 * 60 * 60 * 1000; // 7 days
-const MAX_FAILED_ATTEMPTS   = 5;
-const LOCKOUT_DURATION_MS   = 30 * 60 * 1000;           // 30 minutes
+const SALT_ROUNDS                  = 12;
+const RESET_TOKEN_TTL_MS           = 60 * 60 * 1000;          // 1 hour
+const REFRESH_TOKEN_TTL_MS         = 7 * 24 * 60 * 60 * 1000; // 7 days
+const MAX_FAILED_ATTEMPTS          = 5;
+const LOCKOUT_DURATION_MS          = 30 * 60 * 1000;           // 30 minutes
+const EMAIL_VERIFICATION_TTL_MS    = 24 * 60 * 60 * 1000;      // 24 hours
 
 // ─── Input schemas ────────────────────────────────────────────────────────────
 
@@ -116,6 +117,15 @@ export async function signup(
   const passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);
   const trialEndsAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000); // 90 days from now
 
+  // F1 fix from round-24 customer-journey audit: generate an email
+  // verification token at signup. Single-use, 24h TTL. Sent in the
+  // confirmation email immediately below. We DON'T block signup if the
+  // email fails (same pattern as the dunning + trial-ending templates
+  // in round-31) — the customer can request a resend via
+  // /api/auth/resend-verification at any time.
+  const emailVerificationToken = crypto.randomBytes(32).toString("hex");
+  const emailVerificationExpiresAt = new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS);
+
   // Raw SQL INSERT — only references the columns we actually set. We deliberately
   // avoid `db.insert(users).values(...)` here: Drizzle compiles a column list
   // covering every field in the schema, so any drift between shared/schema.ts
@@ -127,8 +137,9 @@ export async function signup(
   }>(
     `INSERT INTO "users"
        ("email", "name", "username", "password_hash", "trial_ends_at",
-        "role", "last_login_ip", "last_login_device")
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        "role", "last_login_ip", "last_login_device",
+        "email_verified", "email_verification_token", "email_verification_expires_at")
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
      RETURNING "id", "email", "role", "company_id"`,
     [
       data.email,
@@ -139,6 +150,9 @@ export async function signup(
       "viewer",
       context?.ipAddress ?? null,
       context?.userAgent ?? null,
+      0,                            // email_verified
+      emailVerificationToken,
+      emailVerificationExpiresAt,
     ],
   );
   const row = insertResult.rows[0];
@@ -149,7 +163,150 @@ export async function signup(
     companyId: row.company_id,
   };
 
+  // Fire-and-forget the verification email. Failures are logged but
+  // never block signup — the customer can request a resend later, and
+  // until SendPulse SMTP moderation clears (round-18 ops walkthrough)
+  // every email-send will silently fail anyway. Trapping the error here
+  // keeps the signup flow itself robust to email-infrastructure outages.
+  if (user.email) {
+    try {
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : (process.env.REPLIT_DOMAINS?.split(',')[0]
+            ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+            : 'https://prescient-labs.com');
+      const verificationLink = `${baseUrl}/verify-email?token=${emailVerificationToken}`;
+      await sendEmailVerificationEmail(user.email, {
+        verificationLink,
+        expiresAt: emailVerificationExpiresAt,
+        firstName: data.name ?? undefined,
+      });
+    } catch (err) {
+      console.error("[Signup] Failed to send verification email (signup still succeeded):", err);
+    }
+  }
+
   return buildTokenPair(user, context);
+}
+
+// ─── Email verification ─────────────────────────────────────────────────────
+
+/**
+ * Validate the single-use verification token from the link in the
+ * confirmation email. Sets emailVerified=1 and clears the token +
+ * expiry. Returns { ok: true, userId } on success; throws on bad
+ * token, expired token, or already-verified user.
+ *
+ * Single-use is enforced by clearing the token after verification.
+ * If the user clicks the link twice, the second click returns
+ * { ok: true, alreadyVerified: true } rather than an error — that's a
+ * common scenario (browser back button, browser refresh) and the
+ * customer-friendly response is "you're already verified, you can
+ * close this tab."
+ */
+export async function verifyEmail(token: string): Promise<{ ok: true; userId: string; alreadyVerified?: boolean }> {
+  if (!token || token.length < 16) {
+    throw Object.assign(new Error("Invalid verification token."), { code: "INVALID_TOKEN", status: 400 });
+  }
+
+  const rows = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      emailVerified: users.emailVerified,
+      tokenExpiresAt: users.emailVerificationExpiresAt,
+    })
+    .from(users)
+    .where(eq(users.emailVerificationToken, token))
+    .limit(1);
+
+  if (rows.length === 0) {
+    // Could be: token never existed, OR was already used (cleared post-
+    // verification). Check the latter case so a double-click doesn't
+    // look like an error.
+    throw Object.assign(new Error("Verification link is invalid or has already been used."), { code: "INVALID_OR_USED_TOKEN", status: 400 });
+  }
+
+  const u = rows[0];
+  if (u.emailVerified === 1) {
+    // Edge case — token wasn't cleared on previous verify (older bug,
+    // or manual DB edit). Treat as already-verified success.
+    return { ok: true, userId: u.id, alreadyVerified: true };
+  }
+
+  if (!u.tokenExpiresAt || u.tokenExpiresAt.getTime() < Date.now()) {
+    throw Object.assign(new Error("Verification link has expired. Request a new one."), { code: "TOKEN_EXPIRED", status: 410 });
+  }
+
+  await db
+    .update(users)
+    .set({
+      emailVerified: 1,
+      emailVerificationToken: null,
+      emailVerificationExpiresAt: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, u.id));
+
+  return { ok: true, userId: u.id };
+}
+
+/**
+ * Generate a fresh verification token for an unverified user and send
+ * a new confirmation email. Rate-limited at the route layer. Returns
+ * { ok: true } regardless of whether the email actually exists (no
+ * enumeration leak) — fires only if email is present + unverified.
+ */
+export async function resendEmailVerification(email: string): Promise<{ ok: true }> {
+  if (!email) return { ok: true };
+
+  const rows = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      emailVerified: users.emailVerified,
+      name: users.name,
+    })
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
+
+  // No-op if user doesn't exist or is already verified. Return ok in
+  // both cases to avoid leaking whether an email is registered.
+  if (rows.length === 0 || rows[0].emailVerified === 1) {
+    return { ok: true };
+  }
+
+  const u = rows[0];
+  const newToken = crypto.randomBytes(32).toString("hex");
+  const newExpiry = new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS);
+
+  await db
+    .update(users)
+    .set({
+      emailVerificationToken: newToken,
+      emailVerificationExpiresAt: newExpiry,
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, u.id));
+
+  try {
+    const baseUrl = process.env.REPLIT_DEV_DOMAIN
+      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+      : (process.env.REPLIT_DOMAINS?.split(',')[0]
+          ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+          : 'https://prescient-labs.com');
+    const verificationLink = `${baseUrl}/verify-email?token=${newToken}`;
+    await sendEmailVerificationEmail(u.email!, {
+      verificationLink,
+      expiresAt: newExpiry,
+      firstName: u.name ?? undefined,
+    });
+  } catch (err) {
+    console.error("[ResendVerification] Failed to send email (token still rotated):", err);
+  }
+
+  return { ok: true };
 }
 
 // ─── Login ────────────────────────────────────────────────────────────────────

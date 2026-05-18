@@ -59,6 +59,7 @@ const LandingPageVariantC = lazy(() => import("@/pages/LandingPageVariantC"));
 const NotificationSettings = lazy(() => import("@/pages/NotificationSettings"));
 const ForgotPasswordPage = lazy(() => import("@/pages/ForgotPasswordPage"));
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage"));
+const VerifyEmailPage = lazy(() => import("@/pages/VerifyEmailPage"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
 const ShopFloorMode = lazy(() => import("@/pages/ShopFloorMode"));
 const Integrations = lazy(() => import("@/pages/Integrations"));
@@ -157,6 +158,7 @@ function Router() {
           <Route path="/signin" component={SignInPage} />
           <Route path="/forgot-password" component={ForgotPasswordPage} />
           <Route path="/reset-password" component={ResetPasswordPage} />
+          <Route path="/verify-email" component={VerifyEmailPage} />
           <Route path="/auth/callback" component={AuthCallback} />
           <Route path="/preview/variant-a" component={LandingPageVariantA} />
           <Route path="/preview/variant-b" component={LandingPageVariantB} />
@@ -203,6 +205,7 @@ function Router() {
       <Route path="/settings/:tab" component={SettingsPage} />
       <Route path="/profile" component={SettingsPage} />
       <Route path="/reset-password" component={ResetPasswordPage} />
+      <Route path="/verify-email" component={VerifyEmailPage} />
       <Route path="/how-it-works" component={HowItWorks} />
       <Route path="/sop-workflows" component={SopWorkflows} />
 

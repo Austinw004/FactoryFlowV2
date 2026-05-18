@@ -79,6 +79,10 @@ const ADDITIONS: ColumnAddition[] = [
   { table: "users", column: "data_preferences", type: "jsonb" },
   // ── companies — Phase 12 verified-savings counter (Performance plan)
   { table: "companies", column: "verified_savings_total_cents", type: "integer", defaultExpr: "0" },
+  // ── users — email verification at signup (round-33, F1 fix from round-24 audit)
+  { table: "users", column: "email_verified", type: "integer", defaultExpr: "0" },
+  { table: "users", column: "email_verification_token", type: "text" },
+  { table: "users", column: "email_verification_expires_at", type: "timestamp" },
 ];
 
 export async function runSchemaSelfHeal(): Promise<void> {

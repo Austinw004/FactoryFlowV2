@@ -36,6 +36,7 @@ import {
   signup, login, logout, forgotPassword, resetPassword,
   forgotUsername, refreshAccessToken,
   changePassword, updateProfile,
+  verifyEmail, resendEmailVerification,
   signupSchema, loginSchema, forgotPasswordSchema,
   resetPasswordSchema, forgotUsernameSchema,
 } from "./lib/emailAuthService";
@@ -250,6 +251,41 @@ export function registerAuthPaymentRoutes(app: Express): void {
   app.post("/api/auth/forgot-username", handle(async (req, res) => {
     const result = await forgotUsername(req.body);
     res.json(result);
+  }));
+
+  /**
+   * POST /api/auth/verify-email — confirm the link from the signup
+   * verification email. Body: { token: string }. Flips emailVerified=1
+   * + clears the token. Round-33 fix for F1-NEW-A from round-24 audit
+   * (typo'd email at signup = locked out forever).
+   *
+   * Returns 200 on success (including the already-verified idempotent
+   * case). 400 on bad token, 410 on expired token.
+   */
+  app.post("/api/auth/verify-email", rateLimiters.sensitive, handle(async (req, res) => {
+    const { token } = z.object({ token: z.string().min(16).max(200) }).parse(req.body || {});
+    try {
+      const result = await verifyEmail(token);
+      res.json(result);
+    } catch (err: any) {
+      const status = err?.status || 400;
+      apiError(res, status, err?.code || "VERIFY_FAILED", err?.message || "Verification failed");
+    }
+  }));
+
+  /**
+   * POST /api/auth/resend-verification — request a fresh verification
+   * email for an unverified account. Body: { email: string }. Returns
+   * 200 in all cases (no enumeration leak); silently no-ops if email
+   * doesn't exist or is already verified.
+   *
+   * Rate-limited via rateLimiters.sensitive (3 req/min per IP) to
+   * prevent abuse as a spam-relay vector.
+   */
+  app.post("/api/auth/resend-verification", rateLimiters.sensitive, handle(async (req, res) => {
+    const { email } = z.object({ email: z.string().email().max(320) }).parse(req.body || {});
+    await resendEmailVerification(email);
+    res.json({ ok: true, message: "If that email is registered and unverified, a confirmation link has been sent." });
   }));
 
   /** POST /api/auth/google — OAuth code exchange or simulation fallback */

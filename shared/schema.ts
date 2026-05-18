@@ -69,6 +69,15 @@ export const users = pgTable("users", {
   lockedUntil: timestamp("locked_until"),
   lastLoginIp: text("last_login_ip"),
   lastLoginDevice: text("last_login_device"),
+  // ── Email verification (F1 fix from round-24 customer-journey audit) ──────
+  // Without verification, a typo'd email at signup locked the customer out
+  // forever (no password reset path, no contact channel). On signup we
+  // generate emailVerificationToken (single-use, 24-hour expiry) and email
+  // a confirmation link. Clicking the link flips emailVerified=true and
+  // clears the token + expiry. Sensitive flows can later gate on this flag.
+  emailVerified: integer("email_verified").default(0), // 0/1 boolean
+  emailVerificationToken: text("email_verification_token"),
+  emailVerificationExpiresAt: timestamp("email_verification_expires_at"),
   // ── Onboarding profile fields ─────────────────────────────────────────────
   jobTitle: text("job_title"),
   phone: text("phone"),
