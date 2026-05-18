@@ -11211,6 +11211,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ id: `alert_stub_${Date.now()}`, status: "acknowledged" });
   });
 
+  /**
+   * GET /api/onboarding/state — full resumable wizard state.
+   *
+   * F1 fix from round-24 customer-journey audit: previously the wizard
+   * step lived in client-side `useState(1)` only. If a user closed the
+   * browser mid-flow (e.g., at Step 4 Team), reopening the wizard
+   * dropped them back to Step 1 Company — even though Company was
+   * already persisted server-side. High abandonment risk.
+   *
+   * This endpoint returns ALL the data the wizard needs to:
+   *   (1) Pre-fill every input on every step (no re-typing).
+   *   (2) Compute which step to land on (the earliest one where the
+   *       user hasn't yet completed all required fields).
+   *
+   * Client uses the returned shape to skip ahead to the right step
+   * and pre-populate state. /api/onboarding/status (booleans only)
+   * is kept alive for other callers that only need the high-level
+   * progress signal.
+   */
+  app.get("/api/onboarding/state", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const company = user.companyId ? await storage.getCompany(user.companyId) : null;
+
+      // Parse JSON-array text columns safely. The schema stores
+      // keyMaterials + painPoints as text("...") containing a stringified
+      // JSON array; we parse defensively so a corrupted row doesn't 500.
+      const parseArr = (v: string | null | undefined): string[] => {
+        if (!v) return [];
+        try { const parsed = JSON.parse(v); return Array.isArray(parsed) ? parsed.map(String) : []; }
+        catch { return []; }
+      };
+
+      res.json({
+        company: company ? {
+          id: company.id,
+          name: company.name ?? "",
+          industry: company.industry ?? "",
+          companySize: company.companySize ?? "",
+          location: company.location ?? "",
+          website: company.website ?? "",
+          annualRevenue: company.annualRevenue ?? "",
+          productionVolume: company.productionVolume ?? "",
+          annualProcurementSpend: company.annualProcurementSpend ?? "",
+          keyMaterials: parseArr(company.keyMaterials),
+          erpSystemUsed: company.erpSystemUsed ?? "",
+          painPoints: parseArr(company.painPoints),
+          numberOfSuppliers: company.numberOfSuppliers ?? "",
+          numberOfFacilities: company.numberOfFacilities ?? "",
+          topProducts: company.topProducts ?? "",
+          selectedPlanId: (company as any).selectedPlanId ?? null,
+        } : null,
+        profile: {
+          firstName: user.firstName ?? "",
+          lastName:  user.lastName ?? "",
+          jobTitle:  (user as any).jobTitle ?? "",
+          phone:     (user as any).phone ?? "",
+          department: (user as any).department ?? "",
+          email:     user.email ?? "",
+        },
+        onboardingCompleted: !!(user as any).onboardingCompleted,
+      });
+    } catch (error: any) {
+      console.error("Error fetching onboarding state:", error);
+      res.status(500).json({ message: "Failed to fetch onboarding state" });
+    }
+  });
+
   app.get("/api/onboarding/status", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

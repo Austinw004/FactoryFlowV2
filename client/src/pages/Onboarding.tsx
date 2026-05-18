@@ -280,6 +280,98 @@ export default function Onboarding() {
     setPhone((curr) => curr || authUser.phone || "");
   }, [authUser]);
 
+  // F1 fix from round-24 customer-journey audit: resume from server state.
+  // Without this, closing the browser at any step dropped users back to
+  // Step 1 (Company) even though their progress was already persisted —
+  // high abandonment risk. Now: query /api/onboarding/state on mount,
+  // pre-fill every field, and skip ahead to the earliest INCOMPLETE step.
+  const { data: onboardingState } = useQuery<{
+    company: {
+      id: string; name: string; industry: string; companySize: string;
+      location: string; website: string; annualRevenue: string;
+      productionVolume: string; annualProcurementSpend: string;
+      keyMaterials: string[]; erpSystemUsed: string; painPoints: string[];
+      numberOfSuppliers: string; numberOfFacilities: string;
+      topProducts: string; selectedPlanId: string | null;
+    } | null;
+    profile: {
+      firstName: string; lastName: string; jobTitle: string;
+      phone: string; department: string; email: string;
+    };
+    onboardingCompleted: boolean;
+  }>({
+    queryKey: ["/api/onboarding/state"],
+    // Only fetch once on mount; subsequent step changes are driven by
+    // the local mutations (setupCompanyMutation etc.). Refetching would
+    // race with in-flight saves and clobber unsaved fields.
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
+    staleTime: Infinity,
+  });
+
+  // Pre-fill all fields from server state + jump to the resume step.
+  // Runs ONCE when state arrives (guarded via ref).
+  const hasHydratedFromServerRef = useRef(false);
+  useEffect(() => {
+    if (!onboardingState || hasHydratedFromServerRef.current) return;
+    hasHydratedFromServerRef.current = true;
+
+    const c = onboardingState.company;
+    const p = onboardingState.profile;
+
+    // ── Pre-fill ALL form state from server. We only fill if the local
+    // state is still empty so we don't clobber anything the user
+    // started typing before the query resolved.
+    if (c) {
+      setCompanyName((cur) => cur || c.name);
+      setIndustry((cur) => cur || c.industry);
+      setCompanySize((cur) => cur || c.companySize);
+      setLocation((cur) => cur || c.location);
+      setWebsite((cur) => cur || c.website);
+      setAnnualRevenue((cur) => cur || c.annualRevenue);
+      setProductionVolume((cur) => cur || c.productionVolume);
+      setAnnualProcurementSpend((cur) => cur || c.annualProcurementSpend);
+      setKeyMaterials((cur) => cur.length ? cur : c.keyMaterials);
+      setErpSystem((cur) => cur || c.erpSystemUsed);
+      setPainPoints((cur) => cur.length ? cur : c.painPoints);
+      setNumberOfSuppliers((cur) => cur || c.numberOfSuppliers);
+      setNumberOfFacilities((cur) => cur || c.numberOfFacilities);
+      setTopProducts((cur) => cur || c.topProducts);
+      if (c.selectedPlanId) setSelectedPlanId((cur) => cur || c.selectedPlanId!);
+    }
+    setFirstName((cur) => cur || p.firstName);
+    setLastName((cur) => cur || p.lastName);
+    setJobTitle((cur) => cur || p.jobTitle);
+    setPhone((cur) => cur || p.phone);
+    setDepartment((cur) => cur || p.department);
+
+    // ── Derive the resume step. Walk forward through the wizard's
+    // required-data checks; stop at the first step that isn't fully
+    // satisfied yet. Steps 4 (Team Invites) and 6 (Payment) are
+    // skipped past automatically — team invites are optional, and
+    // payment is handled by Stripe Elements which keeps its own state.
+    let resumeStep = 1;
+    if (c && c.name && c.industry && c.companySize && c.location) {
+      // Step 1 done — try Step 2.
+      resumeStep = 2;
+      if (p.firstName && p.lastName && p.jobTitle) {
+        // Step 2 done — try Step 3 (operations).
+        resumeStep = 3;
+        if (c.productionVolume && c.painPoints?.length) {
+          // Step 3 done — go to Step 4 (Team — optional, can skip).
+          resumeStep = 4;
+          if (c.selectedPlanId) {
+            // Step 5 done — go to Step 6 (payment) or 7 (complete).
+            resumeStep = onboardingState.onboardingCompleted ? 7 : 6;
+          }
+        }
+      }
+    }
+    if (resumeStep > 1) {
+      setStep(resumeStep);
+    }
+  }, [onboardingState]);
+
   // Step 3: Operations Intelligence
   const [productionVolume, setProductionVolume] = useState("");
   const [annualProcurementSpend, setAnnualProcurementSpend] = useState("");
