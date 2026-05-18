@@ -117,9 +117,17 @@ export function useWebSocket(onMessage?: MessageHandler) {
       ws.onopen = () => {
         clearTimeout(connectTimeoutRef.current);
         console.log('[WebSocket] Connected');
-        reconnectAttemptsRef.current = 0;
         setIsConnected(true);
         startHeartbeat();
+        // Do NOT reset reconnectAttemptsRef here — onopen fires on the
+        // WS upgrade (101 Switching Protocols) BEFORE the server's
+        // app-level auth check runs. If auth fails the server closes
+        // with 1008 ~ms later. Resetting the counter here masks that
+        // failure mode as a transient connection issue and produces a
+        // tight ~1Hz reconnect loop (see F1-FILED-007 for the symptom
+        // history). The counter only resets when we actually receive
+        // the server's `connection_established` frame (which only fires
+        // post-auth) — see onmessage below.
       };
 
       ws.onmessage = (event) => {
@@ -137,6 +145,9 @@ export function useWebSocket(onMessage?: MessageHandler) {
 
         if (message.type === 'connection_established') {
           if (message.message) console.log('[WebSocket]', message.message);
+          // Real proof-of-life: server sends this only after the auth
+          // check passes. Reset the reconnect counter NOW.
+          reconnectAttemptsRef.current = 0;
           return;
         }
 

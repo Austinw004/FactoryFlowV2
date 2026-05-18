@@ -112,8 +112,25 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // Carry the JWT in the query string when present — the browser's native
+    // WebSocket API doesn't let you set Authorization headers, so query-string
+    // is the standard pattern for token auth on WS. Server's setupWebSocket
+    // accepts ?token=… (JWT) OR connect.sid cookie (Replit session); without
+    // the JWT-carrying path, JWT-authed customers got 1008 Authentication
+    // required on every handshake.
+    //
+    // F1-FILED-007: this provider was a parallel implementation that never
+    // got the JWT-fix that useWebSocket received. The server's auth check
+    // happens AFTER the WS upgrade (101 Switching Protocols), so onopen
+    // fires successfully — which used to reset reconnectAttemptsRef to 0
+    // — then onclose fires ~ms later with the 1008 code. Result: ~1Hz
+    // reconnect loop forever, ~120+ log lines/minute per page, the
+    // "Live Updates" badge meaningless because no message ever survives.
+    const token = typeof localStorage !== "undefined" ? localStorage.getItem("prescient_token") : null;
+    const tokenParam = token ? `?token=${encodeURIComponent(token)}` : "";
+
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const wsUrl = `${protocol}//${window.location.host}/ws${tokenParam}`;
 
     try {
       const ws = new WebSocket(wsUrl);
@@ -121,7 +138,14 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
       ws.onopen = () => {
         setIsConnected(true);
-        reconnectAttemptsRef.current = 0;
+        // Do NOT reset reconnectAttemptsRef here — onopen fires on the
+        // WS upgrade BEFORE the server's app-level auth check runs. If
+        // auth fails, onclose fires ~ms later; resetting the counter
+        // in onopen masks the auth failure as a transient connection
+        // issue and produces an infinite ~1Hz reconnect loop. The
+        // counter only resets when we actually receive the server's
+        // connection_established frame (which only fires post-auth) —
+        // see the onmessage handler below.
       };
 
       ws.onmessage = (event) => {
@@ -131,6 +155,11 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           setMessageCount((c) => c + 1);
 
           if (message.type === "connection_established") {
+            // Real proof-of-life: the server sends this only after the
+            // auth check passes. NOW it's safe to reset the reconnect
+            // counter, because we know the underlying issue (auth /
+            // server config / network) is resolved.
+            reconnectAttemptsRef.current = 0;
             return;
           }
 
