@@ -1,0 +1,168 @@
+Daily digest — Mon, May 18
+==========================
+
+Hi Austin,
+
+AT A GLANCE
+  1 ran cleanly · 5 need your eyes · 0 blocking
+
+Backlog growing: all 5 prior decisions from yesterday's digest
+(PR #248) are still unanswered. Step 5 skipped this run — fresh
+container, no prior turn to parse.
+
+------------------------------------------------------------------
+
+BIG BOI — activity
+Heavy direct-to-main night (rounds 18-32, ~17 commits) closing F0
+security holes + billing audit items. Round 33 opened as a PR
+instead of pushed to main per session safety.
+  - PR #255 (draft) — "Daily codebase engineer round 33: types to
+    zero, validation, dep refresh." TSC 21->0, npm vulns 7->5,
+    validated routes 7->10, 7 commits.
+    https://github.com/Austinw004/FactoryFlowV2/pull/255
+  - Direct-to-main commits (since prior digest): NetSuite/SAP/
+    Dynamics/Oracle/Acumatica/Custom ERP adapters (F2-FILED-011
+    6/6 scaffolded); F1-FILED-007 WebSocket reconnect loop fixed;
+    3 cross-tenant F0s closed (ERP creds, ERP sync, payout
+    exfiltration); 4 launch-blocking F0s closed (Stripe sub cancel
+    on account delete, customer cancel endpoint, webhook silent-
+    fail, trial banner link); RBAC+Zod+at-rest encryption on 10
+    integration configure handlers (Slack, Shopify, HubSpot, Teams,
+    Notion, Salesforce, Jira, Linear, Twilio); Stripe checkout URL
+    fix; DB pool config; request-ID middleware; onboarding-wizard
+    resume-from-server-state; dunning UX emails wired.
+  - Email helper added: sendPaymentFailedEmail +
+    sendTrialEndingSoonEmail in server/lib/emailService.ts
+    (delivery still gated on SendPulse SMTP moderation — see
+    round-18 commit b8cb7f2).
+
+OPTIMUS — silent
+No activity in the 24h window. Third silent day in a row — clean
+and intentional.
+
+DAILY BOOST — silent
+No new activity. Prior PR still open and now stale — Big Boi has
+independently zeroed TSC errors on main, so this PR is likely
+redundant.
+  - PR #239 (draft, 2d old) — "319->0 TS errors, axios CVE patch,
+    dep updates." Same scope as Big Boi's round-32 + #255 work.
+    Likely a duplicate now.
+    https://github.com/Austinw004/FactoryFlowV2/pull/239
+
+PALANTARD GRADE — activity
+Two new PRs today on top of two stale ones — all touching
+dashboard / regime UI surface. Backlog forming a 4-PR overlap.
+  - PR #256 (draft, today) — "regime-driven command experience
+    across dashboard, procurement, forecasting, supplier risk."
+    Has 1 comment already.
+    https://github.com/Austinw004/FactoryFlowV2/pull/256
+  - PR #249 (draft, today) — docs-only bootstrap of "Palantir
+    meta-routine" spec + docs/ontology/ skeleton. Reads as a
+    roadmap for an orchestrator routine intended to subsume this
+    Daily Digest.
+    https://github.com/Austinw004/FactoryFlowV2/pull/249
+  - PR #247 (draft, yesterday) — "regime-aware dashboard hero +
+    material->supplier intelligence."
+    https://github.com/Austinw004/FactoryFlowV2/pull/247
+  - PR #240 (draft, 2d old) — "regime-prescriptive dashboard +
+    cross-workspace FDR guidance."
+    https://github.com/Austinw004/FactoryFlowV2/pull/240
+
+WEEKLY CLEAN — activity
+No new run today (7-day routine; next due 2026-05-22). Prior PR
+from 2026-05-15 still unmerged.
+  - PR #235 (draft, 3d old) — security headers, CVE patches,
+    bundle split (563kB->232kB main), docs sync.
+    https://github.com/Austinw004/FactoryFlowV2/pull/235
+
+CODE REVIEW — activity
+One small PR (1 file) + four issues filed. The routine itself
+flagged its own duplication problem and asked the operator to
+break the loop.
+  - PR #254 (draft, today) — Dashboard regime_change WebSocket
+    payload null-safety only. Author explicitly held back the
+    usual fixes because they overlap with #237 and #242 (both
+    still open).
+    https://github.com/Austinw004/FactoryFlowV2/pull/254
+  - Issues filed:
+    #250 — Section 232 tariff layer missing from commodity
+      module (P1)
+      https://github.com/Austinw004/FactoryFlowV2/issues/250
+    #251 — DRAM/HBM 58-week lead times — structural lead-time
+      risk surface (P2)
+      https://github.com/Austinw004/FactoryFlowV2/issues/251
+    #252 — Siemens x NVIDIA + Anthropic mid-market competitive
+      watch
+      https://github.com/Austinw004/FactoryFlowV2/issues/252
+    #253 — meta: routine-duplication asks operator to merge
+      #237 OR #242 and close the other
+      https://github.com/Austinw004/FactoryFlowV2/issues/253
+
+------------------------------------------------------------------
+
+POTENTIAL FILE CONFLICTS IN WINDOW
+
+  - client/src/pages/Dashboard.tsx — touched by Big Boi (round-24
+    trial-banner fix, merged to main), Palantard Grade (#256),
+    Code Review (#254). Three-way overlap.
+  - client/src/hooks/useWebSocket.ts + client/src/contexts/
+    RealtimeContext.tsx — Big Boi round-20 fix (merged to main)
+    overlaps with Code Review #237 + #242 console-gating. Both
+    PRs likely need rebase or are now superseded.
+
+------------------------------------------------------------------
+
+DECISIONS NEEDED
+
+  1. Big Boi · PR #255 (round 33, TSC 21->0, validation, deps).
+     Approve and merge, or defer?
+
+  2. Big Boi policy — ~17 direct-to-main commits last night
+     (rounds 18-32). Keep direct-to-main policy, or require PRs
+     going forward? (Repeat of yesterday's item 1 — still
+     unanswered.)
+
+  3. Daily Boost · PR #239 — close as duplicate of Big Boi's TSC
+     work (now on main + #255), rebase, or merge anyway?
+
+  4. Palantard Grade · regime-UI stack — 4 overlapping PRs
+     (#240, #247, #256) on Dashboard / regime hero. Pick a
+     winner (newest #256?) and close the others, or sequence
+     merges?
+
+  5. Palantard Grade · PR #249 — docs-only bootstrap of a
+     "Palantir meta-routine" intended to replace this Daily
+     Digest. Approve the direction (and wind this routine down
+     once the meta-routine ships)? Revise scope? Reject?
+
+  6. Weekly Clean · PR #235 — unmerged for 3 days. Approve and
+     merge, or close in favor of next weekly run (2026-05-22)?
+
+  7. Code Review · PR #254 + #237/#242 dedup — per issue #253 the
+     routine asks: merge #242 (fresher) and close #237 as
+     superseded. Also: merge #254's one-line null-safety fix?
+     Note: Big Boi's main commits may already cover the
+     useWebSocket parts — needs rebase.
+
+  8. Code Review intel · issue #250 (Section 232 tariff layer in
+     commodity module, P1) — greenlight phase-1 scope, defer, or
+     close?
+
+  9. Code Review intel · issue #251 (DRAM/HBM 58-week structural
+     lead-time surface, P2) — greenlight, defer, or close?
+
+  10. Code Review intel · issue #252 (Siemens x NVIDIA + Anthropic
+      competitive positioning brief) — assign to founder, defer,
+      or close?
+
+------------------------------------------------------------------
+
+HOW TO REPLY
+
+To act on these, reply to this routine session with the item
+number plus your decision — e.g., "Item 3: close as duplicate",
+"Item 6: approve and merge", "Item 8: needs more info on which
+tariff data source to wire." I'll execute on the next daily run
+and report back tomorrow.
+
+Generated 2026-05-18 · Prescient Labs Daily Digest routine
