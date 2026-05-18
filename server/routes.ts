@@ -3587,6 +3587,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User not associated with a company" });
       }
       const items = req.body.items || [];
+
+      // F1 fix from round-24 observability audit: cap row count at 1000
+      // per request. Previously unbounded — one pathological client could
+      // post a 10-million-row payload, parse it synchronously, then
+      // hammer a single connection's bulkCreateDemandHistory call,
+      // starving the event loop + DB pool for every other tenant.
+      // 1000 is generous for typical batches; clients that need more
+      // can paginate. Returns 413 (Payload Too Large) which is the
+      // standard HTTP code for this exact case.
+      if (!Array.isArray(items)) {
+        return res.status(400).json({ error: "`items` must be an array" });
+      }
+      const BULK_ROW_CAP = 1000;
+      if (items.length > BULK_ROW_CAP) {
+        return res.status(413).json({
+          error: `Too many rows in single bulk request (${items.length}). Maximum is ${BULK_ROW_CAP} per call — please paginate.`,
+          received: items.length,
+          max: BULK_ROW_CAP,
+        });
+      }
+
       // Batch-validate all SKU IDs in one query to avoid N+1
       const skuIds: string[] = [...new Set<string>(items.map((item: { skuId: string }) => item.skuId))];
       const companySkus = await storage.getSkus(user.companyId);
@@ -3724,6 +3745,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User not associated with a company" });
       }
       const forecasts = req.body.forecasts || [];
+      // F1 fix: same 1000-row cap as /api/demand-history/bulk to prevent
+      // event-loop + pool starvation via unbounded payloads.
+      if (!Array.isArray(forecasts)) {
+        return res.status(400).json({ error: "`forecasts` must be an array" });
+      }
+      const BULK_ROW_CAP = 1000;
+      if (forecasts.length > BULK_ROW_CAP) {
+        return res.status(413).json({
+          error: `Too many forecasts in single bulk request (${forecasts.length}). Maximum is ${BULK_ROW_CAP} per call — please paginate.`,
+          received: forecasts.length,
+          max: BULK_ROW_CAP,
+        });
+      }
       const validated = forecasts.map((f: any) => insertMultiHorizonForecastSchema.parse({
         ...f,
         companyId: user.companyId,
@@ -15818,7 +15852,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customerId = customer.id;
       }
 
-      const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
+      // F1 fix from round-24 audit: REPLIT_DOMAINS may be unset on
+      // custom-domain prod (prescient-labs.com) — the prior `https://${...?.split(',')[0]}`
+      // pattern would evaluate to `https://undefined` and break the entire
+      // checkout / portal round-trip (Stripe would redirect post-payment to
+      // a non-existent URL). Mirrors the team-invite handler's fallback
+      // pattern at routes.ts:1156 (the canonical version).
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : (process.env.REPLIT_DOMAINS?.split(',')[0]
+            ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+            : 'https://prescient-labs.com');
       
       // Create checkout session with optional 90-day trial (only if never used before).
       // 90 days matches the marketing copy on Pricing.tsx and Onboarding.tsx —
@@ -15849,7 +15893,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "No active subscription found" });
       }
 
-      const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
+      // F1 fix from round-24 audit: REPLIT_DOMAINS may be unset on
+      // custom-domain prod (prescient-labs.com) — the prior `https://${...?.split(',')[0]}`
+      // pattern would evaluate to `https://undefined` and break the entire
+      // checkout / portal round-trip (Stripe would redirect post-payment to
+      // a non-existent URL). Mirrors the team-invite handler's fallback
+      // pattern at routes.ts:1156 (the canonical version).
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : (process.env.REPLIT_DOMAINS?.split(',')[0]
+            ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+            : 'https://prescient-labs.com');
       
       const session = await stripeService.createCustomerPortalSession(
         user.stripeCustomerId,

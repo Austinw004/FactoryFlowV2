@@ -197,7 +197,35 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: false }));
 
+// F1 fix from round-24 observability audit: request-ID middleware.
+// Every request gets a UUID, available as `req.id` for downstream code,
+// echoed in the `X-Request-Id` response header, and prepended to the
+// access log line. When a customer reports "I got an error at 3:42pm",
+// they can paste the X-Request-Id from their browser devtools and the
+// operator can grep server logs for that exact ID — instead of trying
+// to correlate "around 3:42pm, /api/forecasts, status 500" which is
+// useless under any real load.
+//
+// Honors an inbound X-Request-Id if the client provided one (useful for
+// cross-system tracing once the rest of the stack respects it), but
+// caps the length at 64 chars to prevent log-injection via long IDs.
+import { randomUUID } from "crypto";
+
+declare module 'http' {
+  interface IncomingMessage {
+    id?: string;
+  }
+}
+
 app.use((req, res, next) => {
+  const inbound = req.headers['x-request-id'];
+  const inboundId = typeof inbound === 'string' && inbound.length > 0 && inbound.length <= 64
+    ? inbound.replace(/[^\w-]/g, '')  // strip anything non-alphanumeric/dash
+    : null;
+  const id = inboundId || randomUUID();
+  req.id = id;
+  res.setHeader('X-Request-Id', id);
+
   const start = Date.now();
   const path = req.path;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
@@ -211,13 +239,19 @@ app.use((req, res, next) => {
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+      // Include the request ID and bump the truncation limit (the prior
+      // 80-char cap was so tight that even short response bodies got
+      // chopped, defeating the purpose of capturing them).
+      let logLine = `[${id.slice(0, 8)}] ${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
 
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
+      // Bumped from 80 → 240 chars. Short enough to stay one line in
+      // most terminal widths, long enough to retain the meaningful tail
+      // of a typical error body.
+      if (logLine.length > 240) {
+        logLine = logLine.slice(0, 239) + "…";
       }
 
       log(logLine);
