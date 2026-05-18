@@ -386,14 +386,53 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Regime-driven hero — the FDR model is this product's competitive moat,
+          so the first thing the customer sees on the dashboard is the active
+          regime + the procurement posture it implies + a direct action path.
+          Eyebrow shows the regime name + live FDR; the headline is the
+          prescriptive posture; the action button routes to the page where the
+          customer can act on that posture today (not "view more"). */}
       <div className="mb-16">
-        <div className="eyebrow mb-4">State of operations</div>
-        <h1 className="hero text-5xl">{regime?.regime ? getRegimeDescription(regime.regime).split('.')[0] + '.' : 'Analyzing conditions.'}</h1>
-        <p className="text-soft mt-5 max-w-xl leading-relaxed">
+        <div className="eyebrow mb-4 flex items-center gap-3 flex-wrap">
+          <span>Active regime — {friendlyRegime}</span>
+          <span className="mono text-muted">FDR {fdr.toFixed(2)}</span>
+        </div>
+        <h1 className="hero text-5xl">{regimePosture}</h1>
+        <p className="text-soft mt-5 max-w-2xl leading-relaxed">
           {Array.isArray(skus) && skus.length > 0
-            ? `Tracking ${skus.length.toLocaleString()} SKU${skus.length === 1 ? '' : 's'}. ${regime?.regime === 'HEALTHY_EXPANSION' ? 'No critical exposures.' : 'Review current regime conditions.'}`
-            : 'Add your first SKU to start tracking operations.'}
+            ? `Tracking ${skus.length.toLocaleString()} SKU${skus.length === 1 ? '' : 's'} against the current regime. ${policySignals.length > 0 ? `${policySignals.length} recommended action${policySignals.length === 1 ? '' : 's'} below.` : 'Recommended actions appear below as conditions shift.'}`
+            : 'Add your first SKU to start tracking operations against the current regime.'}
         </p>
+        {regime?.regime && regime.regime !== 'UNKNOWN' && (
+          <div className="mt-6 flex items-center gap-3 flex-wrap">
+            <Button
+              size="sm"
+              onClick={() => {
+                if (regimeType === 'ASSET_LED_GROWTH' || regimeType === 'REAL_ECONOMY_LEAD') {
+                  setLocation('/procurement');
+                } else if (regimeType === 'IMBALANCED_EXCESS') {
+                  setLocation('/inventory');
+                } else {
+                  setLocation('/forecasting');
+                }
+              }}
+              data-testid="button-regime-primary-action"
+            >
+              {regimeType === 'ASSET_LED_GROWTH' && 'Lock in supplier contracts →'}
+              {regimeType === 'REAL_ECONOMY_LEAD' && 'Secure favorable supply terms →'}
+              {regimeType === 'IMBALANCED_EXCESS' && 'Review inventory buffers →'}
+              {regimeType === 'HEALTHY_EXPANSION' && 'Plan next procurement cycle →'}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setLocation('/digital-twin')}
+              data-testid="button-regime-evidence"
+            >
+              See why this regime
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-4 gap-px bg-line mb-20">
@@ -731,17 +770,40 @@ export default function Dashboard() {
         <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
           <div className="flex items-start gap-3">
             <TrendingUp className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-            <div className="text-sm space-y-1">
+            <div className="text-sm space-y-2 flex-1">
               <p className="font-semibold text-foreground">
                 Market Insight: {fdr >= 1.5 ? 'Financial markets are outpacing the real economy — consider deferring major purchases' : fdr >= 1.0 ? 'Moderate market divergence detected — standard procurement pace recommended' : 'Real economy is strong — favorable conditions for locking in supplier terms'}
               </p>
               <p className="text-muted-foreground">
-                Current FDR ratio of {fdr.toFixed(2)} indicates <strong>{friendlyRegime}</strong> regime. 
-                {dataSource === 'external' && ' The platform is gathering data from 15+ external APIs including FRED, Alpha Vantage, DBnomics, World Bank, IMF, OECD, and Trading Economics to calculate real-time FDR.'}
-                {dataSource === 'fallback' && ' Using simulated economic data while external APIs are unavailable.'}
-                {dataSource === 'balance_sheet' && ' Calculated from internal balance sheet and income statement data.'}
-                {' '}All forecasts, allocations, and procurement signals are automatically adjusted based on the current economic regime.
+                Current FDR ratio of {fdr.toFixed(2)} indicates <strong>{friendlyRegime}</strong> regime. {regimePosture}
+                {' '}{dataSource === 'external' && 'FDR computed from 15+ external APIs (FRED, Alpha Vantage, DBnomics, World Bank, IMF, OECD, Trading Economics).'}
+                {dataSource === 'fallback' && 'Using simulated economic data while external APIs are unavailable.'}
+                {dataSource === 'balance_sheet' && 'Calculated from internal balance sheet and income statement data.'}
               </p>
+              <div className="flex items-center gap-2 pt-1 flex-wrap">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setLocation('/digital-twin')}
+                  data-testid="button-tracker-regime-detail"
+                >
+                  View regime evidence
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setLocation(
+                    regimeType === 'ASSET_LED_GROWTH' || regimeType === 'REAL_ECONOMY_LEAD'
+                      ? '/procurement'
+                      : regimeType === 'IMBALANCED_EXCESS'
+                        ? '/inventory'
+                        : '/forecasting'
+                  )}
+                  data-testid="button-tracker-act"
+                >
+                  Act on this regime →
+                </Button>
+              </div>
             </div>
           </div>
         </div>

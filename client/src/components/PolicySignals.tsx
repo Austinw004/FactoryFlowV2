@@ -109,9 +109,14 @@ export function PolicySignals({ signals }: PolicySignalsProps) {
   return (
     <Card className="p-6" data-testid="card-policy-signals">
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-lg">Recommended Actions</h3>
-          <Badge variant="secondary" data-testid="badge-signal-count">{signals.length}</Badge>
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-lg">Recommended Actions</h3>
+            <Badge variant="secondary" data-testid="badge-signal-count">{signals.length}</Badge>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Driven by the active FDR regime. Each action is what the model recommends doing today, not just what's changed.
+          </p>
         </div>
         
         <div className="space-y-3">
