@@ -17106,7 +17106,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Import and use Slack service
       const { slackService } = await import("./lib/slackService");
-      slackService.configure(company.slackWebhookUrl, company.slackDefaultChannel || undefined);
+      // F0 #4 fix: decrypt the stored webhook URL before passing to the
+      // Slack client. decryptCompanySecret handles BOTH v1-encrypted and
+      // legacy plaintext values transparently.
+      const { decryptCompanySecret } = await import("./lib/companySecrets");
+      const slackUrl = decryptCompanySecret(company.slackWebhookUrl);
+      if (!slackUrl) {
+        return res.status(400).json({ error: "Slack webhook URL could not be decrypted — please reconfigure the integration" });
+      }
+      slackService.configure(slackUrl, company.slackDefaultChannel || undefined);
       
       const result = await slackService.testConnection();
       res.json(result);
@@ -17311,14 +17319,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`No Shopify secret configured for domain: ${shopDomain}`);
         return res.status(401).json({ error: "Shopify integration not configured" });
       }
-      
+
+      // F0 #4 fix: decrypt the stored Shopify secret before using it for
+      // HMAC verification. Without this, an encrypted ciphertext would be
+      // used as the HMAC key — legitimate Shopify webhooks would fail
+      // signature check while attacker-forged webhooks (using guessed
+      // plaintext secrets) would never match either, breaking the
+      // integration entirely.
+      const { decryptCompanySecret } = await import("./lib/companySecrets");
+      const shopifySecret = decryptCompanySecret(company.shopifySecret);
+      if (!shopifySecret) {
+        console.error(`Shopify secret could not be decrypted for domain: ${shopDomain}`);
+        return res.status(500).json({ error: "Shopify integration credentials corrupted — please reconfigure" });
+      }
+
       // Verify HMAC signature using the request body
       // Note: Since body is already parsed as JSON by express middleware,
       // we reconstruct it for HMAC verification. For production, consider
       // adding a raw body capture middleware.
       const crypto = await import("crypto");
       const bodyString = JSON.stringify(req.body);
-      const computedHmac = crypto.createHmac("sha256", company.shopifySecret)
+      const computedHmac = crypto.createHmac("sha256", shopifySecret)
         .update(bodyString, "utf8")
         .digest("base64");
       

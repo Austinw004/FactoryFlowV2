@@ -266,9 +266,18 @@ export async function getShopifyIntegration(companyId: string): Promise<ShopifyI
       return null;
     }
 
+    // F0 #4 fix: decrypt the stored Shopify API key. decryptCompanySecret
+    // handles BOTH v1-encrypted and legacy plaintext values transparently.
+    const { decryptCompanySecret } = await import("./companySecrets");
+    const accessToken = decryptCompanySecret(company.shopifyApiKey);
+    if (!accessToken) {
+      console.error(`[Shopify] API key could not be decrypted for company ${companyId} — reconfiguration needed`);
+      return null;
+    }
+
     return new ShopifyIntegration({
       shopDomain: company.shopifyDomain,
-      accessToken: company.shopifyApiKey,
+      accessToken,
       companyId,
     });
   } catch (error) {
