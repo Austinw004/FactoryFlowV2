@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
 import {
   MessageSquare,
   Send,
@@ -27,15 +26,10 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  Shield,
   Settings,
-  Activity,
   ShoppingCart,
   Boxes,
   Building,
-  ArrowRight,
-  ThumbsUp,
-  ThumbsDown,
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";

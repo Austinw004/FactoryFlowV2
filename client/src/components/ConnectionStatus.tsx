@@ -1,6 +1,6 @@
 import { useRealtime } from "@/contexts/RealtimeContext";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Wifi, WifiOff } from "lucide-react";
+import { WifiOff } from "lucide-react";
 
 export function ConnectionStatus() {
   const { isConnected, messageCount, reconnect } = useRealtime();

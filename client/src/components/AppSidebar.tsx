@@ -7,13 +7,11 @@ import {
   Wrench,
   Network,
   Lightbulb,
-  Eye,
   Bot,
   Plug,
   Webhook,
   AlertTriangle,
   BarChart3,
-  ChevronRight,
   Zap,
   Shield,
 } from "lucide-react";
