@@ -16997,28 +16997,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Configure Slack integration
   app.post("/api/integrations/slack/configure", isAuthenticated, async (req: any, res) => {
     try {
-      const { webhookUrl, defaultChannel, enabled } = req.body;
       const authUserId = req.user.claims.sub;
       const user = await storage.getUser(authUserId);
       if (!user?.companyId) {
         return res.status(401).json({ error: "No company associated" });
       }
-      
-      // Validate webhook URL format
-      if (webhookUrl && !webhookUrl.startsWith("https://hooks.slack.com/")) {
-        return res.status(400).json({ error: "Invalid Slack webhook URL format" });
+
+      // F1 fix from round-24 audit: require manage_integrations RBAC. Previously
+      // ANY authenticated user (including viewer role) could overwrite the
+      // company's Slack webhook URL — a posting credential that grants
+      // arbitrary message delivery into the customer's Slack workspace.
+      const { userHasPermission } = await import("./lib/rbac");
+      if (!(await userHasPermission(authUserId, user.companyId, "manage_integrations"))) {
+        return res.status(403).json({ error: "Insufficient permissions — requires manage_integrations" });
       }
-      
+
+      // F1 fix: Zod validation. The handler previously took req.body fields
+      // raw, allowing any payload shape and unbounded string lengths.
+      const body = z.object({
+        webhookUrl:     z.string().url().startsWith("https://hooks.slack.com/", "Must be a Slack webhook URL").max(500).optional().nullable(),
+        defaultChannel: z.string().max(80).regex(/^#[\w-]+$/, "Must be a Slack channel like #alerts").optional(),
+        enabled:        z.boolean().optional(),
+      }).parse(req.body || {});
+
+      // Encrypt the webhook URL at rest — it's effectively a token that
+      // grants posting access to the workspace.
+      const { encryptCompanySecret } = await import("./lib/companySecrets");
       await storage.updateCompany(user.companyId, {
-        slackWebhookUrl: webhookUrl || null,
-        slackDefaultChannel: defaultChannel || "#prescient-alerts",
-        slackEnabled: enabled ? 1 : 0,
+        slackWebhookUrl: encryptCompanySecret(body.webhookUrl ?? null),
+        slackDefaultChannel: body.defaultChannel || "#prescient-alerts",
+        slackEnabled: body.enabled ? 1 : 0,
       });
-      
+
       res.json({ success: true, message: "Slack integration configured" });
     } catch (error: any) {
       console.error("Error configuring Slack:", error);
-      res.status(500).json({ error: error.message });
+      res.status(error?.name === "ZodError" ? 400 : 500).json({ error: error.message });
     }
   });
   
@@ -17138,28 +17152,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Configure Shopify integration
   app.post("/api/integrations/shopify/configure", isAuthenticated, async (req: any, res) => {
     try {
-      const { shopDomain, apiKey, apiSecret, syncOptions } = req.body;
       const authUserId = req.user.claims.sub;
       const user = await storage.getUser(authUserId);
       if (!user?.companyId) {
         return res.status(401).json({ error: "No company associated" });
       }
-      
-      // Store Shopify configuration
+
+      // F1 fix: RBAC + Zod (see Slack configure handler comment).
+      const { userHasPermission } = await import("./lib/rbac");
+      if (!(await userHasPermission(authUserId, user.companyId, "manage_integrations"))) {
+        return res.status(403).json({ error: "Insufficient permissions — requires manage_integrations" });
+      }
+
+      const body = z.object({
+        shopDomain:  z.string().min(1).max(200).regex(/^[a-z0-9-]+\.myshopify\.com$/i, "Must be like store-name.myshopify.com").optional().nullable(),
+        apiKey:      z.string().max(500).optional().nullable(),
+        apiSecret:   z.string().max(500).optional().nullable(),
+        syncOptions: z.object({
+          syncOrders:    z.boolean().optional(),
+          syncProducts:  z.boolean().optional(),
+          syncInventory: z.boolean().optional(),
+        }).optional(),
+      }).parse(req.body || {});
+
+      // Encrypt API key + secret at rest.
+      const { encryptCompanySecret } = await import("./lib/companySecrets");
       await storage.updateCompany(user.companyId, {
-        shopifyDomain: shopDomain || null,
-        shopifyApiKey: apiKey || null,
-        shopifySecret: apiSecret || null,
-        shopifySyncOrders: syncOptions?.syncOrders ? 1 : 0,
-        shopifySyncProducts: syncOptions?.syncProducts ? 1 : 0,
-        shopifySyncInventory: syncOptions?.syncInventory ? 1 : 0,
-        shopifyEnabled: shopDomain ? 1 : 0,
+        shopifyDomain: body.shopDomain || null,
+        shopifyApiKey: encryptCompanySecret(body.apiKey),
+        shopifySecret: encryptCompanySecret(body.apiSecret),
+        shopifySyncOrders: body.syncOptions?.syncOrders ? 1 : 0,
+        shopifySyncProducts: body.syncOptions?.syncProducts ? 1 : 0,
+        shopifySyncInventory: body.syncOptions?.syncInventory ? 1 : 0,
+        shopifyEnabled: body.shopDomain ? 1 : 0,
       });
-      
+
       res.json({ success: true, message: "Shopify integration configured" });
     } catch (error: any) {
       console.error("Error configuring Shopify:", error);
-      res.status(500).json({ error: error.message });
+      res.status(error?.name === "ZodError" ? 400 : 500).json({ error: error.message });
     }
   });
 
@@ -17302,23 +17333,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Configure Twilio integration
   app.post("/api/integrations/twilio/configure", isAuthenticated, async (req: any, res) => {
     try {
-      const { enabled } = req.body;
       const authUserId = req.user.claims.sub;
       const user = await storage.getUser(authUserId);
       if (!user?.companyId) {
         return res.status(401).json({ error: "No company associated" });
       }
-      
-      // Twilio credentials come from environment variables (secrets)
-      // We only store enabled flag per company
+
+      // F1 fix: RBAC + Zod (see Slack configure handler comment).
+      const { userHasPermission } = await import("./lib/rbac");
+      if (!(await userHasPermission(authUserId, user.companyId, "manage_integrations"))) {
+        return res.status(403).json({ error: "Insufficient permissions — requires manage_integrations" });
+      }
+
+      const body = z.object({
+        enabled: z.boolean().optional(),
+      }).parse(req.body || {});
+
+      // Note: Twilio credentials are platform-level env vars (TWILIO_ACCOUNT_SID,
+      // TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER) — this handler only flips the
+      // per-company enabled flag, so no encryption-at-rest needed here.
       await storage.updateCompany(user.companyId, {
-        twilioEnabled: enabled ? 1 : 0,
+        twilioEnabled: body.enabled ? 1 : 0,
       });
-      
+
       res.json({ success: true, message: "Twilio integration configured" });
     } catch (error: any) {
       console.error("Error configuring Twilio:", error);
-      res.status(500).json({ error: error.message });
+      res.status(error?.name === "ZodError" ? 400 : 500).json({ error: error.message });
     }
   });
   
@@ -17357,27 +17398,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Configure HubSpot integration
   app.post("/api/integrations/hubspot/configure", isAuthenticated, async (req: any, res) => {
     try {
-      const { accessToken, enabled } = req.body;
       const authUserId = req.user.claims.sub;
       const user = await storage.getUser(authUserId);
       if (!user?.companyId) {
         return res.status(401).json({ error: "No company associated" });
       }
-      
-      const updates: any = {
-        hubspotEnabled: enabled ? 1 : 0,
-      };
-      
-      if (accessToken) {
-        updates.hubspotAccessToken = accessToken;
+
+      // F1 fix: RBAC + Zod (see Slack configure handler comment).
+      const { userHasPermission } = await import("./lib/rbac");
+      if (!(await userHasPermission(authUserId, user.companyId, "manage_integrations"))) {
+        return res.status(403).json({ error: "Insufficient permissions — requires manage_integrations" });
       }
-      
+
+      const body = z.object({
+        accessToken: z.string().min(1).max(500).optional().nullable(),
+        enabled:     z.boolean().optional(),
+      }).parse(req.body || {});
+
+      // F0 #4 partial fix: encrypt HubSpot access token at rest. Old
+      // plaintext rows still read fine via decryptCompanySecret() in the
+      // consumer (transparent fallback); next write rotates the row
+      // through the encrypt path. Full migration across all integrations
+      // requires a separate session.
+      const { encryptCompanySecret } = await import("./lib/companySecrets");
+      const updates: any = {
+        hubspotEnabled: body.enabled ? 1 : 0,
+      };
+      if (body.accessToken !== undefined) {
+        updates.hubspotAccessToken = encryptCompanySecret(body.accessToken);
+      }
+
       await storage.updateCompany(user.companyId, updates);
-      
+
       res.json({ success: true, message: "HubSpot integration configured" });
     } catch (error: any) {
       console.error("Error configuring HubSpot:", error);
-      res.status(500).json({ error: error.message });
+      res.status(error?.name === "ZodError" ? 400 : 500).json({ error: error.message });
     }
   });
   
@@ -17396,7 +17452,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const { hubspotService } = await import("./lib/hubspotService");
-      hubspotService.configure(company.hubspotAccessToken);
+      // F0 #4 fix: decrypt the stored token before passing it to the
+      // HubSpot client. decryptCompanySecret() handles BOTH v1-encrypted
+      // and legacy plaintext values transparently — old rows keep
+      // working until next configure-write rotates them through encrypt.
+      const { decryptCompanySecret } = await import("./lib/companySecrets");
+      const hubspotToken = decryptCompanySecret(company.hubspotAccessToken);
+      if (!hubspotToken) {
+        return res.status(400).json({ error: "HubSpot access token could not be decrypted — please reconfigure the integration" });
+      }
+      hubspotService.configure(hubspotToken);
       
       const result = await hubspotService.testConnection();
       res.json(result);
@@ -17421,7 +17486,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const { hubspotService } = await import("./lib/hubspotService");
-      hubspotService.configure(company.hubspotAccessToken);
+      // F0 #4 fix: decrypt the stored token before passing it to the
+      // HubSpot client. decryptCompanySecret() handles BOTH v1-encrypted
+      // and legacy plaintext values transparently — old rows keep
+      // working until next configure-write rotates them through encrypt.
+      const { decryptCompanySecret } = await import("./lib/companySecrets");
+      const hubspotToken = decryptCompanySecret(company.hubspotAccessToken);
+      if (!hubspotToken) {
+        return res.status(400).json({ error: "HubSpot access token could not be decrypted — please reconfigure the integration" });
+      }
+      hubspotService.configure(hubspotToken);
       
       const contacts = await hubspotService.getContacts();
       res.json({ contacts });
@@ -17446,7 +17520,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const { hubspotService } = await import("./lib/hubspotService");
-      hubspotService.configure(company.hubspotAccessToken);
+      // F0 #4 fix: decrypt the stored token before passing it to the
+      // HubSpot client. decryptCompanySecret() handles BOTH v1-encrypted
+      // and legacy plaintext values transparently — old rows keep
+      // working until next configure-write rotates them through encrypt.
+      const { decryptCompanySecret } = await import("./lib/companySecrets");
+      const hubspotToken = decryptCompanySecret(company.hubspotAccessToken);
+      if (!hubspotToken) {
+        return res.status(400).json({ error: "HubSpot access token could not be decrypted — please reconfigure the integration" });
+      }
+      hubspotService.configure(hubspotToken);
       
       const deals = await hubspotService.getDeals();
       res.json({ deals });
@@ -17477,7 +17560,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const { hubspotService } = await import("./lib/hubspotService");
-      hubspotService.configure(company.hubspotAccessToken);
+      // F0 #4 fix: decrypt the stored token before passing it to the
+      // HubSpot client. decryptCompanySecret() handles BOTH v1-encrypted
+      // and legacy plaintext values transparently — old rows keep
+      // working until next configure-write rotates them through encrypt.
+      const { decryptCompanySecret } = await import("./lib/companySecrets");
+      const hubspotToken = decryptCompanySecret(company.hubspotAccessToken);
+      if (!hubspotToken) {
+        return res.status(400).json({ error: "HubSpot access token could not be decrypted — please reconfigure the integration" });
+      }
+      hubspotService.configure(hubspotToken);
       
       const result = await hubspotService.syncSupplierToHubSpot({
         name: supplier.name,
