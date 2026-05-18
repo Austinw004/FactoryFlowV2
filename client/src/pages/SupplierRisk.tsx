@@ -64,6 +64,7 @@ import {
   PolarRadiusAxis,
 } from "recharts";
 import { format } from "date-fns";
+import { formatRegimeName } from "@/lib/utils";
 
 interface RiskFactors {
   financial: { score: number; weight: number };
@@ -604,6 +605,10 @@ export default function SupplierRisk() {
     queryKey: ["/api/supplier-risk/summary"],
   });
 
+  const { data: liveRegime } = useQuery<{ regime: string; fdr: number }>({
+    queryKey: ["/api/economics/regime"],
+  });
+
   const isLoading = snapshotsLoading || summaryLoading;
 
   const handleViewDetails = (snapshot: SupplierRiskSnapshot) => {
@@ -641,20 +646,33 @@ export default function SupplierRisk() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="space-y-1">
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <ShieldAlert className="h-6 w-6 text-primary" />
             Supplier Risk Scoring
           </h1>
           <p className="text-muted-foreground">
-            FDR-aware risk assessment for your supplier network.
+            FDR-aware risk assessment for your supplier network — scores are weighted by the active economic regime.
           </p>
         </div>
-        <Button onClick={() => setCalculateDialogOpen(true)} data-testid="button-recalculate-risk">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Recalculate Scores
-        </Button>
+        <div className="flex items-center gap-3 flex-wrap">
+          {liveRegime?.regime && (
+            <div
+              className="text-xs text-muted-foreground border-l-2 border-primary/40 pl-3"
+              data-testid="text-supplier-risk-regime-context"
+            >
+              <div className="uppercase tracking-wider">Scoring against</div>
+              <div className="font-medium text-foreground">
+                {formatRegimeName(liveRegime.regime)} · FDR {Number.isFinite(Number(liveRegime.fdr)) ? Number(liveRegime.fdr).toFixed(2) : '—'}
+              </div>
+            </div>
+          )}
+          <Button onClick={() => setCalculateDialogOpen(true)} data-testid="button-recalculate-risk">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Recalculate Scores
+          </Button>
+        </div>
       </div>
 
       {summary && (

@@ -313,6 +313,42 @@ export default function Procurement() {
         </Button>
       </div>
 
+      {/* Regime command banner — the procurement decisions on this page are
+          driven by the FDR regime, so the customer should see the active
+          regime + posture without scrolling. Uses the same posture copy as
+          the Dashboard so the language is consistent across the product. */}
+      {regime?.regime && (
+        <Card
+          className={`border-l-4 ${
+            regime.regime === 'IMBALANCED_EXCESS'
+              ? 'border-l-destructive bg-destructive/5'
+              : regime.regime === 'ASSET_LED_GROWTH'
+                ? 'border-l-signal bg-signal/5'
+                : regime.regime === 'REAL_ECONOMY_LEAD'
+                  ? 'border-l-good bg-good/5'
+                  : 'border-l-primary bg-primary/5'
+          }`}
+          data-testid="card-procurement-regime-banner"
+        >
+          <CardContent className="p-4 flex items-start justify-between gap-4 flex-wrap">
+            <div className="flex-1 min-w-0">
+              <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
+                Active regime · FDR {Number.isFinite(Number(regime.fdr)) ? Number(regime.fdr).toFixed(2) : '—'}
+              </div>
+              <div className="font-semibold mb-1" data-testid="text-procurement-regime-name">
+                {formatRegimeName(regime.regime)}
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {regime.regime === 'HEALTHY_EXPANSION' && 'Forward-buy critical materials, lock contracts, scale capacity. Optimistic with discipline.'}
+                {regime.regime === 'ASSET_LED_GROWTH' && 'Shorten lead times, hedge cost inflation, watch credit conditions. Input costs likely to rise 8-12% this quarter.'}
+                {regime.regime === 'IMBALANCED_EXCESS' && 'Defer non-critical buys, renegotiate expiring contracts, build buffer on production-critical materials only.'}
+                {regime.regime === 'REAL_ECONOMY_LEAD' && 'Counter-cyclical window. Lock in favorable supplier terms while asset markets correct.'}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card 

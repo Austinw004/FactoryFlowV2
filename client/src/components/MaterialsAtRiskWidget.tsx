@@ -14,11 +14,45 @@ interface MaterialRisk {
   inventoryLevel: number; // percentage
 }
 
+// Regime-aware guidance translates a stockout risk into a specific
+// procurement posture. The same low-stock material warrants very different
+// action depending on whether the FDR model says prices are about to spike
+// (Asset-Led Growth → buy now, lock contracts) versus fall (Imbalanced
+// Excess → draw down, defer). Without this, a "Schedule Procurement" button
+// is generic — with it, the widget tells the customer what to actually do.
+const regimeRiskAdvice: Record<string, { headline: string; cta: string }> = {
+  HEALTHY_EXPANSION: {
+    headline: "Standard reorder cadence. Replenish to target safety stock; pricing is stable.",
+    cta: "Schedule reorder",
+  },
+  ASSET_LED_GROWTH: {
+    headline: "Prices likely to rise. Pull forward purchases on critical items and lock supplier contracts.",
+    cta: "Lock in pricing",
+  },
+  IMBALANCED_EXCESS: {
+    headline: "Defer non-critical buys; renegotiate. Build buffer only on production-critical materials.",
+    cta: "Review alternatives",
+  },
+  REAL_ECONOMY_LEAD: {
+    headline: "Favorable buying window. Negotiate longer-term contracts before recovery tightens supply.",
+    cta: "Negotiate contract",
+  },
+  UNKNOWN: {
+    headline: "Regime signals loading. Default action: schedule replenishment.",
+    cta: "Schedule procurement",
+  },
+};
+
 export function MaterialsAtRiskWidget() {
   const [, setLocation] = useLocation();
   const { data: materials = [], isLoading } = useQuery<Material[]>({
     queryKey: ['/api/materials'],
   });
+  const { data: regime } = useQuery<{ regime?: string; fdr?: number }>({
+    queryKey: ['/api/economics/regime'],
+  });
+  const regimeType = regime?.regime || 'UNKNOWN';
+  const advice = regimeRiskAdvice[regimeType] || regimeRiskAdvice.UNKNOWN;
   
   // Calculate risk for each material
   const materialsAtRisk: MaterialRisk[] = materials
@@ -106,10 +140,19 @@ export function MaterialsAtRiskWidget() {
               Materials at Risk
             </CardTitle>
             <CardDescription>
-              {materialsAtRisk.length} materials requiring attention
+              {materialsAtRisk.length} material{materialsAtRisk.length === 1 ? '' : 's'} requiring attention — ranked by stockout risk
             </CardDescription>
           </div>
           <Badge variant="destructive">{materialsAtRisk.length}</Badge>
+        </div>
+        {/* Regime-aware procurement guidance — the same risk warrants
+            different action depending on the FDR-detected regime. */}
+        <div
+          className="mt-3 text-xs text-muted-foreground leading-relaxed border-l-2 border-signal/50 pl-3"
+          data-testid="text-risk-regime-guidance"
+        >
+          <span className="font-medium text-foreground">Posture: </span>
+          {advice.headline}
         </div>
       </CardHeader>
       <CardContent>
@@ -170,7 +213,7 @@ export function MaterialsAtRiskWidget() {
                   data-testid={`button-procure-${item.material.id}`}
                 >
                   <TrendingDown className="h-3 w-3 mr-1" />
-                  Schedule Procurement
+                  {advice.cta}
                 </Button>
               </div>
             </div>
