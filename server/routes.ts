@@ -8684,8 +8684,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/erp-connections/:id", isAuthenticated, async (req: any, res) => {
     try {
+      // F0 tenant-isolation fix: enforce companyId ownership before returning
+      // the connection. Previously this handler called getErpConnection(id)
+      // with no companyId filter — any authenticated tenant could read any
+      // other tenant's ERP credentials (SAP, Oracle, NetSuite tokens stored
+      // as part of the connection record). Returning 404 instead of 403 to
+      // avoid leaking the existence of other tenants' connection IDs.
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
       const connection = await storage.getErpConnection(req.params.id);
-      if (!connection) {
+      if (!connection || connection.companyId !== user.companyId) {
         return res.status(404).json({ error: "ERP connection not found" });
       }
       res.json(connection);
@@ -8713,7 +8723,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/erp-connections/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const connection = await storage.updateErpConnection(req.params.id, req.body);
+      // F0 tenant-isolation fix: verify ownership BEFORE update.
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+      const existing = await storage.getErpConnection(req.params.id);
+      if (!existing || existing.companyId !== user.companyId) {
+        return res.status(404).json({ error: "ERP connection not found" });
+      }
+      // Strip any companyId in the update body — tenant cannot reassign
+      // ownership to themselves or anyone else.
+      const { companyId: _ignored, ...safeUpdate } = req.body || {};
+      const connection = await storage.updateErpConnection(req.params.id, safeUpdate);
       if (!connection) {
         return res.status(404).json({ error: "ERP connection not found" });
       }
@@ -8725,6 +8747,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/erp-connections/:id", isAuthenticated, async (req: any, res) => {
     try {
+      // F0 tenant-isolation fix: verify ownership BEFORE delete.
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
+      const existing = await storage.getErpConnection(req.params.id);
+      if (!existing || existing.companyId !== user.companyId) {
+        return res.status(404).json({ error: "ERP connection not found" });
+      }
       await storage.deleteErpConnection(req.params.id);
       res.status(204).send();
     } catch (error: any) {
@@ -12902,8 +12933,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Trigger full ERP data sync
   app.post("/api/erp/sync/:connectionId", isAuthenticated, rateLimiters.api, async (req: any, res) => {
     try {
+      // F0 tenant-isolation fix: verify ownership BEFORE triggering a sync.
+      // Previously this handler called getErpConnection(connectionId) with no
+      // companyId filter — any authenticated tenant could trigger a sync
+      // using another tenant's ERP credentials, potentially pulling another
+      // tenant's data into the wrong company or burning the victim's
+      // ERP API quota.
+      const user = await storage.getUser(req.user.claims.sub);
+      if (!user?.companyId) {
+        return res.status(400).json({ error: "User has no company" });
+      }
       const connection = await storage.getErpConnection(req.params.connectionId);
-      if (!connection) {
+      if (!connection || connection.companyId !== user.companyId) {
         return res.status(404).json({ error: "Connection not found" });
       }
 

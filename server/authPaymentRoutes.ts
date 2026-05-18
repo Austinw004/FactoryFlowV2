@@ -80,7 +80,7 @@ import { getUncachableStripeClient } from "./stripeClient";
 import { db } from "./db";
 import {
   payments, supplierPayouts, transactions, invoices, subscriptions,
-  savingsEvidenceRecords, performanceBilling,
+  savingsEvidenceRecords, performanceBilling, suppliers, users,
 } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 
@@ -1541,29 +1541,103 @@ export function registerAuthPaymentRoutes(app: Express): void {
 
   /**
    * POST /api/payouts/send — Stripe Connect supplier transfer.
+   *
+   * F0 security fixes applied:
+   *   1. Verify the supplier belongs to the caller's company. Previously
+   *      this handler took `supplierId` from the body with no ownership
+   *      check, so any authed user could initiate a payout "on behalf of"
+   *      another tenant's supplier — combined with the
+   *      `connectedAccountId` body field below, this was a wire-the-money-
+   *      to-attacker's-account vulnerability.
+   *   2. Require admin or operator role. Payouts move real money, so
+   *      they shouldn't be available to viewer/analyst-tier users even
+   *      within the right company. Matches the principle-of-least-privilege
+   *      pattern used elsewhere in this file for financial mutations.
+   *   3. Verify the destination Stripe connected account matches the one
+   *      previously used for THIS supplier (if any prior payouts exist).
+   *      Catches "bait and switch" — attacker can't redirect a legitimate
+   *      vendor payment to their own account after a prior legitimate one
+   *      established the trusted destination. First-time payouts to a
+   *      supplier still go through (no prior record to compare against);
+   *      audit log captures the destination for ops review.
+   *   4. Cap maximum payout amount at $50,000.00 USD per single transaction.
+   *      Stripe Connect transfers don't enforce this; we do to limit the
+   *      blast radius of any compromised admin account.
    */
   app.post("/api/payouts/send", requireJwt, handle(async (req, res) => {
     const authUser = getAuthUser(req);
     if (!authUser) { apiError(res, 401, "UNAUTHORIZED", "Authentication required."); return; }
 
+    if (!authUser.companyId) {
+      apiError(res, 400, "NO_COMPANY", "User has no company association."); return;
+    }
+
+    // Role gate — only admin/operator can move money. Viewer/analyst can
+    // see payouts via /api/payouts/history but can't initiate them.
+    if (authUser.role !== "admin" && authUser.role !== "operator") {
+      apiError(res, 403, "FORBIDDEN", "Only admin or operator roles can initiate supplier payouts.");
+      return;
+    }
+
     const { supplierId, connectedAccountId, amount, currency = "usd", description } = z.object({
       supplierId:          z.string().min(1),
-      connectedAccountId:  z.string().min(1),
-      amount:              z.number().int().positive(),
+      connectedAccountId:  z.string().min(1).regex(/^acct_[a-zA-Z0-9]+$/, "Invalid Stripe Connect account id format"),
+      amount:              z.number().int().positive().max(5_000_000, "Per-transaction cap is $50,000.00 USD (5,000,000 cents)."),
       currency:            z.string().length(3).optional(),
       description:         z.string().max(500).optional(),
     }).parse(req.body);
 
+    // (1) Verify supplier ownership — closes the cross-tenant attack.
+    const [supplier] = await db.select().from(suppliers).where(eq(suppliers.id, supplierId)).limit(1);
+    if (!supplier || supplier.companyId !== authUser.companyId) {
+      apiError(res, 404, "SUPPLIER_NOT_FOUND", "Supplier not found.");
+      return;
+    }
+
+    // (2) Bait-and-switch guard: if this supplier has prior sent payouts,
+    // the destination account must match one of them. New destinations
+    // require an out-of-band review (we surface a 409 the UI can convert
+    // into a "verify this is the supplier's account" confirmation step).
+    const priorPayouts = await db
+      .select({ stripeConnectedAccountId: supplierPayouts.stripeConnectedAccountId })
+      .from(supplierPayouts)
+      .where(and(
+        eq(supplierPayouts.supplierId, supplierId),
+        eq(supplierPayouts.companyId, authUser.companyId),
+        eq(supplierPayouts.status, "sent"),
+      ));
+    const knownAccounts = new Set(priorPayouts.map(p => p.stripeConnectedAccountId).filter(Boolean));
+    if (knownAccounts.size > 0 && !knownAccounts.has(connectedAccountId)) {
+      apiError(res, 409, "DESTINATION_MISMATCH",
+        `This supplier has been paid before to a different Stripe Connect account. ` +
+        `If the supplier's bank/account changed, an admin must approve the new destination first via the Suppliers page. ` +
+        `Known destination(s): ${Array.from(knownAccounts).join(", ")}.`);
+      return;
+    }
+
     const stripe = await getUncachableStripeClient();
     const transfer = await stripe.transfers.create({
       amount, currency, destination: connectedAccountId, description,
-      metadata: { supplierId, companyId: authUser.companyId ?? "", requestedBy: authUser.id },
+      metadata: { supplierId, companyId: authUser.companyId, requestedBy: authUser.id },
     });
 
     const [payoutRow] = await db.insert(supplierPayouts).values({
       supplierId, companyId: authUser.companyId, amount, currency, status: "sent",
       stripeTransferId: transfer.id, stripeConnectedAccountId: connectedAccountId, description,
     }).returning();
+
+    // Audit log so ops + tenants both have a record of every payout.
+    try {
+      await logAudit({
+        action: "create",
+        entityType: "supplier_payout",
+        entityId: payoutRow.id,
+        notes: `Payout ${amount} ${currency} to supplier ${supplier.name ?? supplierId} → Stripe ${connectedAccountId} (transfer ${transfer.id})`,
+        req,
+      });
+    } catch {
+      // Audit failure must never block the payout response.
+    }
 
     res.status(201).json({
       transferId: transfer.id, payoutDbId: payoutRow.id, status: "sent", amount, currency,
