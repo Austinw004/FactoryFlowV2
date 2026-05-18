@@ -263,6 +263,16 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
+    // Round-34: initialize Sentry early. No-op if SENTRY_DSN is unset
+    // (the common case until the operator signs up); safe otherwise.
+    // Doing this BEFORE any other boot step means any error during
+    // route registration or schema self-heal also flows to Sentry.
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { getSentry } = require('./lib/sentry');
+      getSentry();
+    } catch { /* never block boot on observability setup */ }
+
     // Schema self-heal — runs idempotent ALTER TABLE IF NOT EXISTS for any
     // columns added to shared/schema.ts but not yet pushed to the live DB.
     // Bounded by a 10s timeout so a hung query can't block boot. See
@@ -286,6 +296,24 @@ app.use((req, res, next) => {
       console.error('[Server Error]', err.stack || err.message || err);
       const isProduction = process.env.NODE_ENV === 'production';
       const status = err.status || 500;
+
+      // Round-34: send 5xx errors to Sentry (no-op if SENTRY_DSN unset).
+      // 4xx errors are usually client mistakes — not worth alerting on.
+      if (status >= 500) {
+        try {
+          // Lazy require so a missing @sentry/node install can't crash
+          // the error handler itself.
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          const { captureException } = require('./lib/sentry');
+          captureException(err, {
+            requestId: req?.id,
+            path: req?.path,
+            method: req?.method,
+            userId: req?.jwtUser?.sub || req?.user?.claims?.sub,
+            companyId: req?.jwtUser?.companyId,
+          });
+        } catch { /* never let observability break the response */ }
+      }
 
       // Round-14 audit: prior handler returned "Internal server error" for
       // EVERY error including 4xx client mistakes (malformed JSON → 400,

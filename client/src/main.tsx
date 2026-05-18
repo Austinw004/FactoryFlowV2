@@ -3,6 +3,55 @@ import App from "./App";
 import "./index.css";
 
 /**
+ * Round-34: Sentry client-side init — env-gated, defensive.
+ *
+ * Reads VITE_SENTRY_DSN at build time (Vite inlines import.meta.env.*).
+ * Without it, this is a no-op. If @sentry/react isn't installed yet
+ * (e.g., dependency added in code but the deploy's npm install hasn't
+ * caught up), the dynamic import fails silently rather than crashing
+ * the app shell.
+ *
+ * Operator setup:
+ *   1. Same Sentry project as server (or a separate "browser" project).
+ *   2. Set VITE_SENTRY_DSN in Replit Secrets (must be prefixed VITE_
+ *      for Vite to expose it to the client bundle).
+ *   3. Republish. Client errors flow to Sentry the next page load.
+ *
+ * Sample rate: 10% of pages traced, 100% of errors captured. Plenty
+ * of headroom on Sentry's free tier for typical SaaS traffic shapes.
+ */
+const SENTRY_DSN = (import.meta as any).env?.VITE_SENTRY_DSN as string | undefined;
+if (SENTRY_DSN) {
+  // Dynamic import so a missing dep doesn't break the shell.
+  import("@sentry/react").then((Sentry) => {
+    try {
+      Sentry.init({
+        dsn: SENTRY_DSN,
+        environment: (import.meta as any).env?.MODE || "production",
+        release: (import.meta as any).env?.VITE_SENTRY_RELEASE || undefined,
+        tracesSampleRate: 0.1,
+        // Ignore browser-noise errors that aren't actionable.
+        ignoreErrors: [
+          "ResizeObserver loop limit exceeded",
+          "ResizeObserver loop completed with undelivered notifications",
+          "Non-Error promise rejection captured",
+          // Chunk-load errors we already recover from in maybeRecoverFromStaleChunk
+          "Failed to fetch dynamically imported module",
+          "Loading chunk",
+          "Loading CSS chunk",
+        ],
+      });
+      // Auth token can leak to Sentry via fetch breadcrumbs — wipe it.
+      Sentry.setTag("client", "factoryflow-web");
+    } catch (err) {
+      console.warn("[Sentry] Init failed:", err);
+    }
+  }).catch((err) => {
+    console.warn("[Sentry] Dynamic import failed (package not installed?):", err);
+  });
+}
+
+/**
  * Auto-recover from stale lazy-chunk references after a deploy.
  *
  * Vite hashes every code-split chunk (e.g. Dashboard-CvSWu1Xm.js). When we
