@@ -125,6 +125,9 @@ import {
   automationSafeMode,
   rfqs,
   users,
+  insertAuditFindingSchema,
+  updateAuditFindingSchema,
+  insertComplianceCalendarEventSchema,
 } from "@shared/schema";
 
 const economics = new DualCircuitEconomics();
@@ -5279,13 +5282,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "User must be associated with a company" });
       }
 
+      // Strip companyId from the client payload — we always force-assign it
+      // server-side from the authenticated user to prevent cross-tenant writes.
+      const clientPayload = insertAuditFindingSchema.omit({ companyId: true }).parse(req.body);
       const finding = await storage.createAuditFinding({
-        ...req.body,
+        ...clientPayload,
         companyId: user.companyId,
       });
-      
+
       res.status(201).json(finding);
     } catch (error: any) {
+      if (error?.name === "ZodError") {
+        return res.status(400).json({ error: "Validation failed", details: error.issues });
+      }
       console.error("Error creating audit finding:", error);
       res.status(500).json({ error: error.message });
     }
@@ -5300,13 +5309,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "User must be associated with a company" });
       }
 
-      const finding = await storage.updateAuditFinding(req.params.id, req.body);
+      const updates = updateAuditFindingSchema.parse(req.body);
+      const finding = await storage.updateAuditFinding(req.params.id, updates);
       if (!finding) {
         return res.status(404).json({ error: "Finding not found" });
       }
-      
+
       res.json(finding);
     } catch (error: any) {
+      if (error?.name === "ZodError") {
+        return res.status(400).json({ error: "Validation failed", details: error.issues });
+      }
       console.error("Error updating audit finding:", error);
       res.status(500).json({ error: error.message });
     }
@@ -5342,13 +5355,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "User must be associated with a company" });
       }
 
+      const clientPayload = insertComplianceCalendarEventSchema.omit({ companyId: true }).parse(req.body);
       const event = await storage.createComplianceCalendarEvent({
-        ...req.body,
+        ...clientPayload,
         companyId: user.companyId,
       });
-      
+
       res.status(201).json(event);
     } catch (error: any) {
+      if (error?.name === "ZodError") {
+        return res.status(400).json({ error: "Validation failed", details: error.issues });
+      }
       console.error("Error creating calendar event:", error);
       res.status(500).json({ error: error.message });
     }
