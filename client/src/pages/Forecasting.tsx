@@ -104,6 +104,25 @@ export default function Forecasting() {
 
       {regime && (() => {
         const regimeInfo = getFriendlyRegimeName(regime.regime);
+        // Forecast-specific posture — what the active regime means for
+        // how the customer should react to demand projections. This was
+        // previously a generic "forecasts are adjusted automatically"
+        // line, which is descriptive but not prescriptive. The customer
+        // needs to know what action the forecast + regime together
+        // imply, not just that the model is "smart".
+        const forecastGuidance: Record<string, string> = {
+          HEALTHY_EXPANSION:
+            "Plan to forecast — input costs are stable, so demand uplift can be met without front-loading inventory.",
+          ASSET_LED_GROWTH:
+            "Trust the forecast direction, then add 1-2 weeks of cover on critical inputs before suppliers reprice (historically 8-12% rise this regime).",
+          IMBALANCED_EXCESS:
+            "Treat upside forecasts cautiously — demand often softens as the cycle turns. Hold back discretionary buys; protect production-critical materials only.",
+          REAL_ECONOMY_LEAD:
+            "Counter-cyclical window. Use forecast lift to negotiate longer-term contracts at favorable terms before supply tightens.",
+          UNKNOWN:
+            "Regime signal still loading — forecasts shown without regime overlay.",
+        };
+        const guidance = forecastGuidance[regime.regime] || forecastGuidance.UNKNOWN;
         return (
           <Card data-testid="card-regime-context">
             <CardHeader>
@@ -140,9 +159,14 @@ export default function Forecasting() {
                     {regime.fdr?.toFixed(1) || "0.0"}
                   </span>
                 </div>
-                <p className="text-sm text-muted-foreground mt-3 pt-3 border-t">
-                  Forecasts are automatically adjusted based on current market conditions to improve accuracy.
-                </p>
+                <div className="mt-3 pt-3 border-t space-y-2">
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                    What this regime means for your forecast
+                  </p>
+                  <p className="text-sm leading-relaxed" data-testid="text-regime-forecast-guidance">
+                    {guidance}
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>
