@@ -31,7 +31,6 @@ import {
   Truck,
   ClipboardList,
   Activity,
-  Eye,
 } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────

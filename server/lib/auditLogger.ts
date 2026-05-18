@@ -129,6 +129,7 @@ export async function logAudit(params: {
     | "create"
     | "update"
     | "delete"
+    | "cancel"
     | "export"
     | "import"
     | "login"
