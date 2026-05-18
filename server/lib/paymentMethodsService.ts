@@ -18,16 +18,34 @@ import {
 import { eq, and } from "drizzle-orm";
 import { getUncachableStripeClient } from "../stripeClient";
 import { assertEconomicValidityStrict, safeAsync, logEvent } from "./guardRails";
+import { BILLING_PLANS } from "./billingService";
 
 // ─── Plan → Stripe price ID map ────────────────────────────────────────────────
-const PLAN_PRICE_IDS: Record<string, string> = {
-  monthly_starter: process.env.STRIPE_PRICE_MONTHLY_STARTER || "price_monthly_starter",
-  monthly_growth:  process.env.STRIPE_PRICE_MONTHLY_GROWTH  || "price_monthly_growth",
-  annual_starter:  process.env.STRIPE_PRICE_ANNUAL_STARTER  || "price_annual_starter",
-  annual_growth:   process.env.STRIPE_PRICE_ANNUAL_GROWTH   || "price_annual_growth",
-  usage_based:     process.env.STRIPE_PRICE_USAGE_BASED     || "price_usage_based",
-  performance:     process.env.STRIPE_PRICE_PERFORMANCE     || "price_performance",
-};
+//
+// F1 fix from round-24 billing audit: previously this file had its OWN
+// PLAN_PRICE_IDS map that read from a DIFFERENT set of env vars than
+// billingService.ts (e.g., STRIPE_PRICE_MONTHLY_STARTER vs
+// STRIPE_PRICE_STARTER_MONTHLY) and fell back to DUMMY strings like
+// "price_monthly_starter" that would 400 immediately against Stripe
+// live mode if any env var was missing.
+//
+// Worse: the two files could drift — admin upgrading via
+// /api/billing/create-subscription would charge the user a different
+// price than someone using /api/billing/subscribe.
+//
+// Now: derive directly from BILLING_PLANS' resolved stripePriceId
+// values (which already do the env-var-with-real-fallback resolution).
+// Single source of truth. Adding a new plan ONLY requires editing
+// billingService.ts BILLING_PLANS.
+function buildPlanPriceMap(): Record<string, string> {
+  const m: Record<string, string> = {};
+  for (const [planId, plan] of Object.entries(BILLING_PLANS)) {
+    const priceId = (plan as any).stripePriceId;
+    if (priceId) m[planId] = priceId;
+  }
+  return m;
+}
+const PLAN_PRICE_IDS: Record<string, string> = buildPlanPriceMap();
 
 // ─── List saved payment methods for a company ──────────────────────────────────
 export async function listCompanyPaymentMethods(
