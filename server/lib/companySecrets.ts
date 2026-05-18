@@ -104,13 +104,17 @@ const SENSITIVE_COMPANY_FIELDS = [
   "shopifySecret",
   "twilioAuthToken",
   "notionAccessToken",
-  "slackWebhookUrl",   // technically a URL not a token, but it grants posting access — treat as secret
-  "intercomAccessToken",
+  "slackWebhookUrl",     // posting access into customer's Slack workspace — treat as secret
+  "teamsWebhookUrl",     // posting access into customer's Teams workspace — same logic
   "salesforceAccessToken",
   "salesforceRefreshToken",
+  "jiraApiToken",
+  "linearApiKey",
+  // Reserved-future columns (not yet in companies schema; remain here so
+  // adding them later doesn't risk forgetting to encrypt):
+  "intercomAccessToken",
   "zendeskApiToken",
   "asanaAccessToken",
-  "jiraApiToken",
   "githubAccessToken",
   "gitlabAccessToken",
 ] as const;

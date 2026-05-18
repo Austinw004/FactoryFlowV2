@@ -17198,35 +17198,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Configure Microsoft Teams integration
   app.post("/api/integrations/teams/configure", isAuthenticated, async (req: any, res) => {
     try {
-      const { webhookUrl, channelName, enabled } = req.body;
       const authUserId = req.user.claims.sub;
       const user = await storage.getUser(authUserId);
       if (!user?.companyId) {
         return res.status(401).json({ error: "No company associated" });
       }
-      
-      // Validate Teams webhook URL format if provided
-      if (webhookUrl && !webhookUrl.includes("webhook.office.com") && !webhookUrl.includes("office365.com")) {
-        return res.status(400).json({ error: "Invalid Teams webhook URL format" });
+
+      // F1 fix from round-24 audit: RBAC + Zod + encrypt-at-rest (same pattern
+      // as round-26 Slack/HubSpot/Shopify). teamsWebhookUrl grants posting
+      // access into the customer's Teams workspace — treat as secret.
+      const { userHasPermission } = await import("./lib/rbac");
+      if (!(await userHasPermission(authUserId, user.companyId, "manage_integrations"))) {
+        return res.status(403).json({ error: "Insufficient permissions — requires manage_integrations" });
       }
-      
-      // Build update object - only include webhookUrl if a new one was provided
+
+      const body = z.object({
+        webhookUrl:  z.string().url().max(1000).refine(
+          u => u.includes("webhook.office.com") || u.includes("office365.com"),
+          "Must be a Teams webhook URL",
+        ).optional().nullable(),
+        channelName: z.string().max(80).optional(),
+        enabled:     z.boolean().optional(),
+      }).parse(req.body || {});
+
+      const { encryptCompanySecret } = await import("./lib/companySecrets");
       const updateData: any = {
-        teamsChannelName: channelName || "Prescient Alerts",
-        teamsEnabled: enabled ? 1 : 0,
+        teamsChannelName: body.channelName || "Prescient Alerts",
+        teamsEnabled: body.enabled ? 1 : 0,
       };
-      
-      // Only update the webhook URL if a new one was explicitly provided
-      if (webhookUrl !== undefined && webhookUrl !== "") {
-        updateData.teamsWebhookUrl = webhookUrl;
+      if (body.webhookUrl !== undefined && body.webhookUrl !== "") {
+        updateData.teamsWebhookUrl = encryptCompanySecret(body.webhookUrl);
       }
-      
+
       await storage.updateCompany(user.companyId, updateData);
-      
       res.json({ success: true, message: "Teams integration configured" });
     } catch (error: any) {
       console.error("Error configuring Teams:", error);
-      res.status(500).json({ error: error.message });
+      res.status(error?.name === "ZodError" ? 400 : 500).json({ error: error.message });
     }
   });
   
@@ -17243,7 +17251,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!company?.teamsWebhookUrl) {
         return res.status(400).json({ error: "Teams webhook URL not configured" });
       }
-      
+
+      // F0 #4 fix: decrypt the stored webhook URL before posting.
+      const { decryptCompanySecret } = await import("./lib/companySecrets");
+      const teamsUrl = decryptCompanySecret(company.teamsWebhookUrl);
+      if (!teamsUrl) {
+        return res.status(400).json({ error: "Teams webhook URL could not be decrypted — please reconfigure the integration" });
+      }
+
       // Send test message to Teams using adaptive card format
       const teamsMessage = {
         "@type": "MessageCard",
@@ -17265,7 +17280,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }]
       };
       
-      const response = await fetch(company.teamsWebhookUrl, {
+      const response = await fetch(teamsUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(teamsMessage),
@@ -18059,32 +18074,38 @@ You'll receive emails for:
   
   app.post("/api/integrations/notion/configure", isAuthenticated, async (req: any, res) => {
     try {
-      const { enabled, accessToken, workspaceId, databaseId } = req.body;
       const authUserId = req.user.claims.sub;
       const user = await storage.getUser(authUserId);
       if (!user?.companyId) {
         return res.status(401).json({ error: "No company associated" });
       }
-      
+
+      // F1 fix: RBAC + Zod + encrypt-at-rest (same pattern as Slack/HubSpot).
+      const { userHasPermission } = await import("./lib/rbac");
+      if (!(await userHasPermission(authUserId, user.companyId, "manage_integrations"))) {
+        return res.status(403).json({ error: "Insufficient permissions — requires manage_integrations" });
+      }
+
+      const body = z.object({
+        enabled:      z.boolean().optional(),
+        accessToken:  z.string().min(1).max(500).optional().nullable(),
+        workspaceId:  z.string().max(200).optional().nullable(),
+        databaseId:   z.string().max(200).optional().nullable(),
+      }).parse(req.body || {});
+
+      const { encryptCompanySecret } = await import("./lib/companySecrets");
       const updates: any = {
-        notionEnabled: enabled ? 1 : 0,
+        notionEnabled: body.enabled ? 1 : 0,
       };
-      
-      if (accessToken !== undefined) {
-        updates.notionAccessToken = accessToken;
-      }
-      if (workspaceId !== undefined) {
-        updates.notionWorkspaceId = workspaceId;
-      }
-      if (databaseId !== undefined) {
-        updates.notionDatabaseId = databaseId;
-      }
-      
+      if (body.accessToken !== undefined) updates.notionAccessToken = encryptCompanySecret(body.accessToken);
+      if (body.workspaceId !== undefined) updates.notionWorkspaceId = body.workspaceId;
+      if (body.databaseId !== undefined) updates.notionDatabaseId = body.databaseId;
+
       await storage.updateCompany(user.companyId, updates);
       res.json({ success: true, message: "Notion integration configured" });
     } catch (error: any) {
       console.error("Error configuring Notion:", error);
-      res.status(500).json({ error: error.message });
+      res.status(error?.name === "ZodError" ? 400 : 500).json({ error: error.message });
     }
   });
   
@@ -18100,11 +18121,18 @@ You'll receive emails for:
       if (!company?.notionAccessToken) {
         return res.status(400).json({ success: false, message: "Notion access token not configured" });
       }
-      
+
+      // F0 #4 fix: decrypt the stored Notion token before passing to API.
+      const { decryptCompanySecret } = await import("./lib/companySecrets");
+      const notionToken = decryptCompanySecret(company.notionAccessToken);
+      if (!notionToken) {
+        return res.status(400).json({ success: false, message: "Notion token could not be decrypted — please reconfigure" });
+      }
+
       // Test Notion API connectivity
       const response = await axios.get("https://api.notion.com/v1/users/me", {
         headers: {
-          "Authorization": `Bearer ${company.notionAccessToken}`,
+          "Authorization": `Bearer ${notionToken}`,
           "Notion-Version": "2022-06-28",
         },
         timeout: 5000,
@@ -18127,32 +18155,39 @@ You'll receive emails for:
   
   app.post("/api/integrations/salesforce/configure", isAuthenticated, async (req: any, res) => {
     try {
-      const { enabled, accessToken, refreshToken, instanceUrl } = req.body;
       const authUserId = req.user.claims.sub;
       const user = await storage.getUser(authUserId);
       if (!user?.companyId) {
         return res.status(401).json({ error: "No company associated" });
       }
-      
+
+      // F1 fix: RBAC + Zod + encrypt-at-rest. Salesforce OAuth2 tokens
+      // grant full read/write on the customer's Salesforce org.
+      const { userHasPermission } = await import("./lib/rbac");
+      if (!(await userHasPermission(authUserId, user.companyId, "manage_integrations"))) {
+        return res.status(403).json({ error: "Insufficient permissions — requires manage_integrations" });
+      }
+
+      const body = z.object({
+        enabled:      z.boolean().optional(),
+        accessToken:  z.string().min(1).max(2000).optional().nullable(),
+        refreshToken: z.string().min(1).max(2000).optional().nullable(),
+        instanceUrl:  z.string().url().max(500).optional().nullable(),
+      }).parse(req.body || {});
+
+      const { encryptCompanySecret } = await import("./lib/companySecrets");
       const updates: any = {
-        salesforceEnabled: enabled ? 1 : 0,
+        salesforceEnabled: body.enabled ? 1 : 0,
       };
-      
-      if (accessToken !== undefined) {
-        updates.salesforceAccessToken = accessToken;
-      }
-      if (refreshToken !== undefined) {
-        updates.salesforceRefreshToken = refreshToken;
-      }
-      if (instanceUrl !== undefined) {
-        updates.salesforceInstanceUrl = instanceUrl;
-      }
-      
+      if (body.accessToken !== undefined)  updates.salesforceAccessToken  = encryptCompanySecret(body.accessToken);
+      if (body.refreshToken !== undefined) updates.salesforceRefreshToken = encryptCompanySecret(body.refreshToken);
+      if (body.instanceUrl !== undefined)  updates.salesforceInstanceUrl  = body.instanceUrl;
+
       await storage.updateCompany(user.companyId, updates);
       res.json({ success: true, message: "Salesforce integration configured" });
     } catch (error: any) {
       console.error("Error configuring Salesforce:", error);
-      res.status(500).json({ error: error.message });
+      res.status(error?.name === "ZodError" ? 400 : 500).json({ error: error.message });
     }
   });
   
@@ -18168,15 +18203,23 @@ You'll receive emails for:
       if (!company?.salesforceAccessToken || !company?.salesforceInstanceUrl) {
         return res.status(400).json({ success: false, message: "Salesforce credentials not configured" });
       }
-      
+
+      // F0 #4 fix: decrypt the stored Salesforce access token before
+      // passing to the API.
+      const { decryptCompanySecret } = await import("./lib/companySecrets");
+      const sfToken = decryptCompanySecret(company.salesforceAccessToken);
+      if (!sfToken) {
+        return res.status(400).json({ success: false, message: "Salesforce token could not be decrypted — please reconfigure" });
+      }
+
       // Test Salesforce API connectivity
       const response = await axios.get(`${company.salesforceInstanceUrl}/services/data/v58.0/sobjects`, {
         headers: {
-          "Authorization": `Bearer ${company.salesforceAccessToken}`,
+          "Authorization": `Bearer ${sfToken}`,
         },
         timeout: 5000,
       });
-      
+
       res.json({ 
         success: true, 
         message: "Salesforce configuration saved (connectivity not verified)",
@@ -18194,32 +18237,38 @@ You'll receive emails for:
   
   app.post("/api/integrations/jira/configure", isAuthenticated, async (req: any, res) => {
     try {
-      const { enabled, apiToken, domain, projectKey } = req.body;
       const authUserId = req.user.claims.sub;
       const user = await storage.getUser(authUserId);
       if (!user?.companyId) {
         return res.status(401).json({ error: "No company associated" });
       }
-      
+
+      // F1 fix: RBAC + Zod + encrypt-at-rest.
+      const { userHasPermission } = await import("./lib/rbac");
+      if (!(await userHasPermission(authUserId, user.companyId, "manage_integrations"))) {
+        return res.status(403).json({ error: "Insufficient permissions — requires manage_integrations" });
+      }
+
+      const body = z.object({
+        enabled:     z.boolean().optional(),
+        apiToken:    z.string().min(1).max(500).optional().nullable(),
+        domain:      z.string().max(200).optional().nullable(),
+        projectKey:  z.string().max(50).optional().nullable(),
+      }).parse(req.body || {});
+
+      const { encryptCompanySecret } = await import("./lib/companySecrets");
       const updates: any = {
-        jiraEnabled: enabled ? 1 : 0,
+        jiraEnabled: body.enabled ? 1 : 0,
       };
-      
-      if (apiToken !== undefined) {
-        updates.jiraApiToken = apiToken;
-      }
-      if (domain !== undefined) {
-        updates.jiraDomain = domain;
-      }
-      if (projectKey !== undefined) {
-        updates.jiraProjectKey = projectKey;
-      }
-      
+      if (body.apiToken !== undefined)   updates.jiraApiToken   = encryptCompanySecret(body.apiToken);
+      if (body.domain !== undefined)     updates.jiraDomain     = body.domain;
+      if (body.projectKey !== undefined) updates.jiraProjectKey = body.projectKey;
+
       await storage.updateCompany(user.companyId, updates);
       res.json({ success: true, message: "Jira integration configured" });
     } catch (error: any) {
       console.error("Error configuring Jira:", error);
-      res.status(500).json({ error: error.message });
+      res.status(error?.name === "ZodError" ? 400 : 500).json({ error: error.message });
     }
   });
 
@@ -18301,29 +18350,36 @@ You'll receive emails for:
   
   app.post("/api/integrations/linear/configure", isAuthenticated, async (req: any, res) => {
     try {
-      const { enabled, apiKey, teamId } = req.body;
       const authUserId = req.user.claims.sub;
       const user = await storage.getUser(authUserId);
       if (!user?.companyId) {
         return res.status(401).json({ error: "No company associated" });
       }
-      
+
+      // F1 fix: RBAC + Zod + encrypt-at-rest.
+      const { userHasPermission } = await import("./lib/rbac");
+      if (!(await userHasPermission(authUserId, user.companyId, "manage_integrations"))) {
+        return res.status(403).json({ error: "Insufficient permissions — requires manage_integrations" });
+      }
+
+      const body = z.object({
+        enabled: z.boolean().optional(),
+        apiKey:  z.string().min(1).max(500).optional().nullable(),
+        teamId:  z.string().max(200).optional().nullable(),
+      }).parse(req.body || {});
+
+      const { encryptCompanySecret } = await import("./lib/companySecrets");
       const updates: any = {
-        linearEnabled: enabled ? 1 : 0,
+        linearEnabled: body.enabled ? 1 : 0,
       };
-      
-      if (apiKey !== undefined) {
-        updates.linearApiKey = apiKey;
-      }
-      if (teamId !== undefined) {
-        updates.linearTeamId = teamId;
-      }
-      
+      if (body.apiKey !== undefined) updates.linearApiKey = encryptCompanySecret(body.apiKey);
+      if (body.teamId !== undefined) updates.linearTeamId = body.teamId;
+
       await storage.updateCompany(user.companyId, updates);
       res.json({ success: true, message: "Linear integration configured" });
     } catch (error: any) {
       console.error("Error configuring Linear:", error);
-      res.status(500).json({ error: error.message });
+      res.status(error?.name === "ZodError" ? 400 : 500).json({ error: error.message });
     }
   });
   
@@ -18339,13 +18395,20 @@ You'll receive emails for:
       if (!company?.linearApiKey) {
         return res.status(400).json({ success: false, message: "Linear API key not configured" });
       }
-      
+
+      // F0 #4 fix: decrypt the stored Linear API key before passing.
+      const { decryptCompanySecret } = await import("./lib/companySecrets");
+      const linearKey = decryptCompanySecret(company.linearApiKey);
+      if (!linearKey) {
+        return res.status(400).json({ success: false, message: "Linear API key could not be decrypted — please reconfigure" });
+      }
+
       // Test Linear API connectivity
       const response = await axios.post("https://api.linear.app/graphql", {
         query: `{ viewer { id name email } }`
       }, {
         headers: {
-          "Authorization": company.linearApiKey,
+          "Authorization": linearKey,
           "Content-Type": "application/json",
         },
         timeout: 5000,
