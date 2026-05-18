@@ -435,6 +435,149 @@ Your password won't be changed unless you click the link and pick a new one.
   });
 }
 
+/**
+ * Dunning email — payment failed.
+ *
+ * Sent from the Stripe `invoice.payment_failed` webhook handler. Tells
+ * the customer (a) their last charge failed, (b) what specifically to
+ * do (update payment method), (c) when service will be interrupted if
+ * they don't act. Stripe's Smart Retries (configured in the dashboard)
+ * will keep attempting the same card for ~3 weeks; if the customer
+ * doesn't fix it, the subscription transitions to canceled.
+ *
+ * This email runs in parallel with that automatic retry — better the
+ * customer hear from US than discover later that they were silently
+ * locked out.
+ */
+export async function sendPaymentFailedEmail(
+  recipientEmail: string,
+  details: {
+    amountFormatted: string;       // e.g. "$299.00"
+    cardLast4?: string;            // e.g. "4242" (optional)
+    cardBrand?: string;            // e.g. "Visa"
+    nextRetryDate?: Date;          // when Stripe will try again
+    fixPaymentUrl: string;         // link into in-app billing page
+    invoiceId?: string;
+  },
+): Promise<{ success: boolean; error?: string }> {
+  const retryLine = details.nextRetryDate
+    ? `We'll try the charge again on <strong>${details.nextRetryDate.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</strong>.`
+    : `We'll keep retrying the charge over the next few weeks.`;
+  const cardLine = details.cardLast4
+    ? `${details.cardBrand ?? 'Card'} ending in ${details.cardLast4}`
+    : `Your saved payment method`;
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1a1a1a;max-width:560px;margin:0 auto;padding:32px 20px;background:#fafafa;">
+  <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:36px 32px;">
+    <h1 style="color:#0f172a;margin:0 0 16px 0;font-size:22px;font-weight:600;">Payment couldn't be processed</h1>
+    <p style="font-size:15px;margin:0 0 12px 0;">${cardLine} couldn't be charged ${details.amountFormatted} for your Prescient Labs subscription.</p>
+    <p style="font-size:15px;margin:0 0 12px 0;">${retryLine}</p>
+    <p style="font-size:15px;margin:0 0 24px 0;">To avoid an interruption to your service, please update your payment method now:</p>
+    <div style="margin:24px 0;">
+      <a href="${details.fixPaymentUrl}" style="display:inline-block;background:#CC785C;color:#fff;text-decoration:none;padding:12px 24px;border-radius:4px;font-weight:500;font-size:15px;">
+        Update payment method
+      </a>
+    </div>
+    <p style="font-size:13px;color:#6b7280;margin:0 0 8px 0;">Common reasons charges fail:</p>
+    <ul style="font-size:13px;color:#6b7280;margin:0 0 24px 16px;padding:0;">
+      <li>The card on file expired</li>
+      <li>Your bank declined the charge (often a fraud-protection auto-block — calling the bank usually resolves it)</li>
+      <li>The card's billing address changed</li>
+    </ul>
+    <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
+    <p style="font-size:12px;color:#9ca3af;margin:0;">Questions? Reply to this email and we'll help. If you've already updated your card, you can ignore this notice — your account will keep working as soon as Stripe's next retry succeeds.</p>
+  </div>
+  <p style="font-size:11px;color:#9ca3af;text-align:center;margin:16px 0 0 0;">&copy; ${new Date().getFullYear()} Prescient Labs.</p>
+</body></html>`;
+
+  const text = `Payment couldn't be processed
+
+${cardLine} couldn't be charged ${details.amountFormatted} for your Prescient Labs subscription.
+
+${retryLine.replace(/<\/?strong>/g, '')}
+
+To avoid an interruption to your service, please update your payment method now:
+${details.fixPaymentUrl}
+
+Common reasons charges fail:
+  - The card on file expired
+  - Your bank declined the charge (often a fraud-protection auto-block — calling the bank usually resolves it)
+  - The card's billing address changed
+
+Questions? Reply to this email and we'll help. If you've already updated your card, you can ignore this notice — your account will keep working as soon as Stripe's next retry succeeds.
+
+— Prescient Labs
+`;
+
+  return sendEmail({
+    to: [{ name: recipientEmail, email: recipientEmail }],
+    subject: `Action required: payment for your Prescient Labs subscription failed`,
+    html,
+    text,
+  });
+}
+
+/**
+ * Trial-ending-soon nudge email.
+ *
+ * Sent from the Stripe `customer.subscription.trial_will_end` webhook
+ * (Stripe fires this 3 days before trial end). Tells the customer
+ * what's about to happen so the conversion isn't a surprise.
+ */
+export async function sendTrialEndingSoonEmail(
+  recipientEmail: string,
+  details: {
+    trialEndDate: Date;
+    upgradeUrl: string;
+    planName?: string;
+  },
+): Promise<{ success: boolean; error?: string }> {
+  const daysRemaining = Math.max(0, Math.ceil((details.trialEndDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+  const planLine = details.planName ? ` Your selected plan is <strong>${details.planName}</strong>.` : '';
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1a1a1a;max-width:560px;margin:0 auto;padding:32px 20px;background:#fafafa;">
+  <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:36px 32px;">
+    <h1 style="color:#0f172a;margin:0 0 16px 0;font-size:22px;font-weight:600;">Your free trial ends in ${daysRemaining} day${daysRemaining === 1 ? '' : 's'}</h1>
+    <p style="font-size:15px;margin:0 0 12px 0;">Your Prescient Labs trial ends <strong>${details.trialEndDate.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</strong>.${planLine}</p>
+    <p style="font-size:15px;margin:0 0 24px 0;">To keep your account active without interruption, choose a plan and add a payment method:</p>
+    <div style="margin:24px 0;">
+      <a href="${details.upgradeUrl}" style="display:inline-block;background:#CC785C;color:#fff;text-decoration:none;padding:12px 24px;border-radius:4px;font-weight:500;font-size:15px;">
+        Choose a plan
+      </a>
+    </div>
+    <p style="font-size:13px;color:#6b7280;margin:0 0 16px 0;">Already added a card? Then you're all set — your subscription will automatically convert from trial to paid on ${details.trialEndDate.toLocaleDateString()}. No action needed.</p>
+    <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
+    <p style="font-size:12px;color:#9ca3af;margin:0;">Questions about pricing? Reply to this email or visit prescient-labs.com/pricing.</p>
+  </div>
+  <p style="font-size:11px;color:#9ca3af;text-align:center;margin:16px 0 0 0;">&copy; ${new Date().getFullYear()} Prescient Labs.</p>
+</body></html>`;
+
+  const text = `Your free trial ends in ${daysRemaining} day${daysRemaining === 1 ? '' : 's'}
+
+Your Prescient Labs trial ends ${details.trialEndDate.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}.${details.planName ? ` Your selected plan is ${details.planName}.` : ''}
+
+To keep your account active without interruption, choose a plan and add a payment method:
+${details.upgradeUrl}
+
+Already added a card? Then you're all set — your subscription will automatically convert from trial to paid on ${details.trialEndDate.toLocaleDateString()}. No action needed.
+
+Questions about pricing? Reply to this email or visit prescient-labs.com/pricing.
+
+— Prescient Labs
+`;
+
+  return sendEmail({
+    to: [{ name: recipientEmail, email: recipientEmail }],
+    subject: `Your Prescient Labs trial ends in ${daysRemaining} day${daysRemaining === 1 ? '' : 's'}`,
+    html,
+    text,
+  });
+}
+
 export async function syncEmailCampaignsAsDemandSignals(companyId: string, campaigns: Array<{
   campaignId: string;
   subject: string;

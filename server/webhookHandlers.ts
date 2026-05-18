@@ -244,6 +244,10 @@ export class WebhookHandlers {
         logger.webhook("trial_ending_soon", {
           details: { subscriptionId: data?.id, trialEnd: data?.trial_end },
         });
+        // F1 fix from round-24 billing audit: previously this event was
+        // logged but did nothing. Now we send the customer a nudge so
+        // they aren't surprised when the card auto-charges.
+        await this.handleTrialWillEnd(data);
         break;
       case 'invoice.paid':
         await this.handleInvoicePaid(data, eventType, tx);
@@ -538,6 +542,103 @@ export class WebhookHandlers {
         { subscriptionId, invoiceId: invoice.id, attemptCount: invoice.attempt_count },
         tx,
       );
+    }
+
+    // F1 fix from round-24 billing audit: send dunning email so the
+    // customer learns about the failed charge from us rather than from
+    // being silently locked out at next request. Stripe's Smart Retries
+    // will keep attempting the same card automatically — this email
+    // runs in parallel.
+    //
+    // Failure to send the email never blocks the webhook response —
+    // (a) SendPulse SMTP may still be in moderation; (b) the
+    // subscription state is the source of truth and is already updated
+    // above; (c) Stripe will retry the underlying charge regardless.
+    try {
+      await this.sendDunningEmailForFailedInvoice(customerId, invoice);
+    } catch (err) {
+      console.error('[Dunning] Failed to send payment-failed email for customer', customerId, err);
+    }
+  }
+
+  /**
+   * Look up the user's email + format the dunning email payload.
+   * Extracted so unit tests can exercise the formatting independently
+   * of the SendPulse SDK.
+   */
+  private static async sendDunningEmailForFailedInvoice(customerId: string, invoice: any): Promise<void> {
+    const userRows = await db
+      .select({ id: users.id, email: users.email })
+      .from(users)
+      .where(eq(users.stripeCustomerId, customerId))
+      .limit(1);
+    if (userRows.length === 0 || !userRows[0].email) return;
+
+    // Stripe invoice fields we care about:
+    //   amount_due (cents) → format as USD
+    //   currency
+    //   next_payment_attempt (unix ts) → "we'll retry on X"
+    //   default_payment_method.card → {brand, last4} (sometimes deeply nested)
+    const amount = (invoice.amount_due ?? invoice.amount_remaining ?? 0) / 100;
+    const currency = (invoice.currency ?? 'usd').toUpperCase();
+    const amountFormatted = new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
+    const nextRetryDate = invoice.next_payment_attempt
+      ? new Date(invoice.next_payment_attempt * 1000)
+      : undefined;
+    const cardLast4 = invoice.last_finalization_error?.payment_intent?.last_payment_error?.payment_method?.card?.last4
+                      ?? invoice.payment_intent?.payment_method?.card?.last4;
+    const cardBrand = invoice.last_finalization_error?.payment_intent?.last_payment_error?.payment_method?.card?.brand
+                      ?? invoice.payment_intent?.payment_method?.card?.brand;
+
+    const baseUrl = process.env.REPLIT_DEV_DOMAIN
+      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+      : (process.env.REPLIT_DOMAINS?.split(',')[0]
+          ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+          : 'https://prescient-labs.com');
+    const fixPaymentUrl = `${baseUrl}/billing`;
+
+    const { sendPaymentFailedEmail } = await import('./lib/emailService');
+    await sendPaymentFailedEmail(userRows[0].email, {
+      amountFormatted,
+      cardLast4,
+      cardBrand,
+      nextRetryDate,
+      fixPaymentUrl,
+      invoiceId: invoice.id,
+    });
+  }
+
+  /**
+   * Handle Stripe's customer.subscription.trial_will_end webhook
+   * (fires 3 days before trial-end). Sends a nudge so the upcoming
+   * auto-charge isn't a surprise.
+   */
+  static async handleTrialWillEnd(subscription: any): Promise<void> {
+    if (!subscription?.customer || !subscription?.trial_end) return;
+    try {
+      const userRows = await db
+        .select({ id: users.id, email: users.email })
+        .from(users)
+        .where(eq(users.stripeCustomerId, subscription.customer))
+        .limit(1);
+      if (userRows.length === 0 || !userRows[0].email) return;
+
+      const trialEndDate = new Date(subscription.trial_end * 1000);
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : (process.env.REPLIT_DOMAINS?.split(',')[0]
+            ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+            : 'https://prescient-labs.com');
+      const upgradeUrl = `${baseUrl}/billing`;
+
+      const { sendTrialEndingSoonEmail } = await import('./lib/emailService');
+      await sendTrialEndingSoonEmail(userRows[0].email, {
+        trialEndDate,
+        upgradeUrl,
+        planName: subscription.items?.data?.[0]?.price?.nickname,
+      });
+    } catch (err) {
+      console.error('[Dunning] Failed to send trial-ending-soon email for customer', subscription.customer, err);
     }
   }
 
