@@ -71,12 +71,33 @@ export default function Forecasting() {
 
   if (!skus || skus.length === 0) {
     return (
-      <div className="p-6">
-        <div className="mb-6">
-<p className="text-muted-foreground mt-1">
+      <div className="p-6 space-y-6">
+        <div>
+          <p className="text-muted-foreground mt-1">
             Regime-aware demand predictions for optimal production planning
           </p>
         </div>
+        {/* Even before any SKUs are loaded, the customer should see the FDR
+            regime that will weight their forecasts — this is the platform's
+            differentiator, not a metric that appears after data import. */}
+        {regime && (
+          <Card data-testid="card-forecast-empty-regime">
+            <CardContent className="p-4 flex items-start gap-3">
+              <TrendingUp className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
+                  Forecasts will be weighted against
+                </div>
+                <div className="font-medium">
+                  {formatRegimeName(regime.regime)} · FDR {regime.fdr?.toFixed(2) || '—'}
+                </div>
+                <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                  Add your first SKU below to see how the active regime adjusts forecast direction and cover recommendations.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
         <Card className="border-dashed" data-testid="card-no-skus">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <BarChart3 className="h-16 w-16 text-muted-foreground mb-4" />
