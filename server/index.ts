@@ -8,6 +8,7 @@ import { runMigrations } from 'stripe-replit-sync';
 import { getStripeSync } from './stripeClient';
 import { WebhookHandlers } from './webhookHandlers';
 import { runSchemaSelfHeal } from './lib/schemaSelfHeal';
+import { runEncryptionBackfillIfNeeded } from './lib/encryptionBackfill';
 
 const app = express();
 app.use(compression());
@@ -286,6 +287,24 @@ app.use((req, res, next) => {
       ]);
     } catch (err: any) {
       console.error('[Startup] Schema self-heal error (non-fatal, continuing):', err?.message || err);
+    }
+
+    // Round-35: encryption backfill for any legacy plaintext
+    // integration secrets in the companies table. Self-healing +
+    // idempotent — on subsequent boots when everything's encrypted,
+    // this is one cheap SELECT and a no-op return. See
+    // server/lib/encryptionBackfill.ts for the full design.
+    try {
+      await Promise.race([
+        runEncryptionBackfillIfNeeded(),
+        // 60s overall cap as a brake — per-column has its own 5s cap,
+        // so this only fires if something is catastrophically wrong.
+        new Promise<void>((_, reject) =>
+          setTimeout(() => reject(new Error("encryption backfill timed out after 60s")), 60_000),
+        ),
+      ]);
+    } catch (err: any) {
+      console.error('[Startup] Encryption backfill error (non-fatal, continuing):', err?.message || err);
     }
 
     console.log('[Startup] Registering routes...');
