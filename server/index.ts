@@ -164,8 +164,23 @@ app.post(
       if (msg.includes('signature') || msg.includes('Signature')) {
         return res.status(401).json({ error: 'Webhook signature verification failed' });
       }
-      console.error('Webhook processing error:', msg);
-      res.status(200).json({ received: true });
+      // F0 fix: previously returned 200 ("received: true") on every
+      // internal error — Stripe takes 2xx as success and NEVER retries.
+      // That meant any bug in WebhookHandlers.processWebhook (DB write
+      // failure, Stripe object missing expected field, etc.) silently
+      // discarded the event forever. Real-world impact: invoice.payment_
+      // failed events from a customer's declined card don't update the
+      // local subscription row → app still treats them as active → they
+      // keep using paid features for free. Same for
+      // checkout.session.completed (new subscription never recorded
+      // locally) and customer.subscription.deleted (canceled subs still
+      // marked active).
+      //
+      // Now: return 500 so Stripe retries per its standard backoff
+      // schedule (up to 3 days of retries). Log loudly so ops sees the
+      // pattern and can investigate.
+      console.error('[StripeWebhook] Processing failed — returning 500 so Stripe retries:', msg, error?.stack);
+      res.status(500).json({ error: 'Webhook processing failed; will be retried' });
     }
   }
 );

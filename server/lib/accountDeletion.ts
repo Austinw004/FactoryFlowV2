@@ -23,8 +23,9 @@
  */
 
 import { db } from "../db";
-import { accountDeletionRequests, users, userRoleAssignments, roles, companies } from "@shared/schema";
+import { accountDeletionRequests, users, userRoleAssignments, roles, companies, subscriptions } from "@shared/schema";
 import { and, eq, isNull, sql, lte } from "drizzle-orm";
+import { getUncachableStripeClient } from "../stripeClient";
 
 export const DELETION_GRACE_PERIOD_DAYS = 30;
 
@@ -199,19 +200,107 @@ export async function getDeletionStatus(userId: string): Promise<{
 }
 
 /**
+ * Cancel any active Stripe subscriptions associated with this user
+ * BEFORE we delete the user row. Without this step, a user requests
+ * deletion → 30-day grace period elapses → we cascade-delete the user →
+ * but Stripe still has an active subscription → recurring monthly
+ * charges continue indefinitely on a card belonging to someone who's
+ * no longer a customer. That's a $299-$999/mo billing leak per deleted
+ * user, plus a major reputation + refund-liability issue.
+ *
+ * Strategy:
+ *   - Find all subscriptions with userId = this user.
+ *   - For each one with a stripeSubscriptionId, call
+ *     stripe.subscriptions.cancel() (immediate cancel — no grace; we're
+ *     past the 30-day window already).
+ *   - Update the local subscriptions.status = "canceled" so any
+ *     remaining indices/queries see the truth before the user row
+ *     disappears.
+ *   - Errors during Stripe cancel are LOGGED but DON'T block the user
+ *     deletion. Rationale: customer's primary right is data deletion
+ *     (GDPR Article 17); a residual Stripe subscription is a billing
+ *     ops issue that can be cleaned up manually from the Stripe
+ *     dashboard. We surface the failure loudly so ops sees it.
+ *
+ * Returns the count of subscriptions successfully canceled vs failed.
+ */
+async function cancelStripeSubscriptionsForUser(userId: string): Promise<{ canceled: number; failed: number }> {
+  let canceled = 0;
+  let failed = 0;
+
+  // Find every subscription owned by this user that's still in a
+  // billable state. "canceled" / "past_due" / "incomplete_expired" are
+  // already terminal so we skip them.
+  const userSubs = await db
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.userId, userId));
+
+  const billableSubs = userSubs.filter(s =>
+    s.stripeSubscriptionId && (s.status === "active" || s.status === "trialing" || s.status === "past_due")
+  );
+
+  if (billableSubs.length === 0) {
+    return { canceled, failed };
+  }
+
+  let stripe: Awaited<ReturnType<typeof getUncachableStripeClient>> | null = null;
+  try {
+    stripe = await getUncachableStripeClient();
+  } catch (err) {
+    // Stripe client not configured (e.g., STRIPE_SECRET_KEY missing in
+    // dev). Log loudly so the operator notices, then continue with user
+    // deletion — the user's right to erasure shouldn't be held hostage
+    // to misconfigured infra.
+    console.error(`[AccountDeletion] Cannot reach Stripe to cancel subs for user=${userId}; user will be deleted but ${billableSubs.length} Stripe subscription(s) need manual cleanup:`, err);
+    return { canceled: 0, failed: billableSubs.length };
+  }
+
+  for (const sub of billableSubs) {
+    try {
+      await stripe.subscriptions.cancel(sub.stripeSubscriptionId!);
+      await db
+        .update(subscriptions)
+        .set({ status: "canceled", updatedAt: new Date() })
+        .where(eq(subscriptions.id, sub.id));
+      canceled++;
+      console.log(`[AccountDeletion] Canceled Stripe subscription ${sub.stripeSubscriptionId} for user=${userId}`);
+    } catch (err: any) {
+      // If Stripe says "No such subscription" (404), treat as already-
+      // canceled — flip local row and move on.
+      if (err?.statusCode === 404 || err?.code === "resource_missing") {
+        await db
+          .update(subscriptions)
+          .set({ status: "canceled", updatedAt: new Date() })
+          .where(eq(subscriptions.id, sub.id));
+        canceled++;
+        console.log(`[AccountDeletion] Stripe subscription ${sub.stripeSubscriptionId} already gone; marked canceled locally`);
+        continue;
+      }
+      failed++;
+      console.error(`[AccountDeletion] FAILED to cancel Stripe subscription ${sub.stripeSubscriptionId} for user=${userId} — MANUAL CLEANUP REQUIRED in Stripe dashboard:`, err);
+    }
+  }
+
+  return { canceled, failed };
+}
+
+/**
  * Background sweep — runs once daily via backgroundJobs.ts.
  * Processes any deletion request whose scheduledFor has passed and is
- * still pending. The actual DELETE on the users row cascades to all
- * dependent rows via Drizzle's `onDelete: "cascade"` FKs (auth_sessions,
- * user_role_assignments, team_invitations, password_reset_tokens, etc.).
+ * still pending. Sequence:
+ *   1. Cancel any active Stripe subscriptions for the user (so we stop
+ *      billing them after we delete their account record).
+ *   2. Mark the deletion request status=completed (audit trail before
+ *      the cascade nukes the request row alongside the user).
+ *   3. DELETE the user row. FKs handle dependents (auth_sessions,
+ *      user_role_assignments, team_invitations, password_reset_tokens,
+ *      etc.).
  *
  * Idempotent: if the deletion request row was already deleted by the
- * user cascade (FK on userId), we just skip. We update status=
- * "completed" BEFORE deleting the user so the cascade leaves an audit
- * trail (the request row gets deleted along with the user, but the
- * status-update succeeded first).
+ * user cascade (FK on userId), we just skip.
  */
-export async function processDueDeletions(): Promise<{ processed: number; errors: number }> {
+export async function processDueDeletions(): Promise<{ processed: number; errors: number; subscriptionsCanceled: number; subscriptionsFailed: number }> {
   const due = await db
     .select()
     .from(accountDeletionRequests)
@@ -222,10 +311,19 @@ export async function processDueDeletions(): Promise<{ processed: number; errors
 
   let processed = 0;
   let errors = 0;
+  let subscriptionsCanceled = 0;
+  let subscriptionsFailed = 0;
 
   for (const req of due) {
     try {
-      // Mark complete first — the cascade below will delete this row
+      // (1) Cancel Stripe subscriptions FIRST. If we delete the user
+      // before this, the userId on subscriptions becomes null (FK
+      // onDelete: set null) and we lose the link Stripe-side.
+      const cancelResult = await cancelStripeSubscriptionsForUser(req.userId);
+      subscriptionsCanceled += cancelResult.canceled;
+      subscriptionsFailed += cancelResult.failed;
+
+      // (2) Mark complete — the cascade below will delete this row
       // along with the user. Marking before guarantees the status
       // transition is logged even if the cascade fails partway.
       await db
@@ -233,11 +331,11 @@ export async function processDueDeletions(): Promise<{ processed: number; errors
         .set({ status: "completed", completedAt: new Date() })
         .where(eq(accountDeletionRequests.id, req.id));
 
-      // Cascade-delete the user. FKs handle dependents.
+      // (3) Cascade-delete the user. FKs handle dependents.
       await db.delete(users).where(eq(users.id, req.userId));
 
       processed++;
-      console.log(`[AccountDeletion] Completed deletion for user=${req.userId} (request=${req.id})`);
+      console.log(`[AccountDeletion] Completed deletion for user=${req.userId} (request=${req.id}); canceled ${cancelResult.canceled} Stripe subs, ${cancelResult.failed} cancel-failures`);
     } catch (err) {
       errors++;
       console.error(`[AccountDeletion] Failed deletion for user=${req.userId} (request=${req.id}):`, err);
@@ -245,7 +343,7 @@ export async function processDueDeletions(): Promise<{ processed: number; errors
   }
 
   if (processed > 0 || errors > 0) {
-    console.log(`[AccountDeletion] Sweep complete: ${processed} processed, ${errors} errors`);
+    console.log(`[AccountDeletion] Sweep complete: ${processed} processed, ${errors} errors, ${subscriptionsCanceled} subs canceled, ${subscriptionsFailed} sub-cancel failures`);
   }
-  return { processed, errors };
+  return { processed, errors, subscriptionsCanceled, subscriptionsFailed };
 }

@@ -775,6 +775,177 @@ export function registerAuthPaymentRoutes(app: Express): void {
     res.status(201).json({ subscription: sub });
   }));
 
+  /**
+   * POST /api/billing/cancel-subscription — customer-facing self-serve cancel.
+   *
+   * F0 #6 fix: before this endpoint existed, the only way to cancel a
+   * subscription was through Stripe's hosted Customer Portal (via
+   * /api/stripe/portal). That works only if the Customer Portal is
+   * enabled in the Stripe dashboard config AND the customer can find
+   * the link AND we have a portal-redirect button in the UI. For
+   * support reps trying to cancel on behalf of a customer (refund flow,
+   * dispute resolution, etc.), there was no programmatic path at all.
+   *
+   * This endpoint:
+   *   - Defaults to "cancel at period end" (cancel_at_period_end: true)
+   *     — customer keeps access until their already-paid period runs
+   *     out. Pass `{ "immediate": true }` to cancel right now (sets
+   *     status=canceled in Stripe immediately, no proration refund).
+   *   - Optional `{ "reason": "..." }` for analytics + audit trail
+   *     (passed as Stripe metadata + recorded in our audit log).
+   *   - Tenant-isolated: only cancels subscriptions where userId or
+   *     companyId match the caller. No cross-tenant cancel.
+   *   - Idempotent: if the sub is already canceled, returns 200 with
+   *     a noted status rather than erroring.
+   *
+   * On success returns the updated subscription summary. The Stripe
+   * customer.subscription.updated webhook handler will sync the local
+   * subscriptions row independently (defense in depth).
+   */
+  app.post("/api/billing/cancel-subscription", requireJwt, handle(async (req, res) => {
+    const authUser = getAuthUser(req);
+    if (!authUser) { apiError(res, 401, "UNAUTHORIZED", "Authentication required."); return; }
+    if (!authUser.companyId) {
+      apiError(res, 400, "NO_COMPANY", "User has no company association."); return;
+    }
+
+    const { subscriptionId, immediate, reason } = z.object({
+      subscriptionId: z.string().min(1).optional(),  // if omitted, cancels the caller's active sub
+      immediate:      z.boolean().optional(),
+      reason:         z.string().max(500).optional(),
+    }).parse(req.body || {});
+
+    // Find the target subscription. If subscriptionId provided, verify
+    // ownership. Otherwise, default to the caller's active subscription.
+    let targetSub;
+    if (subscriptionId) {
+      [targetSub] = await db
+        .select()
+        .from(subscriptions)
+        .where(eq(subscriptions.id, subscriptionId))
+        .limit(1);
+      if (!targetSub || (targetSub.userId !== authUser.id && targetSub.companyId !== authUser.companyId)) {
+        apiError(res, 404, "SUBSCRIPTION_NOT_FOUND", "Subscription not found.");
+        return;
+      }
+    } else {
+      const candidates = await db
+        .select()
+        .from(subscriptions)
+        .where(and(
+          eq(subscriptions.userId, authUser.id),
+        ));
+      // Prefer an active/trialing/past_due sub over a canceled one.
+      targetSub = candidates.find(s => s.status === "active" || s.status === "trialing" || s.status === "past_due")
+                  ?? candidates[0];
+      if (!targetSub) {
+        apiError(res, 404, "SUBSCRIPTION_NOT_FOUND", "No subscription found for this user.");
+        return;
+      }
+    }
+
+    if (targetSub.status === "canceled") {
+      // Idempotent success — no surprise 4xx for a customer who clicked
+      // cancel twice or hit a refresh.
+      res.json({
+        subscriptionId: targetSub.id,
+        status: "canceled",
+        message: "Subscription was already canceled.",
+        alreadyCanceled: true,
+      });
+      return;
+    }
+
+    if (!targetSub.stripeSubscriptionId) {
+      // Local-only sub (rare — typically a manually-provisioned trial).
+      // Just flip the DB status.
+      await db
+        .update(subscriptions)
+        .set({ status: "canceled", updatedAt: new Date() })
+        .where(eq(subscriptions.id, targetSub.id));
+      try {
+        await logAudit({
+          action: "cancel",
+          entityType: "subscription",
+          entityId: targetSub.id,
+          notes: `Local-only sub canceled${reason ? `: ${reason}` : ""}`,
+          req,
+        });
+      } catch { /* never block on audit */ }
+      res.json({ subscriptionId: targetSub.id, status: "canceled", stripeSynced: false });
+      return;
+    }
+
+    // Cancel via Stripe.
+    const stripe = await getUncachableStripeClient();
+    try {
+      const metadata = reason ? { cancel_reason: reason.slice(0, 500), canceled_by: authUser.id } : { canceled_by: authUser.id };
+      let stripeSub;
+      if (immediate) {
+        stripeSub = await stripe.subscriptions.cancel(targetSub.stripeSubscriptionId, {
+          // Don't refund anything — that's a separate manual decision.
+          // If product wants auto-refund-on-cancel, wire it here.
+        });
+        // Stripe doesn't take metadata on cancel(); update separately.
+        try {
+          await stripe.subscriptions.update(targetSub.stripeSubscriptionId, { metadata });
+        } catch { /* metadata write is best-effort */ }
+      } else {
+        stripeSub = await stripe.subscriptions.update(targetSub.stripeSubscriptionId, {
+          cancel_at_period_end: true,
+          metadata,
+        });
+      }
+
+      const newStatus = immediate ? "canceled" : targetSub.status;
+      await db
+        .update(subscriptions)
+        .set({
+          status: newStatus,
+          cancelAtPeriodEnd: immediate ? 0 : 1,
+          updatedAt: new Date(),
+        })
+        .where(eq(subscriptions.id, targetSub.id));
+
+      try {
+        await logAudit({
+          action: "cancel",
+          entityType: "subscription",
+          entityId: targetSub.id,
+          notes: `Subscription ${immediate ? "canceled immediately" : "scheduled to cancel at period end"}${reason ? `: ${reason}` : ""}; stripe_sub=${targetSub.stripeSubscriptionId}`,
+          req,
+        });
+      } catch { /* never block on audit */ }
+
+      res.json({
+        subscriptionId: targetSub.id,
+        stripeSubscriptionId: targetSub.stripeSubscriptionId,
+        status: newStatus,
+        cancelAtPeriodEnd: !immediate,
+        accessUntil: immediate ? new Date().toISOString() : (stripeSub as any)?.current_period_end
+          ? new Date((stripeSub as any).current_period_end * 1000).toISOString()
+          : null,
+        stripeSynced: true,
+      });
+    } catch (err: any) {
+      // If Stripe says the sub is already canceled, sync local + return success.
+      if (err?.statusCode === 404 || err?.code === "resource_missing") {
+        await db
+          .update(subscriptions)
+          .set({ status: "canceled", updatedAt: new Date() })
+          .where(eq(subscriptions.id, targetSub.id));
+        res.json({
+          subscriptionId: targetSub.id,
+          status: "canceled",
+          message: "Subscription was already canceled in Stripe; local state synced.",
+          alreadyCanceled: true,
+        });
+        return;
+      }
+      apiError(res, 502, "STRIPE_ERROR", `Failed to cancel subscription with Stripe: ${err?.message ?? "unknown error"}`);
+    }
+  }));
+
   /** POST /api/billing/usage — record a usage event */
   app.post("/api/billing/usage", requireJwt, handle(async (req, res) => {
     const authUser = getAuthUser(req);

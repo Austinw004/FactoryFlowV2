@@ -368,7 +368,21 @@ export default function Dashboard() {
             <span className="dot bg-signal"></span>
             <span className="text-sm">Free trial — <span className="text-bone">{subscriptionData?.trialEndsAt ? `${Math.max(0, Math.ceil((new Date(subscriptionData.trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))} days remaining` : 'Active'}</span>. Add billing anytime.</span>
           </div>
-          <a href="#/billing" className="text-xs uppercase tracking-[0.14em] text-signal hover:text-bone transition">Choose a plan →</a>
+          {/*
+            F0 fix: previously used `href="#/billing"` which is a URL fragment
+            (anchor scroll target), NOT a wouter route. With BrowserRouter the
+            anchor resolved to `/dashboard#/billing` and never navigated. Result:
+            trialing customers literally could not upgrade from the in-app banner —
+            they had to manually type /billing in the URL bar. Use setLocation to
+            match the other navigation patterns in this file.
+          */}
+          <button
+            type="button"
+            onClick={() => setLocation('/billing')}
+            className="text-xs uppercase tracking-[0.14em] text-signal hover:text-bone transition"
+          >
+            Choose a plan →
+          </button>
         </div>
       )}
 
