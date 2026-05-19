@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Daily digest — Tue, May 19</title>
+<style>
+  body { margin:0; padding:24px; background:#F2F2F2; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; color:#0A0B0D; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:680px; margin:0 auto; }
+  .hi { font-size:15px; color:#0A0B0D; margin:0 0 16px; }
+  .card { background:#FFFFFF; border-radius:12px; padding:18px 20px; margin:0 0 14px; box-shadow:0 1px 2px rgba(10,11,13,0.04); }
+  .h { font-size:13px; font-weight:600; color:#0A0B0D; margin:0 0 6px; letter-spacing:-0.01em; }
+  .sub { font-size:13px; color:#6A6E76; margin:0 0 10px; line-height:1.5; }
+  .pill { display:inline-block; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:600; line-height:1.4; }
+  .p-good { background:#E7F1ED; color:#3F7A66; }
+  .p-act  { background:#FBEDE7; color:#A05A42; }
+  .p-silent { background:#EEEEF0; color:#6A6E76; }
+  .p-fail { background:#F3DFD9; color:#8A4A3D; }
+  .counters { display:flex; gap:8px; flex-wrap:wrap; }
+  .ctr { padding:6px 12px; border-radius:999px; font-size:12px; font-weight:600; }
+  .c-good { background:#7FB09A; color:#0A0B0D; }
+  .c-warn { background:#CC785C; color:#FFFFFF; }
+  .c-bad  { background:#C47A6E; color:#FFFFFF; }
+  .row { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:6px; }
+  ul { margin:6px 0 0; padding-left:18px; font-size:13px; color:#0A0B0D; line-height:1.6; }
+  li { margin:2px 0; }
+  a { color:#CC785C; text-decoration:none; }
+  a:hover { text-decoration:underline; }
+  .muted { color:#6A6E76; }
+  .dec { background:#FFFFFF; border-radius:12px; padding:18px 20px; }
+  ol.decisions { padding-left:22px; margin:6px 0 0; }
+  ol.decisions li { margin:8px 0; font-size:13px; line-height:1.55; }
+  .tag { display:inline-block; padding:1px 7px; border-radius:4px; font-size:10px; font-weight:700; letter-spacing:0.04em; margin-right:6px; }
+  .t-y { background:#FBEDE7; color:#A05A42; }
+  .t-r { background:#C47A6E; color:#FFFFFF; }
+  .footer { font-size:12px; color:#6A6E76; padding:10px 4px 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="hi">Hi Austin — daily digest for Tuesday, May 19.</p>
+
+  <!-- At a glance -->
+  <div class="card">
+    <div class="h">At a glance</div>
+    <div class="counters">
+      <span class="ctr c-good">1 ran cleanly</span>
+      <span class="ctr c-warn">5 need your eyes</span>
+      <span class="ctr c-bad">0 blocking</span>
+    </div>
+    <p class="sub" style="margin-top:10px;">2 new PRs and 6 direct-to-main commits in the last 24h. Decision backlog is 13 (10 carried from <a href="https://github.com/Austinw004/FactoryFlowV2/pull/257">yesterday's digest #257</a> with no reply received, plus 3 new today).</p>
+  </div>
+
+  <!-- Big Boi -->
+  <div class="card">
+    <div class="row">
+      <div class="h">Big Boi</div>
+      <span class="pill p-act">activity</span>
+    </div>
+    <p class="sub">6 direct-to-main commits (rounds 33–38) + 1 new draft PR. Big Boi continued to bypass the PR flow for routine work; one commit (round 35) added a self-healing boot hook that auto-mutates the encryption table on every startup.</p>
+    <ul>
+      <li>Commit <a href="https://github.com/Austinw004/FactoryFlowV2/commit/b80fa24">b80fa24</a> — round 33 feat(auth): email verification at signup</li>
+      <li>Commit <a href="https://github.com/Austinw004/FactoryFlowV2/commit/6fd77d2">6fd77d2</a> — round 34 feat(observability): Sentry SDK (env-gated)</li>
+      <li>Commit <a href="https://github.com/Austinw004/FactoryFlowV2/commit/bf72874">bf72874</a> — round 35 feat(security): encryption backfill as self-healing boot hook</li>
+      <li>Commits <a href="https://github.com/Austinw004/FactoryFlowV2/commit/4e6f1e5">4e6f1e5</a>, <a href="https://github.com/Austinw004/FactoryFlowV2/commit/ca0da72">ca0da72</a>, <a href="https://github.com/Austinw004/FactoryFlowV2/commit/589bb5f">589bb5f</a> — rounds 36–38 observability: `/_test/sentry-probe` endpoint + PUBLIC_API_PATHS allowlist</li>
+      <li>PR <a href="https://github.com/Austinw004/FactoryFlowV2/pull/260">#260</a> (draft, +1067/-19, 5 files) — Daily codebase pass: TSC 21→0, axios/postcss/ws CVE patches, ERP adapter generic type fix</li>
+    </ul>
+  </div>
+
+  <!-- Optimus -->
+  <div class="card">
+    <div class="row">
+      <div class="h">Optimus</div>
+      <span class="pill p-silent">silent</span>
+    </div>
+    <p class="sub">No activity. 4th clean day in a row — nothing to action.</p>
+  </div>
+
+  <!-- Daily Boost -->
+  <div class="card">
+    <div class="row">
+      <div class="h">Daily Boost</div>
+      <span class="pill p-silent">silent</span>
+    </div>
+    <p class="sub">No new activity. <a href="https://github.com/Austinw004/FactoryFlowV2/pull/239">PR #239</a> still open from earlier window and likely redundant with the TSC work in <a href="https://github.com/Austinw004/FactoryFlowV2/pull/260">#260</a>.</p>
+  </div>
+
+  <!-- Palantard Grade -->
+  <div class="card">
+    <div class="row">
+      <div class="h">Palantard Grade</div>
+      <span class="pill p-act">activity</span>
+    </div>
+    <p class="sub">1 new draft PR; backlog of 5 open regime/UX PRs touching the same 3 files. <a href="https://github.com/Austinw004/FactoryFlowV2/pull/261">#261</a> likely supersedes <a href="https://github.com/Austinw004/FactoryFlowV2/pull/256">#256</a>. Meta-routine spec PRs (<a href="https://github.com/Austinw004/FactoryFlowV2/pull/249">#249</a>, <a href="https://github.com/Austinw004/FactoryFlowV2/pull/258">#258</a>) still unmerged.</p>
+    <ul>
+      <li>PR <a href="https://github.com/Austinw004/FactoryFlowV2/pull/261">#261</a> (draft, +441/-73, 4 files) — regime-aware command center: prescriptive hero, RegimeChangeBanner, signal reasoning, regime-keyed Materials-at-Risk actions</li>
+      <li>Carryover open: <a href="https://github.com/Austinw004/FactoryFlowV2/pull/240">#240</a>, <a href="https://github.com/Austinw004/FactoryFlowV2/pull/247">#247</a>, <a href="https://github.com/Austinw004/FactoryFlowV2/pull/249">#249</a>, <a href="https://github.com/Austinw004/FactoryFlowV2/pull/256">#256</a>, <a href="https://github.com/Austinw004/FactoryFlowV2/pull/258">#258</a></li>
+    </ul>
+  </div>
+
+  <!-- Weekly Clean -->
+  <div class="card">
+    <div class="row">
+      <div class="h">Weekly Clean</div>
+      <span class="pill p-silent">silent</span>
+    </div>
+    <p class="sub">No new run (7-day cycle, next 2026-05-22). <a href="https://github.com/Austinw004/FactoryFlowV2/pull/235">PR #235</a> (W19 deep clean) unmerged 4 days.</p>
+  </div>
+
+  <!-- Code Review -->
+  <div class="card">
+    <div class="row">
+      <div class="h">Code Review</div>
+      <span class="pill p-silent">silent</span>
+    </div>
+    <p class="sub">No new activity in 24h. Backlog from yesterday is unchanged: PRs <a href="https://github.com/Austinw004/FactoryFlowV2/pull/254">#254</a>, <a href="https://github.com/Austinw004/FactoryFlowV2/pull/242">#242</a>, <a href="https://github.com/Austinw004/FactoryFlowV2/pull/237">#237</a> and intel issues <a href="https://github.com/Austinw004/FactoryFlowV2/issues/250">#250</a>–<a href="https://github.com/Austinw004/FactoryFlowV2/issues/253">#253</a>.</p>
+  </div>
+
+  <!-- Decisions needed -->
+  <div class="dec">
+    <div class="h">Decisions needed</div>
+    <ol class="decisions">
+      <li><span class="tag t-y">YELLOW</span><b>Big Boi</b> — <a href="https://github.com/Austinw004/FactoryFlowV2/pull/255">PR #255</a> (round 33). Approve and merge, or defer? <span class="muted">(carryover from #257 item 1)</span></li>
+      <li><span class="tag t-y">YELLOW</span><b>Big Boi policy</b> — direct-to-main commits continued today (rounds 33–38). Keep direct-to-main, or require draft PRs? <span class="muted">(carryover from #257 item 2)</span></li>
+      <li><span class="tag t-y">YELLOW</span><b>Daily Boost</b> — <a href="https://github.com/Austinw004/FactoryFlowV2/pull/239">PR #239</a> still open. Close as duplicate of <a href="https://github.com/Austinw004/FactoryFlowV2/pull/260">#260</a>/Big Boi's main commits, rebase, or merge? <span class="muted">(carryover)</span></li>
+      <li><span class="tag t-y">YELLOW</span><b>Palantard Grade</b> — vigilant-allen 4-PR overlap on Dashboard / regime UI: <a href="https://github.com/Austinw004/FactoryFlowV2/pull/240">#240</a>, <a href="https://github.com/Austinw004/FactoryFlowV2/pull/247">#247</a>, <a href="https://github.com/Austinw004/FactoryFlowV2/pull/256">#256</a>, <a href="https://github.com/Austinw004/FactoryFlowV2/pull/261">#261</a>. Pick winner (newest #261?) and close others, or sequence? <span class="muted">(carryover updated)</span></li>
+      <li><span class="tag t-y">YELLOW</span><b>Palantard Grade</b> — meta-routine spec <a href="https://github.com/Austinw004/FactoryFlowV2/pull/249">#249</a> + <a href="https://github.com/Austinw004/FactoryFlowV2/pull/258">#258</a> intended to <i>replace</i> this Daily Digest. Approve direction (and wind this routine down), revise scope, or reject? <span class="muted">(carryover)</span></li>
+      <li><span class="tag t-y">YELLOW</span><b>Weekly Clean</b> — <a href="https://github.com/Austinw004/FactoryFlowV2/pull/235">PR #235</a> unmerged 4 days. Approve/merge, or close in favor of 2026-05-22 cycle? <span class="muted">(carryover)</span></li>
+      <li><span class="tag t-y">YELLOW</span><b>Code Review</b> — per meta-issue <a href="https://github.com/Austinw004/FactoryFlowV2/issues/253">#253</a>: merge <a href="https://github.com/Austinw004/FactoryFlowV2/pull/242">#242</a> (fresher) and close <a href="https://github.com/Austinw004/FactoryFlowV2/pull/237">#237</a> as superseded; also rebase + merge <a href="https://github.com/Austinw004/FactoryFlowV2/pull/254">#254</a>? <span class="muted">(carryover)</span></li>
+      <li><span class="tag t-y">YELLOW</span><b>Code Review intel</b> — <a href="https://github.com/Austinw004/FactoryFlowV2/issues/250">#250</a> Section 232 tariff layer (P1). Greenlight phase-1, defer, or close? <span class="muted">(carryover)</span></li>
+      <li><span class="tag t-y">YELLOW</span><b>Code Review intel</b> — <a href="https://github.com/Austinw004/FactoryFlowV2/issues/251">#251</a> DRAM/HBM 58-week lead-time surface (P2). Greenlight, defer, or close? <span class="muted">(carryover)</span></li>
+      <li><span class="tag t-y">YELLOW</span><b>Code Review intel</b> — <a href="https://github.com/Austinw004/FactoryFlowV2/issues/252">#252</a> Siemens × NVIDIA + Anthropic positioning brief. Assign to founder, defer, or close? <span class="muted">(carryover)</span></li>
+      <li><span class="tag t-y">YELLOW</span><b>Big Boi</b> — new <a href="https://github.com/Austinw004/FactoryFlowV2/pull/260">PR #260</a> (TSC 21→0, axios/postcss/ws CVE patches, ERP adapter generic). Approve/merge, or treat like #239/#255 and let it pile up?</li>
+      <li><span class="tag t-y">YELLOW</span><b>Palantard Grade</b> — new <a href="https://github.com/Austinw004/FactoryFlowV2/pull/261">PR #261</a> (regime-aware command center). Designate as the winner for the vigilant-allen Dashboard overlap and close <a href="https://github.com/Austinw004/FactoryFlowV2/pull/240">#240</a>/<a href="https://github.com/Austinw004/FactoryFlowV2/pull/247">#247</a>/<a href="https://github.com/Austinw004/FactoryFlowV2/pull/256">#256</a>, or sequence?</li>
+      <li><span class="tag t-y">YELLOW</span><b>Big Boi</b> — round 35 commit <a href="https://github.com/Austinw004/FactoryFlowV2/commit/bf72874">bf72874</a> added a self-healing boot hook that auto-runs the encryption backfill on every server start. Round 36 added a new public-allowlisted `/_test/sentry-probe` endpoint on main. Audit and keep, gate behind env flag, or revert?</li>
+    </ol>
+  </div>
+
+  <!-- Reply -->
+  <div class="card" style="margin-top:14px;">
+    <div class="h">How to reply</div>
+    <p class="sub">Reply to this routine session with the item number plus your decision — e.g., <span style="color:#0A0B0D;">"Item 3: approve and merge"</span>, <span style="color:#0A0B0D;">"Item 5: defer to next week"</span>, <span style="color:#0A0B0D;">"Item 12: needs more info on the FDR copy."</span> The next daily run will execute on it.</p>
+  </div>
+
+  <div class="footer">Prescient Labs · Daily Digest routine · 2026-05-19</div>
+
+</div>
+</body>
+</html>
