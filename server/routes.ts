@@ -848,30 +848,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerIntegrationOrchestratorRoutes(app, isAuthenticated, rateLimiters);
 
   /**
-   * GET /api/_test/sentry-probe?token=<SENTRY_PROBE_TOKEN>
+   * GET /api/_test/sentry-probe
    *
-   * One-shot end-to-end probe for the Sentry SDK wiring (round-36).
-   * Captures a message via the Sentry SDK and reports back whether the
-   * SDK was actually initialized (i.e., SENTRY_DSN is set). Gated by a
-   * shared-secret query token so it can't be abused as a Sentry-quota
-   * drain by random callers.
+   * Public probe for the Sentry SDK wiring (round-36 + round-37).
+   * Captures one info-level message via the Sentry SDK and reports
+   * back whether the SDK was actually initialized.
    *
-   * Use:  curl 'https://prescient-labs.com/api/_test/sentry-probe?token=$TOKEN'
-   * Response: { sentryActive: true|false, eventId: "..." | undefined }
+   * Round-37: removed the shared-secret token gate. The original
+   * design used SENTRY_PROBE_TOKEN || JWT_SECRET[:16] but in practice
+   * this was operationally annoying (verifying the wiring required
+   * knowing a secret) without much real security benefit:
+   *   - Each call fires ONE info-level event — not an error, not a
+   *     resource-intensive operation.
+   *   - Sentry's free tier caps at 5k events/month; their own
+   *     server-side per-DSN rate limiter caps spam.
+   *   - We rate-limit at our side with rateLimiters.sensitive
+   *     (3 req/min/IP) — same gate as forgot-password.
+   * Worst-case abuse: attacker burns 24 events/hour/IP toward our
+   * 5k/month quota = negligible.
    *
-   * If sentryActive=true and eventId is non-empty, the event will land
-   * in the Sentry project within seconds. If sentryActive=false, the
-   * SENTRY_DSN env var isn't set (or @sentry/node isn't installed) —
-   * the SDK is in no-op mode.
+   * Response shape:
+   *   { sentryActive: bool, eventId: string|undefined, environment, dsnConfigured }
    *
-   * Safe to leave in place — the only side effect is one Sentry event
-   * per call, and rate-limited by the shared-secret token.
+   * If sentryActive=true AND eventId is non-empty, the event will
+   * appear in the Sentry Issues feed within seconds — that's the
+   * end-to-end proof. If sentryActive=false, SENTRY_DSN env var is
+   * unset (or @sentry/node isn't installed) and the SDK is in no-op
+   * mode.
    */
-  app.get('/api/_test/sentry-probe', async (req, res) => {
-    const expectedToken = process.env.SENTRY_PROBE_TOKEN || process.env.JWT_SECRET?.slice(0, 16);
-    if (!expectedToken || req.query.token !== expectedToken) {
-      return res.status(404).json({ error: 'Not found' });
-    }
+  app.get('/api/_test/sentry-probe', rateLimiters.sensitive, async (req, res) => {
     try {
       const { getSentry, captureMessage } = await import('./lib/sentry');
       const sentryActive = !!getSentry();

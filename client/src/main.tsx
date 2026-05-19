@@ -3,24 +3,33 @@ import App from "./App";
 import "./index.css";
 
 /**
- * Round-34: Sentry client-side init — env-gated, defensive.
+ * Round-34 + round-37: Sentry client-side init.
  *
- * Reads VITE_SENTRY_DSN at build time (Vite inlines import.meta.env.*).
- * Without it, this is a no-op. If @sentry/react isn't installed yet
- * (e.g., dependency added in code but the deploy's npm install hasn't
- * caught up), the dynamic import fails silently rather than crashing
- * the app shell.
+ * The DSN is hard-coded below. Sentry treats client-side DSNs as
+ * NOT a secret — they're designed to be embedded in client bundles
+ * (Sentry's own docs include them in example snippets). Anyone who
+ * has the DSN can send fake error events to fill the project's quota
+ * (rate-limited by Sentry server-side), but they CAN'T read events,
+ * change settings, or otherwise compromise the project.
  *
- * Operator setup:
- *   1. Same Sentry project as server (or a separate "browser" project).
- *   2. Set VITE_SENTRY_DSN in Replit Secrets (must be prefixed VITE_
- *      for Vite to expose it to the client bundle).
- *   3. Republish. Client errors flow to Sentry the next page load.
+ * Why hard-code instead of reading from env:
+ *   Replit's `vite build` step doesn't have access to Replit Secrets,
+ *   so `import.meta.env.VITE_SENTRY_DSN` was undefined at build time
+ *   — Vite then tree-shook the entire init block, leaving the
+ *   deployed bundle without any Sentry code (confirmed empirically in
+ *   round-37 diagnosis: grep'd the deployed assets/index-*.js bundle
+ *   and found no @sentry references). Hard-coding fixes this with
+ *   zero infra changes.
+ *
+ * Falls back to `import.meta.env.VITE_SENTRY_DSN` if present (so
+ * environments that DO populate it at build time can override the
+ * hard-coded value — e.g., staging vs prod with separate projects).
  *
  * Sample rate: 10% of pages traced, 100% of errors captured. Plenty
  * of headroom on Sentry's free tier for typical SaaS traffic shapes.
  */
-const SENTRY_DSN = (import.meta as any).env?.VITE_SENTRY_DSN as string | undefined;
+const HARDCODED_SENTRY_DSN = "https://c744caaad0dc518c941537edc129fa0c@o4511414105145344.ingest.us.sentry.io/4511414119759872";
+const SENTRY_DSN = ((import.meta as any).env?.VITE_SENTRY_DSN as string | undefined) || HARDCODED_SENTRY_DSN;
 if (SENTRY_DSN) {
   // Dynamic import so a missing dep doesn't break the shell.
   import("@sentry/react").then((Sentry) => {
