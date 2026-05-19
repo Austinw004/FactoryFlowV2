@@ -915,7 +915,8 @@ export function registerAuthPaymentRoutes(app: Express): void {
     // Cancel via Stripe.
     const stripe = await getUncachableStripeClient();
     try {
-      const metadata = reason ? { cancel_reason: reason.slice(0, 500), canceled_by: authUser.id } : { canceled_by: authUser.id };
+      const metadata: Record<string, string> = { canceled_by: authUser.id };
+      if (reason) metadata.cancel_reason = reason.slice(0, 500);
       let stripeSub;
       if (immediate) {
         stripeSub = await stripe.subscriptions.cancel(targetSub.stripeSubscriptionId, {
