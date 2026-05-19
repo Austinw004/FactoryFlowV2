@@ -631,6 +631,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     "/auth/google/callback",
     "/auth/apple/start",
     "/auth/apple/callback",
+    // Round-38: Sentry probe needs to be reachable without auth — it's an
+    // observability tool used to verify the SDK wiring end-to-end from
+    // outside the auth-protected surface. Rate-limited via
+    // rateLimiters.sensitive on the route handler.
+    "/_test/sentry-probe",
   ]);
 
   // Unified auth middleware — supports both JWT Bearer and Replit session
