@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily digest — Mon, May 18</title>
+</head>
+<body style="margin:0;padding:24px 12px;background:#F2F2F2;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#0A0B0D;line-height:1.5;">
+<div style="max-width:680px;margin:0 auto;">
+
+<!-- Header -->
+<p style="margin:0 0 16px 0;font-size:15px;color:#0A0B0D;">Hi Austin — daily digest for Mon, May 18.</p>
+
+<!-- At a glance -->
+<div style="background:#FFFFFF;border-radius:10px;padding:18px 20px;margin:0 0 16px 0;">
+  <p style="margin:0 0 10px 0;font-size:12px;font-weight:600;letter-spacing:.04em;color:#6A6E76;text-transform:uppercase;">At a glance</p>
+  <table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:8px 0;"><tr>
+    <td style="background:#7FB09A;color:#FFFFFF;font-size:13px;font-weight:600;padding:6px 14px;border-radius:999px;">1 ran cleanly</td>
+    <td style="background:#CC785C;color:#FFFFFF;font-size:13px;font-weight:600;padding:6px 14px;border-radius:999px;">5 need your eyes</td>
+    <td style="background:#6A6E76;color:#FFFFFF;font-size:13px;font-weight:600;padding:6px 14px;border-radius:999px;">0 blocking</td>
+  </tr></table>
+  <p style="margin:12px 0 0 0;font-size:13px;color:#6A6E76;">Backlog growing: 5 of 5 prior decisions from yesterday's digest (PR <a href="https://github.com/Austinw004/FactoryFlowV2/pull/248" style="color:#CC785C;text-decoration:none;">#248</a>) are still unanswered. No reply parsed this run (Step 5 skipped — fresh container, no prior turn).</p>
+</div>
+
+<!-- Big Boi -->
+<div style="background:#FFFFFF;border-radius:10px;padding:18px 20px;margin:0 0 12px 0;border-left:3px solid #CC785C;">
+  <p style="margin:0 0 4px 0;"><span style="font-size:15px;font-weight:600;">Big Boi</span> <span style="display:inline-block;margin-left:8px;background:#CC785C;color:#FFFFFF;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;">activity</span></p>
+  <p style="margin:6px 0;font-size:13px;color:#0A0B0D;">Heavy direct-to-main night (rounds 18–32, ~17 commits) closing F0 security holes + billing audit items. Round 33 opened as a PR instead of pushed to main per session safety.</p>
+  <ul style="margin:6px 0 0 18px;padding:0;font-size:13px;color:#0A0B0D;">
+    <li><strong>PR <a href="https://github.com/Austinw004/FactoryFlowV2/pull/255" style="color:#CC785C;text-decoration:none;">#255</a></strong> (draft) — "Daily codebase engineer round 33: types to zero, validation, dep refresh." TSC 21→0, npm vulns 7→5, validated routes 7→10, 7 commits.</li>
+    <li>Direct-to-main commits (since prior digest): rounds 18–32 — NetSuite/SAP/Dynamics/Oracle/Acumatica/Custom ERP adapters (F2-FILED-011 closed 6/6); F1-FILED-007 WebSocket reconnect loop fixed; 3 cross-tenant F0s closed (ERP creds, ERP sync, payout exfiltration); 4 launch-blocking F0s closed (Stripe sub cancel on account delete, customer cancel endpoint, webhook silent-fail, trial banner link); RBAC+Zod+at-rest encryption on 10 integration configure handlers (Slack, Shopify, HubSpot, Teams, Notion, Salesforce, Jira, Linear, Twilio); Stripe checkout URL fix; DB pool config; request-ID middleware; onboarding-wizard resume-from-server-state; dunning UX emails wired.</li>
+    <li>Email helper added: <code>sendPaymentFailedEmail</code> + <code>sendTrialEndingSoonEmail</code> in <code>server/lib/emailService.ts</code> (delivery still gated on SendPulse SMTP moderation — see round-18 commit b8cb7f2).</li>
+  </ul>
+</div>
+
+<!-- Optimus -->
+<div style="background:#FFFFFF;border-radius:10px;padding:18px 20px;margin:0 0 12px 0;border-left:3px solid #7FB09A;">
+  <p style="margin:0 0 4px 0;"><span style="font-size:15px;font-weight:600;">Optimus</span> <span style="display:inline-block;margin-left:8px;background:#7FB09A;color:#FFFFFF;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;">silent</span></p>
+  <p style="margin:6px 0 0 0;font-size:13px;color:#6A6E76;">No activity in the 24h window. Third silent day in a row — clean and intentional.</p>
+</div>
+
+<!-- Daily Boost -->
+<div style="background:#FFFFFF;border-radius:10px;padding:18px 20px;margin:0 0 12px 0;border-left:3px solid #CC785C;">
+  <p style="margin:0 0 4px 0;"><span style="font-size:15px;font-weight:600;">Daily Boost</span> <span style="display:inline-block;margin-left:8px;background:#6A6E76;color:#FFFFFF;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;">silent</span></p>
+  <p style="margin:6px 0;font-size:13px;color:#0A0B0D;">No new activity. Prior PR still open and now stale — Big Boi has independently zeroed TSC errors on main, so this PR is likely redundant.</p>
+  <ul style="margin:6px 0 0 18px;padding:0;font-size:13px;color:#0A0B0D;">
+    <li><strong>PR <a href="https://github.com/Austinw004/FactoryFlowV2/pull/239" style="color:#CC785C;text-decoration:none;">#239</a></strong> (draft, 2d old) — "319→0 TS errors, axios CVE patch, dep updates." Same scope as Big Boi's round-32 + #255 work. Likely a duplicate now.</li>
+  </ul>
+</div>
+
+<!-- Palantard Grade -->
+<div style="background:#FFFFFF;border-radius:10px;padding:18px 20px;margin:0 0 12px 0;border-left:3px solid #CC785C;">
+  <p style="margin:0 0 4px 0;"><span style="font-size:15px;font-weight:600;">Palantard Grade</span> <span style="display:inline-block;margin-left:8px;background:#CC785C;color:#FFFFFF;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;">activity</span></p>
+  <p style="margin:6px 0;font-size:13px;color:#0A0B0D;">Two new PRs today on top of two stale ones — all touching dashboard / regime UI surface. Backlog forming a 4-PR overlap.</p>
+  <ul style="margin:6px 0 0 18px;padding:0;font-size:13px;color:#0A0B0D;">
+    <li><strong>PR <a href="https://github.com/Austinw004/FactoryFlowV2/pull/256" style="color:#CC785C;text-decoration:none;">#256</a></strong> (draft, today) — "regime-driven command experience across dashboard, procurement, forecasting, supplier risk." Has 1 comment already.</li>
+    <li><strong>PR <a href="https://github.com/Austinw004/FactoryFlowV2/pull/249" style="color:#CC785C;text-decoration:none;">#249</a></strong> (draft, today) — docs-only bootstrap of "Palantir meta-routine" spec + <code>docs/ontology/</code> skeleton. Reads as a roadmap for an orchestrator routine intended to subsume this Daily Digest.</li>
+    <li><strong>PR <a href="https://github.com/Austinw004/FactoryFlowV2/pull/247" style="color:#CC785C;text-decoration:none;">#247</a></strong> (draft, yesterday, +538/-79) — "regime-aware dashboard hero + material→supplier intelligence."</li>
+    <li><strong>PR <a href="https://github.com/Austinw004/FactoryFlowV2/pull/240" style="color:#CC785C;text-decoration:none;">#240</a></strong> (draft, 2d old, +538/-79) — "regime-prescriptive dashboard + cross-workspace FDR guidance."</li>
+  </ul>
+</div>
+
+<!-- Weekly Clean -->
+<div style="background:#FFFFFF;border-radius:10px;padding:18px 20px;margin:0 0 12px 0;border-left:3px solid #CC785C;">
+  <p style="margin:0 0 4px 0;"><span style="font-size:15px;font-weight:600;">Weekly Clean</span> <span style="display:inline-block;margin-left:8px;background:#CC785C;color:#FFFFFF;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;">activity</span></p>
+  <p style="margin:6px 0;font-size:13px;color:#0A0B0D;">No new run today (it's a 7-day routine; next due 2026-05-22). Prior PR from 2026-05-15 still unmerged.</p>
+  <ul style="margin:6px 0 0 18px;padding:0;font-size:13px;color:#0A0B0D;">
+    <li><strong>PR <a href="https://github.com/Austinw004/FactoryFlowV2/pull/235" style="color:#CC785C;text-decoration:none;">#235</a></strong> (draft, 3d old) — security headers, CVE patches, bundle split (563kB→232kB main), docs sync.</li>
+  </ul>
+</div>
+
+<!-- Code Review -->
+<div style="background:#FFFFFF;border-radius:10px;padding:18px 20px;margin:0 0 12px 0;border-left:3px solid #CC785C;">
+  <p style="margin:0 0 4px 0;"><span style="font-size:15px;font-weight:600;">Code Review</span> <span style="display:inline-block;margin-left:8px;background:#CC785C;color:#FFFFFF;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;">activity</span></p>
+  <p style="margin:6px 0;font-size:13px;color:#0A0B0D;">One small PR (1 file) + four issues filed. The routine itself flagged its own duplication problem and asked the operator to break the loop.</p>
+  <ul style="margin:6px 0 0 18px;padding:0;font-size:13px;color:#0A0B0D;">
+    <li><strong>PR <a href="https://github.com/Austinw004/FactoryFlowV2/pull/254" style="color:#CC785C;text-decoration:none;">#254</a></strong> (draft, today) — Dashboard <code>regime_change</code> WebSocket payload null-safety only. Author explicitly held back the usual fixes because they overlap with <a href="https://github.com/Austinw004/FactoryFlowV2/pull/237" style="color:#CC785C;text-decoration:none;">#237</a> and <a href="https://github.com/Austinw004/FactoryFlowV2/pull/242" style="color:#CC785C;text-decoration:none;">#242</a> (both still open).</li>
+    <li>Issues filed: <a href="https://github.com/Austinw004/FactoryFlowV2/issues/250" style="color:#CC785C;text-decoration:none;">#250</a> Section 232 tariff layer missing from commodity module (P1) · <a href="https://github.com/Austinw004/FactoryFlowV2/issues/251" style="color:#CC785C;text-decoration:none;">#251</a> DRAM/HBM 58-week lead times — structural lead-time risk surface (P2) · <a href="https://github.com/Austinw004/FactoryFlowV2/issues/252" style="color:#CC785C;text-decoration:none;">#252</a> Siemens × NVIDIA + Anthropic mid-market competitive watch · <a href="https://github.com/Austinw004/FactoryFlowV2/issues/253" style="color:#CC785C;text-decoration:none;">#253</a> meta: routine-duplication asks operator to merge #237 OR #242 and close the other.</li>
+  </ul>
+</div>
+
+<!-- Cross-routine conflict note -->
+<div style="background:#FFFFFF;border-radius:10px;padding:18px 20px;margin:0 0 16px 0;border-left:3px solid #C47A6E;">
+  <p style="margin:0 0 6px 0;font-size:12px;font-weight:600;letter-spacing:.04em;color:#6A6E76;text-transform:uppercase;">Potential file conflicts in window</p>
+  <ul style="margin:0 0 0 18px;padding:0;font-size:13px;color:#0A0B0D;">
+    <li><code>client/src/pages/Dashboard.tsx</code> — touched by Big Boi (round-24 trial-banner fix, merged to main), Palantard Grade (<a href="https://github.com/Austinw004/FactoryFlowV2/pull/256" style="color:#CC785C;text-decoration:none;">#256</a>), Code Review (<a href="https://github.com/Austinw004/FactoryFlowV2/pull/254" style="color:#CC785C;text-decoration:none;">#254</a>). Three-way overlap.</li>
+    <li><code>client/src/hooks/useWebSocket.ts</code> + <code>client/src/contexts/RealtimeContext.tsx</code> — Big Boi round-20 fix (merged to main) overlaps with Code Review <a href="https://github.com/Austinw004/FactoryFlowV2/pull/237" style="color:#CC785C;text-decoration:none;">#237</a> + <a href="https://github.com/Austinw004/FactoryFlowV2/pull/242" style="color:#CC785C;text-decoration:none;">#242</a> console-gating. Both PRs likely need rebase or are now superseded.</li>
+  </ul>
+</div>
+
+<!-- Decisions needed -->
+<div style="background:#FFFFFF;border-radius:10px;padding:18px 20px;margin:0 0 16px 0;">
+  <p style="margin:0 0 10px 0;font-size:12px;font-weight:600;letter-spacing:.04em;color:#6A6E76;text-transform:uppercase;">Decisions needed</p>
+  <ol style="margin:0 0 0 20px;padding:0;font-size:13px;color:#0A0B0D;">
+    <li style="margin:0 0 8px 0;"><strong>Big Boi · PR <a href="https://github.com/Austinw004/FactoryFlowV2/pull/255" style="color:#CC785C;text-decoration:none;">#255</a></strong> (round 33, TSC 21→0, validation, deps). Approve and merge, or defer?</li>
+    <li style="margin:0 0 8px 0;"><strong>Big Boi policy</strong> — ~17 direct-to-main commits last night (rounds 18–32). Keep direct-to-main policy, or require PRs going forward? (Repeat of yesterday's item 1 — still unanswered.)</li>
+    <li style="margin:0 0 8px 0;"><strong>Daily Boost · PR <a href="https://github.com/Austinw004/FactoryFlowV2/pull/239" style="color:#CC785C;text-decoration:none;">#239</a></strong> — close as duplicate of Big Boi's TSC work (now on main + #255), rebase, or merge anyway?</li>
+    <li style="margin:0 0 8px 0;"><strong>Palantard Grade · regime-UI stack</strong> — 4 overlapping PRs (<a href="https://github.com/Austinw004/FactoryFlowV2/pull/240" style="color:#CC785C;text-decoration:none;">#240</a>, <a href="https://github.com/Austinw004/FactoryFlowV2/pull/247" style="color:#CC785C;text-decoration:none;">#247</a>, <a href="https://github.com/Austinw004/FactoryFlowV2/pull/256" style="color:#CC785C;text-decoration:none;">#256</a>) on Dashboard / regime hero. Pick a winner (newest #256?) and close the others, or sequence merges?</li>
+    <li style="margin:0 0 8px 0;"><strong>Palantard Grade · PR <a href="https://github.com/Austinw004/FactoryFlowV2/pull/249" style="color:#CC785C;text-decoration:none;">#249</a></strong> — docs-only bootstrap of a "Palantir meta-routine" intended to <em>replace</em> this Daily Digest. Approve the direction (and wind this routine down once the meta-routine ships)? Revise scope? Reject?</li>
+    <li style="margin:0 0 8px 0;"><strong>Weekly Clean · PR <a href="https://github.com/Austinw004/FactoryFlowV2/pull/235" style="color:#CC785C;text-decoration:none;">#235</a></strong> — unmerged for 3 days. Approve and merge, or close in favor of next weekly run (2026-05-22)?</li>
+    <li style="margin:0 0 8px 0;"><strong>Code Review · PR <a href="https://github.com/Austinw004/FactoryFlowV2/pull/254" style="color:#CC785C;text-decoration:none;">#254</a> + #237/#242 dedup</strong> — per issue <a href="https://github.com/Austinw004/FactoryFlowV2/issues/253" style="color:#CC785C;text-decoration:none;">#253</a> the routine asks: merge <a href="https://github.com/Austinw004/FactoryFlowV2/pull/242" style="color:#CC785C;text-decoration:none;">#242</a> (fresher) and close <a href="https://github.com/Austinw004/FactoryFlowV2/pull/237" style="color:#CC785C;text-decoration:none;">#237</a> as superseded. Also: merge #254's one-line null-safety fix? Note: Big Boi's main commits may already cover the useWebSocket parts — needs rebase.</li>
+    <li style="margin:0 0 8px 0;"><strong>Code Review intel · issue <a href="https://github.com/Austinw004/FactoryFlowV2/issues/250" style="color:#CC785C;text-decoration:none;">#250</a></strong> (Section 232 tariff layer in commodity module, P1) — greenlight phase-1 scope, defer, or close?</li>
+    <li style="margin:0 0 8px 0;"><strong>Code Review intel · issue <a href="https://github.com/Austinw004/FactoryFlowV2/issues/251" style="color:#CC785C;text-decoration:none;">#251</a></strong> (DRAM/HBM 58-week structural lead-time surface, P2) — greenlight, defer, or close?</li>
+    <li style="margin:0 0 8px 0;"><strong>Code Review intel · issue <a href="https://github.com/Austinw004/FactoryFlowV2/issues/252" style="color:#CC785C;text-decoration:none;">#252</a></strong> (Siemens × NVIDIA + Anthropic competitive positioning brief) — assign to founder, defer, or close?</li>
+  </ol>
+</div>
+
+<!-- Reply -->
+<div style="background:#FFFFFF;border-radius:10px;padding:18px 20px;margin:0 0 16px 0;">
+  <p style="margin:0 0 6px 0;font-size:12px;font-weight:600;letter-spacing:.04em;color:#6A6E76;text-transform:uppercase;">How to reply</p>
+  <p style="margin:0;font-size:13px;color:#0A0B0D;">To act on these, reply to this routine session with the item number plus your decision — e.g., <em>"Item 3: close as duplicate"</em>, <em>"Item 6: approve and merge"</em>, <em>"Item 8: needs more info on which tariff data source to wire."</em> I'll execute on the next daily run and report back tomorrow.</p>
+</div>
+
+<p style="margin:0;font-size:11px;color:#6A6E76;text-align:center;">Generated 2026-05-18 · Prescient Labs Daily Digest routine</p>
+
+</div>
+</body>
+</html>

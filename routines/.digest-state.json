@@ -1,0 +1,132 @@
+{
+  "digest_date": "2026-05-18",
+  "prior_digest_date": "2026-05-17",
+  "prior_reply_checksum": null,
+  "prior_reply_processed": false,
+  "email_sent": false,
+  "email_failure_reason": "sendpulse-api module not installed in sandbox; no SENDPULSE_API_USER_ID/SENDPULSE_API_SECRET env vars; SendPulse SMTP service pending moderation approval (commit b8cb7f2)",
+  "artifacts": {
+    "html": "routines/digest-2026-05-18.html",
+    "text": "routines/digest-2026-05-18.txt"
+  },
+  "summary": {
+    "ran_cleanly": 1,
+    "need_eyes": 5,
+    "blocking": 0
+  },
+  "routine_status": {
+    "Big Boi": {
+      "pill": "activity",
+      "notable": "~17 direct-to-main commits last night (rounds 18-32) closing F0 security holes + billing audit items; PR #255 round 33 (draft, TSC 21->0)"
+    },
+    "Optimus": {
+      "pill": "silent",
+      "notable": "No activity, third silent day in a row"
+    },
+    "Daily Boost": {
+      "pill": "silent",
+      "notable": "No new activity; PR #239 still open and likely redundant with Big Boi main commits"
+    },
+    "Palantard Grade": {
+      "pill": "activity",
+      "notable": "PR #256 + PR #249 (Palantir meta-routine docs) opened today; PRs #240 + #247 still open; 4-PR backlog on Dashboard/regime UI"
+    },
+    "Weekly Clean": {
+      "pill": "activity",
+      "notable": "No new run (7-day cycle, next 2026-05-22); PR #235 unmerged 3 days"
+    },
+    "Code Review": {
+      "pill": "activity",
+      "notable": "PR #254 single-file fix; 4 issues filed (#250-#253); meta-issue #253 asks operator to dedup #237/#242"
+    }
+  },
+  "decisions": [
+    {
+      "id": 1,
+      "routine": "Big Boi",
+      "subject": "PR #255 (round 33 — TSC 21->0, validation, deps)",
+      "question": "Approve and merge, or defer?",
+      "pr_or_issue": 255
+    },
+    {
+      "id": 2,
+      "routine": "Big Boi",
+      "subject": "Direct-to-main policy",
+      "question": "Keep direct-to-main, or require PRs going forward? (Repeat of yesterday item 1 — still unanswered)",
+      "pr_or_issue": null
+    },
+    {
+      "id": 3,
+      "routine": "Daily Boost",
+      "subject": "PR #239 (319->0 TS errors)",
+      "question": "Close as duplicate of Big Boi's TSC work, rebase, or merge anyway?",
+      "pr_or_issue": 239
+    },
+    {
+      "id": 4,
+      "routine": "Palantard Grade",
+      "subject": "Regime-UI 4-PR overlap (#240, #247, #256)",
+      "question": "Pick winner (#256?) and close others, or sequence merges?",
+      "pr_or_issue": [240, 247, 256]
+    },
+    {
+      "id": 5,
+      "routine": "Palantard Grade",
+      "subject": "PR #249 — Palantir meta-routine bootstrap intended to replace Daily Digest",
+      "question": "Approve direction (and wind down Daily Digest)? Revise scope? Reject?",
+      "pr_or_issue": 249
+    },
+    {
+      "id": 6,
+      "routine": "Weekly Clean",
+      "subject": "PR #235 (3 days unmerged)",
+      "question": "Approve and merge, or close in favor of next weekly run (2026-05-22)?",
+      "pr_or_issue": 235
+    },
+    {
+      "id": 7,
+      "routine": "Code Review",
+      "subject": "PR #254 + #237/#242 dedup per meta-issue #253",
+      "question": "Merge #242 (fresher) + close #237? Also merge #254's null-safety fix? Both need rebase given Big Boi useWebSocket main commits.",
+      "pr_or_issue": [254, 237, 242, 253]
+    },
+    {
+      "id": 8,
+      "routine": "Code Review",
+      "subject": "Intel issue #250 — Section 232 tariff layer missing from commodity module (P1)",
+      "question": "Greenlight phase-1 scope, defer, or close?",
+      "pr_or_issue": 250
+    },
+    {
+      "id": 9,
+      "routine": "Code Review",
+      "subject": "Intel issue #251 — DRAM/HBM 58-week structural lead-time surface (P2)",
+      "question": "Greenlight, defer, or close?",
+      "pr_or_issue": 251
+    },
+    {
+      "id": 10,
+      "routine": "Code Review",
+      "subject": "Intel issue #252 — Siemens x NVIDIA + Anthropic competitive positioning brief",
+      "question": "Assign to founder, defer, or close?",
+      "pr_or_issue": 252
+    }
+  ],
+  "potential_conflicts": [
+    {
+      "file": "client/src/pages/Dashboard.tsx",
+      "touched_by": ["Big Boi (round-24, merged to main)", "Palantard Grade PR #256", "Code Review PR #254"]
+    },
+    {
+      "file": "client/src/hooks/useWebSocket.ts + client/src/contexts/RealtimeContext.tsx",
+      "touched_by": ["Big Boi round-20 (merged to main)", "Code Review PR #237", "Code Review PR #242"]
+    }
+  ],
+  "carryover_unanswered_from_prior_digest": [
+    "Item 1 (Big Boi direct-to-main policy)",
+    "Item 2 (Daily Boost PR #239 dedup)",
+    "Item 3 (Palantard Grade #247/#240 dedup)",
+    "Item 4 (Weekly Clean PR #235 merge/close)",
+    "Item 5 (Code Review #237/#242 dedup)"
+  ]
+}
