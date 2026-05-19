@@ -5,6 +5,7 @@ import { AllocationTable } from "@/components/AllocationTable";
 import { EditableBudgetGauge } from "@/components/EditableBudgetGauge";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { InfoTooltip } from "@/components/InfoTooltip";
+import { RegimeChangeBanner } from "@/components/RegimeChangeBanner";
 
 // Below-the-fold and dialog-gated widgets are lazy-loaded so the initial
 // Dashboard paint only pays for what the user actually sees before scrolling.
@@ -37,7 +38,7 @@ const SmartInsightsCompact = lazy(() =>
 const InsightPanel = lazy(() =>
   import("@/components/InsightPanel").then((m) => ({ default: m.InsightPanel })),
 );
-import { TrendingUp, DollarSign, Package, AlertCircle, Plus, Upload, GitCompare, Loader2, Globe, Radio, Package2, Building2, Box, FileDown } from "lucide-react";
+import { TrendingUp, DollarSign, Package, AlertCircle, Plus, Upload, GitCompare, Loader2, Globe, Radio, Package2, Building2, Box, FileDown, ArrowRight, ShieldCheck, Lock, ShoppingCart, Pause } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -61,6 +62,63 @@ const regimeDescriptions: Record<string, string> = {
 
 function getRegimeDescription(regime: string): string {
   return regimeDescriptions[regime] || "Economic conditions are being analyzed.";
+}
+
+// The hero command-center copy is keyed off the active regime. Each entry is
+// a one-screen answer to "what regime are we in, and what should I do about
+// it this week." The headline is an imperative verb so the page reads as a
+// directive, not a description. The two primary actions deep-link to the
+// pages where the operator actually executes that posture — no "view more."
+type RegimeHero = {
+  headline: string;
+  body: string;
+  primary: { label: string; icon: typeof Lock; route: string; testId: string };
+  secondary: { label: string; route: string; testId: string };
+  // Subtle tone applied as an accent strip on the hero card. Avoids painting
+  // the whole dashboard red — color is a signal, not a wash.
+  accent: string;
+};
+
+const regimeHero: Record<string, RegimeHero> = {
+  HEALTHY_EXPANSION: {
+    headline: "Market conditions are stable. Lock in long-term contracts.",
+    body: "Financial and real-economy circuits are aligned. A standard procurement pace is appropriate, and this is an unusually good window to negotiate multi-year supplier agreements before the next regime shift narrows the room to bargain.",
+    primary: { label: "Renegotiate supplier contracts", icon: ShieldCheck, route: "/supplier-risk", testId: "button-hero-action-primary" },
+    secondary: { label: "Open regime playbook", route: "/action-playbooks", testId: "button-hero-action-secondary" },
+    accent: "border-l-emerald-500/60",
+  },
+  ASSET_LED_GROWTH: {
+    headline: "Asset prices outpacing the real economy. Lock contracts now.",
+    body: "FDR is elevated and rising. Historically this regime precedes 8-12% input cost increases over the next quarter. Lock in pricing on critical materials, pre-purchase long-lead items, and tighten safety stock on anything single-sourced.",
+    primary: { label: "Lock in supplier contracts", icon: Lock, route: "/rfq-generation", testId: "button-hero-action-primary" },
+    secondary: { label: "Review exposed materials", route: "/supplier-risk", testId: "button-hero-action-secondary" },
+    accent: "border-l-amber-500/70",
+  },
+  IMBALANCED_EXCESS: {
+    headline: "Significant market decoupling detected. Defer non-critical buys.",
+    body: "Asset markets and the real economy are sharply out of alignment. Defer non-critical purchases, renegotiate any contract expiring inside the next 90 days, and build safety stock only on materials with no alternative source.",
+    primary: { label: "Defer non-critical orders", icon: Pause, route: "/procurement", testId: "button-hero-action-primary" },
+    secondary: { label: "Review at-risk materials", route: "/supplier-risk", testId: "button-hero-action-secondary" },
+    accent: "border-l-red-500/70",
+  },
+  REAL_ECONOMY_LEAD: {
+    headline: "Counter-cyclical window open. Favorable terms available.",
+    body: "Asset markets are correcting while the real economy holds up. Suppliers are unusually flexible — lock in long-dated agreements on critical materials and consider accelerating purchases that were deferred during the prior regime.",
+    primary: { label: "Lock in long-term agreements", icon: ShoppingCart, route: "/rfq-generation", testId: "button-hero-action-primary" },
+    secondary: { label: "Run allocation scenario", route: "/allocation", testId: "button-hero-action-secondary" },
+    accent: "border-l-blue-500/70",
+  },
+  UNKNOWN: {
+    headline: "Analyzing market conditions.",
+    body: "Regime classification is still stabilizing. The dashboard will switch to prescriptive guidance as soon as the FDR signal clears.",
+    primary: { label: "View regime methodology", icon: ShieldCheck, route: "/how-it-works", testId: "button-hero-action-primary" },
+    secondary: { label: "See historical regimes", route: "/historical-backtesting", testId: "button-hero-action-secondary" },
+    accent: "border-l-muted-foreground/40",
+  },
+};
+
+function getRegimeHero(regime: string): RegimeHero {
+  return regimeHero[regime] || regimeHero.UNKNOWN;
 }
 
 export default function Dashboard() {
@@ -386,15 +444,62 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="mb-16">
-        <div className="eyebrow mb-4">State of operations</div>
-        <h1 className="hero text-5xl">{regime?.regime ? getRegimeDescription(regime.regime).split('.')[0] + '.' : 'Analyzing conditions.'}</h1>
-        <p className="text-soft mt-5 max-w-xl leading-relaxed">
-          {Array.isArray(skus) && skus.length > 0
-            ? `Tracking ${skus.length.toLocaleString()} SKU${skus.length === 1 ? '' : 's'}. ${regime?.regime === 'HEALTHY_EXPANSION' ? 'No critical exposures.' : 'Review current regime conditions.'}`
-            : 'Add your first SKU to start tracking operations.'}
-        </p>
-      </div>
+      {/* Regime-shift event banner — surfaces unacknowledged regime transitions
+          ahead of the hero so a fresh transition becomes the first thing the
+          operator sees. Hidden automatically when there are no pending events.
+          See client/src/components/RegimeChangeBanner.tsx. */}
+      <RegimeChangeBanner />
+
+      {/* Command-center hero: regime-keyed imperative + the two actions an
+          operator should take this week, deep-linked. The accent strip on the
+          left is the only place we let the regime visually color the page,
+          to avoid "everything is red" alarm fatigue (see Principle 5). */}
+      {(() => {
+        const hero = getRegimeHero(regimeType);
+        const PrimaryIcon = hero.primary.icon;
+        return (
+          <div className={`mb-16 border-l-2 pl-6 ${hero.accent}`} data-testid="dashboard-hero">
+            <div className="eyebrow mb-4 flex items-center gap-2">
+              <span>Command center</span>
+              <span className="text-muted">·</span>
+              <span className="font-mono">{friendlyRegime} · FDR {fdr.toFixed(2)}</span>
+              <InfoTooltip term="fdr" />
+            </div>
+            <h1 className="hero text-5xl leading-tight" data-testid="text-hero-headline">{hero.headline}</h1>
+            <p className="text-soft mt-5 max-w-2xl leading-relaxed" data-testid="text-hero-body">
+              {hero.body}
+            </p>
+            <p className="text-xs text-muted mt-3 max-w-2xl leading-relaxed">
+              Tracking {(Array.isArray(skus) ? skus.length : 0).toLocaleString()} SKU{Array.isArray(skus) && skus.length === 1 ? '' : 's'}
+              {policySignals.length > 0 && (
+                <> · {policySignals.length} action signal{policySignals.length === 1 ? '' : 's'} below</>
+              )}
+              {regimeIntelligence?.confidence?.overall != null && (
+                <> · {Math.round(regimeIntelligence.confidence.overall * 100)}% regime confidence</>
+              )}
+            </p>
+            <div className="flex items-center gap-3 mt-6 flex-wrap">
+              <Button
+                size="default"
+                onClick={() => setLocation(hero.primary.route)}
+                data-testid={hero.primary.testId}
+              >
+                <PrimaryIcon className="h-4 w-4 mr-2" />
+                {hero.primary.label}
+                <ArrowRight className="h-3.5 w-3.5 ml-2" />
+              </Button>
+              <Button
+                size="default"
+                variant="outline"
+                onClick={() => setLocation(hero.secondary.route)}
+                data-testid={hero.secondary.testId}
+              >
+                {hero.secondary.label}
+              </Button>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="grid grid-cols-4 gap-px bg-line mb-20">
         <div className="bg-panel p-6">
@@ -624,7 +729,7 @@ export default function Dashboard() {
           <Suspense fallback={<div className="h-32 rounded-md bg-muted/20 animate-pulse" />}>
             <InsightPanel compact />
             <QuickWinsWidget />
-            <MaterialsAtRiskWidget />
+            <MaterialsAtRiskWidget regime={regimeType} />
           </Suspense>
         </div>
       </div>
