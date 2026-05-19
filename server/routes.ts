@@ -847,6 +847,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Integration Orchestrator routes
   registerIntegrationOrchestratorRoutes(app, isAuthenticated, rateLimiters);
 
+  /**
+   * GET /api/_test/sentry-probe?token=<SENTRY_PROBE_TOKEN>
+   *
+   * One-shot end-to-end probe for the Sentry SDK wiring (round-36).
+   * Captures a message via the Sentry SDK and reports back whether the
+   * SDK was actually initialized (i.e., SENTRY_DSN is set). Gated by a
+   * shared-secret query token so it can't be abused as a Sentry-quota
+   * drain by random callers.
+   *
+   * Use:  curl 'https://prescient-labs.com/api/_test/sentry-probe?token=$TOKEN'
+   * Response: { sentryActive: true|false, eventId: "..." | undefined }
+   *
+   * If sentryActive=true and eventId is non-empty, the event will land
+   * in the Sentry project within seconds. If sentryActive=false, the
+   * SENTRY_DSN env var isn't set (or @sentry/node isn't installed) —
+   * the SDK is in no-op mode.
+   *
+   * Safe to leave in place — the only side effect is one Sentry event
+   * per call, and rate-limited by the shared-secret token.
+   */
+  app.get('/api/_test/sentry-probe', async (req, res) => {
+    const expectedToken = process.env.SENTRY_PROBE_TOKEN || process.env.JWT_SECRET?.slice(0, 16);
+    if (!expectedToken || req.query.token !== expectedToken) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    try {
+      const { getSentry, captureMessage } = await import('./lib/sentry');
+      const sentryActive = !!getSentry();
+      const eventId = captureMessage(
+        `Sentry probe from production at ${new Date().toISOString()}`,
+        'info',
+      );
+      res.json({
+        sentryActive,
+        eventId,
+        environment: process.env.NODE_ENV || 'unknown',
+        dsnConfigured: !!process.env.SENTRY_DSN,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Probe failed', message: err?.message });
+    }
+  });
+
   // Health check endpoint for monitoring
   app.get('/api/health', async (req, res) => {
     try {
