@@ -1,0 +1,94 @@
+Hi Austin — daily digest for Tuesday, May 19.
+
+AT A GLANCE
+  1 ran cleanly · 5 need your eyes · 0 blocking
+  2 new PRs and 6 direct-to-main commits in the last 24h.
+  Decision backlog is 13 (10 carried from yesterday's digest #257 with
+  no reply received, plus 3 new today).
+
+------------------------------------------------------------------
+BIG BOI — activity
+6 direct-to-main commits (rounds 33–38) + 1 new draft PR. One commit
+(round 35) added a self-healing boot hook that auto-mutates the
+encryption table on every startup.
+  - b80fa24 round 33 feat(auth): email verification at signup
+  - 6fd77d2 round 34 feat(observability): Sentry SDK (env-gated)
+  - bf72874 round 35 feat(security): encryption backfill as self-healing boot hook
+  - 4e6f1e5 / ca0da72 / 589bb5f rounds 36–38 observability:
+    /_test/sentry-probe + PUBLIC_API_PATHS allowlist
+  - PR #260 (draft, +1067/-19, 5 files) — Daily codebase pass:
+    TSC 21→0, axios/postcss/ws CVE patches, ERP adapter generic
+    https://github.com/Austinw004/FactoryFlowV2/pull/260
+
+OPTIMUS — silent
+No activity. 4th clean day in a row — nothing to action.
+
+DAILY BOOST — silent
+No new activity. PR #239 still open and likely redundant with #260.
+  https://github.com/Austinw004/FactoryFlowV2/pull/239
+
+PALANTARD GRADE — activity
+1 new draft PR; backlog of 5 open regime/UX PRs on the same 3 files.
+#261 likely supersedes #256. Meta-routine spec PRs (#249, #258) still
+unmerged.
+  - PR #261 (draft, +441/-73, 4 files) — regime-aware command center:
+    prescriptive hero, RegimeChangeBanner, regime-keyed actions
+    https://github.com/Austinw004/FactoryFlowV2/pull/261
+  - Carryover open: #240, #247, #249, #256, #258
+
+WEEKLY CLEAN — silent
+No new run (7-day cycle, next 2026-05-22). PR #235 (W19 deep clean)
+unmerged 4 days.
+  https://github.com/Austinw004/FactoryFlowV2/pull/235
+
+CODE REVIEW — silent
+No new activity in 24h. Backlog unchanged: PRs #254, #242, #237 and
+intel issues #250–#253.
+
+------------------------------------------------------------------
+DECISIONS NEEDED (reply "Item N: <decision>")
+
+  1. [Y] Big Boi — PR #255 (round 33). Approve/merge or defer?
+        (carryover from #257 item 1)
+  2. [Y] Big Boi policy — direct-to-main commits continued today
+        (rounds 33–38). Keep direct-to-main or require draft PRs?
+        (carryover from #257 item 2)
+  3. [Y] Daily Boost — PR #239 still open. Close as duplicate of #260
+        and Big Boi's main commits, rebase, or merge? (carryover)
+  4. [Y] Palantard Grade — vigilant-allen 4-PR Dashboard overlap:
+        #240, #247, #256, #261. Pick winner (newest #261?) and close
+        others, or sequence merges? (carryover updated)
+  5. [Y] Palantard Grade — meta-routine spec #249 + #258 intended to
+        replace this Daily Digest. Approve direction (wind down),
+        revise scope, or reject? (carryover)
+  6. [Y] Weekly Clean — PR #235 unmerged 4 days. Approve/merge or
+        close in favor of 2026-05-22 cycle? (carryover)
+  7. [Y] Code Review — per meta-issue #253: merge #242 (fresher) +
+        close #237; also rebase + merge #254? (carryover)
+  8. [Y] Code Review intel — issue #250 Section 232 tariff layer (P1).
+        Greenlight phase-1, defer, or close? (carryover)
+  9. [Y] Code Review intel — issue #251 DRAM/HBM 58-week lead-time
+        surface (P2). Greenlight, defer, or close? (carryover)
+ 10. [Y] Code Review intel — issue #252 Siemens × NVIDIA + Anthropic
+        positioning brief. Assign to founder, defer, or close?
+        (carryover)
+ 11. [Y] Big Boi — new PR #260 (TSC 21→0, axios/postcss/ws CVE patches,
+        ERP adapter generic). Approve/merge, or let it pile up like
+        #239/#255?
+ 12. [Y] Palantard Grade — new PR #261 (regime-aware command center).
+        Designate as winner for the vigilant-allen Dashboard overlap
+        and close #240/#247/#256, or sequence?
+ 13. [Y] Big Boi — round 35 (bf72874) added a self-healing boot hook
+        that auto-runs the encryption backfill on every server start.
+        Round 36 added a new public-allowlisted /_test/sentry-probe
+        endpoint on main. Audit and keep, gate behind env flag,
+        or revert?
+
+------------------------------------------------------------------
+HOW TO REPLY
+Reply to this routine session with the item number plus your
+decision — e.g., "Item 3: approve and merge", "Item 5: defer to
+next week", "Item 12: needs more info on the FDR copy." The next
+daily run will execute on it.
+
+Prescient Labs · Daily Digest routine · 2026-05-19
