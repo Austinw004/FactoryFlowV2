@@ -1,0 +1,12 @@
+{
+  "_meta": {
+    "description": "Enriched mirror of the contact_inquiries table. Deduped on (email, company). Status/notes history preserved.",
+    "source_table": "contact_inquiries (shared/schema.ts:9689)",
+    "source_fields": ["id", "receivedAt", "name", "email", "company", "role", "topic", "status", "notes", "assignedTo", "submissionCount", "updatedAt"],
+    "status_values": ["new", "triaged", "replied", "qualified", "won", "lost", "spam"],
+    "note": "DB not directly readable from this routine; leads will be reconciled in once a dump or read path is available. Empty at bootstrap is expected.",
+    "created": "2026-05-20",
+    "created_by": "palantir-meta-routine (bootstrap)"
+  },
+  "leads": []
+}

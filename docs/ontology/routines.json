@@ -1,0 +1,49 @@
+{
+  "_meta": {
+    "description": "Catalog of all Claude Code routines targeting FactoryFlowV2 / Prescient Labs. Merged across runs; run history preserved.",
+    "note": "Routine enumeration via account/workspace API is not available from this execution context. Entries below are declared from the meta-routine spec and marked unverified until a discovery source confirms them.",
+    "created": "2026-05-20",
+    "created_by": "palantir-meta-routine (bootstrap)"
+  },
+  "routines": [
+    {
+      "name": "FactoryFlowV2 — Palantir meta-routine",
+      "slug": "palantir-meta",
+      "repo": "Austinw004/FactoryFlowV2",
+      "schedule": "daily 02:00 America/Chicago; weekly Sun 03:00 CT",
+      "class": "orchestrator",
+      "connectors": ["GitHub", "Email"],
+      "summary": "Orchestrator-of-orchestrators: fuses signals into the ontology and ships one daily digest.",
+      "verified": true,
+      "runs": []
+    },
+    {
+      "name": "Daily Codebase Engineer",
+      "slug": "daily-codebase-engineer",
+      "repo": "Austinw004/FactoryFlowV2",
+      "class": "B/C",
+      "summary": "Runs small-to-medium code-modifying work; output is code diffs + tests.",
+      "verified": false,
+      "runs": []
+    },
+    {
+      "name": "Three-Hat (Customer / Engineer / Intelligence Analyst)",
+      "slug": "three-hat",
+      "repo": "Austinw004/FactoryFlowV2",
+      "class": "A/B",
+      "summary": "Customer hat -> leads/customers.json; Engineer hat -> code_health.json; Intel hat -> intel/*.md + draft roadmap.",
+      "verified": false,
+      "runs": []
+    },
+    {
+      "name": "Weekly Deep Clean",
+      "slug": "weekly-deep-clean",
+      "repo": "Austinw004/FactoryFlowV2",
+      "schedule": "Sunday only",
+      "class": "C",
+      "summary": "Dead-code removal, dependency upgrades, doc-drift fixes, route-pruning proposals.",
+      "verified": false,
+      "runs": []
+    }
+  ]
+}

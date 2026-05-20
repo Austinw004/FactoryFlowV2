@@ -1,0 +1,58 @@
+{
+  "_meta": {
+    "description": "Production incidents, bugs, and security events fused from the repo, CI, logs, and hat routines.",
+    "schema": {
+      "id": "string",
+      "opened": "ISO date",
+      "severity": "P0|P1|P2|P3",
+      "title": "string",
+      "source": "string",
+      "status": "open|mitigated|closed",
+      "evidence": "string (path or link)"
+    },
+    "created": "2026-05-20",
+    "created_by": "palantir-meta-routine (bootstrap)"
+  },
+  "incidents": [
+    {
+      "id": "INC-2026-05-20-001",
+      "opened": "2026-05-20",
+      "severity": "P0",
+      "title": "CI typecheck red on main — 319 pre-existing TS errors (zod/drizzle-zod mismatch, 228 in shared/schema.ts)",
+      "source": "npm run check on origin/main @ c356664; tracked by GitHub issues #191, #232, #218, #181, #161",
+      "status": "open",
+      "evidence": "319 errors: shared/schema.ts(228), Machinery.tsx(44), SopWorkspace.tsx(32), routes.ts(13), SettingsPage.tsx(2)",
+      "note": "Pre-existing, not caused by this run. NOT re-filed — already covered by issues #191 and #232. Multiple competing fix PRs already open (#260, #239, #192, #263)."
+    },
+    {
+      "id": "INC-2026-05-20-002",
+      "opened": "2026-05-20",
+      "severity": "P0",
+      "title": "Production outage — prescient-labs.com unreachable (Replit deployment down)",
+      "source": "GitHub issue #175",
+      "status": "open",
+      "evidence": "issue #175",
+      "note": "Surfaced from existing open issue; cannot verify live deployment from this routine. Flagged to Austin."
+    },
+    {
+      "id": "INC-2026-05-20-003",
+      "opened": "2026-05-20",
+      "severity": "P1",
+      "title": "Routine-fleet runaway: 50 open PRs + 152 open issues, near-zero merge rate; duplicate artifacts piling up",
+      "source": "GitHub PR/issue inventory; tracked by issue #253",
+      "status": "open",
+      "evidence": "3 duplicate ontology-bootstrap PRs (#258, #249, #174); 4+ competing TS-fix PRs (#260, #239, #192, #263); issue #253 'operator merge required to break the loop'",
+      "note": "This is the dominant operational signal. Meta-routine should defer to existing PRs, not regenerate them. Needs operator triage."
+    },
+    {
+      "id": "INC-2026-05-20-004",
+      "opened": "2026-05-20",
+      "severity": "P1",
+      "title": "Leaked secrets previously committed in .replit — rotation required before live pilot",
+      "source": "SECURITY_ROTATION.md (repo runbook)",
+      "status": "open",
+      "evidence": "SECURITY_ROTATION.md; current .replit scanned clean for plaintext (KEY|SECRET|TOKEN)=\"...\" at 2026-05-20",
+      "note": "Current .replit has no plaintext secrets. Open until the documented credential rotation is confirmed complete by Austin."
+    }
+  ]
+}
