@@ -173,10 +173,15 @@ export default function AuditTrail() {
     return params.toString();
   }, [page, entityTypeFilter, actionFilter]);
 
-  const { data, isLoading } = useQuery<AuditResponse>({
+  const { data, isLoading, error: auditError } = useQuery<AuditResponse>({
     queryKey: [`/api/audit-trail?${queryParams}`],
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
+
+  // round-42: backend now gates audit logs behind the view_audit_logs
+  // permission (Admin-only by default). Non-admins get a 403 — show a clean
+  // "elevated access required" state rather than an empty/broken page.
+  const isForbidden = auditError instanceof Error && auditError.message.startsWith("403");
 
   const { data: summary } = useQuery<{ entityTypes: any[]; actions: any[] }>({
     queryKey: ["/api/audit-trail/summary"],
@@ -189,6 +194,31 @@ export default function AuditTrail() {
 
   const entityTypes = (summary?.entityTypes || []).sort((a: any, b: any) => b.count - a.count);
   const actionTypes = (summary?.actions || []).sort((a: any, b: any) => b.count - a.count);
+
+  if (isForbidden) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center gap-2 mb-6">
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Shield className="h-6 w-6 text-primary" />
+            Audit Trail
+          </h1>
+        </div>
+        <Card>
+          <CardContent className="p-10 flex flex-col items-center text-center gap-3">
+            <div className="p-3 rounded-full bg-amber-500/10">
+              <AlertTriangle className="h-7 w-7 text-amber-500" />
+            </div>
+            <h2 className="text-lg font-semibold">Elevated access required</h2>
+            <p className="text-sm text-muted-foreground max-w-md">
+              Viewing the audit trail requires the <span className="font-medium">View Audit Logs</span> permission.
+              Ask a workspace administrator to grant your role access, or sign in with an admin account.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">

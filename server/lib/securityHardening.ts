@@ -609,7 +609,20 @@ export const encryptionService = new EncryptionService();
 // IS shared across instances and is the real brute-force protection.
 export const rateLimiters = {
   // Rate limiting for authentication endpoints (per-IP, in-process).
+  // 30/min is intentionally lenient for LOGIN — legit users retype
+  // passwords. The real brute-force defense is the per-account lockout
+  // (5 attempts → 30-min DB-backed lock) in emailAuthService.login().
   auth: createRateLimitMiddleware(30, 60000), // 30 requests per minute
+
+  // Round-42: dedicated, tighter limiter for SIGNUP. Unlike login,
+  // there's no legitimate reason to create accounts 30×/min from one
+  // IP — that pattern is account-spam (which, combined with the
+  // pre-SendPulse lack of email verification, was a real abuse vector
+  // flagged in the round-24 audit). 5/min still comfortably covers a
+  // team onboarding several people from one office IP. The dominant
+  // long-term fix is a captcha (Cloudflare Turnstile) on the signup
+  // form — filed as follow-up; this is the cheap, no-frontend defense.
+  signup: createRateLimitMiddleware(5, 60000), // 5 requests per minute
 
   // Moderate rate limiting for API endpoints
   api: createRateLimitMiddleware(300, 60000), // 300 requests per minute

@@ -1645,6 +1645,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(userId);
       if (!user || !user.companyId) return res.status(400).json({ error: "No company" });
 
+      // RBAC gate (round-42 audit F2 fix): audit logs reveal every team member's
+      // actions. Previously ANY authenticated tenant user (Analyst, Executive,
+      // viewer) could read the full trail. Gate behind view_audit_logs to match
+      // the sibling /api/rbac/audit-logs endpoint (Admin-only by default).
+      const { userHasPermission } = await import("./lib/rbac");
+      if (!(await userHasPermission(userId, user.companyId, "view_audit_logs"))) {
+        return res.status(403).json({ error: "Insufficient permissions — requires view_audit_logs" });
+      }
+
       const { auditLogs, users: usersTable } = await import("../shared/schema");
       const { desc, and: drizzleAnd, eq: drizzleEq, gte: drizzleGte, like } = await import("drizzle-orm");
 
@@ -1703,6 +1712,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       if (!user || !user.companyId) return res.status(400).json({ error: "No company" });
+
+      // RBAC gate (round-42 audit F2 fix): same as /api/audit-trail above.
+      const { userHasPermission } = await import("./lib/rbac");
+      if (!(await userHasPermission(userId, user.companyId, "view_audit_logs"))) {
+        return res.status(403).json({ error: "Insufficient permissions — requires view_audit_logs" });
+      }
 
       const { auditLogs } = await import("../shared/schema");
       const { eq: drizzleEq } = await import("drizzle-orm");

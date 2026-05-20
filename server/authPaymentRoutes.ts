@@ -191,8 +191,8 @@ export function registerAuthPaymentRoutes(app: Express): void {
   // AUTH ROUTES
   // ═══════════════════════════════════════════════════════════════════════════
 
-  /** POST /api/auth/signup */
-  app.post("/api/auth/signup", rateLimiters.auth, handle(async (req, res) => {
+  /** POST /api/auth/signup — round-42: dedicated tighter rate limit (5/min/IP) vs login's 30/min */
+  app.post("/api/auth/signup", rateLimiters.signup, handle(async (req, res) => {
     const ctx = clientContext(req);
     const result = await signup(req.body, ctx);
     // Set HTTP-only refresh cookie for browser clients
