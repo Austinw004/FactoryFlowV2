@@ -9,6 +9,7 @@ import { getStripeSync } from './stripeClient';
 import { WebhookHandlers } from './webhookHandlers';
 import { runSchemaSelfHeal } from './lib/schemaSelfHeal';
 import { runEncryptionBackfillIfNeeded } from './lib/encryptionBackfill';
+import { getSentry as initSentry, captureException as sentryCaptureException } from './lib/sentry';
 
 const app = express();
 app.use(compression());
@@ -268,10 +269,10 @@ app.use((req, res, next) => {
     // (the common case until the operator signs up); safe otherwise.
     // Doing this BEFORE any other boot step means any error during
     // route registration or schema self-heal also flows to Sentry.
+    // Round-40: statically imported (require() doesn't exist in the
+    // esbuild --format=esm production bundle).
     try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { getSentry } = require('./lib/sentry');
-      getSentry();
+      initSentry();
     } catch { /* never block boot on observability setup */ }
 
     // Schema self-heal — runs idempotent ALTER TABLE IF NOT EXISTS for any
@@ -318,13 +319,11 @@ app.use((req, res, next) => {
 
       // Round-34: send 5xx errors to Sentry (no-op if SENTRY_DSN unset).
       // 4xx errors are usually client mistakes — not worth alerting on.
+      // Round-40: uses the statically-imported helper (require() doesn't
+      // exist in the esbuild --format=esm production bundle).
       if (status >= 500) {
         try {
-          // Lazy require so a missing @sentry/node install can't crash
-          // the error handler itself.
-          // eslint-disable-next-line @typescript-eslint/no-var-requires
-          const { captureException } = require('./lib/sentry');
-          captureException(err, {
+          sentryCaptureException(err, {
             requestId: req?.id,
             path: req?.path,
             method: req?.method,

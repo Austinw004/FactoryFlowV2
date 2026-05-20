@@ -7,14 +7,21 @@
  * function here is a no-op so the deploy works even without a Sentry
  * account.
  *
- * Why the dynamic require + try/catch:
- *   - The @sentry/node package was added to package.json in round-34
- *     but the install hasn't necessarily completed in the deploy yet.
- *     A bare `import * as Sentry from "@sentry/node"` at module top
- *     would crash the whole server with "Cannot find module" if the
- *     install lagged behind the code deploy.
- *   - Defensive lazy require() means the worst case is "Sentry doesn't
- *     report" rather than "server fails to boot."
+ * Round-40 fix: switched from `require("@sentry/node")` to a STATIC
+ * ESM import. The production build is bundled by esbuild with
+ * `--format=esm` — and in an ES module, `require` is NOT defined
+ * (it's a CommonJS-only global). The old `const Sentry =
+ * require("@sentry/node")` threw `ReferenceError: require is not
+ * defined` at runtime, was swallowed by the try/catch, and getSentry()
+ * returned null forever → sentryActive:false even with the package
+ * installed + DSN set. (The workspace `node -e "require(...)"` test
+ * passed only because that's plain CommonJS, not the ESM bundle.)
+ *
+ * The original lazy-require rationale ("package might not be installed
+ * yet") no longer applies: @sentry/node is a committed dependency
+ * (round-39), so a static import resolves at build time and works at
+ * runtime in ESM. If the package were ever missing, the build would
+ * fail loudly — which is better than a silent runtime null.
  *
  * Operator setup (when you're ready to turn on monitoring):
  *   1. Sign up at sentry.io (free tier covers 5k errors/month).
@@ -28,6 +35,8 @@
  * Per-environment scrubbing: only sends in NODE_ENV=production by
  * default so dev errors don't pollute the Sentry feed.
  */
+
+import * as SentryNode from "@sentry/node";
 
 type SentryModule = typeof import("@sentry/node") | null;
 
@@ -56,11 +65,9 @@ export function getSentry(): SentryModule {
   }
 
   try {
-    // Lazy require so a missing @sentry/node install can't crash boot.
-    // The `as any` cast is intentional — TS doesn't know if the package
-    // is installed at compile time.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const Sentry = require("@sentry/node") as typeof import("@sentry/node");
+    // Static ESM import (see round-40 note in the file header). Works in
+    // both the esbuild --format=esm production bundle and tsx dev.
+    const Sentry = SentryNode;
     Sentry.init({
       dsn: process.env.SENTRY_DSN,
       environment: process.env.NODE_ENV || "development",
