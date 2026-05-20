@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
+import crypto from "crypto";
 
 export interface IntegrationCredentials {
   accessToken?: string;
@@ -139,7 +140,6 @@ export class IntegrationFactory {
   }
 
   static encryptCredential(value: string): string {
-    const crypto = require("crypto");
     const key = this.getEncryptionKey();
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv("aes-256-cbc", Buffer.from(key.padEnd(32).slice(0, 32)), iv);
@@ -150,7 +150,6 @@ export class IntegrationFactory {
 
   static decryptCredential(encrypted: string): string {
     try {
-      const crypto = require("crypto");
       const key = this.getEncryptionKey();
       const [ivHex, encryptedHex] = encrypted.split(":");
       if (!ivHex || !encryptedHex) return encrypted;

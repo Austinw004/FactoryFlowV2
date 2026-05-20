@@ -6,6 +6,7 @@
 
 import axios from "axios";
 import { isDemoMode } from "./demoMode";
+import { classifyRegimeFromFDR } from "./regimeConstants";
 
 class CircuitBreaker {
   private failures = 0;
@@ -446,10 +447,11 @@ export function determineEconomicRegimeFromData(economicData: any): string {
   }
 
   // Use canonical classification from regimeConstants.ts
-  // Thresholds: HEALTHY_EXPANSION [0, 1.2), ASSET_LED_GROWTH [1.2, 1.8), 
+  // Thresholds: HEALTHY_EXPANSION [0, 1.2), ASSET_LED_GROWTH [1.2, 1.8),
   //             IMBALANCED_EXCESS [1.8, 2.5), REAL_ECONOMY_LEAD [2.5, 10]
   // REAL_ECONOMY_LEAD at HIGH FDR = asset markets overheated, counter-cyclical opportunity
-  const { classifyRegimeFromFDR } = require("./regimeConstants");
+  // (round-43: was require("./regimeConstants") — an ESM-bundle landmine; now a
+  // top-level import like the 20+ other consumers of classifyRegimeFromFDR.)
   return classifyRegimeFromFDR(fdr);
 }
 
