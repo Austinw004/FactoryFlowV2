@@ -17,12 +17,12 @@
     {
       "id": "INC-2026-05-20-001",
       "opened": "2026-05-20",
-      "severity": "P0",
-      "title": "CI typecheck red on main — 319 pre-existing TS errors (zod/drizzle-zod mismatch, 228 in shared/schema.ts)",
-      "source": "npm run check on origin/main @ c356664; tracked by GitHub issues #191, #232, #218, #181, #161",
+      "severity": "P1",
+      "title": "CI typecheck red on main — 21 pre-existing TS errors (erp adapters, payments, onboarding)",
+      "source": "npm run check on real main @ f824ce0; fix already open in PR #263",
       "status": "open",
-      "evidence": "319 errors: shared/schema.ts(228), Machinery.tsx(44), SopWorkspace.tsx(32), routes.ts(13), SettingsPage.tsx(2)",
-      "note": "Pre-existing, not caused by this run. NOT re-filed — already covered by issues #191 and #232. Multiple competing fix PRs already open (#260, #239, #192, #263)."
+      "evidence": "21 errors: server/lib/erp/* adapters (15), server/authPaymentRoutes.ts (4), client/src/pages/Onboarding.tsx (2)",
+      "note": "Pre-existing, not caused by this run. NOT re-filed — fix already open in PR #263 ('TypeScript 21->0'). Earlier 319-error reading was from a STALE local origin/main ref (c356664); real main = f824ce0 has 21 errors. Build is green (esbuild does not typecheck) so the broken type gate is easy to miss."
     },
     {
       "id": "INC-2026-05-20-002",
