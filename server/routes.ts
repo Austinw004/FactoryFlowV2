@@ -1307,14 +1307,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Save operations intelligence during onboarding
-  app.post('/api/onboarding/operations', isAuthenticated, async (req: any, res) => {
+  app.post('/api/onboarding/operations', isAuthenticated, validateBody(onboardingOperationsSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       if (!user || !user.companyId) return res.status(400).json({ error: "No company" });
-      const parsed = onboardingOperationsSchema.safeParse(req.body);
-      if (!parsed.success) return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
-      const { productionVolume, annualProcurementSpend, keyMaterials, erpSystem, painPoints, numberOfSuppliers, numberOfFacilities, topProducts } = parsed.data;
+      const { productionVolume, annualProcurementSpend, keyMaterials, erpSystem, painPoints, numberOfSuppliers, numberOfFacilities, topProducts } = req.validated as z.infer<typeof onboardingOperationsSchema>;
       await storage.updateCompany(user.companyId, {
         productionVolume,
         annualProcurementSpend,
@@ -1614,7 +1612,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     metadata: z.record(z.unknown()).optional(),
   });
 
-  app.post('/api/activity-logs', isAuthenticated, async (req: any, res) => {
+  app.post('/api/activity-logs', isAuthenticated, validateBody(activityLogSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -1623,13 +1621,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User has no associated company" });
       }
 
-      const parsed = activityLogSchema.safeParse(req.body);
-      if (!parsed.success) return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
-
       const activity = await storage.createActivityLog({
         companyId: user.companyId,
         userId,
-        ...parsed.data,
+        ...(req.validated as z.infer<typeof activityLogSchema>),
       });
       res.status(201).json(activity);
     } catch (error: any) {
@@ -1786,15 +1781,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     category: z.string().max(100).optional(),
   });
 
-  app.put('/api/automations/:id', isAuthenticated, async (req: any, res) => {
+  app.put('/api/automations/:id', isAuthenticated, validateBody(automationUpdateSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       if (!user || !user.companyId) return res.status(400).json({ error: "No company" });
-      const parsed = automationUpdateSchema.safeParse(req.body);
-      if (!parsed.success) return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
       const { updateRule } = await import("./lib/workflowEngine");
-      const rule = await updateRule(req.params.id, user.companyId, parsed.data);
+      const rule = await updateRule(req.params.id, user.companyId, req.validated as z.infer<typeof automationUpdateSchema>);
       if (!rule) return res.status(404).json({ error: "Rule not found" });
       res.json(rule);
     } catch (error: any) {
@@ -4046,21 +4039,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     modelVersion: z.string().max(50).optional(),
   });
 
-  app.patch("/api/multi-horizon-forecasts/:id", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/multi-horizon-forecasts/:id", isAuthenticated, validateBody(forecastPatchSchema), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       if (!user?.companyId) {
         return res.status(400).json({ error: "User not associated with a company" });
       }
-      const parsed = forecastPatchSchema.safeParse(req.body);
-      if (!parsed.success) return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
       const forecasts = await storage.getMultiHorizonForecasts(user.companyId);
       const forecast = forecasts.find(f => f.id === req.params.id);
       if (!forecast) {
         return res.status(404).json({ error: "Forecast not found" });
       }
-      const updated = await storage.updateMultiHorizonForecast(req.params.id, parsed.data);
+      const updated = await storage.updateMultiHorizonForecast(req.params.id, req.validated as z.infer<typeof forecastPatchSchema>);
       res.json(updated);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -14310,11 +14301,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     dataSource: z.enum(["manual", "api", "inferred"]).optional(),
   });
 
-  app.patch("/api/supplier-tiers/:id", isAuthenticated, rateLimiters.api, async (req: any, res) => {
+  app.patch("/api/supplier-tiers/:id", isAuthenticated, rateLimiters.api, validateBody(supplierTierUpdateSchema), async (req: any, res) => {
     try {
-      const parsed = supplierTierUpdateSchema.safeParse(req.body);
-      if (!parsed.success) return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
-      const tier = await storage.updateSupplierTier(req.params.id, parsed.data);
+      const tier = await storage.updateSupplierTier(req.params.id, req.validated as z.infer<typeof supplierTierUpdateSchema>);
       if (!tier) {
         return res.status(404).json({ error: "Supplier tier not found" });
       }

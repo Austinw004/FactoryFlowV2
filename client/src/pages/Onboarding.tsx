@@ -337,7 +337,7 @@ export default function Onboarding() {
       setNumberOfSuppliers((cur) => cur || c.numberOfSuppliers);
       setNumberOfFacilities((cur) => cur || c.numberOfFacilities);
       setTopProducts((cur) => cur || c.topProducts);
-      if (c.selectedPlanId) setSelectedPlanId((cur) => cur || c.selectedPlanId!);
+      if (c.selectedPlanId) setSelectedPlan((cur) => cur || c.selectedPlanId!);
     }
     setFirstName((cur) => cur || p.firstName);
     setLastName((cur) => cur || p.lastName);
