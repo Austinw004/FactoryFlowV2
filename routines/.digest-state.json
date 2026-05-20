@@ -1,0 +1,70 @@
+{
+  "today": "2026-05-20",
+  "prior_digest_date": "2026-05-19",
+  "prior_digest_pr": 262,
+  "prior_reply_checksum": null,
+  "prior_reply_processed": false,
+  "prior_reply_note": "No operator reply present in this session's prior turn; Step 5 skipped.",
+  "email_status": {
+    "sent": false,
+    "attempted_at": "2026-05-20T12:00:00Z",
+    "reason": "sendpulse-api package not installed in routine sandbox; SENDPULSE_API_USER_ID and SENDPULSE_API_SECRET env vars unset. 4th consecutive run with this root cause (#248 05-17, #257 05-18, #262 05-19). Per spec, did not retry. Logged to /tmp/digest-failures.jsonl.",
+    "subject": "Daily digest — 5 need your call",
+    "content_paths": {
+      "html": "routines/digest-2026-05-20.html",
+      "text": "routines/digest-2026-05-20.txt"
+    },
+    "failure_log": "/tmp/digest-failures.jsonl"
+  },
+  "counters": {
+    "ran_cleanly": 1,
+    "need_eyes": 5,
+    "blocking": 0
+  },
+  "attribution_note": "Branch->routine mapping inherited from prior-run state. Prior file was internally inconsistent (daily_boost branch_pattern vs notes). Reconciled this run as: big_boi=FactoryFlow Dispatch direct-to-main rounds; daily_boost=claude/exciting-fermi-* daily codebase PRs; palantard_grade=claude/relaxed-ramanujan-* docs + claude/vigilant-allen-* dashboard PRs; weekly_clean=claude/festive-dijkstra-*; code_review=claude/hopeful-rubin-* + intelligence issues; optimus=silent (no branch).",
+  "routine_status": {
+    "big_boi":         { "status": "activity", "branch_pattern": "(direct-to-main: FactoryFlow Dispatch)", "notes": "rounds 40-43 to main on 05-19/20" },
+    "optimus":         { "status": "silent",   "branch_pattern": null,                          "notes": "5th clean day" },
+    "daily_boost":     { "status": "activity", "branch_pattern": "claude/exciting-fermi-*",      "notes": "new PR #263 (CI green); #260/#255/#239 carryover" },
+    "palantard_grade": { "status": "activity", "branch_pattern": "claude/relaxed-ramanujan-* + claude/vigilant-allen-*", "notes": "new PR #264 (CI fail); #261/#256/#247/#240 dashboard + #249/#258 docs carryover" },
+    "weekly_clean":    { "status": "silent",   "branch_pattern": "claude/festive-dijkstra-*",    "notes": "no new run; PR #235 unmerged since 05-15; next cycle 05-22" },
+    "code_review":     { "status": "silent",   "branch_pattern": "claude/hopeful-rubin-*",       "notes": "no new run; #242/#237/#254 + issues #250-#253 carryover" }
+  },
+  "decisions": [
+    { "id": 1,  "severity": "YELLOW", "routine": "big_boi",         "ref": { "type": "commits", "shas": ["add93bc","4ae77a0","5e73a8e","f824ce0"] }, "summary": "4 commits pushed direct to main overnight (incl. round 42 security RBAC + signup rate limit).", "question": "Keep direct-to-main authority, or require draft PRs going forward?", "carryover_from": { "digest": "2026-05-19", "pr": 262, "item": 2 } },
+    { "id": 2,  "severity": "YELLOW", "routine": "big_boi",         "ref": { "type": "endpoint" }, "summary": "Round-35 self-healing boot hook auto-mutates the encryption table at startup; rounds 36-38 left a public-allowlisted /_test/sentry-probe endpoint on main.", "question": "Audit & keep, gate behind env flag, or revert?", "carryover_from": { "digest": "2026-05-19", "pr": 262, "item": 13 } },
+    { "id": 3,  "severity": "YELLOW", "routine": "daily_boost",     "ref": { "type": "pr", "numbers": [263, 260, 255, 239] }, "summary": "Four overlapping daily-codebase drafts (#263 green), none merged.", "question": "Merge newest #263 and close the rest as superseded, or change cadence?", "carryover_from": { "digest": "2026-05-19", "pr": 262, "items": [1, 3, 11] } },
+    { "id": 4,  "severity": "YELLOW", "routine": "palantard_grade", "ref": { "type": "pr", "numbers": [264, 261, 256, 247, 240], "conflict": true }, "summary": "Five dashboard drafts edit the same files; #264 (new) is failing CI.", "question": "Pick a winner and close the rest, or sequence merges?", "carryover_from": { "digest": "2026-05-19", "pr": 262, "items": [4, 12] } },
+    { "id": 5,  "severity": "YELLOW", "routine": "palantard_grade", "ref": { "type": "pr", "numbers": [249, 258] }, "summary": "Meta-routine spec proposes winding down this Daily Digest.", "question": "Approve direction, revise scope, or reject?", "carryover_from": { "digest": "2026-05-19", "pr": 262, "item": 5 } },
+    { "id": 6,  "severity": "YELLOW", "routine": "weekly_clean",    "ref": { "type": "pr", "numbers": [235] }, "summary": "W19 deep-clean PR unmerged since 05-15.", "question": "Merge, or close in favor of the 2026-05-22 cycle?", "carryover_from": { "digest": "2026-05-19", "pr": 262, "item": 6 } },
+    { "id": 7,  "severity": "YELLOW", "routine": "code_review",     "ref": { "type": "pr", "numbers": [242, 237, 254] }, "summary": "#242/#237 duplicate safety fixes; #254 needs rebase (meta-issue #253).", "question": "Merge #242, close #237 as superseded, rebase+merge #254?", "carryover_from": { "digest": "2026-05-19", "pr": 262, "item": 7 } },
+    { "id": 8,  "severity": "YELLOW", "routine": "code_review",     "ref": { "type": "issue", "numbers": [250] }, "summary": "Section 232 tariff layer missing from commodity module (P1).", "question": "Greenlight phase-1 (data model only), defer, or close?", "carryover_from": { "digest": "2026-05-19", "pr": 262, "item": 8 } },
+    { "id": 9,  "severity": "YELLOW", "routine": "code_review",     "ref": { "type": "issue", "numbers": [251] }, "summary": "DRAM/HBM 58-week structural lead-time surface (P2).", "question": "Greenlight, defer, or close?", "carryover_from": { "digest": "2026-05-19", "pr": 262, "item": 9 } },
+    { "id": 10, "severity": "YELLOW", "routine": "code_review",     "ref": { "type": "issue", "numbers": [252] }, "summary": "Siemens x NVIDIA + Anthropic competitive positioning brief.", "question": "Assign to founder, defer, or close?", "carryover_from": { "digest": "2026-05-19", "pr": 262, "item": 10 } },
+    { "id": 11, "severity": "YELLOW", "routine": "code_review",     "ref": { "type": "issue", "numbers": [253] }, "summary": "Morning sweep regenerates identical fixes; operator merge needed to break the loop.", "question": "Adopt a 'skip files already in an open PR' guard and merge one of #237/#242?", "carryover_from": null }
+  ],
+  "items_24h": {
+    "prs_opened": [263, 264],
+    "prs_merged": [],
+    "prs_closed": [],
+    "issues_opened": [],
+    "issues_closed": [],
+    "commits_to_main": ["add93bc", "4ae77a0", "5e73a8e", "f824ce0"],
+    "failed_ci_runs": [ { "pr": 264, "check": "typecheck + build", "conclusion": "failure", "branch": "claude/vigilant-allen-uYUK1", "note": "draft PR branch, not main" } ],
+    "non_routine": [ { "type": "pr", "number": 259, "source": "dependabot", "title": "deps(deps): bump the react group" } ]
+  },
+  "items_7d_weekly_clean": {
+    "prs_opened": [],
+    "prs_merged": [],
+    "prs_closed": [],
+    "note": "No festive-dijkstra activity in 7d window; PR #235 (W19, 05-15) carryover."
+  },
+  "potential_conflicts": [
+    {
+      "files": ["client/src/pages/Dashboard.tsx", "regime/command-center components"],
+      "prs": [264, 261, 256, 247, 240],
+      "routines": ["palantard_grade"],
+      "note": "Intra-routine overlap (vigilant-allen family). Surfaced as decision 4."
+    }
+  ]
+}
