@@ -5,6 +5,8 @@ import { AllocationTable } from "@/components/AllocationTable";
 import { EditableBudgetGauge } from "@/components/EditableBudgetGauge";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { InfoTooltip } from "@/components/InfoTooltip";
+import { getRegimeIntelligence } from "@/lib/regimeIntelligence";
+import { ArrowRight } from "lucide-react";
 
 // Below-the-fold and dialog-gated widgets are lazy-loaded so the initial
 // Dashboard paint only pays for what the user actually sees before scrolling.
@@ -251,18 +253,10 @@ export default function Dashboard() {
   
   const friendlyRegime = regimeLabels[regimeType] || regimeType;
 
-  // One-line posture summary keyed off the active regime — the thesis baked
-  // into the customer's first screen so the empty-state still answers Persona
-  // Q1 ("what regime are we in, what does it mean for me?"). Matches the
-  // canonical posture descriptions documented in the Dispatch test brief.
-  const regimePostures: Record<string, string> = {
-    HEALTHY_EXPANSION:  "Forward-buy critical materials, lock contracts, scale capacity. Optimistic with discipline.",
-    ASSET_LED_GROWTH:   "Shorten lead times, hedge cost inflation, watch credit conditions. Alert-but-engaged.",
-    IMBALANCED_EXCESS:  "Build inventory buffer on critical inputs, scenario-plan a downturn, defer expansion. Defensive.",
-    REAL_ECONOMY_LEAD:  "Secure supply ahead of price moves, longer-term contracts, lock capacity. Grab-it-while-you-can.",
-    UNKNOWN:            "Regime signals still loading. Posture recommendations appear once the analysis stabilizes.",
-  };
-  const regimePosture = regimePostures[regimeType] || regimePostures.UNKNOWN;
+  // Prescriptive intelligence for the command banner — translates the active
+  // regime into a plain-language meaning, a specific procurement action, and a
+  // direct path. This is the dashboard's "so what?" answer (Persona Q1).
+  const regimeIntel = getRegimeIntelligence(regimeType);
 
   // Show loading state (wait for auth first, then data)
   if (authLoading || (user && (skusLoading || regimeLoading))) {
@@ -300,8 +294,12 @@ export default function Dashboard() {
                 <h2 className="text-2xl font-semibold mb-2" data-testid="text-empty-regime-name">
                   {friendlyRegime}
                 </h2>
-                <p className="text-sm text-muted-foreground leading-relaxed max-w-3xl">
-                  {regimePosture}
+                <p className="text-sm leading-relaxed max-w-3xl mb-2">
+                  <span className="text-muted-foreground">{regimeIntel.meaning}</span>{' '}
+                  <span className="text-foreground font-medium">{regimeIntel.guidance}</span>
+                </p>
+                <p className="text-xs text-muted-foreground leading-relaxed max-w-3xl">
+                  Why: {regimeIntel.reasoning}
                 </p>
               </div>
               <Badge variant="outline" className="gap-1.5 shrink-0">
@@ -394,6 +392,59 @@ export default function Dashboard() {
             ? `Tracking ${skus.length.toLocaleString()} SKU${skus.length === 1 ? '' : 's'}. ${regime?.regime === 'HEALTHY_EXPANSION' ? 'No critical exposures.' : 'Review current regime conditions.'}`
             : 'Add your first SKU to start tracking operations.'}
         </p>
+      </div>
+
+      {/* Regime command banner — the prescriptive heart of the command center.
+          Translates the FDR regime into a plain-language meaning + a specific
+          procurement action + a direct path, with tone drawn from the brand
+          palette so the dashboard mood shifts with market conditions. */}
+      <div
+        className={`border ${regimeIntel.tone.border} bg-panel rounded-md p-6 mb-16`}
+        data-testid="banner-regime-command"
+      >
+        <div className="flex items-start justify-between gap-6 flex-wrap">
+          <div className="flex-1 min-w-[280px]">
+            <div className="flex items-center gap-2 mb-3">
+              <span className={`dot ${regimeIntel.tone.dot}`}></span>
+              <span className="eyebrow">
+                {regimeIntel.severity === 'act'
+                  ? 'Action needed'
+                  : regimeIntel.severity === 'watch'
+                  ? 'Watch'
+                  : 'Stable'}
+                {' · '}Procurement guidance
+              </span>
+            </div>
+            <h2 className={`text-2xl display mb-2 ${regimeIntel.tone.text}`}>
+              {regimeIntel.label}
+            </h2>
+            <p className="text-soft leading-relaxed max-w-2xl mb-3">
+              {regimeIntel.meaning} <span className="text-bone">{regimeIntel.guidance}</span>
+            </p>
+            <p className="mono text-xs text-muted leading-relaxed max-w-2xl">
+              Why: {regimeIntel.reasoning}
+              {regime?.fdr != null ? ` (FDR ${Number(regime.fdr).toFixed(2)})` : ''}
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 shrink-0">
+            <Button
+              size="sm"
+              onClick={() => setLocation(regimeIntel.primaryAction.route)}
+              data-testid="button-regime-primary-action"
+            >
+              {regimeIntel.primaryAction.label}
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setLocation(regimeIntel.secondaryAction.route)}
+              data-testid="button-regime-secondary-action"
+            >
+              {regimeIntel.secondaryAction.label}
+            </Button>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-4 gap-px bg-line mb-20">

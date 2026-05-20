@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Package, TrendingDown } from "lucide-react";
 import { useLocation } from "wouter";
 import type { Material } from "@shared/schema";
+import { getRegimeIntelligence } from "@/lib/regimeIntelligence";
 
 interface MaterialRisk {
   material: Material;
@@ -19,6 +20,16 @@ export function MaterialsAtRiskWidget() {
   const { data: materials = [], isLoading } = useQuery<Material[]>({
     queryKey: ['/api/materials'],
   });
+  // Reuse the already-cached regime query so the recommended action reflects
+  // the current FDR regime (buy ahead vs. draw down) rather than a fixed script.
+  const { data: regime } = useQuery<any>({ queryKey: ['/api/economics/regime'] });
+  const regimeIntel = getRegimeIntelligence((regime as any)?.regime);
+  const buyingFavored = regimeIntel.key === 'ASSET_LED_GROWTH' || regimeIntel.key === 'REAL_ECONOMY_LEAD';
+  const regimeNote = regimeIntel.key === 'IMBALANCED_EXCESS'
+    ? 'Prices are stretched — cover the gap with safety stock, avoid bulk buys at peak.'
+    : buyingFavored
+    ? 'Favorable buying window — secure supply now before the next price move.'
+    : 'Standard procurement pace — replenish to target levels.';
   
   // Calculate risk for each material
   const materialsAtRisk: MaterialRisk[] = materials
@@ -106,11 +117,14 @@ export function MaterialsAtRiskWidget() {
               Materials at Risk
             </CardTitle>
             <CardDescription>
-              {materialsAtRisk.length} materials requiring attention
+              {materialsAtRisk.length} materials requiring attention · {regimeIntel.label}
             </CardDescription>
           </div>
           <Badge variant="destructive">{materialsAtRisk.length}</Badge>
         </div>
+        <p className={`text-xs mt-2 ${regimeIntel.tone.text}`} data-testid="text-risk-regime-note">
+          {regimeNote}
+        </p>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -170,7 +184,7 @@ export function MaterialsAtRiskWidget() {
                   data-testid={`button-procure-${item.material.id}`}
                 >
                   <TrendingDown className="h-3 w-3 mr-1" />
-                  Schedule Procurement
+                  {regimeIntel.key === 'IMBALANCED_EXCESS' ? 'Cover with safety stock' : buyingFavored ? 'Secure supply now' : 'Schedule procurement'}
                 </Button>
               </div>
             </div>
