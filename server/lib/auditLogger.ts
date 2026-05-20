@@ -140,6 +140,7 @@ export async function logAudit(params: {
     | "calculate"
     | "run"
     | "execute"
+    | "cancel"
     | "view";
   entityType: string;
   entityId?: string;
