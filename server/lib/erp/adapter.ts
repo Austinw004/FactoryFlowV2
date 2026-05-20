@@ -123,7 +123,7 @@ export function listRegisteredAdapters(): { system: ErpSystem; displayName: stri
  * to the route handler so it can pass through to the customer-facing
  * "in beta" copy.
  */
-export function notConfigured(adapterName: string, envHint: string): ErpAdapterResult {
+export function notConfigured(adapterName: string, envHint: string): { kind: "not_configured"; reason: string } {
   return {
     kind: "not_configured",
     reason: `${adapterName} adapter requires ${envHint} environment variables. Contact sales@prescient-labs.com to provision a sandbox or production connection.`,
