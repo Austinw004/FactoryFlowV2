@@ -1,0 +1,89 @@
+Hi Austin — daily digest for Wed, May 20.
+
+AT A GLANCE
+  1 ran cleanly   |   5 need your eyes   |   0 blocking
+Window: 24h for daily routines, 7d for Weekly Clean. Nothing merged since
+the last digest, so open drafts keep accumulating. Branch-to-routine
+attribution is inherited from prior-run state and is approximate.
+
+------------------------------------------------------------------
+PER-ROUTINE
+
+Big Boi — ACTIVITY
+  Direct-to-main dispatch engine; pushed 4 commits to main overnight.
+  - round 40 Sentry ESM require() root-cause fix (add93bc)
+  - round 41 DEPLOYMENT_RUNBOOK.md docs (4ae77a0)
+  - round 42 audit-trail RBAC gate + signup rate limit / security (5e73a8e)
+  - round 43 eliminate 3 require() landmines in server/ (f824ce0)
+  See decisions 1, 2.
+
+Optimus — SILENT
+  No activity in the window; 5th clean day. Nothing to do. Reliable.
+
+Daily Boost — ACTIVITY
+  Daily codebase pass; opened a new draft, three older equivalents open.
+  - #263 daily maintenance: security patch, TS 21->0, validation (new, CI green)
+  - older open drafts same theme: #260, #255, #239
+  See decision 3.
+
+Palantard Grade — ACTIVITY
+  Regime-aware dashboard work + meta-routine spec. New draft fails CI.
+  - #264 dashboard command center (new, CI FAIL: typecheck+build)
+  - same-file dashboard drafts: #261, #256, #247, #240 (potential conflict)
+  - meta-routine spec / ontology docs: #258, #249
+  See decisions 4, 5.
+
+Weekly Clean — SILENT
+  No new run this window (next cycle 2026-05-22). One PR from last cycle open.
+  - #235 W19 deep clean (security headers, CVE patches, bundle split),
+    unmerged since 05-15
+  See decision 6.
+
+Code Review — SILENT
+  No new run; carryover safety PRs and intelligence issues await decisions.
+  - duplicate safety fixes #242 / #237; rebase needed #254
+  - intelligence issues #250 (tariff P1), #251 (DRAM lead-time P2), #252 (positioning)
+  - meta-issue #253: routine keeps regenerating same fixes
+  See decisions 7, 8, 9, 10, 11.
+  (Also still open, outside this window: P1 perf #202, OAuth fallback #245.)
+
+------------------------------------------------------------------
+DECISIONS NEEDED  (11 items, all YELLOW, 0 blocking)
+
+ 1. Big Boi / policy. 4 commits pushed straight to main overnight (incl.
+    round 42 security: RBAC + signup rate limit). Keep direct-to-main
+    authority, or require draft PRs going forward?
+ 2. Big Boi / risk. Round-35 self-healing boot hook auto-mutates the
+    encryption table on startup; rounds 36-38 left a public-allowlisted
+    /_test/sentry-probe endpoint on main. Audit & keep, gate behind an env
+    flag, or revert?
+ 3. Daily Boost / pile-up. Four overlapping daily-codebase drafts (#263
+    green, #260, #255, #239), none merged. Merge newest #263 and close the
+    rest as superseded, or change cadence?
+ 4. Palantard Grade / conflict. Five dashboard drafts edit the same files
+    (#264 red, #261, #256, #247, #240). Pick a winner (#264 is currently
+    failing CI) and close the rest, or sequence merges?
+ 5. Palantard Grade / direction. Meta-routine spec #249/#258 proposes winding
+    down this Daily Digest. Approve the direction, revise scope, or reject?
+ 6. Weekly Clean / stale PR. #235 (W19 deep clean) unmerged since 05-15;
+    next cycle 05-22. Merge, or close in favor of next cycle?
+ 7. Code Review / dedup. #242/#237 are duplicate safety fixes; #254 needs
+    rebase (meta-issue #253). Merge #242, close #237 as superseded,
+    rebase+merge #254?
+ 8. Code Review / product (P1). Section 232 tariff layer missing from the
+    commodity module (#250). Greenlight phase-1 (data model only), defer,
+    or close?
+ 9. Code Review / product (P2). DRAM/HBM 58-week structural lead-time surface
+    (#251). Greenlight, defer, or close?
+10. Code Review / positioning. Siemens x NVIDIA + Anthropic competitive brief
+    (#252). Assign to founder, defer, or close?
+11. Code Review / meta. Morning sweep keeps regenerating identical fixes;
+    operator merge needed to break the loop (#253). Adopt a "skip files
+    already in an open PR" guard and merge one of #237/#242?
+
+------------------------------------------------------------------
+TO ACT: reply to this routine session with the item number plus your
+decision, e.g. "Item 3: approve and merge", "Item 5: defer to next week",
+"Item 7: needs more info on X." I'll execute on the next daily run.
+
+Prescient Labs - FactoryFlowV2 - automated daily digest
