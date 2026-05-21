@@ -264,6 +264,50 @@ export default function Dashboard() {
   };
   const regimePosture = regimePostures[regimeType] || regimePostures.UNKNOWN;
 
+  // Regime-aware procurement guidance for the command-center hero. Each entry
+  // translates the FDR regime into (1) what it means for input costs, (2) the
+  // specific procurement move to make, and (3) a direct action path — so a
+  // plant director knows what to DO within seconds, not just what regime they
+  // are in. `accent` shifts the card's tone with market conditions (calm →
+  // amber heating up → red tension → opportunity green).
+  const regimeGuidance: Record<string, {
+    accent: string;
+    costSignal: string;
+    action: string;
+    ctaLabel: string;
+    ctaRoute: string;
+  }> = {
+    HEALTHY_EXPANSION: {
+      accent: "border-line bg-panel",
+      costSignal: "Market conditions are stable. Asset and real-economy circuits are in balance.",
+      action: "Maintain standard procurement pace. A good window to negotiate long-term supplier contracts and lock favorable pricing.",
+      ctaLabel: "Review procurement",
+      ctaRoute: "/procurement",
+    },
+    ASSET_LED_GROWTH: {
+      accent: "border-amber-500/40 bg-amber-500/[0.06]",
+      costSignal: "Asset prices are outpacing the real economy — input costs are likely to rise 8–12% this quarter.",
+      action: "Lock in contracts now and pre-purchase critical materials before the next pricing cycle.",
+      ctaLabel: "View exposed materials",
+      ctaRoute: "/supplier-risk",
+    },
+    IMBALANCED_EXCESS: {
+      accent: "border-red-500/40 bg-red-500/[0.06]",
+      costSignal: "Significant asset–real economy decoupling detected — elevated procurement and demand risk.",
+      action: "Defer non-critical purchases, renegotiate expiring contracts, and build safety stock on critical materials only.",
+      ctaLabel: "Review at-risk materials",
+      ctaRoute: "/supplier-risk",
+    },
+    REAL_ECONOMY_LEAD: {
+      accent: "border-emerald-500/40 bg-emerald-500/[0.06]",
+      costSignal: "Counter-cyclical window — favorable supplier terms are available while asset markets correct.",
+      action: "Lock in longer-term supplier agreements and renegotiate expiring contracts while you hold the leverage.",
+      ctaLabel: "Renegotiate contracts",
+      ctaRoute: "/procurement",
+    },
+  };
+  const guidance = regimeGuidance[regimeType] || null;
+
   // Show loading state (wait for auth first, then data)
   if (authLoading || (user && (skusLoading || regimeLoading))) {
     return (
@@ -395,6 +439,42 @@ export default function Dashboard() {
             : 'Add your first SKU to start tracking operations.'}
         </p>
       </div>
+
+      {/* Regime-aware procurement guidance — the command-center's "so what?".
+          Translates the live FDR regime into the specific procurement move to
+          make right now, with a one-click action path. Tone shifts with the
+          regime so market conditions register before the customer reads a word. */}
+      {guidance && (
+        <div
+          className={`border rounded-lg p-6 mb-16 ${guidance.accent}`}
+          data-testid="card-regime-guidance"
+        >
+          <div className="flex items-start justify-between gap-6 flex-wrap">
+            <div className="flex-1 min-w-0 space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="eyebrow">Procurement guidance</span>
+                <Badge variant="outline" className="gap-1.5 shrink-0">
+                  <span className="text-xs">{friendlyRegime} · FDR {fdr.toFixed(2)}</span>
+                </Badge>
+              </div>
+              <p className="text-base font-medium leading-relaxed max-w-2xl">
+                {guidance.costSignal}
+              </p>
+              <p className="text-sm text-soft leading-relaxed max-w-2xl">
+                <span className="text-muted-foreground uppercase tracking-wider text-xs mr-2">Recommended</span>
+                {guidance.action}
+              </p>
+            </div>
+            <Button
+              onClick={() => setLocation(guidance.ctaRoute)}
+              className="shrink-0"
+              data-testid="button-regime-guidance-cta"
+            >
+              {guidance.ctaLabel}
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-4 gap-px bg-line mb-20">
         <div className="bg-panel p-6">
