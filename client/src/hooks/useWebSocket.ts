@@ -116,7 +116,7 @@ export function useWebSocket(onMessage?: MessageHandler) {
 
       ws.onopen = () => {
         clearTimeout(connectTimeoutRef.current);
-        console.log('[WebSocket] Connected');
+        if (import.meta.env.DEV) console.log('[WebSocket] Connected');
         setIsConnected(true);
         startHeartbeat();
         // Do NOT reset reconnectAttemptsRef here — onopen fires on the
@@ -144,7 +144,7 @@ export function useWebSocket(onMessage?: MessageHandler) {
         }
 
         if (message.type === 'connection_established') {
-          if (message.message) console.log('[WebSocket]', message.message);
+          if (import.meta.env.DEV && message.message) console.log('[WebSocket]', message.message);
           // Real proof-of-life: server sends this only after the auth
           // check passes. Reset the reconnect counter NOW.
           reconnectAttemptsRef.current = 0;
@@ -192,14 +192,14 @@ export function useWebSocket(onMessage?: MessageHandler) {
           );
           // Add jitter to avoid stampede on mass reconnect
           const jittered = delay + Math.floor(Math.random() * 500);
-          console.log(`[WebSocket] Disconnected. Reconnecting in ${jittered}ms (attempt ${reconnectAttemptsRef.current + 1}/${MAX_RECONNECT_ATTEMPTS})`);
+          if (import.meta.env.DEV) console.log(`[WebSocket] Disconnected. Reconnecting in ${jittered}ms (attempt ${reconnectAttemptsRef.current + 1}/${MAX_RECONNECT_ATTEMPTS})`);
 
           reconnectTimeoutRef.current = setTimeout(() => {
             reconnectAttemptsRef.current++;
             connect();
           }, jittered);
         } else {
-          console.log('[WebSocket] Max reconnect attempts reached. Real-time updates paused.');
+          if (import.meta.env.DEV) console.log('[WebSocket] Max reconnect attempts reached. Real-time updates paused.');
         }
       };
     } catch (error) {
