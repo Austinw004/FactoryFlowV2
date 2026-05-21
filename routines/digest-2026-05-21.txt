@@ -1,0 +1,105 @@
+Hi Austin — daily digest for Thursday, May 21.
+
+AT A GLANCE
+  1 ran cleanly | 5 need your eyes | 0 blocking
+
+----------------------------------------------------------------
+BIG BOI — activity
+Pushed 5 commits direct to main (rounds 44-48), touching the forecast
+engine and customer-facing pricing. All marked "NOT DEPLOYED."
+  - 53ba65f r44 forecast seasonal decomposition (+53/-10)
+  - c2e74c3 r45 damped Holt trend (+42/-4)
+  - e2d3723 r46 self-bias correction — forecast engine (+101/-82)
+  - 8705f0f r47 retire Starter tier -> 4 plans — pricing (+13/-112, 6 files)
+  - cd82350 r48 %-of-savings logic — pricing (+48/-4)
+
+OPTIMUS — silent
+Ran and produced nothing — no branch, commit, PR, or issue. Sixth
+consecutive clean day. Nothing for you here.
+
+DAILY BOOST — activity
+Opened a new daily-maintenance draft; CI green. Five overlapping
+daily-codebase drafts now sit unmerged.
+  - #268 patch high/moderate vuln + clear all 21 TS errors — CI GREEN (new)
+    https://github.com/Austinw004/FactoryFlowV2/pull/268
+  - carryover: #263, #260, #255, #239 — none merged
+
+PALANTARD GRADE — activity
+Two new drafts (both failing CI) plus a new product-enhancement issue.
+Dashboard drafts still edit the same files.
+  - #269 regime-aware procurement dashboard — CI FAIL (new)
+    https://github.com/Austinw004/FactoryFlowV2/pull/269
+  - #267 palantir digest + ontology snapshot (restraint mode) — CI FAIL (new)
+    https://github.com/Austinw004/FactoryFlowV2/pull/267
+  - #270 materials->supplier reverse lookup (enhancement, new)
+    https://github.com/Austinw004/FactoryFlowV2/issues/270
+  - dashboard carryover (same files): #264, #261, #256, #247, #240; docs #249/#258
+
+WEEKLY CLEAN — silent
+No new run this 7-day window; next cycle is 2026-05-22. The W19
+deep-clean PR is still standing open.
+  - #235 W19 deep clean (security headers, CVE patches, bundle split) — open since 05-15
+    https://github.com/Austinw004/FactoryFlowV2/pull/235
+
+CODE REVIEW — activity
+Opened another safety-fix draft (failing CI). Duplicate-fix backlog +
+intelligence issues still awaiting your call.
+  - #266 guard unprotected async route + sync stale lockfile — CI FAIL (new)
+    https://github.com/Austinw004/FactoryFlowV2/pull/266
+  - carryover drafts: #254, #242, #237 (#242/#237 duplicate)
+  - open issues: #250 tariff (P1), #251 DRAM lead-time (P2), #252 positioning, #253 sweep duplication
+
+----------------------------------------------------------------
+DECISIONS NEEDED  (reply "Item N: <decision>")
+
+1. BIG BOI — 5 commits pushed direct to main (rounds 44-48), incl.
+   forecast-engine edits (r44-46) and a customer-facing pricing change
+   (r47 retires Starter tier; r48 %-of-savings). Keep Big Boi's
+   direct-to-main authority — including forecast-model and pricing
+   edits — or require draft PRs for review going forward?
+
+2. BIG BOI — round-35 self-healing boot hook auto-mutates the encryption
+   table at startup; rounds 36-38 left a public-allowlisted
+   /_test/sentry-probe endpoint on main. Audit & keep, gate behind an
+   env flag, or revert?
+
+3. DAILY BOOST — five overlapping daily-codebase drafts (#268 newest, CI
+   green; #263, #260, #255, #239), none merged. Merge newest green #268
+   and close the rest as superseded, or change cadence?
+
+4. PALANTARD GRADE — six dashboard drafts edit the same files (#269 new +
+   #264, #261, #256, #247, #240); #269 and #264 fail CI. Potential
+   conflict. Pick one winner and close the rest, or sequence the merges?
+
+5. PALANTARD GRADE — new product-enhancement issue #270 (materials->supplier
+   reverse lookup) needs a new backend endpoint + a UI placement call.
+   Greenlight, defer, or close?
+
+6. PALANTARD GRADE — meta-routine spec (#249, #258) and today's
+   restraint-mode digest PR #267 propose winding down this Daily Digest.
+   Approve the direction, revise scope, or reject?
+
+7. WEEKLY CLEAN — W19 deep-clean PR #235 unmerged since 05-15; next cycle
+   05-22. Merge #235, or close it in favor of the 05-22 run?
+
+8. CODE REVIEW — duplicate safety-fix drafts (#266 new/CI fail, #254, #242,
+   #237); meta-issue #253 says the morning sweep keeps regenerating
+   identical fixes until one merges. Merge one (#242 or #266) + close the
+   others, and adopt a "skip files already in an open PR" guard?
+
+9. CODE REVIEW — Section 232 tariff layer missing from the commodity
+   module, issue #250 (P1). Greenlight phase-1 (data-model only), defer,
+   or close?
+
+10. CODE REVIEW — DRAM/HBM 58-week structural lead-time surface, issue
+    #251 (P2). Greenlight, defer, or close?
+
+11. CODE REVIEW — Siemens x NVIDIA + Anthropic competitive positioning
+    brief, issue #252. Assign to founder, defer, or close?
+
+----------------------------------------------------------------
+To act on these, reply to this routine session with the item number plus
+your decision — e.g. "Item 3: approve and merge", "Item 5: defer to next
+week", "Item 7: needs more info on X." I'll execute on the next daily run.
+
+Prescient Labs · FactoryFlowV2 · automated daily digest
