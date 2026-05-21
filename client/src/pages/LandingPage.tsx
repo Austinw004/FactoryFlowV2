@@ -280,17 +280,7 @@ export default function LandingPage() {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-4 gap-px bg-line">
-          <div className="bg-ink p-10">
-            <div className="text-sm text-soft mb-10">Starter</div>
-            <div className="text-4xl display mb-1">
-              ${(billingPeriod === 'monthly' ? livePlans.starter.monthly : livePlans.starter.annual)?.toLocaleString('en-US')}
-              <span className="text-base text-muted">{billingPeriod === 'monthly' ? '/mo' : '/yr'}</span>
-            </div>
-            {billingPeriod === 'annual' && <div className="mono text-xs text-muted mt-3">${annualAsMonthly(livePlans.starter)}/mo billed annually</div>}
-            {billingPeriod === 'monthly' && <div className="mono text-xs text-muted mt-3">Billed monthly</div>}
-            <button onClick={handleStartTrial} className="btn-ghost text-xs px-4 py-2 inline-block mt-8 uppercase tracking-[0.14em]">Start trial</button>
-          </div>
+        <div className="grid md:grid-cols-3 gap-px bg-line">
           <div className="bg-ink p-10">
             <div className="text-sm text-soft mb-10">Growth</div>
             <div className="text-4xl display mb-1">

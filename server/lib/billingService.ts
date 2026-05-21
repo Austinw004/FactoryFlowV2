@@ -1,12 +1,14 @@
 /**
  * Billing Service \u2014 Enterprise SaaS Subscription + Usage-Based Billing
  *
- * 5 Plans (ALL features included on ALL plans \u2014 differences are billing mechanics ONLY):
- *   1. monthly_starter    \u2014 $299/month
- *   2. monthly_growth     \u2014 $799/month
- *   3. annual_starter     \u2014 $2,990/year  (~17% discount)
- *   4. annual_growth      \u2014 $7,990/year  (~17% discount)
- *   5. usage_based        \u2014 $199/month base + $0.02/unit OR 0.25% of procurement spend
+ * 4 Plans (ALL features included on ALL plans \u2014 differences are billing mechanics ONLY):
+ *   1. monthly_growth     \u2014 $799/month                 (the monthly option)
+ *   2. annual_growth      \u2014 $7,990/year  (~17% discount) (the annual option)
+ *   3. usage_based        \u2014 $199/month base + $2/SKU overage (the meter-based option)
+ *   4. performance        \u2014 $100/month + 10\u201320% of verified savings (the percentage option)
+ *
+ * The legacy "starter" tier ($299/mo, $2,990/yr) was retired 2026-05 \u2014 Growth is
+ * now the single fixed-subscription tier (monthly or annual).
  *
  * IMPORTANT: No feature gating anywhere. Plan type is stored for billing mechanics only.
  */
@@ -37,18 +39,6 @@ const stripePriceId = (key: string, fallback: string): string =>
   process.env[`STRIPE_PRICE_${key}`]?.trim() || fallback;
 
 export const BILLING_PLANS = {
-  monthly_starter: {
-    id:          "monthly_starter",
-    name:        "Monthly Starter",
-    description: "Full platform access, billed monthly",
-    priceCents:  29900,       // $299.00
-    currency:    "usd",
-    interval:    "month" as const,
-    intervalCount: 1,
-    type:        "subscription" as const,
-    featureGating: false,     // All features included
-    stripePriceId: stripePriceId("STARTER_MONTHLY", "price_1TLvZh9F4Ysa19m8rrNdtZ7b"),
-  },
   monthly_growth: {
     id:          "monthly_growth",
     name:        "Monthly Growth",
@@ -60,18 +50,6 @@ export const BILLING_PLANS = {
     type:        "subscription" as const,
     featureGating: false,
     stripePriceId: stripePriceId("GROWTH_MONTHLY", "price_1TLvZj9F4Ysa19m86mw8fPZb"),
-  },
-  annual_starter: {
-    id:          "annual_starter",
-    name:        "Annual Starter",
-    description: "Full platform access, billed annually (~17% discount vs monthly)",
-    priceCents:  299000,      // $2,990.00
-    currency:    "usd",
-    interval:    "year" as const,
-    intervalCount: 1,
-    type:        "subscription" as const,
-    featureGating: false,
-    stripePriceId: stripePriceId("STARTER_ANNUAL", "price_1TLvZi9F4Ysa19m8DGXyivla"),
   },
   annual_growth: {
     id:          "annual_growth",

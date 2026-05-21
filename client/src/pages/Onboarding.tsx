@@ -14,7 +14,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { StripePaymentForm } from "@/components/StripePaymentForm";
 import {
   Building2, Users, Rocket, Check, X, Loader2, Mail, UserPlus,
-  MapPin, User, CreditCard, Crown, Zap, BarChart3, Shield,
+  MapPin, User, CreditCard, Crown, BarChart3, Shield,
   Phone, Briefcase, ChevronRight, ArrowLeft, TrendingUp,
   Factory, Package, DollarSign, Wrench, Globe, AlertTriangle,
   Settings, Truck, Target, Brain, Gauge,
@@ -130,26 +130,6 @@ const PRODUCTION_VOLUME = [
 ];
 
 const PLANS = [
-  {
-    id: "monthly_starter",
-    name: "Starter",
-    price: "$299",
-    interval: "/month",
-    annualId: "annual_starter",
-    annualPrice: "$249",
-    annualSavings: "Save $600/year",
-    description: "Full platform access for growing manufacturers",
-    icon: Zap,
-    color: "text-blue-500",
-    bgColor: "bg-blue-50 dark:bg-blue-950/30",
-    borderColor: "border-blue-200 dark:border-blue-800",
-    features: [
-      "All platform modules included",
-      "Up to 10 team members",
-      "Standard support (24h response)",
-      "Monthly billing, cancel anytime",
-    ],
-  },
   {
     id: "monthly_growth",
     name: "Growth",

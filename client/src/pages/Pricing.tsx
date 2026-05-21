@@ -93,16 +93,6 @@ export function Pricing() {
 
   const plans = [
     {
-      name: "Starter",
-      monthlyPrice: livePlans.starter.monthly,
-      annualPrice:  livePlans.starter.annual,
-      description: "Perfect for getting started with demand forecasting",
-      features: features.slice(0, 5),
-      cta: isTrialing ? "Current Plan" : "Start 90-day free trial",
-      highlighted: false,
-      id: "starter",
-    },
-    {
       name: "Growth",
       monthlyPrice: livePlans.growth.monthly,
       annualPrice:  livePlans.growth.annual,
@@ -180,7 +170,7 @@ export function Pricing() {
           </div>
 
           {/* Pricing Cards */}
-          <div className="grid md:grid-cols-4 gap-px bg-line mb-14">
+          <div className="grid md:grid-cols-3 gap-px bg-line mb-14">
             {plans.map((plan) => (
               <div
                 key={plan.id}

@@ -3,7 +3,7 @@
  *
  * Fetches `/api/billing/plans` (a thin wrapper over server/lib/billingService.ts
  * BILLING_PLANS), and reshapes the flat plan list into the grouped form the
- * UI needs ({ starter: {monthly, annual}, growth: {...}, usageBased, performance }).
+ * UI needs ({ growth: {monthly, annual}, usageBased, performance }).
  *
  * Why this exists: the same prices used to be hardcoded in three places —
  * Pricing.tsx, Billing.tsx, and LandingPage.tsx. If a price changed in Stripe
@@ -80,7 +80,6 @@ export interface PerformancePlan {
 }
 
 export interface NormalizedPlans {
-  starter: PlanGroup;
   growth: PlanGroup;
   usageBased: UsageBasedPlan;
   performance: PerformancePlan;
@@ -92,12 +91,6 @@ export interface NormalizedPlans {
 // ──────────────────────────────────────────────────────────────────────────────
 
 export const FALLBACK_PLANS: NormalizedPlans = {
-  starter: {
-    monthly: 299,
-    annual:  2990,
-    monthlyStripePriceId: null,
-    annualStripePriceId:  null,
-  },
   growth: {
     monthly: 799,
     annual:  7990,
@@ -133,12 +126,6 @@ function normalize(raw: RawPlan[] | undefined): NormalizedPlans {
   // Each lookup falls back individually so a partially-loaded response
   // still produces a coherent UI.
   return {
-    starter: {
-      monthly: dollars(byId.monthly_starter?.priceCents) ?? FALLBACK_PLANS.starter.monthly,
-      annual:  dollars(byId.annual_starter?.priceCents)  ?? FALLBACK_PLANS.starter.annual,
-      monthlyStripePriceId: byId.monthly_starter?.stripePriceId ?? null,
-      annualStripePriceId:  byId.annual_starter?.stripePriceId  ?? null,
-    },
     growth: {
       monthly: dollars(byId.monthly_growth?.priceCents) ?? FALLBACK_PLANS.growth.monthly,
       annual:  dollars(byId.annual_growth?.priceCents)  ?? FALLBACK_PLANS.growth.annual,

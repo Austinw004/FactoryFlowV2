@@ -46,7 +46,6 @@ export function Billing() {
   // See client/src/hooks/usePlans.ts.
   const livePlans = usePlans();
   const tierPricing = {
-    starter:       livePlans.starter,
     growth:        livePlans.growth,
     "usage-based": { monthly: livePlans.usageBased.monthlyBase, annual: null },
     performance:   { monthly: null, annual: null },
@@ -59,8 +58,6 @@ export function Billing() {
   const resolvePriceId = (plan: string): string | null => {
     const useAnnual = billingPeriod === "annual";
     switch (plan) {
-      case "starter":
-        return (useAnnual ? livePlans.starter.annualStripePriceId : livePlans.starter.monthlyStripePriceId) ?? null;
       case "growth":
         return (useAnnual ? livePlans.growth.annualStripePriceId : livePlans.growth.monthlyStripePriceId) ?? null;
       case "usage-based":
@@ -237,28 +234,7 @@ export function Billing() {
                 </div>
               </div>
 
-              <div className="grid md:grid-cols-4 gap-px bg-line">
-                <div className="bg-panel p-8 flex flex-col">
-                  <div className="text-sm text-soft mb-6">Starter</div>
-                  <div className="text-3xl display mb-1">
-                    ${(billingPeriod === "monthly" ? livePlans.starter.monthly : livePlans.starter.annual)?.toLocaleString("en-US")}
-                    <span className="text-base text-muted">
-                      {billingPeriod === "monthly" ? "/mo" : "/yr"}
-                    </span>
-                  </div>
-                  <div className="text-xs text-muted mb-8">
-                    {billingPeriod === "annual" && livePlans.starter.monthly && livePlans.starter.annual &&
-                      `Save $${(livePlans.starter.monthly * 12 - livePlans.starter.annual).toLocaleString("en-US")} per year`}
-                  </div>
-                  <button
-                    onClick={() => handleUpgrade("starter")}
-                    disabled={tier === "starter"}
-                    className="btn-ghost text-xs px-4 py-2 mb-auto"
-                  >
-                    {tier === "starter" ? "Current Plan" : "Start Trial"}
-                  </button>
-                </div>
-
+              <div className="grid md:grid-cols-3 gap-px bg-line">
                 <div className="bg-panel p-8 flex flex-col">
                   <div className="text-sm text-soft mb-6">Growth</div>
                   <div className="text-3xl display mb-1">
