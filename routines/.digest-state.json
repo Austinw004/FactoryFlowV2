@@ -1,0 +1,77 @@
+{
+  "today": "2026-05-21",
+  "prior_digest_date": "2026-05-20",
+  "prior_digest_pr": 265,
+  "prior_reply_checksum": null,
+  "prior_reply_processed": false,
+  "prior_reply_note": "No operator reply present in this session's prior turn; Step 5 skipped.",
+  "email_status": {
+    "sent": false,
+    "attempted_at": "2026-05-21T09:15:00Z",
+    "reason": "sendpulse-api package not installed in routine sandbox; SENDPULSE_API_USER_ID and SENDPULSE_API_SECRET (and SENDPULSE_USER_ID/SENDPULSE_SECRET) env vars unset. 5th consecutive run with this root cause (#248 05-17, #257 05-18, #262 05-19, #265 05-20). Per spec, did not retry. Logged to /tmp/digest-failures.jsonl.",
+    "subject": "Daily digest — 5 need your call",
+    "content_paths": {
+      "html": "routines/digest-2026-05-21.html",
+      "text": "routines/digest-2026-05-21.txt"
+    },
+    "failure_log": "/tmp/digest-failures.jsonl"
+  },
+  "counters": {
+    "ran_cleanly": 1,
+    "need_eyes": 5,
+    "blocking": 0
+  },
+  "attribution_note": "Branch->routine mapping inherited from prior-run state (#265). big_boi=direct-to-main FactoryFlow Dispatch rounds; daily_boost=claude/exciting-fermi-*; palantard_grade=claude/relaxed-ramanujan-* (docs) + claude/vigilant-allen-* (dashboard + product-intelligence issues); weekly_clean=claude/festive-dijkstra-*; code_review=claude/hopeful-rubin-* (safety fixes) + morning-sweep intelligence issues; optimus=silent (no branch). Daily Digest itself = claude/intelligent-fermi-* (this routine; not summarized).",
+  "routine_status": {
+    "big_boi":         { "status": "activity", "branch_pattern": "(direct-to-main: FactoryFlow Dispatch)", "notes": "rounds 44-48 to main on 05-20 evening; r44-46 forecast engine, r47-48 pricing; all 'NOT DEPLOYED'" },
+    "optimus":         { "status": "silent",   "branch_pattern": null,                          "notes": "6th clean day; nothing produced" },
+    "daily_boost":     { "status": "activity", "branch_pattern": "claude/exciting-fermi-*",      "notes": "new PR #268 (CI green); #263/#260/#255/#239 carryover, none merged" },
+    "palantard_grade": { "status": "activity", "branch_pattern": "claude/relaxed-ramanujan-* + claude/vigilant-allen-*", "notes": "new PR #269 (CI fail), #267 (CI fail), issue #270; #264/#261/#256/#247/#240 dashboard + #249/#258 docs carryover" },
+    "weekly_clean":    { "status": "silent",   "branch_pattern": "claude/festive-dijkstra-*",    "notes": "no new run in 7d; PR #235 unmerged since 05-15; next cycle 05-22" },
+    "code_review":     { "status": "activity", "branch_pattern": "claude/hopeful-rubin-*",       "notes": "new PR #266 (CI fail); #254/#242/#237 + issues #250-#253 carryover" }
+  },
+  "decisions": [
+    { "id": 1,  "severity": "YELLOW", "routine": "big_boi",         "ref": { "type": "commits", "shas": ["53ba65f","c2e74c3","e2d3723","8705f0f","cd82350"] }, "summary": "5 commits pushed direct to main (rounds 44-48): forecast-engine edits (r44-46) + customer-facing pricing change (r47 retire Starter tier, r48 %-of-savings).", "question": "Keep direct-to-main authority incl. forecast-model + pricing edits, or require draft PRs going forward?", "carryover_from": { "digest": "2026-05-20", "pr": 265, "item": 1 } },
+    { "id": 2,  "severity": "YELLOW", "routine": "big_boi",         "ref": { "type": "endpoint" }, "summary": "Round-35 self-healing boot hook auto-mutates the encryption table at startup; rounds 36-38 left a public-allowlisted /_test/sentry-probe endpoint on main.", "question": "Audit & keep, gate behind env flag, or revert?", "carryover_from": { "digest": "2026-05-20", "pr": 265, "item": 2 } },
+    { "id": 3,  "severity": "YELLOW", "routine": "daily_boost",     "ref": { "type": "pr", "numbers": [268, 263, 260, 255, 239] }, "summary": "Five overlapping daily-codebase drafts; #268 newest and CI green; none merged.", "question": "Merge newest green #268 and close the rest as superseded, or change cadence?", "carryover_from": { "digest": "2026-05-20", "pr": 265, "item": 3 } },
+    { "id": 4,  "severity": "YELLOW", "routine": "palantard_grade", "ref": { "type": "pr", "numbers": [269, 264, 261, 256, 247, 240], "conflict": true }, "summary": "Six dashboard drafts edit the same files; #269 (new) and #264 failing CI.", "question": "Pick a winner and close the rest, or sequence merges?", "carryover_from": { "digest": "2026-05-20", "pr": 265, "item": 4 } },
+    { "id": 5,  "severity": "YELLOW", "routine": "palantard_grade", "ref": { "type": "issue", "numbers": [270] }, "summary": "New product-enhancement issue: materials->supplier reverse lookup; needs a new backend endpoint + UI placement call.", "question": "Greenlight, defer, or close?", "carryover_from": null },
+    { "id": 6,  "severity": "YELLOW", "routine": "palantard_grade", "ref": { "type": "pr", "numbers": [249, 258, 267] }, "summary": "Meta-routine spec + today's restraint-mode digest PR #267 propose winding down this Daily Digest.", "question": "Approve direction, revise scope, or reject?", "carryover_from": { "digest": "2026-05-20", "pr": 265, "item": 5 } },
+    { "id": 7,  "severity": "YELLOW", "routine": "weekly_clean",    "ref": { "type": "pr", "numbers": [235] }, "summary": "W19 deep-clean PR unmerged since 05-15; next cycle 05-22.", "question": "Merge #235, or close in favor of the 05-22 cycle?", "carryover_from": { "digest": "2026-05-20", "pr": 265, "item": 6 } },
+    { "id": 8,  "severity": "YELLOW", "routine": "code_review",     "ref": { "type": "pr", "numbers": [266, 254, 242, 237] }, "summary": "Duplicate safety-fix drafts (#266 new/CI fail, #254, #242, #237); meta-issue #253 says morning sweep regenerates identical fixes until one merges.", "question": "Merge one (#242 or #266) + close the others, and adopt a 'skip files already in an open PR' guard?", "carryover_from": { "digest": "2026-05-20", "pr": 265, "items": [7, 11] } },
+    { "id": 9,  "severity": "YELLOW", "routine": "code_review",     "ref": { "type": "issue", "numbers": [250] }, "summary": "Section 232 tariff layer missing from commodity module (P1).", "question": "Greenlight phase-1 (data model only), defer, or close?", "carryover_from": { "digest": "2026-05-20", "pr": 265, "item": 8 } },
+    { "id": 10, "severity": "YELLOW", "routine": "code_review",     "ref": { "type": "issue", "numbers": [251] }, "summary": "DRAM/HBM 58-week structural lead-time surface (P2).", "question": "Greenlight, defer, or close?", "carryover_from": { "digest": "2026-05-20", "pr": 265, "item": 9 } },
+    { "id": 11, "severity": "YELLOW", "routine": "code_review",     "ref": { "type": "issue", "numbers": [252] }, "summary": "Siemens x NVIDIA + Anthropic competitive positioning brief.", "question": "Assign to founder, defer, or close?", "carryover_from": { "digest": "2026-05-20", "pr": 265, "item": 10 } }
+  ],
+  "items_24h": {
+    "prs_opened": [266, 267, 268, 269],
+    "prs_merged": [],
+    "prs_closed": [],
+    "issues_opened": [270],
+    "issues_closed": [],
+    "commits_to_main": ["53ba65f", "c2e74c3", "e2d3723", "8705f0f", "cd82350"],
+    "failed_ci_runs": [
+      { "pr": 269, "check": "typecheck + build", "conclusion": "failure", "branch": "claude/vigilant-allen-79Usv", "note": "draft PR branch, not main" },
+      { "pr": 267, "check": "typecheck + build", "conclusion": "failure", "branch": "claude/relaxed-ramanujan-9awCo", "note": "draft PR branch, not main" },
+      { "pr": 266, "check": "typecheck + build", "conclusion": "failure", "branch": "claude/hopeful-rubin-jhmPp", "note": "draft PR branch, not main" }
+    ],
+    "main_ci_note": "No failed CI run detected on main; the typecheck+build workflow runs on PR branches. Big Boi's direct-to-main rounds 44-48 are not associated with a failing tracked check.",
+    "non_routine": [
+      { "type": "pr", "number": 259, "source": "dependabot", "title": "deps(deps): bump the react group" }
+    ]
+  },
+  "items_7d_weekly_clean": {
+    "prs_opened": [],
+    "prs_merged": [],
+    "prs_closed": [],
+    "note": "No festive-dijkstra run in the 7d window; PR #235 (W19, 05-15) standing carryover. Next cycle 05-22."
+  },
+  "potential_conflicts": [
+    {
+      "files": ["client/src/pages/Dashboard.tsx", "regime/command-center components"],
+      "prs": [269, 264, 261, 256, 247, 240],
+      "routines": ["palantard_grade"],
+      "note": "Intra-routine overlap (vigilant-allen family). Surfaced as decision 4. No cross-routine same-file collision detected in window."
+    }
+  ]
+}
