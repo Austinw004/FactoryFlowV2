@@ -1,0 +1,11 @@
+{
+  "_meta": {
+    "description": "Mirror of the contact_inquiries table, enriched. Dedupe key = lower(email)+lower(company).",
+    "source_table": "contact_inquiries",
+    "schema_fields": ["id","receivedAt","name","email","company","role","topic","status","notes","assignedTo","submissionCount"],
+    "status_enum": ["new","triaged","replied","qualified","won","lost","spam"],
+    "data_access_note": "This run has NO direct database access (no secrets, no db reads permitted). leads[] cannot be seeded until a contact_inquiries dump is dropped into docs/ontology/inbox/ or a read-only query path is wired. See digest 'Needs Austin'.",
+    "last_updated": "2026-05-21"
+  },
+  "leads": []
+}

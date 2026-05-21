@@ -1,0 +1,12 @@
+{
+  "_meta": {
+    "description": "FDR model outputs. OWNED BY THE FDR PIPELINE — never hand-edited by the meta-routine. This is an empty skeleton created on first run; the FDR pipeline should populate it.",
+    "owner": "server/lib/fdr* (sacred)",
+    "status": "awaiting first FDR-pipeline write",
+    "last_updated": "2026-05-21"
+  },
+  "latest_horizon": null,
+  "latest_mape": null,
+  "latest_mae": null,
+  "regime_changes": []
+}

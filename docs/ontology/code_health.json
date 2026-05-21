@@ -1,0 +1,28 @@
+{
+  "_meta": {
+    "description": "One row appended per meta-routine run. Measured on branch claude/relaxed-ramanujan-IoW26 (this run's checkout).",
+    "last_updated": "2026-05-21"
+  },
+  "history": [
+    {
+      "date": "2026-05-21",
+      "branch": "claude/relaxed-ramanujan-IoW26",
+      "head_sha": "cd823504",
+      "typecheck_clean": true,
+      "lint_clean": null,
+      "lint_note": "no lint script in package.json",
+      "test_pass_count": null,
+      "test_fail_count": null,
+      "test_note": "no test script in package.json",
+      "build_clean": true,
+      "bundle_size_kb": null,
+      "dependency_count": 119,
+      "prod_dependency_count": 96,
+      "dev_dependency_count": 23,
+      "security_advisory_count": 8,
+      "security_advisory_high": 1,
+      "security_advisory_moderate": 7,
+      "security_advisory_critical": 0
+    }
+  ]
+}

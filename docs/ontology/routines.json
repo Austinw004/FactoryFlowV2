@@ -1,0 +1,66 @@
+{
+  "_meta": {
+    "description": "Catalog of Claude Code routines acting on FactoryFlowV2. Discovered from open-PR branch-name patterns + issue history; no account-level routine API is exposed to this run, so this catalog is inferred and should be confirmed by Austin.",
+    "discovery_method": "PR head-branch slug clustering + issue references",
+    "last_updated": "2026-05-21"
+  },
+  "routines": [
+    {
+      "slug": "relaxed-ramanujan",
+      "name": "Palantir meta-routine (this routine)",
+      "branch_prefix": "claude/relaxed-ramanujan-*",
+      "class": "A/B (reporting + docs-only writes)",
+      "summary": "Orchestrator-of-orchestrators. Fuses signals into docs/ontology/*, emits one daily digest, opens draft PRs only.",
+      "recent_prs": [249, 258, 267],
+      "schedule": "daily 02:00 CT"
+    },
+    {
+      "slug": "exciting-fermi",
+      "name": "Daily Codebase Engineer",
+      "branch_prefix": "claude/exciting-fermi-*",
+      "class": "B/C (code-modifying)",
+      "summary": "TypeScript error reduction, security/CVE patches, dependency refresh, validation standardization.",
+      "recent_prs": [233, 239, 255, 260, 263, 268]
+    },
+    {
+      "slug": "vigilant-allen",
+      "name": "Three-Hat — Intelligence Analyst / Product Intelligence sweep",
+      "branch_prefix": "claude/vigilant-allen-*",
+      "class": "C (code-modifying, large surface)",
+      "summary": "Regime-driven dashboard/procurement UX, cross-workspace FDR guidance, material->supplier intelligence.",
+      "recent_prs": [234, 240, 247, 256, 261, 264, 269]
+    },
+    {
+      "slug": "hopeful-rubin",
+      "name": "Three-Hat — Customer/Engineer safety sweep",
+      "branch_prefix": "claude/hopeful-rubin-*",
+      "class": "B (code-modifying, small surface)",
+      "summary": "Customer-facing safety gaps, crash/null-handling resilience, route guarding, lockfile sync.",
+      "recent_prs": [228, 237, 242, 254, 266]
+    },
+    {
+      "slug": "intelligent-fermi",
+      "name": "Daily digest state persistence",
+      "branch_prefix": "claude/intelligent-fermi-*",
+      "class": "A (docs/state only)",
+      "summary": "Persists daily routine digest state files.",
+      "recent_prs": [236, 241, 248, 257, 262, 265, 271]
+    },
+    {
+      "slug": "festive-dijkstra",
+      "name": "Weekly Deep Clean (Sunday)",
+      "branch_prefix": "claude/festive-dijkstra-*",
+      "class": "C (code-modifying, large surface)",
+      "summary": "Security headers, CVE patches, bundle split, docs sync, dead-code/route pruning.",
+      "recent_prs": [235]
+    },
+    {
+      "slug": "dependabot",
+      "name": "Dependabot",
+      "branch_prefix": "dependabot/*",
+      "class": "B (dependency bumps; patch/minor auto-merge via workflow)",
+      "summary": "Automated dependency updates.",
+      "recent_prs": [259]
+    }
+  ]
+}
