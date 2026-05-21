@@ -1,0 +1,15 @@
+{
+  "_meta": {
+    "description": "Product roadmap. Cross-referenced against customer open_asks, open incidents, and code-health trends. Items added/reordered only via draft PR — never silently.",
+    "buckets": {
+      "now": "in flight this cycle",
+      "next": "committed, not started",
+      "later": "intent, not committed"
+    },
+    "created": "2026-05-20",
+    "created_by": "palantir-meta-routine (bootstrap)"
+  },
+  "now": [],
+  "next": [],
+  "later": []
+}

@@ -1,0 +1,26 @@
+{
+  "_meta": {
+    "description": "Daily code-health telemetry. One row appended per run. Measured via npm run check / npm run build.",
+    "fields": "date, branch_base_sha, main_sha, typecheck_clean, typecheck_errors_branch, typecheck_errors_main, lint_clean, test_pass_count, test_fail_count, build_clean, bundle_largest_chunk_kb, dependency_count, dev_dependency_count, security_advisory_count, notes",
+    "created": "2026-05-20",
+    "created_by": "palantir-meta-routine (bootstrap)"
+  },
+  "history": [
+    {
+      "date": "2026-05-20",
+      "branch_base_sha": "f824ce0",
+      "main_sha": "f824ce0",
+      "typecheck_clean": false,
+      "typecheck_errors_main": 21,
+      "lint_clean": null,
+      "test_pass_count": null,
+      "test_fail_count": null,
+      "build_clean": true,
+      "bundle_largest_chunk_kb": 577,
+      "dependency_count": 96,
+      "dev_dependency_count": 23,
+      "security_advisory_count": null,
+      "notes": "No lint or test scripts defined in package.json (only check, build, dev, start, db:push). Build is green because esbuild/vite do not typecheck. CI gate (npm run check) is RED on main: 21 errors — server/lib/erp/* adapters (15), authPaymentRoutes.ts (4), Onboarding.tsx (2). Pre-existing; a fix is already open in PR #263 ('TypeScript 21→0'). This branch is a clean +1-commit descendant of main (f824ce0). NOTE: an earlier reading of 319 errors came from a STALE local origin/main ref (c356664); after git fetch, real main = f824ce0 with 21 errors. security_advisory_count not measured (npm audit not run)."
+    }
+  ]
+}

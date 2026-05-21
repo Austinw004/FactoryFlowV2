@@ -1,0 +1,9 @@
+{
+  "_meta": {
+    "description": "FDR forecasting model outputs. OWNED BY THE FDR PIPELINE — READ ONLY. Do not hand-edit. Created as an empty skeleton at bootstrap per ontology rule P1.",
+    "owner": "server/lib/fdr* (sacred — see P4)",
+    "created": "2026-05-20",
+    "created_by": "palantir-meta-routine (bootstrap, empty skeleton only)"
+  },
+  "forecasts": []
+}

@@ -1,0 +1,17 @@
+{
+  "_meta": {
+    "description": "Known and prospective customers / pilots. Source of truth for the customer object graph.",
+    "schema": {
+      "id": "string (slug)",
+      "name": "string",
+      "type": "prospect|pilot|customer",
+      "last_touch_date": "ISO date | null",
+      "open_asks": "array of {id, summary, source}",
+      "contract_stage": "string",
+      "pilot_health": "green|yellow|red|null"
+    },
+    "created": "2026-05-20",
+    "created_by": "palantir-meta-routine (bootstrap)"
+  },
+  "customers": []
+}
