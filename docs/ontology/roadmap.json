@@ -1,0 +1,20 @@
+{
+  "_meta": {
+    "description": "Product roadmap (now/next/later). DRAFT seeding inferred from open product issues — NOT customer-confirmed. Customer signal (P3) outranks this; reshuffles must be approved by Austin.",
+    "last_updated": "2026-05-21"
+  },
+  "now": [
+    { "item": "Section 232 tariff overlay on commodity/cost forecasts (Apr 6 2026 methodology change)", "evidence": ["github#204","github#211","github#223","github#229","github#238","github#250"], "customer_asked": "unknown" },
+    { "item": "Supplier country/region field for Hormuz/Red Sea/Panama exposure flags", "evidence": ["github#224","github#230"], "customer_asked": "unknown" },
+    { "item": "Material->supplier reverse lookup", "evidence": ["github#270"], "customer_asked": "unknown" }
+  ],
+  "next": [
+    { "item": "Long-lead-component risk surface (DRAM/HBM 40-58 week lead times)", "evidence": ["github#243","github#251"], "customer_asked": "unknown" },
+    { "item": "Lead-time forecasting accounts for port/canal congestion", "evidence": ["github#205","github#230"], "customer_asked": "unknown" },
+    { "item": "Compliance-cost overlay (OSHA HazCom, GHS Rev 7, EPA 2026)", "evidence": ["github#207","github#225","github#231"], "customer_asked": "unknown" }
+  ],
+  "later": [
+    { "item": "Supplier cyber-posture risk indicator (logistics-cyber attacks +61% YoY)", "evidence": ["github#213"], "customer_asked": "unknown" },
+    { "item": "Competitive positioning vs Siemens×NVIDIA Industrial AI OS", "evidence": ["github#208","github#252"], "customer_asked": "unknown" }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "_meta": {
+    "description": "Known + prospective customers and pilots. Promoted from leads.json when status in {won, qualified}.",
+    "data_access_note": "No CRM/DB access this run; the only customer-shaped signal in-repo is the Texas pilot (see TEXAS_PILOT_READINESS_REPORT.md). Seeded as a single prospective pilot for continuity; confirm details with Austin.",
+    "last_updated": "2026-05-21"
+  },
+  "customers": [
+    {
+      "id": "texas-pilot",
+      "name": "Texas pilot (prospective)",
+      "contract_stage": "pilot-readiness",
+      "pilot_health": "unknown",
+      "last_touch_date": null,
+      "open_asks": [],
+      "evidence": "TEXAS_PILOT_READINESS_REPORT.md"
+    }
+  ]
+}

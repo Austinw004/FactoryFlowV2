@@ -1,0 +1,64 @@
+{
+  "_meta": {
+    "description": "Production incidents, persistent bugs, and security events. Seeded from open GitHub issues + npm audit on first run.",
+    "last_updated": "2026-05-21"
+  },
+  "incidents": [
+    {
+      "id": "ISSUE-202",
+      "severity": "P1",
+      "type": "performance",
+      "title": "GET /api/suppliers timing out (>10s) in prod",
+      "source": "github#202",
+      "status": "open"
+    },
+    {
+      "id": "ISSUE-203",
+      "severity": "P2",
+      "type": "reliability",
+      "title": "Silent failures in maIntelligencePopulation.ts swallow DB insert errors",
+      "source": "github#203",
+      "status": "open"
+    },
+    {
+      "id": "ISSUE-245",
+      "severity": "P2",
+      "type": "config",
+      "title": "OAuth base-URL fallback silently returns localhost:5000 in prod if env vars missing",
+      "source": "github#245",
+      "status": "open"
+    },
+    {
+      "id": "ISSUE-232",
+      "severity": "P2",
+      "type": "ci",
+      "title": "CI: typecheck red on main (zod v4 / drizzle-zod typing) — NOTE: local `npm run check` on this branch passed clean (exit 0). May be stale or branch-specific; verify on main HEAD.",
+      "source": "github#232",
+      "status": "needs-verification"
+    },
+    {
+      "id": "ISSUE-218",
+      "severity": "P2",
+      "type": "ci",
+      "title": "238 TS2344 errors — zod 3.25 + drizzle-zod 0.8 + @hookform/resolvers typing",
+      "source": "github#218",
+      "status": "open"
+    },
+    {
+      "id": "SEC-AUDIT-2026-05-21",
+      "severity": "P2",
+      "type": "security",
+      "title": "npm audit: 8 advisories (1 high, 7 moderate, 0 critical)",
+      "source": "npm audit",
+      "status": "open"
+    },
+    {
+      "id": "OPS-PR-BACKLOG",
+      "severity": "P1",
+      "type": "process",
+      "title": "~30 open unmerged routine PRs accumulating; issue #253 reports routine duplication (4 redundant three-hat PRs). Operator merge/triage required to break the loop.",
+      "source": "github PR list + github#253",
+      "status": "open"
+    }
+  ]
+}
