@@ -79,7 +79,7 @@ export function Pricing() {
     },
     {
       q: "What does \"15% of verified savings\" mean on the Performance tier?",
-      a: "Instead of a flat monthly fee, you pay 15% of the documented inventory savings, freight savings, and commodity-hedging wins the platform delivers — measured against a baseline we establish together during the first 60 days. If we don't save you money, you don't pay us. Minimum contract: 12 months.",
+      a: "You pay a $100/month platform fee plus 15% (negotiable 10–20%) of verified savings — the documented reduction in inventory carrying cost, stockout/expedite cost, and procurement spend — measured from your own operational data against a baseline we lock together during the first 60 days, and reviewed with you before each invoice. Beyond the base fee, if we don't measurably save you money, you pay nothing more. Minimum contract: 12 months.",
     },
     {
       q: "Do you offer a money-back guarantee?",

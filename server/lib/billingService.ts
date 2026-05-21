@@ -80,8 +80,8 @@ export const BILLING_PLANS = {
   performance: {
     id:              "performance",
     name:            "Performance-Based",
-    description:     "$100/month + 10\u201320% of verified, realized savings. Only pay when value is delivered.",
-    baseFeeCents:    10000,    // $100.00/month \u2014 always charged
+    description:     "$100/month platform fee + 10\u201320% of verified, realized savings. Beyond the base fee, you only pay when we measurably save you money.",
+    baseFeeCents:    10000,    // $100.00/month \u2014 always charged (platform fee)
     feePercentageMin: 0.10,    // 10% of verified savings
     feePercentageMax: 0.20,    // 20% of verified savings
     feePercentageDefault: 0.15, // 15% default
@@ -89,7 +89,7 @@ export const BILLING_PLANS = {
     interval:        "month" as const,
     type:            "performance" as const,
     featureGating:   false,
-    disclaimer:      "Performance fees apply only to verified, realized savings",
+    disclaimer:      "Beyond the $100/month platform fee, performance fees apply only to verified, realized savings \u2014 measured from your own operational data against a baseline locked jointly during onboarding, and reviewed with you before each invoice.",
     cta:             ["Start Pilot", "Talk to Sales"],
   },
 } as const;
@@ -102,6 +102,50 @@ export const PLATFORM_FEE_RATE = parseFloat(process.env.PLATFORM_FEE_RATE ?? "0.
 
 export function computePlatformFee(amountCents: number): number {
   return Math.round(amountCents * PLATFORM_FEE_RATE);
+}
+
+// ─── Performance-plan fee computation ─────────────────────────────────────────
+// The Performance plan bills two parts each period:
+//   1. baseFeeCents — the fixed $100/month platform fee, ALWAYS charged.
+//   2. appliedPercentage × verifiedSavingsCents — only on positive, VERIFIED savings.
+//
+// "Verified, realized savings" is a MEASURED quantity, never a model self-
+// assertion: it is the reduction in the customer's own inventory-carrying +
+// stockout/expedite + procurement cost over the period, computed from their
+// operational data against a baseline locked jointly during onboarding, and
+// reviewed with the customer before the invoice issues. A period with zero or
+// negative verified savings bills ONLY the base fee — the customer is never
+// charged a performance fee for value that wasn't measured and agreed. The
+// negotiated rate is always clamped into the published 10–20% band.
+export interface PerformanceFeeResult {
+  baseFeeCents: number;          // always charged
+  verifiedSavingsCents: number;  // agreed, measured savings (clamped to >= 0)
+  appliedPercentage: number;     // clamped into [feePercentageMin, feePercentageMax]
+  performanceFeeCents: number;   // appliedPercentage × verifiedSavingsCents
+  totalCents: number;            // base + performance
+}
+
+export function computePerformanceFee(
+  verifiedSavingsCents: number,
+  feePercentage: number = BILLING_PLANS.performance.feePercentageDefault,
+): PerformanceFeeResult {
+  const plan = BILLING_PLANS.performance;
+  const appliedPercentage = Math.max(
+    plan.feePercentageMin,
+    Math.min(plan.feePercentageMax, feePercentage),
+  );
+  const verified =
+    Number.isFinite(verifiedSavingsCents) && verifiedSavingsCents > 0
+      ? Math.round(verifiedSavingsCents)
+      : 0;
+  const performanceFeeCents = Math.round(verified * appliedPercentage);
+  return {
+    baseFeeCents: plan.baseFeeCents,
+    verifiedSavingsCents: verified,
+    appliedPercentage,
+    performanceFeeCents,
+    totalCents: plan.baseFeeCents + performanceFeeCents,
+  };
 }
 
 // ─── Create or retrieve Stripe customer ───────────────────────────────────────
