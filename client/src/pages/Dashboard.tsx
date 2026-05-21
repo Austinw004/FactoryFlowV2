@@ -37,7 +37,7 @@ const SmartInsightsCompact = lazy(() =>
 const InsightPanel = lazy(() =>
   import("@/components/InsightPanel").then((m) => ({ default: m.InsightPanel })),
 );
-import { TrendingUp, DollarSign, Package, AlertCircle, Plus, Upload, GitCompare, Loader2, Globe, Radio, Package2, Building2, Box, FileDown } from "lucide-react";
+import { TrendingUp, DollarSign, Package, AlertCircle, Plus, Upload, GitCompare, Loader2, Globe, Radio, Package2, Building2, Box, FileDown, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -68,14 +68,28 @@ export default function Dashboard() {
   const { user, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
 
+  // Captures the most recent regime shift so it can surface as a persistent,
+  // top-of-page event (not just a transient toast). A regime change rewrites
+  // the customer's procurement strategy, so it should be the #1 thing they see
+  // on their next glance — until they acknowledge it.
+  const [regimeShift, setRegimeShift] = useState<{ from: string; to: string; fdr: number | null; severity?: string } | null>(null);
+
   // Enable WebSocket for real-time updates with regime change notifications
   const { isConnected } = useWebSocket((message) => {
     if (message.type === 'regime_change' && message.data) {
       const severity = message.data.severity === 'high' ? 'destructive' : 'default';
-      
+      const fdrNum = Number(message.data.fdr);
+
+      setRegimeShift({
+        from: message.data.from,
+        to: message.data.to,
+        fdr: Number.isFinite(fdrNum) ? fdrNum : null,
+        severity: message.data.severity,
+      });
+
       toast({
         title: "Economic Regime Changed",
-        description: `The economic regime has shifted from ${message.data.from} to ${message.data.to}. FDR: ${Number.isFinite(Number(message.data.fdr)) ? Number(message.data.fdr).toFixed(2) : '—'}`,
+        description: `The economic regime has shifted from ${message.data.from} to ${message.data.to}. FDR: ${Number.isFinite(fdrNum) ? fdrNum.toFixed(2) : '—'}`,
         variant: severity as 'default' | 'destructive',
         duration: 10000, // Show for 10 seconds
       });
@@ -405,6 +419,47 @@ export default function Dashboard() {
   // Main dashboard content
   return (
     <div className="p-12 max-w-5xl">
+      {/* Regime-shift event banner — a live regime change rewrites the
+          procurement playbook, so it sits at the very top until acknowledged
+          rather than disappearing with the toast. */}
+      {regimeShift && (
+        <div
+          className={`border rounded-lg px-6 py-4 mb-8 flex items-start justify-between gap-4 ${regimeShift.severity === 'high' ? 'border-red-500/50 bg-red-500/[0.06]' : 'border-amber-500/50 bg-amber-500/[0.06]'}`}
+          data-testid="banner-regime-shift"
+        >
+          <div className="flex items-start gap-3 min-w-0">
+            <AlertCircle className={`h-5 w-5 shrink-0 mt-0.5 ${regimeShift.severity === 'high' ? 'text-red-500' : 'text-amber-500'}`} />
+            <div className="space-y-1 min-w-0">
+              <p className="font-semibold">
+                Economic regime shifted to {regimeLabels[regimeShift.to] || regimeShift.to}
+              </p>
+              <p className="text-sm text-soft leading-relaxed">
+                Moved from {regimeLabels[regimeShift.from] || regimeShift.from}
+                {regimeShift.fdr != null ? ` · FDR now ${regimeShift.fdr.toFixed(2)}` : ''}. This changes your procurement strategy — review the updated guidance below.
+              </p>
+              <Button
+                variant="link"
+                size="sm"
+                className="px-0 h-auto"
+                onClick={() => setLocation('/supplier-risk')}
+                data-testid="button-regime-shift-impact"
+              >
+                View impact analysis →
+              </Button>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setRegimeShift(null)}
+            className="text-muted-foreground hover:text-foreground transition shrink-0"
+            aria-label="Dismiss regime change notice"
+            data-testid="button-dismiss-regime-shift"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       {/* Trial banner */}
       {subscriptionData?.status === 'trialing' && (
         <div className="trial-banner px-6 py-4 mb-12 flex items-center justify-between">
