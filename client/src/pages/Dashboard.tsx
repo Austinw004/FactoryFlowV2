@@ -437,15 +437,14 @@ export default function Dashboard() {
                 Moved from {regimeLabels[regimeShift.from] || regimeShift.from}
                 {regimeShift.fdr != null ? ` · FDR now ${regimeShift.fdr.toFixed(2)}` : ''}. This changes your procurement strategy — review the updated guidance below.
               </p>
-              <Button
-                variant="link"
-                size="sm"
-                className="px-0 h-auto"
+              <button
+                type="button"
+                className="text-sm font-medium text-signal hover:text-bone transition"
                 onClick={() => setLocation('/supplier-risk')}
                 data-testid="button-regime-shift-impact"
               >
                 View impact analysis →
-              </Button>
+              </button>
             </div>
           </div>
           <button
