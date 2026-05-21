@@ -11,6 +11,7 @@ interface MaterialRisk {
   material: Material;
   riskScore: number;
   reason: string;
+  recommendation: string;
   inventoryLevel: number; // percentage
 }
 
@@ -30,27 +31,33 @@ export function MaterialsAtRiskWidget() {
       // Simple risk calculation (in production, would factor in demand, lead time, etc.)
       let riskScore = 0;
       let reason = "";
-      
+      let recommendation = "";
+
       if (total === 0) {
         riskScore = 100;
         reason = "Zero inventory";
+        recommendation = "Expedite a purchase order now — dependent production lines may stall.";
       } else if (total < 100) {
         riskScore = 80;
         reason = "Critically low stock";
+        recommendation = "Reorder immediately and confirm supplier lead time before it slips.";
       } else if (total < 500) {
         riskScore = 50;
         reason = "Low inventory";
+        recommendation = "Place a replenishment order to restore buffer stock this week.";
       } else if (inbound === 0 && onHand < 1000) {
         riskScore = 30;
         reason = "No inbound orders";
+        recommendation = "No inbound coverage — schedule a PO to avoid a stockout.";
       }
-      
+
       const inventoryLevel = Math.min(100, (total / 1000) * 100); // Assume 1000 is full stock
-      
+
       return {
         material,
         riskScore,
         reason,
+        recommendation,
         inventoryLevel,
       };
     })
@@ -141,6 +148,11 @@ export function MaterialsAtRiskWidget() {
                 </Badge>
               </div>
               
+              <p className="text-xs text-muted-foreground mb-2 leading-relaxed">
+                <span className="uppercase tracking-wider mr-1.5">Recommended</span>
+                {item.recommendation}
+              </p>
+
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">Inventory Level</span>
